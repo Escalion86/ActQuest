@@ -30,7 +30,6 @@ import useCopyEventLinkToClipboard from '@helpers/useCopyEventLinkToClipboard'
 
 import { useDetectClickOutside } from 'react-detect-click-outside'
 import windowDimensionsTailwindSelector from '@state/selectors/windowDimensionsTailwindSelector'
-import { EVENT_STATUSES, SERVICE_USER_STATUSES } from '@helpers/constants'
 import isLoggedUserModerSelector from '@state/selectors/isLoggedUserModerSelector'
 import useCopyServiceLinkToClipboard from '@helpers/useCopyServiceLinkToClipboard'
 import isLoggedUserDevSelector from '@state/selectors/isLoggedUserDevSelector'
@@ -151,17 +150,6 @@ const CardButtons = ({
           tooltipText="Скопировать ссылку на мероприятие"
         />
       )}
-      {show.eventUsersBtn && (
-        <ItemComponent
-          icon={faUsers}
-          onClick={() => {
-            setOpen(false)
-            modalsFunc.event.users(item._id)
-          }}
-          color="green"
-          tooltipText="Участники мероприятия"
-        />
-      )}
       {show.loginHistory && (
         <ItemComponent
           icon={faSignIn}
@@ -171,28 +159,6 @@ const CardButtons = ({
           }}
           color="purple"
           tooltipText="История авторизаций пользователя"
-        />
-      )}
-      {show.paymentsUsersBtn && (
-        <ItemComponent
-          icon={faMoneyBill}
-          onClick={() => {
-            setOpen(false)
-            modalsFunc.event.payments(item._id)
-          }}
-          color="amber"
-          tooltipText="Финансы"
-        />
-      )}
-      {show.userPaymentsBtn && (
-        <ItemComponent
-          icon={faMoneyBill}
-          onClick={() => {
-            setOpen(false)
-            modalsFunc.user.payments(item._id)
-          }}
-          color="amber"
-          tooltipText="Финансы"
         />
       )}
       {show.upBtn && (
@@ -217,17 +183,6 @@ const CardButtons = ({
           tooltipText="Переместить ниже"
         />
       )}
-      {show.userEvents && (
-        <ItemComponent
-          icon={faCalendarAlt}
-          onClick={() => {
-            setOpen(false)
-            modalsFunc[typeOfItem].events(item._id)
-          }}
-          color="blue"
-          tooltipText="Мероприятия с пользователем"
-        />
-      )}
       {show.editBtn && (
         <ItemComponent
           icon={faPencilAlt}
@@ -237,14 +192,6 @@ const CardButtons = ({
           }}
           color="orange"
           tooltipText="Редактировать"
-        />
-      )}
-      {show.editQuestionnaire && (
-        <ItemComponent
-          icon={faIdCard}
-          onClick={onEditQuestionnaire}
-          color="purple"
-          tooltipText="Редактировать анкету"
         />
       )}
       {show.cloneBtn && (
@@ -270,34 +217,6 @@ const CardButtons = ({
           tooltipText="Показывать на сайте"
         />
       )}
-      {show.statusBtn
-        ? (() => {
-            const status = item.status ?? 'active'
-            const { icon, color, name } = (
-              typeOfItem === 'serviceUser'
-                ? SERVICE_USER_STATUSES
-                : EVENT_STATUSES
-            ).find(({ value }) => value === status)
-            return (
-              <ItemComponent
-                icon={icon}
-                onClick={() => {
-                  setOpen(false)
-                  modalsFunc[typeOfItem].statusEdit(item._id)
-                  // if (item.status === 'canceled')
-                  //   modalsFunc[typeOfItem].uncancel(item._id)
-                  // else modalsFunc[typeOfItem].cancel(item._id)
-                }}
-                color={
-                  color.indexOf('-') > 0
-                    ? color.slice(0, color.indexOf('-'))
-                    : color
-                }
-                tooltipText={`${name} (изменить статус)`}
-              />
-            )
-          })()
-        : null}
       {show.deleteBtn && (
         <ItemComponent
           icon={faTrashAlt}

@@ -4,7 +4,6 @@ import { useRouter } from 'next/router'
 
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3'
 
-import SvgWave from 'svg/SvgWave'
 // import SvgLogin from 'svg/SvgLogin'
 // import SvgAvatar from 'svg/SvgAvatar'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -15,7 +14,6 @@ import { postData } from '@helpers/CRUD'
 import resolveConfig from 'tailwindcss/resolveConfig'
 import tailwindConfig from 'tailwind.config.js'
 import passwordValidator from '@helpers/passwordValidator'
-import SvgLove from 'svg/SvgLove'
 import Link from 'next/link'
 import MaskedInput from 'react-text-mask'
 import LoadingSpinner from '@components/LoadingSpinner'
@@ -605,14 +603,7 @@ const LoginPage = (props) => {
     <div className="box-border w-screen h-screen overflow-y-auto">
       {/* <Wave /> */}
       {/* <Image src="/public/img/login/wave.svg" width={174} height={84} /> */}
-      <SvgWave
-        color={generalColor}
-        className="fixed top-0 left-0 hidden w-auto h-full laptop:block -z-10"
-      />
       <div className="grid w-full h-full grid-cols-1 px-2 bg-transparent laptop:grid-cols-2 gap-7">
-        <div className="items-center hidden text-center laptop:flex">
-          <SvgLove color={generalColor} className="w-124" />
-        </div>
         <div className="flex items-center justify-center text-center laptop:justify-start">
           <form className="pt-4 pb-10 w-90">
             <div className="flex justify-center w-full">
