@@ -15,6 +15,7 @@
 import Header from '@layouts/Header'
 import { getSession } from 'next-auth/react'
 import Head from 'next/head'
+
 import ContactsBlock from '@blocks/ContactsBlock'
 import TitleBlock from '@blocks/TitleBlock'
 import fetchProps from '@server/fetchProps'
