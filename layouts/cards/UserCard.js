@@ -1,7 +1,6 @@
 import { modalsFuncAtom } from '@state/atoms'
 import { useRecoilValue } from 'recoil'
 import isLoggedUserAdminSelector from '@state/selectors/isLoggedUserAdminSelector'
-import eventsUsersSignedUpWithEventStatusByUserIdCountSelector from '@state/selectors/eventsUsersSignedUpWithEventStatusByUserIdCountSelector'
 import userSelector from '@state/selectors/userSelector'
 import loadingAtom from '@state/atoms/loadingAtom'
 
@@ -13,32 +12,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faGenderless } from '@fortawesome/free-solid-svg-icons'
 import { CardWrapper } from '@components/CardWrapper'
 import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
-import ZodiacIcon from '@components/ZodiacIcon'
 import UserStatusIcon from '@components/UserStatusIcon'
 import formatDate from '@helpers/formatDate'
 import UserName from '@components/UserName'
-import sumOfPaymentsWithoutEventIdByUserIdSelector from '@state/selectors/sumOfPaymentsWithoutEventIdByUserIdSelector'
 import isLoggedUserModerSelector from '@state/selectors/isLoggedUserModerSelector'
-
-const UserSumOfPaymentsWithoutEvent = ({ userId, className }) => {
-  const sumOfPaymentsWithoutEventOfUser = useRecoilValue(
-    sumOfPaymentsWithoutEventIdByUserIdSelector(userId)
-  )
-
-  if (sumOfPaymentsWithoutEventOfUser === 0) return null
-
-  return (
-    <div
-      className={cn(
-        'flex justify-center items-center text-base tablet:text-lg font-bold uppercase text-white px-3 rounded-tl-lg',
-        sumOfPaymentsWithoutEventOfUser > 0 ? 'bg-success' : 'bg-danger',
-        className
-      )}
-    >
-      {`${sumOfPaymentsWithoutEventOfUser} ₽`}
-    </div>
-  )
-}
 
 const UserCard = ({ userId, hidden = false, style }) => {
   const modalsFunc = useRecoilValue(modalsFuncAtom)
@@ -47,10 +24,6 @@ const UserCard = ({ userId, hidden = false, style }) => {
   // const eventUsers = useRecoilValue(eventsUsersSignedUpByUserIdSelector(userId))
   const isLoggedUserAdmin = useRecoilValue(isLoggedUserAdminSelector)
   const isLoggedUserModer = useRecoilValue(isLoggedUserModerSelector)
-
-  const eventsUsersSignedUpCount = useRecoilValue(
-    eventsUsersSignedUpWithEventStatusByUserIdCountSelector(userId)
-  )
 
   // const widthNum = useWindowDimensionsTailwindNum()
   // const itemFunc = useRecoilValue(itemsFuncAtom)
@@ -100,36 +73,6 @@ const UserCard = ({ userId, hidden = false, style }) => {
                       className="h-8 tablet:h-auto text-base font-bold tablet:text-lg -mt-0.5 tablet:mt-0"
                       // noWrap
                     />
-                    {/* <span>{user.firstName}</span>
-                    {user.secondName && <span>{user.secondName}</span>} */}
-                    {/* {user.birthday && (
-                      <div className="flex items-center font-normal whitespace-nowrap gap-x-2">
-                        <span>{birthDateToAge(user.birthday)}</span>
-                        <ZodiacIcon date={user.birthday} />
-                      </div>
-                    )} */}
-                    {/* {widthNum > 3 &&
-                      user.birthday &&
-                      (isLoggedUserAdmin ||
-                        user.security?.showBirthday ||
-                        user.security?.showAge) && (
-                        <div className="flex items-center text-base font-normal tablet:text-lg whitespace-nowrap gap-x-2">
-                          <span>
-                            {birthDateToAge(
-                              user.birthday,
-                              true,
-                              false,
-                              isLoggedUserAdmin || user.security?.showAge
-                            )}
-                          </span>
-                          <ZodiacIcon date={user.birthday} />
-                        </div>
-                      )} */}
-                    {/* {user.role === 'admin' && (
-                      <span className="font-normal text-red-400">
-                        АДМИНИСТРАТОР
-                      </span>
-                    )} */}
                   </div>
                   <div className="flex">
                     <img
@@ -157,7 +100,6 @@ const UserCard = ({ userId, hidden = false, style }) => {
                                   true
                                 )}
                               </span>
-                              <ZodiacIcon date={user.birthday} small />
                             </div>
                           </div>
                         )}
@@ -165,16 +107,6 @@ const UserCard = ({ userId, hidden = false, style }) => {
                         <span className="font-bold">Зарегистрирован:</span>
                         <span className="font-normal">
                           {formatDate(user.createdAt)}
-                        </span>
-                      </div>
-                      <div className="flex text-sm leading-4 gap-x-2">
-                        <span className="font-bold">Посетил:</span>
-                        <span className="font-normal">
-                          {eventsUsersSignedUpCount.finished}
-                        </span>
-                        <span className="font-bold">Записан:</span>
-                        <span className="font-normal">
-                          {eventsUsersSignedUpCount.signUp}
                         </span>
                       </div>
                     </div>
@@ -186,9 +118,6 @@ const UserCard = ({ userId, hidden = false, style }) => {
                     typeOfItem="user"
                     alwaysCompactOnPhone
                   />
-                  {isLoggedUserAdmin && (
-                    <UserSumOfPaymentsWithoutEvent userId={userId} />
-                  )}
                 </div>
               </div>
               {/* <div className="flex-col justify-end flex-1 hidden px-2 tablet:flex"> */}

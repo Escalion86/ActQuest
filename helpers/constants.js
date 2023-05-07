@@ -52,45 +52,11 @@ import {
   faCreditCard,
 } from '@fortawesome/free-regular-svg-icons'
 
-import ServicesContent from '@layouts/content/ServicesContent'
-import DirectionsContent from '@layouts/content/DirectionsContent'
-import ReviewsContent from '@layouts/content/ReviewsContent'
-import EventsContent from '@layouts/content/EventsContent'
-import AdditionalBlocksContent from '@layouts/content/AdditionalBlocksContent'
-import QuestionnaireContent from '@layouts/content/QuestionnaireContent'
 import UsersContent from '@layouts/content/UsersContent'
-import MembersContent from '@layouts/content/MembersContent'
 
-import ZodiacCapricorn from 'svg/zodiac/ZodiacCapricorn'
-import ZodiacTaurus from 'svg/zodiac/ZodiacTaurus'
-import ZodiacGemini from 'svg/zodiac/ZodiacGemini'
-import ZodiacCancer from 'svg/zodiac/ZodiacCancer'
-import ZodiacLeo from 'svg/zodiac/ZodiacLeo'
-import ZodiacLibra from 'svg/zodiac/ZodiacLibra'
-import ZodiacSagittarius from 'svg/zodiac/ZodiacSagittarius'
-import ZodiacAries from 'svg/zodiac/ZodiacAries'
-import ZodiacAquarius from 'svg/zodiac/ZodiacAquarius'
-import ZodiacPisces from 'svg/zodiac/ZodiacPisces'
-import ZodiacVirgo from 'svg/zodiac/ZodiacVirgo'
-import ZodiacScorpio from 'svg/zodiac/ZodiacScorpio'
-import PaymentsContent from '@layouts/content/PaymentsContent'
 import ContactsContent from '@layouts/content/ContactsContent'
 import DevContent from '@layouts/content/DevContent'
-import HistoriesContent from '@layouts/content/HistoriesContent'
-import BirthdaysContent from '@layouts/content/BirthdaysContent'
-import StatisticsContent from '@layouts/content/StatisticsContent'
-import badgePaymentsOfEventWithoutEventIdSelector from '@state/selectors/badgePaymentsOfEventWithoutEventIdSelector'
 import SettingsContent from '@layouts/content/SettingsContent'
-import PaymentsWithoutEventContent from '@layouts/content/PaymentsWithoutEventContent'
-import badgePaymentsWithoutUserWritingToEventSelector from '@state/selectors/badgePaymentsWithoutUserWritingToEventSelector'
-import PaymentsNotParticipantsEventContent from '@layouts/content/PaymentsNotParticipantsEventContent'
-import ServicesUsersContent from '@layouts/content/ServicesUsersContent'
-import ServicesLoggedUserContent from '@layouts/content/ServicesLoggedUserContent'
-import badgeBirthdaysTodayCountSelector from '@state/selectors/badgeBirthdaysTodayCountSelector'
-import ToolsAnonsContent from '@layouts/content/ToolsAnonsContent'
-import StatisticsFinanceContent from '@layouts/content/StatisticsFinanceContent'
-import StatisticsUsersContent from '@layouts/content/StatisticsUsersContent'
-import StatisticsEventsContent from '@layouts/content/StatisticsEventsContent'
 
 const colors = [
   'border-blue-400',
@@ -352,39 +318,6 @@ export const DEFAULT_ADDRESS = Object.freeze({
   comment: '',
 })
 
-export const DEFAULT_EVENT = Object.freeze({
-  directionId: null,
-  organizerId: null,
-  title: '',
-  description: '',
-  // date: null,
-  dateStart: null,
-  dateEnd: null,
-  address: DEFAULT_ADDRESS,
-  status: 'active',
-  images: [],
-  showOnSite: true,
-  // duration: 60,
-  price: 0,
-  maxParticipants: null,
-  maxMans: null,
-  maxWomans: null,
-  maxMansNovice: null,
-  maxWomansNovice: null,
-  maxMansMember: null,
-  maxWomansMember: null,
-  minMansAge: 35,
-  minWomansAge: 30,
-  maxMansAge: 50,
-  maxWomansAge: 45,
-  usersStatusAccess: {},
-  usersStatusDiscount: {},
-  isReserveActive: true,
-  report: '',
-  reportImages: [],
-  warning: false,
-})
-
 export const DEFAULT_QUESTIONNAIRE = Object.freeze({
   title: '',
   data: [],
@@ -397,13 +330,6 @@ export const DEFAULT_QUESTIONNAIRE_ITEM = {
   show: true,
   required: false,
 }
-
-export const DEFAULT_DIRECTION = Object.freeze({
-  title: '',
-  description: '',
-  image: null,
-  showOnSite: true,
-})
 
 export const DEFAULT_REVIEW = Object.freeze({
   author: '',
@@ -435,41 +361,6 @@ export const DEFAULT_ADDITIONAL_BLOCK = Object.freeze({
   showOnSite: true,
 })
 
-export const DEFAULT_SERVICE = Object.freeze({
-  title: '',
-  description: '',
-  shortDescription: '',
-  images: [],
-  menuName: '',
-  index: null,
-  showOnSite: true,
-  price: 0,
-  questionnaire: null,
-  usersStatusAccess: {},
-  usersStatusDiscount: {},
-})
-
-export const DEFAULT_PRODUCT = Object.freeze({
-  title: '',
-  description: '',
-  shortDescription: '',
-  images: [],
-  menuName: '',
-  index: null,
-  showOnSite: true,
-  price: 0,
-  questionnaire: null,
-  usersStatusAccess: {},
-  usersStatusDiscount: {},
-})
-
-export const DEFAULT_SERVICE_USER = Object.freeze({
-  userId: '',
-  serviceId: '',
-  answers: {},
-  status: 'active',
-})
-
 export const DEFAULT_SITE_SETTINGS = Object.freeze({
   email: '',
   phone: '',
@@ -480,37 +371,6 @@ export const DEFAULT_SITE_SETTINGS = Object.freeze({
   vk: '',
   codeSendService: 'telefonip',
 })
-
-export const EVENT_STATUSES = [
-  { value: 'active', name: 'Активно', color: 'blue-400', icon: faPlay },
-  { value: 'canceled', name: 'Отменено', color: 'red-400', icon: faBan },
-  { value: 'closed', name: 'Закрыто', color: 'green-400', icon: faLock },
-]
-
-export const SERVICE_USER_STATUSES = [
-  { value: 'active', name: 'Активно', color: 'blue-400', icon: faPlay },
-  { value: 'canceled', name: 'Отменено', color: 'red-400', icon: faBan },
-  { value: 'closed', name: 'Закрыто', color: 'green-400', icon: faLock },
-]
-
-export const PRODUCT_USER_STATUSES = [
-  { value: 'active', name: 'Активно', color: 'blue-400', icon: faPlay },
-  { value: 'canceled', name: 'Отменено', color: 'red-400', icon: faBan },
-  { value: 'closed', name: 'Закрыто', color: 'green-400', icon: faLock },
-]
-
-export const EVENT_STATUSES_WITH_TIME = [
-  ...EVENT_STATUSES,
-  { value: 'finished', name: 'Завершено', color: 'green-400', icon: faCheck },
-  { value: 'inProgress', name: 'В процессе', color: 'blue-400', icon: faClock },
-]
-
-export const EVENT_USER_STATUSES = [
-  { value: 'participant', name: 'Участник', color: 'green-400' },
-  { value: 'assistant', name: 'Ведущий', color: 'blue-400' },
-  { value: 'reserve', name: 'Резерв', color: 'yellow-400' },
-  { value: 'ban', name: 'Бан', color: 'red-400' },
-]
 
 export const GENDERS = [
   { value: 'male', name: 'Мужчина', color: 'blue-400', icon: faMars },
@@ -533,175 +393,11 @@ export const CODE_SEND_SERVICES = [
   { value: 'ucaller', name: 'UCaller', color: 'blue-400' },
 ]
 
-export const ZODIAC = [
-  {
-    name: 'Овен',
-    component: ZodiacAries,
-    element: 'Огонь',
-    dateFrom: '21.03',
-    dateTo: '19.04',
-  },
-  {
-    name: 'Телец',
-    component: ZodiacTaurus,
-    element: 'Земля',
-    dateFrom: '20.04',
-    dateTo: '20.05',
-  },
-  {
-    name: 'Близнецы',
-    component: ZodiacGemini,
-    element: 'Воздух',
-    dateFrom: '21.05',
-    dateTo: '20.06',
-  },
-  {
-    name: 'Рак',
-    component: ZodiacCancer,
-    element: 'Вода',
-    dateFrom: '21.06',
-    dateTo: '22.07',
-  },
-  {
-    name: 'Лев',
-    component: ZodiacLeo,
-    element: 'Огонь',
-    dateFrom: '23.07',
-    dateTo: '22.08',
-  },
-  {
-    name: 'Дева',
-    component: ZodiacVirgo,
-    element: 'Земля',
-    dateFrom: '23.08',
-    dateTo: '22.09',
-  },
-  {
-    name: 'Весы',
-    component: ZodiacLibra,
-    element: 'Воздух',
-    dateFrom: '23.09',
-    dateTo: '22.10',
-  },
-  {
-    name: 'Скорпион',
-    component: ZodiacScorpio,
-    element: 'Вода',
-    dateFrom: '23.10',
-    dateTo: '21.11',
-  },
-  {
-    name: 'Стрелец',
-    component: ZodiacSagittarius,
-    element: 'Огонь',
-    dateFrom: '22.11',
-    dateTo: '21.12',
-  },
-  {
-    name: 'Козерог',
-    component: ZodiacCapricorn,
-    element: 'Земля',
-    dateFrom: '22.12',
-    dateTo: '19.01',
-  },
-  {
-    name: 'Водолей',
-    component: ZodiacAquarius,
-    element: 'Воздух',
-    dateFrom: '20.01',
-    dateTo: '18.02',
-  },
-  {
-    name: 'Рыбы',
-    component: ZodiacPisces,
-    element: 'Вода',
-    dateFrom: '19.02',
-    dateTo: '20.03',
-  },
-]
-
-export const CLOUDINARY_FOLDER = isDevMode
-  ? 'polovinka_uspeha'
-  : 'polovinka_uspeha'
-
-export const SECTORS = [
-  { name: 'Мероприятие', value: 'event', icon: faCalendar, color: 'general' },
-  { name: 'Услуга', value: 'service', icon: faHeart, color: 'purple-400' },
-  { name: 'Товар', value: 'product', icon: faShoppingBag, color: 'blue-400' },
-  {
-    name: 'Внутренние',
-    value: 'internal',
-    icon: faBriefcase,
-    color: 'orange-400',
-  },
-]
-
 export const CONTENTS = {
-  services: {
-    Component: ServicesContent,
-    name: 'Услуги',
-    accessRoles: ['client', 'admin', 'dev'],
-  },
-  servicesUsers: {
-    Component: ServicesUsersContent,
-    name: 'Заявки на услуги',
-    accessRoles: ['admin', 'dev'],
-  },
-  myServices: {
-    Component: ServicesLoggedUserContent,
-    name: 'Мои заявки на услуги',
-    accessRoles: ['client', 'dev'],
-  },
-  directions: {
-    Component: DirectionsContent,
-    name: 'Сайт / Направления',
-    accessRoles: ['admin', 'dev'],
-  },
-  reviews: {
-    Component: ReviewsContent,
-    name: 'Сайт / Отзывы',
-    accessRoles: ['admin', 'dev'],
-  },
-  additionalBlocks: {
-    Component: AdditionalBlocksContent,
-    name: 'Сайт / Доп. блоки',
-    accessRoles: ['admin', 'dev'],
-  },
-  events: {
-    Component: EventsContent,
-    name: 'Мероприятия',
-    accessRoles: ['client', 'moder', 'admin', 'dev'],
-  },
-  questionnaire: {
-    Component: QuestionnaireContent,
-    name: 'Моя анкета',
-    accessRoles: ['client', 'moder', 'admin', 'dev'],
-  },
   users: {
     Component: UsersContent,
     name: 'Пользователи',
     accessRoles: ['moder', 'admin', 'dev'],
-  },
-  members: {
-    Component: MembersContent,
-    name: 'Участники клуба',
-    accessRoles: ['client'],
-    accessStatuses: ['member'],
-  },
-  payments: {
-    Component: PaymentsContent,
-    name: 'Транзакции',
-    accessRoles: ['admin', 'dev'],
-  },
-  paymentsWithNoEvent: {
-    Component: PaymentsWithoutEventContent,
-    name: 'Непривязанные транзакции',
-    accessRoles: ['admin', 'dev'],
-  },
-  paymentsNotParticipantsEvent: {
-    Component: PaymentsNotParticipantsEventContent,
-    name: 'Не пришли на мероприятие',
-    accessRoles: ['admin', 'dev'],
   },
   contacts: {
     Component: ContactsContent,
@@ -709,41 +405,6 @@ export const CONTENTS = {
     accessRoles: ['admin', 'dev'],
   },
   dev: { Component: DevContent, name: 'Разработчик', accessRoles: ['dev'] },
-  tools: {
-    Component: ToolsAnonsContent,
-    name: 'Инструменты / Редактор анонса',
-    accessRoles: ['moder', 'dev', 'admin'],
-  },
-  histories: {
-    Component: HistoriesContent,
-    name: 'События / Записи на мероприятия',
-    accessRoles: ['moder', 'admin', 'dev'],
-  },
-  birthdays: {
-    Component: BirthdaysContent,
-    name: 'События / Дни рождения',
-    accessRoles: ['moder', 'admin', 'dev'],
-  },
-  // statistics: {
-  //   Component: StatisticsContent,
-  //   name: 'Статистика',
-  //   accessRoles: ['admin', 'dev'],
-  // },
-  statisticsFinance: {
-    Component: StatisticsFinanceContent,
-    name: 'Статистика / Финансы',
-    accessRoles: ['admin', 'dev'],
-  },
-  statisticsUsers: {
-    Component: StatisticsUsersContent,
-    name: 'Статистика / Пользователи',
-    accessRoles: ['admin', 'dev'],
-  },
-  statisticsEvents: {
-    Component: StatisticsEventsContent,
-    name: 'Статистика / Мероприятия',
-    accessRoles: ['admin', 'dev'],
-  },
   settings: {
     Component: SettingsContent,
     name: 'Настройки',
@@ -752,62 +413,6 @@ export const CONTENTS = {
 }
 
 export const pages = [
-  {
-    id: 0,
-    group: 0,
-    name: 'Услуги',
-    href: 'services',
-    icon: faHeart,
-    accessRoles: CONTENTS['services'].accessRoles,
-  },
-  {
-    id: 1,
-    group: 0,
-    name: 'Заявки на услуги',
-    href: 'servicesUsers',
-    icon: faHandHoldingHeart,
-    accessRoles: CONTENTS['servicesUsers'].accessRoles,
-  },
-  {
-    id: 2,
-    group: 0,
-    name: 'Мои заявки на услуги',
-    href: 'myServices',
-    icon: faHandHoldingHeart,
-    accessRoles: CONTENTS['myServices'].accessRoles,
-  },
-  {
-    id: 3,
-    group: 1,
-    name: 'Мероприятия',
-    href: 'events',
-    icon: faCalendar,
-    accessRoles: CONTENTS['events'].accessRoles,
-  },
-  {
-    id: 4,
-    group: 2,
-    name: 'Направления',
-    href: 'directions',
-    icon: faHeart,
-    accessRoles: CONTENTS['directions'].accessRoles,
-  },
-  {
-    id: 5,
-    group: 2,
-    name: 'Доп. блоки',
-    href: 'additionalBlocks',
-    icon: faCube,
-    accessRoles: CONTENTS['additionalBlocks'].accessRoles,
-  },
-  {
-    id: 6,
-    group: 2,
-    name: 'Отзывы',
-    href: 'reviews',
-    icon: faComments,
-    accessRoles: CONTENTS['reviews'].accessRoles,
-  },
   {
     id: 7,
     group: 2,
@@ -823,99 +428,6 @@ export const pages = [
     href: 'users',
     icon: faUser,
     accessRoles: CONTENTS['users'].accessRoles,
-  },
-  {
-    id: 9,
-    group: 4,
-    name: 'Транзакции',
-    href: 'payments',
-    icon: faMoneyBill,
-    accessRoles: CONTENTS['payments'].accessRoles,
-  },
-  {
-    id: 10,
-    group: 4,
-    name: 'Непривязанные транзакции',
-    href: 'paymentsWithNoEvent',
-    icon: faUnlink,
-    badge: badgePaymentsOfEventWithoutEventIdSelector,
-    accessRoles: CONTENTS['paymentsWithNoEvent'].accessRoles,
-  },
-
-  {
-    id: 11,
-    group: 4,
-    name: 'Не пришли на мероприятие',
-    href: 'paymentsNotParticipantsEvent',
-    icon: faUserTimes,
-    // badge: badgePaymentsWithoutUserWritingToEventSelector,
-    accessRoles: CONTENTS['paymentsNotParticipantsEvent'].accessRoles,
-  },
-
-  {
-    id: 12,
-    group: 5,
-    name: 'Записи на мероприятия',
-    href: 'histories',
-    icon: faUsers,
-    accessRoles: CONTENTS['histories'].accessRoles,
-  },
-  {
-    id: 13,
-    group: 5,
-    name: 'Дни рождения',
-    href: 'birthdays',
-    icon: faBirthdayCake,
-    accessRoles: CONTENTS['birthdays'].accessRoles,
-    badge: badgeBirthdaysTodayCountSelector,
-  },
-  // {
-  //   id: 14,
-  //   group: 6,
-  //   name: 'Статистика',
-  //   href: 'statistics',
-  //   icon: faPieChart,
-  //   accessRoles: CONTENTS['statistics'].accessRoles,
-  // },
-  {
-    id: 15,
-    group: 6,
-    name: 'Мероприятия',
-    href: 'statisticsEvents',
-    icon: faCalendar,
-    accessRoles: CONTENTS['statisticsEvents'].accessRoles,
-  },
-  {
-    id: 16,
-    group: 6,
-    name: 'Пользователи',
-    href: 'statisticsUsers',
-    icon: faUser,
-    accessRoles: CONTENTS['statisticsUsers'].accessRoles,
-  },
-  {
-    id: 17,
-    group: 6,
-    name: 'Финансы',
-    href: 'statisticsFinance',
-    icon: faMoneyBill,
-    accessRoles: CONTENTS['statisticsFinance'].accessRoles,
-  },
-  {
-    id: 50,
-    group: 7,
-    name: 'Участники клуба',
-    href: 'members',
-    icon: faCalendar,
-    accessRoles: CONTENTS['members'].accessRoles,
-  },
-  {
-    id: 70,
-    group: 8,
-    name: 'Инструменты',
-    href: 'tools',
-    icon: faTools,
-    accessRoles: CONTENTS['tools'].accessRoles,
   },
   {
     id: 80,
@@ -936,18 +448,6 @@ export const pages = [
 ]
 
 export const pagesGroups = [
-  {
-    id: 0,
-    name: 'Услуги',
-    icon: faHeart,
-    accessRoles: ['client', 'admin', 'dev'],
-  },
-  {
-    id: 1,
-    name: 'Мероприятия',
-    icon: faCalendarAlt,
-    accessRoles: ['client', 'moder', 'admin', 'dev'],
-  },
   { id: 2, name: 'Сайт', icon: faHome, accessRoles: ['admin', 'dev'] },
   {
     id: 3,
@@ -962,25 +462,6 @@ export const pagesGroups = [
     accessRoles: ['admin', 'dev'],
   },
   {
-    id: 5,
-    name: 'События',
-    icon: faHistory,
-    accessRoles: ['moder', 'admin', 'dev'],
-  },
-  {
-    id: 6,
-    name: 'Статистика',
-    icon: faPieChart,
-    accessRoles: ['admin', 'dev'],
-  },
-  {
-    id: 7,
-    name: 'Участники клуба',
-    icon: faUser,
-    accessRoles: ['client'],
-    accessStatuses: ['member'],
-  },
-  {
     id: 8,
     name: 'Инструменты',
     icon: faTools,
@@ -988,58 +469,6 @@ export const pagesGroups = [
   },
   { id: 9, name: 'Настройки', icon: faCog, accessRoles: ['admin', 'dev'] },
   { id: 99, name: 'Разработчик', icon: faBug, accessRoles: ['dev'] },
-]
-
-export const PAY_TYPES = [
-  { value: 'card', name: 'Картой', color: 'blue-400', icon: faCreditCard },
-  { value: 'cash', name: 'Наличными', color: 'green-400', icon: faMoneyBill },
-  {
-    value: 'remittance',
-    name: 'Перевод',
-    color: 'yellow-400',
-    icon: faSignInAlt,
-  },
-  {
-    value: 'coupon',
-    name: 'Купон',
-    color: 'general',
-    icon: faCertificate,
-  },
-]
-// var arr = [{key:"11", value:"1100"},{key:"22", value:"2200"}];
-// var object = arr.reduce(
-//   (obj, item) => Object.assign(obj, { [item.key]: item.value }), {})
-
-export const PAY_TYPES_OBJECT = PAY_TYPES.reduce(
-  (obj, item) => Object.assign(obj, { [item.value]: item.name }),
-  {}
-)
-
-export const PAY_DIRECTIONS = [
-  {
-    value: 'toUser',
-    name: 'Пользователю (за помощь / возврат)',
-    color: 'red-400',
-    icon: faMoneyBill, // faUserAlt,
-  },
-  {
-    value: 'toEvent',
-    name: 'Затраты организатора',
-    color: 'red-400',
-    icon: faMoneyBill, //faCalendar,
-  },
-  {
-    value: 'fromUser',
-    name: 'Оплата мероприятия',
-    color: 'green-400',
-    icon: faMoneyBill, //faUserAlt,
-  },
-  {
-    value: 'fromEvent',
-    name: 'Доп. доходы',
-    color: 'green-400',
-    icon: faMoneyBill, //faCalendar,
-  },
 ]
 
 export const EVENT_PAY_DIRECTIONS = [
@@ -1066,81 +495,6 @@ export const EVENT_PAY_DIRECTIONS = [
     name: 'Доп. доходы',
     color: 'green-400',
     icon: faMoneyBill, //faCalendar,
-  },
-]
-
-export const SERVICE_PAY_DIRECTIONS = [
-  {
-    value: 'toUser',
-    name: 'Специалисту',
-    color: 'red-400',
-    icon: faMoneyBill, //faUserAlt,
-  },
-  {
-    value: 'toService',
-    name: 'Затраты на услугу',
-    color: 'red-400',
-    icon: faMoneyBill, //faHeart,
-  },
-  {
-    value: 'fromUser',
-    name: 'Оплата услуги',
-    color: 'green-400',
-    icon: faMoneyBill, //faUserAlt,
-  },
-  {
-    value: 'fromService',
-    name: 'Доп. доходы',
-    color: 'green-400',
-    icon: faMoneyBill, //faHeart,
-  },
-]
-
-export const PRODUCT_PAY_DIRECTIONS = [
-  // {
-  //   value: 'toUser',
-  //   name: 'Покупателю (возврат)',
-  //   color: 'red-400',
-  //   icon: faUserAlt,
-  // },
-  {
-    value: 'toProduct',
-    name: 'Затраты на продукт',
-    color: 'red-400',
-    icon: faMoneyBill, //faHeart,
-  },
-  {
-    value: 'fromUser',
-    name: 'Оплата товара',
-    color: 'green-400',
-    icon: faMoneyBill, //faUserAlt,
-  },
-  {
-    value: 'fromProduct',
-    name: 'Доп. доходы',
-    color: 'green-400',
-    icon: faMoneyBill, //faHeart,
-  },
-]
-
-export const PRODUCT_PAY_INTERNAL = [
-  {
-    value: 'toInternal',
-    name: 'Затраты',
-    color: 'red-400',
-    icon: faMoneyBill, //faBriefcase,
-  },
-  {
-    value: 'toUser',
-    name: 'Зарплата работнику',
-    color: 'red-400',
-    icon: faMoneyBill, //faUserAlt,
-  },
-  {
-    value: 'fromInternal',
-    name: 'Доп. доходы',
-    color: 'green-400',
-    icon: faMoneyBill, //faBriefcase,
   },
 ]
 

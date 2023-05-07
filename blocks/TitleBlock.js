@@ -4,7 +4,6 @@ import loggedUserAtom from '@state/atoms/loggedUserAtom'
 import Link from 'next/link'
 // import { useRouter } from 'next/router'
 import { useRecoilValue } from 'recoil'
-import Svg30Plus from 'svg/Svg30Plus'
 
 const TitleBlock = () => {
   const userIsLogged = !!useRecoilValue(loggedUserAtom)
@@ -28,8 +27,6 @@ const TitleBlock = () => {
           // width="100%"
           // height="100%"
         /> */}
-        <Svg30Plus className="absolute w-12 h-12 tablet:w-16 tablet:h-16 top-6 right-6 tablet:top-14 tablet:right-12 laptop:h-20 laptop:w-20 fill-general" />
-
         <div className="flex justify-center flex-1 max-h-[350px]">
           <img
             className="object-contain max-w-[90%] laptop:max-w-[100%] h-full"

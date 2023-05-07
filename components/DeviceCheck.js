@@ -1,19 +1,16 @@
-import showDeviceAtom from '@state/atoms/showDeviceAtom'
 import isLoggedUserDevSelector from '@state/selectors/isLoggedUserDevSelector'
 import cn from 'classnames'
 import { useRecoilValue } from 'recoil'
 
 const DeviceCheck = ({ textClassName = null }) => {
   const isLoggedUserDev = useRecoilValue(isLoggedUserDevSelector)
-  const showDevice = useRecoilValue(showDeviceAtom)
 
   if (!isLoggedUserDev) return null
 
   return (
     <div
       className={cn(
-        'duration-300 pointer-events-none flex items-center justify-center text-white border-white border-t-1 border-l-1 border-b-1 fixed z-50 h-24 text-sm leading-3 w-10 top-40 bg-general rounded-l-md transform',
-        showDevice ? 'right-0' : '-right-10'
+        'duration-300 pointer-events-none flex items-center justify-center text-white border-white border-t-1 border-l-1 border-b-1 fixed z-50 h-24 text-sm leading-3 w-10 top-40 bg-general rounded-l-md transform'
       )}
     >
       <div className="-rotate-90">

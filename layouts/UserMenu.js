@@ -21,7 +21,6 @@ import { useState } from 'react'
 import menuOpenAtom from '@state/atoms/menuOpen'
 import cn from 'classnames'
 import loggedUserAtom from '@state/atoms/loggedUserAtom'
-import getParentDir from '@state/atoms/getParentDir'
 
 const variants = {
   show: {
@@ -119,11 +118,6 @@ const UserMenu = () => {
               <span>{loggedUser.firstName}</span>
               <span>{loggedUser.secondName}</span>
             </div>
-            {getParentDir(router.asPath) === 'cabinet' ? (
-              <MenuItem href="/" icon={faHome} title="Главная страница сайта" />
-            ) : (
-              <MenuItem href="/cabinet" icon={faListAlt} title="Мой кабинет" />
-            )}
             <MenuItem
               href="/cabinet/questionnaire"
               icon={faUserAlt}

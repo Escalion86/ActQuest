@@ -7,19 +7,13 @@ import {
   GENDERS,
   PAY_TYPES,
 } from '@helpers/constants'
-import eventStatusFunc from '@helpers/eventStatus'
 import formatDateTime from '@helpers/formatDateTime'
 import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 import sanitize from '@helpers/sanitize'
-import directionSelector from '@state/selectors/directionSelector'
-import eventSelector from '@state/selectors/eventSelector'
 import isLoggedUserModerSelector from '@state/selectors/isLoggedUserModerSelector'
 import userSelector from '@state/selectors/userSelector'
 import cn from 'classnames'
-import Image from 'next/image'
 import { useRecoilValue } from 'recoil'
-import DateTimeEvent from './DateTimeEvent'
-import EventNameById from './EventNameById'
 import TextLinesLimiter from './TextLinesLimiter'
 import UserName from './UserName'
 import UserNameById from './UserNameById'
@@ -192,76 +186,6 @@ export const UserItem = ({
   )
 }
 
-export const EventItemFromId = ({
-  eventId,
-  onClick = null,
-  active = false,
-}) => {
-  const event = useRecoilValue(eventSelector(eventId))
-  return <EventItem item={event} active={active} onClick={onClick} />
-}
-
-export const EventItem = ({ item, onClick = null, active = false }) => {
-  const direction = useRecoilValue(directionSelector(item.directionId))
-
-  const eventStatus = eventStatusFunc(item)
-  const eventStatusObj = EVENT_STATUSES_WITH_TIME.find(
-    (data) => data.value === eventStatus
-  )
-
-  return (
-    <ItemContainer
-      onClick={onClick}
-      active={active}
-      className="flex text-xs tablet:text-sm h-[33px]"
-      noPadding
-    >
-      <div
-        className={cn(
-          'w-7 flex justify-center items-center',
-          eventStatusObj ? 'bg-' + eventStatusObj.color : 'bg-gray-400'
-        )}
-      >
-        <FontAwesomeIcon
-          className="w-6 h-6 text-white"
-          icon={eventStatusObj ? eventStatusObj.icon : faGenderless}
-        />
-      </div>
-      <div className="flex items-center justify-between flex-1 px-1 leading-3">
-        <div className="flex flex-col h-full justify-evenly">
-          <TextLinesLimiter className="font-bold text-general" lines={1}>
-            {direction.title}
-          </TextLinesLimiter>
-          <TextLinesLimiter className="font-bold text-gray-800" lines={1}>
-            {item.title}
-          </TextLinesLimiter>
-        </div>
-        <div className="text-gray-600 gap-x-2">
-          {/* <div className="flex-2 whitespace-nowrap">
-        Артикул: {item.а || '[нет]'}
-      </div> */}
-          <DateTimeEvent
-            wrapperClassName="flex-1 font-bold justify-end"
-            dateClassName="text-general"
-            timeClassName="italic"
-            durationClassName="italic font-normal"
-            event={item}
-            showDayOfWeek
-            // fullMonth
-            thin
-            twoLines
-            // showDuration
-          />
-          {/* {formatDateTime(item.date, false, false, true, true, true)} */}
-          {/* <div className="flex-1 w-10 text-right whitespace-nowrap">
-        {item.price ? item.price / 100 : 0} ₽
-      </div> */}
-        </div>
-      </div>
-    </ItemContainer>
-  )
-}
-
 export const DirectionItem = ({ item, onClick = null, active = false }) => (
   <ItemContainer
     onClick={onClick}
@@ -388,14 +312,6 @@ export const PaymentItem = ({
                 userId={item.userId}
                 noWrap
                 className="font-bold leading-4"
-              />
-            )}
-          {showUserOrEvent &&
-            (item.payDirection === 'toEvent' ||
-              item.payDirection === 'fromEvent') && (
-              <EventNameById
-                eventId={item.eventId}
-                className="font-bold leading-4 text-general"
               />
             )}
           {item.comment && (

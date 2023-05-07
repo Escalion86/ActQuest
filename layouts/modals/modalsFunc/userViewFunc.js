@@ -14,12 +14,10 @@ import CardButtons from '@components/CardButtons'
 import { faCalendarAlt } from '@fortawesome/free-solid-svg-icons'
 import ValueItem from '@components/ValuePicker/ValueItem'
 import { modalsFuncAtom } from '@state/atoms'
-import ZodiacIcon from '@components/ZodiacIcon'
 import formatDate from '@helpers/formatDate'
 import TextLine from '@components/TextLine'
 import isLoggedUserDevSelector from '@state/selectors/isLoggedUserDevSelector'
 import isLoggedUserMemberSelector from '@state/selectors/isLoggedUserMemberSelector'
-import eventsUsersSignedUpWithEventStatusByUserIdCountSelector from '@state/selectors/eventsUsersSignedUpWithEventStatusByUserIdCountSelector'
 import isLoggedUserModerSelector from '@state/selectors/isLoggedUserModerSelector'
 
 const userViewFunc = (userId, clone = false) => {
@@ -37,10 +35,6 @@ const userViewFunc = (userId, clone = false) => {
     const isLoggedUserMember = useRecoilValue(isLoggedUserMemberSelector)
 
     const user = useRecoilValue(userSelector(userId))
-
-    const eventsUsersSignedUpCount = useRecoilValue(
-      eventsUsersSignedUpWithEventStatusByUserIdCountSelector(userId)
-    )
 
     useEffect(() => {
       if (!user) closeModal()
@@ -98,7 +92,6 @@ const userViewFunc = (userId, clone = false) => {
                       user.security?.showBirthday === true
                   )}
                 </span>
-                <ZodiacIcon date={user.birthday} />
               </div>
             )}
           <TextLine label="Дети">

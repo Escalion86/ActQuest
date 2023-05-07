@@ -3,8 +3,6 @@ import loggedUserActiveRoleAtom from '@state/atoms/loggedUserActiveRoleAtom'
 import loggedUserAtom from '@state/atoms/loggedUserAtom'
 import { ToggleButton, ToggleButtonGroup } from '@mui/material'
 import loggedUserActiveStatusAtom from '@state/atoms/loggedUserActiveStatusAtom'
-import CheckBox from './CheckBox'
-import showDeviceAtom from '@state/atoms/showDeviceAtom'
 
 const DevSwitch = () => {
   const loggedUser = useRecoilValue(loggedUserAtom)
@@ -15,19 +13,10 @@ const DevSwitch = () => {
     loggedUserActiveStatusAtom
   )
 
-  const [showDevice, setShowDevice] = useRecoilState(showDeviceAtom)
-
   if (loggedUser.role !== 'dev') return null
 
   return (
     <>
-      <div className="p-1 text-black bg-gray-100">
-        <CheckBox
-          label="Тип устройства"
-          checked={showDevice}
-          onChange={() => setShowDevice((checked) => !checked)}
-        />
-      </div>
       <ToggleButtonGroup
         className="flex bg-gray-100 rounded-none"
         color="primary"

@@ -1,7 +1,5 @@
 import formatDate from '@helpers/formatDate'
-import birthDateToAge from '@helpers/birthDateToAge'
 import cn from 'classnames'
-import getZodiac from '@helpers/getZodiac'
 import InputWrapper from './InputWrapper'
 
 const DatePicker = ({
@@ -31,15 +29,6 @@ const DatePicker = ({
       className={cn(fullWidth ? '' : 'w-48', className)}
       required={required}
       error={error}
-      // postfix={
-      //   value &&
-      //   (showYears || showZodiac) &&
-      //   '(' +
-      //     (showYears ? birthDateToAge(value) : '') +
-      //     (showYears && showZodiac ? ', ' : '') +
-      //     (showZodiac ? getZodiac(value).name : '') +
-      //     ')'
-      // }
       fullWidth={fullWidth}
       paddingY="small"
       disabled={disabled}
@@ -67,15 +56,6 @@ const DatePicker = ({
         // min="2018-01-01"
         // max="2018-12-31"
       />
-      {/* {value && (showYears || showZodiac) && (
-        <div className="ml-2 whitespace-nowrap">
-          {'(' +
-            (showYears ? birthDateToAge(value) : '') +
-            (showYears && showZodiac ? ', ' : '') +
-            (showZodiac ? getZodiac(value).name : '') +
-            ')'}
-        </div>
-      )} */}
     </InputWrapper>
   )
 }
