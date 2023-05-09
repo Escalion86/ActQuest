@@ -1,6 +1,8 @@
 import { postData } from '@helpers/CRUD'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
+import callbackHandler from 'telegram/callbackHandler'
+import messageHandler from 'telegram/messageHandler'
 
 export default async function handler(req, res) {
   const { query, method, body } = req
@@ -84,31 +86,38 @@ export default async function handler(req, res) {
           type: 'private',
         },
         date: 1683645745,
-        text: '/new_command',
+        text: '/new_team',
         entities: [{ offset: 0, length: 12, type: 'bot_command' }],
       },
     },
   }
   var keyboard = {
     inline_keyboard: [
-      [
-        { text: 'Yes', url: 'http://www.cigam.ru/' },
-        { text: 'No', url: 'https://cigam.ru/' },
-      ],
-      [
-        { text: 'Yes', url: 'http://www.cigam.ru/' },
-        { text: 'MayBe', url: 'https://cigam.ru/' },
-        { text: 'No', url: 'https://cigam.ru/' },
-      ],
+      // [
+      //   { text: 'Yes', url: 'http://www.cigam.ru/' },
+      //   { text: 'No', url: 'https://cigam.ru/' },
+      // ],
+      // [
+      //   { text: 'Yes', url: 'http://www.cigam.ru/' },
+      //   { text: 'MayBe', url: 'https://cigam.ru/' },
+      //   { text: 'No', url: 'https://cigam.ru/' },
+      // ],
       [
         {
-          text: 'callback_data',
-          callback_data: JSON.stringify({ id: '123', dataForIt: 'date' }),
+          text: 'Создать команду',
+          callback_data: '/create_team',
+        },
+        {
+          text: 'Редактировать команду',
+          callback_data: '/edit_team',
+        },
+        {
+          text: 'Присоединиться к команде',
+          callback_data: '/join_team',
         },
       ],
     ],
   }
-  var commands = { '/new_command': 'Создание команды' }
   if (method === 'POST') {
     try {
       console.log(body)
@@ -118,23 +127,21 @@ export default async function handler(req, res) {
           'callback_query :>> ',
           JSON.parse(body?.callback_query.data)
         )
-        // await postData(
-        //   `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
-        //   {
-        //     chat_id: '261102161',
-        //     // text: JSON.stringify({ body, headers: req.headers.origin }),
-        //     text: `Ваш текст: ${message?.text ?? ''}.\nКоманда: ${
-        //       message?.text ? commands[message.text] ?? 'неизвестно' : ''
-        //     }`,
-        //     parse_mode: 'html',
-        //     reply_markup: JSON.stringify(keyboard),
-        //   },
-        //   (data) => console.log('data', data),
-        //   (data) => console.log('error', data),
-        //   true,
-        //   null,
-        //   true
-        // )
+        await postData(
+          `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+          {
+            chat_id: '261102161',
+            // text: JSON.stringify({ body, headers: req.headers.origin }),
+            text: callbackHandler(body?.callback_query.data),
+            parse_mode: 'html',
+            reply_markup: JSON.stringify(keyboard),
+          },
+          (data) => console.log('data', data),
+          (data) => console.log('error', data),
+          true,
+          null,
+          true
+        )
       } else if (body?.message) {
         // Пользователь написал текст
         const { update_id, message, callback_query } = body
@@ -147,9 +154,8 @@ export default async function handler(req, res) {
           {
             chat_id: '261102161',
             // text: JSON.stringify({ body, headers: req.headers.origin }),
-            text: `Ваш текст: ${message?.text ?? ''}.\nКоманда: ${
-              message?.text ? commands[message.text] ?? 'неизвестно' : ''
-            }`,
+            // text: `Ваш текст: ${message?.text ?? ''}`,
+            text: messageHandler(message?.text),
             parse_mode: 'html',
             reply_markup: JSON.stringify(keyboard),
             // media: JSON.stringify(
