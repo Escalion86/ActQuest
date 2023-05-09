@@ -109,15 +109,15 @@ export default async function handler(req, res) {
       console.log(body)
       const { update_id, message } = body
       console.log('body :>> ', body)
-      const { message_id, from, chat, date, text, entities } = message
+      // const { message_id, from, chat, date, text, entities } = message
 
       await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
         {
           chat_id: '261102161',
           // text: JSON.stringify({ body, headers: req.headers.origin }),
-          text: `Ваш текст: ${text}.\nКоманда: ${
-            commands[text] ?? 'неизвестно'
+          text: `Ваш текст: ${message?.text ?? ''}.\nКоманда: ${
+            message?.text ? commands[message.text] ?? 'неизвестно' : ''
           }`,
           parse_mode: 'html',
           reply_markup: JSON.stringify(keyboard),
