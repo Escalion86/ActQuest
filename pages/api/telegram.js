@@ -102,6 +102,7 @@ export default async function handler(req, res) {
     try {
       console.log(body)
       const { update_id, message } = body
+      console.log('body :>> ', body)
       const { message_id, from, chat, date, text, entities } = message
 
       await postData(
@@ -109,7 +110,7 @@ export default async function handler(req, res) {
         {
           chat_id: '261102161',
           // text: JSON.stringify({ body, headers: req.headers.origin }),
-          test: `Ваш текст: ${text}.\nКоманда: ${
+          text: `Ваш текст: ${text}.\nКоманда: ${
             commands[text] ?? 'неизвестно'
           }`,
           parse_mode: 'html',
