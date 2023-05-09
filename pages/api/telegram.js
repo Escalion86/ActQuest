@@ -114,7 +114,27 @@ export default async function handler(req, res) {
       console.log(body)
       if (body?.callback_query) {
         // Принимаем команду
-        console.log('callback_query :>> ', JSON.parse(body?.callback_query))
+        console.log(
+          'callback_query :>> ',
+          JSON.parse(body?.callback_query.data)
+        )
+        await postData(
+          `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+          {
+            chat_id: '261102161',
+            // text: JSON.stringify({ body, headers: req.headers.origin }),
+            text: `Ваш текст: ${message?.text ?? ''}.\nКоманда: ${
+              message?.text ? commands[message.text] ?? 'неизвестно' : ''
+            }`,
+            parse_mode: 'html',
+            reply_markup: JSON.stringify(keyboard),
+          },
+          (data) => console.log('data', data),
+          (data) => console.log('error', data),
+          true,
+          null,
+          true
+        )
       } else {
         const { update_id, message, callback_query } = body
         // console.log('body :>> ', body)
