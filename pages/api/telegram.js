@@ -95,10 +95,6 @@ export default async function handler(req, res) {
         { text: 'www.cigam.ru', url: 'http://www.cigam.ru/' },
         { text: 'https://cigam.ru', url: 'https://cigam.ru/' },
       ],
-      [
-        { text: 'Yes', url: 'http://www.cigam.ru/' },
-        { text: 'No', url: 'https://cigam.ru/' },
-      ],
     ],
   }
   var commands = { '/new_command': 'Создание команды' }
@@ -107,7 +103,6 @@ export default async function handler(req, res) {
       console.log(body)
       const { update_id, message } = body
       const { message_id, from, chat, date, text, entities } = message
-      var command = text
 
       await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
