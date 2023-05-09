@@ -109,9 +109,7 @@ export default async function handler(req, res) {
         {
           chat_id: '261102161',
           // text: JSON.stringify({ body, headers: req.headers.origin }),
-          test: `Ваш текст: ${text}.\nКоманда: ${
-            commands[text] ?? 'неизвестно'
-          }`,
+          test: `Ваш текст: ${text}`,
           parse_mode: 'html',
           reply_markup: JSON.stringify(keyboard),
           // media: JSON.stringify(
