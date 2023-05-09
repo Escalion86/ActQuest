@@ -123,10 +123,10 @@ export default async function handler(req, res) {
       console.log(body)
       if (body?.callback_query) {
         // Принимаем команду
-        console.log(
-          'callback_query :>> ',
-          JSON.parse(body?.callback_query.data)
-        )
+        // console.log(
+        //   'callback_query :>> ',
+        //   JSON.parse(body?.callback_query.data)
+        // )
         await postData(
           `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
           {
