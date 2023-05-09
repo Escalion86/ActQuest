@@ -62,6 +62,14 @@ export default async function handler(req, res) {
       return res?.status(400).json({ success: false, error })
     }
   }
+  var keyboard = {
+    inline_keyboard: [
+      [
+        { text: 'Yes', url: 'http://www.google.com/' },
+        { text: 'No', url: 'http://www.google.com/' },
+      ],
+    ],
+  }
   if (method === 'POST') {
     try {
       console.log(body)
@@ -70,8 +78,9 @@ export default async function handler(req, res) {
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
         {
           chat_id: '261102161',
-          text: JSON.stringify(body),
+          text: JSON.stringify({ body, headers: req.headers.origin }),
           parse_mode: 'html',
+          reply_markup: JSON.stringify(keyboard),
           // media: JSON.stringify(
           //   data.images.map((photo) => {
           //     return {
@@ -82,19 +91,19 @@ export default async function handler(req, res) {
           //     }
           //   })
           // ),
-          reply_markup:
-            req.headers.origin.substr(0, 5) === 'https'
-              ? JSON.stringify({
-                  inline_keyboard: [
-                    [
-                      {
-                        text: 'Открыть сайт',
-                        url: 'https://actquest.ru',
-                      },
-                    ],
-                  ],
-                })
-              : undefined,
+          // reply_markup:
+          //   req.headers.origin.substr(0, 5) === 'https'
+          //     ? JSON.stringify({
+          //         inline_keyboard: [
+          //           [
+          //             {
+          //               text: 'Открыть сайт',
+          //               url: 'https://actquest.ru',
+          //             },
+          //           ],
+          //         ],
+          //       })
+          //     : undefined,
           // reply_markup:
           //   req.headers?.origin?.substr(0, 5) === 'https'
           //     ? JSON.stringify({
