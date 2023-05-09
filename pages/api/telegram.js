@@ -95,6 +95,11 @@ export default async function handler(req, res) {
         { text: 'Yes', url: 'http://www.cigam.ru/' },
         { text: 'No', url: 'https://cigam.ru/' },
       ],
+      [
+        { text: 'Yes', url: 'http://www.cigam.ru/' },
+        { text: 'MayBe', url: 'https://cigam.ru/' },
+        { text: 'No', url: 'https://cigam.ru/' },
+      ],
     ],
   }
   var commands = { '/new_command': 'Создание команды' }
