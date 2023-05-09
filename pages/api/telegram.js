@@ -92,8 +92,8 @@ export default async function handler(req, res) {
   var keyboard = {
     inline_keyboard: [
       [
-        { text: 'ДА', url: 'http://www.cigam.ru/' },
-        { text: 'НЕТ', url: 'https://cigam.ru/' },
+        { text: 'Yes', url: 'http://www.cigam.ru/' },
+        { text: 'No', url: 'https://cigam.ru/' },
       ],
     ],
   }
@@ -109,7 +109,9 @@ export default async function handler(req, res) {
         {
           chat_id: '261102161',
           // text: JSON.stringify({ body, headers: req.headers.origin }),
-          test: `Ваш текст: ${text}`,
+          test: `Ваш текст: ${text}.\nКоманда: ${
+            commands[text] ?? 'неизвестно'
+          }`,
           parse_mode: 'html',
           reply_markup: JSON.stringify(keyboard),
           // media: JSON.stringify(
