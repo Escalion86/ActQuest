@@ -100,88 +100,99 @@ export default async function handler(req, res) {
       //   { text: 'MayBe', url: 'https://cigam.ru/' },
       //   { text: 'No', url: 'https://cigam.ru/' },
       // ],
-      [{ text: 'Stop', callback_data: 'string' }],
+      [
+        {
+          text: 'callback_data',
+          callback_data: JSON.stringify({ id: '123', dataForIt: 'date' }),
+        },
+      ],
     ],
   }
   var commands = { '/new_command': 'Создание команды' }
   if (method === 'POST') {
     try {
       console.log(body)
-      const { update_id, message } = body
-      console.log('body :>> ', body)
-      // const { message_id, from, chat, date, text, entities } = message
+      if (body?.callback_query) {
+        // Принимаем команду
+        console.log('callback_query :>> ', JSON.parse(body?.callback_query))
+      } else {
+        const { update_id, message, callback_query } = body
+        // console.log('body :>> ', body)
+        // const { message_id, from, chat, date, text, entities } = message
+        // const {id, from, message, chat_instanse, data}
 
-      await postData(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
-        {
-          chat_id: '261102161',
-          // text: JSON.stringify({ body, headers: req.headers.origin }),
-          text: `Ваш текст: ${message?.text ?? ''}.\nКоманда: ${
-            message?.text ? commands[message.text] ?? 'неизвестно' : ''
-          }`,
-          parse_mode: 'html',
-          reply_markup: JSON.stringify(keyboard),
-          // media: JSON.stringify(
-          //   data.images.map((photo) => {
-          //     return {
-          //       type: 'photo',
-          //       media: photo,
-          //       // caption: 'Наденька',
-          //       // "parse_mode": "optional (you can delete this parameter) the parse mode of the caption"
-          //     }
-          //   })
-          // ),
-          // reply_markup:
-          //   req.headers.origin.substr(0, 5) === 'https'
-          //     ? JSON.stringify({
-          //         inline_keyboard: [
-          //           [
-          //             {
-          //               text: 'Открыть сайт',
-          //               url: 'https://actquest.ru',
-          //             },
-          //           ],
-          //         ],
-          //       })
-          //     : undefined,
-          // reply_markup:
-          //   req.headers?.origin?.substr(0, 5) === 'https'
-          //     ? JSON.stringify({
-          //         inline_keyboard: [
-          //           [
-          //             {
-          //               text: 'Тестовая кнопка1',
-          //               url: 'https://cigam.ru',
-          //             },
-          //             {
-          //               text: 'Тестовая кнопка2',
-          //               url: 'https://cigam.ru',
-          //             },
-          //           ],
-          //           [
-          //             {
-          //               text: 'Тестовая кнопка3',
-          //               url: 'https://cigam.ru',
-          //             },
-          //             {
-          //               text: 'Тестовая кнопка4',
-          //               url: 'https://cigam.ru',
-          //             },
-          //             {
-          //               text: 'Тестовая кнопка5',
-          //               url: 'https://cigam.ru',
-          //             },
-          //           ],
-          //         ],
-          //       })
-          //     : undefined,
-        },
-        (data) => console.log('data', data),
-        (data) => console.log('error', data),
-        true,
-        null,
-        true
-      )
+        await postData(
+          `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+          {
+            chat_id: '261102161',
+            // text: JSON.stringify({ body, headers: req.headers.origin }),
+            text: `Ваш текст: ${message?.text ?? ''}.\nКоманда: ${
+              message?.text ? commands[message.text] ?? 'неизвестно' : ''
+            }`,
+            parse_mode: 'html',
+            reply_markup: JSON.stringify(keyboard),
+            // media: JSON.stringify(
+            //   data.images.map((photo) => {
+            //     return {
+            //       type: 'photo',
+            //       media: photo,
+            //       // caption: 'Наденька',
+            //       // "parse_mode": "optional (you can delete this parameter) the parse mode of the caption"
+            //     }
+            //   })
+            // ),
+            // reply_markup:
+            //   req.headers.origin.substr(0, 5) === 'https'
+            //     ? JSON.stringify({
+            //         inline_keyboard: [
+            //           [
+            //             {
+            //               text: 'Открыть сайт',
+            //               url: 'https://actquest.ru',
+            //             },
+            //           ],
+            //         ],
+            //       })
+            //     : undefined,
+            // reply_markup:
+            //   req.headers?.origin?.substr(0, 5) === 'https'
+            //     ? JSON.stringify({
+            //         inline_keyboard: [
+            //           [
+            //             {
+            //               text: 'Тестовая кнопка1',
+            //               url: 'https://cigam.ru',
+            //             },
+            //             {
+            //               text: 'Тестовая кнопка2',
+            //               url: 'https://cigam.ru',
+            //             },
+            //           ],
+            //           [
+            //             {
+            //               text: 'Тестовая кнопка3',
+            //               url: 'https://cigam.ru',
+            //             },
+            //             {
+            //               text: 'Тестовая кнопка4',
+            //               url: 'https://cigam.ru',
+            //             },
+            //             {
+            //               text: 'Тестовая кнопка5',
+            //               url: 'https://cigam.ru',
+            //             },
+            //           ],
+            //         ],
+            //       })
+            //     : undefined,
+          },
+          (data) => console.log('data', data),
+          (data) => console.log('error', data),
+          true,
+          null,
+          true
+        )
+      }
       // console.log('telegram body', body)
       // if (message.text === '/activate' || message.text === '/deactivate') {
       //   console.log('message.text', message.text)
