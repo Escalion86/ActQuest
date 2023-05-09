@@ -62,23 +62,61 @@ export default async function handler(req, res) {
       return res?.status(400).json({ success: false, error })
     }
   }
+  const rtest = {
+    body: {
+      update_id: 173172081,
+      message: {
+        message_id: 14,
+        from: {
+          id: 261102161,
+          is_bot: false,
+          first_name: 'Алексей',
+          last_name: 'Белинский Иллюзионист',
+          username: 'Escalion',
+          language_code: 'ru',
+          is_premium: true,
+        },
+        chat: {
+          id: 261102161,
+          first_name: 'Алексей',
+          last_name: 'Белинский Иллюзионист',
+          username: 'Escalion',
+          type: 'private',
+        },
+        date: 1683645745,
+        text: '/new_command',
+        entities: [{ offset: 0, length: 12, type: 'bot_command' }],
+      },
+    },
+  }
   var keyboard = {
     inline_keyboard: [
+      [
+        { text: 'www.cigam.ru', url: 'http://www.cigam.ru/' },
+        { text: 'https://cigam.ru', url: 'https://cigam.ru/' },
+      ],
       [
         { text: 'Yes', url: 'http://www.cigam.ru/' },
         { text: 'No', url: 'https://cigam.ru/' },
       ],
     ],
   }
+  var commands = { '/new_command': 'Создание команды' }
   if (method === 'POST') {
     try {
       console.log(body)
       const { update_id, message } = body
+      const { message_id, from, chat, date, text, entities } = message
+      var command = text
+
       await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
         {
           chat_id: '261102161',
-          text: JSON.stringify({ body, headers: req.headers.origin }),
+          // text: JSON.stringify({ body, headers: req.headers.origin }),
+          test: `Ваш текст: ${text}.\nКоманда: ${
+            commands[text] ?? 'неизвестно'
+          }`,
           parse_mode: 'html',
           reply_markup: JSON.stringify(keyboard),
           // media: JSON.stringify(
