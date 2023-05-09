@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (method === 'GET') {
     try {
       const { update_id, message } = body
-      console.log('body :>> ', body)
+      console.log('query :>> ', query)
       await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
         {
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
   }
   if (method === 'POST') {
     try {
-      // console.log(body)
+      console.log(body)
       const { update_id, message } = body
       await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
