@@ -72,37 +72,60 @@ export default async function handler(req, res) {
           chat_id: '261102161',
           text: JSON.stringify(body),
           parse_mode: 'html',
+          // media: JSON.stringify(
+          //   data.images.map((photo) => {
+          //     return {
+          //       type: 'photo',
+          //       media: photo,
+          //       // caption: 'Наденька',
+          //       // "parse_mode": "optional (you can delete this parameter) the parse mode of the caption"
+          //     }
+          //   })
+          // ),
           reply_markup:
-            req.headers?.origin?.substr(0, 5) === 'https'
+            req.headers.origin.substr(0, 5) === 'https'
               ? JSON.stringify({
                   inline_keyboard: [
                     [
                       {
-                        text: 'Тестовая кнопка1',
-                        url: 'https://cigam.ru',
-                      },
-                      {
-                        text: 'Тестовая кнопка2',
-                        url: 'https://cigam.ru',
-                      },
-                    ],
-                    [
-                      {
-                        text: 'Тестовая кнопка3',
-                        url: 'https://cigam.ru',
-                      },
-                      {
-                        text: 'Тестовая кнопка4',
-                        url: 'https://cigam.ru',
-                      },
-                      {
-                        text: 'Тестовая кнопка5',
-                        url: 'https://cigam.ru',
+                        text: 'Открыть сайт',
+                        url: 'https://actquest.ru',
                       },
                     ],
                   ],
                 })
               : undefined,
+          // reply_markup:
+          //   req.headers?.origin?.substr(0, 5) === 'https'
+          //     ? JSON.stringify({
+          //         inline_keyboard: [
+          //           [
+          //             {
+          //               text: 'Тестовая кнопка1',
+          //               url: 'https://cigam.ru',
+          //             },
+          //             {
+          //               text: 'Тестовая кнопка2',
+          //               url: 'https://cigam.ru',
+          //             },
+          //           ],
+          //           [
+          //             {
+          //               text: 'Тестовая кнопка3',
+          //               url: 'https://cigam.ru',
+          //             },
+          //             {
+          //               text: 'Тестовая кнопка4',
+          //               url: 'https://cigam.ru',
+          //             },
+          //             {
+          //               text: 'Тестовая кнопка5',
+          //               url: 'https://cigam.ru',
+          //             },
+          //           ],
+          //         ],
+          //       })
+          //     : undefined,
         },
         (data) => console.log('data', data),
         (data) => console.log('error', data),
