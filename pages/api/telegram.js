@@ -95,11 +95,11 @@ export default async function handler(req, res) {
         { text: 'Yes', url: 'http://www.cigam.ru/' },
         { text: 'No', url: 'https://cigam.ru/' },
       ],
-      // [
-      //   { text: 'Yes', url: 'http://www.cigam.ru/' },
-      //   { text: 'MayBe', url: 'https://cigam.ru/' },
-      //   { text: 'No', url: 'https://cigam.ru/' },
-      // ],
+      [
+        { text: 'Yes', url: 'http://www.cigam.ru/' },
+        { text: 'MayBe', url: 'https://cigam.ru/' },
+        { text: 'No', url: 'https://cigam.ru/' },
+      ],
       [
         {
           text: 'callback_data',
@@ -118,24 +118,25 @@ export default async function handler(req, res) {
           'callback_query :>> ',
           JSON.parse(body?.callback_query.data)
         )
-        await postData(
-          `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
-          {
-            chat_id: '261102161',
-            // text: JSON.stringify({ body, headers: req.headers.origin }),
-            text: `Ваш текст: ${message?.text ?? ''}.\nКоманда: ${
-              message?.text ? commands[message.text] ?? 'неизвестно' : ''
-            }`,
-            parse_mode: 'html',
-            reply_markup: JSON.stringify(keyboard),
-          },
-          (data) => console.log('data', data),
-          (data) => console.log('error', data),
-          true,
-          null,
-          true
-        )
-      } else {
+        // await postData(
+        //   `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+        //   {
+        //     chat_id: '261102161',
+        //     // text: JSON.stringify({ body, headers: req.headers.origin }),
+        //     text: `Ваш текст: ${message?.text ?? ''}.\nКоманда: ${
+        //       message?.text ? commands[message.text] ?? 'неизвестно' : ''
+        //     }`,
+        //     parse_mode: 'html',
+        //     reply_markup: JSON.stringify(keyboard),
+        //   },
+        //   (data) => console.log('data', data),
+        //   (data) => console.log('error', data),
+        //   true,
+        //   null,
+        //   true
+        // )
+      } else if (body?.message) {
+        // Пользователь написал текст
         const { update_id, message, callback_query } = body
         // console.log('body :>> ', body)
         // const { message_id, from, chat, date, text, entities } = message
