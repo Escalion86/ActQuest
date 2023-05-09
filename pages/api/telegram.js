@@ -65,8 +65,8 @@ export default async function handler(req, res) {
   var keyboard = {
     inline_keyboard: [
       [
-        { text: 'Yes', url: 'http://www.google.com/' },
-        { text: 'No', url: 'http://www.google.com/' },
+        { text: 'Yes', url: 'http://www.cigam.ru/' },
+        { text: 'No', url: 'https://cigam.ru/' },
       ],
     ],
   }
