@@ -103,18 +103,24 @@ export default async function handler(req, res) {
       //   { text: 'No', url: 'https://cigam.ru/' },
       // ],
       [
-        {
-          text: 'Создать команду',
-          callback_data: '/create_team',
-        },
-        {
-          text: 'Редактировать команду',
-          callback_data: '/edit_team',
-        },
-        {
-          text: 'Присоединиться к команде',
-          callback_data: '/join_team',
-        },
+        [
+          {
+            text: 'Создать команду',
+            callback_data: '/create_team',
+          },
+        ],
+        [
+          {
+            text: 'Редактировать команду',
+            callback_data: '/edit_team',
+          },
+        ],
+        [
+          {
+            text: 'Присоединиться к команде',
+            callback_data: '/join_team',
+          },
+        ],
       ],
     ],
   }
