@@ -92,8 +92,8 @@ export default async function handler(req, res) {
   var keyboard = {
     inline_keyboard: [
       [
-        { text: 'www.cigam.ru', url: 'http://www.cigam.ru/' },
-        { text: 'https://cigam.ru', url: 'https://cigam.ru/' },
+        { text: 'ДА', url: 'http://www.cigam.ru/' },
+        { text: 'НЕТ', url: 'https://cigam.ru/' },
       ],
     ],
   }
