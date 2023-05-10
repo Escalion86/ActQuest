@@ -31,17 +31,17 @@ const callbackHandler = (body, res) => {
   const { id, from, message, data, chat_instance } = callback_query
   // console.log('callback body :>> ', body)
 
-  switch (data) {
-    case '/create_team':
-      // return 'Создание команды'
-      return createTeam(from.id, data, res)
-    case '/edit_team':
-      return 'Редактирование команды'
-    case '/join_team':
-      return 'Присоединиться к команде'
-    default:
-      return 'Неизвестная команда'
-  }
+  // switch (data) {
+  //   case '/create_team':
+  //     // return 'Создание команды'
+  return createTeam(from.id, data, res)
+  //   case '/edit_team':
+  //     return 'Редактирование команды'
+  //   case '/join_team':
+  //     return 'Присоединиться к команде'
+  //   default:
+  //     return 'Неизвестная команда'
+  // }
 }
 
 export default callbackHandler
