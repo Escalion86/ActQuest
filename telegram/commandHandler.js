@@ -275,28 +275,31 @@ const commandHandler = async (userTelegramId, message, res) => {
         // Если команда выбрана
         // if (secondaryCommand === 'set_name') {
         const team = await Teams.findById(secondaryCommand)
-        return await script({
-          userTelegramId,
-          text: `Редактирование команды "${team.name}"`,
-          command: {
-            command: '/edit_team',
-            props: { teamId: message },
-          },
-          keyboard: inlineKeyboard(
-            [
-              {
-                text: `Изменить имя`,
-                callback_data: `/edit_team/set_name/${secondaryCommand}`,
-              },
-            ],
-            [
-              {
-                text: `Изменить описание`,
-                callback_data: `/edit_team/description/${secondaryCommand}`,
-              },
-            ]
-          ),
-        })
+        console.log('team :>> ', team)
+        if (team)
+          return await script({
+            userTelegramId,
+            text: `Редактирование команды "${team.name}"`,
+            command: {
+              command: '/edit_team',
+              props: { teamId: message },
+            },
+            keyboard: inlineKeyboard(
+              [
+                {
+                  text: `Изменить имя`,
+                  callback_data: `/edit_team/set_name/${secondaryCommand}`,
+                },
+              ],
+              [
+                {
+                  text: `Изменить описание`,
+                  callback_data: `/edit_team/description/${secondaryCommand}`,
+                },
+              ]
+            ),
+          })
+        else return
         // }
       }
     }
