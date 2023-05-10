@@ -275,14 +275,14 @@ const commandHandler = async (userTelegramId, message, res) => {
         // Если команда выбрана
         // if (secondaryCommand === 'set_name') {
         const team = await Teams.findById(secondaryCommand)
-        console.log('team :>> ', team)
+        console.log('team.name :>> ', team.name)
         if (team)
           return await script({
             userTelegramId,
             text: `Редактирование команды "${team.name}"`,
             command: {
               command: '/edit_team',
-              props: { teamId: message },
+              props: { teamId: secondaryCommand },
             },
             keyboard: inlineKeyboard(
               [
