@@ -1,3 +1,5 @@
+import { postData } from '@helpers/CRUD'
+
 const sendMessage = async ({ chat_id, text, keyboard }) => {
   return await postData(
     `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
