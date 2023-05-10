@@ -67,40 +67,16 @@ const commandHandler = async (userTelegramId, message, res) => {
 
   // Если была отправлена команда, то ищем ее или возвращаем ошибку
   if (isItCommand) {
+    console.log('message :>> ', message)
     const commandsArray = message.split('/')
     commandsArray.shift()
     const mainCommand = commandsArray[0]
+
     // Если такой команды не зарегистрировано, то возвращаем ошибку
     if (!allCommands.includes(mainCommand))
       return await sendError(userTelegramId)
-    // Если команда существует, то обрабатываем
 
-    // Ищем была ли до этого сделана команда
-    // const lastCommand = await LastCommands.find({ userTelegramId })
-    // const isLastCommandExists = lastCommand && lastCommand.length !== 0
-    // if (mainCommand === 'create_team') {
-    //   if (isLastCommandExists) {
-    //     const lastCommandsArray = lastCommand[0].command.split('/')
-    //     lastCommandsArray.shift()
-    //     const mainLastCommand = lastCommandsArray[0]
-    //     // Проверяем, что предыдущая команда верна, если нет, то перезапускаем ее
-    //     if (mainLastCommand === 'create_team') {
-    //       const secondaryLastCommand = lastCommandsArray[1]
-    //       if (secondaryLastCommand === 'set_name')
-    //         return await script({
-    //           userTelegramId,
-    //           command: '/create_team/set_description',
-    //           text: `Задано название команды: ${command}.\nВведите описание команды (не обязательно)`,
-    //           keyboard: keyboardCreateTeam,
-    //         })
-    //       if (secondaryLastCommand === 'set_description')
-    //         return await script({
-    //           userTelegramId,
-    //           text: `Задано описание команды: ${command}. Создание команды завершено`,
-    //         })
-    //     }
-    //   }
-    // Если ранее команд небыло, значит мы начали новую команду
+    // Если команда существует, то обрабатываем
     if (mainCommand === 'create_team')
       return await script({
         userTelegramId,
@@ -109,6 +85,7 @@ const commandHandler = async (userTelegramId, message, res) => {
         keyboard: keyboardCreateTeamSetName,
       })
 
+    // Если команда без обработчика, то пишем ошибку
     return await script({
       userTelegramId,
       text: 'Неизвестная команда',
