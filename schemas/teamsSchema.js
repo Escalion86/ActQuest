@@ -7,6 +7,10 @@ const teamsSchema = {
     type: String,
     required: true,
   },
+  name_lowered: {
+    type: String,
+    required: true,
+  },
   description: {
     type: String,
     default: '',
