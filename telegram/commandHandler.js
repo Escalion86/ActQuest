@@ -216,15 +216,13 @@ const commandHandler = async (userTelegramId, message, res) => {
         return await teamsMenuScript(userTelegramId)
       }
       const { mainCommand, secondaryCommand, props } = lastCommand
-      console.log('props :>> ', props)
-      console.log(
-        'props?.teamName.toLowerCase() :>> ',
-        props?.teamName.toLowerCase()
-      )
+
       const team = await Teams.create({
+        capitanId: userTelegramId,
         name: props?.teamName,
         name_lowered: props?.teamName.toLowerCase(),
       })
+
       await script({
         userTelegramId,
         text: `'Создание команды ${props?.teamName} завершено`,
@@ -232,44 +230,33 @@ const commandHandler = async (userTelegramId, message, res) => {
       return await teamsMenuScript(userTelegramId)
     }
     if (message === '/edit_team') {
-      console.log('!')
       const teamsOfUser = await Teams.find({ capitanId: userTelegramId })
-      console.log(
-        'teamsOfUser mapped:>> ',
-        teamsOfUser.map((team) => [
-          {
-            text: `"${team.name}"`,
-            callback_data: `/edit_team/${team._id}`,
-          },
-        ])
-      )
-      // if (!teamsOfUser || teamsOfUser.length === 0) {
-      //   return await script({
-      //     userTelegramId,
-      //     text: 'У вас нет команд, которые вы можете администрировать',
-      //     keyboard: inlineKeyboard([
-      //       [
-      //         {
-      //           text: '<= Вернуться в Меню команд',
-      //           callback_data: '/menu_teams',
-      //         },
-      //       ],
-      //     ]),
-      //   })
-      // }
+      if (!teamsOfUser || teamsOfUser.length === 0) {
+        return await script({
+          userTelegramId,
+          text: 'У вас нет команд, которые вы можете администрировать',
+          keyboard: inlineKeyboard([
+            [
+              {
+                text: '<= Вернуться в Меню команд',
+                callback_data: '/menu_teams',
+              },
+            ],
+          ]),
+        })
+      }
 
-      return
-      await script({
+      return await script({
         userTelegramId,
         text: 'Выберите команду которую хотите изменить',
-        keyboard: inlineKeyboard([
+        keyboard: inlineKeyboard(
           teamsOfUser.map((team) => [
             {
               text: `"${team.name}"`,
               callback_data: `/edit_team/${team._id}`,
             },
-          ]),
-        ]),
+          ])
+        ),
       })
     }
     if (message === '/edit_team/no_description') {
