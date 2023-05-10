@@ -216,6 +216,11 @@ const commandHandler = async (userTelegramId, message, res) => {
         return await teamsMenuScript(userTelegramId)
       }
       const { mainCommand, secondaryCommand, props } = lastCommand
+      console.log('props :>> ', props)
+      console.log(
+        'props?.teamName.toLowerCase() :>> ',
+        props?.teamName.toLowerCase()
+      )
       const team = await Teams.create({
         name: props?.teamName,
         name_lowered: props?.teamName.toLowerCase(),
@@ -229,7 +234,15 @@ const commandHandler = async (userTelegramId, message, res) => {
     if (message === '/edit_team') {
       console.log('!')
       const teamsOfUser = await Teams.find({ capitanId: userTelegramId })
-      console.log('teamsOfUser :>> ', teamsOfUser)
+      console.log(
+        'teamsOfUser mapped:>> ',
+        teamsOfUser.map((team) => [
+          {
+            text: `"${team.name}"`,
+            callback_data: `/edit_team/${team._id}`,
+          },
+        ])
+      )
       // if (!teamsOfUser || teamsOfUser.length === 0) {
       //   return await script({
       //     userTelegramId,
