@@ -16,6 +16,8 @@ var keyboard = {
 const createTeam = async (userTelegramId, command, res) => {
   await dbConnect()
   const lastCommand = await LastCommands.find({ userTelegramId })
+  console.log('userTelegramId :>> ', userTelegramId)
+  console.log('lastCommand :>> ', lastCommand)
   // Если небыло никаких команд с пользователем
   if (!lastCommand) {
     await LastCommands.create({
