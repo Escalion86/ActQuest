@@ -18,7 +18,8 @@ const createTeam = async (userTelegramId, command, res) => {
   const lastCommand = await LastCommands.find({ userTelegramId })
   console.log('userTelegramId :>> ', userTelegramId)
   console.log('lastCommand :>> ', lastCommand)
-  if (!lastCommand || lastCommand.length === 0) {
+  if (lastCommand.length === 0) {
+    console.log('==> /create_team/set_name')
     await LastCommands.create({
       userTelegramId,
       command: '/create_team/set_name',
