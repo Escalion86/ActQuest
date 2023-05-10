@@ -67,7 +67,6 @@ const commandHandler = async (userTelegramId, message, res) => {
 
   // Если была отправлена команда, то ищем ее или возвращаем ошибку
   if (isItCommand) {
-    console.log('message :>> ', message)
     const commandsArray = message.split('/')
     commandsArray.shift()
     const mainCommand = commandsArray[0]
@@ -80,7 +79,7 @@ const commandHandler = async (userTelegramId, message, res) => {
     if (mainCommand === 'create_team')
       return await script({
         userTelegramId,
-        command: '/create_team/set_name',
+        command: { command: '/create_team/set_name' },
         text: 'Введите название команды',
         keyboard: keyboardCreateTeamSetName,
       })
