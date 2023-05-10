@@ -191,13 +191,13 @@ const commandHandler = async (userTelegramId, message, res) => {
       })
     console.log(
       'lastCommand[0].command.command :>> ',
-      lastCommand[0].command.command
+      lastCommand[0].command.get('command')
     )
-    const lastCommandsArray = lastCommand[0].command.command.split('/')
+    const lastCommandsArray = lastCommand[0].command.get('command').split('/')
     lastCommandsArray.shift()
     const mainLastCommand = lastCommandsArray[0]
     console.log('mainLastCommand :>> ', mainLastCommand)
-    const props = lastCommand[0].command.props
+    const props = lastCommand[0].command.get(props)
     console.log('props :>> ', props)
 
     if (mainLastCommand === 'create_team') {
