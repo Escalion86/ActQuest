@@ -240,7 +240,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       })
       return await teamsMenuScript(userTelegramId)
     }
-    if (mainCommand === 'edit_team' && !secondaryCommand) {
+    if (mainCommand === 'edit_team') {
       if (!secondaryCommand) {
         // Если команда не выбрана
         const teamsOfUser = await Teams.find({ capitanId: userTelegramId })
