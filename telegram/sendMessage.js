@@ -7,7 +7,7 @@ const sendMessage = async ({ chat_id, text, keyboard }) => {
       chat_id,
       text,
       parse_mode: 'html',
-      reply_markup: JSON.stringify(keyboard),
+      reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
     },
     null,
     null,

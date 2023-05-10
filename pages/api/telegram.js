@@ -65,6 +65,32 @@ export default async function handler(req, res) {
       return res?.status(400).json({ success: false, error })
     }
   }
+
+  const test_callback = {
+    update_id: 173172137,
+    callback_query: {
+      id: '1121425242543370968',
+      from: {
+        id: 261102161,
+        is_bot: false,
+        first_name: 'Алексей',
+        last_name: 'Белинский Иллюзионист',
+        username: 'Escalion',
+        language_code: 'ru',
+        is_premium: true,
+      },
+      message: {
+        message_id: 91,
+        from: '[Object]',
+        chat: ' [Object]',
+        date: 1683689196,
+        text: 'Неизвестная команда',
+        reply_markup: '[Object]',
+      },
+      chat_instance: '3955131192076482535',
+      data: '/create_team',
+    },
+  }
   const rtest = {
     body: {
       update_id: 173172081,
@@ -133,7 +159,7 @@ export default async function handler(req, res) {
         await sendMessage({
           chat_id: '261102161',
           // text: JSON.stringify({ body, headers: req.headers.origin }),
-          text: callbackHandler(body),
+          text: callbackHandler(body, res),
           keyboard,
         })
       } else if (body?.message) {
@@ -144,7 +170,7 @@ export default async function handler(req, res) {
         await sendMessage({
           chat_id: '261102161',
           // text: JSON.stringify({ body, headers: req.headers.origin }),
-          text: messageHandler(body),
+          text: messageHandler(body, res),
           keyboard,
         })
       }

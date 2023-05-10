@@ -1,5 +1,5 @@
 const lastCommandsSchema = {
-  id: {
+  userTelegramId: {
     type: Number,
     default: null,
     require: true,
