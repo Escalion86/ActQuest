@@ -18,21 +18,38 @@ const createTeam = async (userTelegramId, command, res) => {
   const lastCommand = await LastCommands.find({ userTelegramId })
   console.log('userTelegramId :>> ', userTelegramId)
   console.log('lastCommand :>> ', lastCommand)
-  // Если небыло никаких команд с пользователем
-  if (!lastCommand) {
+  if (!lastCommand || lastCommand.length === 0) {
     await LastCommands.create({
       userTelegramId,
       command: '/create_team/set_name',
     })
-    await sendMessage({
-      chat_id: '261102161',
+    return await sendMessage({
+      chat_id: userTelegramId,
       // text: JSON.stringify({ body, headers: req.headers.origin }),
       text: 'Введите название команды',
       keyboard,
     })
     // return res?.status(200).json({ success: true, data })
   } else {
-    console.log('command :>> ', command.split('/'))
+    // Если небыло никаких команд с пользователем
+    const commandsArray = lastCommand.split('/').shift()
+    if (commandsArray[0] !== 'create_team') {
+      return await sendMessage({
+        chat_id: userTelegramId,
+        // text: JSON.stringify({ body, headers: req.headers.origin }),
+        text: 'Ошибка команды',
+      })
+    }
+
+    if (commandsArray[1] === 'set_name') {
+      return await sendMessage({
+        chat_id: userTelegramId,
+        // text: JSON.stringify({ body, headers: req.headers.origin }),
+        text: `Задано название команды: ${command}.\nВведите описание команды (не обязательно)`,
+      })
+    }
+
+    console.log('command :>> ', command.split('/').shift())
     // return res?.status(200).json({ success: true, data: command })
   }
 }
