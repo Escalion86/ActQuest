@@ -175,40 +175,46 @@ const allCommands = [
 const commandHandler = async (userTelegramId, message, res) => {
   await dbConnect()
 
-  const isItCommand = typeof message === 'object' || message[0] === '/'
+  const isItCommand = message[0] === '/'
 
   // Если была отправлена команда, то ищем ее или возвращаем ошибку
   if (isItCommand) {
-    const cmd = typeof message === 'object' ? message.command : message
-    const cmdProps = typeof message === 'object' ? message.props : {}
-    // const commandsArray = message.split('/')
-    // commandsArray.shift()
-    // const mainCommand = commandsArray[0]
+    // const cmd = typeof message === 'object' ? message.command : message
+    // const cmdProps = typeof message === 'object' ? message.props : {}
+    const commandsArray = message.split('/')
+    commandsArray.shift()
+    const mainCommand = commandsArray[0]
+    const secondaryCommand = commandsArray[1]
+    const propsCommand = commandsArray[2]
 
     // Если такой команды не зарегистрировано, то возвращаем ошибку
     // if (!allCommands.includes(mainCommand))
     //   return await sendError(userTelegramId)
 
     // Если команда существует, то обрабатываем
-    if (cmd === '/start' || cmd === '/main_menu')
+    if (mainCommand === 'start' || mainCommand === 'main_menu')
       return await mainMenuScript(userTelegramId)
-    if (cmd === '/menu_teams') return await teamsMenuScript(userTelegramId)
-    if (cmd === '/menu_user') return await userMenuScript(userTelegramId)
-    if (cmd === '/create_team')
+    if (mainCommand === 'menu_teams')
+      return await teamsMenuScript(userTelegramId)
+    if (mainCommand === 'menu_user') return await userMenuScript(userTelegramId)
+    if (mainCommand === 'create_team')
       return await script({
         userTelegramId,
         command: { command: '/create_team/set_name' },
         text: 'Введите название команды',
         keyboard: keyboardCreateTeamSetName,
       })
-    if (cmd === '/create_team/exit') {
+    if (mainCommand === 'create_team' && secondaryCommand === 'exit') {
       await script({
         userTelegramId,
         text: `Создание команды отменено`,
       })
       return await mainMenuScript(userTelegramId)
     }
-    if (cmd === '/create_team/no_description') {
+    if (
+      mainCommand === 'create_team' &&
+      secondaryCommand === 'no_description'
+    ) {
       const lastCommand = await getLastCommand(userTelegramId)
       if (!lastCommand) {
         await script({
@@ -217,7 +223,7 @@ const commandHandler = async (userTelegramId, message, res) => {
         })
         return await teamsMenuScript(userTelegramId)
       }
-      const { mainCommand, secondaryCommand, props } = lastCommand
+      const { props } = lastCommand
 
       const team = await Teams.create({
         capitanId: userTelegramId,
@@ -231,8 +237,9 @@ const commandHandler = async (userTelegramId, message, res) => {
       })
       return await teamsMenuScript(userTelegramId)
     }
-    if (cmd === '/edit_team') {
-      if (!cmdProps.teamId) {
+    if (mainCommand === 'edit_team') {
+      if (!secondaryCommand) {
+        // Если команда не выбрана
         const teamsOfUser = await Teams.find({ capitanId: userTelegramId })
         if (!teamsOfUser || teamsOfUser.length === 0) {
           return await script({
@@ -256,45 +263,41 @@ const commandHandler = async (userTelegramId, message, res) => {
             teamsOfUser.map((team) => [
               {
                 text: `"${team.name}"`,
-                callback_data: {
-                  command: '/edit_team',
-                  props: { teamId: team._id },
-                },
+                callback_data: `/edit_team/${team._id}`,
               },
             ])
           ),
         })
       } else {
         // Если команда выбрана
-        const team = await Teams.findById(cmdProps.teamId)
-
+        // if (secondaryCommand === 'set_name') {
+        const team = await Teams.findById(secondaryCommand)
         return await script({
           userTelegramId,
           text: `Редактирование команды "${team.name}"`,
+          command: {
+            command: '/edit_team',
+            props: { teamId: message },
+          },
           keyboard: inlineKeyboard(
             [
               {
                 text: `Изменить имя`,
-                callback_data: {
-                  command: '/edit_team/set_name',
-                  props: { teamId: cmdProps.teamId },
-                },
+                callback_data: `/edit_team/set_name/${secondaryCommand}`,
               },
             ],
             [
               {
                 text: `Изменить описание`,
-                callback_data: {
-                  command: '/edit_team/description',
-                  props: { teamId: cmdProps.teamId },
-                },
+                callback_data: `/edit_team/description/${secondaryCommand}`,
               },
             ]
           ),
         })
+        // }
       }
     }
-    if (cmd === '/edit_team/no_description') {
+    if (mainCommand === 'edit_team' && secondaryCommand === 'no_description') {
       const lastCommand = await getLastCommand(userTelegramId)
       if (!lastCommand) {
         await script({
