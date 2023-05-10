@@ -29,16 +29,33 @@ const sendError = async (userTelegramId) =>
     text: 'Ошибка команды',
   })
 
-var keyboardCreateTeam = {
-  inline_keyboard: [
-    [
-      {
-        text: 'Отмена создания команды',
-        callback_data: '/create_team/exit',
-      },
-    ],
+const inlineKeyboard = (inline_keyboard) => ({
+  inline_keyboard,
+})
+
+var keyboardCreateTeamSetName = inlineKeyboard([
+  [
+    {
+      text: 'Отмена создания команды',
+      callback_data: '/create_team/exit',
+    },
   ],
-}
+])
+
+var keyboardCreateTeamSetDescription = inlineKeyboard([
+  [
+    {
+      text: 'Без описания',
+      callback_data: '/create_team/no_description',
+    },
+  ],
+  [
+    {
+      text: 'Отмена создания команды',
+      callback_data: '/create_team/exit',
+    },
+  ],
+])
 
 const allCommands = ['create_team', 'edit_team', 'join_team']
 
@@ -88,7 +105,7 @@ const commandHandler = async (userTelegramId, command, res) => {
         userTelegramId,
         command: '/create_team/set_name',
         text: 'Введите название команды',
-        keyboard: keyboardCreateTeam,
+        keyboard: keyboardCreateTeamSetName,
       })
 
     return await script({
@@ -120,7 +137,12 @@ const commandHandler = async (userTelegramId, command, res) => {
           userTelegramId,
           command: '/create_team/set_description',
           text: `Задано название команды: ${command}.\nВведите описание команды (не обязательно)`,
-          keyboard: keyboardCreateTeam,
+          keyboard: keyboardCreateTeamSetDescription,
+        })
+      if (secondaryLastCommand === 'no_description')
+        return await script({
+          userTelegramId,
+          text: `Создание команды завершено`,
         })
       if (secondaryLastCommand === 'set_description')
         return await script({
