@@ -24,12 +24,6 @@ const script = async ({ userTelegramId, command, text, keyboard }) => {
   })
 }
 
-const sendError = async (userTelegramId) =>
-  await sendMessage({
-    chat_id: userTelegramId,
-    text: 'Ошибка команды',
-  })
-
 const inlineKeyboard = (inline_keyboard) => ({
   inline_keyboard,
 })
@@ -37,8 +31,17 @@ const inlineKeyboard = (inline_keyboard) => ({
 var keyboardCreateTeamSetName = inlineKeyboard([
   [
     {
-      text: 'Отмена создания команды',
+      text: 'Отмена создания/редактирования команды',
       callback_data: '/create_team/exit',
+    },
+  ],
+])
+
+var keyboardEditTeamSetName = inlineKeyboard([
+  [
+    {
+      text: 'Отмена редактирования команды',
+      callback_data: '/edit_team/exit',
     },
   ],
 ])
@@ -52,8 +55,23 @@ var keyboardCreateTeamSetDescription = inlineKeyboard([
   ],
   [
     {
-      text: 'Отмена создания команды',
+      text: 'Отмена создания/редактирования команды',
       callback_data: '/create_team/exit',
+    },
+  ],
+])
+
+var keyboardEditTeamSetDescription = inlineKeyboard([
+  [
+    {
+      text: 'Без описания',
+      callback_data: '/edit_team/no_description',
+    },
+  ],
+  [
+    {
+      text: 'Отмена редактирования команды',
+      callback_data: '/edit_team/exit',
     },
   ],
 ])
@@ -177,7 +195,7 @@ const commandHandler = async (userTelegramId, message, res) => {
     if (message === '/create_team')
       return await script({
         userTelegramId,
-        command: { command: '/create_team/set_name', newTeam: true },
+        command: { command: '/create_team/set_name' },
         text: 'Введите название команды',
         keyboard: keyboardCreateTeamSetName,
       })
@@ -193,18 +211,65 @@ const commandHandler = async (userTelegramId, message, res) => {
       if (!lastCommand) {
         await script({
           userTelegramId,
-          text: 'Ошибка создания/редактирования команды.',
+          text: 'Ошибка создания команды.',
         })
         return await teamsMenuScript(userTelegramId)
       }
       const { mainCommand, secondaryCommand, props } = lastCommand
-      const newTeam = !!props?.newTeam
       const team = await Teams.create({ name: props?.teamName })
       await script({
         userTelegramId,
-        text: `${newTeam ? 'Создание' : 'Редактирование'} команды ${
-          props?.teamName
-        } завершено`,
+        text: `'Создание команды ${props?.teamName} завершено`,
+      })
+      return await teamsMenuScript(userTelegramId)
+    }
+    if (message === '/edit_team') {
+      const teamsOfUser = await Teams.find({ capitanId: userTelegramId })
+      if (!teamsOfUser || teamsOfUser.length === 0) {
+        return await script({
+          userTelegramId,
+          text: 'У вас нет команд, которые вы можете администрировать',
+          keyboard: inlineKeyboard([
+            [
+              {
+                text: '<= Вернуться в Меню команд',
+                callback_data: '/menu_teams',
+              },
+            ],
+          ]),
+        })
+      }
+
+      return await script({
+        userTelegramId,
+        text: 'Выберите команду которую хотите изменить',
+        keyboard: inlineKeyboard([
+          teamsOfUser.map((team) => [
+            {
+              text: `"${team.name}"`,
+              callback_data: `/edit_team/${team._id}`,
+            },
+          ]),
+        ]),
+      })
+    }
+    if (message === '/edit_team/no_description') {
+      const lastCommand = await getLastCommand(userTelegramId)
+      if (!lastCommand) {
+        await script({
+          userTelegramId,
+          text: 'Ошибка редактирования команды.',
+        })
+        return await teamsMenuScript(userTelegramId)
+      }
+      const { mainCommand, secondaryCommand, props } = lastCommand
+      const team = await Teams.create({
+        capitanId: userTelegramId,
+        name: props?.teamName,
+      })
+      await script({
+        userTelegramId,
+        text: `'Редактирование команды ${props?.teamName} завершено`,
       })
       return await teamsMenuScript(userTelegramId)
     }
@@ -230,15 +295,14 @@ const commandHandler = async (userTelegramId, message, res) => {
     const { mainCommand, secondaryCommand, props } = lastCommand
 
     if (mainCommand === 'create_team') {
-      const newTeam = !!props?.newTeam
       if (secondaryCommand === 'set_name') {
         return await script({
           userTelegramId,
           command: {
             command: '/create_team/set_description',
-            props: { teamName: message, newTeam },
+            props: { teamName: message },
           },
-          text: `Задано название команды: ${message}.\nВведите описание команды (не обязательно)`,
+          text: `Задано название команды: "${message}".\n\nВведите описание команды (не обязательно)`,
           keyboard: keyboardCreateTeamSetDescription,
         })
       }
@@ -246,21 +310,18 @@ const commandHandler = async (userTelegramId, message, res) => {
         if (!props?.teamName) {
           await script({
             userTelegramId,
-            text: `Ошибка ${
-              newTeam ? 'создания' : 'редактирования'
-            } команды. Не задано название команды`,
+            text: `Ошибка создания команды. Не задано название команды`,
           })
           return await teamsMenuScript(userTelegramId)
         }
         const team = await Teams.create({
+          capitanId: userTelegramId,
           name: props?.teamName,
           description: message,
         })
         await script({
           userTelegramId,
-          text: `Задано описание команды: ${message}. ${
-            newTeam ? 'Создание' : 'Редактирование'
-          } команды ${props?.teamName} завершено`,
+          text: `Задано описание команды: "${message}".\n\nСоздание команды "${props?.teamName}" завершено`,
         })
         return await teamsMenuScript(userTelegramId)
       }
