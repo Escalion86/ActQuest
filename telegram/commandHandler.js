@@ -156,7 +156,8 @@ const commandHandler = async (userTelegramId, message, res) => {
       return await sendError(userTelegramId)
 
     // Если команда существует, то обрабатываем
-    if (mainCommand === 'start') return await mainMenuScript(userTelegramId)
+    if (mainCommand === 'start' || mainCommand === 'main_menu')
+      return await mainMenuScript(userTelegramId)
     if (mainCommand === 'menu_teams')
       return await teamsMenuScript(userTelegramId)
     if (mainCommand === 'menu_user') return await userMenuScript(userTelegramId)
