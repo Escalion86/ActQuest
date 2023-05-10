@@ -1,5 +1,9 @@
-const messageHandler = (message) => {
-  switch (message) {
+const messageHandler = (body) => {
+  const { update_id, message } = body
+  const { message_id, from, chat, date, text, entities } = message
+  console.log('message body :>> ', body)
+
+  switch (text) {
     case '/create_team':
       return 'Создание команды'
     case '/edit_team':

@@ -3,6 +3,7 @@ import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 import callbackHandler from 'telegram/callbackHandler'
 import messageHandler from 'telegram/messageHandler'
+import sendMessage from 'telegram/sendMessage'
 
 export default async function handler(req, res) {
   const { query, method, body } = req
@@ -128,102 +129,24 @@ export default async function handler(req, res) {
       console.log(body)
       if (body?.callback_query) {
         // Принимаем команду
-        // console.log(
-        //   'callback_query :>> ',
-        //   JSON.parse(body?.callback_query.data)
-        // )
-        await postData(
-          `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
-          {
-            chat_id: '261102161',
-            // text: JSON.stringify({ body, headers: req.headers.origin }),
-            text: callbackHandler(body?.callback_query.data),
-            parse_mode: 'html',
-            reply_markup: JSON.stringify(keyboard),
-          },
-          (data) => console.log('data', data),
-          (data) => console.log('error', data),
-          true,
-          null,
-          true
-        )
+        console.log('callback_body :>> ', body)
+        await sendMessage({
+          chat_id: '261102161',
+          // text: JSON.stringify({ body, headers: req.headers.origin }),
+          text: callbackHandler(body),
+          keyboard,
+        })
       } else if (body?.message) {
         // Пользователь написал текст
-        const { update_id, message, callback_query } = body
-        // console.log('body :>> ', body)
+        console.log('message_body :>> ', body)
         // const { message_id, from, chat, date, text, entities } = message
         // const {id, from, message, chat_instanse, data}
-
-        await postData(
-          `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
-          {
-            chat_id: '261102161',
-            // text: JSON.stringify({ body, headers: req.headers.origin }),
-            // text: `Ваш текст: ${message?.text ?? ''}`,
-            text: messageHandler(message?.text),
-            parse_mode: 'html',
-            reply_markup: JSON.stringify(keyboard),
-            // media: JSON.stringify(
-            //   data.images.map((photo) => {
-            //     return {
-            //       type: 'photo',
-            //       media: photo,
-            //       // caption: 'Наденька',
-            //       // "parse_mode": "optional (you can delete this parameter) the parse mode of the caption"
-            //     }
-            //   })
-            // ),
-            // reply_markup:
-            //   req.headers.origin.substr(0, 5) === 'https'
-            //     ? JSON.stringify({
-            //         inline_keyboard: [
-            //           [
-            //             {
-            //               text: 'Открыть сайт',
-            //               url: 'https://actquest.ru',
-            //             },
-            //           ],
-            //         ],
-            //       })
-            //     : undefined,
-            // reply_markup:
-            //   req.headers?.origin?.substr(0, 5) === 'https'
-            //     ? JSON.stringify({
-            //         inline_keyboard: [
-            //           [
-            //             {
-            //               text: 'Тестовая кнопка1',
-            //               url: 'https://cigam.ru',
-            //             },
-            //             {
-            //               text: 'Тестовая кнопка2',
-            //               url: 'https://cigam.ru',
-            //             },
-            //           ],
-            //           [
-            //             {
-            //               text: 'Тестовая кнопка3',
-            //               url: 'https://cigam.ru',
-            //             },
-            //             {
-            //               text: 'Тестовая кнопка4',
-            //               url: 'https://cigam.ru',
-            //             },
-            //             {
-            //               text: 'Тестовая кнопка5',
-            //               url: 'https://cigam.ru',
-            //             },
-            //           ],
-            //         ],
-            //       })
-            //     : undefined,
-          },
-          (data) => console.log('data', data),
-          (data) => console.log('error', data),
-          true,
-          null,
-          true
-        )
+        await sendMessage({
+          chat_id: '261102161',
+          // text: JSON.stringify({ body, headers: req.headers.origin }),
+          text: messageHandler(body),
+          keyboard,
+        })
       }
       // console.log('telegram body', body)
       // if (message.text === '/activate' || message.text === '/deactivate') {
