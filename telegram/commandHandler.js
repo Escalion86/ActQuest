@@ -284,7 +284,7 @@ const commandHandler = async (userTelegramId, message, res) => {
               command: '/edit_team',
               props: { teamId: secondaryCommand },
             },
-            keyboard: inlineKeyboard(
+            keyboard: inlineKeyboard([
               [
                 {
                   text: `Изменить имя`,
@@ -296,8 +296,8 @@ const commandHandler = async (userTelegramId, message, res) => {
                   text: `Изменить описание`,
                   callback_data: `/edit_team/description/${secondaryCommand}`,
                 },
-              ]
-            ),
+              ],
+            ]),
           })
         else return
         // }
