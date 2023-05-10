@@ -186,6 +186,8 @@ const commandHandler = async (userTelegramId, message, res) => {
     const mainCommand = commandsArray[0]
     const secondaryCommand = commandsArray[1]
     const propsCommand = commandsArray[2]
+    console.log('mainCommand :>> ', mainCommand)
+    console.log('secondaryCommand :>> ', secondaryCommand)
 
     // Если такой команды не зарегистрировано, то возвращаем ошибку
     // if (!allCommands.includes(mainCommand))
