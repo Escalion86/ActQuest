@@ -49,7 +49,7 @@ const commandHandler = async (userTelegramId, command, res) => {
 
   // Если была отправлена команда, то ищем ее или возвращаем ошибку
   if (isItCommand) {
-    const commandsArray = command[0].split('/')
+    const commandsArray = command.split('/')
     commandsArray.shift()
     const mainCommand = commandsArray[0]
     // Если такой команды не зарегистрировано, то возвращаем ошибку
