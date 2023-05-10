@@ -208,7 +208,6 @@ const commandHandler = async (userTelegramId, message, res) => {
     }
     if (message === '/create_team/no_description') {
       const lastCommand = await getLastCommand(userTelegramId)
-      console.log('lastCommand :>> ', lastCommand)
       if (!lastCommand) {
         await script({
           userTelegramId,
@@ -217,8 +216,10 @@ const commandHandler = async (userTelegramId, message, res) => {
         return await teamsMenuScript(userTelegramId)
       }
       const { mainCommand, secondaryCommand, props } = lastCommand
-      const team = await Teams.create({ name: props?.teamName })
-      console.log('team :>> ', team)
+      const team = await Teams.create({
+        name: props?.teamName,
+        name_lowered: props?.teamName.toLowerCase(),
+      })
       await script({
         userTelegramId,
         text: `'Создание команды ${props?.teamName} завершено`,
@@ -227,6 +228,7 @@ const commandHandler = async (userTelegramId, message, res) => {
     }
     if (message === '/edit_team') {
       const teamsOfUser = await Teams.find({ capitanId: userTelegramId })
+      console.log('teamsOfUser :>> ', teamsOfUser)
       if (!teamsOfUser || teamsOfUser.length === 0) {
         return await script({
           userTelegramId,
@@ -241,8 +243,6 @@ const commandHandler = async (userTelegramId, message, res) => {
           ]),
         })
       }
-
-      console.log('teamsOfUser :>> ', teamsOfUser)
 
       return await script({
         userTelegramId,
