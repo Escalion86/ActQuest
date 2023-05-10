@@ -199,7 +199,7 @@ const commandHandler = async (userTelegramId, message, res) => {
     if (mainCommand === 'menu_teams')
       return await teamsMenuScript(userTelegramId)
     if (mainCommand === 'menu_user') return await userMenuScript(userTelegramId)
-    if (mainCommand === 'create_team')
+    if (mainCommand === 'create_team' && !secondaryCommand)
       return await script({
         userTelegramId,
         command: { command: '/create_team/set_name' },
@@ -217,6 +217,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       mainCommand === 'create_team' &&
       secondaryCommand === 'no_description'
     ) {
+      console.log('!')
       const lastCommand = await getLastCommand(userTelegramId)
       if (!lastCommand) {
         await script({
@@ -239,7 +240,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       })
       return await teamsMenuScript(userTelegramId)
     }
-    if (mainCommand === 'edit_team') {
+    if (mainCommand === 'edit_team' && !secondaryCommand) {
       if (!secondaryCommand) {
         // Если команда не выбрана
         const teamsOfUser = await Teams.find({ capitanId: userTelegramId })
