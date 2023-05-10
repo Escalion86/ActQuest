@@ -62,13 +62,13 @@ var keyboardMainMenu = inlineKeyboard([
   [
     {
       text: 'Команды',
-      callback_data: '/menuTeams',
+      callback_data: '/menu_teams',
     },
   ],
   [
     {
       text: 'Моя анкета',
-      callback_data: '/menuUser',
+      callback_data: '/menu_user',
     },
   ],
 ])
@@ -132,8 +132,8 @@ const userMenuScript = async (userTelegramId) =>
 
 const allCommands = [
   'start',
-  'menuTeams',
-  'menuUser',
+  'menu_teams',
+  'menu_user',
   'create_team',
   'edit_team',
   'join_team',
@@ -157,9 +157,9 @@ const commandHandler = async (userTelegramId, message, res) => {
 
     // Если команда существует, то обрабатываем
     if (mainCommand === 'start') return await mainMenuScript(userTelegramId)
-    if (mainCommand === 'menuTeams')
+    if (mainCommand === 'menu_teams')
       return await teamsMenuScript(userTelegramId)
-    if (mainCommand === 'menuUser') return await userMenuScript(userTelegramId)
+    if (mainCommand === 'menu_user') return await userMenuScript(userTelegramId)
     if (mainCommand === 'create_team')
       return await script({
         userTelegramId,
