@@ -77,7 +77,7 @@ var keyboardTeamsMenu = inlineKeyboard([
   [
     {
       text: 'Создать новую команду',
-      callback_data: 'create_team',
+      callback_data: '/create_team',
     },
   ],
   [
@@ -131,13 +131,13 @@ const userMenuScript = async (userTelegramId) =>
   })
 
 const allCommands = [
-  'start',
+  'start', // +
   'menu_teams',
   'menu_user',
   'create_team',
   'edit_team',
   'join_team',
-  'main_menu',
+  'main_menu', // +
 ]
 
 const commandHandler = async (userTelegramId, message, res) => {
@@ -191,10 +191,13 @@ const commandHandler = async (userTelegramId, message, res) => {
     const lastCommandsArray = lastCommand[0].command.command.split('/')
     lastCommandsArray.shift()
     const mainLastCommand = lastCommandsArray[0]
+    console.log('mainLastCommand :>> ', mainLastCommand)
     const props = lastCommand[0].command.props
+    console.log('props :>> ', props)
 
     if (mainLastCommand === 'create_team') {
       const secondaryLastCommand = lastCommandsArray[1]
+      console.log('secondaryLastCommand :>> ', secondaryLastCommand)
       if (secondaryLastCommand === 'exit') {
         await script({
           userTelegramId,
