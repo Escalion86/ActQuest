@@ -227,24 +227,26 @@ const commandHandler = async (userTelegramId, message, res) => {
       return await teamsMenuScript(userTelegramId)
     }
     if (message === '/edit_team') {
+      console.log('!')
       const teamsOfUser = await Teams.find({ capitanId: userTelegramId })
       console.log('teamsOfUser :>> ', teamsOfUser)
-      if (!teamsOfUser || teamsOfUser.length === 0) {
-        return await script({
-          userTelegramId,
-          text: 'У вас нет команд, которые вы можете администрировать',
-          keyboard: inlineKeyboard([
-            [
-              {
-                text: '<= Вернуться в Меню команд',
-                callback_data: '/menu_teams',
-              },
-            ],
-          ]),
-        })
-      }
+      // if (!teamsOfUser || teamsOfUser.length === 0) {
+      //   return await script({
+      //     userTelegramId,
+      //     text: 'У вас нет команд, которые вы можете администрировать',
+      //     keyboard: inlineKeyboard([
+      //       [
+      //         {
+      //           text: '<= Вернуться в Меню команд',
+      //           callback_data: '/menu_teams',
+      //         },
+      //       ],
+      //     ]),
+      //   })
+      // }
 
-      return await script({
+      return
+      await script({
         userTelegramId,
         text: 'Выберите команду которую хотите изменить',
         keyboard: inlineKeyboard([
