@@ -28,10 +28,10 @@ const createTeam = async (userTelegramId, command, res) => {
       text: 'Введите название команды',
       keyboard,
     })
-    res?.status(200).json({ success: true, data })
+    // return res?.status(200).json({ success: true, data })
   } else {
-    console.log('lastCommand :>> ', command.split('/'))
-    res?.status(200).json({ success: true, data: command })
+    console.log('command :>> ', command.split('/'))
+    // return res?.status(200).json({ success: true, data: command })
   }
 }
 
