@@ -1,4 +1,4 @@
-import createTeam from './createTeam'
+import commandHandler from './commandHandler'
 
 const test_callback = {
   update_id: 173172137,
@@ -34,7 +34,7 @@ const callbackHandler = (body, res) => {
   // switch (data) {
   //   case '/create_team':
   //     // return 'Создание команды'
-  return createTeam(from.id, data, res)
+  return commandHandler(from.id, data, res)
   //   case '/edit_team':
   //     return 'Редактирование команды'
   //   case '/join_team':

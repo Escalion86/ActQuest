@@ -1,4 +1,4 @@
-import createTeam from './createTeam'
+import commandHandler from './commandHandler'
 
 const test_message = {
   body: {
@@ -35,7 +35,7 @@ const messageHandler = (body, res) => {
   // switch (text) {
   //   case '/create_team':
   //     // return 'Создание команды'
-  return createTeam(from.id, text, res)
+  return commandHandler(from.id, text, res)
   //   case '/edit_team':
   //     return 'Редактирование команды'
   //   case '/join_team':
