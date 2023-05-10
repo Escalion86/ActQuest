@@ -29,7 +29,7 @@ const test_callback = {
 const callbackHandler = (body, res) => {
   const { callback_query } = body
   const { id, from, message, data, chat_instance } = callback_query
-  console.log('callback body :>> ', body)
+  // console.log('callback body :>> ', body)
 
   switch (data) {
     case '/create_team':

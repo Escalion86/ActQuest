@@ -30,7 +30,7 @@ const test_message = {
 const messageHandler = (body, res) => {
   const { update_id, message } = body
   const { message_id, from, chat, date, text, entities } = message
-  console.log('message body :>> ', body)
+  // console.log('message body :>> ', body)
 
   switch (text) {
     case '/create_team':
