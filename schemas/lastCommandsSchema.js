@@ -5,8 +5,7 @@ const lastCommandsSchema = {
     require: true,
   },
   command: {
-    type: String,
-    default: null,
+    type: Map,
   },
 }
 

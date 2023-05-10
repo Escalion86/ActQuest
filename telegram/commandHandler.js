@@ -1,4 +1,5 @@
 import LastCommands from '@models/LastCommands'
+import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 import sendMessage from './sendMessage'
 
@@ -59,14 +60,14 @@ var keyboardCreateTeamSetDescription = inlineKeyboard([
 
 const allCommands = ['create_team', 'edit_team', 'join_team']
 
-const commandHandler = async (userTelegramId, command, res) => {
+const commandHandler = async (userTelegramId, message, res) => {
   await dbConnect()
 
-  const isItCommand = command[0] === '/'
+  const isItCommand = message[0] === '/'
 
   // Если была отправлена команда, то ищем ее или возвращаем ошибку
   if (isItCommand) {
-    const commandsArray = command.split('/')
+    const commandsArray = message.split('/')
     commandsArray.shift()
     const mainCommand = commandsArray[0]
     // Если такой команды не зарегистрировано, то возвращаем ошибку
@@ -126,29 +127,55 @@ const commandHandler = async (userTelegramId, command, res) => {
         text: 'Пожалуйста введите команду',
       })
 
-    const lastCommandsArray = lastCommand[0].command.split('/')
+    const lastCommandsArray = lastCommand[0].command.command.split('/')
     lastCommandsArray.shift()
     const mainLastCommand = lastCommandsArray[0]
+    const props = lastCommand[0].command.props
 
     if (mainLastCommand === 'create_team') {
       const secondaryLastCommand = lastCommandsArray[1]
+      if (secondaryLastCommand === 'exit')
+        return await script({
+          userTelegramId,
+          text: `Создание команды отменено`,
+        })
       if (secondaryLastCommand === 'set_name')
         return await script({
           userTelegramId,
-          command: '/create_team/set_description',
-          text: `Задано название команды: ${command}.\nВведите описание команды (не обязательно)`,
+          command: {
+            command: '/create_team/set_description',
+            props: { teamName: message },
+          },
+          text: `Задано название команды: ${message}.\nВведите описание команды (не обязательно)`,
           keyboard: keyboardCreateTeamSetDescription,
         })
-      if (secondaryLastCommand === 'no_description')
+      if (secondaryLastCommand === 'no_description') {
+        if (!props?.teamName)
+          return await script({
+            userTelegramId,
+            text: 'Ошибка создания команды. Не задано название',
+          })
+        const team = await Teams.create({ name: props?.teamName })
         return await script({
           userTelegramId,
-          text: `Создание команды завершено`,
+          text: `Создание команды ${props?.teamName} завершено`,
         })
-      if (secondaryLastCommand === 'set_description')
+      }
+      if (secondaryLastCommand === 'set_description') {
+        if (!props?.teamName)
+          return await script({
+            userTelegramId,
+            text: 'Ошибка создания команды. Не задано название',
+          })
+        const team = await Teams.create({
+          name: props?.teamName,
+          description: message,
+        })
         return await script({
           userTelegramId,
-          text: `Задано описание команды: ${command}. Создание команды завершено`,
+          text: `Задано описание команды: ${message}. Создание команды ${props?.teamName} завершено`,
         })
+      }
     }
     // Если возникла ошибка
     return await script({
