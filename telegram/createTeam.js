@@ -33,10 +33,8 @@ const createTeam = async (userTelegramId, command, res) => {
     // return res?.status(200).json({ success: true, data })
   } else {
     // Если небыло никаких команд с пользователем
-    console.log('lastCommand[0] :>> ', lastCommand[0])
-    console.log('object :>> ', String(lastCommand[0].command).split('/'))
-    const commandsArray = String(lastCommand[0].command).split('/').shift()
-    console.log('commandsArray :>> ', commandsArray)
+    const commandsArray = String(lastCommand[0].command).split('/')
+    commandsArray.shift()
     if (commandsArray[0] !== 'create_team') {
       console.log('create_team')
       return await sendMessage({
