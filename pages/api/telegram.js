@@ -156,23 +156,25 @@ export default async function handler(req, res) {
       if (body?.callback_query) {
         // Принимаем команду
         // console.log('callback_body :>> ', body)
-        await sendMessage({
-          chat_id: '261102161',
-          // text: JSON.stringify({ body, headers: req.headers.origin }),
-          text: callbackHandler(body, res),
-          keyboard,
-        })
+        callbackHandler(body, res)
+        // await sendMessage({
+        //   chat_id: '261102161',
+        //   // text: JSON.stringify({ body, headers: req.headers.origin }),
+        //   text: callbackHandler(body, res),
+        //   keyboard,
+        // })
       } else if (body?.message) {
         // Пользователь написал текст
         // console.log('message_body :>> ', body)
         // const { message_id, from, chat, date, text, entities } = message
         // const {id, from, message, chat_instanse, data}
-        await sendMessage({
-          chat_id: '261102161',
-          // text: JSON.stringify({ body, headers: req.headers.origin }),
-          text: messageHandler(body, res),
-          keyboard,
-        })
+        messageHandler(body, res)
+        // await sendMessage({
+        //   chat_id: '261102161',
+        //   // text: JSON.stringify({ body, headers: req.headers.origin }),
+        //   text: messageHandler(body, res),
+        //   keyboard,
+        // })
       }
       // console.log('telegram body', body)
       // if (message.text === '/activate' || message.text === '/deactivate') {
