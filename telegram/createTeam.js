@@ -40,7 +40,7 @@ const createTeam = async (userTelegramId, command, res) => {
   console.log('userTelegramId :>> ', userTelegramId)
   console.log('lastCommand :>> ', lastCommand)
   if (lastCommand.length === 0) {
-    return await async({
+    return await script({
       userTelegramId,
       command: '/create_team/set_name',
       text: 'Введите название команды',
