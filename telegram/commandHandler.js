@@ -179,7 +179,9 @@ const commandHandler = async (userTelegramId, message, res) => {
     // Если отправлен текст, то смотрим к какой команде он применяется
     // Ищем была ли до этого сделана команда
     const lastCommand = await LastCommands.find({ userTelegramId })
+    console.log('lastCommand :>> ', lastCommand)
     const isLastCommandExists = lastCommand && lastCommand.length !== 0
+    console.log('isLastCommandExists :>> ', isLastCommandExists)
 
     // Если до этого небыло никакой команды, то пишем что ждем команду
     if (!isLastCommandExists)
@@ -187,7 +189,10 @@ const commandHandler = async (userTelegramId, message, res) => {
         userTelegramId,
         text: 'Пожалуйста введите команду',
       })
-
+    console.log(
+      'lastCommand[0].command.command :>> ',
+      lastCommand[0].command.command
+    )
     const lastCommandsArray = lastCommand[0].command.command.split('/')
     lastCommandsArray.shift()
     const mainLastCommand = lastCommandsArray[0]
