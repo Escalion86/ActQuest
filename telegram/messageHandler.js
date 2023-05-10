@@ -1,3 +1,5 @@
+import createTeam from './createTeam'
+
 const test_message = {
   body: {
     update_id: 173172081,
@@ -32,7 +34,8 @@ const messageHandler = (body, res) => {
 
   switch (text) {
     case '/create_team':
-      return 'Создание команды'
+      // return 'Создание команды'
+      return createTeam(from.id, text, res)
     case '/edit_team':
       return 'Редактирование команды'
     case '/join_team':
