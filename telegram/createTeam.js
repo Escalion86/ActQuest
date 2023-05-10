@@ -33,7 +33,9 @@ const createTeam = async (userTelegramId, command, res) => {
   } else {
     // Если небыло никаких команд с пользователем
     const commandsArray = lastCommand.split('/').shift()
+    console.log('commandsArray :>> ', commandsArray)
     if (commandsArray[0] !== 'create_team') {
+      console.log('create_teame')
       return await sendMessage({
         chat_id: userTelegramId,
         // text: JSON.stringify({ body, headers: req.headers.origin }),
@@ -42,6 +44,7 @@ const createTeam = async (userTelegramId, command, res) => {
     }
 
     if (commandsArray[1] === 'set_name') {
+      console.log('error create_team')
       return await sendMessage({
         chat_id: userTelegramId,
         // text: JSON.stringify({ body, headers: req.headers.origin }),
@@ -49,7 +52,6 @@ const createTeam = async (userTelegramId, command, res) => {
       })
     }
 
-    console.log('command :>> ', command.split('/').shift())
     // return res?.status(200).json({ success: true, data: command })
   }
 }
