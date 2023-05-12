@@ -235,7 +235,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       { command: message },
       { upsert: true }
     )
-    console.log('oldCommand :>> ', oldCommand)
+    console.log('oldCommand :>> ', last)
     const lastCommand = last.command.get('command')
     console.log('lastCommand :>> ', lastCommand)
     const command = message.substr(1)
