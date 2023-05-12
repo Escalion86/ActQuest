@@ -241,7 +241,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       { upsert: true }
     )
     console.log('last :>> ', last)
-    const lastCommand = last.command.get('command')
+    const lastCommand = last ? last.command.get('command') : undefined
     console.log('lastCommand :>> ', lastCommand)
     const command = message.substr(1)
     const menu = menus[command]
@@ -260,14 +260,12 @@ const commandHandler = async (userTelegramId, message, res) => {
       text,
       keyboard: buttons
         ? inlineKeyboard([
-            ...LastCommands(
-              buttons.map((button) => [
-                {
-                  text: menus[button].buttonText ?? menus[button].text,
-                  callback_data: `/${button}`,
-                },
-              ])
-            ),
+            ...buttons.map((button) => [
+              {
+                text: menus[button].buttonText ?? menus[button].text,
+                callback_data: `/${button}`,
+              },
+            ]),
             [
               {
                 text: `<= Назад`,
