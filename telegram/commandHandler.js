@@ -221,9 +221,6 @@ const commandHandler = async (userTelegramId, message, res) => {
   await dbConnect()
 
   const isItCommand = message[0] === '/'
-  console.log('isItCommand :>> ', isItCommand)
-  console.log('userTelegramId :>> ', userTelegramId)
-  console.log('message :>> ', message)
   // Если была отправлена команда, то ищем ее или возвращаем ошибку
   if (isItCommand) {
     const last = await LastCommands.findOneAndUpdate(
@@ -238,11 +235,8 @@ const commandHandler = async (userTelegramId, message, res) => {
       },
       { upsert: true }
     )
-    console.log('last :>> ', last)
     const lastCommand = last ? last.command.get('command') : undefined
-    console.log('lastCommand :>> ', lastCommand)
     const command = message.substr(1)
-    console.log('command :>> ', command)
     const menu = menus[command]
     // console.log('menu :>> ', menu)
     if (!menu) {
@@ -254,16 +248,18 @@ const commandHandler = async (userTelegramId, message, res) => {
     }
 
     const { text, buttons } = menu
-    console.log('menu text :>> ', text)
-    console.log('menu buttons :>> ', buttons)
-    const keyboard = inlineKeyboard(
-      buttons.map((button) => [
-        {
-          text: menus[button].buttonText ?? menus[button].text,
-          callback_data: `/${button}`,
-        },
-      ])
-    )
+    const keyboard = buttons
+      ? inlineKeyboard(
+          buttons.map((button) => [
+            {
+              text: menus[button].buttonText ?? menus[button].text,
+              callback_data: `/${button}`,
+            },
+          ])
+        )
+      : []
+    if (lastCommand)
+      keyboard.push([{ text: '<= назад', callback_data: lastCommand }])
     console.log('keyboard :>> ', keyboard)
 
     return await script({
