@@ -256,12 +256,14 @@ const commandHandler = async (userTelegramId, message, res) => {
     const { text, buttons } = menu
     console.log('menu text :>> ', text)
     console.log('menu buttons :>> ', buttons)
-    const keyboard = buttons.map((button) => [
-      {
-        text: menus[button].buttonText ?? menus[button].text,
-        callback_data: `/${button}`,
-      },
-    ])
+    const keyboard = inlineKeyboard(
+      buttons.map((button) => [
+        {
+          text: menus[button].buttonText ?? menus[button].text,
+          callback_data: `/${button}`,
+        },
+      ])
+    )
     console.log('keyboard :>> ', keyboard)
 
     return await script({
