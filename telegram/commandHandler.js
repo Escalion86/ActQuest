@@ -244,7 +244,9 @@ const commandHandler = async (userTelegramId, message, res) => {
     const lastCommand = last ? last.command.get('command') : undefined
     console.log('lastCommand :>> ', lastCommand)
     const command = message.substr(1)
+    console.log('command :>> ', command)
     const menu = menus[command]
+    console.log('menu :>> ', menu)
     if (!menu) {
       return await script({
         userTelegramId,
