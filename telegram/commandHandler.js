@@ -24,9 +24,12 @@ const script = async ({ userTelegramId, command, text, keyboard }) => {
   })
 }
 
-const inlineKeyboard = (inline_keyboard) => ({
-  inline_keyboard,
-})
+const inlineKeyboard = (inline_keyboard) => {
+  if (!inline_keyboard || inline_keyboard.length === 0) return
+  return {
+    inline_keyboard,
+  }
+}
 
 var keyboardCreateTeamSetName = inlineKeyboard([
   [
@@ -172,7 +175,96 @@ const allCommands = [
   'main_menu', // +
 ]
 
+const menus = () => {
+  return {
+    start: {
+      text: 'Главное меню',
+      buttons: ['menu_teams', 'menu_user'],
+    },
+    main_menu: {
+      text: 'Главное меню',
+      buttons: ['menu_teams', 'menu_user'],
+      // keyboard: keyboardMainMenu
+    },
+    menu_teams: {
+      text: 'Меню работы с командами',
+      buttons: ['create_team', 'edit_team', 'join_team'],
+      // keyboard: keyboardMainMenu
+    },
+    menu_user: {
+      text: 'Моя анкета',
+    },
+    create_team: {
+      text: 'Создание команды',
+      answerScript: (answer) => console.log('answer :>> ', answer),
+    },
+    edit_team: {
+      text: 'Редактирование команды',
+      // buttons: async (userId) => {
+      //   await dbConnect()
+      //   const teamsOfUser = await Teams.find({ capitanId: userId })
+      //   teamsOfUser.map((team) => [
+      //     {
+      //       text: `"${team.name}"`,
+      //       callback_data: `/edit_team/${team._id}`,
+      //     },
+      //   ])
+      // }
+    },
+    join_team: {
+      text: 'Создание команды',
+      answerScript: (answer) => console.log('answer :>> ', answer),
+    },
+  }
+}
+
 const commandHandler = async (userTelegramId, message, res) => {
+  await dbConnect()
+
+  const isItCommand = message[0] === '/'
+
+  // Если была отправлена команда, то ищем ее или возвращаем ошибку
+  if (isItCommand) {
+    const oldCommand = await LastCommands.findOneAndUpdate(
+      {
+        userTelegramId,
+      },
+      { command: message },
+      { upsert: true }
+    )
+    console.log('oldCommand :>> ', oldCommand)
+    const command = message.substr(1)
+    const menu = menus[command]
+    if (!menu) {
+      return await script({
+        userTelegramId,
+        command: oldCommand.command.get('command'),
+        text: 'Неизвестная команда',
+      })
+    }
+
+    const { text, buttons } = menu
+
+    return await script({
+      userTelegramId,
+      text,
+      keyboard: inlineKeyboard(
+        buttons.map((button) => [
+          {
+            text: menus[button].text,
+            callback_data: `/${button}`,
+          },
+        ])
+      ),
+    })
+  } else {
+    await LastCommands.findOneAndDelete({
+      userTelegramId,
+    })
+  }
+}
+
+const commandHandler2 = async (userTelegramId, message, res) => {
   await dbConnect()
 
   const isItCommand = message[0] === '/'
@@ -278,7 +370,7 @@ const commandHandler = async (userTelegramId, message, res) => {
             text: `Введите новое название команды`,
             command: {
               command: '/edit_team/set_name',
-              props: { teamId: secondaryCommand },
+              props: { teamId: propsCommand },
             },
             keyboard: inlineKeyboard([
               [
@@ -296,7 +388,7 @@ const commandHandler = async (userTelegramId, message, res) => {
             text: `Введите новое описание команды`,
             command: {
               command: '/edit_team/set_description',
-              props: { teamId: secondaryCommand },
+              props: { teamId: propsCommand },
             },
             keyboard: inlineKeyboard([
               [
