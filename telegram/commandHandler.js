@@ -188,6 +188,7 @@ const menus = () => {
     },
     menu_teams: {
       text: 'Меню работы с командами',
+      buttonText: 'Команды',
       buttons: ['create_team', 'edit_team', 'join_team'],
       // keyboard: keyboardMainMenu
     },
@@ -222,10 +223,12 @@ const commandHandler = async (userTelegramId, message, res) => {
   await dbConnect()
 
   const isItCommand = message[0] === '/'
-
+  console.log('isItCommand :>> ', isItCommand)
+  console.log('userTelegramId :>> ', userTelegramId)
+  console.log('message :>> ', message)
   // Если была отправлена команда, то ищем ее или возвращаем ошибку
   if (isItCommand) {
-    const oldCommand = await LastCommands.findOneAndUpdate(
+    const last = await LastCommands.findOneAndUpdate(
       {
         userTelegramId,
       },
@@ -233,12 +236,14 @@ const commandHandler = async (userTelegramId, message, res) => {
       { upsert: true }
     )
     console.log('oldCommand :>> ', oldCommand)
+    const lastCommand = last.command.get('command')
+    console.log('lastCommand :>> ', lastCommand)
     const command = message.substr(1)
     const menu = menus[command]
     if (!menu) {
       return await script({
         userTelegramId,
-        command: oldCommand.command.get('command'),
+        command: lastCommand,
         text: 'Неизвестная команда',
       })
     }
@@ -248,14 +253,24 @@ const commandHandler = async (userTelegramId, message, res) => {
     return await script({
       userTelegramId,
       text,
-      keyboard: inlineKeyboard(
-        buttons.map((button) => [
-          {
-            text: menus[button].text,
-            callback_data: `/${button}`,
-          },
-        ])
-      ),
+      keyboard: buttons
+        ? inlineKeyboard([
+            ...LastCommands(
+              buttons.map((button) => [
+                {
+                  text: menus[button].buttonText ?? menus[button].text,
+                  callback_data: `/${button}`,
+                },
+              ])
+            ),
+            [
+              {
+                text: `<= Назад`,
+                callback_data: lastCommand,
+              },
+            ],
+          ])
+        : undefined,
     })
   } else {
     await LastCommands.findOneAndDelete({
