@@ -175,48 +175,46 @@ const allCommands = [
   'main_menu', // +
 ]
 
-const menus = () => {
-  return {
-    start: {
-      text: 'Главное меню',
-      buttons: ['menu_teams', 'menu_user'],
-    },
-    main_menu: {
-      text: 'Главное меню',
-      buttons: ['menu_teams', 'menu_user'],
-      // keyboard: keyboardMainMenu
-    },
-    menu_teams: {
-      text: 'Меню работы с командами',
-      buttonText: 'Команды',
-      buttons: ['create_team', 'edit_team', 'join_team'],
-      // keyboard: keyboardMainMenu
-    },
-    menu_user: {
-      text: 'Моя анкета',
-    },
-    create_team: {
-      text: 'Создание команды',
-      answerScript: (answer) => console.log('answer :>> ', answer),
-    },
-    edit_team: {
-      text: 'Редактирование команды',
-      // buttons: async (userId) => {
-      //   await dbConnect()
-      //   const teamsOfUser = await Teams.find({ capitanId: userId })
-      //   teamsOfUser.map((team) => [
-      //     {
-      //       text: `"${team.name}"`,
-      //       callback_data: `/edit_team/${team._id}`,
-      //     },
-      //   ])
-      // }
-    },
-    join_team: {
-      text: 'Создание команды',
-      answerScript: (answer) => console.log('answer :>> ', answer),
-    },
-  }
+const menus = {
+  start: {
+    text: 'Главное меню',
+    buttons: ['menu_teams', 'menu_user'],
+  },
+  main_menu: {
+    text: 'Главное меню',
+    buttons: ['menu_teams', 'menu_user'],
+    // keyboard: keyboardMainMenu
+  },
+  menu_teams: {
+    text: 'Меню работы с командами',
+    buttonText: 'Команды',
+    buttons: ['create_team', 'edit_team', 'join_team'],
+    // keyboard: keyboardMainMenu
+  },
+  menu_user: {
+    text: 'Моя анкета',
+  },
+  create_team: {
+    text: 'Создание команды',
+    answerScript: (answer) => console.log('answer :>> ', answer),
+  },
+  edit_team: {
+    text: 'Редактирование команды',
+    // buttons: async (userId) => {
+    //   await dbConnect()
+    //   const teamsOfUser = await Teams.find({ capitanId: userId })
+    //   teamsOfUser.map((team) => [
+    //     {
+    //       text: `"${team.name}"`,
+    //       callback_data: `/edit_team/${team._id}`,
+    //     },
+    //   ])
+    // }
+  },
+  join_team: {
+    text: 'Создание команды',
+    answerScript: (answer) => console.log('answer :>> ', answer),
+  },
 }
 
 const commandHandler = async (userTelegramId, message, res) => {
