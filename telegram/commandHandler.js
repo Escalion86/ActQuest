@@ -244,7 +244,7 @@ const commandHandler = async (userTelegramId, message, res) => {
     const command = message.substr(1)
     console.log('command :>> ', command)
     const menu = menus[command]
-    console.log('menu :>> ', menu)
+    // console.log('menu :>> ', menu)
     if (!menu) {
       return await script({
         userTelegramId,
@@ -254,26 +254,20 @@ const commandHandler = async (userTelegramId, message, res) => {
     }
 
     const { text, buttons } = menu
+    console.log('menu text :>> ', text)
+    console.log('menu buttons :>> ', buttons)
+    const keyboard = buttons.map((button) => [
+      {
+        text: menus[button].buttonText ?? menus[button].text,
+        callback_data: `/${button}`,
+      },
+    ])
+    console.log('keyboard :>> ', keyboard)
 
     return await script({
       userTelegramId,
       text,
-      keyboard: buttons
-        ? inlineKeyboard([
-            ...buttons.map((button) => [
-              {
-                text: menus[button].buttonText ?? menus[button].text,
-                callback_data: `/${button}`,
-              },
-            ]),
-            [
-              {
-                text: `<= Назад`,
-                callback_data: lastCommand,
-              },
-            ],
-          ])
-        : undefined,
+      keyboard,
     })
   } else {
     await LastCommands.findOneAndDelete({
