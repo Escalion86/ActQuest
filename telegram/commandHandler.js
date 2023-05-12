@@ -232,10 +232,15 @@ const commandHandler = async (userTelegramId, message, res) => {
       {
         userTelegramId,
       },
-      { command: message },
+      {
+        command: {
+          command: message,
+          // props: { teamName: message },
+        },
+      },
       { upsert: true }
     )
-    console.log('oldCommand :>> ', last)
+    console.log('last :>> ', last)
     const lastCommand = last.command.get('command')
     console.log('lastCommand :>> ', lastCommand)
     const command = message.substr(1)
