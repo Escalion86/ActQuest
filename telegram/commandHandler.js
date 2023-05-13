@@ -223,7 +223,7 @@ const menus = async (userId, props) => {
           buttonText: 'Редактирование команд',
           buttons: teamsOfUser.map((team) => ({
             text: `"${team.name}"`,
-            command: `/edit_team/teamId=${team._id}`,
+            command: `edit_team/teamId=${team._id}`,
           })),
         },
     join_team: {
