@@ -254,6 +254,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       )
       console.log('last :>> ', last)
       const commands = message.split('/')
+      console.log('commands :>> ', commands)
       commands.shift()
       const command = commands[0]
       commands.shift()
