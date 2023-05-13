@@ -263,7 +263,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       props[key] = value
     })
     const menu = (await menus(userTelegramId, props))[command]
-
+    console.log('menu :>> ', menu)
     // console.log('menu :>> ', menu)
     if (!menu) {
       const lastCommand = last ? last.command.get('command') : undefined
