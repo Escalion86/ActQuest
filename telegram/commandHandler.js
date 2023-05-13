@@ -253,6 +253,7 @@ const commandHandler = async (userTelegramId, message, res) => {
         { upsert: true }
       )
       console.log('last :>> ', last)
+      console.log('message :>> ', message)
       const commands = message.split('/')
       console.log('commands :>> ', commands)
       commands.shift()
