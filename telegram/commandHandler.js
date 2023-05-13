@@ -183,6 +183,7 @@ const getTeam = async (id) => {
 const menus = async (userId, props) => {
   await dbConnect()
   const teamsOfUser = await Teams.find({ capitanId: userId })
+  console.log('teamsOfUser :>> ', teamsOfUser)
 
   return {
     start: {
@@ -277,8 +278,9 @@ const commandHandler = async (userTelegramId, message, res) => {
       }
 
       const { text, buttons } = menu[command]
-      console.log('menu[command] :>> ', menu[command])
-
+      console.log('buttons :>> ', buttons)
+      console.log('text :>> ', text)
+      // console.log('menu[command] :>> ', menu[command])
       var keyboard
       // if (!buttons) keyboard === undefined
       // if (typeof buttons === 'function') {
@@ -325,7 +327,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       //   : []
       // if (lastCommand)
       //   keyboard.push([{ text: '<= назад', callback_data: lastCommand }])
-      console.log('keyboard :>> ', keyboard)
+      // console.log('keyboard :>> ', keyboard)
       console.log('keyboardJSON :>> ', JSON.stringify(keyboard))
 
       return await script({
