@@ -217,7 +217,9 @@ const menus = async (userId, props) => {
     },
     edit_team: props?.teamId
       ? {
-          text: `Редактирование команды "${await getTeam(props.teamId)?.name}"`,
+          text: `Редактирование команды "${
+            (await getTeam(props.teamId))?.name
+          }"`,
           buttons: [{ command: 'edit_team', text: '<= Отмена' }],
         }
       : {
