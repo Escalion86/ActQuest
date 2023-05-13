@@ -180,60 +180,60 @@ const getTeam = async (id) => {
   return await Teams.findById(id)
 }
 
-const menus = async (userId, props) => ({
-  start: {
-    text: 'Главное меню',
-    buttons: ['menu_teams', 'menu_user'],
-  },
-  main_menu: {
-    text: 'Главное меню',
-    buttons: ['menu_teams', 'menu_user'],
-    // keyboard: keyboardMainMenu
-  },
-  menu_teams: {
-    text: 'Меню работы с командами',
-    buttonText: 'Команды',
-    buttons: [
-      'create_team',
-      'edit_team',
-      'join_team',
-      { command: 'main_menu', text: '<= Главное меню' },
-    ],
-    // keyboard: keyboardMainMenu
-  },
-  menu_user: {
-    text: 'Моя анкета',
-    buttons: [{ command: 'main_menu', text: '<= главное меню' }],
-  },
-  create_team: {
-    text: 'Создание команды',
-    answerScript: (answer) => console.log('answer :>> ', answer),
-  },
-  edit_team: props?.teamId
-    ? {
-        text: `Редактирование команды "${await getTeam(props.teamId)?.name}"`,
-        buttons: [{ command: 'edit_team', text: '<= отмена' }],
-      }
-    : {
-        text: 'Выберите команду для редактирования',
-        buttonText: 'Редактирование команд',
-        buttons: await (async () => {
-          console.log('props :>> ', props)
-          await dbConnect()
-          const teamsOfUser = await Teams.find({ capitanId: userId })
-          return teamsOfUser.map((team) => [
+const menus = async (userId, props) => {
+  await dbConnect()
+  const teamsOfUser = await Teams.find({ capitanId: userId })
+
+  return {
+    start: {
+      text: 'Главное меню',
+      buttons: ['menu_teams', 'menu_user'],
+    },
+    main_menu: {
+      text: 'Главное меню',
+      buttons: ['menu_teams', 'menu_user'],
+      // keyboard: keyboardMainMenu
+    },
+    menu_teams: {
+      text: 'Меню работы с командами',
+      buttonText: 'Команды',
+      buttons: [
+        'create_team',
+        'edit_team',
+        'join_team',
+        { command: 'main_menu', text: '<= Главное меню' },
+      ],
+      // keyboard: keyboardMainMenu
+    },
+    menu_user: {
+      text: 'Моя анкета',
+      buttons: [{ command: 'main_menu', text: '<= главное меню' }],
+    },
+    create_team: {
+      text: 'Создание команды',
+      answerScript: (answer) => console.log('answer :>> ', answer),
+    },
+    edit_team: props?.teamId
+      ? {
+          text: `Редактирование команды "${await getTeam(props.teamId)?.name}"`,
+          buttons: [{ command: 'edit_team', text: '<= отмена' }],
+        }
+      : {
+          text: 'Выберите команду для редактирования',
+          buttonText: 'Редактирование команд',
+          buttons: teamsOfUser.map((team) => [
             {
               text: `"${team.name}"`,
               callback_data: `/edit_team/teamId=${team._id}`,
             },
-          ])
-        })(),
-      },
-  join_team: {
-    text: 'Присоединиться к команде',
-    answerScript: (answer) => console.log('answer :>> ', answer),
-  },
-})
+          ]),
+        },
+    join_team: {
+      text: 'Присоединиться к команде',
+      answerScript: (answer) => console.log('answer :>> ', answer),
+    },
+  }
+}
 
 const commandHandler = async (userTelegramId, message, res) => {
   await dbConnect()
@@ -262,8 +262,9 @@ const commandHandler = async (userTelegramId, message, res) => {
       const [key, value] = prop.split('=')
       props[key] = value
     })
+    console.log('props :>> ', props)
     const menu = await menus(userTelegramId, props)
-    console.log('menu :>> ', menu)
+    // console.log('menu :>> ', menu)
     // console.log('menu :>> ', menu)
     if (!menu[command]) {
       const lastCommand = last ? last.command.get('command') : undefined
