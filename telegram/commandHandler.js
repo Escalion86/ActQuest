@@ -183,6 +183,15 @@ const getTeam = async (id) => {
 const menus = async (userId, props) => {
   await dbConnect()
   const teamsOfUser = await Teams.find({ capitanId: userId })
+  console.log(
+    'object :>> ',
+    teamsOfUser.map((team) => [
+      {
+        text: `"${team.name}"`,
+        callback_data: `/edit_team/teamId=${team._id}`,
+      },
+    ])
+  )
 
   return {
     start: {
