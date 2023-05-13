@@ -253,6 +253,7 @@ const commandHandler = async (userTelegramId, message, res) => {
         },
         { upsert: true }
       )
+      console.log('last :>> ', last)
       const commands = message.split('/')
       commands.shift()
       const command = commands[0]
@@ -276,9 +277,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       }
 
       const { text, buttons } = menu[command]
-      console.log('buttons :>> ', buttons)
-      console.log('text :>> ', text)
-      // console.log('menu[command] :>> ', menu[command])
+
       var keyboard
       // if (!buttons) keyboard === undefined
       // if (typeof buttons === 'function') {
