@@ -192,32 +192,33 @@ const menus = {
       'create_team',
       'edit_team',
       'join_team',
-      { command: 'main_menu', text: '<= главное меню' },
+      { command: 'main_menu', text: '<= Главное меню' },
     ],
     // keyboard: keyboardMainMenu
   },
   menu_user: {
     text: 'Моя анкета',
+    buttons: [{ command: 'main_menu', text: '<= главное меню' }],
   },
   create_team: {
     text: 'Создание команды',
     answerScript: (answer) => console.log('answer :>> ', answer),
   },
   edit_team: {
-    text: 'Редактирование команды',
-    // buttons: async (userId) => {
-    //   await dbConnect()
-    //   const teamsOfUser = await Teams.find({ capitanId: userId })
-    //   teamsOfUser.map((team) => [
-    //     {
-    //       text: `"${team.name}"`,
-    //       callback_data: `/edit_team/${team._id}`,
-    //     },
-    //   ])
-    // }
+    text: 'Выберите команду для редактирования',
+    buttons: async (userId) => {
+      await dbConnect()
+      const teamsOfUser = await Teams.find({ capitanId: userId })
+      return teamsOfUser.map((team) => [
+        {
+          text: `"${team.name}"`,
+          callback_data: `/edit_team/${team._id}`,
+        },
+      ])
+    },
   },
   join_team: {
-    text: 'Создание команды',
+    text: 'Присоединиться к команде',
     answerScript: (answer) => console.log('answer :>> ', answer),
   },
 }
@@ -253,25 +254,51 @@ const commandHandler = async (userTelegramId, message, res) => {
     }
 
     const { text, buttons } = menu
-    const keyboard = buttons
-      ? inlineKeyboard(
-          buttons.map((button) => {
-            if (typeof button === 'object')
-              return [
-                {
-                  text: button.text,
-                  callback_data: `/${button.command}`,
-                },
-              ]
+
+    var keyboard
+    // if (!buttons) keyboard === undefined
+    if (typeof buttons === 'function') {
+      keyboard = inlineKeyboard(await buttons(userTelegramId))
+    }
+    if (typeof buttons === 'object') {
+      keyboard = inlineKeyboard(
+        buttons.map((button) => {
+          if (typeof button === 'object')
             return [
               {
-                text: menus[button].buttonText ?? menus[button].text,
-                callback_data: `/${button}`,
+                text: button.text,
+                callback_data: `/${button.command}`,
               },
             ]
-          })
-        )
-      : []
+          return [
+            {
+              text: menus[button].buttonText ?? menus[button].text,
+              callback_data: `/${button}`,
+            },
+          ]
+        })
+      )
+    }
+
+    // keyboard = buttons
+    //   ? inlineKeyboard(
+    //       buttons.map((button) => {
+    //         if (typeof button === 'object')
+    //           return [
+    //             {
+    //               text: button.text,
+    //               callback_data: `/${button.command}`,
+    //             },
+    //           ]
+    //         return [
+    //           {
+    //             text: menus[button].buttonText ?? menus[button].text,
+    //             callback_data: `/${button}`,
+    //           },
+    //         ]
+    //       })
+    //     )
+    //   : []
     // if (lastCommand)
     //   keyboard.push([{ text: '<= назад', callback_data: lastCommand }])
     console.log('keyboard :>> ', keyboard)
