@@ -292,8 +292,8 @@ const commandHandler = async (userTelegramId, message, res) => {
             if (typeof button === 'object')
               return [
                 {
-                  text: button.text,
-                  callback_data: `/${button.command}`,
+                  text: button[0].text,
+                  callback_data: `/${button[0].command}`,
                 },
               ]
             return [
