@@ -175,7 +175,12 @@ const allCommands = [
   'main_menu', // +
 ]
 
-const menus = {
+const getTeam = async (id) => {
+  await dbConnect()
+  return await Teams.findById(id)
+}
+
+const menus = async (userId, props) => ({
   start: {
     text: 'Главное меню',
     buttons: ['menu_teams', 'menu_user'],
@@ -204,24 +209,31 @@ const menus = {
     text: 'Создание команды',
     answerScript: (answer) => console.log('answer :>> ', answer),
   },
-  edit_team: {
-    text: 'Выберите команду для редактирования',
-    buttons: async (userId) => {
-      await dbConnect()
-      const teamsOfUser = await Teams.find({ capitanId: userId })
-      return teamsOfUser.map((team) => [
-        {
-          text: `"${team.name}"`,
-          callback_data: `/edit_team/${team._id}`,
-        },
-      ])
-    },
-  },
+  edit_team: props?.teamId
+    ? {
+        text: `Редактирование команды "${await getTeam(props.teamId)?.name}"`,
+        buttons: [{ command: 'edit_team', text: '<= отмена' }],
+      }
+    : {
+        text: 'Выберите команду для редактирования',
+        buttonText: 'Редактирование команд',
+        buttons: await (async () => {
+          console.log('props :>> ', props)
+          await dbConnect()
+          const teamsOfUser = await Teams.find({ capitanId: userId })
+          return teamsOfUser.map((team) => [
+            {
+              text: `"${team.name}"`,
+              callback_data: `/edit_team/teamId=${team._id}`,
+            },
+          ])
+        })(),
+      },
   join_team: {
     text: 'Присоединиться к команде',
     answerScript: (answer) => console.log('answer :>> ', answer),
   },
-}
+})
 
 const commandHandler = async (userTelegramId, message, res) => {
   await dbConnect()
@@ -241,8 +253,17 @@ const commandHandler = async (userTelegramId, message, res) => {
       },
       { upsert: true }
     )
-    const command = message.substr(1)
-    const menu = menus[command]
+    const commands = message.split('/')
+    commands.shift()
+    const command = commands[0]
+    commands.shift()
+    var props = {}
+    commands.forEach((prop) => {
+      const [key, value] = prop.split('=')
+      props[key] = value
+    })
+    const menu = menus(userTelegramId, props)[command]
+
     // console.log('menu :>> ', menu)
     if (!menu) {
       const lastCommand = last ? last.command.get('command') : undefined
@@ -257,9 +278,9 @@ const commandHandler = async (userTelegramId, message, res) => {
 
     var keyboard
     // if (!buttons) keyboard === undefined
-    if (typeof buttons === 'function') {
-      keyboard = inlineKeyboard(await buttons(userTelegramId))
-    }
+    // if (typeof buttons === 'function') {
+    //   keyboard = inlineKeyboard(await buttons(userTelegramId, props))
+    // }
     if (typeof buttons === 'object') {
       keyboard = inlineKeyboard(
         buttons.map((button) => {
@@ -452,7 +473,7 @@ const commandHandler2 = async (userTelegramId, message, res) => {
           })
         }
         // Если команда выбрана
-        const team = await Teams.findById(secondaryCommand)
+        const team = await getTeam(secondaryCommand)
         if (team)
           return await script({
             userTelegramId,
