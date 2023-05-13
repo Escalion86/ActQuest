@@ -222,12 +222,10 @@ const menus = async (userId, props) => {
       : {
           text: 'Выберите команду для редактирования',
           buttonText: 'Редактирование команд',
-          buttons: teamsOfUser.map((team) => [
-            {
-              text: `"${team.name}"`,
-              callback_data: `/edit_team/teamId=${team._id}`,
-            },
-          ]),
+          buttons: teamsOfUser.map((team) => ({
+            text: `"${team.name}"`,
+            command: `/edit_team/teamId=${team._id}`,
+          })),
         },
     join_team: {
       text: 'Присоединиться к команде',
@@ -292,8 +290,8 @@ const commandHandler = async (userTelegramId, message, res) => {
             if (typeof button === 'object')
               return [
                 {
-                  text: button[0].text,
-                  callback_data: `/${button[0].command}`,
+                  text: button.text,
+                  callback_data: `/${button.command}`,
                 },
               ]
             return [
