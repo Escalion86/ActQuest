@@ -177,7 +177,9 @@ const allCommands = [
 
 const getTeam = async (id) => {
   await dbConnect()
-  return await Teams.findById(id)
+  const team = await Teams.findById(id)
+  console.log('team :>> ', team)
+  return team
 }
 
 const menus = async (userId, props) => {
@@ -216,7 +218,7 @@ const menus = async (userId, props) => {
     edit_team: props?.teamId
       ? {
           text: `Редактирование команды "${await getTeam(props.teamId)?.name}"`,
-          buttons: [{ command: 'edit_team', text: '<= отмена' }],
+          buttons: [{ command: 'edit_team', text: '<= Отмена' }],
         }
       : {
           text: 'Выберите команду для редактирования',
