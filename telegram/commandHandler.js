@@ -262,10 +262,10 @@ const commandHandler = async (userTelegramId, message, res) => {
       const [key, value] = prop.split('=')
       props[key] = value
     })
-    const menu = (await menus(userTelegramId, props))[command]
+    const menu = await menus(userTelegramId, props)
     console.log('menu :>> ', menu)
     // console.log('menu :>> ', menu)
-    if (!menu) {
+    if (!menu[command]) {
       const lastCommand = last ? last.command.get('command') : undefined
       return await script({
         userTelegramId,
@@ -274,7 +274,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       })
     }
 
-    const { text, buttons } = menu
+    const { text, buttons } = menu[command]
 
     var keyboard
     // if (!buttons) keyboard === undefined
@@ -293,7 +293,7 @@ const commandHandler = async (userTelegramId, message, res) => {
             ]
           return [
             {
-              text: menus[button].buttonText ?? menus[button].text,
+              text: menu[button].buttonText ?? menu[button].text,
               callback_data: `/${button}`,
             },
           ]
