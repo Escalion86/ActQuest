@@ -262,7 +262,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       const [key, value] = prop.split('=')
       props[key] = value
     })
-    const menu = menus(userTelegramId, props)[command]
+    const menu = (await menus(userTelegramId, props))[command]
 
     // console.log('menu :>> ', menu)
     if (!menu) {
