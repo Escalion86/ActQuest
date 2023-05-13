@@ -11,8 +11,8 @@ const sendMessage = async ({ chat_id, text, keyboard }) => {
     },
     null,
     null,
-    // (data) => console.log('data', data),
-    // (data) => console.log('error', data),
+    (data) => console.log('post success', data),
+    (data) => console.log('post error', data),
     true,
     null,
     true
