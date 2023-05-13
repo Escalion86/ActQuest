@@ -188,7 +188,12 @@ const menus = {
   menu_teams: {
     text: 'Меню работы с командами',
     buttonText: 'Команды',
-    buttons: ['create_team', 'edit_team', 'join_team'],
+    buttons: [
+      'create_team',
+      'edit_team',
+      'join_team',
+      { command: 'main_menu', text: '<= главное меню' },
+    ],
     // keyboard: keyboardMainMenu
   },
   menu_user: {
@@ -235,11 +240,11 @@ const commandHandler = async (userTelegramId, message, res) => {
       },
       { upsert: true }
     )
-    const lastCommand = last ? last.command.get('command') : undefined
     const command = message.substr(1)
     const menu = menus[command]
     // console.log('menu :>> ', menu)
     if (!menu) {
+      const lastCommand = last ? last.command.get('command') : undefined
       return await script({
         userTelegramId,
         command: lastCommand,
@@ -250,16 +255,25 @@ const commandHandler = async (userTelegramId, message, res) => {
     const { text, buttons } = menu
     const keyboard = buttons
       ? inlineKeyboard(
-          buttons.map((button) => [
-            {
-              text: menus[button].buttonText ?? menus[button].text,
-              callback_data: `/${button}`,
-            },
-          ])
+          buttons.map((button) => {
+            if (typeof button === 'object')
+              return [
+                {
+                  text: button.text,
+                  callback_data: `/${button.command}`,
+                },
+              ]
+            return [
+              {
+                text: menus[button].buttonText ?? menus[button].text,
+                callback_data: `/${button}`,
+              },
+            ]
+          })
         )
       : []
-    if (lastCommand)
-      keyboard.push([{ text: '<= назад', callback_data: lastCommand }])
+    // if (lastCommand)
+    //   keyboard.push([{ text: '<= назад', callback_data: lastCommand }])
     console.log('keyboard :>> ', keyboard)
 
     return await script({
