@@ -245,104 +245,108 @@ const menus = async (userId, props) => {
 }
 
 const commandHandler = async (userTelegramId, message, res) => {
-  await dbConnect()
+  try {
+    await dbConnect()
 
-  const isItCommand = message[0] === '/'
-  // Если была отправлена команда, то ищем ее или возвращаем ошибку
-  if (isItCommand) {
-    const last = await LastCommands.findOneAndUpdate(
-      {
-        userTelegramId,
-      },
-      {
-        command: {
-          command: message,
-          // props: { teamName: message },
+    const isItCommand = message[0] === '/'
+    // Если была отправлена команда, то ищем ее или возвращаем ошибку
+    if (isItCommand) {
+      const last = await LastCommands.findOneAndUpdate(
+        {
+          userTelegramId,
         },
-      },
-      { upsert: true }
-    )
-    const commands = message.split('/')
-    commands.shift()
-    const command = commands[0]
-    commands.shift()
-    var props = {}
-    commands.forEach((prop) => {
-      const [key, value] = prop.split('=')
-      props[key] = value
-    })
-    console.log('props :>> ', props)
-    const menu = await menus(userTelegramId, props)
-    // console.log('menu :>> ', menu)
-    // console.log('menu :>> ', menu)
-    if (!menu[command]) {
-      const lastCommand = last ? last.command.get('command') : undefined
-      return await script({
-        userTelegramId,
-        command: lastCommand,
-        text: 'Неизвестная команда',
+        {
+          command: {
+            command: message,
+            // props: { teamName: message },
+          },
+        },
+        { upsert: true }
+      )
+      const commands = message.split('/')
+      commands.shift()
+      const command = commands[0]
+      commands.shift()
+      var props = {}
+      commands.forEach((prop) => {
+        const [key, value] = prop.split('=')
+        props[key] = value
       })
-    }
+      console.log('props :>> ', props)
+      const menu = await menus(userTelegramId, props)
+      // console.log('menu :>> ', menu)
+      // console.log('menu :>> ', menu)
+      if (!menu[command]) {
+        const lastCommand = last ? last.command.get('command') : undefined
+        return await script({
+          userTelegramId,
+          command: lastCommand,
+          text: 'Неизвестная команда',
+        })
+      }
 
-    const { text, buttons } = menu[command]
+      const { text, buttons } = menu[command]
 
-    var keyboard
-    // if (!buttons) keyboard === undefined
-    // if (typeof buttons === 'function') {
-    //   keyboard = inlineKeyboard(await buttons(userTelegramId, props))
-    // }
-    if (typeof buttons === 'object') {
-      keyboard = inlineKeyboard(
-        buttons.map((button) => {
-          if (typeof button === 'object')
+      var keyboard
+      // if (!buttons) keyboard === undefined
+      // if (typeof buttons === 'function') {
+      //   keyboard = inlineKeyboard(await buttons(userTelegramId, props))
+      // }
+      if (typeof buttons === 'object') {
+        keyboard = inlineKeyboard(
+          buttons.map((button) => {
+            if (typeof button === 'object')
+              return [
+                {
+                  text: button.text,
+                  callback_data: `/${button.command}`,
+                },
+              ]
             return [
               {
-                text: button.text,
-                callback_data: `/${button.command}`,
+                text: menu[button].buttonText ?? menu[button].text,
+                callback_data: `/${button}`,
               },
             ]
-          return [
-            {
-              text: menu[button].buttonText ?? menu[button].text,
-              callback_data: `/${button}`,
-            },
-          ]
-        })
-      )
+          })
+        )
+      }
+
+      // keyboard = buttons
+      //   ? inlineKeyboard(
+      //       buttons.map((button) => {
+      //         if (typeof button === 'object')
+      //           return [
+      //             {
+      //               text: button.text,
+      //               callback_data: `/${button.command}`,
+      //             },
+      //           ]
+      //         return [
+      //           {
+      //             text: menus[button].buttonText ?? menus[button].text,
+      //             callback_data: `/${button}`,
+      //           },
+      //         ]
+      //       })
+      //     )
+      //   : []
+      // if (lastCommand)
+      //   keyboard.push([{ text: '<= назад', callback_data: lastCommand }])
+      console.log('keyboard :>> ', keyboard)
+
+      return await script({
+        userTelegramId,
+        text,
+        keyboard,
+      })
+    } else {
+      await LastCommands.findOneAndDelete({
+        userTelegramId,
+      })
     }
-
-    // keyboard = buttons
-    //   ? inlineKeyboard(
-    //       buttons.map((button) => {
-    //         if (typeof button === 'object')
-    //           return [
-    //             {
-    //               text: button.text,
-    //               callback_data: `/${button.command}`,
-    //             },
-    //           ]
-    //         return [
-    //           {
-    //             text: menus[button].buttonText ?? menus[button].text,
-    //             callback_data: `/${button}`,
-    //           },
-    //         ]
-    //       })
-    //     )
-    //   : []
-    // if (lastCommand)
-    //   keyboard.push([{ text: '<= назад', callback_data: lastCommand }])
-    console.log('keyboard :>> ', keyboard)
-
-    return await script({
-      userTelegramId,
-      text,
-      keyboard,
-    })
-  } else {
-    await LastCommands.findOneAndDelete({
-      userTelegramId,
-    })
+  } catch (e) {
+    console.log('e :>> ', e)
   }
 }
 
