@@ -333,7 +333,8 @@ const commandHandler = async (userTelegramId, message, res) => {
       //   : []
       // if (lastCommand)
       //   keyboard.push([{ text: '<= назад', callback_data: lastCommand }])
-      console.log('keyboard :>> ', keyboard)
+      // console.log('keyboard :>> ', keyboard)
+      console.log('keyboardJSON :>> ', JSON.stringify(keyboard))
 
       return await script({
         userTelegramId,

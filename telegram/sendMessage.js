@@ -13,7 +13,7 @@ const sendMessage = async ({ chat_id, text, keyboard }) => {
     // null,
     (data) => console.log('post success', data),
     (data) => console.log('post error', data),
-    false,
+    true,
     null,
     true
   )
