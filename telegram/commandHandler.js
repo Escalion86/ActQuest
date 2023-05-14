@@ -203,19 +203,19 @@ const menus = async (userId, props) => {
         'create_team',
         'edit_team',
         'join_team',
-        { command: 'main_menu', text: '<= Главное меню' },
+        { command: 'main_menu', text: '\u{2B05} Главное меню' },
       ],
       // keyboard: keyboardMainMenu
     },
     menu_user: {
       text: 'Моя анкета',
-      buttons: [{ command: 'main_menu', text: '<= Главное меню' }],
+      buttons: [{ command: 'main_menu', text: '\u{2B05} Главное меню' }],
     },
     create_team: !props?.teamName
       ? {
           text: 'Введите название команды',
           buttons: [
-            { command: 'edit_team', text: '<= Отмена создания команды' },
+            { command: 'edit_team', text: '\u{2B05} Отмена создания команды' },
           ],
           answerScript: (answer) => `edit_team/teamName=${answer}`,
         }
@@ -226,7 +226,7 @@ const menus = async (userId, props) => {
               command: `edit_team/teamName=${props?.teamName}/teamDescription=`,
               text: 'Без описания',
             },
-            { command: 'edit_team', text: '<= Отмена создания команды' },
+            { command: 'edit_team', text: '\u{2B05} Отмена создания команды' },
           ],
           answerScript: (answer) =>
             `edit_team/teamName=${props?.teamName}/teamDescription=${answer}`,
@@ -245,7 +245,7 @@ const menus = async (userId, props) => {
               command: `set_team_description/teamId=${props.teamId}`,
               text: 'Изменить описание',
             },
-            { command: 'edit_team', text: '<= Назад' },
+            { command: 'edit_team', text: '\u{2B05} Назад' },
           ],
         }
       : {
@@ -256,24 +256,24 @@ const menus = async (userId, props) => {
               text: `"${team.name}"`,
               command: `edit_team/teamId=${team._id}`,
             })),
-            { command: 'edit_team', text: '<= Назад' },
+            { command: 'edit_team', text: '\u{2B05} Назад' },
           ],
         },
     set_team_name: {
       text: `Введите новое название команды`,
-      buttons: [{ command: 'edit_team', text: '<= Отмена' }],
+      buttons: [{ command: 'edit_team', text: '\u{2B05} Отмена' }],
       answerScript: (answer) =>
         `set_team_name/teamId=${props?.teamId}/teamName=${answer}`,
     },
     set_team_description: {
       text: `Введите новое описание команды`,
-      buttons: [{ command: 'edit_team', text: '<= Отмена' }],
+      buttons: [{ command: 'edit_team', text: '\u{2B05} Отмена' }],
       answerScript: (answer) =>
         `set_team_description/teamId=${props?.teamId}/teamDescription=${answer}`,
     },
     join_team: {
       text: 'Присоединиться к команде',
-      buttons: [{ command: 'main_menu', text: '<= Главное меню' }],
+      buttons: [{ command: 'main_menu', text: '\u{2B05} Главное меню' }],
       // answerScript: (answer) => console.log('answer :>> ', answer),
     },
   }
