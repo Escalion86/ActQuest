@@ -3,6 +3,21 @@ import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 import sendMessage from './sendMessage'
 
+const updateCommand = async (userTelegramId, command) => {
+  if (command)
+    await LastCommands.findOneAndUpdate(
+      {
+        userTelegramId,
+      },
+      { command },
+      { upsert: true }
+    )
+  else
+    await LastCommands.findOneAndDelete({
+      userTelegramId,
+    })
+}
+
 const script = async ({ userTelegramId, command, text, keyboard }) => {
   if (command)
     await LastCommands.findOneAndUpdate(
@@ -214,8 +229,9 @@ const menus = async (userId, props) => {
     create_team: !props?.teamName
       ? {
           text: 'Введите название команды',
+          buttonText: '\u{2795} Создание команды',
           buttons: [
-            { command: 'edit_team', text: '\u{2B05} Отмена создания команды' },
+            { command: 'edit_team', text: '\u{1F6AB} Отмена создания команды' },
           ],
           answerScript: (answer) => `edit_team/teamName=${answer}`,
         }
@@ -226,7 +242,7 @@ const menus = async (userId, props) => {
               command: `edit_team/teamName=${props?.teamName}/teamDescription=`,
               text: 'Без описания',
             },
-            { command: 'edit_team', text: '\u{2B05} Отмена создания команды' },
+            { command: 'edit_team', text: '\u{1F6AB} Отмена создания команды' },
           ],
           answerScript: (answer) =>
             `edit_team/teamName=${props?.teamName}/teamDescription=${answer}`,
@@ -239,18 +255,22 @@ const menus = async (userId, props) => {
           buttons: [
             {
               command: `set_team_name/teamId=${props.teamId}`,
-              text: 'Изменить название',
+              text: '\u{270F} Изменить название',
             },
             {
               command: `set_team_description/teamId=${props.teamId}`,
-              text: 'Изменить описание',
+              text: '\u{270F} Изменить описание',
+            },
+            {
+              command: `delete_team/teamId=${props.teamId}`,
+              text: '\u{1F4A3} Удалить команду',
             },
             { command: 'edit_team', text: '\u{2B05} Назад' },
           ],
         }
       : {
           text: 'Выберите команду для редактирования',
-          buttonText: 'Редактирование команд',
+          buttonText: '\u{270F}  Редактирование команд',
           buttons: [
             ...teamsOfUser.map((team) => ({
               text: `"${team.name}"`,
@@ -261,13 +281,13 @@ const menus = async (userId, props) => {
         },
     set_team_name: {
       text: `Введите новое название команды`,
-      buttons: [{ command: 'edit_team', text: '\u{2B05} Отмена' }],
+      buttons: [{ command: 'edit_team', text: '\u{1F6AB} Отмена' }],
       answerScript: (answer) =>
         `set_team_name/teamId=${props?.teamId}/teamName=${answer}`,
     },
     set_team_description: {
       text: `Введите новое описание команды`,
-      buttons: [{ command: 'edit_team', text: '\u{2B05} Отмена' }],
+      buttons: [{ command: 'edit_team', text: '\u{1F6AB} Отмена' }],
       answerScript: (answer) =>
         `set_team_description/teamId=${props?.teamId}/teamDescription=${answer}`,
     },
