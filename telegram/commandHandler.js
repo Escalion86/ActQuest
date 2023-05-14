@@ -209,30 +209,53 @@ const menus = async (userId, props) => {
     },
     menu_user: {
       text: 'Моя анкета',
-      buttons: [{ command: 'main_menu', text: '<= главное меню' }],
+      buttons: [{ command: 'main_menu', text: '<= Главное меню' }],
     },
-    create_team: {
-      text: 'Создание команды',
-      answerScript: (answer) => console.log('answer :>> ', answer),
-    },
+    create_team: !props?.teamName
+      ? {
+          text: 'Введите название команды',
+          buttons: [
+            { command: 'edit_team', text: '<= Отмена создания команды' },
+          ],
+          // answerScript: (answer) => console.log('answer :>> ', answer),
+        }
+      : {
+          text: 'Введите описание команды (не обязательно)',
+          buttons: [
+            {
+              command: `edit_team/teamName=${props?.teamName}/teamDescription=`,
+              text: 'Без описания',
+            },
+            { command: 'edit_team', text: '<= Отмена создания команды' },
+          ],
+          // answerScript: (answer) => console.log('answer :>> ', answer),
+        },
     edit_team: props?.teamId
       ? {
-          text: `Редактирование команды "${
+          text: `Редактирование команды"${
             (await getTeam(props.teamId))?.name
           }"`,
-          buttons: [{ command: 'edit_team', text: '<= Отмена' }],
+          buttons: [
+            { command: 'set_team_name', text: 'Изменить название' },
+            { command: 'set_team_description', text: 'Изменить описание' },
+            { command: 'edit_team', text: '<= Назад' },
+          ],
         }
       : {
           text: 'Выберите команду для редактирования',
           buttonText: 'Редактирование команд',
-          buttons: teamsOfUser.map((team) => ({
-            text: `"${team.name}"`,
-            command: `edit_team/teamId=${team._id}`,
-          })),
+          buttons: [
+            ...teamsOfUser.map((team) => ({
+              text: `"${team.name}"`,
+              command: `edit_team/teamId=${team._id}`,
+            })),
+            { command: 'edit_team', text: '<= Назад' },
+          ],
         },
     join_team: {
       text: 'Присоединиться к команде',
-      answerScript: (answer) => console.log('answer :>> ', answer),
+      buttons: [{ command: 'main_menu', text: '<= Главное меню' }],
+      // answerScript: (answer) => console.log('answer :>> ', answer),
     },
   }
 }
