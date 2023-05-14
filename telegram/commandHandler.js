@@ -217,7 +217,7 @@ const menus = async (userId, props) => {
           buttons: [
             { command: 'edit_team', text: '<= Отмена создания команды' },
           ],
-          // answerScript: (answer) => console.log('answer :>> ', answer),
+          answerScript: (answer) => `edit_team/teamName=${answer}`,
         }
       : {
           text: 'Введите описание команды (не обязательно)',
@@ -228,7 +228,8 @@ const menus = async (userId, props) => {
             },
             { command: 'edit_team', text: '<= Отмена создания команды' },
           ],
-          // answerScript: (answer) => console.log('answer :>> ', answer),
+          answerScript: (answer) =>
+            `edit_team/teamName=${props?.teamName}/teamDescription=${answer}`,
         },
     edit_team: props?.teamId
       ? {
@@ -236,8 +237,14 @@ const menus = async (userId, props) => {
             (await getTeam(props.teamId))?.name
           }"`,
           buttons: [
-            { command: 'set_team_name', text: 'Изменить название' },
-            { command: 'set_team_description', text: 'Изменить описание' },
+            {
+              command: `set_team_name/teamId=${props.teamId}`,
+              text: 'Изменить название',
+            },
+            {
+              command: `set_team_description/teamId=${props.teamId}`,
+              text: 'Изменить описание',
+            },
             { command: 'edit_team', text: '<= Назад' },
           ],
         }
@@ -252,6 +259,18 @@ const menus = async (userId, props) => {
             { command: 'edit_team', text: '<= Назад' },
           ],
         },
+    set_team_name: {
+      text: `Введите новое название команды`,
+      buttons: [{ command: 'edit_team', text: '<= Отмена' }],
+      answerScript: (answer) =>
+        `set_team_name/teamId=${props?.teamId}/teamName=${answer}`,
+    },
+    set_team_description: {
+      text: `Введите новое описание команды`,
+      buttons: [{ command: 'edit_team', text: '<= Отмена' }],
+      answerScript: (answer) =>
+        `set_team_description/teamId=${props?.teamId}/teamDescription=${answer}`,
+    },
     join_team: {
       text: 'Присоединиться к команде',
       buttons: [{ command: 'main_menu', text: '<= Главное меню' }],
