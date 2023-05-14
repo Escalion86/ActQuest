@@ -293,6 +293,7 @@ const menus = async (userId, props) => {
     },
     join_team: {
       text: 'Присоединиться к команде',
+      textButton: `\u{1F517} Присоединиться к команде`,
       buttons: [{ command: 'main_menu', text: '\u{2B05} Главное меню' }],
       // answerScript: (answer) => console.log('answer :>> ', answer),
     },
