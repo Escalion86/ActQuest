@@ -209,7 +209,6 @@ const menus = async (userId, props) => {
     main_menu: {
       text: 'Главное меню',
       buttons: ['menu_teams', 'menu_user'],
-      // keyboard: keyboardMainMenu
     },
     menu_teams: {
       text: 'Меню работы с командами',
@@ -220,7 +219,6 @@ const menus = async (userId, props) => {
         'join_team',
         { command: 'main_menu', text: '\u{2B05} Главное меню' },
       ],
-      // keyboard: keyboardMainMenu
     },
     menu_user: {
       text: 'Моя анкета',
@@ -394,12 +392,17 @@ const commandHandler = async (userTelegramId, message, res) => {
       //   keyboard.push([{ text: '<= назад', callback_data: lastCommand }])
       // console.log('keyboard :>> ', keyboard)
       // console.log('keyboardJSON :>> ', JSON.stringify(keyboard))
-
-      return await script({
-        userTelegramId,
+      return await sendMessage({
+        chat_id: userTelegramId,
+        // text: JSON.stringify({ body, headers: req.headers.origin }),
         text,
         keyboard,
       })
+      // return await script({
+      //   userTelegramId,
+      //   text,
+      //   keyboard,
+      // })
     } else {
       await LastCommands.findOneAndDelete({
         userTelegramId,
