@@ -274,7 +274,7 @@ const menus = async (userId, props) => {
               text: `"${team.name}"`,
               command: `edit_team/teamId=${team._id}`,
             })),
-            { command: 'edit_team', text: '\u{2B05} Назад' },
+            { command: 'menu_teams', text: '\u{2B05} Назад' },
           ],
         },
     set_team_name: {
@@ -404,8 +404,21 @@ const commandHandler = async (userTelegramId, message, res) => {
       //   keyboard,
       // })
     } else {
-      await LastCommands.findOneAndDelete({
+      const last = await LastCommands.findOne({
         userTelegramId,
+      })
+      if (!last) {
+        return await sendMessage({
+          chat_id: userTelegramId,
+          // text: JSON.stringify({ body, headers: req.headers.origin }),
+          text: 'Ответ получен, но команда на которую дан ответ не найден',
+        })
+      }
+      return await sendMessage({
+        chat_id: userTelegramId,
+        // text: JSON.stringify({ body, headers: req.headers.origin }),
+        text: `Принят ответ на команду:\n${last.command.command}`,
+        keyboard,
       })
     }
   } catch (e) {
