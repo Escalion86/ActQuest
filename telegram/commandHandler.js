@@ -424,9 +424,11 @@ const commandHandler = async (userTelegramId, message, res) => {
         // text: JSON.stringify({ body, headers: req.headers.origin }),
         text: 'Дайте доступ к номеру телефона',
         // props: { request_contact: true },
-        keyboard: [
-          [{ text: 'Отправить номер телефона', request_contact: true }],
-        ],
+        keyboard: {
+          keyboard: [
+            [{ text: 'Отправить номер телефона', request_contact: true }],
+          ],
+        },
       })
     }
 
