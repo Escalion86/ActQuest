@@ -1,6 +1,6 @@
 import { postData } from '@helpers/CRUD'
 
-const sendMessage = async ({ chat_id, text, keyboard }) => {
+const sendMessage = async ({ chat_id, text, keyboard, props = {} }) => {
   return await postData(
     `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
     {
@@ -8,6 +8,7 @@ const sendMessage = async ({ chat_id, text, keyboard }) => {
       text,
       parse_mode: 'html',
       reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
+      ...props,
     },
     null,
     null,
