@@ -1,3 +1,4 @@
+import Users from '@models/Users'
 import commandHandler from './commandHandler'
 import sendMessage from './sendMessage'
 
@@ -42,23 +43,49 @@ const messageHandler = async (body, res) => {
     reply_to_message,
   } = message
   // console.log('message body :>> ', body)
+
+  await dbConnect()
+
   if (contact) {
     const { phone_number, first_name, last_name, user_id } = contact
-    console.log('contact :>> ', contact)
-    return await sendMessage({
+
+    const user = await Users.findOneAndUpdate(
+      {
+        telegramId: from.id,
+      },
+      {
+        firstName: first_name,
+        secondName: last_name,
+        phone: Number(phone_number),
+      },
+      { upsert: true }
+    )
+
+    await sendMessage({
       chat_id: user_id,
+      text: 'Регистрация успешна!',
+    })
+    return await commandHandler(from.id, '/main_menu', res)
+  }
+
+  const user = await Users.find({
+    telegramId: userTelegramId,
+  })
+
+  if (!user) {
+    return await sendMessage({
+      chat_id: userTelegramId,
       // text: JSON.stringify({ body, headers: req.headers.origin }),
-      text: 'Данные получены!',
+      text: 'Для регистрации необходимо предоставить данные (номер телефона). Пожалуйста нажмите на кнопку внизу и подтвердите отправку данных.',
       // props: { request_contact: true },
-      // keyboard: {
-      //   keyboard: [
-      //     [{ text: 'Отправить номер телефона', request_contact: true }],
-      //   ],
-      //   resize_keyboard: true,
-      //   one_time_keyboard: true,
-      // },
+      keyboard: {
+        keyboard: [[{ text: 'Отправить данные', request_contact: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
     })
   }
+
   // switch (text) {
   //   case '/create_team':
   //     // return 'Создание команды'
