@@ -70,12 +70,12 @@ const messageHandler = async (body, res) => {
   }
 
   const user = await Users.find({
-    telegramId: userTelegramId,
+    telegramId: from.id,
   })
 
   if (!user) {
     return await sendMessage({
-      chat_id: userTelegramId,
+      chat_id: from.id,
       // text: JSON.stringify({ body, headers: req.headers.origin }),
       text: 'Для регистрации необходимо предоставить данные (номер телефона). Пожалуйста нажмите на кнопку внизу и подтвердите отправку данных.',
       // props: { request_contact: true },
