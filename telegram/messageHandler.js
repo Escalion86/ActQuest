@@ -27,15 +27,41 @@ const test_message = {
     },
   },
 }
-const messageHandler = (body, res) => {
-  const { update_id, message } = body
-  const { message_id, from, chat, date, text, entities } = message
-  console.log('message body :>> ', body)
 
+const messageHandler = async (body, res) => {
+  const { update_id, message } = body
+  const {
+    message_id,
+    from,
+    chat,
+    date,
+    text,
+    entities,
+    contact,
+    reply_to_message,
+  } = message
+  // console.log('message body :>> ', body)
+  if (contact) {
+    const { phone_number, first_name, last_name, user_id } = contact
+    console.log('contact :>> ', contact)
+    return await sendMessage({
+      chat_id: user_id,
+      // text: JSON.stringify({ body, headers: req.headers.origin }),
+      text: 'Данные получены!',
+      // props: { request_contact: true },
+      // keyboard: {
+      //   keyboard: [
+      //     [{ text: 'Отправить номер телефона', request_contact: true }],
+      //   ],
+      //   resize_keyboard: true,
+      //   one_time_keyboard: true,
+      // },
+    })
+  }
   // switch (text) {
   //   case '/create_team':
   //     // return 'Создание команды'
-  return commandHandler(from.id, text, res)
+  return await commandHandler(from.id, text, res)
   //   case '/edit_team':
   //     return 'Редактирование команды'
   //   case '/join_team':
