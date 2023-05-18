@@ -495,7 +495,7 @@ const commandHandler = async (userTelegramId, message, res) => {
           },
           {
             command: {
-              command: '/' + result.nextCommand,
+              command: result.nextCommand,
               // props: { teamName: message },
             },
           },
