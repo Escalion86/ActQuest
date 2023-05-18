@@ -428,7 +428,7 @@ const commandHandler = async (userTelegramId, message, res) => {
           keyboard: [
             [{ text: 'Отправить номер телефона', request_contact: true }],
           ],
-          resizeKeyboard: true,
+          resize_keyboard: true,
           one_time_keyboard: true,
         },
       })
