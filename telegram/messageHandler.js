@@ -1,4 +1,5 @@
 import commandHandler from './commandHandler'
+import sendMessage from './sendMessage'
 
 const test_message = {
   body: {
