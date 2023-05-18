@@ -437,11 +437,11 @@ const commandHandler = async (userTelegramId, message, res) => {
       await sendMessage({
         chat_id: userTelegramId,
         // text: JSON.stringify({ body, headers: req.headers.origin }),
-        text: result,
+        text: result.message,
         // keyboard,
       })
 
-      const menu = await menus(userTelegramId, props)
+      const menu = await menus(userTelegramId, {})
       const { upper_command } = menu[command]
       const { text, buttons } = menu[upper_command]
 
