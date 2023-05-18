@@ -256,7 +256,8 @@ const menus = async (userId, props) => {
           upper_command: 'menu_teams',
           buttons: [
             {
-              command: `create_team/teamName=${props?.teamName}/teamDescription=`,
+              // command: `create_team/teamName=${props?.teamName}/teamDescription=`,
+              command: ``,
               text: 'Без описания',
             },
             { command: 'edit_team', text: '\u{1F6AB} Отмена создания команды' },
