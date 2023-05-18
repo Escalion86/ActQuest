@@ -333,7 +333,10 @@ const lastCommandHandler = async (userTelegramId, command, props, message) => {
         message:
           'Не удалось изменить название команды, так как команда не найдена',
       }
-    const team = await Teams.findByIdAndUpdate(props.teamId, { name: message })
+    const team = await Teams.findByIdAndUpdate(props.teamId, {
+      name: message,
+      name_lowered: message.toLowerCase(),
+    })
     return { success: true, message: 'Название команды обновлено' }
   }
   if (command === 'set_team_description') {
@@ -350,16 +353,28 @@ const lastCommandHandler = async (userTelegramId, command, props, message) => {
   }
   if (command === 'create_team') {
     if (!props.teamName) {
+      return {
+        success: true,
+        message: `Задано название команды "${message}"`,
+        nextCommand: `'/create_team/teamName=${message}`,
+      }
     }
+    const team = await Teams.create({
+      capitanId: userTelegramId,
+      name: props?.teamName,
+      name_lowered: props?.teamName.toLowerCase(),
+      description: message,
+    })
+
+    return { success: true, message: `Команда создана` }
     // return {
     //   success: false,
     //   message:
     //     'Не удалось изменить описание команды, так как команда не найдена',
     // }
-    const team = await Teams.findByIdAndUpdate(props.teamId, {
-      description: message,
-    })
-    return { success: true, message: 'Описание команды обновлено' }
+    // const team = await Teams.findByIdAndUpdate(props.teamId, {
+    //   description: message,
+    // })
   }
   return { success: false, message: 'Неизвестная команда' }
 }
@@ -465,6 +480,33 @@ const commandHandler = async (userTelegramId, message, res) => {
         text: result.message,
         // keyboard,
       })
+      if (result.nextCommand) {
+        const { command, props } = messageToCommandAndProps(result.nextCommand)
+        const menu = await menus(userTelegramId, props)
+        const { text, buttons } = menu[command]
+
+        await LastCommands.findOneAndUpdate(
+          {
+            userTelegramId,
+          },
+          {
+            command: {
+              command: '/' + command,
+              // props: { teamName: message },
+            },
+          },
+          { upsert: true }
+        )
+
+        const keyboard = keyboardFormer(menu, buttons)
+
+        return await sendMessage({
+          chat_id: userTelegramId,
+          // text: JSON.stringify({ body, headers: req.headers.origin }),
+          text,
+          keyboard,
+        })
+      }
 
       const menu = await menus(userTelegramId, {})
       const { upper_command } = menu[command]
