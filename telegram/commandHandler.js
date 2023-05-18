@@ -428,17 +428,13 @@ const commandHandler = async (userTelegramId, message, res) => {
           keyboard: [
             [{ text: 'Отправить номер телефона', request_contact: true }],
           ],
+          resizeKeyboard: true,
+          one_time_keyboard: true,
         },
       })
     }
 
-    ;[
-      {
-        text: 'Создать команду',
-        callback_data: '/create_team',
-      },
-    ],
-      await dbConnect()
+    await dbConnect()
     if (message === '/') message = ''
 
     const isItCommand = message[0] === '/'
