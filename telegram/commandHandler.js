@@ -424,15 +424,19 @@ const commandHandler = async (userTelegramId, message, res) => {
         // text: JSON.stringify({ body, headers: req.headers.origin }),
         text: 'Дайте доступ к номеру телефона',
         // props: { request_contact: true },
-        keyboard: {
-          inlineKeyboard: [
-            [{ text: 'Отправить номер телефона', request_contact: true }],
-          ],
-        },
+        keyboard: [
+          [{ text: 'Отправить номер телефона', request_contact: true }],
+        ],
       })
     }
 
-    await dbConnect()
+    ;[
+      {
+        text: 'Создать команду',
+        callback_data: '/create_team',
+      },
+    ],
+      await dbConnect()
     if (message === '/') message = ''
 
     const isItCommand = message[0] === '/'
