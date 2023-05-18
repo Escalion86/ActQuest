@@ -234,22 +234,26 @@ const menus = async (userId, props) => {
           buttonText: '\u{2795} Создание команды',
           upper_command: 'menu_teams',
           buttons: [
-            { command: 'edit_team', text: '\u{1F6AB} Отмена создания команды' },
+            {
+              command: 'menu_teams',
+              text: '\u{1F6AB} Отмена создания команды',
+            },
           ],
-          answerScript: (answer) => `edit_team/teamName=${answer}`,
+          // answerScript: (answer) => `create_team/teamName=${answer}`,
         }
       : {
           text: 'Введите описание команды (не обязательно)',
           upper_command: 'menu_teams',
           buttons: [
             {
-              command: `edit_team/teamName=${props?.teamName}/teamDescription=`,
+              // command: `create_team/teamName=${props?.teamName}/teamDescription=`,
+              command: '',
               text: 'Без описания',
             },
             { command: 'edit_team', text: '\u{1F6AB} Отмена создания команды' },
           ],
-          answerScript: (answer) =>
-            `edit_team/teamName=${props?.teamName}/teamDescription=${answer}`,
+          // answerScript: (answer) =>
+          //   `edit_team/teamName=${props?.teamName}/teamDescription=${answer}`,
         },
     edit_team: props?.teamId
       ? {
@@ -289,15 +293,15 @@ const menus = async (userId, props) => {
       text: `Введите новое название команды`,
       buttons: [{ command: 'edit_team', text: '\u{1F6AB} Отмена' }],
       upper_command: 'menu_teams',
-      answerScript: (answer) =>
-        `set_team_name/teamId=${props?.teamId}/teamName=${answer}`,
+      // answerScript: (answer) =>
+      //   `set_team_name/teamId=${props?.teamId}/teamName=${answer}`,
     },
     set_team_description: {
       text: `Введите новое описание команды`,
       buttons: [{ command: 'edit_team', text: '\u{1F6AB} Отмена' }],
       upper_command: 'menu_teams',
-      answerScript: (answer) =>
-        `set_team_description/teamId=${props?.teamId}/teamDescription=${answer}`,
+      // answerScript: (answer) =>
+      //   `set_team_description/teamId=${props?.teamId}/teamDescription=${answer}`,
     },
     join_team: {
       text: 'Присоединиться к команде',
