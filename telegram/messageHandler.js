@@ -73,6 +73,8 @@ const messageHandler = async (body, res) => {
     telegramId: from.id,
   })
 
+  console.log('user :>> ', user)
+
   if (!user) {
     return await sendMessage({
       chat_id: from.id,
