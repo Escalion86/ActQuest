@@ -360,7 +360,7 @@ const lastCommandHandler = async (userTelegramId, command, props, message) => {
       return {
         success: true,
         message: `Задано название команды "${message}"`,
-        nextCommand: `create_team/teamName=${message}`,
+        nextCommand: `/create_team/teamName=${message}`,
       }
     }
     const team = await Teams.create({
