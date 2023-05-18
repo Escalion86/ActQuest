@@ -297,7 +297,6 @@ const menus = async (userId, props) => {
     },
   }
 }
-
 const messageToCommandAndProps = (message) => {
   const commands = message.split('/')
   commands.shift()
@@ -312,6 +311,22 @@ const messageToCommandAndProps = (message) => {
   })
 
   return { command, props }
+}
+
+const lastCommandHandler = async (lastCommand, message) => {
+  await dbConnect()
+  const { command, props } = messageToCommandAndProps(lastCommand)
+  if (command === 'set_team_name') {
+    if (!props.teamId)
+      return {
+        success: false,
+        message:
+          'Не удалось изменить название команды, так как команда не найдена',
+      }
+    const team = await Teams.findByIdAndUpdate(props.teamId, { name: message })
+    return { success: true, message: 'Название команды обновлено' }
+  }
+  return { success: false, message: 'Неизвестная команда' }
 }
 
 const keyboardFormer = (menu, buttons) => {
@@ -402,9 +417,8 @@ const commandHandler = async (userTelegramId, message, res) => {
         })
       }
       const lastCommand = last.command.get('command')
-      const { command, props } = messageToCommandAndProps(lastCommand)
-      console.log('command :>> ', command)
-      console.log('props :>> ', props)
+      const result = await lastCommandHandler(lastCommand, message)
+
       return await sendMessage({
         chat_id: userTelegramId,
         // text: JSON.stringify({ body, headers: req.headers.origin }),
