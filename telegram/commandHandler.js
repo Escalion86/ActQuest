@@ -336,6 +336,31 @@ const lastCommandHandler = async (userTelegramId, command, props, message) => {
     const team = await Teams.findByIdAndUpdate(props.teamId, { name: message })
     return { success: true, message: 'Название команды обновлено' }
   }
+  if (command === 'set_team_description') {
+    if (!props.teamId)
+      return {
+        success: false,
+        message:
+          'Не удалось изменить описание команды, так как команда не найдена',
+      }
+    const team = await Teams.findByIdAndUpdate(props.teamId, {
+      description: message,
+    })
+    return { success: true, message: 'Описание команды обновлено' }
+  }
+  if (command === 'create_team') {
+    if (!props.teamName) {
+    }
+    // return {
+    //   success: false,
+    //   message:
+    //     'Не удалось изменить описание команды, так как команда не найдена',
+    // }
+    const team = await Teams.findByIdAndUpdate(props.teamId, {
+      description: message,
+    })
+    return { success: true, message: 'Описание команды обновлено' }
+  }
   return { success: false, message: 'Неизвестная команда' }
 }
 
