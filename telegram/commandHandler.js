@@ -197,6 +197,16 @@ const getTeam = async (id) => {
   return team
 }
 
+const createTeam = async (userTelegramId, name, description) => {
+  await dbConnect()
+  return await Teams.create({
+    capitanId: userTelegramId,
+    name,
+    name_lowered: name.toLowerCase(),
+    description: description ?? '',
+  })
+}
+
 const menus = async (userId, props) => {
   await dbConnect()
   const teamsOfUser = await Teams.find({ capitanId: userId })
@@ -246,8 +256,7 @@ const menus = async (userId, props) => {
           upper_command: 'menu_teams',
           buttons: [
             {
-              // command: `create_team/teamName=${props?.teamName}/teamDescription=`,
-              command: '',
+              command: `create_team/teamName=${props?.teamName}/teamDescription=`,
               text: 'Без описания',
             },
             { command: 'edit_team', text: '\u{1F6AB} Отмена создания команды' },
@@ -363,12 +372,7 @@ const lastCommandHandler = async (userTelegramId, command, props, message) => {
         nextCommand: `/create_team/teamName=${message}`,
       }
     }
-    const team = await Teams.create({
-      capitanId: userTelegramId,
-      name: props?.teamName,
-      name_lowered: props?.teamName.toLowerCase(),
-      description: message,
-    })
+    const team = await createTeam(userTelegramId, props?.teamName, message)
 
     return { success: true, message: `Команда создана` }
     // return {
@@ -414,6 +418,7 @@ const keyboardFormer = (menu, buttons) => {
 const commandHandler = async (userTelegramId, message, res) => {
   try {
     await dbConnect()
+    if (message === '/') message = ''
 
     const isItCommand = message[0] === '/'
     // Если была отправлена команда, то ищем ее или возвращаем ошибку
@@ -472,6 +477,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       }
       const lastCommand = last.command.get('command')
       const { command, props } = messageToCommandAndProps(lastCommand)
+
       const result = await lastCommandHandler(
         userTelegramId,
         command,
