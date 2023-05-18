@@ -156,7 +156,7 @@ export default async function handler(req, res) {
       if (body?.callback_query) {
         // Принимаем команду
         // console.log('callback_body :>> ', body)
-        const result = callbackHandler(body, res)
+        const result = await callbackHandler(body, res)
         console.log('result :>> ', result)
         // await sendMessage({
         //   chat_id: '261102161',
@@ -169,7 +169,7 @@ export default async function handler(req, res) {
         // console.log('message_body :>> ', body)
         // const { message_id, from, chat, date, text, entities } = message
         // const {id, from, message, chat_instanse, data}
-        const result = messageHandler(body, res)
+        const result = await messageHandler(body, res)
         console.log('result :>> ', result)
         // await sendMessage({
         //   chat_id: '261102161',

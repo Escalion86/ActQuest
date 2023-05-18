@@ -26,15 +26,15 @@ const test_callback = {
   },
 }
 
-const callbackHandler = (body, res) => {
+const callbackHandler = async (body, res) => {
   const { callback_query } = body
   const { id, from, message, data, chat_instance } = callback_query
-  // console.log('callback body :>> ', body)
+  console.log('callback body :>> ', body)
 
   // switch (data) {
   //   case '/create_team':
   //     // return 'Создание команды'
-  return commandHandler(from.id, data, res)
+  return await commandHandler(from.id, data, res)
   //   case '/edit_team':
   //     return 'Редактирование команды'
   //   case '/join_team':
