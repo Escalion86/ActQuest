@@ -1,4 +1,5 @@
 import Users from '@models/Users'
+import dbConnect from '@utils/dbConnect'
 import commandHandler from './commandHandler'
 import sendMessage from './sendMessage'
 
