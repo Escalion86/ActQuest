@@ -65,6 +65,7 @@ const messageHandler = async (body, res) => {
     await sendMessage({
       chat_id: user_id,
       text: 'Регистрация успешна!',
+      keyboard: { hide_keyboard: true },
     })
     return await commandHandler(from.id, '/main_menu', res)
   }
@@ -84,7 +85,7 @@ const messageHandler = async (body, res) => {
       keyboard: {
         keyboard: [[{ text: 'Отправить данные', request_contact: true }]],
         resize_keyboard: true,
-        one_time_keyboard: true,
+        // one_time_keyboard: true,
       },
     })
   }
