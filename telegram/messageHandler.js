@@ -85,7 +85,7 @@ const messageHandler = async (body, res) => {
       keyboard: {
         keyboard: [[{ text: 'Отправить данные', request_contact: true }]],
         resize_keyboard: true,
-        // one_time_keyboard: true,
+        one_time_keyboard: true,
       },
     })
   }
