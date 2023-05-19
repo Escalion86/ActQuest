@@ -46,7 +46,7 @@ const messageHandler = async (body, res) => {
   // console.log('message body :>> ', body)
 
   await dbConnect()
-  console.log('contact :>> ', contact)
+
   if (contact) {
     const { phone_number, first_name, last_name, user_id } = contact
 
@@ -69,7 +69,7 @@ const messageHandler = async (body, res) => {
     return await commandHandler(from.id, '/main_menu', res)
   }
 
-  const user = await Users.find({
+  const user = await Users.findOne({
     telegramId: from.id,
   })
 
