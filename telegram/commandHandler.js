@@ -347,7 +347,7 @@ const messageToCommandAndProps = (message) => {
 const lastCommandHandler = async (userTelegramId, command, props, message) => {
   await dbConnect()
   if (command === 'set_user_name') {
-    const user = await Users.findByIdAndUpdate(userTelegramId, {
+    const user = await Users.findOneAndUpdate({telegramId:userTelegramId}, {
       name: message,
     })
     return { success: true, message: 'Имя обновлено' }

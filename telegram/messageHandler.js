@@ -61,7 +61,7 @@ const messageHandler = async (body, res) => {
       { upsert: true }
     )
 
-    await sendMessage({
+    return await sendMessage({
       chat_id: user_id,
       text: `Регистрация успешна! Ваши данные:\n - Имя: ${name}\n - Телефон: ${phone_number}`,
       keyboard: {
@@ -72,7 +72,7 @@ const messageHandler = async (body, res) => {
         hide_keyboard: true,
       },
     })
-    return await commandHandler(from.id, '/main_menu', res)
+    // return await commandHandler(from.id, '/main_menu', res)
   }
 
   const user = await Users.findOne({
