@@ -1,5 +1,6 @@
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
+import checkUserData from './checkUserData'
 import commandHandler from './commandHandler'
 import sendMessage from './sendMessage'
 
@@ -75,35 +76,7 @@ const messageHandler = async (body, res) => {
     // return await commandHandler(from.id, '/main_menu', res)
   }
 
-  const user = await Users.findOne({
-    telegramId: from.id,
-  })
-
-  if (!user) {
-    return await sendMessage({
-      chat_id: from.id,
-      // text: JSON.stringify({ body, headers: req.headers.origin }),
-      text: 'Для регистрации необходимо предоставить данные (номер телефона и имя). Пожалуйста нажмите на кнопку внизу и подтвердите отправку данных.',
-      // props: { request_contact: true },
-      keyboard: {
-        keyboard: [[{ text: 'Отправить данные', request_contact: true }]],
-        // resize_keyboard: true,
-        one_time_keyboard: true,
-      },
-    })
-  }
-
-  // switch (text) {
-  //   case '/create_team':
-  //     // return 'Создание команды'
-  return await commandHandler(from.id, text, res)
-  //   case '/edit_team':
-  //     return 'Редактирование команды'
-  //   case '/join_team':
-  //     return 'Присоединиться к команде'
-  //   default:
-  //     return 'Неизвестная команда'
-  // }
+  if (checkUserData(from.id)) return await commandHandler(from.id, text, res)
 }
 
 export default messageHandler

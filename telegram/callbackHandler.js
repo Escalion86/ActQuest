@@ -1,3 +1,4 @@
+import checkUserData from './checkUserData'
 import commandHandler from './commandHandler'
 
 const test_callback = {
@@ -29,19 +30,9 @@ const test_callback = {
 const callbackHandler = async (body, res) => {
   const { callback_query } = body
   const { id, from, message, data, chat_instance } = callback_query
-  console.log('callback body :>> ', body)
+  // console.log('callback body :>> ', body)
 
-  // switch (data) {
-  //   case '/create_team':
-  //     // return 'Создание команды'
-  return await commandHandler(from.id, data, res)
-  //   case '/edit_team':
-  //     return 'Редактирование команды'
-  //   case '/join_team':
-  //     return 'Присоединиться к команде'
-  //   default:
-  //     return 'Неизвестная команда'
-  // }
+  if (checkUserData(from.id)) return await commandHandler(from.id, data, res)
 }
 
 export default callbackHandler
