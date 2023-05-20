@@ -32,7 +32,8 @@ const callbackHandler = async (body, res) => {
   const { id, from, message, data, chat_instance } = callback_query
   // console.log('callback body :>> ', body)
 
-  if (checkUserData(from.id)) return await commandHandler(from.id, data, res)
+  if (await checkUserData(from.id))
+    return await commandHandler(from.id, data, res)
 }
 
 export default callbackHandler

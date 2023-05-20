@@ -76,7 +76,8 @@ const messageHandler = async (body, res) => {
     // return await commandHandler(from.id, '/main_menu', res)
   }
 
-  if (checkUserData(from.id)) return await commandHandler(from.id, text, res)
+  if (await checkUserData(from.id))
+    return await commandHandler(from.id, text, res)
 }
 
 export default messageHandler
