@@ -237,7 +237,10 @@ const menus = async (userId, props) => {
     menu_user: {
       text: 'Моя анкета',
       upper_command: 'main_menu',
-      buttons: [{ command: 'main_menu', text: '\u{2B05} Главное меню' }],
+      buttons: [
+        { text: 'Изменить имя', command: `set_user_name` },
+        { command: 'main_menu', text: '\u{2B05} Главное меню' },
+      ],
     },
     create_team: !props?.teamName
       ? {
@@ -300,11 +303,11 @@ const menus = async (userId, props) => {
             { command: 'menu_teams', text: '\u{2B05} Назад' },
           ],
         },
-        set_user_name: {
-          text: `Введите имя`,
-          buttons: [{ command: 'menu_team', text: '\u{1F6AB} Отмена' }],
-          upper_command: 'menu_team',
-        },
+    set_user_name: {
+      text: `Введите имя`,
+      buttons: [{ command: 'menu_user', text: '\u{1F6AB} Отмена' }],
+      upper_command: 'menu_user',
+    },
     set_team_name: {
       text: `Введите новое название команды`,
       buttons: [{ command: 'edit_team', text: '\u{1F6AB} Отмена' }],
@@ -347,10 +350,17 @@ const messageToCommandAndProps = (message) => {
 const lastCommandHandler = async (userTelegramId, command, props, message) => {
   await dbConnect()
   if (command === 'set_user_name') {
-    const user = await Users.findOneAndUpdate({telegramId:userTelegramId}, {
-      name: message,
-    })
-    return { success: true, message: 'Имя обновлено' }
+    const user = await Users.findOneAndUpdate(
+      { telegramId: userTelegramId },
+      {
+        name: message,
+      }
+    )
+    return {
+      success: true,
+      message: 'Имя обновлено',
+      nextCommand: `/menu_user`,
+    }
   }
   if (command === 'set_team_name') {
     if (!props.teamId)
