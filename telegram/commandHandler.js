@@ -1,5 +1,6 @@
 import LastCommands from '@models/LastCommands'
 import Teams from '@models/Teams'
+import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 import sendMessage from './sendMessage'
 
@@ -299,6 +300,11 @@ const menus = async (userId, props) => {
             { command: 'menu_teams', text: '\u{2B05} Назад' },
           ],
         },
+        set_user_name: {
+          text: `Введите имя`,
+          buttons: [{ command: 'menu_team', text: '\u{1F6AB} Отмена' }],
+          upper_command: 'menu_team',
+        },
     set_team_name: {
       text: `Введите новое название команды`,
       buttons: [{ command: 'edit_team', text: '\u{1F6AB} Отмена' }],
@@ -340,6 +346,12 @@ const messageToCommandAndProps = (message) => {
 
 const lastCommandHandler = async (userTelegramId, command, props, message) => {
   await dbConnect()
+  if (command === 'set_user_name') {
+    const user = await Users.findByIdAndUpdate(userTelegramId, {
+      name: message,
+    })
+    return { success: true, message: 'Имя обновлено' }
+  }
   if (command === 'set_team_name') {
     if (!props.teamId)
       return {

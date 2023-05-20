@@ -49,14 +49,13 @@ const messageHandler = async (body, res) => {
 
   if (contact) {
     const { phone_number, first_name, last_name, user_id } = contact
-
+    const name = (first_name + (last_name ? ' ' + last_name : '')).trim()
     const user = await Users.findOneAndUpdate(
       {
         telegramId: from.id,
       },
       {
-        firstName: first_name,
-        secondName: last_name,
+        name,
         phone: Number(phone_number),
       },
       { upsert: true }
@@ -64,8 +63,14 @@ const messageHandler = async (body, res) => {
 
     await sendMessage({
       chat_id: user_id,
-      text: 'Регистрация успешна!',
-      keyboard: { hide_keyboard: true },
+      text: `Регистрация успешна! Ваши данные:\n - Имя: ${name}\n - Телефон: ${phone_number}`,
+      keyboard: {
+        inline_keyboard: [
+          [{ text: 'Изменить имя', callback_data: `/set_user_name` }],
+          [{ text: 'Перейти в главное меню', callback_data: `/main_menu` }],
+        ],
+        hide_keyboard: true,
+      },
     })
     return await commandHandler(from.id, '/main_menu', res)
   }
@@ -74,17 +79,15 @@ const messageHandler = async (body, res) => {
     telegramId: from.id,
   })
 
-  console.log('user :>> ', user)
-
   if (!user) {
     return await sendMessage({
       chat_id: from.id,
       // text: JSON.stringify({ body, headers: req.headers.origin }),
-      text: 'Для регистрации необходимо предоставить данные (номер телефона). Пожалуйста нажмите на кнопку внизу и подтвердите отправку данных.',
+      text: 'Для регистрации необходимо предоставить данные (номер телефона и имя). Пожалуйста нажмите на кнопку внизу и подтвердите отправку данных.',
       // props: { request_contact: true },
       keyboard: {
         keyboard: [[{ text: 'Отправить данные', request_contact: true }]],
-        resize_keyboard: true,
+        // resize_keyboard: true,
         one_time_keyboard: true,
       },
     })
