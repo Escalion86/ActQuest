@@ -25,6 +25,7 @@ const propsToStr = (props) => {
 
 const create_team = async ({ telegramId, message, props }) => {
   await dbConnect()
+  console.log('props :>> ', props)
   // Если задаем имя
   if (!message) {
     for (let i = 0; i < array.length; i++) {
