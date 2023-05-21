@@ -20,40 +20,26 @@ const edit_team = async ({ telegramId, message, props }) => {
     }
   }
 
-  if (props?.teamId) {
-    const team = await getTeam(props.teamId)
-    return {
-      message: `Редактирование команды "${team?.name}".${
-        team?.description ? ` Описание: "${team?.description}"` : ''
-      }`,
-      upper_command: 'menu_teams',
-      buttons: [
-        {
-          command: `set_team_name/teamId=${props.teamId}`,
-          text: '\u{270F} Изменить название',
-        },
-        {
-          command: `set_team_description/teamId=${props.teamId}`,
-          text: '\u{270F} Изменить описание',
-        },
-        {
-          command: `delete_team/teamId=${props.teamId}`,
-          text: '\u{1F4A3} Удалить команду',
-        },
-        { command: 'edit_team', text: '\u{2B05} Назад' },
-      ],
-    }
-  }
+  const team = await getTeam(props.teamId)
   return {
-    success: true,
-    message: 'Меню работы с командами',
-    buttonText: 'Команды',
-    upper_command: 'main_menu',
+    message: `Редактирование команды "${team?.name}".${
+      team?.description ? ` Описание: "${team?.description}"` : ''
+    }`,
+    upper_command: 'menu_teams',
     buttons: [
-      { command: 'create_team', text: 'Создать команду' },
-      { command: 'edit_team', text: 'Редактировать команду' },
-      { command: 'join_team', text: 'Присоединиться к команде' },
-      { command: 'main_menu', text: '\u{1F3E0} Главное меню' },
+      {
+        command: `set_team_name/teamId=${props.teamId}`,
+        text: '\u{270F} Изменить название',
+      },
+      {
+        command: `set_team_description/teamId=${props.teamId}`,
+        text: '\u{270F} Изменить описание',
+      },
+      {
+        command: `delete_team/teamId=${props.teamId}`,
+        text: '\u{1F4A3} Удалить команду',
+      },
+      { command: 'edit_team', text: '\u{2B05} Назад' },
     ],
   }
 }
