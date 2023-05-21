@@ -11,6 +11,7 @@ const set_team_description = async ({ telegramId, message, props }) => {
         'Не удалось изменить описание команды, так как команда не найдена',
       nextCommand: `/menu_teams`,
     }
+  console.log('props.noDescription :>> ', props.noDescription)
   if (props.noDescription) {
     await dbConnect()
     const team = await Teams.findByIdAndUpdate(props.teamId, {
@@ -22,6 +23,7 @@ const set_team_description = async ({ telegramId, message, props }) => {
       nextCommand: `/menu_teams`,
     }
   }
+  console.log('message :>> ', message)
   if (!message) {
     return {
       success: true,
