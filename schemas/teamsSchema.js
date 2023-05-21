@@ -1,8 +1,4 @@
 const teamsSchema = {
-  capitanId: {
-    type: Number,
-    required: true,
-  },
   name: {
     type: String,
     required: true,

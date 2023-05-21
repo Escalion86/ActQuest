@@ -1,4 +1,5 @@
 import Teams from '@models/Teams'
+import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import createTeam from 'telegram/func/createTeam'
 import propsToStr from 'telegram/func/propsToStr'

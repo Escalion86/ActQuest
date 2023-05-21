@@ -1,7 +1,6 @@
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
-import getTeam from 'telegram/func/getTeam'
 
 const joined_teams = async ({ telegramId, message, props }) => {
   if (!props?.teamId) {
@@ -13,19 +12,33 @@ const joined_teams = async ({ telegramId, message, props }) => {
         nextCommand: `/menu_teams`,
       }
     }
-    console.log('teamsUser :>> ', teamsUser)
+    const teamsIds = teamsUser.map((teamUser) =>
+      mongoose.Types.ObjectId(teamUser.teamId)
+    )
+
+    const teams = await Teams.find({
+      _id: { $in: teamsIds },
+    })
     // const teams =
     return {
-      message: 'Тест',
+      message: 'Команды в которых я состою',
       // buttonText: '\u{270F}  Редактирование команд',
       // upper_command: 'menu_teams',
-      // buttons: [
-      //   ...teamsOfUser.map((team) => ({
-      //     text: `"${team.name}"`,
-      //     command: `joined_teams/teamId=${team._id}`,
-      //   })),
-      //   { command: 'joined_teams', text: '\u{2B05} Назад' },
-      // ],
+      buttons: [
+        ...teams.map((team) => {
+          const teamUser = teamsUser.find(
+            (teamUser) => teamUser.teamId === team._id
+          )
+          // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
+          return {
+            text: `"${team.name}"${
+              teamUser.role === 'capitan' ? ' (Капитан)' : ''
+            }`,
+            command: `joined_teams/teamId=${team._id}`,
+          }
+        }),
+        { command: 'joined_teams', text: '\u{2B05} Назад' },
+      ],
     }
   }
 

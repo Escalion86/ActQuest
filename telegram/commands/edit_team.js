@@ -1,17 +1,35 @@
 import Teams from '@models/Teams'
+import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
 const edit_team = async ({ telegramId, message, props }) => {
   if (!props?.teamId) {
     await dbConnect()
-    const teamsOfUser = await Teams.find({ capitanId: telegramId })
+    const teamsUser = await TeamsUsers.find({
+      userTelegramId: telegramId,
+      role: 'capitan',
+    })
+    if (!teamsUser || teamsUser.length === 0) {
+      return {
+        message: 'Вы не состоите ни в какой команде',
+        nextCommand: `/menu_teams`,
+      }
+    }
+    const teamsIds = teamsUser.map((teamUser) =>
+      mongoose.Types.ObjectId(teamUser.teamId)
+    )
+
+    const teams = await Teams.find({
+      _id: { $in: teamsIds },
+    })
+
     return {
       message: 'Выберите команду для редактирования',
       buttonText: '\u{270F}  Редактирование команд',
       upper_command: 'menu_teams',
       buttons: [
-        ...teamsOfUser.map((team) => ({
+        ...teams.map((team) => ({
           text: `"${team.name}"`,
           command: `edit_team/teamId=${team._id}`,
         })),
