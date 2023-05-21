@@ -25,8 +25,7 @@ const propsToStr = (props) => {
 
 const create_team = async ({ telegramId, message, props }) => {
   await dbConnect()
-  console.log('props :>> ', props)
-  // Если задаем имя
+  // Если это запрос (команда), то отправляем текст пользователю
   if (!message) {
     for (let i = 0; i < array.length; i++) {
       const data = array[i]
@@ -37,13 +36,8 @@ const create_team = async ({ telegramId, message, props }) => {
           // nextCommand: `/menu_teams`,
         }
     }
-
-    // Если имя уже задано, значит сейчас идет ввод описания
-    // const team = await createTeam(telegramId, props?.teamName, message)
-
-    // return { success: true, message: `Команда "${props?.teamName}" создана` }
   }
-
+  // Если это ответ на запрос, то смотрим какую переменную (key) последнюю внесли
   for (let i = 0; i < array.length; i++) {
     const data = array[i]
     if (!props[data.prop]) {
@@ -57,6 +51,7 @@ const create_team = async ({ telegramId, message, props }) => {
     }
   }
 
+  // Если все переменные на месте, то создаем команду
   const team = await createTeam(
     telegramId,
     props?.teamName,
