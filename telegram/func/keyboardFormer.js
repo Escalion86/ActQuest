@@ -17,6 +17,7 @@ const keyboardFormer = async (commands, buttons) => {
             },
           ]
         const command = await commands[button]()
+        console.log('command :>> ', command)
         return [
           {
             text: command.buttonText ?? command.message,
