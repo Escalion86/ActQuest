@@ -1,6 +1,6 @@
 import inlineKeyboard from './inlineKeyboard'
 
-const keyboardFormer = (commands, buttons) => {
+const keyboardFormer = async (commands, buttons) => {
   var keyboard
   // if (!buttons) keyboard === undefined
   // if (typeof buttons === 'function') {
@@ -8,7 +8,7 @@ const keyboardFormer = (commands, buttons) => {
   // }
   if (typeof buttons === 'object') {
     keyboard = inlineKeyboard(
-      buttons.map((button) => {
+      buttons.map(async (button) => {
         if (typeof button === 'object')
           return [
             {
@@ -18,7 +18,9 @@ const keyboardFormer = (commands, buttons) => {
           ]
         return [
           {
-            text: commands[button]().buttonText ?? commands[button]().message,
+            text:
+              (await commands[button]()).buttonText ??
+              commands[button]().message,
             callback_data: `/${button}`,
           },
         ]
