@@ -1,3 +1,4 @@
+import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 import createTeam from 'telegram/func/createTeam'
 import propsToStr from 'telegram/func/propsToStr'
@@ -32,6 +33,14 @@ const array = [
 // }
 
 const create_team = async ({ telegramId, message, props }) => {
+  await dbConnect()
+  const teamsOfUser = await Teams.find({ capitanId: telegramId })
+  if (teamsOfUser.length >= 3)
+    return {
+      success: true,
+      message: 'Нельзя быть капитаном более 3 команд',
+      nextCommand: `/menu_teams`,
+    }
   // Если это запрос (команда), то отправляем текст пользователю
   if (!message) {
     for (let i = 0; i < array.length; i++) {
