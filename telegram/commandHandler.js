@@ -419,9 +419,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       // }
 
       // const { text, buttons } = menu[command]
-      console.log('result.buttons :>> ', result.buttons)
-      const keyboard = await keyboardFormer(commandsArray, result.buttons)
-      console.log('keyboard :>> ', keyboard.inline_keyboard)
+      const keyboard = keyboardFormer(commandsArray, result.buttons)
 
       return await sendMessage({
         chat_id: userTelegramId,
@@ -481,7 +479,7 @@ const commandHandler = async (userTelegramId, message, res) => {
           { upsert: true }
         )
 
-        const keyboard = await keyboardFormer(menu, buttons)
+        const keyboard = keyboardFormer(menu, buttons)
 
         return await sendMessage({
           chat_id: userTelegramId,
@@ -508,7 +506,7 @@ const commandHandler = async (userTelegramId, message, res) => {
         { upsert: true }
       )
 
-      const keyboard = await keyboardFormer(menu, buttons)
+      const keyboard = keyboardFormer(menu, buttons)
 
       return await sendMessage({
         chat_id: userTelegramId,
