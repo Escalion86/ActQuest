@@ -39,9 +39,9 @@ const create_team = async ({ telegramId, message, props }) => {
     }
 
     // Если имя уже задано, значит сейчас идет ввод описания
-    const team = await createTeam(telegramId, props?.teamName, message)
+    // const team = await createTeam(telegramId, props?.teamName, message)
 
-    return { success: true, message: `Команда "${props?.teamName}" создана` }
+    // return { success: true, message: `Команда "${props?.teamName}" создана` }
   }
 
   for (let i = 0; i < array.length; i++) {
@@ -63,12 +63,11 @@ const create_team = async ({ telegramId, message, props }) => {
     props.teamDescription
   )
 
-  return { success: true, message: `Команда "${props?.teamName}" создана` }
-
-  // return {
-  //   success: false,
-  //   message: `create_team ОШИБКА`,
-  // }
+  return {
+    success: true,
+    message: `Команда "${props?.teamName}" создана`,
+    nextCommand: `/menu_teams`,
+  }
 }
 
 export default create_team
