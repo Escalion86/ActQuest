@@ -247,6 +247,7 @@ const commandHandler = async (userTelegramId, message, res) => {
         })
       }
       const lastCommand = last.command.get('command')
+      console.log('lastCommand :>> ', lastCommand)
       const { command, props } = messageToCommandAndProps(lastCommand)
 
       const result = await lastCommandHandler(
