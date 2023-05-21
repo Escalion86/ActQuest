@@ -28,7 +28,7 @@ const set_team_description = async ({ telegramId, message, props }) => {
       buttons: [
         {
           text: 'Без описания',
-          command: 'set_team_description/noDescription=true',
+          command: `set_team_description/teamId=${props.teamId}/noDescription=true`,
         },
         { text: 'Отмена', command: 'menu_teams' },
       ],
