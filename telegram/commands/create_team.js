@@ -1,4 +1,3 @@
-import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import createTeam from 'telegram/func/createTeam'
@@ -77,6 +76,7 @@ const create_team = async ({ telegramId, message, props }) => {
         }
     }
   }
+  console.log('message :>> ', message)
   // Если это ответ на запрос, то смотрим какую переменную (key) последнюю внесли
   for (let i = 0; i < array.length; i++) {
     const data = array[i]
@@ -99,6 +99,7 @@ const create_team = async ({ telegramId, message, props }) => {
     props?.teamName,
     props.teamDescription
   )
+  console.log('telegramId :>> ', telegramId)
 
   return {
     success: true,
