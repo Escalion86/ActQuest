@@ -425,8 +425,9 @@ const commandHandler = async (userTelegramId, message, res) => {
       // }
 
       // const { text, buttons } = menu[command]
-
+      console.log('result.buttons :>> ', result.buttons)
       const keyboard = keyboardFormer(commandsArray, result.buttons)
+      console.log('keyboard :>> ', keyboard)
 
       return await sendMessage({
         chat_id: userTelegramId,
