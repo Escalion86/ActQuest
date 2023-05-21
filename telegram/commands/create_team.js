@@ -9,11 +9,19 @@ const array = [
     prop: 'teamName',
     message: 'Введите название команды',
     answerMessage: (answer) => `Задано название команды "${answer}"`,
+    buttons: (props) => [{ command: 'menu_teams', text: '\u{2B05} Назад' }],
   },
   {
     prop: 'teamDescription',
     message: 'Введите описание команды',
     answerMessage: (answer) => `Задано описание команды "${answer}"`,
+    buttons: (props) => [
+      {
+        command: 'menu_teams' + propsToStr(props) + '/teamDescription=',
+        text: 'Без описания',
+      },
+      { command: 'menu_teams', text: '\u{2B05} Назад' },
+    ],
   },
 ]
 
@@ -61,7 +69,7 @@ const create_team = async ({ telegramId, message, props }) => {
         return {
           success: true,
           message: data.message,
-          buttons: [{ command: 'menu_teams', text: '\u{2B05} Назад' }],
+          buttons: data.buttons(props),
           // nextCommand: `/menu_teams`,
         }
     }
@@ -74,8 +82,8 @@ const create_team = async ({ telegramId, message, props }) => {
       if (i < array.length - 1)
         return {
           success: true,
-          message: array[i + 1].answerMessage(message),
-          buttons: [{ command: 'menu_teams', text: '\u{2B05} Назад' }],
+          message: array[i].answerMessage(message),
+          buttons: data.buttons(props),
           nextCommand: `/create_team` + propsToStr(props),
         }
     }
