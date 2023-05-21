@@ -20,11 +20,12 @@ const edit_team = async ({ telegramId, message, props }) => {
     }
   }
 
-  if (props?.teamId)
+  if (props?.teamId) {
+    const team = await getTeam(props.teamId)
     return {
-      message: `Редактирование команды "${
-        (await getTeam(props.teamId))?.name
-      }"`,
+      message: `Редактирование команды "${team?.name}".${
+        team?.description ? ` Описание: "${team?.description}"` : ''
+      }`,
       upper_command: 'menu_teams',
       buttons: [
         {
@@ -42,7 +43,7 @@ const edit_team = async ({ telegramId, message, props }) => {
         { command: 'edit_team', text: '\u{2B05} Назад' },
       ],
     }
-
+  }
   return {
     success: true,
     message: 'Меню работы с командами',

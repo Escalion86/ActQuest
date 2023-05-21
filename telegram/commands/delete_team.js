@@ -2,19 +2,6 @@ import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 import propsToStr from 'telegram/func/propsToStr'
 
-const array = [
-  {
-    prop: 'teamName',
-    message: 'Введите название команды',
-    answerMessage: (answer) => `Задано название команды "${answer}"`,
-  },
-  {
-    prop: 'teamDescription',
-    message: 'Введите описание команды',
-    answerMessage: (answer) => `Задано описание команды "${answer}"`,
-  },
-]
-
 const delete_team = async ({ telegramId, message, props }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   if (!props.teamId)
@@ -25,7 +12,6 @@ const delete_team = async ({ telegramId, message, props }) => {
     }
   if (!props.confirm) {
     props.confirm = 'true'
-    console.log('propsToStr(props) :>> ', propsToStr(props))
     return {
       success: true,
       message: 'Подтвердите удаление команды',

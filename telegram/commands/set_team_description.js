@@ -10,11 +10,28 @@ const set_team_description = async ({ telegramId, message, props }) => {
         'Не удалось изменить описание команды, так как команда не найдена',
       nextCommand: `/menu_teams`,
     }
+  if (props.noDescription) {
+    await dbConnect()
+    const team = await Teams.findByIdAndUpdate(props.teamId, {
+      description: '',
+    })
+    return {
+      success: true,
+      message: 'Описание команды удалено',
+      nextCommand: `/menu_teams`,
+    }
+  }
   if (!message) {
     return {
       success: true,
       message: 'Введите новое описание команды',
-      buttons: [{ text: 'Отмена', command: 'menu_teams' }],
+      buttons: [
+        {
+          text: 'Без описания',
+          command: 'set_team_description/noDescription=true',
+        },
+        { text: 'Отмена', command: 'menu_teams' },
+      ],
     }
   }
   await dbConnect()
@@ -24,7 +41,7 @@ const set_team_description = async ({ telegramId, message, props }) => {
 
   return {
     success: true,
-    message: `Описание команды обновлена на "${message}"`,
+    message: `Описание команды обновлено на "${message}"`,
     nextCommand: `/menu_teams`,
   }
 }

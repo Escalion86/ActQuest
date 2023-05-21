@@ -7,7 +7,6 @@ const menu_user = async ({ telegramId, message, props }) => {
     await dbConnect()
     user = await Users.findOne({ telegramId })
   }
-  console.log('user :>> ', user)
 
   return {
     success: true,
