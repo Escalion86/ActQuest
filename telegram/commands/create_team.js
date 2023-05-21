@@ -43,14 +43,15 @@ const create_team = async ({ telegramId, message, props }) => {
     return { success: true, message: `Команда "${props?.teamName}" создана` }
   }
 
-  array.forEach((data) => {
+  for (let i = 0; i < array.length; i++) {
+    const data = array[i]
     if (!props[data.prop])
       return {
         success: true,
         message: data.answerMessage(message),
         nextCommand: `/create_team` + propsToStr(props),
       }
-  })
+  }
 
   return {
     success: false,
