@@ -27,14 +27,15 @@ const create_team = async ({ telegramId, message, props }) => {
   await dbConnect()
   // Если задаем имя
   if (!message) {
-    array.forEach((data) => {
+    for (let i = 0; i < array.length; i++) {
+      const data = array[i]
       if (!props[data.prop])
         return {
           success: true,
           message: data.message,
           // nextCommand: `/menu_teams`,
         }
-    })
+    }
 
     // Если имя уже задано, значит сейчас идет ввод описания
     const team = await createTeam(telegramId, props?.teamName, message)
