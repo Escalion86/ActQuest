@@ -12,9 +12,12 @@ const joined_teams = async ({ telegramId, message, props }) => {
         nextCommand: `/menu_teams`,
       }
     }
-    const teamsIds = teamsUser.map((teamUser) =>
-      mongoose.Types.ObjectId(teamUser.teamId)
+    const teamsIds = teamsUser.map(
+      (teamUser) =>
+        // mongoose.Types.ObjectId(teamUser.teamId)
+        teamUser.teamId
     )
+    console.log('teamsIds :>> ', teamsIds)
 
     const teams = await Teams.find({
       _id: { $in: teamsIds },
