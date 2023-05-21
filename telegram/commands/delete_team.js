@@ -1,5 +1,6 @@
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
+import propsToStr from 'telegram/func/propsToStr'
 
 const array = [
   {
