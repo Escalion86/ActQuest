@@ -406,12 +406,12 @@ const commandHandler = async (userTelegramId, message, res) => {
       const { command, props } = messageToCommandAndProps(message)
 
       const result = await lastCommandHandler(userTelegramId, command, props)
-      await sendMessage({
-        chat_id: userTelegramId,
-        // text: JSON.stringify({ body, headers: req.headers.origin }),
-        text: result.message,
-        // keyboard,
-      })
+      // await sendMessage({
+      //   chat_id: userTelegramId,
+      //   // text: JSON.stringify({ body, headers: req.headers.origin }),
+      //   text: result.message,
+      //   // keyboard,
+      // })
 
       // const menu = await menus(userTelegramId, props)
 
@@ -426,7 +426,7 @@ const commandHandler = async (userTelegramId, message, res) => {
 
       // const { text, buttons } = menu[command]
 
-      const keyboard = keyboardFormer(commandsArray, buttons)
+      const keyboard = keyboardFormer(commandsArray, result.buttons)
 
       return await sendMessage({
         chat_id: userTelegramId,
