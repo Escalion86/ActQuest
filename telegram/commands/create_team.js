@@ -57,9 +57,7 @@ const create_team = async ({ telegramId, message, props }) => {
   if (!message) {
     for (let i = 0; i < array.length; i++) {
       const data = array[i]
-      if (!props[data.prop]) {
-        console.log('props :>> ', props)
-        console.log('data.prop :>> ', data.prop)
+      if (props[data.prop] === undefined) {
         return {
           success: true,
           message: data.message,
@@ -73,7 +71,7 @@ const create_team = async ({ telegramId, message, props }) => {
   // Если это ответ на запрос, то смотрим какую переменную (key) последнюю внесли
   for (let i = 0; i < array.length; i++) {
     const data = array[i]
-    if (!props[data.prop]) {
+    if (props[data.prop] === undefined) {
       props[data.prop] = message
       if (i < array.length - 1)
         return {
