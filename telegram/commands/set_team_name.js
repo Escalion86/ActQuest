@@ -3,13 +3,6 @@ import dbConnect from '@utils/dbConnect'
 
 const set_team_name = async ({ telegramId, message, props }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
-  if (!message)
-    return {
-      success: false,
-      message: 'Не удалось обновить название команды, так как строка пуста',
-      nextCommand: `/menu_teams`,
-    }
-
   if (!props.teamId)
     return {
       success: false,
@@ -17,14 +10,22 @@ const set_team_name = async ({ telegramId, message, props }) => {
         'Не удалось изменить название команды, так как команда не найдена',
       nextCommand: `/menu_teams`,
     }
+  if (!message) {
+    return {
+      success: true,
+      message: 'Введите новое название команды',
+      buttons: [{ text: 'Отмена', command: 'menu_teams' }],
+    }
+  }
   await dbConnect()
   const team = await Teams.findByIdAndUpdate(props.teamId, {
     name: message,
     name_lowered: message.toLowerCase(),
   })
+
   return {
     success: true,
-    message: 'Название команды обновлено',
+    message: `Название команды обновлена на "${message}"`,
     nextCommand: `/menu_teams`,
   }
 }

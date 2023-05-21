@@ -22,7 +22,9 @@ const edit_team = async ({ telegramId, message, props }) => {
 
   if (props?.teamId)
     return {
-      message: `Редактирование команды"${(await getTeam(props.teamId))?.name}"`,
+      message: `Редактирование команды "${
+        (await getTeam(props.teamId))?.name
+      }"`,
       upper_command: 'menu_teams',
       buttons: [
         {
