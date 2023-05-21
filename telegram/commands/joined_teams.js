@@ -30,9 +30,11 @@ const joined_teams = async ({ telegramId, message, props }) => {
       // upper_command: 'menu_teams',
       buttons: [
         ...teams.map((team) => {
-          const teamUser = teamsUser.find(
-            (teamUser) => teamUser.teamId === team._id
-          )
+          const teamUser = teamsUser.find((teamUser) => {
+            console.log('teamUser.teamId :>> ', teamUser.teamId)
+            console.log('team._id :>> ', team._id)
+            return teamUser.teamId === team._id
+          })
           console.log('teamUser :>> ', teamUser)
           // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
           return {
