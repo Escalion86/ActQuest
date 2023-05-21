@@ -15,13 +15,16 @@ const array = [
     prop: 'teamDescription',
     message: 'Введите описание команды',
     answerMessage: (answer) => `Задано описание команды "${answer}"`,
-    buttons: (props) => [
-      {
-        command: 'menu_teams' + propsToStr(props) + '/teamDescription=',
-        text: 'Без описания',
-      },
-      { command: 'menu_teams', text: '\u{2B05} Назад' },
-    ],
+    buttons: (props) => {
+      console.log('props :>> ', props)
+      return [
+        {
+          command: 'create_team' + propsToStr(props) + '/teamDescription=',
+          text: 'Без описания',
+        },
+        { command: 'menu_teams', text: '\u{2B05} Назад' },
+      ]
+    },
   },
 ]
 
