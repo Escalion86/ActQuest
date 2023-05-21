@@ -135,13 +135,13 @@ if (!cached) {
 
 async function dbConnect() {
   if (cached.conn) {
-    console.log('dbConnect: используется текущее соединение')
+    // console.log('dbConnect: используется текущее соединение')
     // console.log('dbConnect: cached.conn', cached.conn)
     return cached.conn
   }
 
   if (!cached.promise) {
-    console.log('dbConnect: соединяем')
+    // console.log('dbConnect: соединяем')
     const opts = {
       // useNewUrlParser: true,
       // useUnifiedTopology: true,
