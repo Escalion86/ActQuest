@@ -1,4 +1,5 @@
 const menu_user = async ({ telegramId, message, props }) => {
+  console.log('!! menu_user')
   return {
     success: true,
     message: 'Моя анкета',

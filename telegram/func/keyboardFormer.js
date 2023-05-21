@@ -1,13 +1,12 @@
 import inlineKeyboard from './inlineKeyboard'
 
 const keyboardFormer = async (commands, buttons) => {
-  var keyboard
   // if (!buttons) keyboard === undefined
   // if (typeof buttons === 'function') {
   //   keyboard = inlineKeyboard(await buttons(userTelegramId, props))
   // }
-  if (typeof buttons === 'object') {
-    keyboard = inlineKeyboard(
+  if (buttons && typeof buttons === 'object') {
+    return inlineKeyboard(
       await Promise.all(
         buttons.map(async (button) => {
           if (typeof button === 'object')
@@ -31,7 +30,7 @@ const keyboardFormer = async (commands, buttons) => {
       )
     )
   }
-  return keyboard
+  return
 }
 
 export default keyboardFormer
