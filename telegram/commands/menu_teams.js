@@ -9,7 +9,7 @@ const menu_teams = async ({ telegramId, message, props }) => {
       { command: 'create_team', text: 'Создать команду' },
       { command: 'edit_team', text: 'Редактировать команду' },
       { command: 'join_team', text: 'Присоединиться к команде' },
-      { command: 'main_menu', text: '\u{2B05} Главное меню' },
+      { command: 'main_menu', text: '\u{1F3E0} Главное меню' },
     ],
   }
 }
