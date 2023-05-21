@@ -3,7 +3,7 @@ import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
 const edit_team = async ({ telegramId, message, props }) => {
-  if (!message) {
+  if (!props?.teamId) {
     await dbConnect()
     const teamsOfUser = await Teams.find({ capitanId: telegramId })
     return {

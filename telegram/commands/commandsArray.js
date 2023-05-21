@@ -1,4 +1,5 @@
 import create_team from './create_team'
+import delete_team from './delete_team'
 import edit_team from './edit_team'
 import main_menu from './main_menu'
 import menu_teams from './menu_teams'
@@ -16,6 +17,7 @@ const commandsArray = {
   main_menu,
   edit_team,
   menu_user,
+  delete_team,
 }
 
 export default commandsArray

@@ -1,5 +1,6 @@
 import dbConnect from '@utils/dbConnect'
 import createTeam from 'telegram/func/createTeam'
+import propsToStr from 'telegram/func/propsToStr'
 
 const array = [
   {
@@ -14,17 +15,23 @@ const array = [
   },
 ]
 
-const propsToStr = (props) => {
-  const tempArray = []
-  for (const key in props) {
-    tempArray.push(`${key}=${props[key]}`)
-  }
-  const result = tempArray.join('/')
-  return tempArray.length > 0 ? '/' + result : ''
-}
+// const commandSample = {
+//   propsNeeded: [
+//     {
+//       prop: 'teamName',
+//       message: 'Введите название команды',
+//       answerMessage: (answer) => `Задано название команды "${answer}"`,
+//     },
+//     {
+//       prop: 'teamDescription',
+//       message: 'Введите описание команды',
+//       answerMessage: (answer) => `Задано описание команды "${answer}"`,
+//     },
+//   ],
+//   messageOnSuccess: (data) => `Команда "${data.name}" создана`
+// }
 
 const create_team = async ({ telegramId, message, props }) => {
-  await dbConnect()
   // Если это запрос (команда), то отправляем текст пользователю
   if (!message) {
     for (let i = 0; i < array.length; i++) {
@@ -52,6 +59,7 @@ const create_team = async ({ telegramId, message, props }) => {
   }
 
   // Если все переменные на месте, то создаем команду
+  await dbConnect()
   const team = await createTeam(
     telegramId,
     props?.teamName,
