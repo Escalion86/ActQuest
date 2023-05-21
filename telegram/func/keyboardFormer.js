@@ -17,6 +17,8 @@ const keyboardFormer = async (commands, buttons) => {
                 callback_data: `/${button.command}`,
               },
             ]
+          console.log('button :>> ', button)
+          console.log('commands[button] :>> ', commands[button])
           const command = await commands[button]()
           console.log('command :>> ', command)
           return [
