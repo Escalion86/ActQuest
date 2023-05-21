@@ -200,12 +200,16 @@ const executeCommand = async (userTelegramId, message) => {
   const result = await lastCommandHandler(userTelegramId, command, props)
   const keyboard = keyboardFormer(commandsArray, result.buttons)
 
-  return await sendMessage({
+  await sendMessage({
     chat_id: userTelegramId,
     // text: JSON.stringify({ body, headers: req.headers.origin }),
     text: result.message,
     keyboard,
   })
+
+  if (result.nextCommand)
+    return await executeCommand(userTelegramId, result.nextCommand)
+  return
 }
 
 const commandHandler = async (userTelegramId, message, res) => {
@@ -232,7 +236,7 @@ const commandHandler = async (userTelegramId, message, res) => {
     const isItCommand = message[0] === '/'
     // Если была отправлена команда, то ищем ее или возвращаем ошибку
     if (isItCommand) {
-      return executeCommand(userTelegramId, message)
+      await executeCommand(userTelegramId, message)
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
       const last = await LastCommands.findOne({
@@ -291,7 +295,7 @@ const commandHandler = async (userTelegramId, message, res) => {
         //   keyboard,
         // })
       }
-      return await executeCommand(userTelegramId, '/' + result.upper_command)
+      // return await executeCommand(userTelegramId, '/' + result.upper_command)
 
       // const menu = await menus(userTelegramId, {})
       // const { upper_command } = menu[command]
