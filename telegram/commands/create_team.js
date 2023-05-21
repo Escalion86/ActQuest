@@ -45,9 +45,11 @@ const array = [
 
 const create_team = async ({ telegramId, message, props }) => {
   await dbConnect()
+  console.log('telegramId :>> ', telegramId)
   const teamsUser = await TeamsUsers.find({
     userTelegramId: telegramId,
   })
+  console.log('teamsUser :>> ', teamsUser)
   if (teamsUser.length >= 3) {
     return {
       message:
@@ -76,6 +78,7 @@ const create_team = async ({ telegramId, message, props }) => {
         }
     }
   }
+
   console.log('message :>> ', message)
   // Если это ответ на запрос, то смотрим какую переменную (key) последнюю внесли
   for (let i = 0; i < array.length; i++) {
