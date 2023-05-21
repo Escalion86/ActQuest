@@ -58,7 +58,8 @@ const create_team = async ({ telegramId, message, props }) => {
     for (let i = 0; i < array.length; i++) {
       const data = array[i]
       if (!props[data.prop]) {
-        console.log('!props[data.prop] :>> ', !props[data.prop])
+        console.log('props :>> ', props)
+        console.log('data.prop :>> ', data.prop)
         return {
           success: true,
           message: data.message,
