@@ -5,9 +5,9 @@ import mongoose from 'mongoose'
 const getTeam = async (id) => {
   await dbConnect()
   const preparedId = mongoose.Types.ObjectId(id)
-  return await Teams.findById(preparedId, null, (err) => {
-    console.log('err :>> ', err)
-  })
+  if (!mongoose.Types.ObjectId.isValid(preparedId)) return
+
+  return await Teams.findById(preparedId)
 }
 
 export default getTeam
