@@ -3,6 +3,7 @@ import dbConnect from '@utils/dbConnect'
 
 const set_team_description = async ({ telegramId, message, props }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
+  console.log('props.teamId :>> ', props.teamId)
   if (!props.teamId)
     return {
       success: false,
