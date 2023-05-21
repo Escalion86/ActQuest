@@ -68,7 +68,7 @@ const messageHandler = async (body, res) => {
       keyboard: {
         inline_keyboard: [
           [{ text: 'Изменить имя', callback_data: `/set_user_name` }],
-          [{ text: 'Перейти в главное меню', callback_data: `/main_menu` }],
+          [{ text: '\u{1F3E0} Главное меню', callback_data: `/main_menu` }],
         ],
         hide_keyboard: true,
       },

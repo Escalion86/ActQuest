@@ -31,7 +31,7 @@ const menus = async (userId, props) => {
         'create_team',
         'edit_team',
         'join_team',
-        { command: 'main_menu', text: '\u{2B05} Главное меню' },
+        { command: 'main_menu', text: '\u{1F3E0} Главное меню' },
       ],
     },
     menu_user: {
@@ -39,7 +39,7 @@ const menus = async (userId, props) => {
       upper_command: 'main_menu',
       buttons: [
         { text: 'Изменить имя', command: `set_user_name` },
-        { command: 'main_menu', text: '\u{2B05} Главное меню' },
+        { command: 'main_menu', text: '\u{1F3E0} Главное меню' },
       ],
     },
     create_team: !props?.teamName
@@ -125,7 +125,7 @@ const menus = async (userId, props) => {
     join_team: {
       text: 'Присоединиться к команде',
       textButton: `\u{1F517} Присоединиться к команде`,
-      buttons: [{ command: 'main_menu', text: '\u{2B05} Главное меню' }],
+      buttons: [{ command: 'main_menu', text: '\u{1F3E0} Главное меню' }],
       upper_command: 'main_menu',
       // answerScript: (answer) => console.log('answer :>> ', answer),
     },

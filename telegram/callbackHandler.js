@@ -31,6 +31,19 @@ const callbackHandler = async (body, res) => {
   const { callback_query } = body
   const { id, from, message, data, chat_instance } = callback_query
   // console.log('callback body :>> ', body)
+  await postData(
+    `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/answerCallbackQuery`,
+    {
+      callback_query_id: id,
+    },
+    null,
+    null,
+    // (data) => console.log('post success', data),
+    // (data) => console.log('post error', data),
+    true,
+    null,
+    true
+  )
 
   if (await checkUserData(from.id))
     return await commandHandler(from.id, data, res)
