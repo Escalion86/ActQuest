@@ -3,6 +3,8 @@ import Teams from '@models/Teams'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 import commandsArray from './commands/commandsArray'
+import getTeam from './func/getTeam'
+import keyboardFormer from './func/keyboardFormer'
 import sendMessage from './sendMessage'
 
 const updateCommand = async (userTelegramId, command) => {
@@ -192,13 +194,6 @@ const allCommands = [
   'main_menu', // +
 ]
 
-const getTeam = async (id) => {
-  await dbConnect()
-  const team = await Teams.findById(id)
-  console.log('team :>> ', team)
-  return team
-}
-
 const menus = async (userId, props) => {
   await dbConnect()
   const teamsOfUser = await Teams.find({ capitanId: userId })
@@ -344,33 +339,33 @@ const lastCommandHandler = async (telegramId, command, props, message) => {
   return { success: false, message: 'Неизвестная команда' }
 }
 
-const keyboardFormer = (menu, buttons) => {
-  var keyboard
-  // if (!buttons) keyboard === undefined
-  // if (typeof buttons === 'function') {
-  //   keyboard = inlineKeyboard(await buttons(userTelegramId, props))
-  // }
-  if (typeof buttons === 'object') {
-    keyboard = inlineKeyboard(
-      buttons.map((button) => {
-        if (typeof button === 'object')
-          return [
-            {
-              text: button.text,
-              callback_data: `/${button.command}`,
-            },
-          ]
-        return [
-          {
-            text: menu[button].buttonText ?? menu[button].text,
-            callback_data: `/${button}`,
-          },
-        ]
-      })
-    )
-  }
-  return keyboard
-}
+// const keyboardFormer = (menu, buttons) => {
+//   var keyboard
+//   // if (!buttons) keyboard === undefined
+//   // if (typeof buttons === 'function') {
+//   //   keyboard = inlineKeyboard(await buttons(userTelegramId, props))
+//   // }
+//   if (typeof buttons === 'object') {
+//     keyboard = inlineKeyboard(
+//       buttons.map((button) => {
+//         if (typeof button === 'object')
+//           return [
+//             {
+//               text: button.text,
+//               callback_data: `/${button.command}`,
+//             },
+//           ]
+//         return [
+//           {
+//             text: menu[button].buttonText ?? menu[button].text,
+//             callback_data: `/${button}`,
+//           },
+//         ]
+//       })
+//     )
+//   }
+//   return keyboard
+// }
 
 const commandHandler = async (userTelegramId, message, res) => {
   try {
@@ -410,20 +405,28 @@ const commandHandler = async (userTelegramId, message, res) => {
       )
       const { command, props } = messageToCommandAndProps(message)
 
-      const menu = await menus(userTelegramId, props)
+      const result = await lastCommandHandler(userTelegramId, command, props)
+      await sendMessage({
+        chat_id: userTelegramId,
+        // text: JSON.stringify({ body, headers: req.headers.origin }),
+        text: result.message,
+        // keyboard,
+      })
 
-      if (!menu[command]) {
-        const lastCommand = last ? last.command.get('command') : undefined
-        return await script({
-          userTelegramId,
-          command: lastCommand,
-          text: 'Неизвестная команда',
-        })
-      }
+      // const menu = await menus(userTelegramId, props)
 
-      const { text, buttons } = menu[command]
+      // if (!menu[command]) {
+      //   const lastCommand = last ? last.command.get('command') : undefined
+      //   return await script({
+      //     userTelegramId,
+      //     command: lastCommand,
+      //     text: 'Неизвестная команда',
+      //   })
+      // }
 
-      const keyboard = keyboardFormer(menu, buttons)
+      // const { text, buttons } = menu[command]
+
+      const keyboard = keyboardFormer(commandsArray, buttons)
 
       return await sendMessage({
         chat_id: userTelegramId,
@@ -437,6 +440,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       //   keyboard,
       // })
     } else {
+      // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
       const last = await LastCommands.findOne({
         userTelegramId,
       })
@@ -463,6 +467,7 @@ const commandHandler = async (userTelegramId, message, res) => {
         text: result.message,
         // keyboard,
       })
+
       if (result.nextCommand) {
         const { command, props } = messageToCommandAndProps(result.nextCommand)
         const menu = await menus(userTelegramId, props)
@@ -516,13 +521,6 @@ const commandHandler = async (userTelegramId, message, res) => {
         text,
         keyboard,
       })
-
-      // return await sendMessage({
-      //   chat_id: userTelegramId,
-      //   // text: JSON.stringify({ body, headers: req.headers.origin }),
-      //   text: `Принят ответ на команду:\n${lastCommand}`,
-      //   // keyboard,
-      // })
     }
   } catch (e) {
     console.log('e :>> ', e)

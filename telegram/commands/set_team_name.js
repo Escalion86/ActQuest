@@ -2,6 +2,7 @@ import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 
 const set_team_name = async ({ telegramId, message, props }) => {
+  // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   if (!message)
     return {
       success: false,
@@ -21,7 +22,11 @@ const set_team_name = async ({ telegramId, message, props }) => {
     name: message,
     name_lowered: message.toLowerCase(),
   })
-  return { success: true, message: 'Название команды обновлено' }
+  return {
+    success: true,
+    message: 'Название команды обновлено',
+    nextCommand: `/menu_teams`,
+  }
 }
 
 export default set_team_name

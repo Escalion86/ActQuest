@@ -1,12 +1,11 @@
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 
-const set_user_name = async ({ telegramId, message }) => {
+const set_user_name = async ({ telegramId, message, props }) => {
   if (!message)
     return {
-      success: false,
-      message: 'Не удалось обновить имя, так как строка пуста',
-      nextCommand: `/menu_user`,
+      success: true,
+      message: 'Введите имя',
     }
   await dbConnect()
   const user = await Users.findOneAndUpdate(

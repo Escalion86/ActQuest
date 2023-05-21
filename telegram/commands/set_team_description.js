@@ -2,6 +2,7 @@ import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 
 const set_team_description = async ({ telegramId, message, props }) => {
+  // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   if (!message)
     return {
       success: false,
@@ -20,7 +21,11 @@ const set_team_description = async ({ telegramId, message, props }) => {
   const team = await Teams.findByIdAndUpdate(props.teamId, {
     description: message,
   })
-  return { success: true, message: 'Описание команды обновлено' }
+  return {
+    success: true,
+    message: 'Описание команды обновлено',
+    nextCommand: `/menu_teams`,
+  }
 }
 
 export default set_team_description
