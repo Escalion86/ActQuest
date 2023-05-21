@@ -1,4 +1,5 @@
-const { default: Teams } = require('@models/Teams')
+import Teams from '@models/Teams'
+import dbConnect from '@utils/dbConnect'
 
 const getTeam = async (id) => {
   await dbConnect()
