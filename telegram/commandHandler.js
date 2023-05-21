@@ -43,6 +43,7 @@ const executeCommand = async (userTelegramId, message) => {
   const { command, props } = messageToCommandAndProps(message)
 
   const result = await lastCommandHandler(userTelegramId, command, props)
+  console.log('result :>> ', result)
   const keyboard = keyboardFormer(commandsArray, result.buttons)
 
   await sendMessage({

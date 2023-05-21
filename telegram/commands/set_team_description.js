@@ -25,6 +25,7 @@ const set_team_description = async ({ telegramId, message, props }) => {
   }
   console.log('message :>> ', message)
   if (!message) {
+    console.log('!!!')
     return {
       success: true,
       message: 'Введите новое описание команды',
