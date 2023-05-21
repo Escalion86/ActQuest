@@ -16,11 +16,10 @@ const keyboardFormer = async (commands, buttons) => {
               callback_data: `/${button.command}`,
             },
           ]
+        const command = await commands[button]()
         return [
           {
-            text:
-              (await commands[button]()).buttonText ??
-              commands[button]().message,
+            text: command.buttonText ?? command.message,
             callback_data: `/${button}`,
           },
         ]
