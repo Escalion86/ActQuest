@@ -12,12 +12,14 @@ const edit_team = async ({ telegramId, message, props }) => {
     })
     if (!teamsUser || teamsUser.length === 0) {
       return {
-        message: 'Вы не состоите ни в какой команде',
+        message: 'Вы не являетесь капитаном ни в какой команде',
         nextCommand: `/menu_teams`,
       }
     }
-    const teamsIds = teamsUser.map((teamUser) =>
-      mongoose.Types.ObjectId(teamUser.teamId)
+    const teamsIds = teamsUser.map(
+      (teamUser) =>
+        // mongoose.Types.ObjectId(teamUser.teamId)
+        teamUser.teamId
     )
 
     const teams = await Teams.find({

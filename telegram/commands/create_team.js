@@ -35,13 +35,24 @@ const array = [
 
 const create_team = async ({ telegramId, message, props }) => {
   await dbConnect()
-  const teamsOfUser = await Teams.find({ capitanId: telegramId })
-  if (teamsOfUser.length >= 3)
+  const teamsUser = await TeamsUsers.find({
+    userTelegramId: telegramId,
+  })
+  if (teamsUser.length >= 3) {
     return {
-      success: true,
-      message: 'Нельзя быть капитаном более 3 команд',
+      message:
+        'Нельзя состоять более чем в 3 командах. Для создания команды сначала покиньте одну из команд',
       nextCommand: `/menu_teams`,
     }
+  }
+
+  // const teamsOfUser = await Teams.find({ capitanId: telegramId })
+  // if (teamsOfUser.length >= 3)
+  //   return {
+  //     success: true,
+  //     message: 'Нельзя быть капитаном более 3 команд',
+  //     nextCommand: `/menu_teams`,
+  //   }
   // Если это запрос (команда), то отправляем текст пользователю
   if (!message) {
     for (let i = 0; i < array.length; i++) {
