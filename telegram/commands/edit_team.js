@@ -5,7 +5,7 @@ import getTeam from 'telegram/func/getTeam'
 const edit_team = async ({ telegramId, message, props }) => {
   if (!message) {
     await dbConnect()
-    const teamsOfUser = await Teams.find({ capitanId: userId })
+    const teamsOfUser = await Teams.find({ capitanId: telegramId })
     return {
       message: 'Выберите команду для редактирования',
       buttonText: '\u{270F}  Редактирование команд',
