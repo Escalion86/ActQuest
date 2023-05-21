@@ -22,6 +22,7 @@ const joined_teams = async ({ telegramId, message, props }) => {
     const teams = await Teams.find({
       _id: { $in: teamsIds },
     })
+    console.log('teams :>> ', teams)
     // const teams =
     return {
       message: 'Команды в которых я состою',
@@ -32,6 +33,7 @@ const joined_teams = async ({ telegramId, message, props }) => {
           const teamUser = teamsUser.find(
             (teamUser) => teamUser.teamId === team._id
           )
+          console.log('teamUser :>> ', teamUser)
           // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
           return {
             text: `"${team.name}"${
