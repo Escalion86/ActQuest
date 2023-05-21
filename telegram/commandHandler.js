@@ -426,7 +426,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       return await sendMessage({
         chat_id: userTelegramId,
         // text: JSON.stringify({ body, headers: req.headers.origin }),
-        text,
+        text: result.message,
         keyboard,
       })
       // return await script({
