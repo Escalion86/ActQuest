@@ -11,7 +11,7 @@ const menu_user = async ({ telegramId, message, props }) => {
 
   return {
     success: true,
-    message: user ? `Моя анкета:\n - Имя:${user.name}` : 'Моя анкета',
+    message: user ? `Моя анкета:\n - Имя: ${user.name}` : 'Моя анкета',
     buttonText: 'Команды',
     upper_command: 'main_menu',
     buttons: [
