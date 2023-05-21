@@ -32,8 +32,8 @@ const joined_teams = async ({ telegramId, message, props }) => {
         ...teams.map((team) => {
           const teamUser = teamsUser.find((teamUser) => {
             console.log('teamUser.teamId :>> ', teamUser.teamId)
-            console.log('team._id :>> ', team._id)
-            return teamUser.teamId === team._id
+            console.log('String(team._id) :>> ', String(team._id))
+            return teamUser.teamId === String(team._id)
           })
           console.log('teamUser :>> ', teamUser)
           // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
