@@ -4,6 +4,7 @@ import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 import commandsArray from './commands/commandsArray'
 import getTeam from './func/getTeam'
+import inlineKeyboard from './func/inlineKeyboard'
 import keyboardFormer from './func/keyboardFormer'
 import sendMessage from './sendMessage'
 
@@ -41,13 +42,6 @@ const script = async ({ userTelegramId, command, text, keyboard }) => {
     text,
     keyboard,
   })
-}
-
-const inlineKeyboard = (inline_keyboard) => {
-  if (!inline_keyboard || inline_keyboard.length === 0) return
-  return {
-    inline_keyboard,
-  }
 }
 
 var keyboardCreateTeamSetName = inlineKeyboard([

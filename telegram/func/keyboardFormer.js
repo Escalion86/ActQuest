@@ -1,3 +1,5 @@
+import inlineKeyboard from './inlineKeyboard'
+
 const keyboardFormer = (commands, buttons) => {
   var keyboard
   // if (!buttons) keyboard === undefined
