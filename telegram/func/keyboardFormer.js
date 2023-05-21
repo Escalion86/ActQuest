@@ -8,23 +8,25 @@ const keyboardFormer = async (commands, buttons) => {
   // }
   if (typeof buttons === 'object') {
     keyboard = inlineKeyboard(
-      buttons.map(async (button) => {
-        if (typeof button === 'object')
+      await Promise.all(
+        buttons.map(async (button) => {
+          if (typeof button === 'object')
+            return [
+              {
+                text: button.text,
+                callback_data: `/${button.command}`,
+              },
+            ]
+          const command = await commands[button]()
+          console.log('command :>> ', command)
           return [
             {
-              text: button.text,
-              callback_data: `/${button.command}`,
+              text: command.buttonText ?? command.message,
+              callback_data: `/${button}`,
             },
           ]
-        const command = await commands[button]()
-        console.log('command :>> ', command)
-        return [
-          {
-            text: command.buttonText ?? command.message,
-            callback_data: `/${button}`,
-          },
-        ]
-      })
+        })
+      )
     )
   }
   return keyboard
