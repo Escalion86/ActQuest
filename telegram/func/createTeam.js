@@ -12,7 +12,7 @@ const createTeam = async (userTelegramId, name, description) => {
   })
   await TeamsUsers.create({
     teamId: String(team._id),
-    userTelegramId: telegramId,
+    userTelegramId,
     role: 'capitan',
   })
   return team

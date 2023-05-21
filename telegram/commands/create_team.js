@@ -94,7 +94,7 @@ const create_team = async ({ telegramId, message, props }) => {
         }
     }
   }
-
+  console.log('telegramId 2 :>> ', telegramId)
   // Если все переменные на месте, то создаем команду
   await dbConnect()
   const team = await createTeam(
@@ -102,7 +102,7 @@ const create_team = async ({ telegramId, message, props }) => {
     props?.teamName,
     props.teamDescription
   )
-  console.log('telegramId :>> ', telegramId)
+  console.log('telegramId 3 :>> ', telegramId)
 
   return {
     success: true,
