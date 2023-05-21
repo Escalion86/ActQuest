@@ -61,6 +61,7 @@ const create_team = async ({ telegramId, message, props }) => {
         return {
           success: true,
           message: data.message,
+          buttons: [{ command: 'menu_teams', text: '\u{2B05} Назад' }],
           // nextCommand: `/menu_teams`,
         }
     }
@@ -74,6 +75,7 @@ const create_team = async ({ telegramId, message, props }) => {
         return {
           success: true,
           message: array[i + 1].answerMessage(message),
+          buttons: [{ command: 'menu_teams', text: '\u{2B05} Назад' }],
           nextCommand: `/create_team` + propsToStr(props),
         }
     }
