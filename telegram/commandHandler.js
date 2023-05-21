@@ -238,7 +238,7 @@ const commandHandler = async (userTelegramId, message, res) => {
       const last = await LastCommands.findOne({
         userTelegramId,
       })
-      console.log('last :>> ', last)
+
       if (!last) {
         return await sendMessage({
           chat_id: userTelegramId,

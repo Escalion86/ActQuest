@@ -1,16 +1,40 @@
 import dbConnect from '@utils/dbConnect'
 import createTeam from 'telegram/func/createTeam'
 
+const array = [
+  {
+    prop: 'teamName',
+    message: 'Введите название команды',
+    answerMessage: (answer) => `Задано название команды "${answer}"`,
+  },
+  {
+    prop: 'teamDescription',
+    message: 'Введите описание команды',
+    answerMessage: (answer) => `Задано описание команды "${answer}"`,
+  },
+]
+
+const propsToStr = (props) => {
+  const tempArray = []
+  for (const key in props) {
+    tempArray.push(`${key}=${props[key]}`)
+  }
+  const result = tempArray.join('/')
+  return tempArray.length > 0 ? '/' + result : ''
+}
+
 const create_team = async ({ telegramId, message, props }) => {
   await dbConnect()
   // Если задаем имя
   if (!message) {
-    if (!props.teamName)
-      return {
-        success: true,
-        message: 'Введите название команды',
-        // nextCommand: `/menu_teams`,
-      }
+    array.forEach((data) => {
+      if (!props[data.prop])
+        return {
+          success: true,
+          message: data.message,
+          // nextCommand: `/menu_teams`,
+        }
+    })
 
     // Если имя уже задано, значит сейчас идет ввод описания
     const team = await createTeam(telegramId, props?.teamName, message)
@@ -18,10 +42,18 @@ const create_team = async ({ telegramId, message, props }) => {
     return { success: true, message: `Команда "${props?.teamName}" создана` }
   }
 
+  array.forEach((data) => {
+    if (!props[data.prop])
+      return {
+        success: true,
+        message: data.answerMessage(message),
+        nextCommand: `/create_team` + propsToStr(props),
+      }
+  })
+
   return {
-    success: true,
-    message: `Задано название команды "${message}"`,
-    nextCommand: `/create_team/teamName=${message}`,
+    success: false,
+    message: `create_team ОШИБКА`,
   }
 }
 
