@@ -66,6 +66,13 @@ const commandHandler = async (userTelegramId, message, messageId) => {
     const isItCommand = message[0] === '/'
     // Если была отправлена команда, то ищем ее или возвращаем ошибку
     if (isItCommand) {
+      if (message[1] === '+') {
+        const last = await LastCommands.findOne({
+          userTelegramId,
+        })
+        const lastCommand = last.command.get('command')
+        message = lastCommand + '/' + message.substr(2)
+      }
       await executeCommand(userTelegramId, message, messageId)
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
