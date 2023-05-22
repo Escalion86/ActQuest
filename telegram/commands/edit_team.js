@@ -8,11 +8,11 @@ const edit_team = async ({ telegramId, message, props }) => {
     await dbConnect()
     const teamsUser = await TeamsUsers.find({
       userTelegramId: telegramId,
-      role: 'capitan',
+      // role: 'capitan',
     })
     if (!teamsUser || teamsUser.length === 0) {
       return {
-        message: 'Вы не являетесь капитаном ни в какой команде',
+        message: 'Ошибка не найдено записи в команде',
         nextCommand: `/menu_teams`,
       }
     }
@@ -40,35 +40,61 @@ const edit_team = async ({ telegramId, message, props }) => {
     }
   }
 
+  await dbConnect()
+  const teamsUser = await TeamsUsers.findOne({
+    userTelegramId: telegramId,
+    teamId: props.teamId,
+  })
+
+  if (!teamsUser) {
+    return {
+      message: 'Ошибка вы не состоите в команде',
+      nextCommand: `/menu_teams`,
+    }
+  }
+
+  const isCapitan = teamsUser.role === 'capitan'
+
   const team = await getTeam(props.teamId)
+
+  const buttons = isCapitan
+    ? [
+        {
+          command: `set_team_name/teamId=${props.teamId}`,
+          text: '\u{270F} Изменить название',
+        },
+        {
+          command: `set_team_description/teamId=${props.teamId}`,
+          text: '\u{270F} Изменить описание',
+        },
+        {
+          command: `team_users/teamId=${props.teamId}`,
+          text: '\u{1F465} Посмотреть состав команды',
+        },
+        {
+          command: `link_to_join_team/teamId=${props.teamId}`,
+          text: '\u{1F517} Пригласить в команду',
+        },
+        {
+          command: `delete_team/teamId=${props.teamId}`,
+          text: '\u{1F4A3} Удалить команду',
+        },
+        { command: 'joined_teams', text: '\u{2B05} Назад' },
+      ]
+    : [
+        {
+          command: `team_users/teamId=${props.teamId}`,
+          text: '\u{1F465} Посмотреть состав команды',
+        },
+        { command: 'joined_teams', text: '\u{2B05} Назад' },
+      ]
+
   return {
-    message: `Редактирование команды "${team?.name}".${
-      team?.description ? ` Описание: "${team?.description}"` : ''
-    }`,
+    message: `${isCapitan ? 'Редактирование команды' : 'Команда'} "${
+      team?.name
+    }".${team?.description ? ` Описание: "${team?.description}"` : ''}`,
     upper_command: 'menu_teams',
-    buttons: [
-      {
-        command: `set_team_name/teamId=${props.teamId}`,
-        text: '\u{270F} Изменить название',
-      },
-      {
-        command: `set_team_description/teamId=${props.teamId}`,
-        text: '\u{270F} Изменить описание',
-      },
-      {
-        command: `team_users/teamId=${props.teamId}`,
-        text: '\u{1F465} Посмотреть состав команды',
-      },
-      {
-        command: `link_to_join_team/teamId=${props.teamId}`,
-        text: '\u{1F517} Пригласить в команду',
-      },
-      {
-        command: `delete_team/teamId=${props.teamId}`,
-        text: '\u{1F4A3} Удалить команду',
-      },
-      { command: 'edit_team', text: '\u{2B05} Назад' },
-    ],
+    buttons,
   }
 }
 
