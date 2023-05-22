@@ -12,6 +12,7 @@ import set_team_name from './set_team_name'
 import set_user_name from './set_user_name'
 import team_users from './team_users'
 import detach_team from './detach_team'
+import team_user from './team_user'
 
 const commandsArray = {
   set_user_name,
@@ -27,6 +28,7 @@ const commandsArray = {
   joined_teams,
   team_users,
   link_to_join_team,
+  team_user,
   detach_team,
 }
 
