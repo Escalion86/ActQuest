@@ -50,8 +50,8 @@ const callbackHandler = async (body, res) => {
     `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageReplyMarkup`,
     {
       message_id: message.message_id,
-      // reply_markup: { keyboard: { inline_keyboard: [] } },
-      reply_markup: undefined,
+      chat_id: from.id,
+      reply_markup: { inline_keyboard: [] },
     },
     null,
     null,
