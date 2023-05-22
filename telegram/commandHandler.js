@@ -28,13 +28,19 @@ const lastCommandHandler = async (telegramId, command, props, message) => {
 
 const executeCommand = async (
   userTelegramId,
-  message,
+  command,
   messageId,
-  callback_query
+  callback_query,
+  message
 ) => {
-  const { command, props } = messageToCommandAndProps(message)
+  const { command, props } = messageToCommandAndProps(command)
 
-  const result = await lastCommandHandler(userTelegramId, command, props)
+  const result = await lastCommandHandler(
+    userTelegramId,
+    command,
+    props,
+    message
+  )
   const keyboard = keyboardFormer(commandsArray, result.buttons)
 
   const sendResult = await sendMessage({
@@ -61,7 +67,7 @@ const executeCommand = async (
       },
       {
         command: {
-          command: message,
+          command,
           messageId,
           // props: { teamName: message },
         },
@@ -111,7 +117,8 @@ const commandHandler = async (
         userTelegramId,
         lastCommand,
         messageId,
-        callback_query
+        callback_query,
+        message
       )
 
       // const { command, props } = messageToCommandAndProps(lastCommand)
