@@ -39,17 +39,21 @@ const team_user = async ({ telegramId, message, props }) => {
     }
   }
 
+  const buttons = isCapitan
+    ? [
+        {
+          command: `detach_team/teamUserId=${props.teamUserId}`,
+          text: 'Удалить из команды',
+        },
+        { command: 'menu_teams', text: '\u{2B05} Назад' },
+      ]
+    : [{ command: 'menu_teams', text: '\u{2B05} Назад' }]
+
   return {
     message: `"${user.name}" ${isCapitan ? 'капитан' : 'участник'} команды "${
       team.name
     }"`,
-    buttons: [
-      {
-        command: `detach_team/teamUserId=${props.teamUserId}`,
-        text: 'Удалить из команды',
-      },
-      { command: 'menu_teams', text: '\u{2B05} Назад' },
-    ],
+    buttons,
   }
 }
 
