@@ -1,17 +1,23 @@
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
+import getTeam from 'telegram/func/getTeam'
 
 const team_users = async ({ telegramId, message, props }) => {
-  if (!props?.teamId) {
-    const team = await getTeam(props?.teamId)
-    if (!team || team.length === 0) {
-      return {
-        message: 'Ошибка. Команда не найдена',
-        nextCommand: `/menu_teams`,
-      }
+  if (!props?.teamId)
+    return {
+      message: 'Ошибка. Не указан teamId',
+      nextCommand: `/menu_teams`,
+    }
+
+  const team = await getTeam(props?.teamId)
+  if (!team || team.length === 0) {
+    return {
+      message: 'Ошибка. Команда не найдена',
+      nextCommand: `/menu_teams`,
     }
   }
+
   await dbConnect()
   const teamsUsers = await TeamsUsers.find({ teamId: props?.teamId })
   if (!teamsUsers || teamsUsers.length === 0) {
@@ -30,19 +36,16 @@ const team_users = async ({ telegramId, message, props }) => {
   const users = await Users.find({
     telegramId: { $in: usersTelegramIds },
   })
-  console.log('users :>> ', users)
   const buttons = users.map((user) => {
     const teamUser = teamsUsers.find((teamUser) => {
       return teamUser.userTelegramId === user.telegramId
     })
-    console.log('teamUser :>> ', teamUser)
     // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
     return {
       text: `${user.name}${teamUser?.role === 'capitan' ? ' (Капитан)' : ''}`,
-      command: `user/userId=${user._id}`,
+      command: `team_user/teamUserId=${teamUser._id}`,
     }
   })
-  console.log('buttons :>> ', buttons)
 
   return {
     message: 'Состав команды',
