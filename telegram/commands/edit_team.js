@@ -92,7 +92,7 @@ const edit_team = async ({ telegramId, message, props }) => {
   return {
     message: `${isCapitan ? 'Редактирование команды' : 'Команда'} "${
       team?.name
-    }".${team?.description ? ` Описание: "${team?.description}"` : ''}`,
+    }".${team?.description ? `\nОписание: "${team?.description}"` : ''}`,
     upper_command: 'menu_teams',
     buttons,
   }

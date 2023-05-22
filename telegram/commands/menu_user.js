@@ -14,7 +14,7 @@ const menu_user = async ({ telegramId, message, props }) => {
     buttonText: 'Команды',
     upper_command: 'main_menu',
     buttons: [
-      { text: 'Изменить имя', command: `set_user_name` },
+      { text: '\u{270F} Изменить имя', command: `set_user_name` },
       { text: '\u{1F3E0} Главное меню', command: 'main_menu' },
     ],
   }
