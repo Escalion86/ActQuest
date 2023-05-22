@@ -107,37 +107,37 @@ const commandHandler = async (
       }
       const lastCommand = last.command.get('command')
 
-      // await executeCommand(
-      //   userTelegramId,
-      //   lastCommand,
-      //   messageId,
-      //   callback_query
-      // )
-
-      const { command, props } = messageToCommandAndProps(lastCommand)
-
-      const result = await lastCommandHandler(
+      await executeCommand(
         userTelegramId,
-        command,
-        props,
-        message
+        lastCommand,
+        messageId,
+        callback_query
       )
-      const keyboard = keyboardFormer(commandsArray, result.buttons)
-      await sendMessage({
-        chat_id: userTelegramId,
-        // text: JSON.stringify({ body, headers: req.headers.origin }),
-        text: result.message,
-        keyboard,
-      })
 
-      if (result.nextCommand) {
-        return await executeCommand(
-          userTelegramId,
-          result.nextCommand,
-          messageId
-          // callback_query
-        )
-      }
+      // const { command, props } = messageToCommandAndProps(lastCommand)
+
+      // const result = await lastCommandHandler(
+      //   userTelegramId,
+      //   command,
+      //   props,
+      //   message
+      // )
+      // const keyboard = keyboardFormer(commandsArray, result.buttons)
+      // await sendMessage({
+      //   chat_id: userTelegramId,
+      //   // text: JSON.stringify({ body, headers: req.headers.origin }),
+      //   text: result.message,
+      //   keyboard,
+      // })
+
+      // if (result.nextCommand) {
+      //   return await executeCommand(
+      //     userTelegramId,
+      //     result.nextCommand,
+      //     messageId
+      //     // callback_query
+      //   )
+      // }
     }
   } catch (e) {
     console.log('e :>> ', e)
