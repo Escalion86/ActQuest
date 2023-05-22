@@ -113,7 +113,7 @@ export const postData = async (
 
     // mutate(url, data, false)
     if (callbackOnSuccess) callbackOnSuccess(resJson ? json : data)
-    return data
+    return resJson ? json : data
   } catch (error) {
     console.log('Failed to add (POST) on ' + url)
     console.log(error)
