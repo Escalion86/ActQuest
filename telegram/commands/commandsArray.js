@@ -11,6 +11,7 @@ import set_team_description from './set_team_description'
 import set_team_name from './set_team_name'
 import set_user_name from './set_user_name'
 import team_users from './team_users'
+import detach_team from './detach_team'
 
 const commandsArray = {
   set_user_name,
@@ -26,6 +27,7 @@ const commandsArray = {
   joined_teams,
   team_users,
   link_to_join_team,
+  detach_team,
 }
 
 export default commandsArray
