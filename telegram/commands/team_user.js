@@ -29,7 +29,7 @@ const team_user = async ({ telegramId, message, props }) => {
   }
 
   await dbConnect()
-  const user = await Users.find({
+  const user = await Users.findOne({
     telegramId: teamUser.userTelegramId,
   })
   if (!user || user.length === 0) {
@@ -40,9 +40,9 @@ const team_user = async ({ telegramId, message, props }) => {
   }
 
   return {
-    message: `${isCapitan ? 'Капитан' : 'Участник'} команды "${team.name}"\n${
-      user.name
-    }`,
+    message: `"${user.name}" ${isCapitan ? 'капитан' : 'участник'} команды "${
+      team.name
+    }"`,
     buttons: [
       {
         command: `detach_team/teamUserId=${props.teamUserId}`,

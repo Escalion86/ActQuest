@@ -48,7 +48,7 @@ const team_users = async ({ telegramId, message, props }) => {
   })
 
   return {
-    message: 'Состав команды',
+    message: `Состав команды "${team.name}"`,
     buttons: [...buttons, { command: 'menu_teams', text: '\u{2B05} Назад' }],
   }
 }
