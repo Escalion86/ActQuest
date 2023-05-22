@@ -3,7 +3,6 @@ import dbConnect from '@utils/dbConnect'
 
 const set_team_description = async ({ telegramId, message, props }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
-  console.log('props.teamId :>> ', props.teamId)
   if (!props.teamId)
     return {
       success: false,
@@ -11,7 +10,6 @@ const set_team_description = async ({ telegramId, message, props }) => {
         'Не удалось изменить описание команды, так как команда не найдена',
       nextCommand: `/menu_teams`,
     }
-  console.log('props.noDescription :>> ', props.noDescription)
   if (props.noDescription) {
     await dbConnect()
     const team = await Teams.findByIdAndUpdate(props.teamId, {
@@ -23,9 +21,7 @@ const set_team_description = async ({ telegramId, message, props }) => {
       nextCommand: `/menu_teams`,
     }
   }
-  console.log('message :>> ', message)
   if (!message) {
-    console.log('!!!')
     return {
       success: true,
       message: 'Введите новое описание команды',

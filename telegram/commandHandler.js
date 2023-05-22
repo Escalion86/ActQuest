@@ -26,7 +26,7 @@ const lastCommandHandler = async (telegramId, command, props, message) => {
   return { success: false, message: 'Неизвестная команда' }
 }
 
-const executeCommand = async (userTelegramId, message) => {
+const executeCommand = async (userTelegramId, message, messageId) => {
   await dbConnect()
   const last = await LastCommands.findOneAndUpdate(
     {
@@ -35,6 +35,7 @@ const executeCommand = async (userTelegramId, message) => {
     {
       command: {
         command: message,
+        messageId,
         // props: { teamName: message },
       },
     },
@@ -43,7 +44,6 @@ const executeCommand = async (userTelegramId, message) => {
   const { command, props } = messageToCommandAndProps(message)
 
   const result = await lastCommandHandler(userTelegramId, command, props)
-  console.log('result :>> ', result)
   const keyboard = keyboardFormer(commandsArray, result.buttons)
 
   await sendMessage({
@@ -54,11 +54,11 @@ const executeCommand = async (userTelegramId, message) => {
   })
 
   if (result.nextCommand)
-    return await executeCommand(userTelegramId, result.nextCommand)
+    return await executeCommand(userTelegramId, result.nextCommand, messageId)
   return
 }
 
-const commandHandler = async (userTelegramId, message, res) => {
+const commandHandler = async (userTelegramId, message, messageId) => {
   try {
     await dbConnect()
     if (message === '/') message = ''
@@ -66,7 +66,7 @@ const commandHandler = async (userTelegramId, message, res) => {
     const isItCommand = message[0] === '/'
     // Если была отправлена команда, то ищем ее или возвращаем ошибку
     if (isItCommand) {
-      await executeCommand(userTelegramId, message)
+      await executeCommand(userTelegramId, message, messageId)
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
       const last = await LastCommands.findOne({
@@ -98,7 +98,11 @@ const commandHandler = async (userTelegramId, message, res) => {
       })
 
       if (result.nextCommand) {
-        return await executeCommand(userTelegramId, result.nextCommand)
+        return await executeCommand(
+          userTelegramId,
+          result.nextCommand,
+          messageId
+        )
       }
     }
   } catch (e) {

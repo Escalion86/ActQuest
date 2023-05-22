@@ -47,7 +47,7 @@ const callbackHandler = async (body, res) => {
   )
 
   if (await checkUserData(from.id))
-    return await commandHandler(from.id, data, res)
+    return await commandHandler(from.id, data, message.message_id)
 }
 
 export default callbackHandler

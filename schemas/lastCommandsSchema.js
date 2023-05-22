@@ -7,6 +7,9 @@ const lastCommandsSchema = {
   command: {
     type: Map,
   },
+  messageId: {
+    type: Number,
+  },
 }
 
 export default lastCommandsSchema
