@@ -17,7 +17,11 @@ const delete_team = async ({ telegramId, message, props }) => {
       success: true,
       message: 'Подтвердите удаление команды',
       buttons: [
-        { text: 'Удалить', command: `delete_team` + propsToStr(props) },
+        {
+          text: 'Удалить',
+          command: `+confirm=true`,
+          // `delete_team` + propsToStr(props)
+        },
         { text: 'Отмена', command: 'menu_teams' },
       ],
     }

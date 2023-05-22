@@ -27,20 +27,6 @@ const lastCommandHandler = async (telegramId, command, props, message) => {
 }
 
 const executeCommand = async (userTelegramId, message, messageId) => {
-  await dbConnect()
-  const last = await LastCommands.findOneAndUpdate(
-    {
-      userTelegramId,
-    },
-    {
-      command: {
-        command: message,
-        messageId,
-        // props: { teamName: message },
-      },
-    },
-    { upsert: true }
-  )
   const { command, props } = messageToCommandAndProps(message)
 
   const result = await lastCommandHandler(userTelegramId, command, props)
@@ -55,6 +41,23 @@ const executeCommand = async (userTelegramId, message, messageId) => {
 
   if (result.nextCommand)
     return await executeCommand(userTelegramId, result.nextCommand, messageId)
+  else {
+    await dbConnect()
+    return await LastCommands.findOneAndUpdate(
+      {
+        userTelegramId,
+      },
+      {
+        command: {
+          command: message,
+          messageId,
+          // props: { teamName: message },
+        },
+      },
+      { upsert: true }
+    )
+  }
+
   return
 }
 
