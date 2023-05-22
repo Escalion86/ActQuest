@@ -23,7 +23,11 @@ const messageToCommandAndProps = (message) => {
 const lastCommandHandler = async (telegramId, command, props, message) => {
   if (commandsArray[command])
     return await commandsArray[command]({ telegramId, props, message })
-  return { success: false, message: 'Неизвестная команда' }
+  return {
+    success: false,
+    message: 'Неизвестная команда',
+    buttins: [{ command: 'main_menu', text: '\u{1F3E0} Главное меню' }],
+  }
 }
 
 const executeCommand = async (

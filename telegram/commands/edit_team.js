@@ -57,11 +57,11 @@ const edit_team = async ({ telegramId, message, props }) => {
       },
       {
         command: `team_users/teamId=${props.teamId}`,
-        text: '\u{270F} Посмотреть состав команды',
+        text: '\u{1F465} Посмотреть состав команды',
       },
       {
         command: `link_to_join_team/teamId=${props.teamId}`,
-        text: '\u{270F} Пригласить в команду',
+        text: '\u{1F517} Пригласить в команду',
       },
       {
         command: `delete_team/teamId=${props.teamId}`,
