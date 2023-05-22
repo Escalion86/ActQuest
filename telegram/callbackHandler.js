@@ -61,23 +61,28 @@ const callbackHandler = async (body, res) => {
   //   null,
   //   true
   // )
-  await postData(
-    `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/deleteMessage`,
-    {
-      message_id: message.message_id,
-      chat_id: from.id,
-    },
-    null,
-    null,
-    // (data) => console.log('post success', data),
-    // (data) => console.log('post error', data),
-    true,
-    null,
-    true
-  )
+  // await postData(
+  //   `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/deleteMessage`,
+  //   {
+  //     message_id: message.message_id,
+  //     chat_id: from.id,
+  //   },
+  //   null,
+  //   null,
+  //   // (data) => console.log('post success', data),
+  //   // (data) => console.log('post error', data),
+  //   true,
+  //   null,
+  //   true
+  // )
 
   if (await checkUserData(from.id))
-    return await commandHandler(from.id, data, message.message_id)
+    return await commandHandler(
+      from.id,
+      data,
+      message.message_id,
+      callback_query
+    )
 }
 
 export default callbackHandler

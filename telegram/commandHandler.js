@@ -26,7 +26,12 @@ const lastCommandHandler = async (telegramId, command, props, message) => {
   return { success: false, message: 'Неизвестная команда' }
 }
 
-const executeCommand = async (userTelegramId, message, messageId) => {
+const executeCommand = async (
+  userTelegramId,
+  message,
+  messageId,
+  callback_query
+) => {
   const { command, props } = messageToCommandAndProps(message)
 
   const result = await lastCommandHandler(userTelegramId, command, props)
@@ -37,6 +42,7 @@ const executeCommand = async (userTelegramId, message, messageId) => {
     // text: JSON.stringify({ body, headers: req.headers.origin }),
     text: result.message,
     keyboard,
+    callback_query,
   })
   console.log('sendResult :>> ', sendResult)
 
@@ -62,7 +68,12 @@ const executeCommand = async (userTelegramId, message, messageId) => {
   return
 }
 
-const commandHandler = async (userTelegramId, message, messageId) => {
+const commandHandler = async (
+  userTelegramId,
+  message,
+  messageId,
+  callback_query
+) => {
   try {
     await dbConnect()
     if (message === '/') message = ''
@@ -77,7 +88,7 @@ const commandHandler = async (userTelegramId, message, messageId) => {
         const lastCommand = last.command.get('command')
         message = lastCommand + '/' + message.substr(2)
       }
-      await executeCommand(userTelegramId, message, messageId)
+      await executeCommand(userTelegramId, message, messageId, callback_query)
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
       const last = await LastCommands.findOne({
@@ -111,7 +122,8 @@ const commandHandler = async (userTelegramId, message, messageId) => {
         return await executeCommand(
           userTelegramId,
           result.nextCommand,
-          messageId
+          messageId,
+          callback_query
         )
       }
     }
