@@ -50,8 +50,8 @@ const executeCommand = async (
     return await executeCommand(
       userTelegramId,
       result.nextCommand,
-      messageId,
-      callback_query
+      messageId
+      // callback_query
     )
   else {
     await dbConnect()
@@ -106,6 +106,14 @@ const commandHandler = async (
         })
       }
       const lastCommand = last.command.get('command')
+
+      // await executeCommand(
+      //   userTelegramId,
+      //   lastCommand,
+      //   messageId,
+      //   callback_query
+      // )
+
       const { command, props } = messageToCommandAndProps(lastCommand)
 
       const result = await lastCommandHandler(
@@ -126,8 +134,8 @@ const commandHandler = async (
         return await executeCommand(
           userTelegramId,
           result.nextCommand,
-          messageId,
-          callback_query
+          messageId
+          // callback_query
         )
       }
     }
