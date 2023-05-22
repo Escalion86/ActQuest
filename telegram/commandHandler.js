@@ -44,10 +44,15 @@ const executeCommand = async (
     keyboard,
     callback_query,
   })
-  console.log('sendResult :>> ', sendResult)
+  // console.log('sendResult :>> ', sendResult)
 
   if (result.nextCommand)
-    return await executeCommand(userTelegramId, result.nextCommand, messageId)
+    return await executeCommand(
+      userTelegramId,
+      result.nextCommand,
+      messageId,
+      callback_query
+    )
   else {
     await dbConnect()
     return await LastCommands.findOneAndUpdate(
@@ -64,8 +69,6 @@ const executeCommand = async (
       { upsert: true }
     )
   }
-
-  return
 }
 
 const commandHandler = async (
@@ -75,13 +78,12 @@ const commandHandler = async (
   callback_query
 ) => {
   try {
-    await dbConnect()
     if (message === '/') message = ''
-
     const isItCommand = message[0] === '/'
     // Если была отправлена команда, то ищем ее или возвращаем ошибку
     if (isItCommand) {
       if (message[1] === '+') {
+        await dbConnect()
         const last = await LastCommands.findOne({
           userTelegramId,
         })
@@ -91,6 +93,7 @@ const commandHandler = async (
       await executeCommand(userTelegramId, message, messageId, callback_query)
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
+      await dbConnect()
       const last = await LastCommands.findOne({
         userTelegramId,
       })
@@ -111,11 +114,12 @@ const commandHandler = async (
         props,
         message
       )
+      const keyboard = keyboardFormer(commandsArray, result.buttons)
       await sendMessage({
         chat_id: userTelegramId,
         // text: JSON.stringify({ body, headers: req.headers.origin }),
         text: result.message,
-        // keyboard,
+        keyboard,
       })
 
       if (result.nextCommand) {

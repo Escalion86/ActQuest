@@ -1,4 +1,5 @@
 import { postData } from '@helpers/CRUD'
+import checkContactRecive from './checkContactRecive'
 import checkUserData from './checkUserData'
 import commandHandler from './commandHandler'
 
@@ -75,14 +76,14 @@ const callbackHandler = async (body, res) => {
   //   null,
   //   true
   // )
-
-  if (await checkUserData(from.id))
-    return await commandHandler(
-      from.id,
-      data,
-      message.message_id,
-      callback_query
-    )
+  if (await checkContactRecive(body))
+    if (await checkUserData(from.id))
+      return await commandHandler(
+        from.id,
+        data,
+        message.message_id,
+        callback_query
+      )
 }
 
 export default callbackHandler
