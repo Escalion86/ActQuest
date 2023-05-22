@@ -33,12 +33,12 @@ const executeCommand = async (
   callback_query,
   message
 ) => {
-  const { command, props } = messageToCommandAndProps(command)
+  const data = messageToCommandAndProps(command)
 
   const result = await lastCommandHandler(
     userTelegramId,
-    command,
-    props,
+    data.command,
+    data.props,
     message
   )
   const keyboard = keyboardFormer(commandsArray, result.buttons)
