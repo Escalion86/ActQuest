@@ -35,9 +35,10 @@ const team_users = async ({ telegramId, message, props }) => {
     const teamUser = teamsUsers.find((teamUser) => {
       return teamUser.userTelegramId === user.telegramId
     })
+    console.log('teamUser :>> ', teamUser)
     // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
     return {
-      text: `${user.name}${teamUser.role === 'capitan' ? ' (Капитан)' : ''}`,
+      text: `${user.name}${teamUser?.role === 'capitan' ? ' (Капитан)' : ''}`,
       command: `user/userId=${user._id}`,
     }
   })
