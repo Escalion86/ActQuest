@@ -32,26 +32,40 @@ const callbackHandler = async (body, res) => {
   const { callback_query } = body
   const { id, from, message, data, chat_instance } = callback_query
   // console.log('callback_query :>> ', callback_query)
+  // await postData(
+  //   `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/answerCallbackQuery`,
+  //   {
+  //     callback_query_id: id,
+  //   },
+  //   null,
+  //   null,
+  //   // (data) => console.log('post success', data),
+  //   // (data) => console.log('post error', data),
+  //   true,
+  //   null,
+  //   true
+  // )
+  // console.log('message.message_id :>> ', message.message_id)
+  // await postData(
+  //   `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageReplyMarkup`,
+  //   {
+  //     message_id: message.message_id,
+  //     chat_id: from.id,
+  //     reply_markup: { inline_keyboard: [] },
+  //   },
+  //   null,
+  //   null,
+  //   // (data) => console.log('post success', data),
+  //   // (data) => console.log('post error', data),
+  //   true,
+  //   null,
+  //   true
+  // )
   await postData(
-    `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/answerCallbackQuery`,
-    {
-      callback_query_id: id,
-    },
-    null,
-    null,
-    // (data) => console.log('post success', data),
-    // (data) => console.log('post error', data),
-    true,
-    null,
-    true
-  )
-  console.log('message.message_id :>> ', message.message_id)
-  await postData(
-    `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageReplyMarkup`,
+    `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/deleteMessage`,
     {
       message_id: message.message_id,
       chat_id: from.id,
-      reply_markup: { inline_keyboard: [] },
     },
     null,
     null,
