@@ -9,11 +9,10 @@ const link_to_join_team = async ({ telegramId, message, props }) => {
         nextCommand: `/menu_teams`,
       }
     }
-
-    return {
-      message: `Код для присоединения к команде: <code>${props?.teamId}</code>.\n Отправьте его пользователю, которого хотите пригласить. Этот кот необходимо ввести в поле "Присоединиться к команде"`,
-      buttons: [{ command: 'menu_teams', text: '\u{2B05} Назад' }],
-    }
+  }
+  return {
+    message: `Код для присоединения к команде: <code>${props?.teamId}</code>.\n Отправьте его пользователю, которого хотите пригласить. Этот кот необходимо ввести в поле "Присоединиться к команде"`,
+    buttons: [{ command: 'menu_teams', text: '\u{2B05} Назад' }],
   }
 }
 
