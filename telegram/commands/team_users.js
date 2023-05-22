@@ -12,6 +12,7 @@ const team_users = async ({ telegramId, message, props }) => {
         nextCommand: `/menu_teams`,
       }
     }
+    console.log('teamsUsers :>> ', teamsUsers)
     const usersTelegramIds = teamsUsers.map(
       (teamUser) =>
         // mongoose.Types.ObjectId(teamUser.teamId)
@@ -21,24 +22,22 @@ const team_users = async ({ telegramId, message, props }) => {
     const users = await Users.find({
       telegramId: { $in: usersTelegramIds },
     })
+    console.log('users :>> ', users)
+    const buttons = users.map((user) => {
+      const teamUser = teamsUsers.find((teamUser) => {
+        return teamUser.userTelegramId === user.telegramId
+      })
+      // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
+      return {
+        text: `${user.name}${teamUser.role === 'capitan' ? ' (Капитан)' : ''}`,
+        command: `user/userId=${user._id}`,
+      }
+    })
+    console.log('buttons :>> ', buttons)
 
     return {
       message: 'Состав команды',
-      buttons: [
-        ...users.map((user) => {
-          const teamUser = teamsUsers.find((teamUser) => {
-            return teamUser.userTelegramId === user.telegramId
-          })
-          // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
-          return {
-            text: `${user.name}${
-              teamUser.role === 'capitan' ? ' (Капитан)' : ''
-            }`,
-            command: `user/userId=${user._id}`,
-          }
-        }),
-        { command: 'menu_teams', text: '\u{2B05} Назад' },
-      ],
+      buttons: [...buttons, { command: 'menu_teams', text: '\u{2B05} Назад' }],
     }
   }
 }
