@@ -44,8 +44,6 @@ const messageHandler = async (body, res) => {
     contact,
     reply_to_message,
   } = message
-  // console.log('message body :>> ', body)
-
   await dbConnect()
 
   if (contact) {

@@ -1,5 +1,4 @@
 const main_menu = async ({ telegramId, message, props }) => {
-  console.log('!! main_menu')
   return {
     success: true,
     message: 'Главное меню',

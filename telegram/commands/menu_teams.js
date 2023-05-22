@@ -1,5 +1,4 @@
 const menu_teams = async ({ telegramId, message, props }) => {
-  console.log('!! menu_teams')
   return {
     success: true,
     message: 'Меню работы с командами',

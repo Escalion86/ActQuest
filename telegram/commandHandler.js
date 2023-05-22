@@ -32,12 +32,13 @@ const executeCommand = async (userTelegramId, message, messageId) => {
   const result = await lastCommandHandler(userTelegramId, command, props)
   const keyboard = keyboardFormer(commandsArray, result.buttons)
 
-  await sendMessage({
+  const sendResult = await sendMessage({
     chat_id: userTelegramId,
     // text: JSON.stringify({ body, headers: req.headers.origin }),
     text: result.message,
     keyboard,
   })
+  console.log('sendResult :>> ', sendResult)
 
   if (result.nextCommand)
     return await executeCommand(userTelegramId, result.nextCommand, messageId)
@@ -91,7 +92,6 @@ const commandHandler = async (userTelegramId, message, messageId) => {
         })
       }
       const lastCommand = last.command.get('command')
-      console.log('lastCommand :>> ', lastCommand)
       const { command, props } = messageToCommandAndProps(lastCommand)
 
       const result = await lastCommandHandler(
