@@ -8,12 +8,12 @@ const menu_games = async ({ telegramId, message, props }) => {
   await dbConnect()
   // Получаем список игр
   const games = await Games.find({})
-  if (!games || games.length === 0) {
-    return {
-      message: 'Предстоящих игр не запланировано',
-      nextCommand: `/main_menu`,
-    }
-  }
+  // if (!games || games.length === 0) {
+  //   return {
+  //     message: 'Предстоящих игр не запланировано',
+  //     nextCommand: `/main_menu`,
+  //   }
+  // }
   // Получаем список команд в которых присутствует пользователь
   const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
   // if (!teamsUser || teamsUser.length === 0) {
@@ -41,7 +41,10 @@ const menu_games = async ({ telegramId, message, props }) => {
   })
 
   return {
-    message: 'Предстоящие игры',
+    message:
+      !games || games.length === 0
+        ? 'Предстоящих игр не запланировано'
+        : 'Предстоящие игры',
     buttons: [
       ...games.map((game) => {
         const gameTeam = gamesTeams.find((gameTeam) => {
