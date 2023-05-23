@@ -30,7 +30,7 @@ const set_team_description = async ({ telegramId, message, props }) => {
           text: 'Без описания',
           command: `+noDescription=true`,
         },
-        { text: 'Отмена', command: 'menu_teams' },
+        { text: '\u{1F6AB} Отмена', command: 'menu_teams' },
       ],
     }
   }

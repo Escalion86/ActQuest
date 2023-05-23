@@ -14,7 +14,7 @@ const set_team_name = async ({ telegramId, message, props }) => {
     return {
       success: true,
       message: 'Введите новое название команды',
-      buttons: [{ text: 'Отмена', command: 'menu_teams' }],
+      buttons: [{ text: '\u{1F6AB} Отмена', command: 'menu_teams' }],
     }
   }
   await dbConnect()

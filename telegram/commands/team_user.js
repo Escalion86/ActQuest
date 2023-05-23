@@ -1,4 +1,3 @@
-import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
@@ -43,7 +42,7 @@ const team_user = async ({ telegramId, message, props }) => {
     ? [
         {
           command: `detach_team/teamUserId=${props.teamUserId}`,
-          text: 'Удалить из команды',
+          text: '\u{1F4A3} Удалить из команды',
         },
         { command: 'menu_teams', text: '\u{2B05} Назад' },
       ]
