@@ -4,7 +4,7 @@ import { postData } from '@helpers/CRUD'
 import getUserFullName from '@helpers/getUserFullName'
 import isUserAdmin from '@helpers/isUserAdmin'
 import isUserQuestionnaireFilled from '@helpers/isUserQuestionnaireFilled'
-import Histories from '@models/Histories'
+// import Histories from '@models/Histories'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 
@@ -59,12 +59,12 @@ export default async function handler(Schema, req, res, params = null) {
           if (!data) {
             return res?.status(400).json({ success: false })
           }
-          await Histories.create({
-            schema: Schema.collection.collectionName,
-            action: 'add',
-            data,
-            userId: body.userId,
-          })
+          // await Histories.create({
+          //   schema: Schema.collection.collectionName,
+          //   action: 'add',
+          //   data,
+          //   userId: body.userId,
+          // })
 
           return res?.status(201).json({ success: true, data })
         }
@@ -97,12 +97,12 @@ export default async function handler(Schema, req, res, params = null) {
             return res?.status(400).json({ success: false })
           }
 
-          await Histories.create({
-            schema: Schema.collection.collectionName,
-            action: 'updete',
-            data,
-            userId: body.userId,
-          })
+          // await Histories.create({
+          //   schema: Schema.collection.collectionName,
+          //   action: 'updete',
+          //   data,
+          //   userId: body.userId,
+          // })
 
           if (afterUpdateNeedToNotificate) {
             const users = await Users.find({})
@@ -219,12 +219,12 @@ export default async function handler(Schema, req, res, params = null) {
           if (!data) {
             return res?.status(400).json({ success: false })
           }
-          await Histories.create({
-            schema: Schema.collection.collectionName,
-            action: 'updete',
-            data,
-            userId: body.userId,
-          })
+          // await Histories.create({
+          //   schema: Schema.collection.collectionName,
+          //   action: 'updete',
+          //   data,
+          //   userId: body.userId,
+          // })
           return res?.status(200).json({ success: true, data })
         } else if (id) {
           data = await Schema.findById(id)
@@ -237,12 +237,12 @@ export default async function handler(Schema, req, res, params = null) {
           if (!data) {
             return res?.status(400).json({ success: false })
           }
-          await Histories.create({
-            schema: Schema.collection.collectionName,
-            action: 'updete',
-            data,
-            userId: body.userId,
-          })
+          // await Histories.create({
+          //   schema: Schema.collection.collectionName,
+          //   action: 'updete',
+          //   data,
+          //   userId: body.userId,
+          // })
           return res?.status(200).json({ success: true, data })
         } else if (body?.params) {
           data = await Schema.deleteMany({
@@ -251,12 +251,12 @@ export default async function handler(Schema, req, res, params = null) {
           if (!data) {
             return res?.status(400).json({ success: false })
           }
-          await Histories.create({
-            schema: Schema.collection.collectionName,
-            action: 'updete',
-            data,
-            userId: body.userId,
-          })
+          // await Histories.create({
+          //   schema: Schema.collection.collectionName,
+          //   action: 'updete',
+          //   data,
+          //   userId: body.userId,
+          // })
           return res?.status(200).json({ success: true, data })
         } else {
           return res?.status(400).json({ success: false })
