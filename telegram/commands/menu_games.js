@@ -58,7 +58,7 @@ const menu_games = async ({ telegramId, message, props }) => {
         }
       }),
       { command: 'create_game', text: '\u{2795} Создать игру' },
-      { command: 'menu_teams', text: '\u{2B05} Назад' },
+      { command: 'main_menu', text: '\u{2B05} Назад' },
     ],
   }
 }
