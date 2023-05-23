@@ -1,3 +1,5 @@
+import main_menu_button from './menuItems/main_menu_button'
+
 const menu_teams = async ({ telegramId, message, props }) => {
   return {
     success: true,
@@ -9,7 +11,7 @@ const menu_teams = async ({ telegramId, message, props }) => {
       { command: 'joined_teams', text: '\u{1F465} Мои команды' },
       { command: 'join_team', text: '\u{1F517} Присоединиться к команде' },
       { command: 'create_team', text: '\u{2795} Создать команду' },
-      { command: 'main_menu', text: '\u{1F3E0} Главное меню' },
+      main_menu_button,
     ],
   }
 }

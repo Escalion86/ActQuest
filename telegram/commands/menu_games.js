@@ -3,6 +3,7 @@ import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
+import main_menu_button from './menuItems/main_menu_button'
 
 const menu_games = async ({ telegramId, message, props }) => {
   await dbConnect()
@@ -58,7 +59,7 @@ const menu_games = async ({ telegramId, message, props }) => {
         }
       }),
       { command: 'create_game', text: '\u{2795} Создать игру' },
-      { command: 'main_menu', text: '\u{2B05} Назад' },
+      main_menu_button,
     ],
   }
 }
