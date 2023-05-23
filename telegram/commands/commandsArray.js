@@ -13,6 +13,8 @@ import set_user_name from './set_user_name'
 import team_users from './team_users'
 import detach_team from './detach_team'
 import team_user from './team_user'
+import menu_games from './menu_games'
+import create_game from './create_game'
 
 const commandsArray = {
   set_user_name,
@@ -30,6 +32,8 @@ const commandsArray = {
   link_to_join_team,
   team_user,
   detach_team,
+  menu_games,
+  create_game,
 }
 
 export default commandsArray

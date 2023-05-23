@@ -4,7 +4,7 @@ import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 
-const games = async ({ telegramId, message, props }) => {
+const menu_games = async ({ telegramId, message, props }) => {
   await dbConnect()
   // Получаем список игр
   const games = await Games.find({})
@@ -60,4 +60,4 @@ const games = async ({ telegramId, message, props }) => {
   }
 }
 
-export default games
+export default menu_games
