@@ -70,7 +70,7 @@ const executeCommand = async (
         userTelegramId,
       },
       {
-        cmd: jsonCommand,
+        command: jsonCommand,
         messageId,
       },
       { upsert: true }
@@ -101,6 +101,7 @@ const commandHandler = async (
       jsonCommand = jsonParser(message)
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
       if (!jsonCommand.cmd) {
+        console.log('Полученная команда не полная')
         await dbConnect()
         const last = await LastCommands.findOne({
           userTelegramId,
@@ -118,6 +119,7 @@ const commandHandler = async (
           ...Object.fromEntries(last.command),
           ...jsonCommand,
         }
+        console.log('Итоговая команда :>> ', jsonCommand)
       }
     }
 

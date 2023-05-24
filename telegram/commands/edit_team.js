@@ -4,7 +4,6 @@ import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
 const edit_team = async ({ telegramId, jsonCommand }) => {
-  console.log('jsonCommand :>> ', jsonCommand)
   console.log('!!edit_team')
   if (!jsonCommand?.teamId) {
     await dbConnect()

@@ -3,6 +3,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 
 const delete_team = async ({ telegramId, jsonCommand }) => {
+  console.log('!!! delete_team')
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   if (!jsonCommand.teamId)
     return {
