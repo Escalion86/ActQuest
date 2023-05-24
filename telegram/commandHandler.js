@@ -115,6 +115,10 @@ const commandHandler = async (
       )
     }
 
+    if (message[0] === '/') {
+      message = { command: message.substr(1) }
+    }
+
     const jsonCommand = jsonParser(message)
     console.log('jsonCommand :>> ', jsonCommand)
     // Если это был JSON
