@@ -38,7 +38,7 @@ const keyboardFormer = (commands, buttons) => {
         // ]
       })
     )
-    console.log('resultKeyboard :>> ', resultKeyboard)
+    console.log('resultKeyboard :>> ', resultKeyboard.inline_keyboard)
     return resultKeyboard
     // )
   }
