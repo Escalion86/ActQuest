@@ -100,8 +100,8 @@ const commandHandler = async (
     } else {
       jsonCommand = jsonParser(message)
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
-      if (!jsonCommand.cmd) {
-        console.log('Полученная команда не полная')
+      if (!jsonCommand || !jsonCommand?.cmd) {
+        console.log('Полученная команда не полная или это не команда')
         await dbConnect()
         const last = await LastCommands.findOne({
           userTelegramId,
@@ -114,11 +114,16 @@ const commandHandler = async (
             text: 'Ответ получен, но команда на которую дан ответ не найден',
           })
         }
-
-        jsonCommand = {
-          ...Object.fromEntries(last.command),
-          ...jsonCommand,
-        }
+        if (!jsonCommand)
+          jsonCommand = {
+            ...Object.fromEntries(last.command),
+            message,
+          }
+        else
+          jsonCommand = {
+            ...Object.fromEntries(last.command),
+            ...jsonCommand,
+          }
         console.log('Итоговая команда :>> ', jsonCommand)
       }
     }
