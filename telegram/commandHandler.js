@@ -146,9 +146,9 @@ const commandHandler = async (
           text: 'Ответ получен, но команда на которую дан ответ не найден',
         })
       }
-      console.log('last.command :>> ', last.command)
+      console.log('last.command :>> ', Object.fromEntries(last.command))
       const lastCommand = {
-        ...last.command,
+        ...Object.fromEntries(last.command),
         message,
       }
 
