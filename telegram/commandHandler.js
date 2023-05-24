@@ -5,22 +5,6 @@ import main_menu_button from './commands/menuItems/main_menu_button'
 import keyboardFormer from './func/keyboardFormer'
 import sendMessage from './sendMessage'
 
-// const messageToCommandAndProps = (message) => {
-//   const commands = message.split('/')
-//   commands.shift()
-
-//   const command = commands[0]
-//   commands.shift()
-
-//   var props = {}
-//   commands.forEach((prop) => {
-//     const [key, value] = prop.split('=')
-//     props[key] = value === 'null' ? null : value
-//   })
-
-//   return { command, props }
-// }
-
 function jsonParser(str) {
   try {
     return JSON.parse(str)
@@ -49,8 +33,6 @@ const executeCommand = async (
 
   const result = await lastCommandHandler(userTelegramId, jsonCommand)
 
-  console.log('result :>> ', result)
-
   const keyboard = keyboardFormer(commandsArray, result.buttons)
 
   const sendResult = await sendMessage({
@@ -63,8 +45,6 @@ const executeCommand = async (
   // console.log('sendResult :>> ', sendResult)
   const nextCommand = result.nextCommand
   if (nextCommand) {
-    console.log('nextCommand :>> ', nextCommand)
-    console.log('typeof nextCommand :>> ', typeof nextCommand)
     if (typeof nextCommand === 'string')
       return await executeCommand(
         userTelegramId,
@@ -119,19 +99,30 @@ const commandHandler = async (
       jsonCommand = { cmd: message.substr(1) }
     } else {
       jsonCommand = jsonParser(message)
+      // Проверяем есть ли команда, или это дополнение к предыдущей команде
+      if (!jsonCommand.cmd) {
+        await dbConnect()
+        const last = await LastCommands.findOne({
+          userTelegramId,
+        })
+
+        if (!last) {
+          return await sendMessage({
+            chat_id: userTelegramId,
+            // text: JSON.stringify({ body, headers: req.headers.origin }),
+            text: 'Ответ получен, но команда на которую дан ответ не найден',
+          })
+        }
+
+        jsonCommand = {
+          ...Object.fromEntries(last.command),
+          ...jsonCommand,
+        }
+      }
     }
 
     // Если это был JSON
     if (jsonCommand) {
-      // if (data.command[0] === '+') {
-      //   await dbConnect()
-      //   const last = await LastCommands.findOne({
-      //     userTelegramId,
-      //   })
-      //   const lastCommand = last.command.get('command')
-      //   data.command =
-      //   message = lastCommand + '/' + message.substr(2)
-      // }
       await executeCommand(
         userTelegramId,
         jsonCommand,
@@ -158,8 +149,6 @@ const commandHandler = async (
         message,
       }
 
-      console.log('lastCommand :>> ', lastCommand)
-
       await executeCommand(
         userTelegramId,
         lastCommand,
@@ -167,44 +156,6 @@ const commandHandler = async (
         callback_query
       )
     }
-
-    // if (message === '/') message = ''
-    // const isItCommand = message[0] === '/'
-    // Если была отправлена команда, то ищем ее или возвращаем ошибку
-    // if (isItCommand) {
-    //   if (message[1] === '+') {
-    //     await dbConnect()
-    //     const last = await LastCommands.findOne({
-    //       userTelegramId,
-    //     })
-    //     const lastCommand = last.command.get('command')
-    //     message = lastCommand + '/' + message.substr(2)
-    //   }
-    //   await executeCommand(userTelegramId, message, messageId, callback_query)
-    // } else {
-    //   // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
-    //   await dbConnect()
-    //   const last = await LastCommands.findOne({
-    //     userTelegramId,
-    //   })
-
-    //   if (!last) {
-    //     return await sendMessage({
-    //       chat_id: userTelegramId,
-    //       // text: JSON.stringify({ body, headers: req.headers.origin }),
-    //       text: 'Ответ получен, но команда на которую дан ответ не найден',
-    //     })
-    //   }
-    //   const lastCommand = last.command.get('command')
-
-    //   await executeCommand(
-    //     userTelegramId,
-    //     lastCommand,
-    //     messageId,
-    //     callback_query,
-    //     message
-    //   )
-    // }
   } catch (e) {
     console.log('e :>> ', e)
   }
