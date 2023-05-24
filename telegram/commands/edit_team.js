@@ -49,8 +49,6 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
     teamId: jsonCommand.teamId,
   })
 
-  console.log('teamsUser :>> ', teamsUser)
-
   if (!teamsUser) {
     return {
       message: 'Ошибка вы не состоите в команде',
@@ -62,50 +60,46 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
 
   const team = await getTeam(jsonCommand.teamId)
 
-  console.log('team :>> ', team)
-
   const buttons = isCapitan
     ? [
         {
-          command: { command: 'set_team_name', teamId: jsonCommand.teamId },
+          cmd: { cmd: 'set_team_name', teamId: jsonCommand.teamId },
           //`set_team_name/teamId=${jsonCommand.teamId}`,
           text: '\u{270F} Изменить название',
         },
         {
-          command: {
-            command: 'set_team_description',
+          cmd: {
+            cmd: 'set_team_desc',
             teamId: jsonCommand.teamId,
           },
-          //`set_team_description/teamId=${jsonCommand.teamId}`,
+          //`set_team_desc/teamId=${jsonCommand.teamId}`,
           text: '\u{270F} Изменить описание',
         },
         {
-          command: { command: 'team_users', teamId: jsonCommand.teamId },
+          cmd: { cmd: 'team_users', teamId: jsonCommand.teamId },
           //`team_users/teamId=${jsonCommand.teamId}`,
           text: '\u{1F465} Посмотреть состав команды',
         },
         {
-          command: { command: 'link_to_join_team', teamId: jsonCommand.teamId },
+          cmd: { cmd: 'link_to_join_team', teamId: jsonCommand.teamId },
           //`link_to_join_team/teamId=${jsonCommand.teamId}`,
           text: '\u{1F517} Пригласить в команду',
         },
         {
-          command: { command: 'delete_team', teamId: jsonCommand.teamId },
+          cmd: { cmd: 'delete_team', teamId: jsonCommand.teamId },
           //`delete_team/teamId=${jsonCommand.teamId}`,
           text: '\u{1F4A3} Удалить команду',
         },
-        { command: 'joined_teams', text: '\u{2B05} Назад' },
+        { cmd: 'joined_teams', text: '\u{2B05} Назад' },
       ]
     : [
         {
-          command: { command: 'team_users', teamId: jsonCommand.teamId },
+          cmd: { cmd: 'team_users', teamId: jsonCommand.teamId },
           //`team_users/teamId=${jsonCommand.teamId}`,
           text: '\u{1F465} Посмотреть состав команды',
         },
-        { command: 'joined_teams', text: '\u{2B05} Назад' },
+        { cmd: 'joined_teams', text: '\u{2B05} Назад' },
       ]
-
-  console.log('buttons :>> ', buttons)
 
   return {
     message: `${isCapitan ? 'Редактирование команды' : 'Команда'} "${

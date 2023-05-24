@@ -33,11 +33,11 @@ const joined_teams = async ({ telegramId, jsonCommand }) => {
           text: `"${team.name}"${
             teamUser.role === 'capitan' ? ' (Капитан)' : ''
           }`,
-          command: { command: 'edit_team', teamId: team._id },
+          cmd: { cmd: 'edit_team', teamId: team._id },
           //`edit_team/teamId=${team._id}`,
         }
       }),
-      { command: 'menu_teams', text: '\u{2B05} Назад' },
+      { cmd: 'menu_teams', text: '\u{2B05} Назад' },
     ],
   }
 }

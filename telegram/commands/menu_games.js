@@ -55,7 +55,7 @@ const menu_games = async ({ telegramId, jsonCommand }) => {
         // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
         return {
           text: `"${game.name}"${isTeamRegistred ? ' (записан)' : ''}`,
-          command: { command: 'game', gameId: game._id },
+          cmd: { cmd: 'game', gameId: game._id },
           //`game/gameId=${game._id}`,
         }
       }),

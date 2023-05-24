@@ -1,7 +1,7 @@
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 
-const set_team_description = async ({ telegramId, jsonCommand }) => {
+const set_team_desc = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   if (!jsonCommand.teamId)
     return {
@@ -28,10 +28,10 @@ const set_team_description = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: 'Без описания',
-          command: { noDescription: true },
+          cmd: { noDescription: true },
           //`+noDescription=true`,
         },
-        { text: '\u{1F6AB} Отмена', command: 'menu_teams' },
+        { text: '\u{1F6AB} Отмена', cmd: 'menu_teams' },
       ],
     }
   }
@@ -47,4 +47,4 @@ const set_team_description = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default set_team_description
+export default set_team_desc

@@ -12,10 +12,10 @@ const menu_games_edit = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...games.map((game) => ({
         text: `\u{270F} "${game.name}"`,
-        command: { command: 'edit_game', gameId: game._id },
+        cmd: { cmd: 'edit_game', gameId: game._id },
         //`edit_game/gameId=${game._id}`,
       })),
-      { command: 'create_game', text: '\u{2795} Создать игру' },
+      { cmd: 'create_game', text: '\u{2795} Создать игру' },
       main_menu_button,
     ],
   }

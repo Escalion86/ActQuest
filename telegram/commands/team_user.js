@@ -41,16 +41,16 @@ const team_user = async ({ telegramId, jsonCommand }) => {
   const buttons = isCapitan
     ? [
         {
-          command: {
-            command: 'detach_team',
+          cmd: {
+            cmd: 'detach_team',
             teamUserId: jsonCommand.teamUserId,
           },
           //`detach_team/teamUserId=${jsonCommand.teamUserId}`,
           text: '\u{1F4A3} Удалить из команды',
         },
-        { command: 'menu_teams', text: '\u{2B05} Назад' },
+        { cmd: 'menu_teams', text: '\u{2B05} Назад' },
       ]
-    : [{ command: 'menu_teams', text: '\u{2B05} Назад' }]
+    : [{ cmd: 'menu_teams', text: '\u{2B05} Назад' }]
 
   return {
     message: `"${user.name}" ${isCapitan ? 'капитан' : 'участник'} команды "${

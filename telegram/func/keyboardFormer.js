@@ -10,19 +10,19 @@ const keyboardFormer = (commands, buttons) => {
       // await Promise.all(
       buttons.map((button) => {
         // if (typeof button === 'object')
-        const { text, command } = button
-        if (typeof command === 'string')
+        const { text, cmd } = button
+        if (typeof cmd === 'string')
           return [
             {
               text,
-              callback_data: JSON.stringify({ command }),
+              callback_data: JSON.stringify({ cmd }),
             },
           ]
         // Значит команда в JSON формате
         return [
           {
             text,
-            callback_data: JSON.stringify(command),
+            callback_data: JSON.stringify(cmd),
           },
         ]
 

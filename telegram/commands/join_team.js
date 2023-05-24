@@ -7,7 +7,7 @@ const join_team = async ({ telegramId, jsonCommand }) => {
     return {
       message: 'Введите код команды',
       upper_command: 'menu_teams',
-      buttons: [{ command: 'menu_teams', text: '\u{2B05} Назад' }],
+      buttons: [{ cmd: 'menu_teams', text: '\u{2B05} Назад' }],
     }
   }
   await dbConnect()

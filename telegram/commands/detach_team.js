@@ -23,9 +23,9 @@ const detach_team = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: '\u{1F4A3} Удалить из команды',
-          command: { confirm: true },
+          cmd: { confirm: true },
         },
-        { text: '\u{1F6AB} Отмена', command: 'menu_teams' },
+        { text: '\u{1F6AB} Отмена', cmd: 'menu_teams' },
       ],
     }
   }

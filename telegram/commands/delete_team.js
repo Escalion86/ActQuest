@@ -17,10 +17,10 @@ const delete_team = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: '\u{1F4A3} Удалить',
-          command: { confirm: true },
+          cmd: { confirm: true },
           // `delete_team` + propsToStr(props)
         },
-        { text: '\u{1F6AB} Отмена создания игры', command: 'menu_teams' },
+        { text: '\u{1F6AB} Отмена создания игры', cmd: 'menu_teams' },
       ],
     }
   }

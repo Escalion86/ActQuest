@@ -7,7 +7,7 @@ import join_team from './join_team'
 import main_menu from './main_menu'
 import menu_teams from './menu_teams'
 import menu_user from './menu_user'
-import set_team_description from './set_team_description'
+import set_team_desc from './set_team_desc'
 import set_team_name from './set_team_name'
 import set_user_name from './set_user_name'
 import team_users from './team_users'
@@ -20,7 +20,7 @@ import menu_games_edit from './menu_games_edit'
 const commandsArray = {
   set_user_name,
   set_team_name,
-  set_team_description,
+  set_team_desc,
   create_team,
   menu_teams,
   main_menu,

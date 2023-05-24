@@ -8,9 +8,9 @@ const menu_teams = async ({ telegramId, jsonCommand }) => {
     upper_command: 'main_menu',
     buttons: [
       // { command: 'edit_team', text: '\u{270F} Редактировать команду' },
-      { command: 'joined_teams', text: '\u{1F465} Мои команды' },
-      { command: 'join_team', text: '\u{1F517} Присоединиться к команде' },
-      { command: 'create_team', text: '\u{2795} Создать команду' },
+      { cmd: 'joined_teams', text: '\u{1F465} Мои команды' },
+      { cmd: 'join_team', text: '\u{1F517} Присоединиться к команде' },
+      { cmd: 'create_team', text: '\u{2795} Создать команду' },
       main_menu_button,
     ],
   }

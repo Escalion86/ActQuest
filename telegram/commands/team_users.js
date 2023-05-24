@@ -43,14 +43,14 @@ const team_users = async ({ telegramId, jsonCommand }) => {
     // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
     return {
       text: `${user.name}${teamUser?.role === 'capitan' ? ' (Капитан)' : ''}`,
-      command: { command: 'team_user', teamUserId: teamUser._id },
+      cmd: { cmd: 'team_user', teamUserId: teamUser._id },
       // `team_user/teamUserId=${teamUser._id}`,
     }
   })
 
   return {
     message: `Состав команды "${team.name}"`,
-    buttons: [...buttons, { command: 'menu_teams', text: '\u{2B05} Назад' }],
+    buttons: [...buttons, { cmd: 'menu_teams', text: '\u{2B05} Назад' }],
   }
 }
 

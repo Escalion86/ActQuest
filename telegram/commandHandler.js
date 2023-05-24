@@ -30,8 +30,8 @@ function jsonParser(str) {
 }
 
 const lastCommandHandler = async (telegramId, jsonCommand) => {
-  if (commandsArray[jsonCommand.command])
-    return await commandsArray[jsonCommand.command]({ telegramId, jsonCommand })
+  if (commandsArray[jsonCommand.cmd])
+    return await commandsArray[jsonCommand.cmd]({ telegramId, jsonCommand })
   return {
     success: false,
     message: 'Неизвестная команда',
@@ -68,13 +68,13 @@ const executeCommand = async (
     if (typeof nextCommand === 'string')
       return await executeCommand(
         userTelegramId,
-        { command: nextCommand },
+        { cmd: nextCommand },
         messageId
         // callback_query
       )
     // Если команда содержит в себе command, то значт это готовая команда,
     // если же нет, то значт это дополнение к предыдущей команде
-    const actualCommand = nextCommand.command
+    const actualCommand = nextCommand.cmd
       ? nextCommand
       : { ...jsonCommand, ...nextCommand }
     return await executeCommand(
@@ -90,7 +90,7 @@ const executeCommand = async (
         userTelegramId,
       },
       {
-        command: jsonCommand,
+        cmd: jsonCommand,
         messageId,
       },
       { upsert: true }
@@ -108,7 +108,7 @@ const commandHandler = async (
     if (message === '/main_menu' || message === '/start') {
       return await executeCommand(
         userTelegramId,
-        { command: 'main_menu' },
+        { cmd: 'main_menu' },
         messageId,
         callback_query
       )
@@ -116,7 +116,7 @@ const commandHandler = async (
 
     var jsonCommand
     if (message[0] === '/') {
-      jsonCommand = { command: message.substr(1) }
+      jsonCommand = { cmd: message.substr(1) }
     } else {
       jsonCommand = jsonParser(message)
     }
