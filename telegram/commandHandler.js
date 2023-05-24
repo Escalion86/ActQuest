@@ -105,7 +105,6 @@ const commandHandler = async (
   callback_query
 ) => {
   try {
-    console.log('message :>> ', message)
     if (message === '/main_menu' || message === '/start') {
       return await executeCommand(
         userTelegramId,
@@ -114,12 +113,13 @@ const commandHandler = async (
         callback_query
       )
     }
-
+    console.log('message :>> ', message)
+    var jsonCommand
     if (message[0] === '/') {
-      message = { command: message.substr(1) }
+      jsonCommand = { command: message.substr(1) }
     }
+    // const jsonCommand = jsonParser(message)
 
-    const jsonCommand = jsonParser(message)
     console.log('jsonCommand :>> ', jsonCommand)
     // Если это был JSON
     if (jsonCommand) {
