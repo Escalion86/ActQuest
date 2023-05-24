@@ -30,7 +30,6 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
     return {
       message: 'Выберите команду для редактирования',
       buttonText: '\u{270F}  Редактирование команд',
-      upper_command: 'menu_teams',
       buttons: [
         ...teams.map((team) => ({
           text: `"${team.name}"`,
@@ -59,52 +58,42 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
 
   const team = await getTeam(jsonCommand.teamId)
 
-  const buttons = isCapitan
-    ? [
-        {
-          cmd: { cmd: 'set_team_name', teamId: jsonCommand.teamId },
-          //`set_team_name/teamId=${jsonCommand.teamId}`,
-          text: '\u{270F} Изменить название',
-        },
-        {
-          cmd: {
-            cmd: 'set_team_desc',
-            teamId: jsonCommand.teamId,
-          },
-          //`set_team_desc/teamId=${jsonCommand.teamId}`,
-          text: '\u{270F} Изменить описание',
-        },
-        {
-          cmd: { cmd: 'team_users', teamId: jsonCommand.teamId },
-          //`team_users/teamId=${jsonCommand.teamId}`,
-          text: '\u{1F465} Посмотреть состав команды',
-        },
-        {
-          cmd: { cmd: 'link_to_join_team', teamId: jsonCommand.teamId },
-          //`link_to_join_team/teamId=${jsonCommand.teamId}`,
-          text: '\u{1F517} Пригласить в команду',
-        },
-        {
-          cmd: { cmd: 'delete_team', teamId: jsonCommand.teamId },
-          //`delete_team/teamId=${jsonCommand.teamId}`,
-          text: '\u{1F4A3} Удалить команду',
-        },
-        { cmd: 'joined_teams', text: '\u{2B05} Назад' },
-      ]
-    : [
-        {
-          cmd: { cmd: 'team_users', teamId: jsonCommand.teamId },
-          //`team_users/teamId=${jsonCommand.teamId}`,
-          text: '\u{1F465} Посмотреть состав команды',
-        },
-        { cmd: 'joined_teams', text: '\u{2B05} Назад' },
-      ]
+  const buttons = [
+    {
+      cmd: { cmd: 'set_team_name', teamId: jsonCommand.teamId },
+      //`set_team_name/teamId=${jsonCommand.teamId}`,
+      hide: !isCapitan,
+      text: '\u{270F} Изменить название',
+    },
+    {
+      cmd: {
+        cmd: 'set_team_desc',
+        teamId: jsonCommand.teamId,
+      },
+      hide: !isCapitan,
+      text: '\u{270F} Изменить описание',
+    },
+    {
+      cmd: { cmd: 'team_users', teamId: jsonCommand.teamId },
+      text: '\u{1F465} Посмотреть состав команды',
+    },
+    {
+      cmd: { cmd: 'link_to_join_team', teamId: jsonCommand.teamId },
+      hide: !isCapitan,
+      text: '\u{1F517} Пригласить в команду',
+    },
+    {
+      cmd: { cmd: 'delete_team', teamId: jsonCommand.teamId },
+      hide: !isCapitan,
+      text: '\u{1F4A3} Удалить команду',
+    },
+    { cmd: 'joined_teams', text: '\u{2B05} Назад' },
+  ]
 
   return {
     message: `${isCapitan ? 'Редактирование команды' : 'Команда'} "${
       team?.name
     }".${team?.description ? `\nОписание: "${team?.description}"` : ''}`,
-    upper_command: 'menu_teams',
     buttons,
   }
 }

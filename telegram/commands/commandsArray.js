@@ -16,6 +16,8 @@ import team_user from './team_user'
 import menu_games from './menu_games'
 import create_game from './create_game'
 import menu_games_edit from './menu_games_edit'
+import edit_game from './edit_game'
+import delete_game from './delete_game'
 
 const commandsArray = {
   set_user_name,
@@ -36,6 +38,8 @@ const commandsArray = {
   menu_games,
   create_game,
   menu_games_edit,
+  edit_game,
+  delete_game,
 }
 
 export default commandsArray

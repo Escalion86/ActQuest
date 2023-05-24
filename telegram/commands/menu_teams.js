@@ -5,7 +5,6 @@ const menu_teams = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: 'Меню работы с командами',
     buttonText: 'Команды',
-    upper_command: 'main_menu',
     buttons: [
       // { command: 'edit_team', text: '\u{270F} Редактировать команду' },
       { cmd: 'joined_teams', text: '\u{1F465} Мои команды' },

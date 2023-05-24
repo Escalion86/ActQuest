@@ -3,7 +3,6 @@ import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 
 const delete_team = async ({ telegramId, jsonCommand }) => {
-  console.log('!!! delete_team')
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   if (!jsonCommand.teamId)
     return {
@@ -21,7 +20,7 @@ const delete_team = async ({ telegramId, jsonCommand }) => {
           cmd: { confirm: true },
           // `delete_team` + propsToStr(props)
         },
-        { text: '\u{1F6AB} Отмена создания игры', cmd: 'menu_teams' },
+        { text: '\u{1F6AB} Отмена', cmd: 'menu_teams' },
       ],
     }
   }
