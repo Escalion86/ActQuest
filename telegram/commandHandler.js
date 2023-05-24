@@ -146,6 +146,7 @@ const commandHandler = async (
           text: 'Ответ получен, но команда на которую дан ответ не найден',
         })
       }
+      console.log('last.command :>> ', last.command)
       const lastCommand = {
         ...last.command,
         message,
