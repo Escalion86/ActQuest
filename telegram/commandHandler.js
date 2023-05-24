@@ -147,7 +147,7 @@ const commandHandler = async (
         })
       }
       const lastCommand = {
-        ...last.command.get('command'),
+        ...last.command,
         message,
       }
 
