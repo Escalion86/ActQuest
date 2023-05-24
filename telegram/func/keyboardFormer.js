@@ -6,7 +6,7 @@ const keyboardFormer = (commands, buttons) => {
   //   keyboard = inlineKeyboard(await buttons(userTelegramId, props))
   // }
   if (buttons && typeof buttons === 'object') {
-    return inlineKeyboard(
+    const resultKeyboard = inlineKeyboard(
       // await Promise.all(
       buttons.map((button) => {
         // if (typeof button === 'object')
@@ -38,6 +38,8 @@ const keyboardFormer = (commands, buttons) => {
         // ]
       })
     )
+    console.log('resultKeyboard :>> ', resultKeyboard)
+    return resultKeyboard
     // )
   }
   return
