@@ -1,4 +1,4 @@
-const main_menu = async ({ telegramId, message, props }) => {
+const main_menu = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Главное меню',

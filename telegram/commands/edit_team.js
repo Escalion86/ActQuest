@@ -3,8 +3,8 @@ import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
-const edit_team = async ({ telegramId, message, props }) => {
-  if (!props?.teamId) {
+const edit_team = async ({ telegramId, jsonCommand }) => {
+  if (!jsonCommand?.teamId) {
     await dbConnect()
     const teamsUser = await TeamsUsers.find({
       userTelegramId: telegramId,
@@ -13,7 +13,7 @@ const edit_team = async ({ telegramId, message, props }) => {
     if (!teamsUser || teamsUser.length === 0) {
       return {
         message: 'Ошибка не найдено записи в команде',
-        nextCommand: `/menu_teams`,
+        nextCommand: `menu_teams`,
       }
     }
     const teamsIds = teamsUser.map(
@@ -33,7 +33,8 @@ const edit_team = async ({ telegramId, message, props }) => {
       buttons: [
         ...teams.map((team) => ({
           text: `"${team.name}"`,
-          command: `edit_team/teamId=${team._id}`,
+          command: { command: 'edit_team', teamId: team._id },
+          // `edit_team/teamId=${team._id}`,
         })),
         { command: 'menu_teams', text: '\u{2B05} Назад' },
       ],
@@ -43,47 +44,56 @@ const edit_team = async ({ telegramId, message, props }) => {
   await dbConnect()
   const teamsUser = await TeamsUsers.findOne({
     userTelegramId: telegramId,
-    teamId: props.teamId,
+    teamId: jsonCommand.teamId,
   })
 
   if (!teamsUser) {
     return {
       message: 'Ошибка вы не состоите в команде',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
   }
 
   const isCapitan = teamsUser.role === 'capitan'
 
-  const team = await getTeam(props.teamId)
+  const team = await getTeam(jsonCommand.teamId)
 
   const buttons = isCapitan
     ? [
         {
-          command: `set_team_name/teamId=${props.teamId}`,
+          command: { command: 'set_team_name', teamId: jsonCommand.teamId },
+          //`set_team_name/teamId=${jsonCommand.teamId}`,
           text: '\u{270F} Изменить название',
         },
         {
-          command: `set_team_description/teamId=${props.teamId}`,
+          command: {
+            command: 'set_team_description',
+            teamId: jsonCommand.teamId,
+          },
+          //`set_team_description/teamId=${jsonCommand.teamId}`,
           text: '\u{270F} Изменить описание',
         },
         {
-          command: `team_users/teamId=${props.teamId}`,
+          command: { command: 'team_users', teamId: jsonCommand.teamId },
+          //`team_users/teamId=${jsonCommand.teamId}`,
           text: '\u{1F465} Посмотреть состав команды',
         },
         {
-          command: `link_to_join_team/teamId=${props.teamId}`,
+          command: { command: 'link_to_join_team', teamId: jsonCommand.teamId },
+          //`link_to_join_team/teamId=${jsonCommand.teamId}`,
           text: '\u{1F517} Пригласить в команду',
         },
         {
-          command: `delete_team/teamId=${props.teamId}`,
+          command: { command: 'delete_team', teamId: jsonCommand.teamId },
+          //`delete_team/teamId=${jsonCommand.teamId}`,
           text: '\u{1F4A3} Удалить команду',
         },
         { command: 'joined_teams', text: '\u{2B05} Назад' },
       ]
     : [
         {
-          command: `team_users/teamId=${props.teamId}`,
+          command: { command: 'team_users', teamId: jsonCommand.teamId },
+          //`team_users/teamId=${jsonCommand.teamId}`,
           text: '\u{1F465} Посмотреть состав команды',
         },
         { command: 'joined_teams', text: '\u{2B05} Назад' },

@@ -2,7 +2,7 @@ import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 import main_menu_button from './menuItems/main_menu_button'
 
-const menu_user = async ({ telegramId, message, props }) => {
+const menu_user = async ({ telegramId, jsonCommand }) => {
   var user
   if (telegramId) {
     await dbConnect()

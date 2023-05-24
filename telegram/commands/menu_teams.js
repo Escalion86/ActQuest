@@ -1,6 +1,6 @@
 import main_menu_button from './menuItems/main_menu_button'
 
-const menu_teams = async ({ telegramId, message, props }) => {
+const menu_teams = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Меню работы с командами',

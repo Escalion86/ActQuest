@@ -3,18 +3,18 @@ import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 import getTeamUser from 'telegram/func/getTeamUser'
 
-const team_user = async ({ telegramId, message, props }) => {
-  if (!props?.teamUserId)
+const team_user = async ({ telegramId, jsonCommand }) => {
+  if (!jsonCommand?.teamUserId)
     return {
       message: 'Ошибка. Не указан teamUserId',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
 
-  const teamUser = await getTeamUser(props.teamUserId)
+  const teamUser = await getTeamUser(jsonCommand.teamUserId)
   if (!teamUser || teamUser.length === 0) {
     return {
       message: 'Ошибка. Не найдена регистрация участника в команде',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
   }
   const isCapitan = teamUser.role === 'capitan'
@@ -23,7 +23,7 @@ const team_user = async ({ telegramId, message, props }) => {
   if (!team || team.length === 0) {
     return {
       message: 'Ошибка. Не найдена команда привязанная к регистрации участника',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
   }
 
@@ -34,14 +34,18 @@ const team_user = async ({ telegramId, message, props }) => {
   if (!user || user.length === 0) {
     return {
       message: 'Ошибка. Не найден пользователь привязанный к команде',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
   }
 
   const buttons = isCapitan
     ? [
         {
-          command: `detach_team/teamUserId=${props.teamUserId}`,
+          command: {
+            command: 'detach_team',
+            teamUserId: jsonCommand.teamUserId,
+          },
+          //`detach_team/teamUserId=${jsonCommand.teamUserId}`,
           text: '\u{1F4A3} Удалить из команды',
         },
         { command: 'menu_teams', text: '\u{2B05} Назад' },

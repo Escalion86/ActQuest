@@ -1,12 +1,11 @@
 import createGame from 'telegram/func/createGame'
-import propsToStr from 'telegram/func/propsToStr'
 
 const array = [
   {
     prop: 'name',
     message: 'Введите название игры',
     answerMessage: (answer) => `Задано название игры "${answer}"`,
-    buttons: (props) => [
+    buttons: (jsonCommand) => [
       { command: 'menu_games', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
@@ -14,7 +13,7 @@ const array = [
     prop: 'description',
     message: 'Введите описание игры',
     answerMessage: (answer) => `Задано описание игры "${answer}"`,
-    buttons: (props) => [
+    buttons: (jsonCommand) => [
       { command: 'menu_games', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
@@ -29,22 +28,27 @@ const array = [
     errorMessage: (answer) =>
       `Дата и время заданы в неверном формате. Формат даты и времени должен соответствовать "dd.MM.yyyy hh:mm"`,
     answerMessage: (answer) => `Заданы дата и время игры "${answer}"`,
-    buttons: (props) => [
+    buttons: (jsonCommand) => [
+      {
+        command: { dateStart: null },
+        // 'create_game' + propsToStr(props) + '/dateStart=null'
+        text: 'Без описания',
+      },
       { command: 'menu_games', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
 ]
 
-const create_game = async ({ telegramId, message, props }) => {
+const create_game = async ({ telegramId, jsonCommand }) => {
   // Если это запрос (команда), то отправляем текст пользователю
-  if (!message) {
+  if (!jsonCommand.message) {
     for (let i = 0; i < array.length; i++) {
       const data = array[i]
-      if (props[data.prop] === undefined) {
+      if (jsonCommand[data.prop] === undefined) {
         return {
           success: true,
           message: data.message,
-          buttons: data.buttons(props),
+          buttons: data.buttons(jsonCommand),
           // nextCommand: `/menu_teams`,
         }
       }
@@ -54,36 +58,37 @@ const create_game = async ({ telegramId, message, props }) => {
   // Если это ответ на запрос, то смотрим какую переменную (key) последнюю внесли
   for (let i = 0; i < array.length; i++) {
     const data = array[i]
-    if (props[data.prop] === undefined) {
+    if (jsonCommand[data.prop] === undefined) {
       if (
         array[i].checkAnswer !== undefined &&
-        !array[i].checkAnswer(message)
+        !array[i].checkAnswer(jsonCommand.message)
       ) {
         return {
           success: false,
-          message: array[i].errorMessage(message),
+          message: array[i].errorMessage(jsonCommand.message),
           // buttons: data.buttons(props),
-          nextCommand: `/create_game` + propsToStr(props),
+          nextCommand: jsonCommand,
+          // `/create_game` + propsToStr(props),
         }
       }
-      props[data.prop] = message
       if (i < array.length - 1)
         return {
           success: true,
-          message: array[i].answerMessage(message),
+          message: array[i].answerMessage(jsonCommand.message),
           // buttons: data.buttons(props),
-          nextCommand: `/create_game` + propsToStr(props),
+          nextCommand: { [data.prop]: jsonCommand.message },
+          // `/create_game` + propsToStr(props),
         }
     }
   }
 
   // Если все переменные на месте, то создаем команду
-  const game = await createGame(telegramId, props)
+  const game = await createGame(telegramId, jsonCommand)
 
   return {
     success: true,
-    message: `Игра "${props.name}" создана`,
-    nextCommand: `/menu_games`,
+    message: `Игра "${jsonCommand.name}" создана`,
+    nextCommand: `menu_games`,
   }
 }
 

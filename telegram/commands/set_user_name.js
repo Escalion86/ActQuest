@@ -1,8 +1,8 @@
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 
-const set_user_name = async ({ telegramId, message, props }) => {
-  if (!message)
+const set_user_name = async ({ telegramId, jsonCommand }) => {
+  if (!jsonCommand.message)
     return {
       success: true,
       message: 'Введите имя',
@@ -12,13 +12,13 @@ const set_user_name = async ({ telegramId, message, props }) => {
   const user = await Users.findOneAndUpdate(
     { telegramId },
     {
-      name: message,
+      name: jsonCommand.message,
     }
   )
   return {
     success: true,
     message: 'Имя обновлено',
-    nextCommand: `/menu_user`,
+    nextCommand: `menu_user`,
   }
 }
 

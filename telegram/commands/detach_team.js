@@ -1,42 +1,40 @@
 import TeamsUsers from '@models/TeamsUsers'
 import getTeamUser from 'telegram/func/getTeamUser'
 
-const detach_team = async ({ telegramId, message, props }) => {
-  if (!props?.teamUserId)
+const detach_team = async ({ telegramId, jsonCommand }) => {
+  if (!jsonCommand?.teamUserId)
     return {
       message: 'Ошибка. Не указан teamUserId',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
 
-  const teamUser = await getTeamUser(props.teamUserId)
+  const teamUser = await getTeamUser(jsonCommand.teamUserId)
   if (!teamUser || teamUser.length === 0) {
     return {
       message: 'Ошибка. Не найдена регистрация участника в команде',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
   }
 
-  if (!props.confirm) {
-    props.confirm = 'true'
+  if (!jsonCommand.confirm) {
     return {
       success: true,
       message: 'Подтвердите удаление участника из команды',
       buttons: [
         {
-          text: '\u{1F4A3} Удалить',
-          command: `+confirm=true`,
-          // `delete_team` + propsToStr(props)
+          text: '\u{1F4A3} Удалить из команды',
+          command: { confirm: true },
         },
         { text: '\u{1F6AB} Отмена', command: 'menu_teams' },
       ],
     }
   }
 
-  await TeamsUsers.findByIdAndDelete(props.teamUserId)
+  await TeamsUsers.findByIdAndDelete(jsonCommand.teamUserId)
   return {
     success: true,
     message: 'Пользователь удален из команды',
-    nextCommand: `/menu_teams`,
+    nextCommand: `menu_teams`,
   }
 }
 

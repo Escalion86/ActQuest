@@ -5,25 +5,33 @@ import main_menu_button from './commands/menuItems/main_menu_button'
 import keyboardFormer from './func/keyboardFormer'
 import sendMessage from './sendMessage'
 
-const messageToCommandAndProps = (message) => {
-  const commands = message.split('/')
-  commands.shift()
+// const messageToCommandAndProps = (message) => {
+//   const commands = message.split('/')
+//   commands.shift()
 
-  const command = commands[0]
-  commands.shift()
+//   const command = commands[0]
+//   commands.shift()
 
-  var props = {}
-  commands.forEach((prop) => {
-    const [key, value] = prop.split('=')
-    props[key] = value
-  })
+//   var props = {}
+//   commands.forEach((prop) => {
+//     const [key, value] = prop.split('=')
+//     props[key] = value === 'null' ? null : value
+//   })
 
-  return { command, props }
+//   return { command, props }
+// }
+
+function jsonParser(str) {
+  try {
+    return JSON.parse(str)
+  } catch (e) {
+    return
+  }
 }
 
-const lastCommandHandler = async (telegramId, command, props, message) => {
-  if (commandsArray[command])
-    return await commandsArray[command]({ telegramId, props, message })
+const lastCommandHandler = async (telegramId, jsonCommand) => {
+  if (commandsArray[jsonCommand.command])
+    return await commandsArray[jsonCommand.command]({ telegramId, jsonCommand })
   return {
     success: false,
     message: 'Неизвестная команда',
@@ -33,19 +41,15 @@ const lastCommandHandler = async (telegramId, command, props, message) => {
 
 const executeCommand = async (
   userTelegramId,
-  command,
+  jsonCommand,
   messageId,
   callback_query,
   message
 ) => {
-  const data = messageToCommandAndProps(command)
+  // const data = messageToCommandAndProps(command)
 
-  const result = await lastCommandHandler(
-    userTelegramId,
-    data.command,
-    data.props,
-    message
-  )
+  const result = await lastCommandHandler(userTelegramId, jsonCommand)
+
   const keyboard = keyboardFormer(commandsArray, result.buttons)
 
   const sendResult = await sendMessage({
@@ -56,26 +60,35 @@ const executeCommand = async (
     callback_query,
   })
   // console.log('sendResult :>> ', sendResult)
-
-  if (result.nextCommand)
+  const command = result.nextCommand
+  if (command) {
+    if (typeof command === 'string')
+      return await executeCommand(
+        userTelegramId,
+        { command: command },
+        messageId
+        // callback_query
+      )
+    // Если команда содержит в себе command, то значт это готовая команда,
+    // если же нет, то значт это дополнение к предыдущей команде
+    const actualCommand = command.command
+      ? command
+      : { ...jsonCommand, ...command }
     return await executeCommand(
       userTelegramId,
-      result.nextCommand,
+      actualCommand,
       messageId
       // callback_query
     )
-  else {
+  } else {
     await dbConnect()
     return await LastCommands.findOneAndUpdate(
       {
         userTelegramId,
       },
       {
-        command: {
-          command,
-          messageId,
-          // props: { teamName: message },
-        },
+        command: JSON.stringify(jsonCommand),
+        messageId,
       },
       { upsert: true }
     )
@@ -89,19 +102,25 @@ const commandHandler = async (
   callback_query
 ) => {
   try {
-    if (message === '/') message = ''
-    const isItCommand = message[0] === '/'
-    // Если была отправлена команда, то ищем ее или возвращаем ошибку
-    if (isItCommand) {
-      if (message[1] === '+') {
-        await dbConnect()
-        const last = await LastCommands.findOne({
-          userTelegramId,
-        })
-        const lastCommand = last.command.get('command')
-        message = lastCommand + '/' + message.substr(2)
-      }
-      await executeCommand(userTelegramId, message, messageId, callback_query)
+    const jsonCommand = jsonParser(message)
+
+    // Если это был JSON
+    if (jsonCommand) {
+      // if (data.command[0] === '+') {
+      //   await dbConnect()
+      //   const last = await LastCommands.findOne({
+      //     userTelegramId,
+      //   })
+      //   const lastCommand = last.command.get('command')
+      //   data.command =
+      //   message = lastCommand + '/' + message.substr(2)
+      // }
+      await executeCommand(
+        userTelegramId,
+        jsonCommand,
+        messageId,
+        callback_query
+      )
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
       await dbConnect()
@@ -116,7 +135,7 @@ const commandHandler = async (
           text: 'Ответ получен, но команда на которую дан ответ не найден',
         })
       }
-      const lastCommand = last.command.get('command')
+      const lastCommand = JSON.parse(last.command.get('command'))
 
       await executeCommand(
         userTelegramId,
@@ -125,32 +144,45 @@ const commandHandler = async (
         callback_query,
         message
       )
-
-      // const { command, props } = messageToCommandAndProps(lastCommand)
-
-      // const result = await lastCommandHandler(
-      //   userTelegramId,
-      //   command,
-      //   props,
-      //   message
-      // )
-      // const keyboard = keyboardFormer(commandsArray, result.buttons)
-      // await sendMessage({
-      //   chat_id: userTelegramId,
-      //   // text: JSON.stringify({ body, headers: req.headers.origin }),
-      //   text: result.message,
-      //   keyboard,
-      // })
-
-      // if (result.nextCommand) {
-      //   return await executeCommand(
-      //     userTelegramId,
-      //     result.nextCommand,
-      //     messageId
-      //     // callback_query
-      //   )
-      // }
     }
+
+    // if (message === '/') message = ''
+    // const isItCommand = message[0] === '/'
+    // Если была отправлена команда, то ищем ее или возвращаем ошибку
+    // if (isItCommand) {
+    //   if (message[1] === '+') {
+    //     await dbConnect()
+    //     const last = await LastCommands.findOne({
+    //       userTelegramId,
+    //     })
+    //     const lastCommand = last.command.get('command')
+    //     message = lastCommand + '/' + message.substr(2)
+    //   }
+    //   await executeCommand(userTelegramId, message, messageId, callback_query)
+    // } else {
+    //   // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
+    //   await dbConnect()
+    //   const last = await LastCommands.findOne({
+    //     userTelegramId,
+    //   })
+
+    //   if (!last) {
+    //     return await sendMessage({
+    //       chat_id: userTelegramId,
+    //       // text: JSON.stringify({ body, headers: req.headers.origin }),
+    //       text: 'Ответ получен, но команда на которую дан ответ не найден',
+    //     })
+    //   }
+    //   const lastCommand = last.command.get('command')
+
+    //   await executeCommand(
+    //     userTelegramId,
+    //     lastCommand,
+    //     messageId,
+    //     callback_query,
+    //     message
+    //   )
+    // }
   } catch (e) {
     console.log('e :>> ', e)
   }

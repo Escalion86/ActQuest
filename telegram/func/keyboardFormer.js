@@ -11,12 +11,21 @@ const keyboardFormer = (commands, buttons) => {
       buttons.map((button) => {
         // if (typeof button === 'object')
         const { text, command } = button
+        if (typeof command === 'string')
+          return [
+            {
+              text,
+              callback_data: `/${command}`,
+            },
+          ]
+        // Значит команда в JSON формате
         return [
           {
             text,
-            callback_data: `/${command}`,
+            callback_data: JSON.stringify(command),
           },
         ]
+
         // console.log('button :>> ', button)
         // console.log('commands[button] :>> ', commands[button])
         // const command = await commands[button]()

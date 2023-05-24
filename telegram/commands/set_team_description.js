@@ -1,48 +1,49 @@
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 
-const set_team_description = async ({ telegramId, message, props }) => {
+const set_team_description = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
-  if (!props.teamId)
+  if (!jsonCommand.teamId)
     return {
       success: false,
       message:
         'Не удалось изменить описание команды, так как команда не найдена',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
-  if (props.noDescription) {
+  if (jsonCommand.noDescription) {
     await dbConnect()
-    const team = await Teams.findByIdAndUpdate(props.teamId, {
+    const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
       description: '',
     })
     return {
       success: true,
       message: 'Описание команды удалено',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
   }
-  if (!message) {
+  if (!jsonCommand.message) {
     return {
       success: true,
       message: 'Введите новое описание команды',
       buttons: [
         {
           text: 'Без описания',
-          command: `+noDescription=true`,
+          command: { noDescription: true },
+          //`+noDescription=true`,
         },
         { text: '\u{1F6AB} Отмена', command: 'menu_teams' },
       ],
     }
   }
   await dbConnect()
-  const team = await Teams.findByIdAndUpdate(props.teamId, {
-    description: message,
+  const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
+    description: jsonCommand.message,
   })
 
   return {
     success: true,
-    message: `Описание команды обновлено на "${message}"`,
-    nextCommand: `/menu_teams`,
+    message: `Описание команды обновлено на "${jsonCommand.message}"`,
+    nextCommand: `menu_teams`,
   }
 }
 

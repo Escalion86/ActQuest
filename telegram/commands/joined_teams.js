@@ -2,13 +2,13 @@ import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 
-const joined_teams = async ({ telegramId, message, props }) => {
+const joined_teams = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
   if (!teamsUser || teamsUser.length === 0) {
     return {
       message: 'Вы не состоите ни в какой команде',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
   }
   const teamsIds = teamsUser.map(
@@ -33,7 +33,8 @@ const joined_teams = async ({ telegramId, message, props }) => {
           text: `"${team.name}"${
             teamUser.role === 'capitan' ? ' (Капитан)' : ''
           }`,
-          command: `edit_team/teamId=${team._id}`,
+          command: { command: 'edit_team', teamId: team._id },
+          //`edit_team/teamId=${team._id}`,
         }
       }),
       { command: 'menu_teams', text: '\u{2B05} Назад' },

@@ -1,16 +1,16 @@
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 
-const set_team_name = async ({ telegramId, message, props }) => {
+const set_team_name = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
-  if (!props.teamId)
+  if (!jsonCommand.teamId)
     return {
       success: false,
       message:
         'Не удалось изменить название команды, так как команда не найдена',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
-  if (!message) {
+  if (!jsonCommand.message) {
     return {
       success: true,
       message: 'Введите новое название команды',
@@ -18,15 +18,15 @@ const set_team_name = async ({ telegramId, message, props }) => {
     }
   }
   await dbConnect()
-  const team = await Teams.findByIdAndUpdate(props.teamId, {
-    name: message,
-    name_lowered: message.toLowerCase(),
+  const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
+    name: jsonCommand.message,
+    name_lowered: jsonCommand.message.toLowerCase(),
   })
 
   return {
     success: true,
-    message: `Название команды обновлена на "${message}"`,
-    nextCommand: `/menu_teams`,
+    message: `Название команды обновлена на "${jsonCommand.message}"`,
+    nextCommand: `menu_teams`,
   }
 }
 

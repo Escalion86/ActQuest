@@ -3,30 +3,30 @@ import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
-const team_users = async ({ telegramId, message, props }) => {
-  if (!props?.teamId)
+const team_users = async ({ telegramId, jsonCommand }) => {
+  if (!jsonCommand?.teamId)
     return {
       message: 'Ошибка. Не указан teamId',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
 
-  const team = await getTeam(props?.teamId)
+  const team = await getTeam(jsonCommand?.teamId)
   if (!team || team.length === 0) {
     return {
       message: 'Ошибка. Команда не найдена',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
   }
 
   await dbConnect()
-  const teamsUsers = await TeamsUsers.find({ teamId: props?.teamId })
+  const teamsUsers = await TeamsUsers.find({ teamId: jsonCommand?.teamId })
   if (!teamsUsers || teamsUsers.length === 0) {
     return {
       message: 'Никто не состоит в команде',
-      nextCommand: `/menu_teams`,
+      nextCommand: `menu_teams`,
     }
   }
-  console.log('teamsUsers :>> ', teamsUsers)
+
   const usersTelegramIds = teamsUsers.map(
     (teamUser) =>
       // mongoose.Types.ObjectId(teamUser.teamId)
@@ -43,7 +43,8 @@ const team_users = async ({ telegramId, message, props }) => {
     // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
     return {
       text: `${user.name}${teamUser?.role === 'capitan' ? ' (Капитан)' : ''}`,
-      command: `team_user/teamUserId=${teamUser._id}`,
+      command: { command: 'team_user', teamUserId: teamUser._id },
+      // `team_user/teamUserId=${teamUser._id}`,
     }
   })
 
