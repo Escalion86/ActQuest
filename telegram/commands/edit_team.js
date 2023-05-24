@@ -62,7 +62,7 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
 
   const team = await getTeam(jsonCommand.teamId)
 
-  console.log('object :>> ', object)
+  console.log('team :>> ', team)
 
   const buttons = isCapitan
     ? [
