@@ -49,6 +49,8 @@ const executeCommand = async (
 
   const result = await lastCommandHandler(userTelegramId, jsonCommand)
 
+  console.log('result :>> ', result)
+
   const keyboard = keyboardFormer(commandsArray, result.buttons)
 
   const sendResult = await sendMessage({
@@ -146,11 +148,13 @@ const commandHandler = async (
           text: 'Ответ получен, но команда на которую дан ответ не найден',
         })
       }
-      console.log('last.command :>> ', Object.fromEntries(last.command))
+
       const lastCommand = {
         ...Object.fromEntries(last.command),
         message,
       }
+
+      console.log('lastCommand :>> ', lastCommand)
 
       await executeCommand(
         userTelegramId,
