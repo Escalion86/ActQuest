@@ -18,6 +18,8 @@ import create_game from './create_game'
 import menu_games_edit from './menu_games_edit'
 import edit_game from './edit_game'
 import delete_game from './delete_game'
+import set_game_desc from './set_game_desc'
+import set_game_name from './set_game_name'
 
 const commandsArray = {
   set_user_name,
@@ -40,6 +42,8 @@ const commandsArray = {
   menu_games_edit,
   edit_game,
   delete_game,
+  set_game_desc,
+  set_game_name,
 }
 
 export default commandsArray

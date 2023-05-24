@@ -6,7 +6,7 @@ const array = [
     message: 'Введите название игры',
     answerMessage: (answer) => `Задано название игры "${answer}"`,
     buttons: (jsonCommand) => [
-      { cmd: 'menu_games', text: '\u{1F6AB} Отмена создания игры' },
+      { cmd: 'menu_games_edit', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
   {
@@ -14,7 +14,7 @@ const array = [
     message: 'Введите описание игры',
     answerMessage: (answer) => `Задано описание игры "${answer}"`,
     buttons: (jsonCommand) => [
-      { cmd: 'menu_games', text: '\u{1F6AB} Отмена создания игры' },
+      { cmd: 'menu_games_edit', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
   {
@@ -34,7 +34,7 @@ const array = [
         // 'create_game' + propsToStr(props) + '/dateStart=null'
         text: 'Без описания',
       },
-      { cmd: 'menu_games', text: '\u{1F6AB} Отмена создания игры' },
+      { cmd: 'menu_games_edit', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
 ]
@@ -88,7 +88,7 @@ const create_game = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Игра "${jsonCommand.name}" создана`,
-    nextCommand: `menu_games`,
+    nextCommand: `menu_games_edit`,
   }
 }
 

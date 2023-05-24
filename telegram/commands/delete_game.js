@@ -8,7 +8,7 @@ const delete_game = async ({ telegramId, jsonCommand }) => {
     return {
       success: false,
       message: 'Не удалось удалить игру, так как не указан id',
-      nextCommand: `menu_teams`,
+      nextCommand: `menu_games_edit`,
     }
   if (!jsonCommand.confirm) {
     return {
@@ -19,7 +19,7 @@ const delete_game = async ({ telegramId, jsonCommand }) => {
           text: '\u{1F4A3} Удалить',
           cmd: { confirm: true },
         },
-        { text: '\u{1F6AB} Отмена', cmd: 'menu_teams' },
+        { text: '\u{1F6AB} Отмена', cmd: 'menu_games_edit' },
       ],
     }
   }
