@@ -4,6 +4,8 @@ import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
 const edit_team = async ({ telegramId, jsonCommand }) => {
+  console.log('jsonCommand :>> ', jsonCommand)
+  console.log('!!edit_team')
   if (!jsonCommand?.teamId) {
     await dbConnect()
     const teamsUser = await TeamsUsers.find({
@@ -47,6 +49,8 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
     teamId: jsonCommand.teamId,
   })
 
+  console.log('teamsUser :>> ', teamsUser)
+
   if (!teamsUser) {
     return {
       message: 'Ошибка вы не состоите в команде',
@@ -57,6 +61,8 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
   const isCapitan = teamsUser.role === 'capitan'
 
   const team = await getTeam(jsonCommand.teamId)
+
+  console.log('object :>> ', object)
 
   const buttons = isCapitan
     ? [
@@ -98,6 +104,8 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
         },
         { command: 'joined_teams', text: '\u{2B05} Назад' },
       ]
+
+  console.log('buttons :>> ', buttons)
 
   return {
     message: `${isCapitan ? 'Редактирование команды' : 'Команда'} "${
