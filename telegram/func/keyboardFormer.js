@@ -15,7 +15,7 @@ const keyboardFormer = (commands, buttons) => {
           return [
             {
               text,
-              callback_data: `/${command}`,
+              callback_data: JSON.stringify({ command }),
             },
           ]
         // Значит команда в JSON формате

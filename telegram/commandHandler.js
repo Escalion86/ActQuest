@@ -113,14 +113,14 @@ const commandHandler = async (
         callback_query
       )
     }
-    console.log('message :>> ', message)
+
     var jsonCommand
     if (message[0] === '/') {
       jsonCommand = { command: message.substr(1) }
+    } else {
+      jsonCommand = jsonParser(message)
     }
-    // const jsonCommand = jsonParser(message)
 
-    console.log('jsonCommand :>> ', jsonCommand)
     // Если это был JSON
     if (jsonCommand) {
       // if (data.command[0] === '+') {
