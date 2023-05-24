@@ -86,7 +86,7 @@ const executeCommand = async (
         userTelegramId,
       },
       {
-        command: JSON.stringify(jsonCommand),
+        command: jsonCommand,
         messageId,
       },
       { upsert: true }
@@ -143,7 +143,7 @@ const commandHandler = async (
         })
       }
       const lastCommand = {
-        ...JSON.parse(last.command.get('command')),
+        ...last.command.get('command'),
         message,
       }
 
