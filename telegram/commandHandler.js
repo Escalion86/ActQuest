@@ -101,8 +101,9 @@ const commandHandler = async (
   callback_query
 ) => {
   try {
+    console.log('message :>> ', message)
     if (message === '/main_menu' || message === '/start') {
-      await executeCommand(
+      return await executeCommand(
         userTelegramId,
         { command: 'main_menu' },
         messageId,
