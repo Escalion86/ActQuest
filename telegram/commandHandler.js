@@ -43,8 +43,7 @@ const executeCommand = async (
   userTelegramId,
   jsonCommand,
   messageId,
-  callback_query,
-  message
+  callback_query
 ) => {
   // const data = messageToCommandAndProps(command)
 
@@ -102,8 +101,16 @@ const commandHandler = async (
   callback_query
 ) => {
   try {
-    const jsonCommand = jsonParser(message)
+    if (message === '/main_menu' || message === '/start') {
+      await executeCommand(
+        userTelegramId,
+        { command: 'main_menu' },
+        messageId,
+        callback_query
+      )
+    }
 
+    const jsonCommand = jsonParser(message)
     // Если это был JSON
     if (jsonCommand) {
       // if (data.command[0] === '+') {
@@ -135,14 +142,16 @@ const commandHandler = async (
           text: 'Ответ получен, но команда на которую дан ответ не найден',
         })
       }
-      const lastCommand = JSON.parse(last.command.get('command'))
+      const lastCommand = {
+        ...JSON.parse(last.command.get('command')),
+        message,
+      }
 
       await executeCommand(
         userTelegramId,
         lastCommand,
         messageId,
-        callback_query,
-        message
+        callback_query
       )
     }
 
