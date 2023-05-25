@@ -48,15 +48,16 @@ const game = async ({ telegramId, jsonCommand }) => {
       const teamUserOfUser = teamsUserOfUser.find(
         (teamUser) => teamUser.teamId === String(team._id)
       )
-      if (teamUserOfUser) {
+      if (teamUserOfUser && teamUserOfUser?.role === 'capitan') {
         const gameTeam = gameTeams.find(
           (gameTeam) => gameTeam.teamId === String(team._id)
         )
         return {
-          text: `"${team.name}" (вы ${
-            teamUserOfUser.role === 'capitan' ? 'капитан' : 'участник'
-          } команды)`,
-          cmd: { cmd: 'game_team', gameTeamId: String(gameTeam._id) },
+          // text: `"${team.name}" (вы ${
+          //   teamUserOfUser.role === 'capitan' ? 'капитан' : 'участник'
+          // } команды)`,
+          text: `Отменить регистрацию команды "${team.name}"`,
+          cmd: { cmd: 'detach_game_team', gameTeamId: String(gameTeam._id) },
         }
       }
       return undefined
@@ -69,7 +70,7 @@ const game = async ({ telegramId, jsonCommand }) => {
     teamsOfUserInAGame && teamsOfUserInAGame.length > 0
       ? `\n\n${
           teamsOfUserInAGame.length === 1
-            ? 'Записана ваши команда'
+            ? 'Записана ваша команда'
             : 'Записаны ваши команды'
         } ${teamsOfUserInAGame.map((team) => `"${team.name}"`).join(', ')}`
       : ''

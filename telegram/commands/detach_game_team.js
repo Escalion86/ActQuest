@@ -12,13 +12,13 @@ const detach_game_team = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.confirm) {
     return {
       success: true,
-      message: 'Подтвердите удаление команды из игры',
+      message: 'Подтвердите отмену регистрации команды из игры',
       buttons: [
         {
-          text: '\u{1F4A3} Удалить из команду из игры',
+          text: '\u{1F4A3} Отменить регистрацию команды из игры',
           cmd: { confirm: true },
         },
-        { text: '\u{1F6AB} Отмена', cmd: 'menu_games_edit' },
+        { text: '\u{1F6AB} Я передумал', cmd: 'menu_games_edit' },
       ],
     }
   }
