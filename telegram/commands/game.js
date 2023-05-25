@@ -59,29 +59,33 @@ const game = async ({ telegramId, jsonCommand }) => {
           cmd: { cmd: 'game_team', gameTeamId },
         }
       }
-      return
+      return undefined
     })
-    .filter((data) => data)
+    .filter((data) => data !== undefined)
+
+  console.log('buttons :>> ', buttons)
+
+  const message = `Игра "${game?.name}".${
+    game?.description ? `\nОписание: "${game?.description}"` : ''
+  }${
+    teamsOfUserInAGame && teamsOfUserInAGame.length > 0
+      ? `\n\n${
+          teamsOfUserInAGame.length === 1
+            ? 'Записана ваши команда'
+            : 'Записаны ваши команды'
+        } ${teamsOfUserInAGame.map((team) => `"${team.name}"`).join(', ')}`
+      : ''
+  }`
+  console.log('message :>> ', message)
 
   return {
-    message: `Игра "${game?.name}".${
-      game?.description ? `\nОписание: "${game?.description}"` : ''
-    }${
-      teamsOfUserInAGame && teamsOfUserInAGame.length > 0
-        ? `\n\n${
-            teamsOfUserInAGame.length === 1
-              ? 'Записана ваши команда'
-              : 'Записаны ваши команды'
-          } ${teamsOfUserInAGame.map((team) => `"${team.name}"`).join(', ')}`
-        : ''
-    }`,
+    message,
     buttons: [
       {
         cmd: { cmd: 'join_game', gameId: jsonCommand.gameId },
         text: '\u{270F} Зарегистрироваться на игру',
         hide: teamsOfUserInAGame,
       },
-
       ...buttons,
       {
         cmd: { cmd: 'game_teams', gameId: jsonCommand.gameId },
