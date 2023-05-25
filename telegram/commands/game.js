@@ -16,6 +16,8 @@ const game = async ({ telegramId, jsonCommand }) => {
     jsonCommand.gameId
   )
 
+  console.log('teamsOfUserInAGame :>> ', teamsOfUserInAGame)
+
   // const teamsOfUser = getTeamsOfUser(    telegramId,
   //   jsonCommand.gameId)
 
