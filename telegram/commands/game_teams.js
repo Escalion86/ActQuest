@@ -32,7 +32,7 @@ const game_teams = async ({ telegramId, jsonCommand }) => {
 
   const buttons = teams.map((team) => {
     const gameTeam = gameTeams.find(
-      (gameTeam) => gameTeam.team_id === String(team._id)
+      (gameTeam) => gameTeam.teamId === String(team._id)
     )
     return {
       text: `"${team.name}"`,
