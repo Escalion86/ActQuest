@@ -25,10 +25,6 @@ const edit_game = async ({ telegramId, jsonCommand }) => {
         text: '\u{270F} Изменить описание',
       },
       {
-        cmd: { cmd: 'game_teams', gameId: jsonCommand.gameId },
-        text: '\u{1F465} Зарегистрированные команды',
-      },
-      {
         cmd: { cmd: 'delete_game', gameId: jsonCommand.gameId },
         text: '\u{1F4A3} Удалить игру',
       },
