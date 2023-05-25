@@ -11,12 +11,10 @@ const game = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
-  const teamsOfUserInAGame = getTeamOfUserRegistredInAGame(
+  const teamsOfUserInAGame = await getTeamOfUserRegistredInAGame(
     telegramId,
     jsonCommand.gameId
   )
-
-  console.log('teamsOfUserInAGame :>> ', teamsOfUserInAGame)
 
   // const teamsOfUser = getTeamsOfUser(    telegramId,
   //   jsonCommand.gameId)
