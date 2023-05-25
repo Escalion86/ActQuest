@@ -57,7 +57,7 @@ const game = async ({ telegramId, jsonCommand }) => {
           //   teamUserOfUser.role === 'capitan' ? 'капитан' : 'участник'
           // } команды)`,
           text: `Отменить регистрацию команды "${team.name}"`,
-          cmd: { cmd: 'detach_game_team', gameTeamId: String(gameTeam._id) },
+          cmd: { cmd: 'del_game_team', gameTeamId: String(gameTeam._id) },
         }
       }
       return undefined

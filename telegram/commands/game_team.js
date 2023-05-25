@@ -19,7 +19,7 @@ const game_team = async ({ telegramId, jsonCommand }) => {
   const buttons = [
     {
       cmd: {
-        cmd: 'detach_game_team',
+        cmd: 'del_game_team',
         gameTeamId: jsonCommand.gameTeamId,
       },
       text: '\u{1F4A3} Удалить команду из игры',

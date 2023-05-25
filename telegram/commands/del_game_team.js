@@ -2,7 +2,7 @@ import GamesTeams from '@models/GamesTeams'
 import check from 'telegram/func/check'
 import getGameTeam from 'telegram/func/getGameTeam'
 
-const detach_game_team = async ({ telegramId, jsonCommand }) => {
+const del_game_team = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
@@ -31,4 +31,4 @@ const detach_game_team = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default detach_game_team
+export default del_game_team

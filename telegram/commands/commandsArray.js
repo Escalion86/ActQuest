@@ -22,7 +22,7 @@ import set_game_desc from './set_game_desc'
 import set_game_name from './set_game_name'
 import game_teams from './game_teams'
 import game_team from './game_team'
-import detach_game_team from './detach_game_team'
+import del_game_team from './del_game_team'
 import game from './game'
 import join_game from './join_game'
 
@@ -51,7 +51,7 @@ const commandsArray = {
   set_game_name,
   game_teams,
   game_team,
-  detach_game_team,
+  del_game_team,
   game,
   join_game,
 }
