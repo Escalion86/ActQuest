@@ -1,7 +1,7 @@
 import TeamsUsers from '@models/TeamsUsers'
 import getTeamUser from 'telegram/func/getTeamUser'
 
-const detach_team = async ({ telegramId, jsonCommand }) => {
+const detach_team_user = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand?.teamUserId)
     return {
       message: 'Ошибка. Не указан teamUserId',
@@ -38,4 +38,4 @@ const detach_team = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default detach_team
+export default detach_team_user

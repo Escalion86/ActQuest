@@ -11,7 +11,7 @@ import set_team_desc from './set_team_desc'
 import set_team_name from './set_team_name'
 import set_user_name from './set_user_name'
 import team_users from './team_users'
-import detach_team from './detach_team'
+import detach_team_user from './detach_team_user'
 import team_user from './team_user'
 import menu_games from './menu_games'
 import create_game from './create_game'
@@ -20,6 +20,9 @@ import edit_game from './edit_game'
 import delete_game from './delete_game'
 import set_game_desc from './set_game_desc'
 import set_game_name from './set_game_name'
+import game_teams from './game_teams'
+import game_team from './game_team'
+import detach_game_team from './detach_game_team'
 
 const commandsArray = {
   set_user_name,
@@ -36,7 +39,7 @@ const commandsArray = {
   team_users,
   link_to_join_team,
   team_user,
-  detach_team,
+  detach_team_user,
   menu_games,
   create_game,
   menu_games_edit,
@@ -44,6 +47,9 @@ const commandsArray = {
   delete_game,
   set_game_desc,
   set_game_name,
+  game_teams,
+  game_team,
+  detach_game_team,
 }
 
 export default commandsArray
