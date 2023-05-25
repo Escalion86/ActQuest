@@ -1,14 +1,12 @@
 import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
+import check from 'telegram/func/check'
 
 const set_game_desc = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
-  if (!jsonCommand.gameId)
-    return {
-      success: false,
-      message: 'Не удалось изменить описание игры, так как id игры не задан',
-      nextCommand: `menu_games_edit`,
-    }
+  const checkData = check(jsonCommand, ['gameId'])
+  if (checkData) return checkData
+
   if (!jsonCommand.message) {
     return {
       success: true,

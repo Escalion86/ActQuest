@@ -5,9 +5,22 @@ import mongoose from 'mongoose'
 const getTeam = async (id) => {
   await dbConnect()
   // const preparedId = mongoose.Types.ObjectId(id)
-  if (!mongoose.Types.ObjectId.isValid(id)) return
+  if (id === undefined || !mongoose.Types.ObjectId.isValid(id))
+    return {
+      success: false,
+      message: 'Ошибка. teamId не указан',
+      nextCommand: `main_menu`,
+    }
 
-  return await Teams.findById(id)
+  const teams = await Teams.findById(id)
+  if (!teams) {
+    return {
+      success: false,
+      message: 'Ошибка. Нет такого teamId',
+      nextCommand: `main_menu`,
+    }
+  }
+  return teams
 }
 
 export default getTeam

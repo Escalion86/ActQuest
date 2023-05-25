@@ -11,11 +11,7 @@ const join_team = async ({ telegramId, jsonCommand }) => {
   }
   await dbConnect()
   const team = await getTeam(jsonCommand.message)
-  if (!team)
-    return {
-      message: 'Код не верен.',
-      nextCommand: `menu_teams`,
-    }
+  if (team.success === false) return team
 
   const teamUser = await TeamsUsers.findOne({
     teamId: String(team._id),

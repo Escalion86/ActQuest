@@ -4,10 +4,22 @@ import mongoose from 'mongoose'
 
 const getGame = async (id) => {
   await dbConnect()
-  // const preparedId = mongoose.Types.ObjectId(id)
-  if (!mongoose.Types.ObjectId.isValid(id)) return
+  if (id === undefined || !mongoose.Types.ObjectId.isValid(id))
+    return {
+      success: false,
+      message: 'Ошибка. gameId не указан',
+      nextCommand: `main_menu`,
+    }
 
-  return await Games.findById(id)
+  const game = await Games.findById(id)
+  if (!game) {
+    return {
+      success: false,
+      message: 'Ошибка. Нет такого gameId',
+      nextCommand: `main_menu`,
+    }
+  }
+  return game
 }
 
 export default getGame

@@ -1,20 +1,13 @@
 import TeamsUsers from '@models/TeamsUsers'
+import check from 'telegram/func/check'
 import getTeamUser from 'telegram/func/getTeamUser'
 
 const detach_team_user = async ({ telegramId, jsonCommand }) => {
-  if (!jsonCommand?.teamUserId)
-    return {
-      message: 'Ошибка. Не указан teamUserId',
-      nextCommand: `menu_teams`,
-    }
+  const checkData = check(jsonCommand, ['teamUserId'])
+  if (checkData) return checkData
 
   const teamUser = await getTeamUser(jsonCommand.teamUserId)
-  if (!teamUser || teamUser.length === 0) {
-    return {
-      message: 'Ошибка. Не найдена регистрация участника в команде',
-      nextCommand: `menu_teams`,
-    }
-  }
+  if (teamUser.success === false) return teamUser
 
   if (!jsonCommand.confirm) {
     return {

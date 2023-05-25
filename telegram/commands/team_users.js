@@ -4,19 +4,11 @@ import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
 const team_users = async ({ telegramId, jsonCommand }) => {
-  if (!jsonCommand?.teamId)
-    return {
-      message: 'Ошибка. Не указан teamId',
-      nextCommand: `menu_teams`,
-    }
+  const checkData = check(jsonCommand, ['teamId'])
+  if (checkData) return checkData
 
   const team = await getTeam(jsonCommand?.teamId)
-  if (!team || team.length === 0) {
-    return {
-      message: 'Ошибка. Команда не найдена',
-      nextCommand: `menu_teams`,
-    }
-  }
+  if (team.success === false) return team
 
   await dbConnect()
   const teamsUsers = await TeamsUsers.find({ teamId: jsonCommand?.teamId })

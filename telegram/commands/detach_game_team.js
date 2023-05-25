@@ -1,20 +1,13 @@
 import GamesTeams from '@models/GamesTeams'
+import check from 'telegram/func/check'
 import getGameTeam from 'telegram/func/getGameTeam'
 
 const detach_game_team = async ({ telegramId, jsonCommand }) => {
-  if (!jsonCommand?.gameTeamId)
-    return {
-      message: 'Ошибка. Не указан gameTeamId',
-      nextCommand: `menu_games_edit`,
-    }
+  const checkData = check(jsonCommand, ['gameTeamId'])
+  if (checkData) return checkData
 
   const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
-  if (!gameTeam || gameTeam.length === 0) {
-    return {
-      message: 'Ошибка. Не найдена регистрация команды на игре',
-      nextCommand: `menu_games_edit`,
-    }
-  }
+  if (gameTeam.success === false) return gameTeam
 
   if (!jsonCommand.confirm) {
     return {

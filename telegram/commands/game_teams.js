@@ -4,19 +4,11 @@ import dbConnect from '@utils/dbConnect'
 import getGame from 'telegram/func/getGame'
 
 const game_teams = async ({ telegramId, jsonCommand }) => {
-  if (!jsonCommand?.gameId)
-    return {
-      message: 'Ошибка. Не указан gameId',
-      nextCommand: `menu_games_edit`,
-    }
+  const checkData = check(jsonCommand, ['gameId'])
+  if (checkData) return checkData
 
   const game = await getGame(jsonCommand?.gameId)
-  if (!game || game.length === 0) {
-    return {
-      message: 'Ошибка. Игра не найдена',
-      nextCommand: `menu_games_edit`,
-    }
-  }
+  if (game.success === false) return game
 
   await dbConnect()
   const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })

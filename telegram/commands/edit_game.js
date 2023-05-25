@@ -1,20 +1,12 @@
+import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
 const edit_game = async ({ telegramId, jsonCommand }) => {
-  if (!jsonCommand?.gameId) {
-    return {
-      message: 'Ошибка. Нет id игры',
-      nextCommand: `menu_games_edit`,
-    }
-  }
+  const checkData = check(jsonCommand, ['gameId'])
+  if (checkData) return checkData
 
   const game = await getGame(jsonCommand.gameId)
-  if (!game) {
-    return {
-      message: 'Ошибка. Нет игры с таким id',
-      nextCommand: `menu_games_edit`,
-    }
-  }
+  if (game.success === false) return game
 
   return {
     message: `Редактирование игры "${game?.name}".${

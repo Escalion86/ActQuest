@@ -1,15 +1,13 @@
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
+import check from 'telegram/func/check'
 
 const delete_team = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
-  if (!jsonCommand.teamId)
-    return {
-      success: false,
-      message: 'Не удалось удалить команду, так как команда не найдена',
-      nextCommand: `menu_teams`,
-    }
+  const checkData = check(jsonCommand, ['teamId'])
+  if (checkData) return checkData
+
   if (!jsonCommand.confirm) {
     return {
       success: true,

@@ -1,37 +1,20 @@
+import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
 
 const game_team = async ({ telegramId, jsonCommand }) => {
-  if (!jsonCommand?.gameTeamId)
-    return {
-      message: 'Ошибка. Не указан gameTeamId',
-      nextCommand: `menu_games_edit`,
-    }
+  const checkData = check(jsonCommand, ['gameTeamId'])
+  if (checkData) return checkData
 
   const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
-  if (!gameTeam || gameTeam.length === 0) {
-    return {
-      message: 'Ошибка. Не найдена регистрация команды на игре',
-      nextCommand: `menu_games_edit`,
-    }
-  }
+  if (gameTeam.success === false) return gameTeam
 
   const game = await getGame(jsonCommand?.gameId)
-  if (!game || game.length === 0) {
-    return {
-      message: 'Ошибка. Игра не найдена',
-      nextCommand: `menu_games_edit`,
-    }
-  }
+  if (game.success === false) return game
 
   const team = await getTeam(gameTeam.teamId)
-  if (!team || team.length === 0) {
-    return {
-      message: 'Ошибка. Не найдена команда зарегистрированная на игру',
-      nextCommand: `menu_games_edit`,
-    }
-  }
+  if (team.success === false) return team
 
   const buttons = [
     {

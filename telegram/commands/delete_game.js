@@ -1,15 +1,13 @@
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
 import dbConnect from '@utils/dbConnect'
+import check from 'telegram/func/check'
 
 const delete_game = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
-  if (!jsonCommand.gameId)
-    return {
-      success: false,
-      message: 'Не удалось удалить игру, так как не указан id',
-      nextCommand: `menu_games_edit`,
-    }
+  const checkData = check(jsonCommand, ['gameId'])
+  if (checkData) return checkData
+
   if (!jsonCommand.confirm) {
     return {
       success: true,

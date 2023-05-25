@@ -3,13 +3,9 @@ import dbConnect from '@utils/dbConnect'
 
 const set_team_desc = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
-  if (!jsonCommand.teamId)
-    return {
-      success: false,
-      message:
-        'Не удалось изменить описание команды, так как команда не найдена',
-      nextCommand: `menu_teams`,
-    }
+  const checkData = check(jsonCommand, ['teamId'])
+  if (checkData) return checkData
+
   if (jsonCommand.noDescription) {
     await dbConnect()
     const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {

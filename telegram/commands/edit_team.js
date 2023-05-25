@@ -4,7 +4,6 @@ import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
 const edit_team = async ({ telegramId, jsonCommand }) => {
-  console.log('!!edit_team')
   if (!jsonCommand?.teamId) {
     await dbConnect()
     const teamsUser = await TeamsUsers.find({
@@ -57,6 +56,7 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
   const isCapitan = teamsUser.role === 'capitan'
 
   const team = await getTeam(jsonCommand.teamId)
+  if (team.success === false) return team
 
   const buttons = [
     {

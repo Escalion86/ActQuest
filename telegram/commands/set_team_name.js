@@ -1,15 +1,12 @@
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
+import check from 'telegram/func/check'
 
 const set_team_name = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
-  if (!jsonCommand.teamId)
-    return {
-      success: false,
-      message:
-        'Не удалось изменить название команды, так как команда не найдена',
-      nextCommand: `menu_teams`,
-    }
+  const checkData = check(jsonCommand, ['teamId'])
+  if (checkData) return checkData
+
   if (!jsonCommand.message) {
     return {
       success: true,
