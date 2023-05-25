@@ -23,6 +23,7 @@ import set_game_name from './set_game_name'
 import game_teams from './game_teams'
 import game_team from './game_team'
 import detach_game_team from './detach_game_team'
+import game from './game'
 
 const commandsArray = {
   set_user_name,
@@ -50,6 +51,7 @@ const commandsArray = {
   game_teams,
   game_team,
   detach_game_team,
+  game,
 }
 
 export default commandsArray

@@ -1,4 +1,3 @@
-import dbConnect from '@utils/dbConnect'
 import getGame from 'telegram/func/getGame'
 
 const edit_game = async ({ telegramId, jsonCommand }) => {
@@ -9,7 +8,6 @@ const edit_game = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  await dbConnect()
   const game = await getGame(jsonCommand.gameId)
   if (!game) {
     return {

@@ -29,12 +29,12 @@ const menu_games = async ({ telegramId, jsonCommand }) => {
       teamUser.teamId
   )
   //  Получаем сами команды где пользователь есть
-  const teams =
-    teamsIds.length > 0
-      ? await Teams.find({
-          _id: { $in: teamsIds },
-        })
-      : []
+  // const teams =
+  //   teamsIds.length > 0
+  //     ? await Teams.find({
+  //         _id: { $in: teamsIds },
+  //       })
+  //     : []
 
   // Получаем список игр где команды пользователей зарегистрированы
   const gamesTeams = await GamesTeams.find({
