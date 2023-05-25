@@ -21,6 +21,7 @@ const game = async ({ telegramId, jsonCommand }) => {
     telegramId,
     jsonCommand.gameId
   )
+  console.log('teamsInGame :>> ', teamsInGame)
 
   return {
     message: `Игра "${game?.name}".${
