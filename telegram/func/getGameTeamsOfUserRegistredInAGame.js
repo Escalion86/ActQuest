@@ -6,7 +6,7 @@ import dbConnect from '@utils/dbConnect'
 const getGameTeamsOfUserRegistredInAGame = async (userTelegramId, gameId) => {
   await dbConnect()
   const teamsUser = await TeamsUsers.find({ userTelegramId: userTelegramId })
-  if (!teamsUser || teamsUser.length === 0) return
+  if (!teamsUser || teamsUser.length === 0) return []
 
   const teamsIds = teamsUser.map(
     (teamUser) =>
@@ -17,7 +17,7 @@ const getGameTeamsOfUserRegistredInAGame = async (userTelegramId, gameId) => {
   const teams = await Teams.find({
     _id: { $in: teamsIds },
   })
-  if (!teams || teams.length === 0) return
+  if (!teams || teams.length === 0) return []
 
   const gameTeams = await GamesTeams.find({
     teamId: { $in: teamsIds },

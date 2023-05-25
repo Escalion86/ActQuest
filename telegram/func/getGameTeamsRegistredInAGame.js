@@ -17,7 +17,7 @@ const getGameTeamsRegistredInAGame = async (gameId) => {
   const teams = await Teams.find({
     _id: { $in: teamsIds },
   })
-  if (!teams || teams.length === 0) return
+  if (!teams || teams.length === 0) return []
 
   return teams
 }
