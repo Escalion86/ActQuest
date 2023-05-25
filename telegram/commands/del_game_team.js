@@ -26,8 +26,8 @@ const del_game_team = async ({ telegramId, jsonCommand }) => {
   await GamesTeams.findByIdAndDelete(jsonCommand.gameTeamId)
   return {
     success: true,
-    message: 'Команда удалена из игры',
-    nextCommand: `menu_games_edit`,
+    message: 'Регистрация команды на игре отменена',
+    nextCommand: `menu_games`,
   }
 }
 
