@@ -17,7 +17,7 @@ const game = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const teamsInGame = getTeamOfUserRegistredInAGame(
+  const teamsInGame = await getTeamOfUserRegistredInAGame(
     telegramId,
     jsonCommand.gameId
   )
