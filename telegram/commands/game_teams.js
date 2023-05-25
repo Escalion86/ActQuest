@@ -1,6 +1,7 @@
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
+import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
 const game_teams = async ({ telegramId, jsonCommand }) => {
