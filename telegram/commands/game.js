@@ -1,3 +1,4 @@
+import GamesTeams from '@models/GamesTeams'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeamsRegistredInAGame from 'telegram/func/getGameTeamsRegistredInAGame'
@@ -23,6 +24,10 @@ const game = async ({ telegramId, jsonCommand }) => {
 
   const teamsUserOfUser = await getTeamsUserOfUser(telegramId)
 
+  const gameTeams = await GamesTeams.find({
+    gameId: jsonCommand.gameId,
+  })
+
   // const teamsUserOfUserIds = teamsUserOfUser.map(
   //   (teamUser) =>
   //     teamUser.teamId
@@ -38,20 +43,25 @@ const game = async ({ telegramId, jsonCommand }) => {
   //   _id: { $in: teamsIds },
   // })
 
-  const buttons = teamsOfUserInAGame.map((team) => {
-    const teamUserOfUser = teamsUserOfUser.find(
-      (teamUser) => teamUser.teamId === String(team._id)
-    )
-    if (teamUserOfUser) {
-      return {
-        text: `"${team.name}" (вы ${
-          teamUserOfUser.role === 'capitan' ? 'капитан' : 'участник'
-        } команды)`,
-        cmd: { cmd: 'game_team', gameTeamId: gameTeam._id },
-        // `team_user/teamUserId=${teamUser._id}`,
+  const buttons = teamsOfUserInAGame
+    .map((team) => {
+      const teamUserOfUser = teamsUserOfUser.find(
+        (teamUser) => teamUser.teamId === String(team._id)
+      )
+      if (teamUserOfUser) {
+        const gameTeamId = gameTeams.find(
+          (gameTeam) => gameTeam.teamId === String(team._id)
+        )
+        return {
+          text: `"${team.name}" (вы ${
+            teamUserOfUser.role === 'capitan' ? 'капитан' : 'участник'
+          } команды)`,
+          cmd: { cmd: 'game_team', gameTeamId },
+        }
       }
-    }
-  })
+      return
+    })
+    .filter((data) => data)
 
   return {
     message: `Игра "${game?.name}".${
