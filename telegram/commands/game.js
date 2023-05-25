@@ -49,21 +49,19 @@ const game = async ({ telegramId, jsonCommand }) => {
         (teamUser) => teamUser.teamId === String(team._id)
       )
       if (teamUserOfUser) {
-        const gameTeamId = gameTeams.find(
+        const gameTeam = gameTeams.find(
           (gameTeam) => gameTeam.teamId === String(team._id)
         )
         return {
           text: `"${team.name}" (вы ${
             teamUserOfUser.role === 'capitan' ? 'капитан' : 'участник'
           } команды)`,
-          cmd: { cmd: 'game_team', gameTeamId },
+          cmd: { cmd: 'game_team', gameTeamId: String(gameTeam._id) },
         }
       }
       return undefined
     })
     .filter((data) => data !== undefined)
-
-  console.log('buttons :>> ', buttons)
 
   const message = `Игра "${game?.name}".${
     game?.description ? `\nОписание: "${game?.description}"` : ''
@@ -76,7 +74,6 @@ const game = async ({ telegramId, jsonCommand }) => {
         } ${teamsOfUserInAGame.map((team) => `"${team.name}"`).join(', ')}`
       : ''
   }`
-  console.log('message :>> ', message)
 
   return {
     message,
