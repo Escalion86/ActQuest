@@ -4,6 +4,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
+import getTeam from 'telegram/func/getTeam'
 
 const join_game = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
