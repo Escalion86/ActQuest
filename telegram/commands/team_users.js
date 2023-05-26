@@ -1,6 +1,7 @@
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
+import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 
 const team_users = async ({ telegramId, jsonCommand }) => {
