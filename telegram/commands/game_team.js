@@ -10,7 +10,7 @@ const game_team = async ({ telegramId, jsonCommand }) => {
   const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
   if (gameTeam.success === false) return gameTeam
 
-  const game = await getGame(jsonCommand?.gameId)
+  const game = await getGame(gameTeam.gameId)
   if (game.success === false) return game
 
   const team = await getTeam(gameTeam.teamId)
