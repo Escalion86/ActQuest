@@ -42,7 +42,7 @@ const team_user = async ({ telegramId, jsonCommand }) => {
   return {
     message: `"${user.name}" ${isCapitan ? 'капитан' : 'участник'} команды "${
       team.name
-    }"`,
+    }" [+79991234567](tel:+79991234567)`,
     buttons,
   }
 }
