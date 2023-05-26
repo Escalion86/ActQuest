@@ -29,12 +29,12 @@ const menu_games = async ({ telegramId, jsonCommand }) => {
       teamUser.teamId
   )
   //  Получаем сами команды где пользователь есть
-  // const teams =
-  //   teamsIds.length > 0
-  //     ? await Teams.find({
-  //         _id: { $in: teamsIds },
-  //       })
-  //     : []
+  const teams =
+    teamsIds.length > 0
+      ? await Teams.find({
+          _id: { $in: teamsIds },
+        })
+      : []
 
   // Получаем список игр где команды пользователей зарегистрированы
   const gamesTeams = await GamesTeams.find({
@@ -48,13 +48,19 @@ const menu_games = async ({ telegramId, jsonCommand }) => {
         : 'Предстоящие игры',
     buttons: [
       ...games.map((game) => {
-        const gameTeam = gamesTeams.find((gameTeam) => {
+        // TODO поправить вывод зарегистрированных команд пользователя на угру
+        const gameTeam = gamesTeams.findOne((gameTeam) => {
           return gameTeam.gameId === String(game._id)
         })
         const isTeamRegistred = !!gameTeam
+        const team = isTeamRegistred
+          ? teams.findOne((team) => String(team._id) === gameTeam.teamId)
+          : null
         // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
         return {
-          text: `"${game.name}"${isTeamRegistred ? ' (записан)' : ''}`,
+          text: `"${game.name}"${
+            team ? `(зарегистрирована ваша команда "${team.name}")` : ''
+          }`,
           cmd: { cmd: 'game', gameId: game._id },
           //`game/gameId=${game._id}`,
         }
