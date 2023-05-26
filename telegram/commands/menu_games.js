@@ -49,12 +49,12 @@ const menu_games = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...games.map((game) => {
         // TODO поправить вывод зарегистрированных команд пользователя на угру
-        const gameTeam = gamesTeams.findOne((gameTeam) => {
+        const gameTeam = gamesTeams.find((gameTeam) => {
           return gameTeam.gameId === String(game._id)
         })
         const isTeamRegistred = !!gameTeam
         const team = isTeamRegistred
-          ? teams.findOne((team) => String(team._id) === gameTeam.teamId)
+          ? teams.find((team) => String(team._id) === gameTeam.teamId)
           : null
         // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
         return {
