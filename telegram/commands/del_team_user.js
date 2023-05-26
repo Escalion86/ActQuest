@@ -2,7 +2,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 import getTeamUser from 'telegram/func/getTeamUser'
 
-const detach_team_user = async ({ telegramId, jsonCommand }) => {
+const del_team_user = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['teamUserId'])
   if (checkData) return checkData
 
@@ -31,4 +31,4 @@ const detach_team_user = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default detach_team_user
+export default del_team_user

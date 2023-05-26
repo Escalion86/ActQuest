@@ -30,7 +30,7 @@ const team_user = async ({ telegramId, jsonCommand }) => {
   const buttons = [
     {
       cmd: {
-        cmd: 'detach_team_user',
+        cmd: 'del_team_user',
         teamUserId: jsonCommand.teamUserId,
       },
       hide: !isCapitan,
@@ -42,7 +42,7 @@ const team_user = async ({ telegramId, jsonCommand }) => {
   return {
     message: `"${user.name}" ${isCapitan ? 'капитан' : 'участник'} команды "${
       team.name
-    }" (тел:+${user.phone})`,
+    }" [+79991234567](tel:+79991234567) <a href="tel:+79138370020">Телефон</a>"`,
     buttons,
   }
 }

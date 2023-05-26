@@ -11,7 +11,7 @@ import set_team_desc from './set_team_desc'
 import set_team_name from './set_team_name'
 import set_user_name from './set_user_name'
 import team_users from './team_users'
-import detach_team_user from './detach_team_user'
+import del_team_user from './del_team_user'
 import team_user from './team_user'
 import menu_games from './menu_games'
 import create_game from './create_game'
@@ -41,7 +41,7 @@ const commandsArray = {
   team_users,
   link_to_join_team,
   team_user,
-  detach_team_user,
+  del_team_user,
   menu_games,
   create_game,
   menu_games_edit,
