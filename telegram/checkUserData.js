@@ -12,7 +12,7 @@ const checkUserData = async (telegramId) => {
     await sendMessage({
       chat_id: telegramId,
       // text: JSON.stringify({ body, headers: req.headers.origin }),
-      text: 'Для регистрации необходимо предоставить данные (номер телефона и имя). Пожалуйста нажмите на кнопку внизу и подтвердите отправку данных.',
+      text: 'Для регистрации НАЖМИТЕ КНОПКУ ВНИЗУ, это отправит ваши номер телефона и имя прописанные в учетной записи telegram.',
       // props: { request_contact: true },
       keyboard: {
         keyboard: [[{ text: 'Отправить данные', request_contact: true }]],

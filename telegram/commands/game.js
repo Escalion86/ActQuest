@@ -82,7 +82,7 @@ const game = async ({ telegramId, jsonCommand }) => {
       {
         cmd: { cmd: 'join_game', gameId: jsonCommand.gameId },
         text: '\u{270F} Зарегистрироваться на игру',
-        hide: teamsOfUserInAGame,
+        hide: teamsOfUserInAGame && teamsOfUserInAGame.length > 0,
       },
       ...buttons,
       {
