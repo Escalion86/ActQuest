@@ -44,7 +44,7 @@ const team_user = async ({ telegramId, jsonCommand }) => {
       team.name
     }" <a href='tel:+79138370020'>Телефон</a><a href='http://t.me/${telegramId}'>Телефон</a>"`,
     buttons,
-    parse_mode: 'Markdown',
+    // parse_mode: 'Markdown',
   }
 }
 
