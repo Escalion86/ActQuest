@@ -9,6 +9,7 @@ const sendMessage = async ({
   callback_query,
 }) => {
   if (callback_query) {
+    console.log('parse_mode :>> ', parse_mode)
     return await postData(
       `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageText`,
       {
