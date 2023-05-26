@@ -44,6 +44,7 @@ const team_user = async ({ telegramId, jsonCommand }) => {
       team.name
     }" [+79991234567](tel:+79991234567) <a href="tel:+79138370020">Телефон</a>"`,
     buttons,
+    parse_mode: 'Markdown',
   }
 }
 

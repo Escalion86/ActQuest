@@ -39,6 +39,7 @@ const executeCommand = async (
     chat_id: userTelegramId,
     // text: JSON.stringify({ body, headers: req.headers.origin }),
     text: result.message,
+    parse_mode: result.parse_mode,
     keyboard,
     callback_query,
   })

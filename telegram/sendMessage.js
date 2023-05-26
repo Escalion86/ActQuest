@@ -4,6 +4,7 @@ const sendMessage = async ({
   chat_id,
   text,
   keyboard,
+  parse_mode = 'html',
   props = {},
   callback_query,
 }) => {
@@ -14,7 +15,7 @@ const sendMessage = async ({
         message_id: callback_query.message.message_id,
         chat_id,
         text,
-        parse_mode: 'html',
+        parse_mode,
         reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
         ...props,
       },
