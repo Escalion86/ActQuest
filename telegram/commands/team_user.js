@@ -42,7 +42,7 @@ const team_user = async ({ telegramId, jsonCommand }) => {
   return {
     message: `"${user.name}" ${isCapitan ? 'капитан' : 'участник'} команды "${
       team.name
-    }" [+79991234567](tel:+79991234567) <a href="tel:+79138370020">Телефон</a>"`,
+    }" <a href='tel:+79138370020'>Телефон</a><a href='http://t.me/${telegramId}'>Телефон</a>"`,
     buttons,
     parse_mode: 'Markdown',
   }
