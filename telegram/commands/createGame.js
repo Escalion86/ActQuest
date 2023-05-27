@@ -41,6 +41,7 @@ const array = [
 
 const createGame = async ({ telegramId, jsonCommand }) => {
   // Если это запрос (команда), то отправляем текст пользователю
+  console.log('jsonCommand :>> ', jsonCommand)
   if (!jsonCommand.message) {
     for (let i = 0; i < array.length; i++) {
       const data = array[i]
