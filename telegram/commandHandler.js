@@ -7,7 +7,9 @@ import sendMessage from './sendMessage'
 
 function jsonParser(str) {
   try {
-    return JSON.parse(str)
+    const json = JSON.parse(str)
+    if (typeof json === 'object') return json
+    return
   } catch (e) {
     return
   }
@@ -102,7 +104,7 @@ const commandHandler = async (
 ) => {
   try {
     console.log('message :>> ', message)
-    if (message === '/mainMenu' || message === '/start') {
+    if (message === '/main_menu' || message === '/start') {
       return await executeCommand(
         userTelegramId,
         { cmd: 'mainMenu' },
