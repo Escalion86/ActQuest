@@ -71,6 +71,7 @@ const executeCommand = async (
       // callback_query
     )
   } else {
+    console.log('!!! jsonCommand :>> ', jsonCommand)
     await dbConnect()
     return await LastCommands.findOneAndUpdate(
       {

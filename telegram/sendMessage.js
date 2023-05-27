@@ -36,14 +36,14 @@ const sendMessage = async ({
     {
       chat_id,
       text,
-      parse_mode: 'html',
+      parse_mode,
       reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
       ...props,
     },
     null,
-    null,
+    // null,
     // (data) => console.log('post success', data),
-    // (data) => console.log('post error', data),
+    (data) => console.log('post error', data),
     true,
     null,
     true
