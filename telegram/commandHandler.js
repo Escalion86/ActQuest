@@ -46,18 +46,21 @@ const executeCommand = async (
   // console.log('sendResult :>> ', sendResult)
   const nextCommand = result.nextCommand
   if (nextCommand) {
-    if (typeof nextCommand === 'string')
+    if (typeof nextCommand === 'string') {
       return await executeCommand(
         userTelegramId,
         { cmd: nextCommand },
         messageId
         // callback_query
       )
+    }
     // Если команда содержит в себе command, то значт это готовая команда,
     // если же нет, то значт это дополнение к предыдущей команде
     const actualCommand = nextCommand.cmd
       ? nextCommand
       : { ...jsonCommand, ...nextCommand }
+    delete actualCommand.message
+
     return await executeCommand(
       userTelegramId,
       actualCommand,

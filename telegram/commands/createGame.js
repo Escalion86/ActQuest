@@ -64,13 +64,11 @@ const createGame = async ({ telegramId, jsonCommand }) => {
         array[i].checkAnswer !== undefined &&
         !array[i].checkAnswer(jsonCommand.message)
       ) {
-        const fixedJsonCommand = { ...jsonCommand }
-        delete fixedJsonCommand.message
         return {
           success: false,
           message: array[i].errorMessage(jsonCommand.message),
           // buttons: data.buttons(props),
-          nextCommand: fixedJsonCommand,
+          nextCommand: jsonCommand,
           // `/createGame` + propsToStr(props),
         }
       }
