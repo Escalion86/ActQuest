@@ -72,9 +72,7 @@ const executeCommand = async (
     )
   } else {
     console.log('!!! jsonCommand :>> ', jsonCommand)
-    const actualCommand = nextCommand.cmd
-      ? nextCommand
-      : { ...jsonCommand, ...nextCommand }
+    const actualCommand = { ...jsonCommand }
     delete actualCommand.message
     console.log('!!! actualCommand :>> ', actualCommand)
     await dbConnect()
