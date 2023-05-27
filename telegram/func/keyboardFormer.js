@@ -8,19 +8,21 @@ const keyboardFormer = (commands, buttons) => {
         .filter((button) => !button.hide)
         .map((button) => {
           // if (typeof button === 'object')
-          const { text, cmd } = button
+          const { text, cmd, url } = button
           if (typeof cmd === 'string')
             return [
               {
                 text,
-                callback_data: JSON.stringify({ cmd }),
+                callback_data: cmd ? JSON.stringify({ cmd }) : undefined,
+                url,
               },
             ]
           // Значит команда в JSON формате
           return [
             {
               text,
-              callback_data: JSON.stringify(cmd),
+              callback_data: cmd ? JSON.stringify(cmd) : undefined,
+              url,
             },
           ]
         })
