@@ -9,7 +9,7 @@ const getUser = async (id) => {
     return {
       success: false,
       message: 'Ошибка. userId не указан',
-      nextCommand: `main_menu`,
+      nextCommand: `mainMenu`,
     }
 
   const user = await Users.findById(id)
@@ -17,7 +17,7 @@ const getUser = async (id) => {
     return {
       success: false,
       message: 'Ошибка. Нет такого userId',
-      nextCommand: `main_menu`,
+      nextCommand: `mainMenu`,
     }
   }
   return user

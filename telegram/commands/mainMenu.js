@@ -1,4 +1,4 @@
-const main_menu = async ({ telegramId, jsonCommand }) => {
+const mainMenu = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Главное меню',
@@ -15,4 +15,4 @@ const main_menu = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default main_menu
+export default mainMenu

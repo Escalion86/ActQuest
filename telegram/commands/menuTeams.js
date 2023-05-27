@@ -1,4 +1,4 @@
-import main_menu_button from './menuItems/main_menu_button'
+import mainMenu_button from './menuItems/mainMenu_button'
 
 const menuTeams = async ({ telegramId, jsonCommand }) => {
   return {
@@ -10,7 +10,7 @@ const menuTeams = async ({ telegramId, jsonCommand }) => {
       { cmd: 'joinedTeams', text: '\u{1F465} Мои команды' },
       { cmd: 'joinTeam', text: '\u{1F517} Присоединиться к команде' },
       { cmd: 'createTeam', text: '\u{2795} Создать команду' },
-      main_menu_button,
+      mainMenu_button,
     ],
   }
 }

@@ -3,7 +3,7 @@ const check = (jsonCommand, keys) => {
     return {
       success: false,
       message: 'Ошибка. Проверки данных',
-      nextCommand: `main_menu`,
+      nextCommand: `mainMenu`,
     }
   }
   keys.forEach((key) => {

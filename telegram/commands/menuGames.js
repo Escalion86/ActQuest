@@ -3,7 +3,7 @@ import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
-import main_menu_button from './menuItems/main_menu_button'
+import mainMenu_button from './menuItems/mainMenu_button'
 
 const menuGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
@@ -12,7 +12,7 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   if (!games || games.length === 0) {
     return {
       message: 'Предстоящих игр не запланировано',
-      nextCommand: `main_menu`,
+      nextCommand: `mainMenu`,
     }
   }
   // Получаем список команд в которых присутствует пользователь
@@ -62,7 +62,7 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
           cmd: { cmd: 'game', gameId: game._id },
         }
       }),
-      main_menu_button,
+      mainMenu_button,
     ],
   }
 }

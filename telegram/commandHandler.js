@@ -1,7 +1,7 @@
 import LastCommands from '@models/LastCommands'
 import dbConnect from '@utils/dbConnect'
 import commandsArray from './commands/commandsArray'
-import main_menu_button from './commands/menuItems/main_menu_button'
+import mainMenu_button from './commands/menuItems/mainMenu_button'
 import keyboardFormer from './func/keyboardFormer'
 import sendMessage from './sendMessage'
 
@@ -19,7 +19,7 @@ const lastCommandHandler = async (telegramId, jsonCommand) => {
   return {
     success: false,
     message: 'Неизвестная команда',
-    buttons: [main_menu_button],
+    buttons: [mainMenu_button],
   }
 }
 
@@ -86,10 +86,10 @@ const commandHandler = async (
   callback_query
 ) => {
   try {
-    if (message === '/main_menu' || message === '/start') {
+    if (message === '/mainMenu' || message === '/start') {
       return await executeCommand(
         userTelegramId,
-        { cmd: 'main_menu' },
+        { cmd: 'mainMenu' },
         messageId,
         callback_query
       )

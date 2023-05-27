@@ -4,7 +4,7 @@ import editTeam from './editTeam'
 import linkToJoinTeam from './linkToJoinTeam'
 import joinedTeams from './joinedTeams'
 import joinTeam from './joinTeam'
-import main_menu from './main_menu'
+import mainMenu from './mainMenu'
 import menuTeams from './menuTeams'
 import menuUser from './menuUser'
 import setTeamDesc from './setTeamDesc'
@@ -33,7 +33,7 @@ const commandsArray = {
   setTeamDesc,
   createTeam,
   menuTeams,
-  main_menu,
+  mainMenu,
   editTeam,
   menuUser,
   deleteTeam,

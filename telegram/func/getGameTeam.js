@@ -8,7 +8,7 @@ const getGameTeam = async (id) => {
     return {
       success: false,
       message: 'Ошибка. gameTeamId не указан',
-      nextCommand: `main_menu`,
+      nextCommand: `mainMenu`,
     }
 
   const gamesTeams = await GamesTeams.findById(id)
@@ -16,7 +16,7 @@ const getGameTeam = async (id) => {
     return {
       success: false,
       message: 'Ошибка. Нет такого gameTeamId',
-      nextCommand: `main_menu`,
+      nextCommand: `mainMenu`,
     }
   }
   return gamesTeams

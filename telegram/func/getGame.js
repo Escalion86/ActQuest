@@ -8,7 +8,7 @@ const getGame = async (id) => {
     return {
       success: false,
       message: 'Ошибка. gameId не указан',
-      nextCommand: `main_menu`,
+      nextCommand: `mainMenu`,
     }
 
   const game = await Games.findById(id)
@@ -16,7 +16,7 @@ const getGame = async (id) => {
     return {
       success: false,
       message: 'Ошибка. Нет такого gameId',
-      nextCommand: `main_menu`,
+      nextCommand: `mainMenu`,
     }
   }
   return game

@@ -1,6 +1,6 @@
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
-import main_menu_button from './menuItems/main_menu_button'
+import mainMenu_button from './menuItems/mainMenu_button'
 
 const menuUser = async ({ telegramId, jsonCommand }) => {
   var user
@@ -15,7 +15,7 @@ const menuUser = async ({ telegramId, jsonCommand }) => {
     buttonText: 'Команды',
     buttons: [
       { text: '\u{270F} Изменить имя', cmd: `setUserName` },
-      main_menu_button,
+      mainMenu_button,
     ],
   }
 }

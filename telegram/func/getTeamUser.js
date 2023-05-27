@@ -9,7 +9,7 @@ const getTeamUser = async (id) => {
     return {
       success: false,
       message: 'Ошибка. teamUserId не указан',
-      nextCommand: `main_menu`,
+      nextCommand: `mainMenu`,
     }
 
   const teamsUsers = await TeamsUsers.findById(id)
@@ -17,7 +17,7 @@ const getTeamUser = async (id) => {
     return {
       success: false,
       message: 'Ошибка. Нет такого teamUserId',
-      nextCommand: `main_menu`,
+      nextCommand: `mainMenu`,
     }
   }
   return teamsUsers

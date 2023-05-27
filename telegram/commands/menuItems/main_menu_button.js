@@ -1,6 +1,6 @@
-const main_menu_button = {
+const mainMenu_button = {
   text: '\u{1F3E0} Главное меню',
-  cmd: 'main_menu',
+  cmd: 'mainMenu',
 }
 
-export default main_menu_button
+export default mainMenu_button
