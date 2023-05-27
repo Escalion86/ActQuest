@@ -3,7 +3,7 @@ import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
 
-const game_team = async ({ telegramId, jsonCommand }) => {
+const gameTeam = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
@@ -19,12 +19,12 @@ const game_team = async ({ telegramId, jsonCommand }) => {
   const buttons = [
     {
       cmd: {
-        cmd: 'del_game_team',
+        cmd: 'delGameTeam',
         gameTeamId: jsonCommand.gameTeamId,
       },
       text: '\u{1F4A3} Удалить команду из игры',
     },
-    { cmd: 'menu_games_edit', text: '\u{2B05} Назад' },
+    { cmd: 'menuGamesEdit', text: '\u{2B05} Назад' },
   ]
 
   return {
@@ -35,4 +35,4 @@ const game_team = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default game_team
+export default gameTeam

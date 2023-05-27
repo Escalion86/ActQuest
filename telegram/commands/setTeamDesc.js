@@ -1,7 +1,7 @@
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 
-const set_team_desc = async ({ telegramId, jsonCommand }) => {
+const setTeamDesc = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
@@ -14,7 +14,7 @@ const set_team_desc = async ({ telegramId, jsonCommand }) => {
     return {
       success: true,
       message: 'Описание команды удалено',
-      nextCommand: `menu_teams`,
+      nextCommand: `menuTeams`,
     }
   }
   if (!jsonCommand.message) {
@@ -27,7 +27,7 @@ const set_team_desc = async ({ telegramId, jsonCommand }) => {
           cmd: { noDescription: true },
           //`+noDescription=true`,
         },
-        { text: '\u{1F6AB} Отмена', cmd: 'menu_teams' },
+        { text: '\u{1F6AB} Отмена', cmd: 'menuTeams' },
       ],
     }
   }
@@ -39,8 +39,8 @@ const set_team_desc = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Описание команды обновлено на "${jsonCommand.message}"`,
-    nextCommand: `menu_teams`,
+    nextCommand: `menuTeams`,
   }
 }
 
-export default set_team_desc
+export default setTeamDesc

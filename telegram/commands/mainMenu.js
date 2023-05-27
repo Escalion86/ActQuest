@@ -3,11 +3,11 @@ const main_menu = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: 'Главное меню',
     buttons: [
-      { cmd: 'menu_games', text: '\u{1F3AE} Игры' },
-      { cmd: 'menu_teams', text: '\u{1F465} Команды' },
-      { cmd: 'menu_user', text: '\u{1F464} Моя анкета' },
+      { cmd: 'menuGames', text: '\u{1F3AE} Игры' },
+      { cmd: 'menuTeams', text: '\u{1F465} Команды' },
+      { cmd: 'menuUser', text: '\u{1F464} Моя анкета' },
       {
-        cmd: 'menu_games_edit',
+        cmd: 'menuGamesEdit',
         text: '\u{1F6E0} Конструктор игр',
         hide: telegramId !== 261102161,
       },

@@ -25,7 +25,7 @@ const test_callback = {
       reply_markup: '[Object]',
     },
     chat_instance: '3955131192076482535',
-    data: '/create_team',
+    data: '/createTeam',
   },
 }
 

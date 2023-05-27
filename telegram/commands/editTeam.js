@@ -3,7 +3,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
-const edit_team = async ({ telegramId, jsonCommand }) => {
+const editTeam = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand?.teamId) {
     await dbConnect()
     const teamsUser = await TeamsUsers.find({
@@ -13,7 +13,7 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
     if (!teamsUser || teamsUser.length === 0) {
       return {
         message: 'Ошибка не найдено записи в команде',
-        nextCommand: `menu_teams`,
+        nextCommand: `menuTeams`,
       }
     }
     const teamsIds = teamsUser.map(
@@ -32,10 +32,10 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
       buttons: [
         ...teams.map((team) => ({
           text: `"${team.name}"`,
-          command: { command: 'edit_team', teamId: team._id },
-          // `edit_team/teamId=${team._id}`,
+          command: { command: 'editTeam', teamId: team._id },
+          // `editTeam/teamId=${team._id}`,
         })),
-        { command: 'menu_teams', text: '\u{2B05} Назад' },
+        { command: 'menuTeams', text: '\u{2B05} Назад' },
       ],
     }
   }
@@ -49,7 +49,7 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
   if (!teamsUser) {
     return {
       message: 'Ошибка вы не состоите в команде',
-      nextCommand: `menu_teams`,
+      nextCommand: `menuTeams`,
     }
   }
 
@@ -60,34 +60,34 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
 
   const buttons = [
     {
-      cmd: { cmd: 'set_team_name', teamId: jsonCommand.teamId },
-      //`set_team_name/teamId=${jsonCommand.teamId}`,
+      cmd: { cmd: 'setTeamName', teamId: jsonCommand.teamId },
+      //`setTeamName/teamId=${jsonCommand.teamId}`,
       hide: !isCapitan,
       text: '\u{270F} Изменить название',
     },
     {
       cmd: {
-        cmd: 'set_team_desc',
+        cmd: 'setTeamDesc',
         teamId: jsonCommand.teamId,
       },
       hide: !isCapitan,
       text: '\u{270F} Изменить описание',
     },
     {
-      cmd: { cmd: 'team_users', teamId: jsonCommand.teamId },
+      cmd: { cmd: 'teamUsers', teamId: jsonCommand.teamId },
       text: '\u{1F465} Состав команды',
     },
     {
-      cmd: { cmd: 'link_to_join_team', teamId: jsonCommand.teamId },
+      cmd: { cmd: 'linkToJoinTeam', teamId: jsonCommand.teamId },
       hide: !isCapitan,
       text: '\u{1F517} Пригласить в команду',
     },
     {
-      cmd: { cmd: 'delete_team', teamId: jsonCommand.teamId },
+      cmd: { cmd: 'deleteTeam', teamId: jsonCommand.teamId },
       hide: !isCapitan,
       text: '\u{1F4A3} Удалить команду',
     },
-    { cmd: 'joined_teams', text: '\u{2B05} Назад' },
+    { cmd: 'joinedTeams', text: '\u{2B05} Назад' },
   ]
 
   return {
@@ -98,4 +98,4 @@ const edit_team = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default edit_team
+export default editTeam

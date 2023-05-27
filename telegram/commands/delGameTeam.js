@@ -2,7 +2,7 @@ import GamesTeams from '@models/GamesTeams'
 import check from 'telegram/func/check'
 import getGameTeam from 'telegram/func/getGameTeam'
 
-const del_game_team = async ({ telegramId, jsonCommand }) => {
+const delGameTeam = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
@@ -18,7 +18,7 @@ const del_game_team = async ({ telegramId, jsonCommand }) => {
           text: '\u{1F4A3} Отменить регистрацию команды из игры',
           cmd: { confirm: true },
         },
-        { text: '\u{1F6AB} Я передумал', cmd: 'menu_games_edit' },
+        { text: '\u{1F6AB} Я передумал', cmd: 'menuGamesEdit' },
       ],
     }
   }
@@ -27,8 +27,8 @@ const del_game_team = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Регистрация команды на игре отменена',
-    nextCommand: `menu_games`,
+    nextCommand: `menuGames`,
   }
 }
 
-export default del_game_team
+export default delGameTeam

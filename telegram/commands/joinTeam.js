@@ -2,11 +2,11 @@ import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
-const join_team = async ({ telegramId, jsonCommand }) => {
+const joinTeam = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message) {
     return {
       message: 'Введите код команды',
-      buttons: [{ cmd: 'menu_teams', text: '\u{2B05} Назад' }],
+      buttons: [{ cmd: 'menuTeams', text: '\u{2B05} Назад' }],
     }
   }
   await dbConnect()
@@ -20,7 +20,7 @@ const join_team = async ({ telegramId, jsonCommand }) => {
   if (teamUser)
     return {
       message: 'Вы уже состоите в этой команде',
-      nextCommand: `menu_teams`,
+      nextCommand: `menuTeams`,
     }
 
   await TeamsUsers.create({
@@ -31,8 +31,8 @@ const join_team = async ({ telegramId, jsonCommand }) => {
     message: `Вы присоединились к команде "${team?.name}".${
       team?.description ? ` Описание команды: "${team?.description}"` : ''
     }`,
-    nextCommand: `menu_teams`,
+    nextCommand: `menuTeams`,
   }
 }
 
-export default join_team
+export default joinTeam

@@ -4,7 +4,7 @@ import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 import getTeamUser from 'telegram/func/getTeamUser'
 
-const team_user = async ({ telegramId, jsonCommand }) => {
+const teamUser = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['teamUserId'])
   if (checkData) return checkData
 
@@ -23,7 +23,7 @@ const team_user = async ({ telegramId, jsonCommand }) => {
   if (!user || user.length === 0) {
     return {
       message: 'Ошибка. Не найден пользователь привязанный к команде',
-      nextCommand: `menu_teams`,
+      nextCommand: `menuTeams`,
     }
   }
 
@@ -34,13 +34,13 @@ const team_user = async ({ telegramId, jsonCommand }) => {
     // },
     {
       cmd: {
-        cmd: 'del_team_user',
+        cmd: 'delTeamUser',
         teamUserId: jsonCommand.teamUserId,
       },
       hide: !isCapitan,
       text: '\u{1F4A3} Удалить из команды',
     },
-    { cmd: 'menu_teams', text: '\u{2B05} Назад' },
+    { cmd: 'menuTeams', text: '\u{2B05} Назад' },
   ]
 
   return {
@@ -52,4 +52,4 @@ const team_user = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default team_user
+export default teamUser

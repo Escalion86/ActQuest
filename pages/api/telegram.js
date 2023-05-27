@@ -88,7 +88,7 @@ export default async function handler(req, res) {
         reply_markup: '[Object]',
       },
       chat_instance: '3955131192076482535',
-      data: '/create_team',
+      data: '/createTeam',
     },
   }
   const rtest = {
@@ -133,19 +133,19 @@ export default async function handler(req, res) {
       [
         {
           text: 'Создать команду',
-          callback_data: '/create_team',
+          callback_data: '/createTeam',
         },
       ],
       [
         {
           text: 'Редактировать команду',
-          callback_data: '/edit_team',
+          callback_data: '/editTeam',
         },
       ],
       [
         {
           text: 'Присоединиться к команде',
-          callback_data: '/join_team',
+          callback_data: '/joinTeam',
         },
       ],
     ],

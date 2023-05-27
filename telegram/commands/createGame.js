@@ -6,7 +6,7 @@ const array = [
     message: 'Введите название игры',
     answerMessage: (answer) => `Задано название игры "${answer}"`,
     buttons: (jsonCommand) => [
-      { cmd: 'menu_games_edit', text: '\u{1F6AB} Отмена создания игры' },
+      { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
   {
@@ -14,7 +14,7 @@ const array = [
     message: 'Введите описание игры',
     answerMessage: (answer) => `Задано описание игры "${answer}"`,
     buttons: (jsonCommand) => [
-      { cmd: 'menu_games_edit', text: '\u{1F6AB} Отмена создания игры' },
+      { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
   {
@@ -31,15 +31,15 @@ const array = [
     buttons: (jsonCommand) => [
       {
         cmd: { dateStart: null },
-        // 'create_game' + propsToStr(props) + '/dateStart=null'
+        // 'createGame' + propsToStr(props) + '/dateStart=null'
         text: 'Без описания',
       },
-      { cmd: 'menu_games_edit', text: '\u{1F6AB} Отмена создания игры' },
+      { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
 ]
 
-const create_game = async ({ telegramId, jsonCommand }) => {
+const createGame = async ({ telegramId, jsonCommand }) => {
   // Если это запрос (команда), то отправляем текст пользователю
   if (!jsonCommand.message) {
     for (let i = 0; i < array.length; i++) {
@@ -49,7 +49,7 @@ const create_game = async ({ telegramId, jsonCommand }) => {
           success: true,
           message: data.message,
           buttons: data.buttons(jsonCommand),
-          // nextCommand: `/menu_teams`,
+          // nextCommand: `/menuTeams`,
         }
       }
     }
@@ -68,7 +68,7 @@ const create_game = async ({ telegramId, jsonCommand }) => {
           message: array[i].errorMessage(jsonCommand.message),
           // buttons: data.buttons(props),
           nextCommand: jsonCommand,
-          // `/create_game` + propsToStr(props),
+          // `/createGame` + propsToStr(props),
         }
       }
       if (i < array.length - 1)
@@ -77,7 +77,7 @@ const create_game = async ({ telegramId, jsonCommand }) => {
           message: array[i].answerMessage(jsonCommand.message),
           // buttons: data.buttons(props),
           nextCommand: { [data.prop]: jsonCommand.message },
-          // `/create_game` + propsToStr(props),
+          // `/createGame` + propsToStr(props),
         }
     }
   }
@@ -88,8 +88,8 @@ const create_game = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Игра "${jsonCommand.name}" создана`,
-    nextCommand: `menu_games_edit`,
+    nextCommand: `menuGamesEdit`,
   }
 }
 
-export default create_game
+export default createGame

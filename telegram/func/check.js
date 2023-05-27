@@ -11,7 +11,7 @@ const check = (jsonCommand, keys) => {
       return {
         success: false,
         message: `Ошибка. Не задан ${key}`,
-        nextCommand: `menu_games`,
+        nextCommand: `menuGames`,
       }
     }
   })

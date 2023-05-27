@@ -3,7 +3,7 @@ import GamesTeams from '@models/GamesTeams'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
-const delete_game = async ({ telegramId, jsonCommand }) => {
+const deleteGame = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
@@ -17,7 +17,7 @@ const delete_game = async ({ telegramId, jsonCommand }) => {
           text: '\u{1F4A3} Удалить',
           cmd: { confirm: true },
         },
-        { text: '\u{1F6AB} Отмена', cmd: 'menu_games_edit' },
+        { text: '\u{1F6AB} Отмена', cmd: 'menuGamesEdit' },
       ],
     }
   }
@@ -27,8 +27,8 @@ const delete_game = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Игра удалена',
-    nextCommand: `menu_games_edit`,
+    nextCommand: `menuGamesEdit`,
   }
 }
 
-export default delete_game
+export default deleteGame

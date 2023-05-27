@@ -2,7 +2,7 @@ import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
-const set_game_desc = async ({ telegramId, jsonCommand }) => {
+const setGameDesc = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
@@ -11,7 +11,7 @@ const set_game_desc = async ({ telegramId, jsonCommand }) => {
     return {
       success: true,
       message: 'Введите новое описание игры',
-      buttons: [{ text: '\u{1F6AB} Отмена', cmd: 'menu_games_edit' }],
+      buttons: [{ text: '\u{1F6AB} Отмена', cmd: 'menuGamesEdit' }],
     }
   }
   await dbConnect()
@@ -22,8 +22,8 @@ const set_game_desc = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Описание игры обновлено на "${jsonCommand.message}"`,
-    nextCommand: `menu_games_edit`,
+    nextCommand: `menuGamesEdit`,
   }
 }
 
-export default set_game_desc
+export default setGameDesc

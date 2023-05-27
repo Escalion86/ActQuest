@@ -7,7 +7,7 @@ const array = [
     prop: 'name',
     message: 'Введите название команды',
     answerMessage: (answer) => `Задано название команды "${answer}"`,
-    buttons: (jsonCommand) => [{ cmd: 'menu_teams', text: '\u{2B05} Назад' }],
+    buttons: (jsonCommand) => [{ cmd: 'menuTeams', text: '\u{2B05} Назад' }],
   },
   {
     prop: 'description',
@@ -16,10 +16,10 @@ const array = [
     buttons: (jsonCommand) => [
       {
         cmd: { description: '' },
-        // command: 'create_team' + propsToStr(props) + '/teamDescription=',
+        // command: 'createTeam' + propsToStr(props) + '/teamDescription=',
         text: 'Без описания',
       },
-      { cmd: 'menu_teams', text: '\u{2B05} Назад' },
+      { cmd: 'menuTeams', text: '\u{2B05} Назад' },
     ],
   },
 ]
@@ -40,7 +40,7 @@ const array = [
 //   messageOnSuccess: (data) => `Команда "${data.name}" создана`
 // }
 
-const create_team = async ({ telegramId, jsonCommand }) => {
+const createTeam = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   const teamsUser = await TeamsUsers.find({
     userTelegramId: telegramId,
@@ -49,7 +49,7 @@ const create_team = async ({ telegramId, jsonCommand }) => {
     return {
       message:
         'Нельзя состоять более чем в 3 командах. Для создания команды сначала покиньте одну из команд',
-      nextCommand: `menu_teams`,
+      nextCommand: `menuTeams`,
     }
   }
 
@@ -62,7 +62,7 @@ const create_team = async ({ telegramId, jsonCommand }) => {
           success: true,
           message: data.message,
           buttons: data.buttons(jsonCommand),
-          // nextCommand: `/menu_teams`,
+          // nextCommand: `/menuTeams`,
         }
       }
     }
@@ -88,8 +88,8 @@ const create_team = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Команда "${jsonCommand.name}" создана`,
-    nextCommand: `menu_teams`,
+    nextCommand: `menuTeams`,
   }
 }
 
-export default create_team
+export default createTeam

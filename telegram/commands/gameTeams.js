@@ -4,7 +4,7 @@ import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const game_teams = async ({ telegramId, jsonCommand }) => {
+const gameTeams = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -16,7 +16,7 @@ const game_teams = async ({ telegramId, jsonCommand }) => {
   if (!gameTeams || gameTeams.length === 0) {
     return {
       message: 'Никто не записался на игру',
-      nextCommand: `menu_games_edit`,
+      nextCommand: `menuGamesEdit`,
     }
   }
 
@@ -36,15 +36,15 @@ const game_teams = async ({ telegramId, jsonCommand }) => {
     )
     return {
       text: `"${team.name}"`,
-      cmd: { cmd: 'game_team', gameTeamId: gameTeam._id },
-      // `team_user/teamUserId=${teamUser._id}`,
+      cmd: { cmd: 'gameTeam', gameTeamId: gameTeam._id },
+      // `teamUser/teamUserId=${teamUser._id}`,
     }
   })
 
   return {
     message: `Команды зарегистрированные на игру "${game.name}"`,
-    buttons: [...buttons, { cmd: 'menu_games', text: '\u{2B05} Назад' }],
+    buttons: [...buttons, { cmd: 'menuGames', text: '\u{2B05} Назад' }],
   }
 }
 
-export default game_teams
+export default gameTeams

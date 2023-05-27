@@ -4,7 +4,7 @@ import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 
-const team_users = async ({ telegramId, jsonCommand }) => {
+const teamUsers = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
 
@@ -16,7 +16,7 @@ const team_users = async ({ telegramId, jsonCommand }) => {
   if (!teamsUsers || teamsUsers.length === 0) {
     return {
       message: 'Никто не состоит в команде',
-      nextCommand: `menu_teams`,
+      nextCommand: `menuTeams`,
     }
   }
 
@@ -36,15 +36,15 @@ const team_users = async ({ telegramId, jsonCommand }) => {
     // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
     return {
       text: `${user.name}${teamUser?.role === 'capitan' ? ' (Капитан)' : ''}`,
-      cmd: { cmd: 'team_user', teamUserId: teamUser._id },
-      // `team_user/teamUserId=${teamUser._id}`,
+      cmd: { cmd: 'teamUser', teamUserId: teamUser._id },
+      // `teamUser/teamUserId=${teamUser._id}`,
     }
   })
 
   return {
     message: `Состав команды "${team.name}"`,
-    buttons: [...buttons, { cmd: 'menu_teams', text: '\u{2B05} Назад' }],
+    buttons: [...buttons, { cmd: 'menuTeams', text: '\u{2B05} Назад' }],
   }
 }
 
-export default team_users
+export default teamUsers

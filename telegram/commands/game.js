@@ -57,7 +57,7 @@ const game = async ({ telegramId, jsonCommand }) => {
           //   teamUserOfUser.role === 'capitan' ? 'капитан' : 'участник'
           // } команды)`,
           text: `Отменить регистрацию команды "${team.name}"`,
-          cmd: { cmd: 'del_game_team', gameTeamId: String(gameTeam._id) },
+          cmd: { cmd: 'delGameTeam', gameTeamId: String(gameTeam._id) },
         }
       }
       return undefined
@@ -80,16 +80,16 @@ const game = async ({ telegramId, jsonCommand }) => {
     message,
     buttons: [
       {
-        cmd: { cmd: 'join_game', gameId: jsonCommand.gameId },
+        cmd: { cmd: 'joinGame', gameId: jsonCommand.gameId },
         text: '\u{270F} Зарегистрироваться на игру',
         hide: teamsOfUserInAGame && teamsOfUserInAGame.length > 0,
       },
       ...buttons,
       {
-        cmd: { cmd: 'game_teams', gameId: jsonCommand.gameId },
+        cmd: { cmd: 'gameTeams', gameId: jsonCommand.gameId },
         text: '\u{1F465} Зарегистрированные команды',
       },
-      { cmd: 'menu_games', text: '\u{2B05} Назад' },
+      { cmd: 'menuGames', text: '\u{2B05} Назад' },
     ],
   }
 }

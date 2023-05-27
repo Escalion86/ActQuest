@@ -5,7 +5,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import main_menu_button from './menuItems/main_menu_button'
 
-const menu_games = async ({ telegramId, jsonCommand }) => {
+const menuGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   // Получаем список игр
   const games = await Games.find({})
@@ -20,7 +20,7 @@ const menu_games = async ({ telegramId, jsonCommand }) => {
   // if (!teamsUser || teamsUser.length === 0) {
   //   return {
   //     message: 'Вы не состоите ни в какой команде',
-  //     nextCommand: `/menu_teams`,
+  //     nextCommand: `/menuTeams`,
   //   }
   // }
   const teamsIds = teamsUser.map(
@@ -67,4 +67,4 @@ const menu_games = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default menu_games
+export default menuGames

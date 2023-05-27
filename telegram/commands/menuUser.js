@@ -2,7 +2,7 @@ import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 import main_menu_button from './menuItems/main_menu_button'
 
-const menu_user = async ({ telegramId, jsonCommand }) => {
+const menuUser = async ({ telegramId, jsonCommand }) => {
   var user
   if (telegramId) {
     await dbConnect()
@@ -14,10 +14,10 @@ const menu_user = async ({ telegramId, jsonCommand }) => {
     message: user ? `Моя анкета:\n - Имя: ${user.name}` : 'Моя анкета',
     buttonText: 'Команды',
     buttons: [
-      { text: '\u{270F} Изменить имя', cmd: `set_user_name` },
+      { text: '\u{270F} Изменить имя', cmd: `setUserName` },
       main_menu_button,
     ],
   }
 }
 
-export default menu_user
+export default menuUser
