@@ -28,10 +28,10 @@ const team_user = async ({ telegramId, jsonCommand }) => {
   }
 
   const buttons = [
-    {
-      url: `https://web.telegram.org/k/#${user.telegramId}`,
-      text: '\u{2712} Написать в личку',
-    },
+    // {
+    //   url: `https://web.telegram.org/k/#${user.telegramId}`,
+    //   text: '\u{2712} Написать в личку',
+    // },
     {
       cmd: {
         cmd: 'del_team_user',
@@ -46,7 +46,7 @@ const team_user = async ({ telegramId, jsonCommand }) => {
   return {
     message: `"${user.name}" ${isCapitan ? 'капитан' : 'участник'} команды "${
       team.name
-    }"`,
+    }"\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,
     buttons,
     // parse_mode: 'Markdown',
   }

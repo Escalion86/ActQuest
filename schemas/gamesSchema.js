@@ -1,3 +1,9 @@
+import mongoose from 'mongoose'
+
+// var Levels = new mongoose.Schema({
+//   type: Map,
+// });
+
 const gamesSchema = {
   name: {
     type: String,
@@ -16,6 +22,38 @@ const gamesSchema = {
     type: Date,
     default: null,
   },
+  tasks: [
+    {
+      title: {
+        type: String,
+        required: [true, 'Введите название уровня'],
+        default: '',
+      },
+      task: {
+        type: String,
+        default: '',
+      },
+      clues: [
+        {
+          clue: {
+            type: String,
+            default: '',
+          },
+          images: {
+            type: [String],
+            default: [],
+          },
+        },
+      ],
+      images: {
+        type: [String],
+        default: [],
+      },
+    },
+  ],
+  // {
+  //     type: [Levels],
+  //   }
   status: {
     type: String,
     default: 'active',
