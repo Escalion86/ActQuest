@@ -3,7 +3,7 @@ import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
-import mainMenu_button from './menuItems/mainMenu_button'
+import mainMenuButton from './menuItems/mainMenuButton'
 
 const menuGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
@@ -62,7 +62,7 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
           cmd: { cmd: 'game', gameId: game._id },
         }
       }),
-      mainMenu_button,
+      mainMenuButton,
     ],
   }
 }

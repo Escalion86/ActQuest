@@ -1,7 +1,7 @@
 import LastCommands from '@models/LastCommands'
 import dbConnect from '@utils/dbConnect'
 import commandsArray from './commands/commandsArray'
-import mainMenu_button from './commands/menuItems/mainMenu_button'
+import mainMenuButton from './commands/menuItems/mainMenuButton'
 import keyboardFormer from './func/keyboardFormer'
 import sendMessage from './sendMessage'
 
@@ -19,7 +19,7 @@ const lastCommandHandler = async (telegramId, jsonCommand) => {
   return {
     success: false,
     message: 'Неизвестная команда',
-    buttons: [mainMenu_button],
+    buttons: [mainMenuButton],
   }
 }
 

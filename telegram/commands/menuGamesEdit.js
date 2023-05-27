@@ -1,6 +1,6 @@
 import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
-import mainMenu_button from './menuItems/mainMenu_button'
+import mainMenuButton from './menuItems/mainMenuButton'
 
 const menuGamesEdit = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
@@ -16,7 +16,7 @@ const menuGamesEdit = async ({ telegramId, jsonCommand }) => {
         //`editGame/gameId=${game._id}`,
       })),
       { cmd: 'createGame', text: '\u{2795} Создать игру' },
-      mainMenu_button,
+      mainMenuButton,
     ],
   }
 }
