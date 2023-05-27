@@ -72,13 +72,18 @@ const executeCommand = async (
     )
   } else {
     console.log('!!! jsonCommand :>> ', jsonCommand)
+    const actualCommand = nextCommand.cmd
+      ? nextCommand
+      : { ...jsonCommand, ...nextCommand }
+    delete actualCommand.message
+    console.log('!!! actualCommand :>> ', actualCommand)
     await dbConnect()
     return await LastCommands.findOneAndUpdate(
       {
         userTelegramId,
       },
       {
-        command: jsonCommand,
+        command: actualCommand,
         messageId,
       },
       { upsert: true }
