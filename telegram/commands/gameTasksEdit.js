@@ -98,7 +98,9 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   return {
     message: `Редактирование игры "${game?.name}".\nОписание: ${
       game?.description ? `"${game?.description}"` : '[без описания]'
-    }\nКоличество заданий: ${game?.tasks?.length ?? '0'}`,
+    }\nКоличество заданий: ${game?.tasks?.length ?? '0'}\nДата и время: ${
+      game.dateStart
+    }`,
     buttons: [
       {
         cmd: { cmd: 'editGame', gameId: jsonCommand.gameId },

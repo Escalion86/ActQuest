@@ -9,8 +9,10 @@ const editGame = async ({ telegramId, jsonCommand }) => {
   if (game.success === false) return game
 
   return {
-    message: `Редактирование игры "${game?.name}".${
-      game?.description ? `\nОписание: "${game?.description}"` : ''
+    message: `Редактирование игры "${game?.name}".\nОписание: ${
+      game?.description ? `"${game?.description}"` : '[без описания]'
+    }\nКоличество заданий: ${game?.tasks?.length ?? '0'}\nДата и время: ${
+      game.dateStart
     }`,
     buttons: [
       {
