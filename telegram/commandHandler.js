@@ -96,6 +96,7 @@ const commandHandler = async (
   callback_query
 ) => {
   try {
+    console.log('message :>> ', message)
     if (message === '/mainMenu' || message === '/start') {
       return await executeCommand(
         userTelegramId,
@@ -110,6 +111,7 @@ const commandHandler = async (
       jsonCommand = { cmd: message.substr(1) }
     } else {
       jsonCommand = jsonParser(message)
+      console.log('??? jsonCommand :>> ', jsonCommand)
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
       if (!jsonCommand || !jsonCommand?.cmd) {
         // console.log('Полученная команда не полная или это не команда')
