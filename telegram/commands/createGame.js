@@ -36,6 +36,7 @@ const array = [
       },
       { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
+    answerConverter: (answer) => new Date(answer),
   },
 ]
 
@@ -72,12 +73,16 @@ const createGame = async ({ telegramId, jsonCommand }) => {
           // `/createGame` + propsToStr(props),
         }
       }
+      const value =
+        typeof array[i].answerConverter === 'function'
+          ? array[i].answerConverter(jsonCommand.message)
+          : jsonCommand.message
       if (i < array.length - 1)
         return {
           success: true,
           message: array[i].answerMessage(jsonCommand.message),
           // buttons: data.buttons(props),
-          nextCommand: { [data.prop]: jsonCommand.message },
+          nextCommand: { [data.prop]: value },
           // `/createGame` + propsToStr(props),
         }
     }
