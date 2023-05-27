@@ -1,4 +1,4 @@
-import createGame from 'telegram/func/createGame'
+import createGameFunc from 'telegram/func/createGameFunc'
 
 const array = [
   {
@@ -83,7 +83,7 @@ const createGame = async ({ telegramId, jsonCommand }) => {
   }
 
   // Если все переменные на месте, то создаем команду
-  const game = await createGame(telegramId, jsonCommand)
+  const game = await createGameFunc(telegramId, jsonCommand)
 
   return {
     success: true,

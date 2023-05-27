@@ -25,6 +25,7 @@ import gameTeam from './gameTeam'
 import delGameTeam from './delGameTeam'
 import game from './game'
 import joinGame from './joinGame'
+import gameTasksEdit from './gameTasksEdit'
 
 const commandsArray = {
   setUserName,
@@ -54,6 +55,7 @@ const commandsArray = {
   delGameTeam,
   game,
   joinGame,
+  gameTasksEdit,
 }
 
 export default commandsArray

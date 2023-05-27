@@ -22,35 +22,38 @@ const gamesSchema = {
     type: Date,
     default: null,
   },
-  tasks: [
-    {
-      title: {
-        type: String,
-        required: [true, 'Введите название уровня'],
-        default: '',
-      },
-      task: {
-        type: String,
-        default: '',
-      },
-      clues: [
-        {
-          clue: {
-            type: String,
-            default: '',
-          },
-          images: {
-            type: [String],
-            default: [],
-          },
+  tasks: {
+    type: [
+      {
+        title: {
+          type: String,
+          required: [true, 'Введите название уровня'],
+          default: '',
         },
-      ],
-      images: {
-        type: [String],
-        default: [],
+        task: {
+          type: String,
+          default: '',
+        },
+        clues: [
+          {
+            clue: {
+              type: String,
+              default: '',
+            },
+            images: {
+              type: [String],
+              default: [],
+            },
+          },
+        ],
+        images: {
+          type: [String],
+          default: [],
+        },
       },
-    },
-  ],
+    ],
+    default: [],
+  },
   // {
   //     type: [Levels],
   //   }

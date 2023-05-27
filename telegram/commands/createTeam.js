@@ -1,6 +1,6 @@
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
-import createTeam from 'telegram/func/createTeam'
+import createTeamFunc from 'telegram/func/createTeamFunc'
 
 const array = [
   {
@@ -83,7 +83,7 @@ const createTeam = async ({ telegramId, jsonCommand }) => {
   }
 
   // Если все переменные на месте, то создаем команду
-  const team = await createTeam(telegramId, jsonCommand)
+  const team = await createTeamFunc(telegramId, jsonCommand)
 
   return {
     success: true,

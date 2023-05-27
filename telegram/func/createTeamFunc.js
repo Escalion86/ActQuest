@@ -2,7 +2,7 @@ import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 
-const createTeam = async (userTelegramId, jsonCommand) => {
+const createTeamFunc = async (userTelegramId, jsonCommand) => {
   await dbConnect()
   const team = await Teams.create({
     // capitanId: userTelegramId,
@@ -18,4 +18,4 @@ const createTeam = async (userTelegramId, jsonCommand) => {
   return team
 }
 
-export default createTeam
+export default createTeamFunc
