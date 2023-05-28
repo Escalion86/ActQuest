@@ -39,12 +39,13 @@ const array = [
     answerConverter: (answer) => {
       const dateArray = answer.split('.')
       const day = dateArray[0]
-      const month = dateArray[1]
+      const month = Number(dateArray[1]) - 1
       const dateArray2 = dateArray[2].split(' ')
       const year = dateArray2[0]
       const dateArray3 = dateArray2[1].split(':')
       const hours = dateArray3[0]
       const minutes = dateArray3[1]
+      console.log('date :>> ', { year, month, day, hours, minutes })
       return new Date(year, month, day, hours, minutes)
     },
   },
