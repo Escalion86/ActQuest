@@ -80,6 +80,8 @@ const createGame = async ({ telegramId, jsonCommand }) => {
           ? array[i].answerConverter(jsonCommand.message)
           : jsonCommand.message
 
+      console.log('value :>> ', value)
+
       if (i < array.length - 1) {
         return {
           success: true,
