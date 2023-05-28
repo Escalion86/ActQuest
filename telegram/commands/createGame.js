@@ -46,7 +46,9 @@ const array = [
       const hours = dateArray3[0]
       const minutes = dateArray3[1]
       console.log('date :>> ', { year, month, day, hours, minutes })
-      return new Date(year, month, day, hours, minutes)
+      return new Date(year, month, day, hours, minutes).toLocaleString('ru', {
+        timeZone: 'Asia/Krasnoyarsk',
+      })
     },
   },
 ]
