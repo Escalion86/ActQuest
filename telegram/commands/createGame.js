@@ -75,14 +75,12 @@ const createGame = async ({ telegramId, jsonCommand }) => {
         }
       }
 
+      const value =
+        typeof array[i].answerConverter === 'function'
+          ? array[i].answerConverter(jsonCommand.message)
+          : jsonCommand.message
+
       if (i < array.length - 1) {
-        const value =
-          typeof array[i].answerConverter === 'function'
-            ? array[i].answerConverter(jsonCommand.message)
-            : jsonCommand.message
-
-        console.log('value :>> ', value)
-
         return {
           success: true,
           message: array[i].answerMessage(jsonCommand.message),
@@ -90,6 +88,8 @@ const createGame = async ({ telegramId, jsonCommand }) => {
           nextCommand: { [data.prop]: value },
           // `/createGame` + propsToStr(props),
         }
+      } else {
+        jsonCommand[data.prop] = value
       }
     }
   }
