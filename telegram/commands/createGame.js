@@ -36,7 +36,17 @@ const array = [
       },
       { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
-    answerConverter: (answer) => new Date(answer),
+    answerConverter: (answer) => {
+      const dateArray = answer.split('.')
+      const day = dateArray[0]
+      const month = dateArray[1]
+      const dateArray2 = dateArray[2].split(' ')
+      const year = dateArray2[0]
+      const dateArray3 = dateArray2[1].split(':')
+      const hours = dateArray3[0]
+      const minutes = dateArray3[1]
+      return new Date(year, month, day, hours, minutes)
+    },
   },
 ]
 
