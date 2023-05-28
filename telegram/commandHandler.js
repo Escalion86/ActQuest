@@ -6,6 +6,7 @@ import keyboardFormer from './func/keyboardFormer'
 import sendMessage from './sendMessage'
 
 function jsonParser(str) {
+  console.log('str :>> ', str)
   try {
     const json = JSON.parse(str)
     if (typeof json === 'object') return json
@@ -16,11 +17,6 @@ function jsonParser(str) {
 }
 
 const lastCommandHandler = async (telegramId, jsonCommand) => {
-  console.log('jsonCommand.cmd :>> ', jsonCommand.cmd)
-  console.log(
-    'commandsArray[jsonCommand.cmd] :>> ',
-    commandsArray[jsonCommand.cmd]
-  )
   if (commandsArray[jsonCommand.cmd])
     return await commandsArray[jsonCommand.cmd]({ telegramId, jsonCommand })
   return {
@@ -63,13 +59,10 @@ const executeCommand = async (
     }
     // Если команда содержит в себе command, то значт это готовая команда,
     // если же нет, то значт это дополнение к предыдущей команде
-    console.log('nextCommand :>> ', nextCommand)
     const actualCommand = nextCommand.cmd
       ? nextCommand
       : { ...jsonCommand, ...nextCommand }
     delete actualCommand.message
-
-    console.log('actualCommand :>> ', actualCommand)
 
     return await executeCommand(
       userTelegramId,
@@ -78,10 +71,8 @@ const executeCommand = async (
       // callback_query
     )
   } else {
-    console.log('!!! jsonCommand :>> ', jsonCommand)
     const actualCommand = { ...jsonCommand }
     delete actualCommand.message
-    console.log('!!! actualCommand :>> ', actualCommand)
     await dbConnect()
     return await LastCommands.findOneAndUpdate(
       {
@@ -103,7 +94,6 @@ const commandHandler = async (
   callback_query
 ) => {
   try {
-    console.log('message :>> ', message)
     if (message === '/main_menu' || message === '/start') {
       return await executeCommand(
         userTelegramId,
@@ -118,7 +108,6 @@ const commandHandler = async (
       jsonCommand = { cmd: message.substr(1) }
     } else {
       jsonCommand = jsonParser(message)
-      console.log('??? jsonCommand :>> ', jsonCommand)
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
       if (!jsonCommand || !jsonCommand?.cmd) {
         // console.log('Полученная команда не полная или это не команда')
