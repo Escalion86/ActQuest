@@ -18,7 +18,10 @@ const delGameTeam = async ({ telegramId, jsonCommand }) => {
           text: '\u{1F4A3} Отменить регистрацию команды из игры',
           cmd: { confirm: true },
         },
-        { text: '\u{1F6AB} Я передумал', cmd: 'menuGamesEdit' },
+        {
+          text: '\u{1F6AB} Я передумал',
+          cmd: { cmd: 'gameTeam', gameTeamId: jsonCommand.gameTeamId },
+        },
       ],
     }
   }
@@ -27,7 +30,7 @@ const delGameTeam = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Регистрация команды на игре отменена',
-    nextCommand: `menuGames`,
+    nextCommand: { cmd: 'gameTeams', gameId: gameTeam.gameId },
   }
 }
 
