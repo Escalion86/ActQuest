@@ -12,6 +12,7 @@ const sendMessage = async ({
   if (images) {
     for (let i = 0; i < images.length; i++) {
       const photo = images[i]
+      console.log('photo :>> ', photo)
       await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendPhoto`,
         {
