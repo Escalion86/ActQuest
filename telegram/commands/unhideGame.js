@@ -9,7 +9,7 @@ const unhideGame = async ({ telegramId, jsonCommand }) => {
 
   await dbConnect()
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
-    hide: false,
+    hidden: false,
   })
 
   return {
