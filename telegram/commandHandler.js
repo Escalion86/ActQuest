@@ -160,6 +160,7 @@ const commandHandler = async (
     }
 
     // Если это был JSON
+    console.log('messageId :>> ', messageId)
     if (jsonCommand) {
       await executeCommand(
         userTelegramId,
