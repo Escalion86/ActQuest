@@ -6,8 +6,8 @@ import keyboardFormer from './func/keyboardFormer'
 import sendMessage from './sendMessage'
 
 function jsonParser(str) {
-  console.log('str :>> ', str)
   try {
+    if (!str) return
     const json = JSON.parse(str)
     if (typeof json === 'object') return json
     return
@@ -118,7 +118,7 @@ const commandHandler = async (
     }
 
     var jsonCommand
-    if (message[0] === '/') {
+    if (message && message[0] === '/') {
       jsonCommand = { cmd: message.substr(1) }
     } else {
       jsonCommand = jsonParser(message)
