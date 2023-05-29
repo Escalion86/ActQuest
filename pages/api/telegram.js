@@ -168,8 +168,8 @@ export default async function handler(req, res) {
         // Пользователь написал текст
         console.log('message_body :>> ', body)
         // console.log('thumbnail :>> ', body?.message?.document?.thumbnail)
-        console.log('entities :>> ', body?.entities)
-        console.log('photo :>> ', body?.photo)
+        // console.log('entities :>> ', body?.message?.entities)
+        console.log('photo :>> ', body?.message?.photo)
         // const { message_id, from, chat, date, text, entities, document } = message
 
         // document: {                                                                                                       x

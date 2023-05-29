@@ -45,12 +45,13 @@ const messageHandler = async (body, res) => {
     contact,
     reply_to_message,
     document,
+    photo,
   } = message
   await dbConnect()
 
   if (await checkContactRecive(body))
     if (await checkUserData(from.id))
-      return await commandHandler(from.id, text, message_id, document)
+      return await commandHandler(from.id, text, message_id, photo, document)
 }
 
 export default messageHandler

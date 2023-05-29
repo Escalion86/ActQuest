@@ -104,6 +104,7 @@ const commandHandler = async (
   message,
   messageId,
   callback_query,
+  photo,
   document
 ) => {
   try {
@@ -141,7 +142,7 @@ const commandHandler = async (
         if (!jsonCommand)
           jsonCommand = {
             ...Object.fromEntries(last.command),
-            message: document?.thumb?.file_id ?? message,
+            message: photo?.file_id ?? message,
           }
         else
           jsonCommand = {
