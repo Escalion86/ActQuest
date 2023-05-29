@@ -56,7 +56,7 @@ const executeCommand = async (
     text: result.message,
     parse_mode: result.parse_mode,
     keyboard,
-    callback_query,
+    callback_query: result.images ? undefined : callback_query,
   })
   // console.log('sendResult :>> ', sendResult)
   const nextCommand = result.nextCommand
@@ -142,7 +142,7 @@ const commandHandler = async (
         if (!jsonCommand)
           jsonCommand = {
             ...Object.fromEntries(last.command),
-            message: photo?.file_id ?? message,
+            message: photo ? photo[1]?.file_id : message,
           }
         else
           jsonCommand = {
