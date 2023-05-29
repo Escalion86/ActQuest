@@ -23,7 +23,7 @@ const checkContactRecive = async (body) => {
 
     await sendMessage({
       chat_id: user_id,
-      text: `Регистрация успешна! Ваши данные:\n - Имя: ${name}\n - Телефон: ${phone_number}`,
+      text: `Регистрация успешна! Ваши данные:\n - Имя: ${name}\n - Телефон: +${phone_number}`,
       keyboard: {
         inline_keyboard: [
           [{ text: 'Изменить имя', callback_data: `/setUserName` }],
