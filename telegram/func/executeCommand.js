@@ -1,6 +1,7 @@
 import LastCommands from '@models/LastCommands'
 import dbConnect from '@utils/dbConnect'
 import commandsArray from 'telegram/commands/commandsArray'
+import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
 

@@ -26,6 +26,8 @@ import delGameTeam from './delGameTeam'
 import game from './game'
 import joinGame from './joinGame'
 import gameTasksEdit from './gameTasksEdit'
+import hideGame from './hideGame'
+import unhideGame from './unhideGame'
 
 const commandsArray = {
   setUserName,
@@ -56,6 +58,8 @@ const commandsArray = {
   game,
   joinGame,
   gameTasksEdit,
+  hideGame,
+  unhideGame,
 }
 
 export default commandsArray

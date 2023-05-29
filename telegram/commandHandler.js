@@ -1,9 +1,6 @@
 import LastCommands from '@models/LastCommands'
 import dbConnect from '@utils/dbConnect'
-import commandsArray from './commands/commandsArray'
-import mainMenuButton from './commands/menuItems/mainMenuButton'
 import executeCommand from './func/executeCommand'
-import keyboardFormer from './func/keyboardFormer'
 import sendMessage from './sendMessage'
 
 function jsonParser(str) {
