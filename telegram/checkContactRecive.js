@@ -6,12 +6,13 @@ const checkContactRecive = async (body) => {
   // Проверяем не отправлен ли нам контакт
   const contact = body?.message?.contact
   if (contact) {
+    console.log('body :>> ', body)
     await dbConnect()
     const { phone_number, first_name, last_name, user_id } = contact
     const name = (first_name + (last_name ? ' ' + last_name : '')).trim()
     const user = await Users.findOneAndUpdate(
       {
-        telegramId: from.id,
+        telegramId: body?.message?.from.id,
       },
       {
         name,
