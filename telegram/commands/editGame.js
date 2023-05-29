@@ -10,8 +10,6 @@ const editGame = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
-  console.log('game :>> ', game)
-
   return {
     images: game.image ? [game.image] : undefined,
     message: `${game.hidden ? '(ИГРА СКРЫТА!) ' : ''}Редактирование игры "${
@@ -55,7 +53,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
         },
         text: '\u{1F648} Скрыть',
-        hide: !game.hidden,
+        hide: game.hidden,
       },
       {
         cmd: {
@@ -63,7 +61,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
         },
         text: '\u{1F441} Отобразить',
-        hide: game.hidden,
+        hide: !game.hidden,
       },
       {
         cmd: { cmd: 'deleteGame', gameId: jsonCommand.gameId },
