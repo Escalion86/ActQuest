@@ -15,7 +15,7 @@ const unhideGame = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Игра "${game.name}" открыта`,
-    nextCommand: { cmd: `menuGamesEdit`, gameId: jsonCommand.gameId },
+    nextCommand: { cmd: `editGame`, gameId: jsonCommand.gameId },
   }
 }
 
