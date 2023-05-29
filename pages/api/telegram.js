@@ -167,8 +167,8 @@ export default async function handler(req, res) {
       } else if (body?.message) {
         // Пользователь написал текст
         // console.log('message_body :>> ', body)
-        console.log('thumbnail :>> ', message?.document?.thumbnail)
-        console.log('thumb :>> ', message?.document?.thumb)
+        console.log('thumbnail :>> ', body?.message?.document?.thumbnail)
+        console.log('thumb :>> ', body?.message?.document?.thumb)
         // const { message_id, from, chat, date, text, entities, document } = message
 
         // document: {                                                                                                       x

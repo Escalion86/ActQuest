@@ -105,15 +105,8 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
         <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/favicon.ico" />
-        {/* <Script
-          strategy="afterInteractive"
-          src="https://cdn.jsdelivr.net/npm/@thelevicole/youtube-to-html5-loader@4.0.1/dist/YouTubeToHtml5.min.js"
-        /> */}
-        {/* <Script strategy="afterInteractive">{`new YouTubeToHtml5()`}</Script> */}
-        {/* <script src="https://smtpjs.com/v3/smtp.js"></script> */}
       </Head>
       <SessionProvider session={session} refetchInterval={5 * 60}>
-        {/* <Provider store={store}> */}
         <RecoilRoot>
           <ThemeProvider theme={theme}>
             <SnackbarProvider maxSnack={4}>
@@ -121,12 +114,10 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
                 src="https://polyfill.io/v3/polyfill.min.js?features=IntersectionObserver"
                 strategy="beforeInteractive"
               />
-              {/* <CssBaseline /> */}
               <Component {...pageProps} />
             </SnackbarProvider>
           </ThemeProvider>
         </RecoilRoot>
-        {/* </Provider> */}
       </SessionProvider>
     </>
   )
