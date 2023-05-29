@@ -22,6 +22,10 @@ const gamesSchema = {
     type: Date,
     default: null,
   },
+  image: {
+    type: String,
+    default: null,
+  },
   tasks: {
     type: [
       {

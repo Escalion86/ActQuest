@@ -33,7 +33,7 @@ const array = [
       {
         cmd: { dateStart: null },
         // 'createGame' + propsToStr(props) + '/dateStart=null'
-        text: 'Без описания',
+        text: 'Без даты',
       },
       { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
@@ -58,11 +58,18 @@ const array = [
       return date
     },
   },
+  {
+    prop: 'image',
+    message: 'Отправьте картинку анонса',
+    answerMessage: (answer) => `Картинка анонса загружена`,
+    buttons: (jsonCommand) => [
+      { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
+    ],
+  },
 ]
 
 const createGame = async ({ telegramId, jsonCommand }) => {
   // Если это запрос (команда), то отправляем текст пользователю
-  console.log('createGame jsonCommand :>> ', jsonCommand)
   if (!jsonCommand.message) {
     for (let i = 0; i < array.length; i++) {
       const data = array[i]
