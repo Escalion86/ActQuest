@@ -24,12 +24,12 @@ const menuTeams = async ({ telegramId, jsonCommand }) => {
       {
         cmd: 'joinTeam',
         text: '\u{1F517} Присоединиться к команде',
-        hide: teamsUser.length < MAX_TEAMS,
+        hide: teamsUser.length >= MAX_TEAMS,
       },
       {
         cmd: 'createTeam',
         text: '\u{2795} Создать команду',
-        hide: teamsUser.length < MAX_TEAMS,
+        hide: teamsUser.length >= MAX_TEAMS,
       },
       mainMenuButton,
     ],

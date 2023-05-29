@@ -1,15 +1,26 @@
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
+import { MAX_TEAMS } from 'telegram/constants'
 import getTeam from 'telegram/func/getTeam'
 
 const joinTeam = async ({ telegramId, jsonCommand }) => {
+  await dbConnect()
+  const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
+
+  if (teamsUser.length >= MAX_TEAMS) {
+    return {
+      message: `Нельзя состоять более чем в ${MAX_TEAMS} командах. Для присоединения к команде сначала покиньте одну из команд`,
+      nextCommand: `joinedTeams`,
+    }
+  }
+
   if (!jsonCommand.message) {
     return {
       message: 'Введите код команды',
       buttons: [{ cmd: 'menuTeams', text: '\u{2B05} Назад' }],
     }
   }
-  await dbConnect()
+
   const team = await getTeam(jsonCommand.message)
   if (team.success === false) return team
 

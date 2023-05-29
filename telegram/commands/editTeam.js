@@ -32,10 +32,10 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
       buttons: [
         ...teams.map((team) => ({
           text: `"${team.name}"`,
-          command: { command: 'editTeam', teamId: team._id },
+          cmd: { cmd: 'editTeam', teamId: team._id },
           // `editTeam/teamId=${team._id}`,
         })),
-        { command: 'menuTeams', text: '\u{2B05} Назад' },
+        { cmd: 'menuTeams', text: '\u{2B05} Назад' },
       ],
     }
   }

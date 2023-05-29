@@ -1,5 +1,6 @@
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
+import { MAX_TEAMS } from 'telegram/constants'
 import createTeamFunc from 'telegram/func/createTeamFunc'
 
 const array = [
@@ -45,11 +46,10 @@ const createTeam = async ({ telegramId, jsonCommand }) => {
   const teamsUser = await TeamsUsers.find({
     userTelegramId: telegramId,
   })
-  if (teamsUser.length >= 3) {
+  if (teamsUser.length >= MAX_TEAMS) {
     return {
-      message:
-        'Нельзя состоять более чем в 3 командах. Для создания команды сначала покиньте одну из команд',
-      nextCommand: `menuTeams`,
+      message: `Нельзя состоять более чем в ${MAX_TEAMS} командах. Для создания команды сначала покиньте одну из команд`,
+      nextCommand: `joinedTeams`,
     }
   }
 
