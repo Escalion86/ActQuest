@@ -51,7 +51,14 @@ const messageHandler = async (body, res) => {
 
   if (await checkContactRecive(body))
     if (await checkUserData(from.id))
-      return await commandHandler(from.id, text, message_id, photo, document)
+      return await commandHandler(
+        from.id,
+        text,
+        message_id,
+        undefined,
+        photo,
+        document
+      )
 }
 
 export default messageHandler
