@@ -62,7 +62,6 @@ const sendMessage = async ({
     // }
   }
   if (text) {
-    console.log('remove_keyboard :>> ', remove_keyboard)
     if (callback_query?.message?.message_id) {
       return await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageText`,
