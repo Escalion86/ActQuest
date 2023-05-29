@@ -29,8 +29,8 @@ const checkContactRecive = async (body) => {
           [{ text: 'Изменить имя', callback_data: `/setUserName` }],
           [{ text: '\u{1F3E0} Главное меню', callback_data: `/mainMenu` }],
         ],
-        remove_keyboard: true,
       },
+      remove_keyboard: true,
     })
     return false
   }

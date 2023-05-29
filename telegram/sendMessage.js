@@ -3,11 +3,12 @@ import { postData } from '@helpers/CRUD'
 const sendMessage = async ({
   chat_id,
   text,
-  keyboard,
+  keyboard = {},
   parse_mode = 'html',
   props = {},
   callback_query,
   images,
+  remove_keyboard,
 }) => {
   if (images) {
     for (let i = 0; i < images.length; i++) {
@@ -69,7 +70,10 @@ const sendMessage = async ({
           chat_id,
           text,
           parse_mode,
-          reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
+          reply_markup:
+            keyboard || remove_keyboard
+              ? JSON.stringify({ ...keyboard, remove_keyboard })
+              : undefined,
           ...props,
         },
         // null,
