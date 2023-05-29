@@ -1,3 +1,4 @@
+import formatDateTime from '@helpers/formatDateTime'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
@@ -11,9 +12,18 @@ const editGame = async ({ telegramId, jsonCommand }) => {
   return {
     message: `Редактирование игры "${game?.name}".\nОписание: ${
       game?.description ? `"${game?.description}"` : '[без описания]'
-    }\nКоличество заданий: ${game?.tasks?.length ?? '0'}\nДата и время: ${
-      game.dateStart
-    }`,
+    }\nКоличество заданий: ${
+      game?.tasks?.length ?? '0'
+    }\nДата и время: ${formatDateTime(
+      game.dateStart,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true
+    )}`,
     buttons: [
       {
         cmd: { cmd: 'setGameName', gameId: jsonCommand.gameId },

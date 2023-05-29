@@ -47,14 +47,14 @@ const array = [
       const dateArray3 = dateArray2[1].split(':')
       const hours = dateArray3[0]
       const minutes = dateArray3[1]
-      console.log('date params :>> ', { year, month, day, hours, minutes })
+      // console.log('date params :>> ', { year, month, day, hours, minutes })
       const date = moment.tz(
         `${year}-${month}-${day} ${hours}:${minutes}`,
         'Asia/Krasnoyarsk'
       )
       // new Date('2024',11,'10','14','00').toLocaleString("ru-RU", {timeZone: 'Asia/Krasnoyarsk'}
       // return new Date(year, month, day, hours, minutes)
-      console.log('date :>> ', date)
+      // console.log('date :>> ', date)
       return date
     },
   },
@@ -81,7 +81,6 @@ const createGame = async ({ telegramId, jsonCommand }) => {
   for (let i = 0; i < array.length; i++) {
     const data = array[i]
     if (jsonCommand[data.prop] === undefined) {
-      console.log('jsonCommand[data.prop] === undefined')
       if (
         array[i].checkAnswer !== undefined &&
         !array[i].checkAnswer(jsonCommand.message)
@@ -99,8 +98,6 @@ const createGame = async ({ telegramId, jsonCommand }) => {
         typeof array[i].answerConverter === 'function'
           ? array[i].answerConverter(jsonCommand.message)
           : jsonCommand.message
-
-      console.log('value :>> ', value)
 
       if (i < array.length - 1) {
         return {
