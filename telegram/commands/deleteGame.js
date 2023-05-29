@@ -17,7 +17,10 @@ const deleteGame = async ({ telegramId, jsonCommand }) => {
           text: '\u{1F4A3} Удалить',
           cmd: { confirm: true },
         },
-        { text: '\u{1F6AB} Отмена', cmd: 'menuGamesEdit' },
+        {
+          text: '\u{1F6AB} Отмена',
+          cmd: { cmd: 'gameEdit', gameId: jsonCommand.gameId },
+        },
       ],
     }
   }

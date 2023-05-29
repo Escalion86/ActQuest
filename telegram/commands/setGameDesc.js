@@ -11,7 +11,12 @@ const setGameDesc = async ({ telegramId, jsonCommand }) => {
     return {
       success: true,
       message: 'Введите новое описание игры',
-      buttons: [{ text: '\u{1F6AB} Отмена', cmd: 'menuGamesEdit' }],
+      buttons: [
+        {
+          text: '\u{1F6AB} Отмена',
+          cmd: { cmd: 'editGame', gameId: jsonCommand.gameId },
+        },
+      ],
     }
   }
   await dbConnect()
@@ -22,7 +27,7 @@ const setGameDesc = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Описание игры обновлено на "${jsonCommand.message}"`,
-    nextCommand: `menuGamesEdit`,
+    nextCommand: { cmd: 'editGame', gameId: jsonCommand.gameId },
   }
 }
 

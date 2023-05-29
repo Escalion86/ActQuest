@@ -11,7 +11,12 @@ const setTeamName = async ({ telegramId, jsonCommand }) => {
     return {
       success: true,
       message: 'Введите новое название команды',
-      buttons: [{ text: '\u{1F6AB} Отмена', cmd: 'menuTeams' }],
+      buttons: [
+        {
+          text: '\u{1F6AB} Отмена',
+          cmd: { cmd: 'editTeam', teamId: jsonCommand.teamId },
+        },
+      ],
     }
   }
   await dbConnect()
@@ -23,7 +28,7 @@ const setTeamName = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Название команды обновлена на "${jsonCommand.message}"`,
-    nextCommand: `menuTeams`,
+    nextCommand: { cmd: 'editTeam', teamId: jsonCommand.teamId },
   }
 }
 
