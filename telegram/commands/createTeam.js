@@ -12,12 +12,11 @@ const array = [
   },
   {
     prop: 'description',
-    message: 'Введите описание команды',
+    message: 'Введите описание команды (не обязательно)',
     answerMessage: (answer) => `Задано описание команды "${answer}"`,
     buttons: (jsonCommand) => [
       {
         cmd: { description: '' },
-        // command: 'createTeam' + propsToStr(props) + '/teamDescription=',
         text: 'Без описания',
       },
       { cmd: 'menuTeams', text: '\u{2B05} Назад' },
