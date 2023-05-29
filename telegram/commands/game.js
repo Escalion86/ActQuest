@@ -88,6 +88,7 @@ const game = async ({ telegramId, jsonCommand }) => {
 
   return {
     message,
+    images: game.image ? [game.image] : undefined,
     buttons: [
       {
         cmd: { cmd: 'joinGame', gameId: jsonCommand.gameId },
