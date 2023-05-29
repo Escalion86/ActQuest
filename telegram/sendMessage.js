@@ -10,18 +10,21 @@ const sendMessage = async ({
   images,
 }) => {
   if (images) {
-    for (let i = 0; i < images.length; i++) {
-      const photo = images[i]
+    if (images.length === 1) {
+      const photo = images[0]
+      // for (let i = 0; i < images.length; i++) {
+      // const photo = images[i]
       console.log('photo :>> ', photo)
-      await postData(
+      return await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendPhoto`,
         {
           // message_id: callback_query.message.message_id,
+          caption: text,
           chat_id,
           photo,
-          // parse_mode,
-          // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
-          // ...props,
+          parse_mode,
+          reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
+          ...props,
         },
         // null,
         // null,
@@ -32,6 +35,7 @@ const sendMessage = async ({
         null,
         true
       )
+      // }
     }
   }
   if (text) {
