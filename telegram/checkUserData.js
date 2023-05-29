@@ -12,7 +12,7 @@ const checkUserData = async (telegramId, text) => {
     if (text === '/start') {
       await sendMessage({
         chat_id: telegramId,
-        text: 'Добро пожаловать на Act Quest!\nAct Quest - это телеграм бот, с помощью которого можно участвовать и проводить различные активные квесты',
+        text: 'Добро пожаловать в Act Quest!\nAct Quest - это телеграм бот, с помощью которого можно участвовать и проводить различные активные квесты',
       })
     }
     await sendMessage({
