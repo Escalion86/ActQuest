@@ -22,7 +22,7 @@ const unjoinTeam = async ({ telegramId, jsonCommand }) => {
         },
         {
           text: '\u{1F6AB} Я передумал',
-          cmd: { cmd: 'editTeam', teamUserId: jsonCommand.teamUserId },
+          cmd: { cmd: 'editTeam', teamId: jsonCommand.teamId },
         },
       ],
     }
