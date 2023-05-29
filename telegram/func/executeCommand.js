@@ -1,3 +1,5 @@
+import commandsArray from 'telegram/commands/commandsArray'
+
 const lastCommandHandler = async (telegramId, jsonCommand) => {
   if (commandsArray[jsonCommand.cmd])
     return await commandsArray[jsonCommand.cmd]({ telegramId, jsonCommand })
