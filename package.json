@@ -31,6 +31,7 @@
     "cloudinary": "^1.33.0",
     "crypto-js": "^4.1.1",
     "framer-motion": "^8.4.3",
+    "moment-timezone": "^0.5.43",
     "mongodb": "^4.13.0",
     "mongoose": "^6.8.3",
     "next": "^12.3.4",

@@ -1,4 +1,5 @@
 import createGameFunc from 'telegram/func/createGameFunc'
+import moment from 'moment-timezone'
 
 const array = [
   {
@@ -45,10 +46,12 @@ const array = [
       const dateArray3 = dateArray2[1].split(':')
       const hours = dateArray3[0]
       const minutes = dateArray3[1]
-      console.log('date :>> ', { year, month, day, hours, minutes })
-      return new Date(year, month, day, hours, minutes).toLocaleString('ru', {
-        timeZone: 'Asia/Krasnoyarsk',
-      })
+      console.log('date params :>> ', { year, month, day, hours, minutes })
+      const date = moment.tz(answer, 'Asia/Krasnoyarsk')
+      // new Date('2024',11,'10','14','00').toLocaleString("ru-RU", {timeZone: 'Asia/Krasnoyarsk'}
+      // return new Date(year, month, day, hours, minutes)
+      console.log('date :>> ', date)
+      return date
     },
   },
 ]
