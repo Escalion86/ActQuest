@@ -50,7 +50,7 @@ const messageHandler = async (body, res) => {
   await dbConnect()
 
   if (await checkContactRecive(body))
-    if (await checkUserData(from.id))
+    if (await checkUserData(from.id, text))
       return await commandHandler(
         from.id,
         text,
