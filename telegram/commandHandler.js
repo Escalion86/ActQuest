@@ -139,7 +139,7 @@ const commandHandler = async (
         }
         // Если отправлено сообщение
         // if (document?.thumb?.file_id)
-        // console.log('commandHandler photo :>> ', photo)
+        console.log('commandHandler photo :>> ', photo)
         console.log(
           'photo.length :>> ',
           typeof photo === 'object' ? photo.length : ''
@@ -158,7 +158,7 @@ const commandHandler = async (
             ...Object.fromEntries(last.command),
             message:
               typeof photo === 'object'
-                ? photo[photo.length - 1]?.file_id
+                ? photo[0][photo.length - 1]?.file_id
                 : message,
           }
         else
