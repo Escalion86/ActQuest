@@ -155,9 +155,9 @@ export default async function handler(req, res) {
       // console.log(body)
       if (body?.callback_query) {
         // Принимаем команду
-        console.log('callback_body :>> ', body)
+        // console.log('callback_body :>> ', body)
         const result = await callbackHandler(body, res)
-        console.log('callbackHandler result :>> ', result)
+        // console.log('callbackHandler result :>> ', result)
         // await sendMessage({
         //   chat_id: '261102161',
         //   // text: JSON.stringify({ body, headers: req.headers.origin }),
@@ -166,11 +166,23 @@ export default async function handler(req, res) {
         // })
       } else if (body?.message) {
         // Пользователь написал текст
-        console.log('message_body :>> ', body)
-        // const { message_id, from, chat, date, text, entities } = message
+        // console.log('message_body :>> ', body)
+        console.log('thumbnail :>> ', message?.document?.thumbnail)
+        console.log('thumb :>> ', message?.document?.thumb)
+        // const { message_id, from, chat, date, text, entities, document } = message
+
+        // document: {                                                                                                       x
+        //   file_name: 'qr-code.png',                                                                                       x
+        //   mime_type: 'image/png',                                                                                         x
+        //   thumbnail: [Object],                                                                                            x
+        //   thumb: [Object],                                                                                                x
+        //   file_id: 'BQACAgIAAxkBAAIHRWR0Q26SyCJCptk3N7p3tW3FW3ydAAJyLAAC706gSzq2IdgFC_ExLwQ',                             x
+        //   file_unique_id: 'AgADciwAAu9OoEs',                                                                              x
+        //   file_size: 88244                                                                                                x
+        // }
         // const {id, from, message, chat_instanse, data}
         const result = await messageHandler(body, res)
-        console.log('messageHandler result :>> ', result)
+        // console.log('messageHandler result :>> ', result)
         // await sendMessage({
         //   chat_id: '261102161',
         //   // text: JSON.stringify({ body, headers: req.headers.origin }),
