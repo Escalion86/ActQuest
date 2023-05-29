@@ -9,7 +9,8 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   // Получаем список игр
   const games = await Games.find({})
-  if (!games || games.length === 0) {
+  const filteredGames = games ? games.filter((game) => !game.hidden) : undefined
+  if (!filteredGames || filteredGames.length === 0) {
     return {
       message: 'Предстоящих игр не запланировано',
       nextCommand: `mainMenu`,
@@ -43,11 +44,11 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
 
   return {
     message:
-      !games || games.length === 0
+      !filteredGames || filteredGames.length === 0
         ? 'Предстоящих игр не запланировано'
         : 'Предстоящие игры',
     buttons: [
-      ...games.map((game) => {
+      ...filteredGames.map((game) => {
         // TODO поправить вывод зарегистрированных команд пользователя на угру
         const gameTeam = gamesTeams.find((gameTeam) => {
           return gameTeam.gameId === String(game._id)
