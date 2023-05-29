@@ -58,9 +58,6 @@ const gamesSchema = {
     ],
     default: [],
   },
-  // {
-  //     type: [Levels],
-  //   }
   status: {
     type: String,
     default: 'active',
