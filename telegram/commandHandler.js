@@ -146,11 +146,11 @@ const commandHandler = async (
         )
         console.log(
           'photo[photo.length - 1] :>> ',
-          typeof photo === 'object' ? photo[0][photo.length - 1] : ''
+          typeof photo === 'object' ? photo[photo.length - 1] : ''
         )
         console.log(
           'photo.file_id :>> ',
-          typeof photo === 'object' ? photo[0][photo.length - 1].file_id : ''
+          typeof photo === 'object' ? photo[photo.length - 1].file_id : ''
         )
         console.log('jsonCommand :>> ', jsonCommand)
         if (!jsonCommand)
@@ -158,7 +158,7 @@ const commandHandler = async (
             ...Object.fromEntries(last.command),
             message:
               typeof photo === 'object'
-                ? photo[0][photo.length - 1]?.file_id
+                ? photo[photo.length - 1]?.file_id
                 : message,
           }
         else
