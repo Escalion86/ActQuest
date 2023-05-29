@@ -139,7 +139,12 @@ const commandHandler = async (
         }
         // Если отправлено сообщение
         // if (document?.thumb?.file_id)
-        console.log('commandHandler photo :>> ', photo)
+        // console.log('commandHandler photo :>> ', photo)
+        console.log(
+          'photo.file_id :>> ',
+          photo ? photo[photo.length - 1]?.file_id : ''
+        )
+        console.log('object :>> ', object)
         if (!jsonCommand)
           jsonCommand = {
             ...Object.fromEntries(last.command),
