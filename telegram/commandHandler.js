@@ -91,7 +91,8 @@ const commandHandler = async (
   userTelegramId,
   message,
   messageId,
-  callback_query
+  callback_query,
+  document
 ) => {
   try {
     if (message === '/main_menu' || message === '/start') {
@@ -123,10 +124,12 @@ const commandHandler = async (
             text: 'Ответ получен, но команда на которую дан ответ не найден',
           })
         }
+        // Если отправлено сообщение
+        // if (document?.thumb?.file_id)
         if (!jsonCommand)
           jsonCommand = {
             ...Object.fromEntries(last.command),
-            message,
+            message: document?.thumb?.file_id ?? message,
           }
         else
           jsonCommand = {
