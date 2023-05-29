@@ -85,6 +85,7 @@ const game = async ({ telegramId, jsonCommand }) => {
         } ${teamsOfUserInAGame.map((team) => `"${team.name}"`).join(', ')}`
       : ''
   }`
+  console.log('game.image :>> ', game.image)
 
   return {
     message,
