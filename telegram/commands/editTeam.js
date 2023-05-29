@@ -78,6 +78,10 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
       text: '\u{1F465} Состав команды',
     },
     {
+      cmd: { cmd: 'unjoinTeam', teamId: jsonCommand.teamId },
+      text: '\u{1F465} Покинуть команду',
+    },
+    {
       cmd: { cmd: 'linkToJoinTeam', teamId: jsonCommand.teamId },
       hide: !isCapitan,
       text: '\u{1F517} Пригласить в команду',
