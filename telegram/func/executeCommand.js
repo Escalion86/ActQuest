@@ -1,4 +1,8 @@
+import LastCommands from '@models/LastCommands'
+import dbConnect from '@utils/dbConnect'
 import commandsArray from 'telegram/commands/commandsArray'
+import sendMessage from 'telegram/sendMessage'
+import keyboardFormer from './keyboardFormer'
 
 const lastCommandHandler = async (telegramId, jsonCommand) => {
   if (commandsArray[jsonCommand.cmd])
