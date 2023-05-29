@@ -62,6 +62,10 @@ const gamesSchema = {
     type: String,
     default: 'active',
   },
+  hidden: {
+    type: Boolean,
+    default: true,
+  },
 }
 
 export default gamesSchema

@@ -3,7 +3,7 @@ import { postData } from '@helpers/CRUD'
 const sendMessage = async ({
   chat_id,
   text,
-  keyboard = {},
+  keyboard,
   parse_mode = 'html',
   props = {},
   callback_query,
@@ -62,6 +62,7 @@ const sendMessage = async ({
     // }
   }
   if (text) {
+    console.log('remove_keyboard :>> ', remove_keyboard)
     if (callback_query?.message?.message_id) {
       return await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageText`,
@@ -72,7 +73,10 @@ const sendMessage = async ({
           parse_mode,
           reply_markup:
             keyboard || remove_keyboard
-              ? JSON.stringify({ ...keyboard, remove_keyboard })
+              ? JSON.stringify({
+                  ...(keyboard ?? {}),
+                  ...(remove_keyboard ? { remove_keyboard: true } : {}),
+                })
               : undefined,
           ...props,
         },
@@ -95,7 +99,10 @@ const sendMessage = async ({
         parse_mode,
         reply_markup:
           keyboard || remove_keyboard
-            ? JSON.stringify({ ...keyboard, remove_keyboard })
+            ? JSON.stringify({
+                ...(keyboard ?? {}),
+                ...(remove_keyboard ? { remove_keyboard: true } : {}),
+              })
             : undefined,
         ...props,
       },
