@@ -40,14 +40,18 @@ const array = [
     answerConverter: (answer) => {
       const dateArray = answer.split('.')
       const day = dateArray[0]
-      const month = Number(dateArray[1]) - 1
+      // const month = Number(dateArray[1]) - 1
+      const month = dateArray[1]
       const dateArray2 = dateArray[2].split(' ')
       const year = dateArray2[0]
       const dateArray3 = dateArray2[1].split(':')
       const hours = dateArray3[0]
       const minutes = dateArray3[1]
       console.log('date params :>> ', { year, month, day, hours, minutes })
-      const date = moment.tz(answer, 'Asia/Krasnoyarsk')
+      const date = moment.tz(
+        `${year}-${month}-${day} ${hours}:${minutes}`,
+        'Asia/Krasnoyarsk'
+      )
       // new Date('2024',11,'10','14','00').toLocaleString("ru-RU", {timeZone: 'Asia/Krasnoyarsk'}
       // return new Date(year, month, day, hours, minutes)
       console.log('date :>> ', date)
