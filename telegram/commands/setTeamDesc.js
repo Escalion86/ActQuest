@@ -1,5 +1,6 @@
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
+import check from 'telegram/func/check'
 
 const setTeamDesc = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА

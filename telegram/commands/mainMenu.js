@@ -1,3 +1,5 @@
+import { ADMIN_TELEGRAM_ID } from 'telegram/constants'
+
 const mainMenu = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
@@ -9,7 +11,7 @@ const mainMenu = async ({ telegramId, jsonCommand }) => {
       {
         cmd: 'menuGamesEdit',
         text: '\u{1F6E0} Конструктор игр',
-        hide: telegramId !== 261102161,
+        hide: telegramId !== ADMIN_TELEGRAM_ID,
       },
     ],
   }

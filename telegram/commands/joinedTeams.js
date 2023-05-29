@@ -1,6 +1,7 @@
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
+import { MAX_TEAMS } from 'telegram/constants'
 
 const joinedTeams = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
@@ -22,7 +23,7 @@ const joinedTeams = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: 'Команды в которых я состою',
+    message: 'Мои команды',
     buttons: [
       ...teams.map((team) => {
         const teamUser = teamsUser.find((teamUser) => {
@@ -37,7 +38,10 @@ const joinedTeams = async ({ telegramId, jsonCommand }) => {
           //`editTeam/teamId=${team._id}`,
         }
       }),
-      { cmd: 'menuTeams', text: '\u{2B05} Назад' },
+      {
+        cmd: teamsUser.length < MAX_TEAMS ? 'menuTeams' : 'mainMenu',
+        text: '\u{2B05} Назад',
+      },
     ],
   }
 }

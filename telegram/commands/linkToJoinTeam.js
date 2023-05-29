@@ -9,8 +9,13 @@ const linkToJoinTeam = async ({ telegramId, jsonCommand }) => {
   if (team.success === false) return team
 
   return {
-    message: `Код для присоединения к команде: <code>${jsonCommand?.teamId}</code>.\nКликните по коду, чтобы скопировать его, затем отправьте пользователю, которого хотите пригласить. Этот код необходимо ввести в поле "Присоединиться к команде"`,
-    buttons: [{ cmd: 'menuTeams', text: '\u{2B05} Назад' }],
+    message: `Код для присоединения к команде: <code>${jsonCommand?.teamId}</code>.\nКликните по коду, чтобы скопировать его, затем отправьте пользователю, которого хотите пригласить. Этот код необходимо ввести в поле "Команды" => "Присоединиться к команде"`,
+    buttons: [
+      {
+        cmd: { cmd: 'editTeam', teamId: jsonCommand.teamId },
+        text: '\u{2B05} Назад',
+      },
+    ],
   }
 }
 
