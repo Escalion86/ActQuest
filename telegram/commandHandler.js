@@ -35,7 +35,7 @@ const executeCommand = async (
   // const data = messageToCommandAndProps(command)
 
   const result = await lastCommandHandler(userTelegramId, jsonCommand)
-  console.log('result :>> ', result)
+  // console.log('result :>> ', result)
 
   const keyboard = keyboardFormer(commandsArray, result.buttons)
   if (result.images) {
@@ -138,21 +138,6 @@ const commandHandler = async (
           })
         }
         // Если отправлено сообщение
-        // if (document?.thumb?.file_id)
-        console.log('commandHandler photo :>> ', photo)
-        console.log(
-          'photo.length :>> ',
-          typeof photo === 'object' ? photo.length : ''
-        )
-        console.log(
-          'photo[photo.length - 1] :>> ',
-          typeof photo === 'object' ? photo[photo.length - 1] : ''
-        )
-        console.log(
-          'photo.file_id :>> ',
-          typeof photo === 'object' ? photo[photo.length - 1].file_id : ''
-        )
-        console.log('jsonCommand :>> ', jsonCommand)
         if (!jsonCommand)
           jsonCommand = {
             ...Object.fromEntries(last.command),
@@ -171,7 +156,6 @@ const commandHandler = async (
     }
 
     // Если это был JSON
-    console.log('messageId :>> ', messageId)
     if (jsonCommand) {
       await executeCommand(
         userTelegramId,

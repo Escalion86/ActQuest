@@ -155,7 +155,7 @@ export default async function handler(req, res) {
       // console.log(body)
       if (body?.callback_query) {
         // Принимаем команду
-        console.log('callback_body :>> ', body)
+        // console.log('callback_body :>> ', body)
         const result = await callbackHandler(body, res)
         // console.log('callbackHandler result :>> ', result)
         // await sendMessage({
@@ -166,7 +166,7 @@ export default async function handler(req, res) {
         // })
       } else if (body?.message) {
         // Пользователь написал текст
-        console.log('message_body :>> ', body)
+        // console.log('message_body :>> ', body)
         // console.log('thumbnail :>> ', body?.message?.document?.thumbnail)
         // console.log('entities :>> ', body?.message?.entities)
         // console.log('photo :>> ', body?.message?.photo)

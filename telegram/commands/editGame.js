@@ -10,6 +10,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
   if (game.success === false) return game
 
   return {
+    images: game.image ? [game.image] : undefined,
     message: `Редактирование игры "${game?.name}".\nОписание: ${
       game?.description ? `"${game?.description}"` : '[без описания]'
     }\nКоличество заданий: ${
