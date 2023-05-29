@@ -61,11 +61,11 @@ const sendMessage = async ({
     // }
   }
   if (text) {
-    if (callback_query) {
+    if (callback_query?.message?.message_id) {
       return await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageText`,
         {
-          message_id: callback_query.message.message_id,
+          message_id: callback_query?.message?.message_id,
           chat_id,
           text,
           parse_mode,
