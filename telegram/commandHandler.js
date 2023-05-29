@@ -144,7 +144,7 @@ const commandHandler = async (
           'photo.file_id :>> ',
           photo ? photo[photo.length - 1]?.file_id : ''
         )
-        console.log('object :>> ', object)
+        console.log('jsonCommand :>> ', jsonCommand)
         if (!jsonCommand)
           jsonCommand = {
             ...Object.fromEntries(last.command),
