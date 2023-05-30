@@ -26,11 +26,12 @@ const setTaskT = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = [...game.tasks]
-  const task = tasks[jsonCommand.i]
-  console.log('task :>> ', task)
-  const newTask = { ...task, title: jsonCommand.message }
-  console.log('newTask :>> ', newTask)
-  tasks[jsonCommand.i] = newTask
+  // const task = tasks[jsonCommand.i]
+  tasks[jsonCommand.i].title = jsonCommand.message
+  // console.log('task :>> ', task)
+  // const newTask = { ...task, title: jsonCommand.message }
+  // console.log('newTask :>> ', newTask)
+  // tasks[jsonCommand.i] = newTask
 
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
     tasks,
