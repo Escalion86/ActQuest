@@ -41,6 +41,13 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       },
       {
         cmd: {
+          cmd: 'setGameImage',
+          gameId: jsonCommand.gameId,
+        },
+        text: '\u{270F} Изменить картинку',
+      },
+      {
+        cmd: {
           cmd: 'gameTasksEdit',
           gameId: jsonCommand.gameId,
         },
