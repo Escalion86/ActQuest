@@ -1,4 +1,3 @@
-import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
@@ -9,24 +8,10 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
-  // const tasks = [
-  //   {
-  //     title: '',
-  //     task: '',
-  //     clues: [
-  //       {
-  //         clue: '',
-  //         images: [],
-  //       },
-  //     ],
-  //     images: [],
-  //   },
-  // ]
-
   const buttons = game.tasks
     ? game.tasks.map((task, index) => {
         return {
-          cmd: { cmd: 'editTask', gameId: jsonCommand.gameId, num: index },
+          cmd: { cmd: 'editTask', gameId: jsonCommand.gameId, i: index },
           //`setTeamName/teamId=${jsonCommand.teamId}`,
           text: `\u{270F} "${task.title}"`,
         }
