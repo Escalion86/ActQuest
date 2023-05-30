@@ -56,15 +56,16 @@ const createTeam = async ({ telegramId, jsonCommand }) => {
     const data = array[i]
     if (jsonCommand[data.prop] === undefined) {
       const value = jsonCommand.message
-      if (i < array.length - 1)
+      if (i < array.length - 1) {
         return {
           success: true,
           message: array[i].answerMessage(value),
           // buttons: data.buttons(jsonCommand),
           nextCommand: { [data.prop]: value },
         }
-    } else {
-      jsonCommand[data.prop] = value
+      } else {
+        jsonCommand[data.prop] = value
+      }
     }
   }
 
