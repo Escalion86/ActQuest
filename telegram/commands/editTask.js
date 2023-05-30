@@ -9,7 +9,6 @@ const editTask = async ({ telegramId, jsonCommand }) => {
 
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
-  console.log('game.tasks :>> ', game.tasks)
   if (!game.tasks)
     return {
       text: 'У игры нет заданий',
@@ -17,7 +16,6 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     }
 
   const task = game.tasks[jsonCommand.i]
-  console.log('task :>> ', task)
   if (!task)
     return {
       text: 'Задание не найдено',

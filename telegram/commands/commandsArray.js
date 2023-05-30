@@ -33,6 +33,7 @@ import setGameDate from './setGameDate'
 import createTask from './createTask'
 import editTask from './editTask'
 import setGameImage from './setGameImage'
+import setTaskT from './setTaskT'
 
 const commandsArray = {
   setUserName,
@@ -70,6 +71,7 @@ const commandsArray = {
   createTask,
   editTask,
   setGameImage,
+  setTaskT,
 }
 
 export default commandsArray
