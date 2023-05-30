@@ -58,16 +58,9 @@ const setGameDate = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Дата игры обновлена на "${formatDateTime(
-      dateStart,
-      true,
-      false,
-      true,
-      false,
-      false,
-      true,
-      true
-    )}"`,
+    message: `Дата игры обновлена на "${moment(dateStart)
+      .tz('Asia/Krasnoyarsk')
+      .format('d M yyyy, h:mm')}"`,
     nextCommand: { cmd: 'editGame', gameId: jsonCommand.gameId },
   }
 }

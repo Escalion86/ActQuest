@@ -1,5 +1,6 @@
 import formatDateTime from '@helpers/formatDateTime'
 import GamesTeams from '@models/GamesTeams'
+import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeamsRegistredInAGame from 'telegram/func/getGameTeamsRegistredInAGame'
@@ -67,16 +68,9 @@ const game = async ({ telegramId, jsonCommand }) => {
 
   const message = `Игра "${game?.name}".${
     game?.description ? `\nОписание: "${game?.description}"` : ''
-  }\nДата и время: ${formatDateTime(
-    game.dateStart,
-    true,
-    false,
-    true,
-    false,
-    false,
-    true,
-    true
-  )}${
+  }\nДата и время: ${moment(game.dateStart)
+    .tz('Asia/Krasnoyarsk')
+    .format('d M yyyy, h:mm')}${
     teamsOfUserInAGame && teamsOfUserInAGame.length > 0
       ? `\n\n${
           teamsOfUserInAGame.length === 1
