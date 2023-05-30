@@ -28,9 +28,7 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
   ]
 
   return {
-    message: `Игра "${game.name}".\тКоманда "${team?.name}".${
-      team?.description ? `\nОписание: "${team?.description}"` : ''
-    }`,
+    message: `<b>Игра "${game.name}"\nКоманда "${team?.name}"</b>`,
     buttons,
   }
 }

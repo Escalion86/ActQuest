@@ -3,7 +3,7 @@ import { ADMIN_TELEGRAM_ID } from 'telegram/constants'
 const mainMenu = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
-    message: 'Главное меню',
+    message: '<b>Главное меню</b>',
     buttons: [
       { cmd: 'menuGames', text: '\u{1F3AE} Игры' },
       { cmd: 'menuTeams', text: '\u{1F465} Команды' },

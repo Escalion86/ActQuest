@@ -13,7 +13,7 @@ const menuTeams = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: 'Меню работы с командами',
+    message: '<b>Меню работы с командами</b>',
     buttonText: 'Команды',
     buttons: [
       {

@@ -11,7 +11,7 @@ const menuUser = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: user ? `Моя анкета:\n - Имя: ${user.name}` : 'Моя анкета',
+    message: `<b>Моя анкета</b>${user ? `:\n - <b>Имя</b>: ${user.name}` : ''}`,
     buttonText: 'Команды',
     buttons: [
       { text: '\u{270F} Изменить имя', cmd: `setUserName` },

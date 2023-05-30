@@ -23,7 +23,7 @@ const joinedTeams = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: 'Мои команды',
+    message: '<b>Мои команды</b>',
     buttons: [
       ...teams.map((team) => {
         const teamUser = teamsUser.find((teamUser) => {

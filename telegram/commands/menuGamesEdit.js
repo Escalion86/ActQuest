@@ -8,7 +8,7 @@ const menuGamesEdit = async ({ telegramId, jsonCommand }) => {
   const games = await Games.find({})
 
   return {
-    message: 'Конструктор игр',
+    message: '<b>Конструктор игр</b>',
     buttons: [
       ...games.map((game) => ({
         text: `\u{270F} "${game.name}"`,

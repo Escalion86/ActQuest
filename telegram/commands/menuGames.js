@@ -45,8 +45,8 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   return {
     message:
       !filteredGames || filteredGames.length === 0
-        ? 'Предстоящих игр не запланировано'
-        : 'Предстоящие игры',
+        ? '<b>Предстоящих игр не запланировано</b>'
+        : '<b>Предстоящие игры</b>',
     buttons: [
       ...filteredGames.map((game) => {
         // TODO поправить вывод зарегистрированных команд пользователя на угру

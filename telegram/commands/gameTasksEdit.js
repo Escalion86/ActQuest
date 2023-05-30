@@ -1,3 +1,4 @@
+import getNoun from '@helpers/getNoun'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
@@ -19,9 +20,13 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
     : []
 
   return {
-    message: `Редактирование заданий игры "${
+    message: `<b>Редактирование заданий игры "${
       game?.name
-    }"\nКоличество заданий: ${game?.tasks?.length ?? '0'}`,
+    }"</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
+      game?.tasks?.length
+        ? game?.tasks.map((task) => `"${task.title}"`).join('\n')
+        : '[нет заданий]'
+    }`,
     buttons: [
       ...buttons,
       {
