@@ -10,35 +10,19 @@ const array = [
     answerMessage: (answer) => `Задано название команды "${answer}"`,
     buttons: (jsonCommand) => [{ cmd: 'menuTeams', text: '\u{2B05} Назад' }],
   },
-  {
-    prop: 'description',
-    message: 'Введите описание команды (не обязательно)',
-    answerMessage: (answer) => `Задано описание команды "${answer}"`,
-    buttons: (jsonCommand) => [
-      {
-        cmd: { description: '' },
-        text: 'Без описания',
-      },
-      { cmd: 'menuTeams', text: '\u{2B05} Назад' },
-    ],
-  },
+  // {
+  //   prop: 'description',
+  //   message: 'Введите описание команды (не обязательно)',
+  //   answerMessage: (answer) => `Задано описание команды "${answer}"`,
+  //   buttons: (jsonCommand) => [
+  //     {
+  //       cmd: { description: '' },
+  //       text: 'Без описания',
+  //     },
+  //     { cmd: 'menuTeams', text: '\u{2B05} Назад' },
+  //   ],
+  // },
 ]
-
-// const commandSample = {
-//   propsNeeded: [
-//     {
-//       prop: 'teamName',
-//       message: 'Введите название команды',
-//       answerMessage: (answer) => `Задано название команды "${answer}"`,
-//     },
-//     {
-//       prop: 'teamDescription',
-//       message: 'Введите описание команды',
-//       answerMessage: (answer) => `Задано описание команды "${answer}"`,
-//     },
-//   ],
-//   messageOnSuccess: (data) => `Команда "${data.name}" создана`
-// }
 
 const createTeam = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
