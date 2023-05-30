@@ -30,6 +30,8 @@ import hideGame from './hideGame'
 import unhideGame from './unhideGame'
 import unjoinTeam from './unjoinTeam'
 import setGameDate from './setGameDate'
+import createTask from './createTask'
+import editTask from './editTask'
 
 const commandsArray = {
   setUserName,
@@ -64,6 +66,8 @@ const commandsArray = {
   unhideGame,
   unjoinTeam,
   setGameDate,
+  createTask,
+  editTask,
 }
 
 export default commandsArray
