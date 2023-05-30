@@ -119,6 +119,7 @@ const createTask = async ({ telegramId, jsonCommand }) => {
         return {
           success: true,
           message: array[i].answerMessage(value),
+          // buttons: data.buttons(jsonCommand),
           nextCommand: { [data.prop]: value },
         }
       } else {
