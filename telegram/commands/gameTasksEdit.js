@@ -9,19 +9,19 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
-  const tasks = [
-    {
-      title: '',
-      task: '',
-      clues: [
-        {
-          clue: '',
-          images: [],
-        },
-      ],
-      images: [],
-    },
-  ]
+  // const tasks = [
+  //   {
+  //     title: '',
+  //     task: '',
+  //     clues: [
+  //       {
+  //         clue: '',
+  //         images: [],
+  //       },
+  //     ],
+  //     images: [],
+  //   },
+  // ]
 
   const buttons = game.tasks
     ? game.tasks.map((task, index) => {

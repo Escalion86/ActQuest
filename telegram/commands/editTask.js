@@ -9,24 +9,24 @@ const editTask = async ({ telegramId, jsonCommand }) => {
 
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
-
+  console.log('game.tasks :>> ', game.tasks)
   if (!game.tasks)
     return {
       text: 'У игры нет заданий',
       cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
     }
 
-  if (game.tasks[jsonCommand.num])
+  const task = game.tasks[jsonCommand.num]
+  console.log('task :>> ', task)
+  if (!task)
     return {
       text: 'Задание не найдено',
       cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
     }
 
-  const task = game.tasks[jsonCommand.num]
-
   return {
-    images: task.images ?? undefined,
-    message: `Редактирование задания "${task?.title}".\nЗадание: "${game?.task}"\nПодсказка №1: "${game?.task.clues[0].clue}"\nПодсказка №2: "${game?.task.clues[0].clue}"`,
+    images: task.images ? task.images : undefined,
+    message: `Редактирование задания "${task?.title}".\nЗадание: "${task?.task}"\nПодсказка №1: "${task.clues[0].clue}"\nПодсказка №2: "${task.clues[0].clue}"`,
     buttons: [
       {
         cmd: {
