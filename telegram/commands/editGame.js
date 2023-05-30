@@ -42,6 +42,13 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       },
       {
         cmd: {
+          cmd: 'setGameDate',
+          gameId: jsonCommand.gameId,
+        },
+        text: '\u{270F} Изменить дату и время',
+      },
+      {
+        cmd: {
           cmd: 'gameTasksEdit',
           gameId: jsonCommand.gameId,
         },

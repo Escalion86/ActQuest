@@ -9,6 +9,20 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
+  const tasks = [
+    {
+      title: '',
+      task: '',
+      clues: [
+        {
+          clue: '',
+          images: [],
+        },
+      ],
+      images: [],
+    },
+  ]
+
   // if (!jsonCommand?.gameId) {
   //   await dbConnect()
   //   const teamsUser = await TeamsUsers.find({
@@ -96,11 +110,9 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   // ]
 
   return {
-    message: `Редактирование игры "${game?.name}".\nОписание: ${
-      game?.description ? `"${game?.description}"` : '[без описания]'
-    }\nКоличество заданий: ${game?.tasks?.length ?? '0'}\nДата и время: ${
-      game.dateStart
-    }`,
+    message: `Редактирование заданий игры "${
+      game?.name
+    }"\nКоличество заданий: ${game?.tasks?.length ?? '0'}`,
     buttons: [
       {
         cmd: { cmd: 'editGame', gameId: jsonCommand.gameId },
