@@ -24,7 +24,14 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
       game?.name
     }"</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
       game?.tasks?.length
-        ? game?.tasks.map((task) => `"${task.title}"`).join('\n')
+        ? game?.tasks
+            .map(
+              (task) =>
+                `"${task.title}". Коды (${task?.codes?.length ?? 0} шт): ${
+                  task?.codes?.length ? task.codes.join(', ') : '[не заданы]'
+                }`
+            )
+            .join('\n')
         : '[нет заданий]'
     }`,
     buttons: [

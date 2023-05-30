@@ -29,7 +29,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     }"</b>\n\n<b>Задание</b>:\n"${task?.task}"\n\n<b>Подсказка №1</b>:\n"${
       task.clues[0].clue
     }"\n\n<b>Подсказка №2</b>:\n"${task.clues[1].clue}"\n\n<b>Коды (${
-      task.codes ? task.codes.length : '0'
+      task?.codes?.length ?? 0
     } шт)</b>:\n${task.codes ? task.codes.join(', ') : '[не задыны]'}`,
     buttons: [
       {
