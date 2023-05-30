@@ -17,7 +17,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       game?.name
     }"\nДата и время: ${moment(game.dateStart)
       .tz('Asia/Krasnoyarsk')
-      .format('d.M.yyyy H:mm')}\nОписание: ${
+      .format('DD.MM.yyyy H:mm')}\nОписание: ${
       game?.description ? `"${game?.description}"` : '[без описания]'
     }\nКоличество заданий: ${game?.tasks?.length ?? '0'}`,
     buttons: [
