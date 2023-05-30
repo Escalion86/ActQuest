@@ -30,7 +30,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     buttons: [
       {
         cmd: {
-          cmd: 'setTaskTitle',
+          cmd: 'setTaskT',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
@@ -38,7 +38,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       },
       {
         cmd: {
-          cmd: 'setTaskName',
+          cmd: 'setTaskN',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
@@ -62,7 +62,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       },
       {
         cmd: {
-          cmd: 'deleteTask',
+          cmd: 'delTask',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
