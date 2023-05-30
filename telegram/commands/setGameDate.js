@@ -28,7 +28,7 @@ const setGameDate = async ({ telegramId, jsonCommand }) => {
   }
 
   const answer = jsonCommand.message
-
+  console.log('answer :>> ', answer)
   if (!checkAnswer(answer)) {
     return {
       success: true,
@@ -42,29 +42,26 @@ const setGameDate = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-
-  const dateArray = answer.split('.')
-  const day = dateArray[0]
-  const month = dateArray[1]
-  const dateArray2 = dateArray[2].split(' ')
-  const year = dateArray2[0]
-  const dateArray3 = dateArray2[1].split(':')
-  const hours = dateArray3[0]
-  const minutes = dateArray3[1]
-  const date = moment.tz(
+  console.log('answer checked!')
+  const [date, time] = answer.split(' ')
+  const [day, month, year] = date.split('.')
+  const [hours, minutes] = time.split(':')
+  const dateStart = moment.tz(
     `${year}-${month}-${day} ${hours}:${minutes}`,
     'Asia/Krasnoyarsk'
   )
+  console.log('dateStart :>> ', dateStart)
 
   await dbConnect()
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
-    dateStart: date,
+    dateStart,
   })
+  console.log('game :>> ', game)
 
   return {
     success: true,
     message: `Дата игры обновлена на "${formatDateTime(
-      game,
+      dateStart,
       true,
       false,
       true,
