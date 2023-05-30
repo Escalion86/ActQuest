@@ -1,5 +1,6 @@
 import formatDateTime from '@helpers/formatDateTime'
 import dbConnect from '@utils/dbConnect'
+import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
@@ -14,20 +15,11 @@ const editGame = async ({ telegramId, jsonCommand }) => {
     images: game.image ? [game.image] : undefined,
     message: `${game.hidden ? '(ИГРА СКРЫТА!) ' : ''}Редактирование игры "${
       game?.name
-    }".\nОписание: ${
+    }"\nДата и время: ${moment(game.dateStart)
+      .tz('Asia/Krasnoyarsk')
+      .format('d.M.yyyy H:mm')}\nОписание: ${
       game?.description ? `"${game?.description}"` : '[без описания]'
-    }\nКоличество заданий: ${
-      game?.tasks?.length ?? '0'
-    }\nДата и время: ${formatDateTime(
-      game.dateStart,
-      true,
-      false,
-      true,
-      false,
-      false,
-      true,
-      true
-    )}`,
+    }\nКоличество заданий: ${game?.tasks?.length ?? '0'}`,
     buttons: [
       {
         cmd: { cmd: 'setGameName', gameId: jsonCommand.gameId },

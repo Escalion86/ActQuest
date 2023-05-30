@@ -70,7 +70,7 @@ const game = async ({ telegramId, jsonCommand }) => {
     game?.description ? `\nОписание: "${game?.description}"` : ''
   }\nДата и время: ${moment(game.dateStart)
     .tz('Asia/Krasnoyarsk')
-    .format('d M yyyy, h:mm')}${
+    .format('d.M.yyyy H:mm')}${
     teamsOfUserInAGame && teamsOfUserInAGame.length > 0
       ? `\n\n${
           teamsOfUserInAGame.length === 1
