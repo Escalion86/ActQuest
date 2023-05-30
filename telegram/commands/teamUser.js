@@ -37,7 +37,7 @@ const teamUser = async ({ telegramId, jsonCommand }) => {
         cmd: 'delTeamUser',
         teamUserId: jsonCommand.teamUserId,
       },
-      hide: !isCapitan,
+      hide: isCapitan,
       text: '\u{1F4A3} Удалить из команды',
     },
     {
