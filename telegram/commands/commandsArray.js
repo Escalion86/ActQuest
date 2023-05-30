@@ -38,6 +38,7 @@ import setTaskN from './setTaskN'
 import delTask from './delTask'
 import setClue1 from './setClue1'
 import setClue2 from './setClue2'
+import setCodes from './setCodes'
 
 const commandsArray = {
   setUserName,
@@ -80,6 +81,7 @@ const commandsArray = {
   delTask,
   setClue1,
   setClue2,
+  setCodes,
 }
 
 export default commandsArray

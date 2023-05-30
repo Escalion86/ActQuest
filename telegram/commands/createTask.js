@@ -1,3 +1,4 @@
+import getNoun from '@helpers/getNoun'
 import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
 
@@ -50,21 +51,21 @@ const array = [
       },
     ],
   },
-  {
-    prop: 'clueImage1',
-    message: 'Отправьте картинку первой подсказки (не обязательно)',
-    answerMessage: (answer) => `Картинка первой подсказки загружена`,
-    buttons: (jsonCommand) => [
-      {
-        cmd: { clueImage1: '' },
-        text: 'Без картинки',
-      },
-      {
-        cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
-        text: '\u{1F6AB} Отмена создания задания',
-      },
-    ],
-  },
+  // {
+  //   prop: 'clueImage1',
+  //   message: 'Отправьте картинку первой подсказки (не обязательно)',
+  //   answerMessage: (answer) => `Картинка первой подсказки загружена`,
+  //   buttons: (jsonCommand) => [
+  //     {
+  //       cmd: { clueImage1: '' },
+  //       text: 'Без картинки',
+  //     },
+  //     {
+  //       cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+  //       text: '\u{1F6AB} Отмена создания задания',
+  //     },
+  //   ],
+  // },
   {
     prop: 'clue2',
     message: 'Введите вторую подсказку',
@@ -77,20 +78,37 @@ const array = [
     ],
   },
   {
-    prop: 'clueImage2',
-    message: 'Отправьте картинку второй подсказки (не обязательно)',
-    answerMessage: (answer) => `Картинка второй подсказки загружена`,
+    prop: 'codes',
+    message: 'Введите коды через запятую',
+    answerMessage: (answer) =>
+      `Введено ${getNoun(answer.split(',').length, 'код', 'кода', 'кодов')}`,
     buttons: (jsonCommand) => [
       {
-        cmd: { clueImage2: '' },
-        text: 'Без картинки',
+        cmd: { codes: '' },
+        text: 'Без кодов',
       },
       {
         cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
         text: '\u{1F6AB} Отмена создания задания',
       },
     ],
+    answerConverter: (answer) => (answer !== '' ? answer.split(',') : []),
   },
+  // {
+  //   prop: 'clueImage2',
+  //   message: 'Отправьте картинку второй подсказки (не обязательно)',
+  //   answerMessage: (answer) => `Картинка второй подсказки загружена`,
+  //   buttons: (jsonCommand) => [
+  //     {
+  //       cmd: { clueImage2: '' },
+  //       text: 'Без картинки',
+  //     },
+  //     {
+  //       cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+  //       text: '\u{1F6AB} Отмена создания задания',
+  //     },
+  //   ],
+  // },
 ]
 
 const createTask = async ({ telegramId, jsonCommand }) => {
@@ -113,7 +131,10 @@ const createTask = async ({ telegramId, jsonCommand }) => {
   for (let i = 0; i < array.length; i++) {
     const data = array[i]
     if (jsonCommand[data.prop] === undefined) {
-      const value = jsonCommand.message
+      const value =
+        typeof array[i].answerConverter === 'function'
+          ? array[i].answerConverter(jsonCommand.message)
+          : jsonCommand.message
 
       if (i < array.length - 1) {
         return {
@@ -142,6 +163,7 @@ const createTask = async ({ telegramId, jsonCommand }) => {
         images: jsonCommand.clueImage2 ? [jsonCommand.clueImage2] : [],
       },
     ],
+    codes: jsonCommand.codes,
   }
 
   // Если все переменные на месте, то создаем команду

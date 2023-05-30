@@ -54,6 +54,14 @@ const gamesSchema = {
           type: [String],
           default: [],
         },
+        codes: {
+          type: [String],
+          default: [],
+        },
+        numCodesToCompliteTask: {
+          type: Number,
+          default: null,
+        },
       },
     ],
     default: [],
