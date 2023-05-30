@@ -6,11 +6,6 @@ import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
 
 const lastCommandHandler = async (telegramId, jsonCommand) => {
-  console.log('jsonCommand :>> ', jsonCommand)
-  console.log(
-    'commandsArray[jsonCommand.cmd] :>> ',
-    !!commandsArray[jsonCommand.cmd]
-  )
   if (commandsArray[jsonCommand.cmd])
     return await commandsArray[jsonCommand.cmd]({ telegramId, jsonCommand })
   return {
