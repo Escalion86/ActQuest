@@ -2,7 +2,7 @@ import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
-const setTaskT = async ({ telegramId, jsonCommand }) => {
+const setTaskN = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
@@ -10,7 +10,7 @@ const setTaskT = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message) {
     return {
       success: true,
-      message: 'Введите новый заголовок задания',
+      message: 'Введите новый текст задания',
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
@@ -27,7 +27,7 @@ const setTaskT = async ({ telegramId, jsonCommand }) => {
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = [...game.tasks]
   // const task = tasks[jsonCommand.i]
-  tasks[jsonCommand.i].title = jsonCommand.message
+  tasks[jsonCommand.i].task = jsonCommand.message
   // console.log('task :>> ', task)
   // const newTask = { ...task, title: jsonCommand.message }
   // console.log('newTask :>> ', newTask)
@@ -39,7 +39,7 @@ const setTaskT = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Заголовок задания обновлен на "${jsonCommand.message}"`,
+    message: `Задание обновлено`,
     nextCommand: {
       cmd: 'editTask',
       gameId: jsonCommand.gameId,
@@ -48,4 +48,4 @@ const setTaskT = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default setTaskT
+export default setTaskN
