@@ -25,7 +25,8 @@ export const getData = async (
     })
     // Throw error with status code in case Fetch API req failed
     if (!res.ok) {
-      throw new Error(await res.json())
+      const text = await res.text()
+      throw new Error(text)
     }
 
     const json = await res.json()
@@ -65,7 +66,8 @@ export const putData = async (
 
     // Throw error with status code in case Fetch API req failed
     if (!res.ok) {
-      throw new Error(await res.json())
+      const text = await res.text()
+      throw new Error(text)
     }
 
     const json = await res.json()

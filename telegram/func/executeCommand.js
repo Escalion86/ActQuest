@@ -27,20 +27,19 @@ const executeCommand = async (
   // console.log('result :>> ', result)
 
   const keyboard = keyboardFormer(commandsArray, result.buttons)
-  if (result.images) {
-    const sendResult = await sendMessage({
-      chat_id: userTelegramId,
-      // text: JSON.stringify({ body, headers: req.headers.origin }),
-      // text: result.message,
-      parse_mode: result.parse_mode,
-      // keyboard,
-      // callback_query,
-      images: result.images,
-    })
-  }
+  // console.log('keyboard ', keyboard?.inline_keyboard)
 
-  console.log('result :>> ', result)
-  console.log('keyboard ', keyboard?.inline_keyboard)
+  // if (result.images) {
+  //   await sendMessage({
+  //     chat_id: userTelegramId,
+  //     // text: JSON.stringify({ body, headers: req.headers.origin }),
+  //     // text: result.message,
+  //     parse_mode: result.parse_mode,
+  //     // keyboard,
+  //     // callback_query,
+  //     images: result.images,
+  //   })
+  // }
 
   const sendResult = await sendMessage({
     chat_id: userTelegramId,
