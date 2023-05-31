@@ -18,7 +18,7 @@ const teams = async ({ telegramId, jsonCommand }) => {
         return {
           text: `"${team.name}" (${participansCount} чел)`,
           c: {
-            c: 'teamUsersAdmin',
+            c: 'editTeamAdmin',
             teamId: team._id,
             // p: 1,
           },
