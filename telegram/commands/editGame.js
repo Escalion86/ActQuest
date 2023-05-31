@@ -11,7 +11,9 @@ const editGame = async ({ telegramId, jsonCommand }) => {
 
   return {
     images: game.image ? [game.image] : undefined,
-    message: `${game.hidden ? '<b>(ИГРА СКРЫТА!)\n' : ''}Редактирование игры "${
+    message: `${
+      game.hidden ? '<b>(ИГРА СКРЫТА!)</b>\n' : ''
+    }<b>Редактирование игры "${
       game?.name
     }"</b>\n\n<b>Дата и время</b>:\n${moment(game.dateStart)
       .tz('Asia/Krasnoyarsk')
