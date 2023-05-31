@@ -20,6 +20,7 @@ const teams = async ({ telegramId, jsonCommand }) => {
           c: {
             c: 'teamUsers',
             teamId: team._id,
+            p: 1,
           },
         }
       }),

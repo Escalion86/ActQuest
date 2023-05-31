@@ -38,7 +38,7 @@ const commandHandler = async (
     } else {
       jsonCommand = jsonParser(message)
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
-      if (!jsonCommand || !jsonCommand?.c || jsonCommand?.prevCmd) {
+      if (!jsonCommand || !jsonCommand?.c || jsonCommand?.prevC) {
         // console.log('Полученная команда не полная или это не команда')
         await dbConnect()
         const last = await LastCommands.findOne({
@@ -62,8 +62,9 @@ const commandHandler = async (
                 : message,
           }
         else {
-          if (jsonCommand?.prevCmd && last?.prevCommand) {
-            delete jsonCommand.prevCmd
+          if (jsonCommand?.prevC && last?.prevCommand) {
+            // console.log('last?.prevCommand :>> ', last?.prevCommand)
+            delete jsonCommand.prevC
             jsonCommand = {
               ...Object.fromEntries(last.prevCommand),
               ...jsonCommand,
