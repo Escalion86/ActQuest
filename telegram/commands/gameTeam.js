@@ -18,7 +18,7 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
   const team = await getTeam(gameTeam.teamId)
   if (team.success === false) return team
 
-  const teamUsers = await TeamsUsers.findOne({
+  const teamUsers = await TeamsUsers.find({
     // userTelegramId: telegramId,
     teamId: String(team._id),
   })
