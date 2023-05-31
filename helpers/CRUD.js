@@ -106,7 +106,7 @@ export const postData = async (
 
     // Throw error with status code in case Fetch API req failed
     if (!res.ok) {
-      throw new Error(res.status)
+      throw new Error(res)
     }
     const json = await res.json()
     const { data } = json
