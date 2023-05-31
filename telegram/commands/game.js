@@ -66,9 +66,9 @@ const game = async ({ telegramId, jsonCommand }) => {
     })
     .filter((data) => data !== undefined)
 
-  const message = `<b>Игра "${game?.name}"</b>${
-    game?.description ? `\n\n<b>Описание</b>:\n"${game?.description}"` : ''
-  }\n<b>Дата и время</b>: ${moment(game.dateStart)
+  const message = `<b>Игра "${game?.name}"</b>\n\n<b>Дата и время</b>: ${moment(
+    game.dateStart
+  )
     .tz('Asia/Krasnoyarsk')
     .format('DD.MM.yyyy H:mm')}${
     teamsOfUserInAGame && teamsOfUserInAGame.length > 0
@@ -78,7 +78,7 @@ const game = async ({ telegramId, jsonCommand }) => {
             : '<b>Записаны ваши команды:</b>'
         } ${teamsOfUserInAGame.map((team) => `"${team.name}"`).join(', ')}`
       : ''
-  }`
+  }${game?.description ? `\n\n<b>Описание</b>:\n"${game?.description}"` : ''}`
 
   return {
     message,

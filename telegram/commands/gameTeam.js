@@ -1,3 +1,4 @@
+import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
@@ -16,20 +17,27 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
   const team = await getTeam(gameTeam.teamId)
   if (team.success === false) return team
 
-  const buttons = [
-    {
-      cmd: {
-        cmd: 'delGameTeam',
-        gameTeamId: jsonCommand.gameTeamId,
-      },
-      text: '\u{1F4A3} Удалить команду из игры',
-    },
-    { cmd: 'menuGamesEdit', text: '\u{2B05} Назад' },
-  ]
+  const teamUser = await TeamsUsers.findOne({
+    userTelegramId: telegramId,
+    teamId: String(team._id),
+  })
 
   return {
     message: `<b>Игра "${game.name}"\nКоманда "${team?.name}"</b>`,
-    buttons,
+    buttons: [
+      {
+        cmd: {
+          cmd: 'delGameTeam',
+          gameTeamId: jsonCommand.gameTeamId,
+        },
+        text: '\u{1F4A3} Удалить команду из игры',
+        hide: teamUser?.role !== 'capitan',
+      },
+      {
+        cmd: { cmd: 'gameTeams', gameId: String(game._id) },
+        text: '\u{2B05} Назад',
+      },
+    ],
   }
 }
 

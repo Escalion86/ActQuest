@@ -16,7 +16,7 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
   if (!gameTeams || gameTeams.length === 0) {
     return {
       message: 'Никто не записался на игру',
-      nextCommand: `menuGamesEdit`,
+      nextCommand: `menuGames`,
     }
   }
 
