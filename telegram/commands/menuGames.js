@@ -3,13 +3,17 @@ import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
+import moment from 'moment-timezone'
+import { ADMIN_TELEGRAM_ID } from 'telegram/constants'
 import mainMenuButton from './menuItems/mainMenuButton'
 
 const menuGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   // Получаем список игр
   const games = await Games.find({})
-  const filteredGames = games ? games.filter((game) => !game.hidden) : undefined
+  const filteredGames = games
+    ? games.filter((game) => !game.hidden || telegramId === ADMIN_TELEGRAM_ID)
+    : undefined
   if (!filteredGames || filteredGames.length === 0) {
     return {
       message: 'Предстоящих игр не запланировано',
@@ -59,7 +63,11 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
         //   : null
         // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
         return {
-          text: `"${game.name}"${isTeamRegistred ? ` (записан)` : ''}`,
+          text: `${moment(game.dateStart)
+            .tz('Asia/Krasnoyarsk')
+            .format('DD.MM')} "${game.name}"${
+            isTeamRegistred ? ` (записан)` : ''
+          }`,
           cmd: { cmd: 'game', gameId: game._id },
         }
       }),
