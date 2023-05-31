@@ -36,14 +36,14 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     )
     return {
       text: `"${team.name}"`,
-      cmd: { cmd: 'gameTeam', gameTeamId: gameTeam._id },
+      c: { c: 'gameTeam', gameTeamId: gameTeam._id },
       // `teamUser/teamUserId=${teamUser._id}`,
     }
   })
 
   return {
     message: `<b>Команды зарегистрированные на игру "${game.name}"</b>`,
-    buttons: [...buttons, { cmd: 'menuGames', text: '\u{2B05} Назад' }],
+    buttons: [...buttons, { c: 'menuGames', text: '\u{2B05} Назад' }],
   }
 }
 

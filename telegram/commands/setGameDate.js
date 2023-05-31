@@ -22,7 +22,7 @@ const setGameDate = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
-          cmd: { cmd: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGame', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -38,7 +38,7 @@ const setGameDate = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
-          cmd: { cmd: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGame', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -61,7 +61,7 @@ const setGameDate = async ({ telegramId, jsonCommand }) => {
     message: `Дата игры обновлена на "${moment(dateStart)
       .tz('Asia/Krasnoyarsk')
       .format('DD.MM.yyyy H:mm')}"`,
-    nextCommand: { cmd: 'editGame', gameId: jsonCommand.gameId },
+    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
   }
 }
 

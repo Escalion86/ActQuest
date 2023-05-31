@@ -14,14 +14,14 @@ const setCodes = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: 'Без кодов',
-          cmd: {
+          c: {
             codes: '',
           },
         },
         {
           text: '\u{1F6AB} Отмена',
-          cmd: {
-            cmd: 'editTask',
+          c: {
+            c: 'editTask',
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
@@ -48,7 +48,7 @@ const setCodes = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: `Коды обновлены`,
     nextCommand: {
-      cmd: 'editTask',
+      c: 'editTask',
       gameId: jsonCommand.gameId,
       i: jsonCommand.i,
     },

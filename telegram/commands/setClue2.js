@@ -14,8 +14,8 @@ const setClue2 = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
-          cmd: {
-            cmd: 'editTask',
+          c: {
+            c: 'editTask',
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
@@ -41,7 +41,7 @@ const setClue2 = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: `Подсказка №2 обновлена`,
     nextCommand: {
-      cmd: 'editTask',
+      c: 'editTask',
       gameId: jsonCommand.gameId,
       i: jsonCommand.i,
     },

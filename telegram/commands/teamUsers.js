@@ -18,7 +18,7 @@ const teamUsers = async ({ telegramId, jsonCommand }) => {
   if (!teamsUsers || teamsUsers.length === 0) {
     return {
       message: 'Никто не состоит в команде',
-      nextCommand: { cmd: b ?? 'editTeam', teamId: jsonCommand.teamId },
+      nextCommand: { c: b ?? 'editTeam', teamId: jsonCommand.teamId },
     }
   }
 
@@ -38,7 +38,7 @@ const teamUsers = async ({ telegramId, jsonCommand }) => {
     // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
     return {
       text: `${user.name}${teamUser?.role === 'capitan' ? ' (капитан)' : ''}`,
-      cmd: { cmd: 'teamUser', teamUserId: teamUser._id },
+      c: { c: 'teamUser', teamUserId: teamUser._id },
       // `teamUser/teamUserId=${teamUser._id}`,
     }
   })
@@ -48,7 +48,7 @@ const teamUsers = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...buttons,
       {
-        cmd: { cmd: b ?? 'editTeam', teamId: jsonCommand.teamId },
+        c: { c: b ?? 'editTeam', teamId: jsonCommand.teamId },
         text: '\u{2B05} Назад',
       },
     ],

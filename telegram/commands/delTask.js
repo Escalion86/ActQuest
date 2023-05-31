@@ -14,12 +14,12 @@ const delTask = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: '\u{1F4A3} Удалить задание',
-          cmd: { confirm: true },
+          c: { confirm: true },
         },
         {
           text: '\u{1F6AB} Я передумал',
-          cmd: {
-            cmd: 'editTask',
+          c: {
+            c: 'editTask',
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
@@ -47,7 +47,7 @@ const delTask = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: `Задание удалено`,
     nextCommand: {
-      cmd: 'gameTasksEdit',
+      c: 'gameTasksEdit',
       gameId: jsonCommand.gameId,
     },
   }

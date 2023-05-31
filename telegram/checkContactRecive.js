@@ -35,7 +35,7 @@ const checkContactRecive = async (body) => {
       remove_keyboard: true,
     })
 
-    await executeCommand(user_id, { cmd: 'mainMenu' })
+    await executeCommand(user_id, { c: 'mainMenu' })
 
     return false
   }

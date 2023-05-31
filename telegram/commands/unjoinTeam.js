@@ -18,11 +18,11 @@ const unjoinTeam = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: '\u{1F4A3} Выйти из команды',
-          cmd: { confirm: true },
+          c: { confirm: true },
         },
         {
           text: '\u{1F6AB} Я передумал',
-          cmd: { cmd: 'editTeam', teamId: jsonCommand.teamId },
+          c: { c: 'editTeam', teamId: jsonCommand.teamId },
         },
       ],
     }
@@ -35,7 +35,7 @@ const unjoinTeam = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Вы покинули команду',
-    nextCommand: { cmd: 'joinedTeams' },
+    nextCommand: { c: 'joinedTeams' },
   }
 }
 

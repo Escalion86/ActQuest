@@ -26,7 +26,7 @@ const commandHandler = async (
     if (message === '/main_menu' || message === '/start') {
       return await executeCommand(
         userTelegramId,
-        { cmd: 'mainMenu' },
+        { c: 'mainMenu' },
         messageId,
         callback_query
       )
@@ -34,11 +34,11 @@ const commandHandler = async (
 
     var jsonCommand
     if (message && message[0] === '/') {
-      jsonCommand = { cmd: message.substr(1) }
+      jsonCommand = { c: message.substr(1) }
     } else {
       jsonCommand = jsonParser(message)
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
-      if (!jsonCommand || !jsonCommand?.cmd) {
+      if (!jsonCommand || !jsonCommand?.c) {
         // console.log('Полученная команда не полная или это не команда')
         await dbConnect()
         const last = await LastCommands.findOne({

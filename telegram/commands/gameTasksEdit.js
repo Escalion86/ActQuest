@@ -12,7 +12,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   const buttons = game.tasks
     ? game.tasks.map((task, index) => {
         return {
-          cmd: { cmd: 'editTask', gameId: jsonCommand.gameId, i: index },
+          c: { c: 'editTask', gameId: jsonCommand.gameId, i: index },
           //`setTeamName/teamId=${jsonCommand.teamId}`,
           text: `\u{270F} "${task.title}"`,
         }
@@ -37,11 +37,11 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...buttons,
       {
-        cmd: { cmd: 'createTask', gameId: jsonCommand.gameId },
+        c: { c: 'createTask', gameId: jsonCommand.gameId },
         text: '\u{2795} Создать задание',
       },
       {
-        cmd: { cmd: 'editGame', gameId: jsonCommand.gameId },
+        c: { c: 'editGame', gameId: jsonCommand.gameId },
         text: '\u{2B05} Назад',
       },
     ],

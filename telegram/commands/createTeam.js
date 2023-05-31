@@ -8,7 +8,7 @@ const array = [
     prop: 'name',
     message: 'Введите название команды',
     answerMessage: (answer) => `Задано название команды "${answer}"`,
-    buttons: (jsonCommand) => [{ cmd: 'menuTeams', text: '\u{2B05} Назад' }],
+    buttons: (jsonCommand) => [{ c: 'menuTeams', text: '\u{2B05} Назад' }],
   },
   // {
   //   prop: 'description',
@@ -16,10 +16,10 @@ const array = [
   //   answerMessage: (answer) => `Задано описание команды "${answer}"`,
   //   buttons: (jsonCommand) => [
   //     {
-  //       cmd: { description: '' },
+  //       c: { description: '' },
   //       text: 'Без описания',
   //     },
-  //     { cmd: 'menuTeams', text: '\u{2B05} Назад' },
+  //     { c: 'menuTeams', text: '\u{2B05} Назад' },
   //   ],
   // },
 ]

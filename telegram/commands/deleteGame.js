@@ -15,11 +15,11 @@ const deleteGame = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: '\u{1F4A3} Удалить',
-          cmd: { confirm: true },
+          c: { confirm: true },
         },
         {
           text: '\u{1F6AB} Отмена',
-          cmd: { cmd: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGame', gameId: jsonCommand.gameId },
         },
       ],
     }

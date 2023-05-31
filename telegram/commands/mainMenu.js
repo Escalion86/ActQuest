@@ -5,16 +5,16 @@ const mainMenu = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: '<b>Главное меню</b>',
     buttons: [
-      { cmd: 'menuGames', text: '\u{1F3AE} Игры' },
-      { cmd: 'menuTeams', text: '\u{1F465} Команды' },
-      { cmd: 'menuUser', text: '\u{1F464} Моя анкета' },
+      { c: 'menuGames', text: '\u{1F3AE} Игры' },
+      { c: 'menuTeams', text: '\u{1F465} Команды' },
+      { c: 'menuUser', text: '\u{1F464} Моя анкета' },
       {
-        cmd: 'teams',
+        c: 'teams',
         text: '\u{1F6E0} Обзор всех команд',
         hide: telegramId !== ADMIN_TELEGRAM_ID,
       },
       {
-        cmd: 'menuGamesEdit',
+        c: 'menuGamesEdit',
         text: '\u{1F6E0} Конструктор игр',
         hide: telegramId !== ADMIN_TELEGRAM_ID,
       },

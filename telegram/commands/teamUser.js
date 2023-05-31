@@ -33,15 +33,15 @@ const teamUser = async ({ telegramId, jsonCommand }) => {
     //   text: '\u{2712} Написать в личку',
     // },
     {
-      cmd: {
-        cmd: 'delTeamUser',
+      c: {
+        c: 'delTeamUser',
         teamUserId: jsonCommand.teamUserId,
       },
       hide: isCapitan,
       text: '\u{1F4A3} Удалить из команды',
     },
     {
-      cmd: { cmd: 'teamUsers', teamId: teamUser.teamId },
+      c: { c: 'teamUsers', teamId: teamUser.teamId },
       text: '\u{2B05} Назад',
     },
   ]

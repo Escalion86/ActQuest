@@ -15,7 +15,7 @@ const setTeamDesc = async ({ telegramId, jsonCommand }) => {
     return {
       success: true,
       message: 'Описание команды удалено',
-      nextCommand: { cmd: 'editTeam', teamId: jsonCommand.teamId },
+      nextCommand: { c: 'editTeam', teamId: jsonCommand.teamId },
     }
   }
   if (!jsonCommand.message) {
@@ -25,12 +25,12 @@ const setTeamDesc = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: 'Без описания',
-          cmd: { noDescription: true },
+          c: { noDescription: true },
           //`+noDescription=true`,
         },
         {
           text: '\u{1F6AB} Отмена',
-          cmd: { cmd: 'editTeam', teamId: jsonCommand.teamId },
+          c: { c: 'editTeam', teamId: jsonCommand.teamId },
         },
       ],
     }
@@ -43,7 +43,7 @@ const setTeamDesc = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Описание команды обновлено на "${jsonCommand.message}"`,
-    nextCommand: { cmd: 'editTeam', teamId: jsonCommand.teamId },
+    nextCommand: { c: 'editTeam', teamId: jsonCommand.teamId },
   }
 }
 

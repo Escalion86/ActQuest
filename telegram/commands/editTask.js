@@ -10,14 +10,14 @@ const editTask = async ({ telegramId, jsonCommand }) => {
   if (!game.tasks)
     return {
       text: 'У игры нет заданий',
-      cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+      c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
     }
 
   const task = game.tasks[jsonCommand.i]
   if (!task)
     return {
       text: 'Задание не найдено',
-      cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+      c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
     }
 
   return {
@@ -31,63 +31,63 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     } шт)</b>:\n${task.codes ? task.codes.join(', ') : '[не задыны]'}`,
     buttons: [
       {
-        cmd: {
-          cmd: 'setTaskT',
+        c: {
+          c: 'setTaskT',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
         text: '\u{270F} Изменить заголовок',
       },
       {
-        cmd: {
-          cmd: 'setTaskN',
+        c: {
+          c: 'setTaskN',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
         text: '\u{270F} Изменить текст задания',
       },
       {
-        cmd: {
-          cmd: 'setTaskI',
+        c: {
+          c: 'setTaskI',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
         text: '\u{270F} Изменить картинку',
       },
       {
-        cmd: {
-          cmd: 'setClue1',
+        c: {
+          c: 'setClue1',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
         text: '\u{270F} Изменить текст подсказки №1',
       },
       {
-        cmd: {
-          cmd: 'setClue2',
+        c: {
+          c: 'setClue2',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
         text: '\u{270F} Изменить текст подсказки №2',
       },
       {
-        cmd: {
-          cmd: 'setCodes',
+        c: {
+          c: 'setCodes',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
         text: '\u{270F} Изменить коды',
       },
       {
-        cmd: {
-          cmd: 'delTask',
+        c: {
+          c: 'delTask',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
         text: '\u{1F4A3} Удалить задание',
       },
       {
-        cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
         text: '\u{2B05} Назад',
       },
     ],

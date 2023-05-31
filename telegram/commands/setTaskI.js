@@ -25,13 +25,13 @@ const setTaskI = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: 'Без картинки',
-          cmd: { noImage: true },
+          c: { noImage: true },
           //`+noDescription=true`,
         },
         {
           text: '\u{1F6AB} Отмена',
-          cmd: {
-            cmd: 'editTask',
+          c: {
+            c: 'editTask',
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
@@ -57,7 +57,7 @@ const setTaskI = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: `Задание обновлено`,
     nextCommand: {
-      cmd: 'editTask',
+      c: 'editTask',
       gameId: jsonCommand.gameId,
       i: jsonCommand.i,
     },

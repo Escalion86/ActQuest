@@ -14,7 +14,7 @@ const setGameImage = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
-          cmd: { cmd: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGame', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -27,7 +27,7 @@ const setGameImage = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Картинка игры обновлена`,
-    nextCommand: { cmd: 'editGame', gameId: jsonCommand.gameId },
+    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
   }
 }
 

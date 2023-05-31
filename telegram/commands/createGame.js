@@ -7,7 +7,7 @@ const array = [
     message: 'Введите название игры',
     answerMessage: (answer) => `Задано название игры "${answer}"`,
     buttons: (jsonCommand) => [
-      { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
+      { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
   {
@@ -15,7 +15,7 @@ const array = [
     message: 'Введите описание игры',
     answerMessage: (answer) => `Задано описание игры "${answer}"`,
     buttons: (jsonCommand) => [
-      { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
+      { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
   {
@@ -31,11 +31,11 @@ const array = [
     answerMessage: (answer) => `Заданы дата и время игры "${answer}"`,
     buttons: (jsonCommand) => [
       {
-        cmd: { dateStart: null },
+        c: { dateStart: null },
         // 'createGame' + propsToStr(props) + '/dateStart=null'
         text: 'Без даты',
       },
-      { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
+      { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
     answerConverter: (answer) => {
       const [date, time] = answer.split(' ')
@@ -52,7 +52,7 @@ const array = [
     message: 'Отправьте картинку анонса',
     answerMessage: (answer) => `Картинка анонса загружена`,
     buttons: (jsonCommand) => [
-      { cmd: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
+      { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
   },
 ]

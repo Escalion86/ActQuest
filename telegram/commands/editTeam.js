@@ -33,10 +33,10 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
       buttons: [
         ...teams.map((team) => ({
           text: `"${team.name}"`,
-          cmd: { cmd: 'editTeam', teamId: team._id },
+          c: { c: 'editTeam', teamId: team._id },
           // `editTeam/teamId=${team._id}`,
         })),
-        { cmd: b ?? 'menuTeams', text: '\u{2B05} Назад' },
+        { c: b ?? 'menuTeams', text: '\u{2B05} Назад' },
       ],
     }
   }
@@ -61,39 +61,39 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
 
   const buttons = [
     {
-      cmd: { cmd: 'setTeamName', teamId: jsonCommand.teamId },
+      c: { c: 'setTeamName', teamId: jsonCommand.teamId },
       //`setTeamName/teamId=${jsonCommand.teamId}`,
       hide: !isCapitan,
       text: '\u{270F} Изменить название',
     },
     // {
-    //   cmd: {
-    //     cmd: 'setTeamDesc',
+    //   c: {
+    //     c: 'setTeamDesc',
     //     teamId: jsonCommand.teamId,
     //   },
     //   hide: !isCapitan,
     //   text: '\u{270F} Изменить описание',
     // },
     {
-      cmd: { cmd: 'teamUsers', teamId: jsonCommand.teamId },
+      c: { c: 'teamUsers', teamId: jsonCommand.teamId },
       text: '\u{1F465} Состав команды',
     },
     {
-      cmd: { cmd: 'unjoinTeam', teamId: jsonCommand.teamId },
+      c: { c: 'unjoinTeam', teamId: jsonCommand.teamId },
       text: '\u{1F4A3} Покинуть команду',
       hide: isCapitan,
     },
     {
-      cmd: { cmd: 'linkToJoinTeam', teamId: jsonCommand.teamId },
+      c: { c: 'linkToJoinTeam', teamId: jsonCommand.teamId },
       hide: !isCapitan,
       text: '\u{1F517} Пригласить в команду',
     },
     {
-      cmd: { cmd: 'deleteTeam', teamId: jsonCommand.teamId },
+      c: { c: 'deleteTeam', teamId: jsonCommand.teamId },
       hide: !isCapitan,
       text: '\u{1F4A3} Удалить команду',
     },
-    { cmd: b ?? 'joinedTeams', text: '\u{2B05} Назад' },
+    { c: b ?? 'joinedTeams', text: '\u{2B05} Назад' },
   ]
 
   return {

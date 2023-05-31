@@ -17,15 +17,15 @@ const teams = async ({ telegramId, jsonCommand }) => {
         )
         return {
           text: `"${team.name}" (${participansCount} чел)`,
-          cmd: {
-            cmd: 'teamUsers',
+          c: {
+            c: 'teamUsers',
             teamId: team._id,
             b: 'teams',
           },
         }
       }),
       {
-        cmd: 'mainMenu',
+        c: 'mainMenu',
         text: '\u{2B05} Назад',
       },
     ],

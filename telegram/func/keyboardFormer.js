@@ -8,12 +8,12 @@ const keyboardFormer = (commands, buttons) => {
         .filter((button) => !button.hide)
         .map((button) => {
           // if (typeof button === 'object')
-          const { text, cmd, url } = button
-          if (typeof cmd === 'string')
+          const { text, c, url } = button
+          if (typeof c === 'string')
             return [
               {
                 text,
-                callback_data: cmd ? JSON.stringify({ cmd }) : undefined,
+                callback_data: c ? JSON.stringify({ c }) : undefined,
                 url,
               },
             ]
@@ -21,7 +21,7 @@ const keyboardFormer = (commands, buttons) => {
           return [
             {
               text,
-              callback_data: cmd ? JSON.stringify(cmd) : undefined,
+              callback_data: c ? JSON.stringify(c) : undefined,
               url,
             },
           ]

@@ -22,58 +22,58 @@ const editGame = async ({ telegramId, jsonCommand }) => {
     }\n\n<b>Количество заданий</b>: ${game?.tasks?.length ?? 0}`,
     buttons: [
       {
-        cmd: { cmd: 'setGameName', gameId: jsonCommand.gameId },
+        c: { c: 'setGameName', gameId: jsonCommand.gameId },
         text: '\u{270F} Изменить название',
       },
       {
-        cmd: {
-          cmd: 'setGameDesc',
+        c: {
+          c: 'setGameDesc',
           gameId: jsonCommand.gameId,
         },
         text: '\u{270F} Изменить описание',
       },
       {
-        cmd: {
-          cmd: 'setGameDate',
+        c: {
+          c: 'setGameDate',
           gameId: jsonCommand.gameId,
         },
         text: '\u{270F} Изменить дату и время',
       },
       {
-        cmd: {
-          cmd: 'setGameImage',
+        c: {
+          c: 'setGameImage',
           gameId: jsonCommand.gameId,
         },
         text: '\u{270F} Изменить картинку',
       },
       {
-        cmd: {
-          cmd: 'gameTasksEdit',
+        c: {
+          c: 'gameTasksEdit',
           gameId: jsonCommand.gameId,
         },
         text: '\u{270F} Редактировать задания',
       },
       {
-        cmd: {
-          cmd: 'hideGame',
+        c: {
+          c: 'hideGame',
           gameId: jsonCommand.gameId,
         },
         text: '\u{1F648} Скрыть',
         hide: game.hidden,
       },
       {
-        cmd: {
-          cmd: 'unhideGame',
+        c: {
+          c: 'unhideGame',
           gameId: jsonCommand.gameId,
         },
         text: '\u{1F441} Отобразить',
         hide: !game.hidden,
       },
       {
-        cmd: { cmd: 'deleteGame', gameId: jsonCommand.gameId },
+        c: { c: 'deleteGame', gameId: jsonCommand.gameId },
         text: '\u{1F4A3} Удалить игру',
       },
-      { cmd: 'menuGamesEdit', text: '\u{2B05} Назад' },
+      { c: 'menuGamesEdit', text: '\u{2B05} Назад' },
     ],
   }
 }

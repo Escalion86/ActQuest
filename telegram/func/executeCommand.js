@@ -6,8 +6,8 @@ import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
 
 const lastCommandHandler = async (telegramId, jsonCommand) => {
-  if (commandsArray[jsonCommand.cmd])
-    return await commandsArray[jsonCommand.cmd]({ telegramId, jsonCommand })
+  if (commandsArray[jsonCommand.c])
+    return await commandsArray[jsonCommand.c]({ telegramId, jsonCommand })
   return {
     success: false,
     message: 'Неизвестная команда',
@@ -55,14 +55,14 @@ const executeCommand = async (
     if (typeof nextCommand === 'string') {
       return await executeCommand(
         userTelegramId,
-        { cmd: nextCommand },
+        { c: nextCommand },
         messageId
         // callback_query
       )
     }
     // Если команда содержит в себе command, то значт это готовая команда,
     // если же нет, то значт это дополнение к предыдущей команде
-    const actualCommand = nextCommand.cmd
+    const actualCommand = nextCommand.c
       ? nextCommand
       : { ...jsonCommand, ...nextCommand }
     delete actualCommand.message

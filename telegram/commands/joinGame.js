@@ -51,10 +51,10 @@ const joinGame = async ({ telegramId, jsonCommand }) => {
       ...teams.map((team) => {
         return {
           text: `"${team.name}"`,
-          cmd: { teamId: team._id },
+          c: { teamId: team._id },
         }
       }),
-      { cmd: 'menuGames', text: '\u{2B05} Назад' },
+      { c: 'menuGames', text: '\u{2B05} Назад' },
     ],
   }
 }

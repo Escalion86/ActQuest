@@ -68,7 +68,7 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
             .format('DD.MM')} "${game.name}"${
             isTeamRegistred ? ` (записан)` : ''
           }`,
-          cmd: { cmd: 'game', gameId: game._id },
+          c: { c: 'game', gameId: game._id },
         }
       }),
       mainMenuButton,

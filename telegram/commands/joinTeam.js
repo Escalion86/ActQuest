@@ -17,7 +17,7 @@ const joinTeam = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message) {
     return {
       message: 'Введите код команды',
-      buttons: [{ cmd: 'menuTeams', text: '\u{2B05} Назад' }],
+      buttons: [{ c: 'menuTeams', text: '\u{2B05} Назад' }],
     }
   }
 

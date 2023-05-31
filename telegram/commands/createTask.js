@@ -9,7 +9,7 @@ const array = [
     answerMessage: (answer) => `Задан заголовок задания "${answer}"`,
     buttons: (jsonCommand) => [
       {
-        cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
         text: '\u{1F6AB} Отмена создания задания',
       },
     ],
@@ -20,7 +20,7 @@ const array = [
     answerMessage: (answer) => `Задание введено`,
     buttons: (jsonCommand) => [
       {
-        cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
         text: '\u{1F6AB} Отмена создания задания',
       },
     ],
@@ -31,11 +31,11 @@ const array = [
     answerMessage: (answer) => `Картинка задания загружена`,
     buttons: (jsonCommand) => [
       {
-        cmd: { image: '' },
+        c: { image: '' },
         text: 'Без картинки',
       },
       {
-        cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
         text: '\u{1F6AB} Отмена создания задания',
       },
     ],
@@ -46,7 +46,7 @@ const array = [
     answerMessage: (answer) => `Первая подсказка введена`,
     buttons: (jsonCommand) => [
       {
-        cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
         text: '\u{1F6AB} Отмена создания задания',
       },
     ],
@@ -57,11 +57,11 @@ const array = [
   //   answerMessage: (answer) => `Картинка первой подсказки загружена`,
   //   buttons: (jsonCommand) => [
   //     {
-  //       cmd: { clueImage1: '' },
+  //       c: { clueImage1: '' },
   //       text: 'Без картинки',
   //     },
   //     {
-  //       cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+  //       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
   //       text: '\u{1F6AB} Отмена создания задания',
   //     },
   //   ],
@@ -72,7 +72,7 @@ const array = [
     answerMessage: (answer) => `Вторая подсказка введена`,
     buttons: (jsonCommand) => [
       {
-        cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
         text: '\u{1F6AB} Отмена создания задания',
       },
     ],
@@ -84,11 +84,11 @@ const array = [
       `Введено ${getNoun(answer.split(',').length, 'код', 'кода', 'кодов')}`,
     buttons: (jsonCommand) => [
       {
-        cmd: { codes: '' },
+        c: { codes: '' },
         text: 'Без кодов',
       },
       {
-        cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
         text: '\u{1F6AB} Отмена создания задания',
       },
     ],
@@ -100,11 +100,11 @@ const array = [
   //   answerMessage: (answer) => `Картинка второй подсказки загружена`,
   //   buttons: (jsonCommand) => [
   //     {
-  //       cmd: { clueImage2: '' },
+  //       c: { clueImage2: '' },
   //       text: 'Без картинки',
   //     },
   //     {
-  //       cmd: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+  //       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
   //       text: '\u{1F6AB} Отмена создания задания',
   //     },
   //   ],
@@ -176,7 +176,7 @@ const createTask = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Задание "${jsonCommand.title}" создано`,
-    nextCommand: { cmd: 'gameTasksEdit', gameId: jsonCommand.gameId },
+    nextCommand: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
   }
 }
 

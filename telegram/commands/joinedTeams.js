@@ -34,12 +34,12 @@ const joinedTeams = async ({ telegramId, jsonCommand }) => {
           text: `"${team.name}"${
             teamUser.role === 'capitan' ? ' (вы капитан)' : ''
           }`,
-          cmd: { cmd: 'editTeam', teamId: team._id },
+          c: { c: 'editTeam', teamId: team._id },
           //`editTeam/teamId=${team._id}`,
         }
       }),
       {
-        cmd: teamsUser.length < MAX_TEAMS ? 'menuTeams' : 'mainMenu',
+        c: teamsUser.length < MAX_TEAMS ? 'menuTeams' : 'mainMenu',
         text: '\u{2B05} Назад',
       },
     ],

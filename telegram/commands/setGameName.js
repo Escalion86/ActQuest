@@ -14,7 +14,7 @@ const setGameName = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
-          cmd: { cmd: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGame', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -27,7 +27,7 @@ const setGameName = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Название игры обновлена на "${jsonCommand.message}"`,
-    nextCommand: { cmd: 'editGame', gameId: jsonCommand.gameId },
+    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
   }
 }
 
