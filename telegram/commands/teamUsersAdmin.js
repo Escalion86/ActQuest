@@ -47,7 +47,7 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
       ...buttons,
       {
         c: {
-          c: 'teams',
+          c: 'editTeamAdmin',
           teamId: jsonCommand.teamId,
         },
         text: '\u{2B05} Назад',
