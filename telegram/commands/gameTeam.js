@@ -1,5 +1,5 @@
-import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
+import Users from '@models/Users'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
@@ -25,7 +25,7 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
 
   const usersTelegramIds = teamUsers.map((teamUser) => teamUser.userTelegramId)
 
-  const users = await Teams.find({
+  const users = await Users.find({
     telegramId: { $in: usersTelegramIds },
   })
 
