@@ -36,7 +36,7 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
     // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
     return {
       text: `${user.name}${teamUser?.role === 'capitan' ? ' (капитан)' : ''}`,
-      c: { c: 'teamUser', teamUserId: teamUser._id },
+      c: { c: 'teamUserAdmin', teamUserId: teamUser._id },
       // `teamUser/teamUserId=${teamUser._id}`,
     }
   })
