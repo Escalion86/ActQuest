@@ -29,15 +29,20 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
     telegramId: { $in: usersTelegramIds },
   })
 
-  const teamUser = teamUsers.find(
-    (teamUser) => teamUser.userTelegramId === telegramId
-  )
+  const capitanTelegramId = teamUsers.find(
+    (teamUser) => teamUser.role === 'capitan'
+  )?.userTelegramId
 
   return {
     message: `<b>Игра "${game.name}"\n\nКоманда "${
       team?.name
     }"</b>\n\n<b>Состав команды</b>: ${users
-      .map((user) => ` - ${user.name}`)
+      .map(
+        (user) =>
+          ` - ${user.name}${
+            capitanTelegramId === user.telegramId ? '(капитан)' : ''
+          }`
+      )
       .join('\n')}`,
     buttons: [
       {
