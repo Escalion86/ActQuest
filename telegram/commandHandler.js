@@ -38,8 +38,7 @@ const commandHandler = async (
     } else {
       jsonCommand = jsonParser(message)
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
-      console.log('jsonCommand?.prevCmd :>> ', jsonCommand?.prevCmd)
-      if (!jsonCommand || !jsonCommand?.c) {
+      if (!jsonCommand || !jsonCommand?.c || jsonCommand?.prevCmd) {
         // console.log('Полученная команда не полная или это не команда')
         await dbConnect()
         const last = await LastCommands.findOne({
@@ -62,11 +61,20 @@ const commandHandler = async (
                 ? photo[photo.length - 1]?.file_id
                 : message,
           }
-        else
-          jsonCommand = {
-            ...Object.fromEntries(last.command),
-            ...jsonCommand,
+        else {
+          if (jsonCommand?.prevCmd && last?.prevCommand) {
+            delete jsonCommand.prevCmd
+            jsonCommand = {
+              ...Object.fromEntries(last.prevCommand),
+              ...jsonCommand,
+            }
+          } else {
+            jsonCommand = {
+              ...Object.fromEntries(last.command),
+              ...jsonCommand,
+            }
           }
+        }
         // console.log('Итоговая команда :>> ', jsonCommand)
       }
     }
