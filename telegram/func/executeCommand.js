@@ -39,6 +39,8 @@ const executeCommand = async (
     })
   }
 
+  console.log('result :>> ', result)
+
   const sendResult = await sendMessage({
     chat_id: userTelegramId,
     // text: JSON.stringify({ body, headers: req.headers.origin }),
