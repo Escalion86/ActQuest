@@ -44,6 +44,8 @@ import teams from './teams'
 import teamUsersAdmin from './teamUsersAdmin'
 import teamUserAdmin from './teamUserAdmin'
 import delTeamUserAdmin from './delTeamUserAdmin'
+import deleteTeamAdmin from './deleteTeamAdmin'
+import editTeamAdmin from './editTeamAdmin'
 
 const commandsArray = {
   setUserName,
@@ -92,6 +94,8 @@ const commandsArray = {
   teamUsersAdmin,
   teamUserAdmin,
   delTeamUserAdmin,
+  deleteTeamAdmin,
+  editTeamAdmin,
 }
 
 export default commandsArray
