@@ -27,7 +27,9 @@ const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
       gameId: jsonCommand.gameId,
     })
     return {
-      message: `Вы зарегистрировали команду "${team?.name}" на игру "${game?.name}"`,
+      message: `Вы зарегистрировали команду "${
+        team?.name
+      }" на игру ${formatGameName(game)}`,
       nextCommand: { c: `teamGamesAdmin`, teamId: jsonCommand.teamId },
     }
   }

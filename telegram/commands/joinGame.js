@@ -36,7 +36,9 @@ const joinGame = async ({ telegramId, jsonCommand }) => {
       gameId: jsonCommand.gameId,
     })
     return {
-      message: `Вы зарегистрировались на игру "${game?.name}" от лица команды "${team.name}"`,
+      message: `Вы зарегистрировались на игру ${formatGameName(
+        game
+      )} от лица команды "${team.name}"`,
       nextCommand: `menuGames`,
     }
   }
