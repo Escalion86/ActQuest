@@ -38,6 +38,7 @@ const commandHandler = async (
     } else {
       jsonCommand = jsonParser(message)
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
+      console.log('jsonCommand?.prevCmd :>> ', jsonCommand?.prevCmd)
       if (!jsonCommand || !jsonCommand?.c) {
         // console.log('Полученная команда не полная или это не команда')
         await dbConnect()
