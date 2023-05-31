@@ -4,7 +4,7 @@ import dbConnect from '@utils/dbConnect'
 import getTeam from 'telegram/func/getTeam'
 
 const editTeam = async ({ telegramId, jsonCommand }) => {
-  const { backСmd } = jsonCommand
+  const { b } = jsonCommand
   if (!jsonCommand?.teamId) {
     await dbConnect()
     const teamsUser = await TeamsUsers.find({
@@ -14,7 +14,7 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
     if (!teamsUser || teamsUser.length === 0) {
       return {
         message: 'Ошибка не найдено записи в команде',
-        nextCommand: backСmd ?? `menuTeams`,
+        nextCommand: b ?? `menuTeams`,
       }
     }
     const teamsIds = teamsUser.map(
@@ -36,7 +36,7 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
           cmd: { cmd: 'editTeam', teamId: team._id },
           // `editTeam/teamId=${team._id}`,
         })),
-        { cmd: backСmd ?? 'menuTeams', text: '\u{2B05} Назад' },
+        { cmd: b ?? 'menuTeams', text: '\u{2B05} Назад' },
       ],
     }
   }
@@ -50,7 +50,7 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
   if (!teamsUser) {
     return {
       message: 'Ошибка вы не состоите в команде',
-      nextCommand: backСmd ?? `menuTeams`,
+      nextCommand: b ?? `menuTeams`,
     }
   }
 
@@ -93,7 +93,7 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
       hide: !isCapitan,
       text: '\u{1F4A3} Удалить команду',
     },
-    { cmd: backСmd ?? 'joinedTeams', text: '\u{2B05} Назад' },
+    { cmd: b ?? 'joinedTeams', text: '\u{2B05} Назад' },
   ]
 
   return {

@@ -11,14 +11,14 @@ const teamUsers = async ({ telegramId, jsonCommand }) => {
   const team = await getTeam(jsonCommand?.teamId)
   if (team.success === false) return team
 
-  const { backСmd } = jsonCommand
+  const { b } = jsonCommand
 
   await dbConnect()
   const teamsUsers = await TeamsUsers.find({ teamId: jsonCommand?.teamId })
   if (!teamsUsers || teamsUsers.length === 0) {
     return {
       message: 'Никто не состоит в команде',
-      nextCommand: { cmd: backСmd ?? 'editTeam', teamId: jsonCommand.teamId },
+      nextCommand: { cmd: b ?? 'editTeam', teamId: jsonCommand.teamId },
     }
   }
 
@@ -48,7 +48,7 @@ const teamUsers = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...buttons,
       {
-        cmd: { cmd: backСmd ?? 'editTeam', teamId: jsonCommand.teamId },
+        cmd: { cmd: b ?? 'editTeam', teamId: jsonCommand.teamId },
         text: '\u{2B05} Назад',
       },
     ],
