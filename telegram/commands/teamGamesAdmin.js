@@ -1,8 +1,8 @@
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
 import dbConnect from '@utils/dbConnect'
-import moment from 'moment-timezone'
 import check from 'telegram/func/check'
+import formatGameName from 'telegram/func/formatGameName'
 import getTeam from 'telegram/func/getTeam'
 
 const teamGamesAdmin = async ({ telegramId, jsonCommand }) => {
@@ -48,12 +48,7 @@ const teamGamesAdmin = async ({ telegramId, jsonCommand }) => {
         ? `<b>Команда "${team.name}" не зарегистрирована ни на какую игру</b>`
         : `<b>Игры на которые зарегистрирована команда "${
             team.name
-          }"</b>:\n${games.map(
-            (game) =>
-              `"${game.name}" (${moment(game.dateStart)
-                .tz('Asia/Krasnoyarsk')
-                .format('DD.MM')})`
-          )}`,
+          }"</b>:\n${games.map((game) => formatGameName(game))}`,
     buttons: [
       // ...buttons,
       {

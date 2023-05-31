@@ -5,6 +5,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
+import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getTeam from 'telegram/func/getTeam'
 
@@ -38,9 +39,7 @@ const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...games.map((game) => {
         return {
-          text: `"${game.name}" ${moment(game.dateStart)
-            .tz('Asia/Krasnoyarsk')
-            .format('DD.MM')}`,
+          text: formatGameName(game),
           c: { gameId: game._id },
         }
       }),

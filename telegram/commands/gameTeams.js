@@ -2,6 +2,7 @@ import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
+import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 
 const gameTeams = async ({ telegramId, jsonCommand }) => {
@@ -42,7 +43,9 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: `<b>Команды зарегистрированные на игру "${game.name}"</b>`,
+    message: `<b>Команды зарегистрированные на игру ${formatGameName(
+      game
+    )}</b>`,
     buttons: [...buttons, { c: 'menuGames', text: '\u{2B05} Назад' }],
   }
 }

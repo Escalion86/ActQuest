@@ -3,8 +3,8 @@ import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
-import moment from 'moment-timezone'
 import { ADMIN_TELEGRAM_ID } from 'telegram/constants'
+import formatGameName from 'telegram/func/formatGameName'
 import mainMenuButton from './menuItems/mainMenuButton'
 
 const menuGames = async ({ telegramId, jsonCommand }) => {
@@ -63,11 +63,7 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
         //   : null
         // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
         return {
-          text: `${moment(game.dateStart)
-            .tz('Asia/Krasnoyarsk')
-            .format('DD.MM')} "${game.name}"${
-            isTeamRegistred ? ` (записан)` : ''
-          }`,
+          text: `${formatGameName(game)}${isTeamRegistred ? ` (записан)` : ''}`,
           c: { c: 'game', gameId: game._id },
         }
       }),

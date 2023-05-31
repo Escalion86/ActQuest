@@ -3,6 +3,7 @@ import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
+import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getTeam from 'telegram/func/getTeam'
 
@@ -46,7 +47,9 @@ const joinGame = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: `Выберите команду которую вы хотите зарегистрировать на игру "${game.name}"`,
+    message: `Выберите команду которую вы хотите зарегистрировать на игру ${formatGameName(
+      game
+    )}`,
     buttons: [
       ...teams.map((team) => {
         return {

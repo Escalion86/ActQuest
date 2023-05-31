@@ -1,6 +1,7 @@
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import check from 'telegram/func/check'
+import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
@@ -34,7 +35,7 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
   )?.userTelegramId
 
   return {
-    message: `<b>Игра "${game.name}"\n\nКоманда "${
+    message: `<b>Игра ${formatGameName(game)}\n\nКоманда "${
       team?.name
     }"</b>\n\n<b>Состав команды</b>: ${users
       .map(

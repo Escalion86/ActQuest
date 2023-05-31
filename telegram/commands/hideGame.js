@@ -1,6 +1,7 @@
 import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
+import formatGameName from 'telegram/func/formatGameName'
 
 const hideGame = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
@@ -14,7 +15,7 @@ const hideGame = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Игра "${game.name}" скрыта`,
+    message: `Игра ${formatGameName(game)} скрыта`,
     nextCommand: { c: `editGame`, gameId: jsonCommand.gameId },
   }
 }
