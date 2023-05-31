@@ -2,7 +2,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 import getTeamUser from 'telegram/func/getTeamUser'
 
-const delTeamUser = async ({ telegramId, jsonCommand }) => {
+const delTeamUserAdmin = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['teamUserId'])
   if (checkData) return checkData
 
@@ -20,7 +20,7 @@ const delTeamUser = async ({ telegramId, jsonCommand }) => {
         },
         {
           text: '\u{1F6AB} Отмена',
-          c: { c: 'teamUsers', teamUserId: jsonCommand.teamUserId },
+          c: { c: 'teamUsersAdmin', teamUserId: jsonCommand.teamUserId },
         },
       ],
     }
@@ -30,8 +30,8 @@ const delTeamUser = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Пользователь удален из команды',
-    nextCommand: { c: 'teamUsers', teamId: teamUser.teamId },
+    nextCommand: { c: 'teamUsersAdmin', teamId: teamUser.teamId },
   }
 }
 
-export default delTeamUser
+export default delTeamUserAdmin

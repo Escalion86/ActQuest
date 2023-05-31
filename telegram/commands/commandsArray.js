@@ -41,6 +41,9 @@ import setClue2 from './setClue2'
 import setCodes from './setCodes'
 import setTaskI from './setTaskI'
 import teams from './teams'
+import teamUsersAdmin from './teamUsersAdmin'
+import teamUserAdmin from './teamUserAdmin'
+import delTeamUserAdmin from './delTeamUserAdmin'
 
 const commandsArray = {
   setUserName,
@@ -86,6 +89,9 @@ const commandsArray = {
   setCodes,
   setTaskI,
   teams,
+  teamUsersAdmin,
+  teamUserAdmin,
+  delTeamUserAdmin,
 }
 
 export default commandsArray
