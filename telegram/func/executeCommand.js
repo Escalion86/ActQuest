@@ -40,6 +40,7 @@ const executeCommand = async (
   }
 
   console.log('result :>> ', result)
+  console.log('keyboard ', keyboard?.inline_keyboard)
 
   const sendResult = await sendMessage({
     chat_id: userTelegramId,
