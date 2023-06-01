@@ -32,7 +32,7 @@ const userJoinToTeam = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const user = await Users.find({ telegramId: jsonCommand.userTId })
+  const user = await Users.findOne({ telegramId: jsonCommand.userTId })
 
   if (jsonCommand.teamId) {
     const team = await Teams.findById(jsonCommand.teamId)

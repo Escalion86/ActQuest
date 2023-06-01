@@ -7,7 +7,7 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
   if (checkData) return checkData
 
   await dbConnect()
-  const user = await Users.find({ telegramId: jsonCommand.userTId })
+  const user = await Users.findOne({ telegramId: jsonCommand.userTId })
 
   return {
     message: `<b>"${user.name}"</b>\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,

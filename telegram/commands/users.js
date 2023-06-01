@@ -14,6 +14,13 @@ const users = async ({ telegramId, jsonCommand }) => {
       )
   )
 
+  if (!usersWithNoTeam || usersWithNoTeam.length === 0) {
+    return {
+      message: 'Нет пользователей неприсоединенных к какой-либо команде',
+      nextCommand: `mainMenu`,
+    }
+  }
+
   return {
     message: '<b>Обзор пользователей без команды</b>',
     buttons: [
