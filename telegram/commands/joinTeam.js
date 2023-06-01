@@ -1,3 +1,4 @@
+import getNoun from '@helpers/getNoun'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import { MAX_TEAMS } from 'telegram/constants'
@@ -9,7 +10,12 @@ const joinTeam = async ({ telegramId, jsonCommand }) => {
 
   if (teamsUser.length >= MAX_TEAMS) {
     return {
-      message: `Нельзя состоять более чем в ${MAX_TEAMS} командах. Для присоединения к команде сначала покиньте одну из команд`,
+      message: `Нельзя состоять более чем в ${getNoun(
+        MAX_TEAMS,
+        'команде',
+        'командах',
+        'командах'
+      )}. Для присоединения к команде сначала покиньте одну из команд`,
       nextCommand: `joinedTeams`,
     }
   }

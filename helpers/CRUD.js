@@ -95,15 +95,17 @@ export const postData = async (
   dontAddUserId = false
 ) => {
   try {
+    const body = dontAddUserId
+      ? JSON.stringify(form)
+      : JSON.stringify({ data: form, userId })
+    console.log('postData body :>> ', body)
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         Accept: contentType,
         'Content-Type': contentType,
       },
-      body: dontAddUserId
-        ? JSON.stringify(form)
-        : JSON.stringify({ data: form, userId }),
+      body,
     })
 
     // Throw error with status code in case Fetch API req failed

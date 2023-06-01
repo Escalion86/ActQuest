@@ -7,7 +7,7 @@ const setCodes = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
 
-  if (!jsonCommand.message && jsonCommand.message !== '') {
+  if (!jsonCommand.message) {
     return {
       success: true,
       message: 'Введите коды через запятую',
@@ -15,7 +15,7 @@ const setCodes = async ({ telegramId, jsonCommand }) => {
         {
           text: 'Без кодов',
           c: {
-            codes: '',
+            noCodes: true,
           },
         },
         {
@@ -29,12 +29,16 @@ const setCodes = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
+
   await dbConnect()
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = [...game.tasks]
   // const task = tasks[jsonCommand.i]
-  tasks[jsonCommand.i].codes =
-    jsonCommand.message !== '' ? jsonCommand.message.split(',') : []
+  tasks[jsonCommand.i].codes = jsonCommand.noCodes
+    ? []
+    : jsonCommand.message !== ''
+    ? jsonCommand.message.split(',')
+    : []
   // console.log('task :>> ', task)
   // const newTask = { ...task, title: jsonCommand.message }
   // console.log('newTask :>> ', newTask)
