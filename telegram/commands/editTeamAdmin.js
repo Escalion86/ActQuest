@@ -46,7 +46,9 @@ const editTeamAdmin = async ({ telegramId, jsonCommand }) => {
   ]
 
   return {
-    message: `<b>Редактирование команды "${team?.name}"</b>.${
+    message: `<b>АДМИНИСТРИРОВАНИЕ</b>\n\n<b>Редактирование команды "${
+      team?.name
+    }"</b>.${
       team?.description ? `\n\n<b>Описание</b>: "${team?.description}"` : ''
     }`,
     buttons,

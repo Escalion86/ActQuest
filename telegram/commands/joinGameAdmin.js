@@ -37,7 +37,7 @@ const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
   const games = await Games.find({})
 
   return {
-    message: `Выберите игру на которую вы хотите зарегистрировать команду "${team.name}"`,
+    message: `<b>АДМИНИСТРИРОВАНИЕ</b>\n\nВыберите игру на которую вы хотите зарегистрировать команду "${team.name}"`,
     buttons: [
       ...games.map((game) => {
         return {

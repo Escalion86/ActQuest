@@ -45,7 +45,7 @@ const teamGamesAdmin = async ({ telegramId, jsonCommand }) => {
   return {
     message:
       gameTeams.length === 0
-        ? `<b>Команда "${team.name}" не зарегистрирована ни на какую игру</b>`
+        ? `<b>АДМИНИСТРИРОВАНИЕ</b>\n\n<b>Команда "${team.name}" не зарегистрирована ни на какую игру</b>`
         : `<b>Игры на которые зарегистрирована команда "${
             team.name
           }"</b>:\n${games.map((game) => formatGameName(game))}`,

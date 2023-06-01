@@ -42,7 +42,7 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: `<b>Состав команды "${team.name}"</b>`,
+    message: `<b>АДМИНИСТРИРОВАНИЕ</b>\n\n<b>Состав команды "${team.name}"</b>`,
     buttons: [
       ...buttons,
       {

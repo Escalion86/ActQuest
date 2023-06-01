@@ -46,7 +46,7 @@ const teamUserAdmin = async ({ telegramId, jsonCommand }) => {
   ]
 
   return {
-    message: `<b>"${user.name}" ${
+    message: `<b>АДМИНИСТРИРОВАНИЕ</b>\n\n<b>"${user.name}" ${
       isCapitan ? 'капитан' : 'участник'
     } команды "${team.name}"</b>\n<a href="tg://user?id=${
       user.telegramId
