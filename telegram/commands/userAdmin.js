@@ -10,17 +10,15 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
   const user = await Users.find({ telegramId: jsonCommand.userTId })
 
   return {
-    message: '<b>Обзор пользователей без команды</b>',
+    message: `<b>"${user.name}"</b>\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,
     buttons: [
-      ...usersWithNoTeam.map((user) => {
-        return {
-          text: '\u{1F517} Записать в команду',
-          c: {
-            c: 'userJoinToTeam',
-            userTId: jsonCommand.userTId,
-          },
-        }
-      }),
+      {
+        text: '\u{1F517} Записать в команду',
+        c: {
+          c: 'userJoinToTeam',
+          userTId: jsonCommand.userTId,
+        },
+      },
       {
         c: 'users',
         text: '\u{2B05} Назад',
