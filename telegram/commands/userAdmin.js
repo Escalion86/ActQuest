@@ -1,5 +1,6 @@
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
+import check from 'telegram/func/check'
 
 const userAdmin = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['userTId'])
