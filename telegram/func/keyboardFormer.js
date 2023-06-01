@@ -19,7 +19,7 @@ const keyboardFormer = (commands, buttons) => {
             ]
           // Значит команда в JSON формате
           // console.log('JSON.stringify(c) :>> ', JSON.stringify(c))
-          // console.log('length :>> ', JSON.stringify(c).length)
+          console.log('keyboard json length :>> ', JSON.stringify(c).length)
           return [
             {
               text,

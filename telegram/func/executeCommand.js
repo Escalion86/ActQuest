@@ -86,7 +86,7 @@ const executeCommand = async (
       },
       {
         command: actualCommand,
-        prevCommand: prevCommand.command,
+        prevCommand: prevCommand?.command,
         messageId,
       },
       { upsert: true }
