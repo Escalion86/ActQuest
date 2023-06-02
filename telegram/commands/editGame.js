@@ -24,6 +24,14 @@ const editGame = async ({ telegramId, jsonCommand }) => {
     }\n\n<b>Количество заданий</b>: ${game?.tasks?.length ?? 0}`,
     buttons: [
       {
+        c: { c: 'gameStart', gameId: jsonCommand.gameId },
+        text: '\u{26A1} ЗАПУСТИТЬ ИГРУ',
+      },
+      {
+        c: { c: 'gameStop', gameId: jsonCommand.gameId },
+        text: '\u{26D4} СТОП ИГРА!',
+      },
+      {
         c: { c: 'setGameName', gameId: jsonCommand.gameId },
         text: '\u{270F} Изменить название',
       },

@@ -10,7 +10,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  var game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
   if (jsonCommand.taskUp !== undefined) {
@@ -25,10 +25,12 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
       await Games.findByIdAndUpdate(jsonCommand.gameId, {
         tasks,
       })
-      return {
-        message: ` Задание перемещено`,
-        nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
-      }
+      game.tasks = tasks
+      delete jsonCommand.taskUp
+      // return {
+      //   message: ` Задание перемещено`,
+      //   nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
+      // }
     }
   }
   // console.log('jsonCommand.taskUp :>> ', jsonCommand.taskUp)
@@ -44,15 +46,14 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
       await Games.findByIdAndUpdate(jsonCommand.gameId, {
         tasks,
       })
-      return {
-        message: ` Задание перемещено`,
-        nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
-      }
+      // return {
+      //   message: ` Задание перемещено`,
+      //   nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
+      // }
+      game.tasks = tasks
+      delete jsonCommand.taskDown
     }
   }
-  //   console.log('jsonCommand.taskDown :>> ', jsonCommand.taskDown)
-  // delete jsonCommand.taskUp
-  // delete jsonCommand.taskDown
 
   const buttons = game.tasks
     ? game.tasks.map((task, index) => {
