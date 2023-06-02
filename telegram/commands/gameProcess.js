@@ -43,7 +43,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
   const taskNum = activeNum ?? 0
 
-  if (taskNum > game.tasks.length) {
+  if (taskNum > game.tasks.length - 1) {
     return {
       message: 'Поздравляем Вы завершили все задания!\n\n',
       // nextCommand: { showTask: false },
