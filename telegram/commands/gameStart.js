@@ -1,5 +1,6 @@
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
+import LastCommands from '@models/LastCommands'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
@@ -54,8 +55,8 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
       const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
       console.log('codes :>> ', codes)
       await Promise.all(
-        usersTelegramIdsOfTeam.map(async (telegramId) =>
-          sendMessage({
+        usersTelegramIdsOfTeam.map(async (telegramId) => {
+          await sendMessage({
             chat_id: telegramId,
             text: `<b>Задание №${taskNum}</b>\n\n${task}\n\nКоличество кодов на локации: ${
               codes?.length ?? 0
@@ -68,7 +69,18 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
             findedCodes?.length > 0 ? `\n\nНайденые коды: ${findedCodes}` : ''
           }`,
           })
-        )
+          await LastCommands.findOneAndUpdate(
+            {
+              userTelegramId: telegramId,
+            },
+            {
+              command: { c: 'insertCode', gameTeamId: String(gameTeam._id) },
+              // prevCommand: prevCommand?.command,
+              // messageId,
+            },
+            { upsert: true }
+          )
+        })
       )
     })
   )

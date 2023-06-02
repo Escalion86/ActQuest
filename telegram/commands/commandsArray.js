@@ -53,6 +53,7 @@ import users from './users'
 import userJoinToTeam from './userJoinToTeam'
 import gameStart from './gameStart'
 import gameStop from './gameStop'
+import insertCode from './insertCode'
 
 const commandsArray = {
   setUserName,
@@ -110,6 +111,7 @@ const commandsArray = {
   userJoinToTeam,
   gameStart,
   gameStop,
+  insertCode,
 }
 
 export default commandsArray
