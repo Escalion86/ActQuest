@@ -31,9 +31,9 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
     teamId: { $in: teamsIds },
   })
 
-  const usersIds = teamsUsers.map((teamUser) => teamUser.userId)
+  const usersTelegramIds = teamsUsers.map((teamUser) => teamUser.userTelegramId)
 
-  console.log('usersIds :>> ', usersIds)
+  console.log('usersTelegramIds :>> ', usersTelegramIds)
 
   return {
     message: `Игра ${formatGameName(
