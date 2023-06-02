@@ -70,6 +70,7 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
           await sendMessage({
             chat_id: telegramId,
             text: taskText({ tasks: game.tasks, taskNum, findedCodes }),
+            images: game.tasks[taskNum].images,
           })
         })
       )
