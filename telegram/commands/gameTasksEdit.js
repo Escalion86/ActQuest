@@ -10,13 +10,32 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
+  if (jsonCommand.taskUp !== undefined)
+    console.log('jsonCommand.taskUp :>> ', jsonCommand.taskUp)
+  if (jsonCommand.taskDown !== undefined)
+    console.log('jsonCommand.taskDown :>> ', jsonCommand.taskDown)
+  delete jsonCommand.taskUp
+  delete jsonCommand.taskDown
+
   const buttons = game.tasks
     ? game.tasks.map((task, index) => {
-        return {
-          c: { c: 'editTask', gameId: jsonCommand.gameId, i: index },
-          //`setTeamName/teamId=${jsonCommand.teamId}`,
-          text: `\u{270F} "${task.title}"`,
-        }
+        return [
+          {
+            c: { taskUp: index },
+            text: `Вверх`,
+            hide: index === 0,
+          },
+          {
+            c: { c: 'editTask', gameId: jsonCommand.gameId, i: index },
+            //`setTeamName/teamId=${jsonCommand.teamId}`,
+            text: `\u{270F} "${task.title}"`,
+          },
+          {
+            c: { taskDown: index },
+            text: `Вниз`,
+            hide: index >= game.tasks.length - 1,
+          },
+        ]
       })
     : []
 
