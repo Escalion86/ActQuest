@@ -13,11 +13,13 @@ const editGame = async ({ telegramId, jsonCommand }) => {
     images: game.image ? [game.image] : undefined,
     message: `${
       game.hidden ? '<b>(ИГРА СКРЫТА!)</b>\n' : ''
-    }<b>Редактирование игры "${
-      game?.name
-    }"</b>\n\n<b>Дата и время</b>:\n${moment(game.dateStart)
-      .tz('Asia/Krasnoyarsk')
-      .format('DD.MM.yyyy H:mm')}\n\n<b>Описание</b>:\n${
+    }<b>Редактирование игры "${game?.name}"</b>\n\n<b>Дата и время</b>:\n${
+      game.dateStart
+        ? moment(game.dateStart)
+            .tz('Asia/Krasnoyarsk')
+            .format('DD.MM.yyyy H:mm')
+        : '[не заданы]'
+    }\n\n<b>Описание</b>:\n${
       game?.description ? `"${game?.description}"` : '[без описания]'
     }\n\n<b>Количество заданий</b>: ${game?.tasks?.length ?? 0}`,
     buttons: [
