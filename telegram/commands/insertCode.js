@@ -44,8 +44,8 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
   if (codes.includes(code)) {
     // Если код введен верно и ранее его не вводили
     const newAllFindedCodes = [...allFindedCodes]
-    // if (newFindedCodes.length < taskNum + 1) newFindedCodes.push()
-    newAllFindedCodes[taskNum] = findedCodesInTask
+    const newFindedCodesInTask = [...findedCodesInTask, code]
+    newAllFindedCodes[taskNum] = newFindedCodesInTask
     console.log('newAllFindedCodes :>> ', newAllFindedCodes)
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedCodes: newAllFindedCodes,
