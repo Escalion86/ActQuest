@@ -25,11 +25,14 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
   if (game.success === false) return game
 
   const taskNum = gameTeam?.activeNum ?? 0
-  const allFindedCodes = gameTeam?.findedCodes ?? []
-  const findedCodes = allFindedCodes[taskNum] ?? []
+
   const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
+
+  const allFindedCodes =
+    gameTeam?.findedCodes ?? Array(game.tasks.length).map(() => [])
+  const findedCodesInTask = allFindedCodes[taskNum] ?? []
   console.log('allFindedCodes :>> ', allFindedCodes)
-  console.log('findedCodes :>> ', findedCodes)
+  console.log('findedCodesInTask :>> ', findedCodesInTask)
 
   if (findedCodes.includes(code)) {
     return {
@@ -40,12 +43,13 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
 
   if (codes.includes(code)) {
     // Если код введен верно и ранее его не вводили
-    const newFindedCodes = [...allFindedCodes]
-    newFindedCodes[taskNum] = newFindedCodes
-    console.log('newFindedCodes :>> ', newFindedCodes)
-    // await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-    //   findedCodes: newFindedCodes,
-    // })
+    const newAllFindedCodes = [...allFindedCodes]
+    // if (newFindedCodes.length < taskNum + 1) newFindedCodes.push()
+    newAllFindedCodes[taskNum] = findedCodesInTask
+    console.log('newAllFindedCodes :>> ', newAllFindedCodes)
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      findedCodes: newAllFindedCodes,
+    })
     return {
       message: `КОД "${code}" ПРИНЯТ`,
       // nextCommand: `menuGames`,
