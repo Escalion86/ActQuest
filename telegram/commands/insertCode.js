@@ -28,6 +28,8 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
   const allFindedCodes = gameTeam?.findedCodes ?? []
   const findedCodes = allFindedCodes[taskNum] ?? []
   const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
+  console.log('allFindedCodes :>> ', allFindedCodes)
+  console.log('findedCodes :>> ', findedCodes)
 
   if (findedCodes.includes(code)) {
     return {
