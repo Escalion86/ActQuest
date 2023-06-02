@@ -19,6 +19,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     })
     return {
       message: `Здесь должно быть задание №${newActiveTaskNum + 1}`,
+      nextCommand: { nextTask: false },
     }
   }
 
@@ -93,6 +94,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       findedCodes: newAllFindedCodes,
       startTime,
       endTime,
+      activeNum: isTaskComplite ? taskNum + 1 : taskNum,
     })
 
     return {
