@@ -1,9 +1,6 @@
 import { postData } from '@helpers/CRUD'
-import Users from '@models/Users'
-import dbConnect from '@utils/dbConnect'
 import callbackHandler from 'telegram/callbackHandler'
 import messageHandler from 'telegram/messageHandler'
-import sendMessage from 'telegram/sendMessage'
 
 export default async function handler(req, res) {
   const { query, method, body } = req

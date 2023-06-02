@@ -1,7 +1,12 @@
 import getNoun from '@helpers/getNoun'
+import Games from '@models/Games'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
+import sendMessage from 'telegram/sendMessage'
+
+const swapElements = (array, index1, index2) =>
+  ([array[index1], array[index2]] = [array[index2], array[index1]])
 
 const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -10,12 +15,46 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
-  if (jsonCommand.taskUp !== undefined)
-    console.log('jsonCommand.taskUp :>> ', jsonCommand.taskUp)
-  if (jsonCommand.taskDown !== undefined)
-    console.log('jsonCommand.taskDown :>> ', jsonCommand.taskDown)
-  delete jsonCommand.taskUp
-  delete jsonCommand.taskDown
+  if (jsonCommand.taskUp !== undefined) {
+    if (jsonCommand.taskUp === 0) {
+      await sendMessage({
+        chat_id: telegramId,
+        text: 'Нельзя переместить выше задание, которое и так является первым',
+      })
+    } else {
+      const tasks = [...game.tasks]
+      swapElements(tasks, jsonCommand.taskUp, jsonCommand.taskUp - 1)
+      await Games.findByIdAndUpdate(jsonCommand.gameId, {
+        tasks,
+      })
+      return {
+        message: ` Задание перемещено`,
+        nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
+      }
+    }
+  }
+  // console.log('jsonCommand.taskUp :>> ', jsonCommand.taskUp)
+  if (jsonCommand.taskDown !== undefined) {
+    if (jsonCommand.taskDown >= game.tasks.length - 1) {
+      await sendMessage({
+        chat_id: telegramId,
+        text: 'Нельзя переместить ниже задание, которое и так является последним',
+      })
+    } else {
+      const tasks = [...game.tasks]
+      swapElements(tasks, jsonCommand.taskDown, jsonCommand.taskDown + 1)
+      await Games.findByIdAndUpdate(jsonCommand.gameId, {
+        tasks,
+      })
+      return {
+        message: ` Задание перемещено`,
+        nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
+      }
+    }
+  }
+  //   console.log('jsonCommand.taskDown :>> ', jsonCommand.taskDown)
+  // delete jsonCommand.taskUp
+  // delete jsonCommand.taskDown
 
   const buttons = game.tasks
     ? game.tasks.map((task, index) => {
