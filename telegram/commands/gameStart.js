@@ -31,9 +31,45 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
     teamId: { $in: teamsIds },
   })
 
-  const usersTelegramIds = teamsUsers.map((teamUser) => teamUser.userTelegramId)
+  // const usersTelegramIds = teamsUsers.map((teamUser) => teamUser.userTelegramId)
 
-  console.log('usersTelegramIds :>> ', usersTelegramIds)
+  await Promise.all(
+    teamsIds.map(async (teamId) => {
+      const gameTeam = gameTeams.find((gameTeam) => gameTeam.teamId === teamId)
+      const usersTelegramIdsOfTeam = teamsUsers
+        .filter((teamUser) => teamUser.teamId === teamId)
+        .map((teamUser) => teamUser.userTelegramId)
+
+      const taskNum = gameTeam?.activeNum ?? 0
+
+      await gameTeams.findByIdAndUpdate(gameTeam._id, {
+        ...gameTeam,
+        tasks: {},
+      })
+
+      const findedCodes = gameTeam?.findedCodes ?? []
+      const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
+      await Promise.all(
+        usersTelegramIdsOfTeam.map(async (telegramId) =>
+          sendMessage({
+            chat_id: telegramId,
+            text: `<b>Задание №${taskNum}</b>\n\n${task}\n\nКоличество кодов на локации: ${
+              codes?.length ?? 0
+            }${
+              numCodesToCompliteTask
+                ? `\nКоличество кодов необходимое для выполнения задания: ${numCodesToCompliteTask}`
+                : ''
+            }
+          ${
+            findedCodes?.length > 0 ? `\n\nНайденые коды: ${findedCodes}` : ''
+          }`,
+          })
+        )
+      )
+    })
+  )
+
+  // console.log('usersTelegramIds :>> ', usersTelegramIds)
 
   return {
     message: `Игра ${formatGameName(

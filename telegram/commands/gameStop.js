@@ -33,16 +33,24 @@ const gameStop = async ({ telegramId, jsonCommand }) => {
   })
 
   const usersTelegramIds = teamsUsers.map((teamUser) => teamUser.userTelegramId)
-
   console.log('usersTelegramIds :>> ', usersTelegramIds)
-  await Promise.all(
-    usersTelegramIds.map(async (telegramId) =>
-      sendMessage({
-        chat_id: telegramId,
-        text: 'Игра началась!',
-      })
-    )
-  )
+  // teamsIds.forEach((teamId) => {
+  //   const gameTeam = gameTeams.find((gameTeam) => gameTeam.teamId === teamId)
+  //   const usersTelegramIdsOfTeam = teamsUsers.filter((teamUser)=>teamUser.teamId === teamId).map((teamUser) => teamUser.userTelegramId)
+
+  //   const taskNum = gameTeam?.tasks?.activeNum ?? 0
+  //   const findedCodes = gameTeam?.tasks?.findedCodes ?? []
+  // })
+
+  // console.log('usersTelegramIds :>> ', usersTelegramIds)
+  // await Promise.all(
+  //   usersTelegramIds.map(async (telegramId) =>
+  //     sendMessage({
+  //       chat_id: telegramId,
+  //       text: 'Игра началась!',
+  //     })
+  //   )
+  // )
 
   return {
     message: `СТОП ИГРА!!\n\nИгра ${formatGameName(
