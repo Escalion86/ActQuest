@@ -10,7 +10,33 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
-  if (jsonCommand.nextTask) {
+  // if (jsonCommand.showTask) {
+  //   const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
+  //   // const newActiveTaskNum = gameTeam?.activeNum ? gameTeam.activeNum + 1 : 1
+  //   // await dbConnect()
+  //   // await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+  //   //   activeNum: newActiveTaskNum,
+  //   // })
+  //   const game = await getGame(gameTeam.gameId)
+  //   if (game.success === false) return game
+
+  //   const taskNum = gameTeam?.activeNum ?? 0
+
+  //   return {
+  //     message: taskText({
+  //       tasks: game.tasks,
+  //       taskNum,
+  //       findedCodes: gameTeam?.findedCodes,
+  //     }),
+  //     nextCommand: { showTask: false },
+  //   }
+  // }
+
+  const code = jsonCommand.message
+  if (!code) {
+    // return {
+    //   message: 'Введите код',
+    // }
     const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
     // const newActiveTaskNum = gameTeam?.activeNum ? gameTeam.activeNum + 1 : 1
     // await dbConnect()
@@ -28,14 +54,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         taskNum,
         findedCodes: gameTeam?.findedCodes,
       }),
-      nextCommand: { nextTask: false },
-    }
-  }
-
-  const code = jsonCommand.message
-  if (!code) {
-    return {
-      message: 'Введите код',
+      // nextCommand: { showTask: false },
     }
   }
 
@@ -117,7 +136,11 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
             )}`
           : ''
       }`,
-      nextCommand: isTaskComplite ? { nextTask: true } : undefined,
+      nextCommand: isTaskComplite
+        ? {
+            // showTask: true
+          }
+        : undefined,
     }
   } else {
     return {
