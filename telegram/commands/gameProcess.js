@@ -145,11 +145,11 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
             })}`
           : ''
       }`,
-      // nextCommand: isTaskComplite
-      //   ? {
-      //       // showTask: true
-      //     }
-      //   : undefined,
+      nextCommand: isTaskComplite
+        ? {
+            // showTask: true
+          }
+        : undefined,
     }
   } else {
     return {
