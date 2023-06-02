@@ -120,12 +120,14 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       }
     }
 
+    const activeNum = isTaskComplite ? taskNum + 1 : taskNum
+
     await dbConnect()
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedCodes: newAllFindedCodes,
       startTime,
       endTime,
-      activeNum: isTaskComplite ? taskNum + 1 : taskNum,
+      activeNum,
     })
 
     return {
@@ -136,14 +138,19 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               'код',
               'кода',
               'кодов'
-            )}`
+            )}\n\n${taskText({
+              images: task.images,
+              tasks: game.tasks,
+              activeNum,
+              findedCodes: newAllFindedCodes,
+            })}`
           : ''
       }`,
-      nextCommand: isTaskComplite
-        ? {
-            // showTask: true
-          }
-        : undefined,
+      // nextCommand: isTaskComplite
+      //   ? {
+      //       // showTask: true
+      //     }
+      //   : undefined,
     }
   } else {
     return {
