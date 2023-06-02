@@ -47,9 +47,11 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     if (game.success === false) return game
 
     const taskNum = gameTeam?.activeNum ?? 0
+    const task = game.tasks[taskNum]
 
     return {
       message: taskText({
+        images: task.images,
         tasks: game.tasks,
         taskNum,
         findedCodes: gameTeam?.findedCodes,
