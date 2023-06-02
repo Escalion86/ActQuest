@@ -1,9 +1,7 @@
-import getNoun from '@helpers/getNoun'
 import Games from '@models/Games'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
-import sendMessage from 'telegram/sendMessage'
 
 const swapElements = (array, index1, index2) =>
   ([array[index1], array[index2]] = [array[index2], array[index1]])
@@ -17,10 +15,10 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
 
   if (jsonCommand.taskUp !== undefined) {
     if (jsonCommand.taskUp === 0) {
-      await sendMessage({
-        chat_id: telegramId,
-        text: 'Нельзя переместить выше задание, которое и так является первым',
-      })
+      return {
+        message: `Нельзя переместить выше задание, которое и так является первым`,
+        nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
+      }
     } else {
       const tasks = [...game.tasks]
       swapElements(tasks, jsonCommand.taskUp, jsonCommand.taskUp - 1)
@@ -36,10 +34,10 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   // console.log('jsonCommand.taskUp :>> ', jsonCommand.taskUp)
   if (jsonCommand.taskDown !== undefined) {
     if (jsonCommand.taskDown >= game.tasks.length - 1) {
-      await sendMessage({
-        chat_id: telegramId,
-        text: 'Нельзя переместить ниже задание, которое и так является последним',
-      })
+      return {
+        message: `Нельзя переместить ниже задание, которое и так является последним`,
+        nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
+      }
     } else {
       const tasks = [...game.tasks]
       swapElements(tasks, jsonCommand.taskDown, jsonCommand.taskDown + 1)
