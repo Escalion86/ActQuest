@@ -23,9 +23,9 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
 
   const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
 
-  const teams = await Teams.find({
-    _id: { $in: teamsIds },
-  })
+  // const teams = await Teams.find({
+  //   _id: { $in: teamsIds },
+  // })
 
   const teamsUsers = await TeamsUsers.find({
     teamId: { $in: teamsIds },

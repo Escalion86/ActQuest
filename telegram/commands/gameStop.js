@@ -5,6 +5,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
+import sendMessage from 'telegram/sendMessage'
 
 const gameStop = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -23,17 +24,25 @@ const gameStop = async ({ telegramId, jsonCommand }) => {
 
   const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
 
-  const teams = await Teams.find({
-    _id: { $in: teamsIds },
-  })
+  // const teams = await Teams.find({
+  //   _id: { $in: teamsIds },
+  // })
 
   const teamsUsers = await TeamsUsers.find({
     teamId: { $in: teamsIds },
   })
 
-  const usersIds = teamsUsers.map((teamUser) => teamUser.userId)
+  const usersTelegramIds = teamsUsers.map((teamUser) => teamUser.userTelegramId)
 
-  console.log('usersIds :>> ', usersIds)
+  console.log('usersTelegramIds :>> ', usersTelegramIds)
+  await Promise.all(
+    usersTelegramIds.map(async (telegramId) =>
+      sendMessage({
+        chat_id: telegramId,
+        text: 'Игра началась!',
+      })
+    )
+  )
 
   return {
     message: `СТОП ИГРА!!\n\nИгра ${formatGameName(
