@@ -40,16 +40,17 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
     // Если код введен верно и ранее его не вводили
     const newFindedCodes = [...allFindedCodes]
     newFindedCodes[taskNum] = newFindedCodes
-    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-      findedCodes: newFindedCodes,
-    })
+    console.log('newFindedCodes :>> ', newFindedCodes)
+    // await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+    //   findedCodes: newFindedCodes,
+    // })
     return {
       message: `КОД "${code}" ПРИНЯТ`,
       // nextCommand: `menuGames`,
     }
   } else {
     return {
-      message: 'Такой не верен. Введите код',
+      message: 'Код не верен. Введите код',
       // nextCommand: `menuGames`,
     }
   }
