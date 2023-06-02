@@ -33,47 +33,45 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   //   }
   // }
 
-  const code = jsonCommand.message
-  if (!code) {
-    // return {
-    //   message: 'Введите код',
-    // }
-    const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
-    // const newActiveTaskNum = gameTeam?.activeNum ? gameTeam.activeNum + 1 : 1
-    // await dbConnect()
-    // await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-    //   activeNum: newActiveTaskNum,
-    // })
-    const game = await getGame(gameTeam.gameId)
-    if (game.success === false) return game
-
-    const taskNum = gameTeam?.activeNum ?? 0
-    // const task = game.tasks[taskNum]
-    console.log('game.tasks[taskNum] :>> ', game.tasks[taskNum])
-
-    return {
-      images: game.tasks[taskNum].images,
-      message: taskText({
-        tasks: game.tasks,
-        taskNum,
-        findedCodes: gameTeam?.findedCodes,
-      }),
-      // nextCommand: { showTask: false },
-    }
-  }
-
   const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
   if (gameTeam.success === false) return gameTeam
 
   const game = await getGame(gameTeam.gameId)
   if (game.success === false) return game
 
-  const taskNum = gameTeam?.activeNum ?? 0
+  const { findedCodes, activeNum } = gameTeam
 
-  const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
+  const taskNum = activeNum ?? 0
+  const { task, codes, numCodesToCompliteTask, images } = game.tasks[taskNum]
 
-  const allFindedCodes =
-    gameTeam?.findedCodes ?? Array(game.tasks.length).map(() => [])
+  const code = jsonCommand.message
+  if (!code) {
+    // return {
+    //   message: 'Введите код',
+    // }
+    // const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
+    // const newActiveTaskNum = gameTeam?.activeNum ? gameTeam.activeNum + 1 : 1
+    // await dbConnect()
+    // await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+    //   activeNum: newActiveTaskNum,
+    // })
+    // const game = await getGame(gameTeam.gameId)
+    // if (game.success === false) return game
+
+    // const taskNum = gameTeam?.activeNum ?? 0
+
+    return {
+      images,
+      message: taskText({
+        tasks: game.tasks,
+        taskNum,
+        findedCodes,
+      }),
+      // nextCommand: { showTask: false },
+    }
+  }
+
+  const allFindedCodes = findedCodes ?? Array(game.tasks.length).map(() => [])
   const findedCodesInTask = allFindedCodes[taskNum] ?? []
 
   if (findedCodesInTask.includes(code)) {
@@ -121,17 +119,18 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       }
     }
 
-    const activeNum = isTaskComplite ? taskNum + 1 : taskNum
+    const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
 
     await dbConnect()
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedCodes: newAllFindedCodes,
       startTime,
       endTime,
-      activeNum,
+      activeNum: newActiveNum,
     })
 
     return {
+      images: isTaskComplite ? game.tasks[newActiveNum].images : undefined,
       message: `КОД "${code}" ПРИНЯТ${
         numOfCodesToFindLeft > 0
           ? `\n\nОсталось найти ${getNoun(
@@ -140,9 +139,8 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               'кода',
               'кодов'
             )}\n\n${taskText({
-              images: task.images,
               tasks: game.tasks,
-              activeNum,
+              taskNum: newActiveNum,
               findedCodes: newAllFindedCodes,
             })}`
           : ''
