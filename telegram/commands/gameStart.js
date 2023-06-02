@@ -6,6 +6,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
+import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 
 const gameStart = async ({ telegramId, jsonCommand }) => {
