@@ -141,7 +141,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
             )}\n\n${taskText({
               tasks: game.tasks,
               taskNum: newActiveNum,
-              findedCodes: newAllFindedCodes,
+              findedCodes: isTaskComplite ? [] : newAllFindedCodes,
             })}`
           : ''
       }`,

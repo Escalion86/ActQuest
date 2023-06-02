@@ -8,8 +8,8 @@ const taskText = ({ tasks, taskNum, findedCodes }) => {
       : ''
   }
 ${
-  findedCodes && findedCodes?.length > 0
-    ? `\n\nНайденые коды: ${findedCodes.join(', ')}`
+  findedCodes && findedCodes[taskNum]?.length > 0
+    ? `\n\nНайденые коды: ${findedCodes[taskNum].join(', ')}`
     : ''
 }\n\nВведите код`
 }
