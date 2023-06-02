@@ -6,7 +6,7 @@ import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 
-const gameEnd = async ({ telegramId, jsonCommand }) => {
+const gameStop = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -43,4 +43,4 @@ const gameEnd = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default gameEnd
+export default gameStop
