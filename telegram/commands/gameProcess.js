@@ -3,17 +3,17 @@ import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
-import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 
-const insertCode = async ({ telegramId, jsonCommand }) => {
+const gameProcess = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
   if (jsonCommand.nextTask) {
     const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
     const newActiveTaskNum = gameTeam?.activeNum ? gameTeam.activeNum + 1 : 1
+    await dbConnect()
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       activeNum: newActiveTaskNum,
     })
@@ -54,7 +54,7 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
     const newAllFindedCodes = [...allFindedCodes]
     const newFindedCodesInTask = [...findedCodesInTask, code]
     newAllFindedCodes[taskNum] = newFindedCodesInTask
-
+    await dbConnect()
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedCodes: newAllFindedCodes,
     })
@@ -83,4 +83,4 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default insertCode
+export default gameProcess
