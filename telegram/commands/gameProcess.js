@@ -1,6 +1,6 @@
 import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
+// import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'

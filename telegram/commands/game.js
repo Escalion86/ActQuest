@@ -45,26 +45,41 @@ const game = async ({ telegramId, jsonCommand }) => {
   //   _id: { $in: teamsIds },
   // })
 
-  const buttons = teamsOfUserInAGame
-    .map((team) => {
-      const teamUserOfUser = teamsUserOfUser.find(
-        (teamUser) => teamUser.teamId === String(team._id)
-      )
-      if (teamUserOfUser && teamUserOfUser?.role === 'capitan') {
+  const isGameStarted = game.status === 'started'
+  const isGameFinished = game.status === 'finished'
+
+  const buttons = isGameFinished
+    ? []
+    : isGameStarted
+    ? teamsOfUserInAGame.map((team) => {
         const gameTeam = gameTeams.find(
           (gameTeam) => gameTeam.teamId === String(team._id)
         )
         return {
-          // text: `"${team.name}" (вы ${
-          //   teamUserOfUser.role === 'capitan' ? 'капитан' : 'участник'
-          // } команды)`,
-          text: `Отменить регистрацию команды "${team.name}"`,
-          c: { c: 'delGameTeam', gameTeamId: String(gameTeam._id) },
+          c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
+          text: `\u{26A1} ЗАЙТИ В ИГРУ ("${team.name}")`,
         }
-      }
-      return undefined
-    })
-    .filter((data) => data !== undefined)
+      })
+    : teamsOfUserInAGame
+        .map((team) => {
+          const teamUserOfUser = teamsUserOfUser.find(
+            (teamUser) => teamUser.teamId === String(team._id)
+          )
+          if (teamUserOfUser && teamUserOfUser?.role === 'capitan') {
+            const gameTeam = gameTeams.find(
+              (gameTeam) => gameTeam.teamId === String(team._id)
+            )
+            return {
+              // text: `"${team.name}" (вы ${
+              //   teamUserOfUser.role === 'capitan' ? 'капитан' : 'участник'
+              // } команды)`,
+              text: `Отменить регистрацию команды "${team.name}"`,
+              c: { c: 'delGameTeam', gameTeamId: String(gameTeam._id) },
+            }
+          }
+          return undefined
+        })
+        .filter((data) => data !== undefined)
 
   const message = `<b>Игра "${game?.name}"</b>\n\n<b>Дата и время</b>: ${
     game.dateStart
@@ -87,9 +102,16 @@ const game = async ({ telegramId, jsonCommand }) => {
       {
         c: { c: 'joinGame', gameId: jsonCommand.gameId },
         text: '\u{270F} Зарегистрироваться на игру',
-        hide: teamsOfUserInAGame && teamsOfUserInAGame.length > 0,
+        hide:
+          isGameStarted ||
+          isGameFinished ||
+          (teamsOfUserInAGame && teamsOfUserInAGame.length > 0),
       },
       ...buttons,
+      {
+        c: { c: 'gameProcess', gameTeamId: jsonCommand.gameTeamId },
+        text: '\u{1F465} ЗАЙТИ В ИГРУ',
+      },
       {
         c: { c: 'gameTeams', gameId: jsonCommand.gameId },
         text: '\u{1F465} Зарегистрированные команды',
