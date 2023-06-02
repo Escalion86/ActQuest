@@ -33,6 +33,8 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
 
   // const usersTelegramIds = teamsUsers.map((teamUser) => teamUser.userTelegramId)
 
+  const startTime = [new Date()]
+
   await Promise.all(
     teamsIds.map(async (teamId) => {
       const gameTeam = gameTeams.find((gameTeam) => gameTeam.teamId === teamId)
@@ -43,12 +45,13 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
       const taskNum = gameTeam?.activeNum ?? 0
 
       await gameTeams.findByIdAndUpdate(gameTeam._id, {
-        ...gameTeam,
-        tasks: {},
+        startTime,
       })
 
       const findedCodes = gameTeam?.findedCodes ?? []
+      console.log('findedCodes :>> ', findedCodes)
       const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
+      console.log('codes :>> ', codes)
       await Promise.all(
         usersTelegramIdsOfTeam.map(async (telegramId) =>
           sendMessage({
