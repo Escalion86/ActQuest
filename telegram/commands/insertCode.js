@@ -34,7 +34,7 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
   console.log('allFindedCodes :>> ', allFindedCodes)
   console.log('findedCodesInTask :>> ', findedCodesInTask)
 
-  if (findedCodes.includes(code)) {
+  if (findedCodesInTask.includes(code)) {
     return {
       message: 'Такой код уже найден. Введите код',
       // nextCommand: `menuGames`,
