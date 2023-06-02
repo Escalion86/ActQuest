@@ -50,6 +50,18 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
         startTime,
       })
 
+      await LastCommands.updateMany(
+        {
+          userTelegramId: { $in: usersTelegramIdsOfTeam },
+        },
+        {
+          command: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
+          // prevCommand: prevCommand?.command,
+          // messageId,
+        },
+        { upsert: true }
+      )
+
       const findedCodes = gameTeam?.findedCodes ?? []
       const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
 
@@ -68,17 +80,6 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
             findedCodes?.length > 0 ? `\n\nНайденые коды: ${findedCodes}` : ''
           }`,
           })
-          await LastCommands.findOneAndUpdate(
-            {
-              userTelegramId: telegramId,
-            },
-            {
-              command: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
-              // prevCommand: prevCommand?.command,
-              // messageId,
-            },
-            { upsert: true }
-          )
         })
       )
     })

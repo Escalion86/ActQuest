@@ -12,7 +12,12 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   // Получаем список игр
   const games = await Games.find({})
   const filteredGames = games
-    ? games.filter((game) => !game.hidden || telegramId === ADMIN_TELEGRAM_ID)
+    ? games.filter(
+        (game) =>
+          !game.hidden ||
+          telegramId === ADMIN_TELEGRAM_ID ||
+          telegramId === 5960834042
+      )
     : undefined
   if (!filteredGames || filteredGames.length === 0) {
     return {
