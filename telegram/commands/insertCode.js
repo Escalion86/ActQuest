@@ -1,3 +1,4 @@
+import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
@@ -31,8 +32,6 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
   const allFindedCodes =
     gameTeam?.findedCodes ?? Array(game.tasks.length).map(() => [])
   const findedCodesInTask = allFindedCodes[taskNum] ?? []
-  console.log('allFindedCodes :>> ', allFindedCodes)
-  console.log('findedCodesInTask :>> ', findedCodesInTask)
 
   if (findedCodesInTask.includes(code)) {
     return {
@@ -46,13 +45,29 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
     const newAllFindedCodes = [...allFindedCodes]
     const newFindedCodesInTask = [...findedCodesInTask, code]
     newAllFindedCodes[taskNum] = newFindedCodesInTask
-    console.log('newAllFindedCodes :>> ', newAllFindedCodes)
+
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedCodes: newAllFindedCodes,
     })
+
+    const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
+    const numOfCodesToFindLeft = numOfCodesToFind - newFindedCodesInTask.length
+    const isTaskComplite = numOfCodesToFindLeft <= 0
+
     return {
-      message: `КОД "${code}" ПРИНЯТ`,
-      // nextCommand: `menuGames`,
+      message: `КОД "${code}" ПРИНЯТ${
+        numOfCodesToFindLeft > 0
+          ? `\n\nОсталось найти ${getNoun(
+              numOfCodesToFindLeft,
+              'код',
+              'кода',
+              'кодов'
+            )}`
+          : ''
+      }`,
+      nextCommand: isTaskComplite
+        ? { c: `nextTask`, gameTeamId: jsonCommand.gameTeamId }
+        : undefined,
     }
   } else {
     return {
