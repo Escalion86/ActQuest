@@ -51,6 +51,8 @@ import teamGamesAdmin from './teamGamesAdmin'
 import userAdmin from './userAdmin'
 import users from './users'
 import userJoinToTeam from './userJoinToTeam'
+import gameStart from './gameStart'
+import gameEnd from './gameEnd'
 
 const commandsArray = {
   setUserName,
@@ -106,6 +108,8 @@ const commandsArray = {
   userAdmin,
   users,
   userJoinToTeam,
+  gameStart,
+  gameEnd,
 }
 
 export default commandsArray

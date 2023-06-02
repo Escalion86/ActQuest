@@ -26,10 +26,12 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       {
         c: { c: 'gameStart', gameId: jsonCommand.gameId },
         text: '\u{26A1} ЗАПУСТИТЬ ИГРУ',
+        hide: game.status === 'started',
       },
       {
         c: { c: 'gameStop', gameId: jsonCommand.gameId },
         text: '\u{26D4} СТОП ИГРА!',
+        hide: !game.status === 'started',
       },
       {
         c: { c: 'setGameName', gameId: jsonCommand.gameId },

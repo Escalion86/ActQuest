@@ -6,7 +6,7 @@ import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 
-const gameStart = async ({ telegramId, jsonCommand }) => {
+const gameEnd = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -14,7 +14,7 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
   if (game.success === false) return game
 
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
-    status: 'started',
+    status: 'finished',
   })
   // Получаем список команд
   const gameTeams = await GamesTeams.find({
@@ -36,11 +36,11 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
   console.log('usersIds :>> ', usersIds)
 
   return {
-    message: `Игра ${formatGameName(
+    message: `СТОП ИГРА!!\n\nИгра ${formatGameName(
       game
-    )} ЗАПУЩЕНА.\n\n\u{26A0} Все игроки оповещены!`,
+    )} ОСТАНОВЛЕНА.\n\n\u{26A0} Все игроки оповещены!`,
     nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
   }
 }
 
-export default gameStart
+export default gameEnd
