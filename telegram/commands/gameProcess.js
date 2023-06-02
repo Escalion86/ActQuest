@@ -39,10 +39,17 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(gameTeam.gameId)
   if (game.success === false) return game
 
-  const { findedCodes, activeNum } = gameTeam
+  const { findedCodes, activeNum, startTime, endTime } = gameTeam
 
   const taskNum = activeNum ?? 0
   const { task, codes, numCodesToCompliteTask, images } = game.tasks[taskNum]
+
+  if (taskNum > game.tasks.length) {
+    return {
+      message: 'Поздравляем Вы завершили все задания!\n\n',
+      // nextCommand: { showTask: false },
+    }
+  }
 
   const code = jsonCommand.message
   if (!code) {
@@ -89,33 +96,33 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     const numOfCodesToFindLeft = numOfCodesToFind - newFindedCodesInTask.length
     const isTaskComplite = numOfCodesToFindLeft <= 0
 
-    var endTime = gameTeam.endTime
-    var startTime = gameTeam.startTime
+    var endTimeTemp = endTime
+    var startTimeTemp = startTime
 
     if (isTaskComplite) {
       const newDate = new Date()
-      if (endTime) {
-        if (endTime.length < taskNum + 1) {
+      if (endTimeTemp) {
+        if (endTimeTemp.length < taskNum + 1) {
           const newArray = Array(game.tasks.length).fill(undefined)
-          endTime.forEach((item, index) => (newArray[index] = item))
-          endTime = [...newArray]
+          endTimeTemp.forEach((item, index) => (newArray[index] = item))
+          endTimeTemp = [...newArray]
         }
       } else {
-        endTime = Array(game.tasks.length).fill(undefined)
+        endTimeTemp = Array(game.tasks.length).fill(undefined)
       }
-      endTime[taskNum] = newDate
+      endTimeTemp[taskNum] = newDate
 
-      if (startTime) {
-        if (startTime.length < taskNum + 1) {
+      if (startTimeTemp) {
+        if (startTimeTemp.length < taskNum + 1) {
           const newArray = Array(game.tasks.length).fill(undefined)
-          startTime.forEach((item, index) => (newArray[index] = item))
-          startTime = [...newArray]
+          startTimeTemp.forEach((item, index) => (newArray[index] = item))
+          startTimeTemp = [...newArray]
         }
       } else {
-        startTime = Array(game.tasks.length).fill(undefined)
+        startTimeTemp = Array(game.tasks.length).fill(undefined)
       }
       if (taskNum < game.tasks.length - 1) {
-        startTime[taskNum + 1] = newDate
+        startTimeTemp[taskNum + 1] = newDate
       }
     }
 
@@ -124,16 +131,16 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     await dbConnect()
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedCodes: newAllFindedCodes,
-      startTime,
-      endTime,
+      startTime: startTimeTemp,
+      endTime: endTimeTemp,
       activeNum: newActiveNum,
     })
 
     return {
-      images: isTaskComplite ? game.tasks[newActiveNum].images : undefined,
+      images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
       message: `КОД "${code}" ПРИНЯТ${
         numOfCodesToFindLeft > 0
-          ? `\n\nОсталось найти ${getNoun(
+          ? `\nОсталось найти ${getNoun(
               numOfCodesToFindLeft,
               'код',
               'кода',
