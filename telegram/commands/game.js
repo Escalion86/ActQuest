@@ -109,10 +109,6 @@ const game = async ({ telegramId, jsonCommand }) => {
       },
       ...buttons,
       {
-        c: { c: 'gameProcess', gameTeamId: jsonCommand.gameTeamId },
-        text: '\u{1F465} ЗАЙТИ В ИГРУ',
-      },
-      {
         c: { c: 'gameTeams', gameId: jsonCommand.gameId },
         text: '\u{1F465} Зарегистрированные команды',
       },

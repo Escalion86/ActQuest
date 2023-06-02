@@ -12,13 +12,22 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
   if (jsonCommand.nextTask) {
     const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
-    const newActiveTaskNum = gameTeam?.activeNum ? gameTeam.activeNum + 1 : 1
-    await dbConnect()
-    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-      activeNum: newActiveTaskNum,
-    })
+    // const newActiveTaskNum = gameTeam?.activeNum ? gameTeam.activeNum + 1 : 1
+    // await dbConnect()
+    // await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+    //   activeNum: newActiveTaskNum,
+    // })
+    const game = await getGame(gameTeam.gameId)
+    if (game.success === false) return game
+
+    const taskNum = gameTeam?.activeNum ?? 0
+
     return {
-      message: `Здесь должно быть задание №${newActiveTaskNum + 1}`,
+      message: taskText({
+        tasks: game.tasks,
+        taskNum,
+        findedCodes: gameTeam?.findedCodes,
+      }),
       nextCommand: { nextTask: false },
     }
   }

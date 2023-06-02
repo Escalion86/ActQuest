@@ -63,22 +63,13 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
       )
 
       const findedCodes = gameTeam?.findedCodes ?? []
-      const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
+      // const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
 
       await Promise.all(
         usersTelegramIdsOfTeam.map(async (telegramId) => {
           await sendMessage({
             chat_id: telegramId,
-            text: `<b>Задание №${taskNum}</b>\n\n${task}\n\nКоличество кодов на локации: ${
-              codes?.length ?? 0
-            }${
-              numCodesToCompliteTask
-                ? `\nКоличество кодов необходимое для выполнения задания: ${numCodesToCompliteTask}`
-                : ''
-            }
-          ${
-            findedCodes?.length > 0 ? `\n\nНайденые коды: ${findedCodes}` : ''
-          }`,
+            text: taskText({ tasks: game.tasks, taskNum, findedCodes }),
           })
         })
       )
