@@ -44,7 +44,7 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
 
       const taskNum = gameTeam?.activeNum ?? 0
 
-      await gameTeams.findByIdAndUpdate(gameTeam._id, {
+      await GamesTeams.findByIdAndUpdate(gameTeam._id, {
         startTime,
       })
 
