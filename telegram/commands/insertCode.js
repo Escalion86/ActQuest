@@ -11,11 +11,21 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
+  if (jsonCommand.nextTask) {
+    const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
+    const newActiveTaskNum = gameTeam?.activeNum ? gameTeam.activeNum + 1 : 1
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      activeNum: newActiveTaskNum,
+    })
+    return {
+      message: `Здесь должно быть задание №${newActiveTaskNum}`,
+    }
+  }
+
   const code = jsonCommand.message
   if (!code) {
     return {
       message: 'Введите код',
-      // nextCommand: `menuGames`,
     }
   }
 
@@ -36,7 +46,6 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
   if (findedCodesInTask.includes(code)) {
     return {
       message: 'Такой код уже найден. Введите код',
-      // nextCommand: `menuGames`,
     }
   }
 
@@ -65,14 +74,11 @@ const insertCode = async ({ telegramId, jsonCommand }) => {
             )}`
           : ''
       }`,
-      nextCommand: isTaskComplite
-        ? { c: `nextTask`, gameTeamId: jsonCommand.gameTeamId }
-        : undefined,
+      nextCommand: isTaskComplite ? { nextTask: true } : undefined,
     }
   } else {
     return {
       message: 'Код не верен. Введите код',
-      // nextCommand: `menuGames`,
     }
   }
 }
