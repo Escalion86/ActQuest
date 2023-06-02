@@ -9,7 +9,7 @@ const keyboardFormer = (commands, buttons) => {
         .map((button) => {
           // if (typeof button === 'object')
           if (Array.isArray(button)) {
-            const buttonsArray = [...button]
+            const buttonsArray = button.filter((button) => !button.hide)
             return buttonsArray.map(({ text, c, url }) => {
               if (typeof c === 'string')
                 return {
