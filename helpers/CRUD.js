@@ -98,7 +98,10 @@ export const postData = async (
     const body = dontAddUserId
       ? JSON.stringify(form)
       : JSON.stringify({ data: form, userId })
-    console.log('postData body :>> ', body)
+    console.log(
+      'postData body :>> ',
+      JSON.stringify(JSON.parse(body), null, '\t')
+    )
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -111,7 +114,7 @@ export const postData = async (
     // Throw error with status code in case Fetch API req failed
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(text)
+      throw new Error(JSON.stringify(JSON.parse(text), null, '\t'))
     }
     // if (!res.ok) {
     //   throw new Error(await res.json())

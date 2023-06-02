@@ -80,6 +80,7 @@ const commandHandler = async (
       }
     }
 
+    console.log('!!!jsonCommand :>> ', jsonCommand)
     // Если это был JSON
     if (jsonCommand) {
       await executeCommand(

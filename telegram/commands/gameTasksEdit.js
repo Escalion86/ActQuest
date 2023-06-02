@@ -23,7 +23,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
           {
             c: { taskUp: index },
             text: `Вверх`,
-            hide: index === 0,
+            // hide: index === 0,
           },
           {
             c: { c: 'editTask', gameId: jsonCommand.gameId, i: index },
@@ -33,7 +33,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
           {
             c: { taskDown: index },
             text: `Вниз`,
-            hide: index >= game.tasks.length - 1,
+            // hide: index >= game.tasks.length - 1,
           },
         ]
       })
