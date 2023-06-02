@@ -42,7 +42,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   const { findedCodes, activeNum, startTime, endTime } = gameTeam
 
   const taskNum = activeNum ?? 0
-  const { task, codes, numCodesToCompliteTask, images } = game.tasks[taskNum]
 
   if (taskNum > game.tasks.length) {
     return {
@@ -50,6 +49,8 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       // nextCommand: { showTask: false },
     }
   }
+
+  const { task, codes, numCodesToCompliteTask, images } = game.tasks[taskNum]
 
   const code = jsonCommand.message
   if (!code) {
