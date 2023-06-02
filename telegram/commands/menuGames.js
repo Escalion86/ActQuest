@@ -16,6 +16,7 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
         (game) =>
           !game.hidden ||
           telegramId === ADMIN_TELEGRAM_ID ||
+          // TODO Убрать эту строчку после тестов
           telegramId === 5960834042
       )
     : undefined

@@ -18,7 +18,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       activeNum: newActiveTaskNum,
     })
     return {
-      message: `Здесь должно быть задание №${newActiveTaskNum}`,
+      message: `Здесь должно быть задание №${newActiveTaskNum + 1}`,
     }
   }
 
@@ -54,14 +54,46 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     const newAllFindedCodes = [...allFindedCodes]
     const newFindedCodesInTask = [...findedCodesInTask, code]
     newAllFindedCodes[taskNum] = newFindedCodesInTask
-    await dbConnect()
-    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-      findedCodes: newAllFindedCodes,
-    })
-
     const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
     const numOfCodesToFindLeft = numOfCodesToFind - newFindedCodesInTask.length
     const isTaskComplite = numOfCodesToFindLeft <= 0
+
+    var endTime = gameTeam.endTime
+    var startTime = gameTeam.startTime
+
+    if (isTaskComplite) {
+      const newDate = new Date()
+      if (endTime) {
+        if (endTime.length < taskNum + 1) {
+          const newArray = Array(game.tasks.length).fill(undefined)
+          endTime.forEach((item, index) => (newArray[index] = item))
+          endTime = [...newArray]
+        }
+      } else {
+        endTime = Array(game.tasks.length).fill(undefined)
+      }
+      endTime[taskNum] = newDate
+
+      if (startTime) {
+        if (startTime.length < taskNum + 1) {
+          const newArray = Array(game.tasks.length).fill(undefined)
+          startTime.forEach((item, index) => (newArray[index] = item))
+          startTime = [...newArray]
+        }
+      } else {
+        startTime = Array(game.tasks.length).fill(undefined)
+      }
+      if (taskNum < game.tasks.length - 1) {
+        startTime[taskNum + 1] = newDate
+      }
+    }
+
+    await dbConnect()
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      findedCodes: newAllFindedCodes,
+      startTime,
+      endTime,
+    })
 
     return {
       message: `КОД "${code}" ПРИНЯТ${
