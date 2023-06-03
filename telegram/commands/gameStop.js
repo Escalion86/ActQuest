@@ -17,7 +17,7 @@ const gameStop = async ({ telegramId, jsonCommand }) => {
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
     status: 'finished',
   })
-  // Получаем список команд
+  // Получаем список команд участвующих в игре
   const gameTeams = await GamesTeams.find({
     gameId: jsonCommand.gameId,
   })
@@ -31,25 +31,32 @@ const gameStop = async ({ telegramId, jsonCommand }) => {
   const teamsUsers = await TeamsUsers.find({
     teamId: { $in: teamsIds },
   })
+  // Получаем telegramId всчех участников игры
+  const allUsersTelegramIds = teamsUsers.map(
+    (teamUser) => teamUser.userTelegramId
+  )
 
-  const usersTelegramIds = teamsUsers.map((teamUser) => teamUser.userTelegramId)
-  console.log('usersTelegramIds :>> ', usersTelegramIds)
-  // teamsIds.forEach((teamId) => {
-  //   const gameTeam = gameTeams.find((gameTeam) => gameTeam.teamId === teamId)
-  //   const usersTelegramIdsOfTeam = teamsUsers.filter((teamUser)=>teamUser.teamId === teamId).map((teamUser) => teamUser.userTelegramId)
+  await LastCommands.updateMany(
+    {
+      userTelegramId: { $in: allUsersTelegramIds },
+    },
+    {
+      command: { c: 'mainMenu' },
+      // prevCommand: prevCommand?.command,
+      // messageId,
+    },
+    { upsert: true }
+  )
 
-  //   const taskNum = gameTeam?.tasks?.activeNum ?? 0
-  //   const findedCodes = gameTeam?.tasks?.findedCodes ?? []
+  await Promise.all(
+    allUsersTelegramIds.map(async (telegramId) => {
+      await sendMessage({
+        chat_id: telegramId,
+        text: '\u{26D4}\u{26D4}\u{26D4} СТОП ИГРА \u{26D4}\u{26D4}\u{26D4}\n\n\nКоды больше не принимаются. Просим все команды прибыть на точку сбора!',
+      })
+    })
+  )
   // })
-
-  // console.log('usersTelegramIds :>> ', usersTelegramIds)
-  // await Promise.all(
-  //   usersTelegramIds.map(async (telegramId) =>
-  //     sendMessage({
-  //       chat_id: telegramId,
-  //       text: 'Игра началась!',
-  //     })
-  //   )
   // )
 
   return {

@@ -39,14 +39,30 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(gameTeam.gameId)
   if (game.success === false) return game
 
+  // Если игра не стартовала или уже закончена
+  if (game.status !== 'active') {
+    return {
+      message: 'Игра не стартовала',
+      nextCommand: { c: 'game', gameId: gameTeam.gameId },
+    }
+  }
+
+  if (game.status !== 'finished') {
+    return {
+      message: 'Игра завершена',
+      nextCommand: { c: 'game', gameId: gameTeam.gameId },
+    }
+  }
+
   const { findedCodes, activeNum, startTime, endTime } = gameTeam
 
   const taskNum = activeNum ?? 0
 
+  // Если больше заданий нет (все выолнены)
   if (taskNum > game.tasks.length - 1) {
     return {
       message: 'Поздравляем Вы завершили все задания!\n\n',
-      // nextCommand: { showTask: false },
+      nextCommand: 'mainMenu',
     }
   }
 

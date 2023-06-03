@@ -34,9 +34,20 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
     teamId: { $in: teamsIds },
   })
 
-  // const usersTelegramIds = teamsUsers.map((teamUser) => teamUser.userTelegramId)
+  // // Получаем telegramId всчех участников игры
+  // const allUsersTelegramIds = teamsUsers.map(
+  //   (teamUser) => teamUser.userTelegramId
+  // )
 
   const startTime = [new Date()]
+  await GamesTeams.updateMany(
+    {
+      gameId: jsonCommand.gameId,
+    },
+    {
+      startTime,
+    }
+  )
 
   await Promise.all(
     teamsIds.map(async (teamId) => {
@@ -46,10 +57,6 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
         .map((teamUser) => teamUser.userTelegramId)
 
       const taskNum = gameTeam?.activeNum ?? 0
-
-      await GamesTeams.findByIdAndUpdate(gameTeam._id, {
-        startTime,
-      })
 
       await LastCommands.updateMany(
         {
@@ -70,15 +77,15 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
         usersTelegramIdsOfTeam.map(async (telegramId) => {
           await sendMessage({
             chat_id: telegramId,
-            text: taskText({ tasks: game.tasks, taskNum, findedCodes }),
+            text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\n\n\n${taskText(
+              { tasks: game.tasks, taskNum, findedCodes }
+            )}`,
             images: game.tasks[taskNum].images,
           })
         })
       )
     })
   )
-
-  // console.log('usersTelegramIds :>> ', usersTelegramIds)
 
   return {
     message: `Игра ${formatGameName(
