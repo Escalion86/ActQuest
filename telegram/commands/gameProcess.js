@@ -9,6 +9,7 @@ import { CLUE_DURATION_SEC } from 'telegram/constants'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
+import keyboardFormer from 'telegram/func/keyboardFormer'
 import taskText from 'telegram/func/taskText'
 
 const endTimeSet = (endTime, taskNum, gameTasksLength) => {
