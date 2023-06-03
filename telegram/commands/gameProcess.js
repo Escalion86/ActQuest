@@ -67,6 +67,21 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
+  // Проверяем не вышло ли время
+  if (getSecondsBetween(startTime[activeNum]) > 60) {
+    await dbConnect()
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      // findedCodes: newAllFindedCodes,
+      startTime: startTimeTemp,
+      // endTime: endTimeTemp,
+      activeNum: activeNum + 1,
+    })
+    return {
+      message: '<b>Время вышло</b>',
+      nextCommand: {},
+    }
+  }
+
   const { task, codes, numCodesToCompliteTask, images } = game.tasks[taskNum]
 
   const code = jsonCommand.message
