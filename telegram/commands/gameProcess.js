@@ -11,6 +11,7 @@ import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import keyboardFormer from 'telegram/func/keyboardFormer'
 import taskText from 'telegram/func/taskText'
+import sendMessage from 'telegram/sendMessage'
 
 const endTimeSet = (endTime, taskNum, gameTasksLength) => {
   const newDate = new Date()
