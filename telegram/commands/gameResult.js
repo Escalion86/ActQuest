@@ -67,7 +67,7 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     .join('\n')
 
   return {
-    message: `<b>Результаты игры:</b>\n${text}\n\nИТОГО:${total}`,
+    message: `<b>Результаты игры:</b>\n${text}\n\n<b>ИТОГО:</b>\n${total}`,
     buttons: [
       {
         text: '\u{2B05} Назад',
