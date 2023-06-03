@@ -46,15 +46,19 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     duration: durationCalc(gameTeam),
   }))
 
-  const text = game.tasks.map((task, index) => {
-    return `\n\n<b>Задание "${task.title}"</b>${teams.map((team) => {
-      const dur = tasksDuration.find((item) => item.teamId === String(team._id))
-      return `\n- ${team.name} - ${secondsToTime(dur?.duration[index])}`
-    })}`
-  })
+  const text = game.tasks
+    .map((task, index) => {
+      return `\n<b>Задание "${task.title}"</b>${teams.map((team) => {
+        const dur = tasksDuration.find(
+          (item) => item.teamId === String(team._id)
+        )
+        return `\n- ${team.name} - ${secondsToTime(dur?.duration[index])}`
+      })}`
+    })
+    .join('\n')
 
   return {
-    message: `<b>Результаты игры:</b>${text}`,
+    message: `<b>Результаты игры:</b>\n${text}`,
     buttons: [
       {
         text: '\u{2B05} Назад',
