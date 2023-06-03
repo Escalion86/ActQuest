@@ -62,12 +62,12 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     .map((team) => {
       const dur = tasksDuration.find((item) => item.teamId === String(team._id))
       const seconds = dur?.duration.reduce((partialSum, a) => partialSum + a, 0)
-      return `\n- ${team.name} - ${secondsToTime(seconds)}`
+      return `- ${team.name} - ${secondsToTime(seconds)}`
     })
     .join('\n')
 
   return {
-    message: `<b>Результаты игры:</b>\n${text}\nИТОГО:\n${total}`,
+    message: `<b>Результаты игры:</b>\n${text}\n\nИТОГО:${total}`,
     buttons: [
       {
         text: '\u{2B05} Назад',
