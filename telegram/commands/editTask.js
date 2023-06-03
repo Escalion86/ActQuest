@@ -30,7 +30,9 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       task?.codes?.length ?? 0
     } шт)</b>:\n${
       task.codes ? task.codes.join(', ') : '[не задыны]'
-    }\n\nКоличество кодов для выполнения: ${numCodesToCompliteTask ?? 'Все'}`,
+    }\n\nКоличество кодов для выполнения: ${
+      task.numCodesToCompliteTask ?? 'Все'
+    }`,
     buttons: [
       {
         c: {
