@@ -4,6 +4,7 @@ import getSecondsBetween from '@helpers/getSecondsBetween'
 import GamesTeams from '@models/GamesTeams'
 // import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
+import { CLUE_DURATION_SEC } from 'telegram/constants'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
@@ -104,7 +105,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   }
 
   // Проверяем не вышло ли время
-  if (getSecondsBetween(startTime[activeNum]) > 3600) {
+  if (getSecondsBetween(startTime[activeNum]) > CLUE_DURATION_SEC * 3) {
     // const endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
 
     const startTimeTemp = startTimeNextSet(

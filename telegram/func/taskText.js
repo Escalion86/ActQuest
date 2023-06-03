@@ -1,4 +1,5 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import { CLUE_DURATION_SEC } from 'telegram/constants'
 
 const secondsToTime = (sec) => {
   const minutes = Math.floor(sec / 60)
@@ -11,15 +12,15 @@ const taskText = ({ tasks, taskNum, findedCodes, startTaskTime }) => {
 
   const taskDuration = Math.floor(getSecondsBetween(startTaskTime))
 
-  const showClue1 = taskDuration >= 1200
-  const showClue2 = taskDuration >= 2400
+  const showClue1 = taskDuration >= CLUE_DURATION_SEC
+  const showClue2 = taskDuration >= CLUE_DURATION_SEC * 2
 
   return `<b>Задание №${taskNum + 1}:</b>\n${task}${
     showClue1 ? `\n\n<b>Подсказка №1</b>:\n${clues[0].clue}` : ''
   }${showClue2 ? `\n\n<b>Подсказка №2</b>:\n${clues[1].clue}` : ''}${
-    taskDuration < 2400
+    taskDuration < CLUE_DURATION_SEC * 2
       ? `\n\n<b>Время до подсказки</b>: ${secondsToTime(
-          1200 - (taskDuration % 1200)
+          CLUE_DURATION_SEC - (taskDuration % CLUE_DURATION_SEC)
         )}`
       : ''
   }\n\nКоличество кодов на локации: ${codes?.length ?? 0}${
