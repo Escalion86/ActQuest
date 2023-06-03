@@ -54,6 +54,7 @@ import userJoinToTeam from './userJoinToTeam'
 import gameStart from './gameStart'
 import gameStop from './gameStop'
 import gameProcess from './gameProcess'
+import gameActive from './gameStop'
 
 const commandsArray = {
   setUserName,
@@ -112,6 +113,7 @@ const commandsArray = {
   gameStart,
   gameStop,
   gameProcess,
+  gameActive,
 }
 
 export default commandsArray
