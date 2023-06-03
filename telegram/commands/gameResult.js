@@ -54,7 +54,13 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
 
   return {
     message: `<b>Результаты игры:</b>${text}`,
-    c: { c: 'editGame', gameId: jsonCommand.gameId },
+    buttons: [
+      {
+        text: '\u{2B05} Назад',
+        c: 'editGame',
+        gameId: jsonCommand.gameId,
+      },
+    ],
   }
 }
 

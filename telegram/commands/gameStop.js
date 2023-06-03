@@ -11,7 +11,7 @@ const gameActive = async ({ telegramId, jsonCommand }) => {
   if (game.success === false) return game
 
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
-    status: 'active',
+    status: 'finished',
   })
 
   return {
