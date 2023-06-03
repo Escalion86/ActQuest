@@ -240,6 +240,12 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
             })}`
           : ''
       }`,
+      buttons: [
+        {
+          c: { c: 'gameProcess', gameTeamId: jsonCommand.gameTeamId },
+          text: '\u{1F504} Обновить',
+        },
+      ],
       nextCommand: isTaskComplite
         ? {
             // showTask: true
