@@ -41,14 +41,14 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   if (game.success === false) return game
 
   // Если игра не стартовала или уже закончена
-  if (game.status !== 'active') {
+  if (game.status === 'active') {
     return {
       message: 'Игра не стартовала',
       nextCommand: { c: 'game', gameId: gameTeam.gameId },
     }
   }
 
-  if (game.status !== 'finished') {
+  if (game.status === 'finished') {
     return {
       message: 'Игра завершена',
       nextCommand: { c: 'game', gameId: gameTeam.gameId },
