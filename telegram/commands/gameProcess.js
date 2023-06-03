@@ -2,6 +2,7 @@ import getMinutesBetween from '@helpers/getMinutesBetween'
 import getNoun from '@helpers/getNoun'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import GamesTeams from '@models/GamesTeams'
+import TeamsUsers from '@models/TeamsUsers'
 // import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
 import { CLUE_DURATION_SEC } from 'telegram/constants'
@@ -127,6 +128,13 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
+  const buttonRefresh = [
+    {
+      c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
+      text: '\u{1F504} Обновить',
+    },
+  ]
+
   const { task, codes, numCodesToCompliteTask, images } = game.tasks[taskNum]
 
   const code = jsonCommand.message
@@ -153,12 +161,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         findedCodes,
         startTaskTime: startTime[taskNum],
       }),
-      buttons: [
-        {
-          c: { c: 'gameProcess', gameTeamId: jsonCommand.gameTeamId },
-          text: '\u{1F504} Обновить',
-        },
-      ],
+      buttons: buttonRefresh,
       // nextCommand: { showTask: false },
     }
   }
@@ -224,6 +227,33 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       activeNum: newActiveNum,
     })
 
+    if (isTaskComplite) {
+      const teamId = gameTeam.teamId
+
+      const teamsUsers = await TeamsUsers.find({
+        teamId,
+      })
+
+      const usersTelegramIdsOfTeam = teamsUsers
+        .filter((teamUser) => teamUser.userTelegramId !== telegramId)
+        .map((teamUser) => teamUser.userTelegramId)
+
+      const keyboard = keyboardFormer(buttonRefresh)
+
+      await Promise.all(
+        usersTelegramIdsOfTeam.map(async (telegramId) => {
+          await sendMessage({
+            chat_id: telegramId,
+            text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\n\n\n${taskText(
+              { tasks: game.tasks, taskNum, findedCodes }
+            )}`,
+            keyboard,
+            images: game.tasks[taskNum].images,
+          })
+        })
+      )
+    }
+
     return {
       images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
       message: `КОД "${code}" ПРИНЯТ${
@@ -241,14 +271,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
             })}`
           : ''
       }`,
-      buttons: isTaskComplite
-        ? undefined
-        : [
-            {
-              c: { c: 'gameProcess', gameTeamId: jsonCommand.gameTeamId },
-              text: '\u{1F504} Обновить',
-            },
-          ],
+      buttons: isTaskComplite ? undefined : buttonRefresh,
       nextCommand: isTaskComplite
         ? {
             // showTask: true
