@@ -12,6 +12,7 @@ import getGameTeam from 'telegram/func/getGameTeam'
 import keyboardFormer from 'telegram/func/keyboardFormer'
 import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
+import mainMenuButton from './menuItems/mainMenuButton'
 
 const endTimeSet = (endTime, taskNum, gameTasksLength) => {
   const newDate = new Date()
@@ -102,7 +103,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   // Если больше заданий нет (все выолнены)
   if (taskNum > game.tasks.length - 1) {
     return {
-      message: 'Поздравляем Вы завершили все задания!\n\n',
+      message: 'Поздравляем Вы завершили все задания!',
       nextCommand: 'mainMenu',
     }
   }
@@ -241,18 +242,39 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         .filter((teamUser) => teamUser.userTelegramId !== telegramId)
         .map((teamUser) => teamUser.userTelegramId)
 
-      const keyboard = keyboardFormer(buttonRefresh)
+      // Если игра завершена
+      if (newActiveNum > game.tasks.length - 1) {
+        const keyboard = keyboardFormer([mainMenuButton])
 
-      await Promise.all(
-        usersTelegramIdsOfTeam.map(async (telegramId) => {
-          await sendMessage({
-            chat_id: telegramId,
-            text: taskText({ tasks: game.tasks, taskNum: newActiveNum }),
-            keyboard,
-            images: game.tasks[taskNum].images,
+        await Promise.all(
+          usersTelegramIdsOfTeam.map(async (telegramId) => {
+            await sendMessage({
+              chat_id: telegramId,
+              text: 'Поздравляем Вы завершили все задания! Игра окончена. Вы можете выдвигаться на точку сбора',
+              keyboard,
+            })
           })
-        })
-      )
+        )
+
+        return {
+          message:
+            'Поздравляем Вы завершили все задания! Игра окончена. Вы можете выдвигаться на точку сбора',
+          nextCommand: 'mainMenu',
+        }
+      } else {
+        const keyboard = keyboardFormer(buttonRefresh)
+
+        await Promise.all(
+          usersTelegramIdsOfTeam.map(async (telegramId) => {
+            await sendMessage({
+              chat_id: telegramId,
+              text: taskText({ tasks: game.tasks, taskNum: newActiveNum }),
+              keyboard,
+              images: game.tasks[taskNum].images,
+            })
+          })
+        )
+      }
     }
 
     return {
