@@ -88,7 +88,7 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
         usersTelegramIdsOfTeam.map(async (telegramId) => {
           await sendMessage({
             chat_id: telegramId,
-            text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\n\n\n${taskText(
+            text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\u{26A0}\n\n\n${taskText(
               { tasks: game.tasks, taskNum, findedCodes }
             )}`,
             keyboard,

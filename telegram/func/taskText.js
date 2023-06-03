@@ -9,6 +9,7 @@ const secondsToTime = (sec) => {
 
 const taskText = ({ tasks, taskNum, findedCodes, startTaskTime }) => {
   const { task, codes, clues, numCodesToCompliteTask } = tasks[taskNum]
+  console.log('numCodesToCompliteTask :>> ', numCodesToCompliteTask)
 
   const taskDuration = Math.floor(getSecondsBetween(startTaskTime))
 

@@ -183,6 +183,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     const newFindedCodesInTask = [...findedCodesInTask, code]
     newAllFindedCodes[taskNum] = newFindedCodesInTask
     const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
+    console.log('numOfCodesToFind :>> ', numOfCodesToFind)
     const numOfCodesToFindLeft = numOfCodesToFind - newFindedCodesInTask.length
     const isTaskComplite = numOfCodesToFindLeft <= 0
 
@@ -246,9 +247,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         usersTelegramIdsOfTeam.map(async (telegramId) => {
           await sendMessage({
             chat_id: telegramId,
-            text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\n\n\n${taskText(
-              { tasks: game.tasks, taskNum, findedCodes }
-            )}`,
+            text: taskText({ tasks: game.tasks, taskNum: newActiveNum }),
             keyboard,
             images: game.tasks[taskNum].images,
           })
