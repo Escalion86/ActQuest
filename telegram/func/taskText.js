@@ -17,13 +17,13 @@ const taskText = ({ tasks, taskNum, findedCodes, startTaskTime }) => {
 
   return `<b>Задание №${taskNum + 1}:</b>\n${task}${
     showClue1 ? `\n\n<b>Подсказка №1</b>:\n${clues[0].clue}` : ''
-  }${showClue2 ? `\n\n<b>Подсказка №2</b>:\n${clues[1].clue}` : ''}${
-    taskDuration < CLUE_DURATION_SEC * 2
-      ? `\n\n<b>Время до подсказки</b>: ${secondsToTime(
-          CLUE_DURATION_SEC - (taskDuration % CLUE_DURATION_SEC)
-        )}`
-      : ''
-  }\n\nКоличество кодов на локации: ${codes?.length ?? 0}${
+  }${
+    showClue2 ? `\n\n<b>Подсказка №2</b>:\n${clues[1].clue}` : ''
+  }${`\n\n<b>Время до ${
+    taskDuration < CLUE_DURATION_SEC * 2 ? 'подсказки' : 'завершения задания'
+  }</b>: ${secondsToTime(
+    CLUE_DURATION_SEC - (taskDuration % CLUE_DURATION_SEC)
+  )}`}\n\nКоличество кодов на локации: ${codes?.length ?? 0}${
     numCodesToCompliteTask
       ? `\nКоличество кодов необходимое для выполнения задания: ${numCodesToCompliteTask}`
       : ''
