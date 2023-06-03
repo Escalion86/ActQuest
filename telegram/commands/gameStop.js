@@ -16,7 +16,7 @@ const gameStop = async ({ telegramId, jsonCommand }) => {
   if (game.success === false) return game
 
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
-    status: 'finihed',
+    status: 'finished',
   })
   // Получаем список команд участвующих в игре
   const gameTeams = await GamesTeams.find({
