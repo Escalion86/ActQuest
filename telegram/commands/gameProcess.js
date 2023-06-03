@@ -104,7 +104,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   }
 
   // Проверяем не вышло ли время
-  if (getSecondsBetween(startTime[activeNum]) > 60) {
+  if (getSecondsBetween(startTime[activeNum]) > 3600) {
     // const endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
 
     const startTimeTemp = startTimeNextSet(
