@@ -1,5 +1,6 @@
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
+import LastCommands from '@models/LastCommands'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
