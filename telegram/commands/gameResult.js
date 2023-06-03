@@ -1,13 +1,19 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
-import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
-import LastCommands from '@models/LastCommands'
 import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
-import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
-import sendMessage from 'telegram/sendMessage'
+import secondsToTime from 'telegram/func/secondsToTime'
+
+const durationCalc = ({ startTime, endTime }) => {
+  if (!startTime || !endTime) return null
+  const tempArray = []
+  for (let i = 0; i < startTime.length; i++) {
+    if (!endTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
+    else tempArray.push(getSecondsBetween(startTime[i], endTime[i]))
+  }
+  return tempArray
+}
 
 const gameResult = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -33,16 +39,6 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
   const teams = await Teams.find({
     _id: { $in: teamsIds },
   })
-
-  const durationCalc = ({ startTime, endTime }) => {
-    if (!startTime || !endTime) return null
-    const tempArray = []
-    for (let i = 0; i < startTime.length; i++) {
-      if (!endTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
-      else tempArray.push(getSecondsBetween(startTime[i], endTime[i]))
-    }
-    return tempArray
-  }
 
   const tasksDuration = gameTeams.map((gameTeam) => ({
     teamId: gameTeam.teamId,
