@@ -9,7 +9,7 @@ const durationCalc = ({ startTime, endTime }) => {
   if (!startTime || !endTime) return null
   const tempArray = []
   for (let i = 0; i < startTime.length; i++) {
-    if (!endTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
+    if (!endTime[i] || !startTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
     else tempArray.push(getSecondsBetween(startTime[i], endTime[i]))
   }
   return tempArray

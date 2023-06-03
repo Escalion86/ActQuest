@@ -54,7 +54,7 @@ import userJoinToTeam from './userJoinToTeam'
 import gameStart from './gameStart'
 import gameStop from './gameStop'
 import gameProcess from './gameProcess'
-import gameActive from './gameStop'
+import gameActive from './gameActive'
 import setCNum from './setCNum'
 import gameResult from './gameResult'
 
