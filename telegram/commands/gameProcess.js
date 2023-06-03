@@ -227,7 +227,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     return {
       images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
       message: `КОД "${code}" ПРИНЯТ${
-        numOfCodesToFindLeft > 0
+        !isTaskComplite
           ? `\nОсталось найти ${getNoun(
               numOfCodesToFindLeft,
               'код',
@@ -241,12 +241,14 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
             })}`
           : ''
       }`,
-      buttons: [
-        {
-          c: { c: 'gameProcess', gameTeamId: jsonCommand.gameTeamId },
-          text: '\u{1F504} Обновить',
-        },
-      ],
+      buttons: isTaskComplite
+        ? undefined
+        : [
+            {
+              c: { c: 'gameProcess', gameTeamId: jsonCommand.gameTeamId },
+              text: '\u{1F504} Обновить',
+            },
+          ],
       nextCommand: isTaskComplite
         ? {
             // showTask: true
