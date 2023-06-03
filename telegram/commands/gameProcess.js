@@ -9,6 +9,41 @@ import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import taskText from 'telegram/func/taskText'
 
+const endTimeSet = (endTime, taskNum, gameTasksLength) => {
+  const newDate = new Date()
+  var endTimeTemp = endTime ? [...endTime] : undefined
+  if (endTimeTemp) {
+    if (endTimeTemp.length < taskNum + 1) {
+      const newArray = Array(gameTasksLength).fill(undefined)
+      endTimeTemp.forEach((item, index) => (newArray[index] = item))
+      endTimeTemp = [...newArray]
+    }
+  } else {
+    endTimeTemp = Array(gameTasksLength).fill(undefined)
+  }
+  endTimeTemp[taskNum] = newDate
+  return endTimeTemp
+}
+
+const startTimeNextSet = (startTime, taskNum, gameTasksLength) => {
+  // var endTimeTemp = endTime
+  const newDate = new Date()
+  var startTimeTemp = startTime ? [...startTime] : undefined
+  if (startTimeTemp) {
+    if (startTimeTemp.length < taskNum + 1) {
+      const newArray = Array(gameTasksLength).fill(undefined)
+      startTimeTemp.forEach((item, index) => (newArray[index] = item))
+      startTimeTemp = [...newArray]
+    }
+  } else {
+    startTimeTemp = Array(gameTasksLength).fill(undefined)
+  }
+  if (taskNum < gameTasksLength - 1) {
+    startTimeTemp[taskNum + 1] = newDate
+  }
+  return startTimeTemp
+}
+
 const gameProcess = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
@@ -70,6 +105,14 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
   // Проверяем не вышло ли время
   if (getSecondsBetween(startTime[activeNum]) > 60) {
+    // const endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
+
+    const startTimeTemp = startTimeNextSet(
+      startTime,
+      taskNum,
+      game.tasks.length
+    )
+
     await dbConnect()
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       // findedCodes: newAllFindedCodes,
@@ -141,30 +184,33 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     var startTimeTemp = startTime
 
     if (isTaskComplite) {
-      const newDate = new Date()
-      if (endTimeTemp) {
-        if (endTimeTemp.length < taskNum + 1) {
-          const newArray = Array(game.tasks.length).fill(undefined)
-          endTimeTemp.forEach((item, index) => (newArray[index] = item))
-          endTimeTemp = [...newArray]
-        }
-      } else {
-        endTimeTemp = Array(game.tasks.length).fill(undefined)
-      }
-      endTimeTemp[taskNum] = newDate
+      // const newDate = new Date()
+      // if (endTimeTemp) {
+      //   if (endTimeTemp.length < taskNum + 1) {
+      //     const newArray = Array(game.tasks.length).fill(undefined)
+      //     endTimeTemp.forEach((item, index) => (newArray[index] = item))
+      //     endTimeTemp = [...newArray]
+      //   }
+      // } else {
+      //   endTimeTemp = Array(game.tasks.length).fill(undefined)
+      // }
+      // endTimeTemp[taskNum] = newDate
 
-      if (startTimeTemp) {
-        if (startTimeTemp.length < taskNum + 1) {
-          const newArray = Array(game.tasks.length).fill(undefined)
-          startTimeTemp.forEach((item, index) => (newArray[index] = item))
-          startTimeTemp = [...newArray]
-        }
-      } else {
-        startTimeTemp = Array(game.tasks.length).fill(undefined)
-      }
-      if (taskNum < game.tasks.length - 1) {
-        startTimeTemp[taskNum + 1] = newDate
-      }
+      endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
+
+      startTimeTemp = startTimeNextSet(startTime, taskNum, game.tasks.length)
+      // if (startTimeTemp) {
+      //   if (startTimeTemp.length < taskNum + 1) {
+      //     const newArray = Array(game.tasks.length).fill(undefined)
+      //     startTimeTemp.forEach((item, index) => (newArray[index] = item))
+      //     startTimeTemp = [...newArray]
+      //   }
+      // } else {
+      //   startTimeTemp = Array(game.tasks.length).fill(undefined)
+      // }
+      // if (taskNum < game.tasks.length - 1) {
+      //   startTimeTemp[taskNum + 1] = newDate
+      // }
     }
 
     const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
