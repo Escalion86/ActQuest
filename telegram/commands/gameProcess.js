@@ -1,3 +1,4 @@
+import getMinutesBetween from '@helpers/getMinutesBetween'
 import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 // import Teams from '@models/Teams'
@@ -90,6 +91,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         tasks: game.tasks,
         taskNum,
         findedCodes,
+        startTaskTime: startTime[taskNum],
       }),
       // nextCommand: { showTask: false },
     }
@@ -166,6 +168,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               tasks: game.tasks,
               taskNum: newActiveNum,
               findedCodes: isTaskComplite ? [] : newAllFindedCodes,
+              startTaskTime: startTime[newActiveNum],
             })}`
           : ''
       }`,
