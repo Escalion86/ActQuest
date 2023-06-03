@@ -1,11 +1,6 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import { CLUE_DURATION_SEC } from 'telegram/constants'
-
-const secondsToTime = (sec) => {
-  const minutes = Math.floor(sec / 60)
-  const seconds = sec % 60
-  return `${minutes} мин ${seconds} сек`
-}
+import secondsToTime from './secondsToTime'
 
 const taskText = ({ tasks, taskNum, findedCodes, startTaskTime }) => {
   const { task, codes, clues, numCodesToCompliteTask } = tasks[taskNum]

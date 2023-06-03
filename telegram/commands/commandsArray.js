@@ -56,6 +56,7 @@ import gameStop from './gameStop'
 import gameProcess from './gameProcess'
 import gameActive from './gameStop'
 import setCNum from './setCNum'
+import gameResult from './gameResult'
 
 const commandsArray = {
   setUserName,
@@ -116,6 +117,7 @@ const commandsArray = {
   gameProcess,
   gameActive,
   setCNum,
+  gameResult,
 }
 
 export default commandsArray
