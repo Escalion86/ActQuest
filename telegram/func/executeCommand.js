@@ -26,7 +26,7 @@ const executeCommand = async (
   const result = await lastCommandHandler(userTelegramId, jsonCommand)
   // console.log('result :>> ', result)
 
-  const keyboard = keyboardFormer(commandsArray, result.buttons)
+  const keyboard = keyboardFormer(result.buttons)
   // console.log('keyboard ', keyboard?.inline_keyboard)
 
   if (result.images) {

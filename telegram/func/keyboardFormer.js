@@ -1,6 +1,6 @@
 import inlineKeyboard from './inlineKeyboard'
 
-const keyboardFormer = (commands, buttons) => {
+const keyboardFormer = (buttons) => {
   if (buttons && typeof buttons === 'object') {
     const resultKeyboard = inlineKeyboard(
       // await Promise.all(

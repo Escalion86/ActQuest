@@ -93,6 +93,12 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         findedCodes,
         startTaskTime: startTime[taskNum],
       }),
+      buttons: [
+        {
+          c: { c: 'gameProcess', gameTeamId: jsonCommand.gameTeamId },
+          text: '\u{1F504} Обновить',
+        },
+      ],
       // nextCommand: { showTask: false },
     }
   }

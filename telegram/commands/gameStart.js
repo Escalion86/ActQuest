@@ -6,6 +6,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
+import keyboardFormer from 'telegram/func/keyboardFormer'
 import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 
@@ -73,6 +74,13 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
       const findedCodes = gameTeam?.findedCodes ?? []
       // const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
 
+      const keyboard = keyboardFormer([
+        {
+          c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
+          text: '\u{1F504} Обновить',
+        },
+      ])
+
       await Promise.all(
         usersTelegramIdsOfTeam.map(async (telegramId) => {
           await sendMessage({
@@ -80,6 +88,7 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
             text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\n\n\n${taskText(
               { tasks: game.tasks, taskNum, findedCodes }
             )}`,
+            keyboard,
             images: game.tasks[taskNum].images,
           })
         })
