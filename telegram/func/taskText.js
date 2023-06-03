@@ -3,7 +3,7 @@ import getSecondsBetween from '@helpers/getSecondsBetween'
 const secondsToTime = (sec) => {
   const minutes = Math.floor(sec / 60)
   const seconds = sec % 60
-  return `${minutes}:${seconds}`
+  return `${minutes} мин ${seconds} сек`
 }
 
 const taskText = ({ tasks, taskNum, findedCodes, startTaskTime }) => {

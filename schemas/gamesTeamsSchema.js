@@ -15,6 +15,7 @@ const gamesTeamsSchema = {
   findedCodes: [[String]],
   startTime: [Date],
   endTime: [Date],
+  timerId: String,
   // },
 }
 
