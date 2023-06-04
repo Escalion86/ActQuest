@@ -16,7 +16,11 @@ const durationCalc = ({ startTime, endTime, activeNum }) => {
     if (activeNum > i) {
       if (!endTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
       else tempArray.push(getSecondsBetween(startTime[i], endTime[i]))
-    } else tempArray.push('[не завершено]')
+    } else if (activeNum === i) {
+      tempArray.push('[не завершено]')
+    } else {
+      tempArray.push('[не начато]')
+    }
   }
   return tempArray
 }
@@ -76,18 +80,17 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
       )
 
       const sortedTeamsSeconds = [...teamsSeconds].sort((a, b) =>
-        a.seconds < b.seconds ? -1 : 1
+        a.seconds.localeCompare(b.seconds, undefined, { numeric: true })
       )
+      // .sort((a, b) =>
+      //   a.seconds < b.seconds ? -1 : 1
+      // )
 
       return `\n<b>\u{1F4CC} "${task.title}"</b>\n${sortedTeamsSeconds
         .map(
           ({ team, seconds }) =>
             `${
-              typeof seconds === 'number'
-                ? secondsToTime(seconds)
-                : typeof seconds === 'string'
-                ? seconds
-                : '[не завершено]'
+              typeof seconds === 'number' ? secondsToTime(seconds) : seconds
             } - ${team.name}`
         )
         .join('\n')}`
@@ -108,8 +111,11 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     }),
   ]
   const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort((a, b) =>
-    a.seconds < b.seconds ? -1 : 1
+    a.seconds.localeCompare(b.seconds, undefined, { numeric: true })
   )
+  // .sort((a, b) =>
+  //   typeof a.seconds === number ? (a.seconds < b.seconds ? -1 : 1) : -1
+  // )
 
   const total = sortedTotalTeamsSeconds
     .map(({ team, seconds }) => {
