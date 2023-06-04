@@ -13,11 +13,10 @@ const durationCalc = ({ startTime, endTime, activeNum }) => {
   if (!startTime || !endTime) return null
   const tempArray = []
   for (let i = 0; i < startTime.length; i++) {
-    if (activeNum < i) tempArray.push('[стоп игра]')
-    else {
-      if (!endTime[i] || !startTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
+    if (activeNum > i) {
+      if (!endTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
       else tempArray.push(getSecondsBetween(startTime[i], endTime[i]))
-    }
+    } else tempArray.push('[не завершено]')
   }
   return tempArray
 }
@@ -88,7 +87,7 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
                 ? secondsToTime(seconds)
                 : typeof seconds === 'string'
                 ? seconds
-                : '[выбыли]'
+                : '[не завершено]'
             } - ${team.name}`
         )
         .join('\n')}`
@@ -98,7 +97,13 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
   const totalTeamsSeconds = [
     ...teams.map((team, index) => {
       const dur = tasksDuration.find((item) => item.teamId === String(team._id))
-      const seconds = dur?.duration.reduce((partialSum, a) => partialSum + a, 0)
+      const seconds = dur?.duration.reduce(
+        (partialSum, a) =>
+          typeof a === 'number' && typeof partialSum === 'number'
+            ? partialSum + a
+            : '[стоп игра]',
+        0
+      )
       return { team, seconds }
     }),
   ]
@@ -108,7 +113,9 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
 
   const total = sortedTotalTeamsSeconds
     .map(({ team, seconds }) => {
-      return `${secondsToTime(seconds)} - ${team.name}`
+      return `${
+        typeof seconds === 'number' ? secondsToTime(seconds) : seconds
+      } - ${team.name}`
     })
     .join('\n')
 
