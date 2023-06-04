@@ -52,7 +52,7 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
           gameTeamId: jsonCommand.gameTeamId,
         },
         text: '\u{1F4A3} Удалить команду из игры',
-        hide: capitanTelegramId !== telegramId,
+        hide: capitanTelegramId !== telegramId || game.status !== 'active',
       },
       {
         c: { c: 'gameTeams', gameId: String(game._id) },
