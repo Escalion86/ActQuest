@@ -80,7 +80,9 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
       )
 
       const sortedTeamsSeconds = [...teamsSeconds].sort((a, b) =>
-        a.seconds.localeCompare(b.seconds, undefined, { numeric: true })
+        String(a.seconds).localeCompare(String(b.seconds), undefined, {
+          numeric: true,
+        })
       )
       // .sort((a, b) =>
       //   a.seconds < b.seconds ? -1 : 1
@@ -111,7 +113,9 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     }),
   ]
   const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort((a, b) =>
-    a.seconds.localeCompare(b.seconds, undefined, { numeric: true })
+    String(a.seconds).localeCompare(String(b.seconds), undefined, {
+      numeric: true,
+    })
   )
   // .sort((a, b) =>
   //   typeof a.seconds === number ? (a.seconds < b.seconds ? -1 : 1) : -1
