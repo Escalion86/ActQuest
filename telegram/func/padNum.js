@@ -1,4 +1,7 @@
-const padNum = (num, pad) =>
-  new Array(pad).join('0').slice((pad || 2) * -1) + num
+function padNum(n, width, z) {
+  z = z || '0'
+  n = n + ''
+  return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n
+}
 
 export default padNum
