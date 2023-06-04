@@ -100,6 +100,11 @@ const game = async ({ telegramId, jsonCommand }) => {
     images: game.image ? [game.image] : undefined,
     buttons: [
       {
+        c: { c: 'gameResult', gameId: jsonCommand.gameId },
+        text: '\u{26A1} Посмотреть результаты игры',
+        hide: game.status !== 'finished',
+      },
+      {
         c: { c: 'joinGame', gameId: jsonCommand.gameId },
         text: '\u{270F} Зарегистрироваться на игру',
         hide:

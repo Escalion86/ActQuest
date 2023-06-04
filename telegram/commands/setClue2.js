@@ -10,7 +10,7 @@ const setClue2 = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message) {
     return {
       success: true,
-      message: 'Введите новый текст подсказки №1',
+      message: 'Введите новый текст подсказки №2',
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
