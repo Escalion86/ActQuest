@@ -50,6 +50,7 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
   }))
 
   const taskAverageTimes = Array(game.tasks.length)
+  const fastestTask = {}
 
   const text = game.tasks
     .map((task, index) => {
@@ -58,6 +59,11 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
           (item) => item.teamId === String(team._id)
         )
         const seconds = dur?.duration[index]
+        if (!fastestTask.seconds || fastestTask.seconds > seconds) {
+          fastestTask.seconds = seconds
+          fastestTask.teamName = team.name
+          fastestTask.taskTitle = task.title
+        }
         return { team, seconds }
       })
 
@@ -95,9 +101,11 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
   const mostEasyTaskIndex = taskAverageTimes.indexOf(
     Math.max.apply(null, taskAverageTimes)
   )
+  console.log('mostEasyTaskIndex :>> ', mostEasyTaskIndex)
   const mostHardTaskIndex = taskAverageTimes.indexOf(
     Math.min.apply(null, taskAverageTimes)
   )
+  console.log('mostHardTaskIndex :>> ', mostHardTaskIndex)
 
   return {
     message: `<b>Результаты игры:</b>\n${text}\n\n<b>ИТОГО:</b>\n${total}\n\n<b>Самое легкое задание:</b>\n"${
@@ -106,11 +114,17 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
       taskAverageTimes[mostEasyTaskIndex]
     )}\n\n<b>Самое сложное задание:</b>\n"${
       game.tasks[mostHardTaskIndex].title
-    }" - среднее время ${secondsToTime(taskAverageTimes[mostHardTaskIndex])}`,
+    }" - среднее время ${secondsToTime(
+      taskAverageTimes[mostHardTaskIndex]
+    )}\n\n<b>Самое быстрое выполнение задания:</b>\n"${
+      fastestTask.taskTitle
+    }" команда "${fastestTask.teamNAme}" - ${secondsToTime(
+      fastestTask.seconds
+    )}`,
     buttons: [
       {
         text: '\u{2B05} Назад',
-        c: { c: 'editGame', gameId: jsonCommand.gameId },
+        c: { c: 'game', gameId: jsonCommand.gameId },
       },
     ],
   }
