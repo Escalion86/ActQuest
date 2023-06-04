@@ -9,12 +9,15 @@ import secondsToTime from 'telegram/func/secondsToTime'
 const getAverage = (numbers) =>
   numbers.reduce((acc, number) => acc + number, 0) / numbers.length
 
-const durationCalc = ({ startTime, endTime }) => {
+const durationCalc = ({ startTime, endTime, activeNum }) => {
   if (!startTime || !endTime) return null
   const tempArray = []
   for (let i = 0; i < startTime.length; i++) {
-    if (!endTime[i] || !startTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
-    else tempArray.push(getSecondsBetween(startTime[i], endTime[i]))
+    if (activeNum < i) tempArray.push('[стоп игра]')
+    else {
+      if (!endTime[i] || !startTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
+      else tempArray.push(getSecondsBetween(startTime[i], endTime[i]))
+    }
   }
   return tempArray
 }
@@ -68,7 +71,9 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
       })
 
       taskAverageTimes[index] = getAverage(
-        teamsSeconds.map(({ seconds }) => seconds).filter((seconds) => seconds)
+        teamsSeconds
+          .map(({ seconds }) => seconds)
+          .filter((seconds) => typeof seconds === 'number')
       )
 
       const sortedTeamsSeconds = [...teamsSeconds].sort((a, b) =>
@@ -78,7 +83,13 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
       return `\n<b>\u{1F4CC} "${task.title}"</b>\n${sortedTeamsSeconds
         .map(
           ({ team, seconds }) =>
-            `${seconds ? secondsToTime(seconds) : '[выбыли]'} - ${team.name}`
+            `${
+              typeof seconds === 'number'
+                ? secondsToTime(seconds)
+                : typeof seconds === 'string'
+                ? seconds
+                : '[выбыли]'
+            } - ${team.name}`
         )
         .join('\n')}`
     })
