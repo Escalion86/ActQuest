@@ -68,7 +68,7 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
       })
 
       taskAverageTimes[index] = getAverage(
-        teamsSeconds.map(({ seconds }) => seconds)
+        teamsSeconds.map(({ seconds }) => seconds ?? CLUE_DURATION_SEC * 3)
       )
 
       const sortedTeamsSeconds = [...teamsSeconds].sort((a, b) =>
