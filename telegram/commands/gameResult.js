@@ -48,35 +48,43 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
 
   const text = game.tasks
     .map((task, index) => {
-      return `\n<b>Задание "${task.title}"</b>${[
-        ...teams.map((team) => {
-          const dur = tasksDuration.find(
-            (item) => item.teamId === String(team._id)
-          )
-          const seconds = dur?.duration[index]
-          return { team, seconds }
-        }),
-      ]
-        .sort((a, b) => (a.seconds < b.seconds ? -1 : 1))
-        .map(({ team, seconds }) => {
-          return `${secondsToTime(seconds)} - ${team.name}`
-        })
+      const teamsSeconds = teams.map((team) => {
+        const dur = tasksDuration.find(
+          (item) => item.teamId === String(team._id)
+        )
+        const seconds = dur?.duration[index]
+        return { team, seconds }
+      })
+      const sortedTeamsSeconds = [...teamsSeconds].sort((a, b) =>
+        a.seconds < b.seconds ? -1 : 1
+      )
+
+      return `\n<b>Задание "${task.title}"</b>${sortedTeamsSeconds
+        .map(({ team, seconds }) => `${secondsToTime(seconds)} - ${team.name}`)
         .join('\n')}`
     })
     .join('\n')
 
-  const total = [
+  console.log('text :>> ', text)
+
+  const totalTeamsSeconds = [
     ...teams.map((team, index) => {
       const dur = tasksDuration.find((item) => item.teamId === String(team._id))
       const seconds = dur?.duration.reduce((partialSum, a) => partialSum + a, 0)
       return { team, seconds }
     }),
   ]
-    .sort((a, b) => (a.seconds < b.seconds ? -1 : 1))
+  const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort((a, b) =>
+    a.seconds < b.seconds ? -1 : 1
+  )
+
+  const total = sortedTotalTeamsSeconds
     .map(({ team, seconds }) => {
       return `${secondsToTime(seconds)} - ${team.name}`
     })
     .join('\n')
+
+  console.log('total :>> ', total)
 
   return {
     message: `<b>Результаты игры:</b>\n${text}\n\n<b>ИТОГО:</b>\n${total}`,
