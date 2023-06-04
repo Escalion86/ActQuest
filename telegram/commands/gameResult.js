@@ -55,9 +55,12 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
         const seconds = dur?.duration[index]
         return { team, seconds }
       })
+      console.log('teamsSeconds :>> ', teamsSeconds)
+
       const sortedTeamsSeconds = [...teamsSeconds].sort((a, b) =>
         a.seconds < b.seconds ? -1 : 1
       )
+      console.log('sortedTeamsSeconds :>> ', sortedTeamsSeconds)
 
       return `\n<b>Задание "${task.title}"</b>${sortedTeamsSeconds
         .map(({ team, seconds }) => `${secondsToTime(seconds)} - ${team.name}`)

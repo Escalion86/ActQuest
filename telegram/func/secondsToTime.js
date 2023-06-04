@@ -1,3 +1,5 @@
+import padNum from './padNum'
+
 const secondsToTime = (sec) => {
   if (!sec) return null
   const hours = Math.floor(sec / 3600)
