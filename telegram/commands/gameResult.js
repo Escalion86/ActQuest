@@ -6,6 +6,24 @@ import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import secondsToTime from 'telegram/func/secondsToTime'
 
+const sortFunc = (a, b) => {
+  const isNumericA = typeof a.seconds === 'number'
+  const isNumericB = typeof b.seconds === 'number'
+
+  if (isNumericA && isNumericB) {
+    return a.seconds - b.seconds
+  }
+
+  if (isNumericA && !isNumericB) {
+    return -1
+  }
+
+  if (!isNumericA && isNumericB) {
+    return 1
+  }
+  return 0
+}
+
 const getAverage = (numbers) =>
   numbers.reduce((acc, number) => acc + number, 0) / numbers.length
 
@@ -64,7 +82,7 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
         const dur = tasksDuration.find(
           (item) => item.teamId === String(team._id)
         )
-        const seconds = dur?.duration[index]
+        const seconds = dur?.duration[index] ?? '[не начато]'
         if (!fastestTask.seconds || fastestTask.seconds > seconds) {
           fastestTask.seconds = seconds
           fastestTask.teamName = team.name
@@ -79,11 +97,7 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
           .filter((seconds) => typeof seconds === 'number')
       )
 
-      const sortedTeamsSeconds = [...teamsSeconds].sort((a, b) =>
-        String(a.seconds).localeCompare(String(b.seconds), undefined, {
-          numeric: true,
-        })
-      )
+      const sortedTeamsSeconds = [...teamsSeconds].sort(sortFunc)
       // .sort((a, b) =>
       //   a.seconds < b.seconds ? -1 : 1
       // )
@@ -112,11 +126,7 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
       return { team, seconds }
     }),
   ]
-  const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort((a, b) =>
-    String(a.seconds).localeCompare(String(b.seconds), undefined, {
-      numeric: true,
-    })
-  )
+  const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort(sortFunc)
   // .sort((a, b) =>
   //   typeof a.seconds === number ? (a.seconds < b.seconds ? -1 : 1) : -1
   // )
