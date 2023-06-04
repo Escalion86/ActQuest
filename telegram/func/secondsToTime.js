@@ -1,11 +1,9 @@
-const twoChars = (num) => (num <= 9 ? `0${num}` : `${num}`)
-
 const secondsToTime = (sec) => {
   if (!sec) return null
   const hours = Math.floor(sec / 3600)
   const minutes = Math.floor(sec / 60)
   const seconds = sec % 60
-  return `${twoChars(hours)}:${twoChars(minutes)}:${twoChars(seconds)}`
+  return `${padNum(hours, 2)}:${padNum(minutes, 2)}:${padNum(seconds, 2)}`
 }
 
 export default secondsToTime
