@@ -98,6 +98,8 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     })
     .join('\n')
 
+  console.log('taskAverageTimes :>> ', taskAverageTimes)
+
   const mostEasyTaskIndex = taskAverageTimes.indexOf(
     Math.max.apply(null, taskAverageTimes)
   )
