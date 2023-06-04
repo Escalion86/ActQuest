@@ -6,6 +6,9 @@ import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import secondsToTime from 'telegram/func/secondsToTime'
 
+const getAverage = (numbers) =>
+  numbers.reduce((acc, number) => acc + number, 0) / numbers.length
+
 const durationCalc = ({ startTime, endTime }) => {
   if (!startTime || !endTime) return null
   const tempArray = []
@@ -46,6 +49,8 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     duration: durationCalc(gameTeam),
   }))
 
+  const taskAverageTimes = Array(game.tasks.length)
+
   const text = game.tasks
     .map((task, index) => {
       const teamsSeconds = teams.map((team) => {
@@ -55,7 +60,10 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
         const seconds = dur?.duration[index]
         return { team, seconds }
       })
-      console.log('teamsSeconds :>> ', teamsSeconds)
+
+      taskAverageTimes[index] = getAverage(
+        teamsSeconds.map(({ seconds }) => seconds)
+      )
 
       const sortedTeamsSeconds = [...teamsSeconds].sort((a, b) =>
         a.seconds < b.seconds ? -1 : 1
@@ -84,10 +92,21 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     })
     .join('\n')
 
-  console.log('total :>> ', total)
+  const mostEasyTaskIndex = taskAverageTimes.indexOf(
+    Math.max.apply(null, taskAverageTimes)
+  )
+  const mostHardTaskIndex = taskAverageTimes.indexOf(
+    Math.min.apply(null, taskAverageTimes)
+  )
 
   return {
-    message: `<b>Результаты игры:</b>\n${text}\n\n<b>ИТОГО:</b>\n${total}`,
+    message: `<b>Результаты игры:</b>\n${text}\n\n<b>ИТОГО:</b>\n${total}\n\n<b>Самое легкое задание:</b>\n"${
+      game.tasks[mostEasyTaskIndex].title
+    }" - среднее время ${secondsToTime(
+      taskAverageTimes[mostEasyTaskIndex]
+    )}\n\n<b>Самое сложное задание:</b>\n"${
+      game.tasks[mostHardTaskIndex].title
+    }" - среднее время ${secondsToTime(taskAverageTimes[mostHardTaskIndex])}`,
     buttons: [
       {
         text: '\u{2B05} Назад',
