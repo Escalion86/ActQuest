@@ -1,11 +1,11 @@
 const secondsToTimeStr = (seconds) => {
   if (seconds == 0) return '0 секунд'
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const seconds = seconds % 60
-  return `${hours > 0 ? getNoun(hours, 'час', 'часа', 'часов') : ''}
-  ${minutes > 0 ? getNoun(minutes, 'минута', 'минуты', 'минут') : ''}
-  ${seconds > 0 ? getNoun(seconds, 'секунда', 'секунды', 'секунд') : ''}`
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  return `${h > 0 ? getNoun(h, 'час', 'часа', 'часов') : ''}
+  ${m > 0 ? getNoun(m, 'минута', 'минуты', 'минут') : ''}
+  ${s > 0 ? getNoun(s, 'секунда', 'секунды', 'секунд') : ''}`
 }
 
 export default secondsToTimeStr
