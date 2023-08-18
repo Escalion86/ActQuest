@@ -28,9 +28,11 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       game?.taskDuration ?? 3600
     )}\n<b>Время до подсказки</b>: ${secondsToTimeStr(
       game?.durationBetweenClues ?? 1200
-    )}\n<b>Перерыв между заданиями</b>: ${secondsToTimeStr(
-      game?.breakDurationBetweenTasks ?? 0
-    )}`,
+    )}\n<b>Перерыв между заданиями</b>: ${
+      !game?.breakDurationBetweenTasks
+        ? 'отсутствует'
+        : secondsToTimeStr(game?.breakDurationBetweenTasks)
+    }`,
     buttons: [
       {
         c: { c: 'gameStart', gameId: jsonCommand.gameId },
