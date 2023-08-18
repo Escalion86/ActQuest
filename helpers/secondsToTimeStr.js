@@ -1,3 +1,5 @@
+import getNoun from './getNoun'
+
 const secondsToTimeStr = (seconds) => {
   if (seconds == 0) return '0 секунд'
   const h = Math.floor(seconds / 3600)
