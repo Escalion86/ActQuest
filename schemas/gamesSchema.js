@@ -60,6 +60,18 @@ const gamesSchema = {
     ],
     default: [],
   },
+  taskDuration: {
+    type: Number,
+    default: 3600,
+  },
+  durationBetweenClues: {
+    type: Number,
+    default: 3600,
+  },
+  breakDurationBetweenTasks: {
+    type: Number,
+    default: 0,
+  },
   status: {
     type: String,
     default: 'active',

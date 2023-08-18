@@ -48,31 +48,35 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         text: '\u{26A1} Посмотреть статус игры',
         hide: game.status !== 'started',
       },
-      {
-        c: { c: 'setGameName', gameId: jsonCommand.gameId },
-        text: '\u{270F} Изменить название',
-      },
-      {
-        c: {
-          c: 'setGameDesc',
-          gameId: jsonCommand.gameId,
+      [
+        {
+          c: { c: 'setGameName', gameId: jsonCommand.gameId },
+          text: '\u{270F} Название',
         },
-        text: '\u{270F} Изменить описание',
-      },
-      {
-        c: {
-          c: 'setGameDate',
-          gameId: jsonCommand.gameId,
+        {
+          c: {
+            c: 'setGameDesc',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Описание',
         },
-        text: '\u{270F} Изменить дату и время',
-      },
-      {
-        c: {
-          c: 'setGameImage',
-          gameId: jsonCommand.gameId,
+      ],
+      [
+        {
+          c: {
+            c: 'setGameDate',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Дата и время',
         },
-        text: '\u{270F} Изменить картинку',
-      },
+        {
+          c: {
+            c: 'setGameImage',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Картинка',
+        },
+      ],
       {
         c: {
           c: 'gameTasksEdit',
