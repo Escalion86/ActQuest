@@ -22,14 +22,13 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         : '[не заданы]'
     }\n\n<b>Описание</b>:\n${
       game?.description ? `"${game?.description}"` : '[без описания]'
-    }\n\n<b>Количество заданий</b>: ${game?.tasks?.length ?? 0}
-    \n<b>Продолжительность одного задания</b>: ${secondsToTimeStr(
+    }\n\n<b>Количество заданий</b>: ${
+      game?.tasks?.length ?? 0
+    }\n<b>Продолжительность одного задания</b>: ${secondsToTimeStr(
       game?.taskDuration ?? 3600
-    )}
-    \n<b>Время до подсказки</b>: ${secondsToTimeStr(
+    )}\n<b>Время до подсказки</b>: ${secondsToTimeStr(
       game?.durationBetweenClues ?? 1200
-    )}
-    \n<b>Перерыв между заданиями</b>: ${secondsToTimeStr(
+    )}\n<b>Перерыв между заданиями</b>: ${secondsToTimeStr(
       game?.breakDurationBetweenTasks ?? 0
     )}`,
     buttons: [
