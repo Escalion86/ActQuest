@@ -66,7 +66,7 @@ const gamesSchema = {
   },
   durationBetweenClues: {
     type: Number,
-    default: 3600,
+    default: 1200,
   },
   breakDurationBetweenTasks: {
     type: Number,

@@ -86,6 +86,29 @@ const editGame = async ({ telegramId, jsonCommand }) => {
           text: '\u{270F} Задания',
         },
       ],
+      [
+        {
+          c: {
+            c: 'taskDuration',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Продолж. задания',
+        },
+        {
+          c: {
+            c: 'durationBetweenClues',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Время до подсказки',
+        },
+        {
+          c: {
+            c: 'breakDuration',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Продолж. перерыва',
+        },
+      ],
       {
         c: {
           c: 'hideGame',
