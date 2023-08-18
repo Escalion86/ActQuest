@@ -60,8 +60,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
           },
           text: '\u{270F} Описание',
         },
-      ],
-      [
+        ,
         {
           c: {
             c: 'setGameDate',
@@ -69,6 +68,8 @@ const editGame = async ({ telegramId, jsonCommand }) => {
           },
           text: '\u{270F} Дата и время',
         },
+      ],
+      [
         {
           c: {
             c: 'setGameImage',
@@ -76,14 +77,15 @@ const editGame = async ({ telegramId, jsonCommand }) => {
           },
           text: '\u{270F} Картинка',
         },
-      ],
-      {
-        c: {
-          c: 'gameTasksEdit',
-          gameId: jsonCommand.gameId,
+        ,
+        {
+          c: {
+            c: 'gameTasksEdit',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Задания',
         },
-        text: '\u{270F} Редактировать задания',
-      },
+      ],
       {
         c: {
           c: 'hideGame',
