@@ -1,9 +1,3 @@
-import mongoose from 'mongoose'
-
-// var Levels = new mongoose.Schema({
-//   type: Map,
-// });
-
 const gamesSchema = {
   name: {
     type: String,
