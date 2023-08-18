@@ -1,3 +1,4 @@
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
@@ -21,7 +22,16 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         : '[не заданы]'
     }\n\n<b>Описание</b>:\n${
       game?.description ? `"${game?.description}"` : '[без описания]'
-    }\n\n<b>Количество заданий</b>: ${game?.tasks?.length ?? 0}`,
+    }\n\n<b>Количество заданий</b>: ${game?.tasks?.length ?? 0}
+    \n<b>Продолжительность одного задания</b>: ${secondsToTimeStr(
+      game?.taskDuration ?? 3600
+    )}
+    \n<b>Время до подсказки</b>: ${secondsToTimeStr(
+      game?.durationBetweenClues ?? 1200
+    )}
+    \n<b>Перерыв между заданиями</b>: ${secondsToTimeStr(
+      game?.breakDurationBetweenTasks ?? 0
+    )}`,
     buttons: [
       {
         c: { c: 'gameStart', gameId: jsonCommand.gameId },
