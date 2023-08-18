@@ -96,6 +96,8 @@ const game = async ({ telegramId, jsonCommand }) => {
       : ''
   }${
     game?.description ? `\n\n<b>Описание</b>:\n"${game?.description}"` : ''
+  }\n\n<b>Количество заданий</b>: ${
+    game?.tasks?.length ?? 0
   }\n<b>Продолжительность одного задания</b>: ${secondsToTimeStr(
     game?.taskDuration ?? 3600
   )}\n<b>Время до подсказки</b>: ${secondsToTimeStr(
