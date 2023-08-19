@@ -64,11 +64,15 @@ const gamesSchema = {
     type: Number,
     default: 3600,
   },
-  durationBetweenClues: {
+  cluesDuration: {
     type: Number,
     default: 1200,
   },
-  breakDurationBetweenTasks: {
+  breakDuration: {
+    type: Number,
+    default: 0,
+  },
+  taskFailurePenalty: {
     type: Number,
     default: 0,
   },
