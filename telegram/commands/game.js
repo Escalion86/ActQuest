@@ -101,11 +101,15 @@ const game = async ({ telegramId, jsonCommand }) => {
   }\n<b>Продолжительность одного задания</b>: ${secondsToTimeStr(
     game?.taskDuration ?? 3600
   )}\n<b>Время до подсказки</b>: ${secondsToTimeStr(
-    game?.durationBetweenClues ?? 1200
+    game?.cluesDuration ?? 1200
   )}\n<b>Перерыв между заданиями</b>: ${
-    !game?.breakDurationBetweenTasks
+    !game?.breakDuration
       ? 'отсутствует'
       : secondsToTimeStr(game?.breakDurationBetweenTasks)
+  }\n<b>Штраф за невыполнение задания</b>: ${
+    !game?.taskFailurePenalty
+      ? 'отсутствует'
+      : secondsToTimeStr(game?.taskFailurePenalty)
   }`
 
   return {
