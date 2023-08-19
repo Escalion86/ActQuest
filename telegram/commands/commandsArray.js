@@ -59,6 +59,10 @@ import setCNum from './setCNum'
 import gameResult from './gameResult'
 import gameStatus from './gameStatus'
 import gameMsg from './gameMsg'
+import setTaskDuration from './setTaskDuration'
+import setBreakDuration from './setBreakDuration'
+import setCluesDuration from './setCluesDuration'
+import setTaskPenalty from './setTaskPenalty'
 
 const commandsArray = {
   setUserName,
@@ -122,6 +126,10 @@ const commandsArray = {
   gameResult,
   gameStatus,
   gameMsg,
+  setTaskDuration,
+  setBreakDuration,
+  setCluesDuration,
+  setTaskPenalty,
 }
 
 export default commandsArray
