@@ -123,7 +123,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         },
         {
           c: {
-            c: 'setTaskFailurePenalty',
+            c: 'setTaskPenalty',
             gameId: jsonCommand.gameId,
           },
           text: '\u{270F} Штраф за провал',

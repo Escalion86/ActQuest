@@ -3,7 +3,7 @@ import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
-const setTaskFailurePenalty = async ({ telegramId, jsonCommand }) => {
+const setTaskPenalty = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
@@ -35,4 +35,4 @@ const setTaskFailurePenalty = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default setTaskFailurePenalty
+export default setTaskPenalty
