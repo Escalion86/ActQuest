@@ -31,7 +31,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
     )}\n<b>Перерыв между заданиями</b>: ${
       !game?.breakDuration
         ? 'отсутствует'
-        : secondsToTimeStr(game?.breakDurationBetweenTasks)
+        : secondsToTimeStr(game?.breakDuration)
     }\n<b>Штраф за невыполнение задания</b>: ${
       !game?.taskFailurePenalty
         ? 'отсутствует'
