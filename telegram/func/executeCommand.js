@@ -30,7 +30,6 @@ const executeCommand = async (
   // const data = messageToCommandAndProps(command)
   const result = await lastCommandHandler(userTelegramId, jsonCommand)
   const keyboard = keyboardFormer(result.buttons)
-  console.log('result :>> ', result)
 
   if (result.images) {
     await sendMessage({

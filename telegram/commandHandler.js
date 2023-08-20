@@ -31,6 +31,7 @@ const commandHandler = async (
         callback_query
       )
     }
+    console.log('message :>> ', message)
 
     var jsonCommand
     if (message && message[0] === '/') {
