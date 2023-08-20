@@ -11,9 +11,8 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
-  if (!jsonCommand.success) {
+  if (!jsonCommand.confirm) {
     return {
-      success: true,
       message: `Подтвердите отправку анонса игры ${formatGameName(
         game
       )} всем подписчикам`,
