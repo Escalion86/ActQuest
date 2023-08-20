@@ -75,7 +75,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
           !game?.taskFailurePenalty
             ? 'отсутствует'
             : secondsToTimeStr(game?.taskFailurePenalty)
-        }`,
+        }\n\n<b>Организатор игры</b>: <a href="tg://user?id=261102161">Алексей Белинский</a> (кликните, чтобы написать организатору)`,
         keyboard,
       })
     })
