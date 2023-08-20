@@ -49,7 +49,7 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
 
   if (!teamsUser) {
     return {
-      message: 'Ошибка вы не состоите в команде',
+      message: 'Ошибка. Вы не состоите в команде',
       nextCommand: b ?? `menuTeams`,
     }
   }

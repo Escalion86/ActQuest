@@ -22,7 +22,7 @@ const joinGame = async ({ telegramId, jsonCommand }) => {
 
   if (!teamsUser || teamsUser.length === 0) {
     return {
-      message: 'Ошибка вы не являетесь капитаном ни в одной из команд',
+      message: 'Для регистрации на игру вы должны быть капитаном команды',
       nextCommand: `menuGames`,
     }
   }

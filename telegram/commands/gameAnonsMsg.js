@@ -5,6 +5,7 @@ import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
+import mainMenuButton from './menuItems/mainMenuButton'
 
 const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -40,17 +41,6 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
 
   await Promise.all(
     allUsersTelegramIds.map(async (telegramId) => {
-      // if (game.image) {
-      //   await sendMessage({
-      //     chat_id: telegramId,
-      //     // text: JSON.stringify({ body, headers: req.headers.origin }),
-      //     // text: result.message,
-      //     // parse_mode: result.parse_mode,
-      //     // keyboard,
-      //     // callback_query,
-      //     images: [game.image],
-      //   })
-      // }
       await sendMessage({
         images: game.image ? [game.image] : undefined,
         chat_id: telegramId,
@@ -77,6 +67,13 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
             ? 'отсутствует'
             : secondsToTimeStr(game?.taskFailurePenalty)
         }`,
+        buttons: [
+          {
+            c: { c: 'joinGame', gameId: jsonCommand.gameId },
+            text: '\u{270F} Зарегистрироваться на игру',
+          },
+          mainMenuButton,
+        ],
       })
     })
   )
