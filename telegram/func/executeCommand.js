@@ -1,11 +1,16 @@
 import LastCommands from '@models/LastCommands'
 import dbConnect from '@utils/dbConnect'
-import commandsArray from 'telegram/commands/commandsArray'
+import commandsArray, { numToCommand } from 'telegram/commands/commandsArray'
 import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
 
 const lastCommandHandler = async (telegramId, jsonCommand) => {
+  if (typeof jsonCommand.c === 'number')
+    return await commandsArray[numToCommand[jsonCommand.c]]({
+      telegramId,
+      jsonCommand,
+    })
   if (commandsArray[jsonCommand.c])
     return await commandsArray[jsonCommand.c]({ telegramId, jsonCommand })
   return {
@@ -22,7 +27,7 @@ const executeCommand = async (
   callback_query
 ) => {
   // const data = messageToCommandAndProps(command)
-
+  console.log('jsonCommand :>> ', jsonCommand)
   const result = await lastCommandHandler(userTelegramId, jsonCommand)
   // console.log('result :>> ', result)
 

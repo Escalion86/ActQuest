@@ -184,7 +184,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     const newFindedCodesInTask = [...findedCodesInTask, code]
     newAllFindedCodes[taskNum] = newFindedCodesInTask
     const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
-    console.log('numOfCodesToFind :>> ', numOfCodesToFind)
+    // console.log('numOfCodesToFind :>> ', numOfCodesToFind)
     const numOfCodesToFindLeft = numOfCodesToFind - newFindedCodesInTask.length
     const isTaskComplite = numOfCodesToFindLeft <= 0
 

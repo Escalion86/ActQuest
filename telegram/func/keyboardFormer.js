@@ -1,3 +1,4 @@
+import { commandToNum } from 'telegram/commands/commandsArray'
 import inlineKeyboard from './inlineKeyboard'
 
 const keyboardFormer = (buttons) => {
@@ -14,15 +15,21 @@ const keyboardFormer = (buttons) => {
               if (typeof c === 'string')
                 return {
                   text,
-                  callback_data: c ? JSON.stringify({ c }) : undefined,
+                  callback_data: c
+                    ? JSON.stringify({ c: commandToNum[c] })
+                    : undefined,
                   url,
                 }
-              else
+              else {
+                const convertedCommand = { ...c, c: commandToNum[c] }
                 return {
                   text,
-                  callback_data: c ? JSON.stringify(c) : undefined,
+                  callback_data: c
+                    ? JSON.stringify(convertedCommand)
+                    : undefined,
                   url,
                 }
+              }
             })
           }
           const { text, c, url } = button
@@ -30,18 +37,36 @@ const keyboardFormer = (buttons) => {
             return [
               {
                 text,
-                callback_data: c ? JSON.stringify({ c }) : undefined,
+                callback_data: c
+                  ? JSON.stringify({ c: commandToNum[c] })
+                  : undefined,
                 url,
               },
             ]
 
           // Значит команда в JSON формате
           // console.log('JSON.stringify(c) :>> ', JSON.stringify(c))
-          console.log('keyboard json length :>> ', JSON.stringify(c).length)
+          if (c) {
+            const convertedCommand = { ...c, c: commandToNum[c] }
+            console.log(
+              'keyboard json length :>> ',
+              JSON.stringify(convertedCommand).length
+            )
+            console.log(
+              'keyboard json length old :>> ',
+              JSON.stringify(c).length
+            )
+            return [
+              {
+                text,
+                callback_data: JSON.stringify(convertedCommand),
+                url,
+              },
+            ]
+          }
           return [
             {
               text,
-              callback_data: c ? JSON.stringify(c) : undefined,
               url,
             },
           ]
