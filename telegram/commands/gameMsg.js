@@ -18,7 +18,9 @@ const gameMsg = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message) {
     return {
       success: true,
-      message: 'Введите сообщение которое хотите отправить всем',
+      message: `Введите сообщение которое хотите отправить всем участникам игры ${formatGameName(
+        game
+      )}`,
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
