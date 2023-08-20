@@ -20,6 +20,10 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
     }
 
+  const codes =
+    typeof task?.codes === 'object'
+      ? task.codes.filter((code) => code !== '')
+      : []
   return {
     // images: task.images ? task.images : undefined,
     message: `<b>Редактирование задания "${
@@ -27,9 +31,9 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     }"</b>\n\n<b>Задание</b>:\n"${task?.task}"\n\n<b>Подсказка №1</b>:\n"${
       task.clues[0].clue
     }"\n\n<b>Подсказка №2</b>:\n"${task.clues[1].clue}"\n\n<b>Коды (${
-      task?.codes && task?.codes[0] === '' ? 0 : task?.codes?.length ?? 0
+      codes.length ?? 0
     } шт)</b>:\n${
-      task.codes ? task.codes.join(', ') : '[не задыны]'
+      codes.length > 0 ? codes.join(', ') : '[не задыны]'
     }\n\nКоличество кодов для выполнения: ${
       task.numCodesToCompliteTask ?? 'Все'
     }`,
