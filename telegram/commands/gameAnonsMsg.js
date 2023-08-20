@@ -6,6 +6,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
+import keyboardFormer from 'telegram/func/keyboardFormer'
 
 const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
