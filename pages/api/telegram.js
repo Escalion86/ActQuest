@@ -4,8 +4,6 @@ import messageHandler from 'telegram/messageHandler'
 
 export default async function handler(req, res) {
   const { query, method, body } = req
-  //https://www.xn--80aaennmesfbiiz1a7a.xn--p1ai/api/notifications/telegram/activate
-  // await dbConnect()
 
   if (method === 'GET') {
     try {

@@ -14,7 +14,6 @@ const usersSchema = {
   },
   phone: {
     type: Number,
-    // required: [true, 'Введите Телефон'],
     default: null,
   },
 }

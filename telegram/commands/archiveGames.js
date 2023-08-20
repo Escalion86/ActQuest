@@ -7,23 +7,17 @@ import { ADMIN_TELEGRAM_ID } from 'telegram/constants'
 import formatGameName from 'telegram/func/formatGameName'
 import mainMenuButton from './menuItems/mainMenuButton'
 
-const menuGames = async ({ telegramId, jsonCommand }) => {
+const archiveGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   // Получаем список игр
   const games = await Games.find({})
   const filteredGames = games
     ? games.filter(
         (game) =>
-          game.status !== 'finished' &&
+          game.status === 'finished' &&
           (!game.hidden || telegramId === ADMIN_TELEGRAM_ID)
       )
     : undefined
-  // if (!filteredGames || filteredGames.length === 0) {
-  //   return {
-  //     message: 'Предстоящих игр не запланировано',
-  //     nextCommand: `mainMenu`,
-  //   }
-  // }
   // Получаем список команд в которых присутствует пользователь
   const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
   // if (!teamsUser || teamsUser.length === 0) {
@@ -53,8 +47,8 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   return {
     message:
       !filteredGames || filteredGames.length === 0
-        ? '<b>Предстоящих игр не запланировано</b>'
-        : '<b>Предстоящие игры</b>',
+        ? '<b>Прошедших игр небыло</b>'
+        : '<b>Прошедшие игры</b>',
     buttons: [
       ...filteredGames.map((game) => {
         // TODO поправить вывод зарегистрированных команд пользователя на угру
@@ -71,10 +65,9 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
           c: { c: 'game', gameId: game._id },
         }
       }),
-      { c: 'archiveGames', text: '\u{1F4DA} Архив игр' },
-      mainMenuButton,
+      { c: 'menuGames', text: '\u{2B05} Назад' },
     ],
   }
 }
 
-export default menuGames
+export default archiveGames

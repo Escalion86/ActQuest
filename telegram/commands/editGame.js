@@ -1,3 +1,4 @@
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
@@ -21,7 +22,21 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         : '[не заданы]'
     }\n\n<b>Описание</b>:\n${
       game?.description ? `"${game?.description}"` : '[без описания]'
-    }\n\n<b>Количество заданий</b>: ${game?.tasks?.length ?? 0}`,
+    }\n\n<b>Количество заданий</b>: ${
+      game?.tasks?.length ?? 0
+    }\n<b>Продолжительность одного задания</b>: ${secondsToTimeStr(
+      game?.taskDuration ?? 3600
+    )}\n<b>Время до подсказки</b>: ${secondsToTimeStr(
+      game?.cluesDuration ?? 1200
+    )}\n<b>Перерыв между заданиями</b>: ${
+      !game?.breakDuration
+        ? 'отсутствует'
+        : secondsToTimeStr(game?.breakDuration)
+    }\n<b>Штраф за невыполнение задания</b>: ${
+      !game?.taskFailurePenalty
+        ? 'отсутствует'
+        : secondsToTimeStr(game?.taskFailurePenalty)
+    }`,
     buttons: [
       {
         c: { c: 'gameStart', gameId: jsonCommand.gameId },
@@ -39,6 +54,11 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         hide: game.status === 'active',
       },
       {
+        c: { c: 'gameAnonsMsg', gameId: jsonCommand.gameId },
+        text: '\u{26A1} Отправить анонс игры всем подписчикам',
+        hide: game.hidden,
+      },
+      {
         c: { c: 'gameMsg', gameId: jsonCommand.gameId },
         text: '\u{26A1} Отправить всем участникам сообщение',
         // hide: game.status !== 'started',
@@ -48,38 +68,76 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         text: '\u{26A1} Посмотреть статус игры',
         hide: game.status !== 'started',
       },
-      {
-        c: { c: 'setGameName', gameId: jsonCommand.gameId },
-        text: '\u{270F} Изменить название',
-      },
-      {
-        c: {
-          c: 'setGameDesc',
-          gameId: jsonCommand.gameId,
+      [
+        {
+          c: { c: 'setGameName', gameId: jsonCommand.gameId },
+          text: '\u{270F} Название',
         },
-        text: '\u{270F} Изменить описание',
-      },
-      {
-        c: {
-          c: 'setGameDate',
-          gameId: jsonCommand.gameId,
+        {
+          c: {
+            c: 'setGameDesc',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Описание',
         },
-        text: '\u{270F} Изменить дату и время',
-      },
-      {
-        c: {
-          c: 'setGameImage',
-          gameId: jsonCommand.gameId,
+        ,
+        {
+          c: {
+            c: 'setGameDate',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Дата и время',
         },
-        text: '\u{270F} Изменить картинку',
-      },
-      {
-        c: {
-          c: 'gameTasksEdit',
-          gameId: jsonCommand.gameId,
+      ],
+      [
+        {
+          c: {
+            c: 'setGameImage',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Картинка',
         },
-        text: '\u{270F} Редактировать задания',
-      },
+        ,
+        {
+          c: {
+            c: 'gameTasksEdit',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Задания',
+        },
+      ],
+      [
+        {
+          c: {
+            c: 'setTaskDuration',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Время задания',
+        },
+        {
+          c: {
+            c: 'setCluesDuration',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} До подсказки',
+        },
+      ],
+      [
+        {
+          c: {
+            c: 'setBreakDuration',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Перерыв',
+        },
+        {
+          c: {
+            c: 'setTaskPenalty',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Штраф за провал',
+        },
+      ],
       {
         c: {
           c: 'hideGame',

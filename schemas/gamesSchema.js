@@ -1,9 +1,3 @@
-import mongoose from 'mongoose'
-
-// var Levels = new mongoose.Schema({
-//   type: Map,
-// });
-
 const gamesSchema = {
   name: {
     type: String,
@@ -65,6 +59,22 @@ const gamesSchema = {
       },
     ],
     default: [],
+  },
+  taskDuration: {
+    type: Number,
+    default: 3600,
+  },
+  cluesDuration: {
+    type: Number,
+    default: 1200,
+  },
+  breakDuration: {
+    type: Number,
+    default: 0,
+  },
+  taskFailurePenalty: {
+    type: Number,
+    default: 0,
   },
   status: {
     type: String,

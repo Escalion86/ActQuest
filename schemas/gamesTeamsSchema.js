@@ -7,7 +7,6 @@ const gamesTeamsSchema = {
     type: String,
     required: [true, 'Необходимо указать id игры'],
   },
-  // tasks: {
   activeNum: {
     type: Number,
     default: 0,
@@ -16,7 +15,6 @@ const gamesTeamsSchema = {
   startTime: [Date],
   endTime: [Date],
   timerId: String,
-  // },
 }
 
 export default gamesTeamsSchema

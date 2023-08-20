@@ -1,8 +1,9 @@
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
-const setGameName = async ({ telegramId, jsonCommand }) => {
+const setTaskPenalty = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
@@ -10,7 +11,7 @@ const setGameName = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message) {
     return {
       success: true,
-      message: 'Введите новое название игры',
+      message: 'Введите штраф за невыполнение задания в секундах',
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
@@ -20,15 +21,18 @@ const setGameName = async ({ telegramId, jsonCommand }) => {
     }
   }
   await dbConnect()
+  const value = parseInt(jsonCommand.message)
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
-    name: jsonCommand.message,
+    taskFailurePenalty: value,
   })
 
   return {
     success: true,
-    message: `Название игры обновлено на "${jsonCommand.message}"`,
+    message: `Штраф за невыполнение задания обновлен на "${secondsToTimeStr(
+      value
+    )}"`,
     nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
   }
 }
 
-export default setGameName
+export default setTaskPenalty

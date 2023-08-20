@@ -1,11 +1,17 @@
 import LastCommands from '@models/LastCommands'
 import dbConnect from '@utils/dbConnect'
-import commandsArray from 'telegram/commands/commandsArray'
+import commandsArray, { numToCommand } from 'telegram/commands/commandsArray'
 import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
 
 const lastCommandHandler = async (telegramId, jsonCommand) => {
+  if (typeof jsonCommand.c === 'number') {
+    return await commandsArray[numToCommand[jsonCommand.c]]({
+      telegramId,
+      jsonCommand,
+    })
+  }
   if (commandsArray[jsonCommand.c])
     return await commandsArray[jsonCommand.c]({ telegramId, jsonCommand })
   return {
@@ -22,14 +28,12 @@ const executeCommand = async (
   callback_query
 ) => {
   // const data = messageToCommandAndProps(command)
-
+  console.log('executeCommand => jsonCommand :>> ', jsonCommand)
   const result = await lastCommandHandler(userTelegramId, jsonCommand)
-  // console.log('result :>> ', result)
-
   const keyboard = keyboardFormer(result.buttons)
-  // console.log('keyboard ', keyboard?.inline_keyboard)
 
   if (result.images) {
+    console.log('executeCommand 1')
     await sendMessage({
       chat_id: userTelegramId,
       // text: JSON.stringify({ body, headers: req.headers.origin }),
@@ -41,14 +45,19 @@ const executeCommand = async (
     })
   }
 
-  const sendResult = await sendMessage({
+  // console.log('executeCommand => result :>> ', result)
+
+  const messageToSend = {
     chat_id: userTelegramId,
     // text: JSON.stringify({ body, headers: req.headers.origin }),
     text: result.message,
     parse_mode: result.parse_mode,
     keyboard,
     callback_query: result.images ? undefined : callback_query,
-  })
+  }
+  // console.log('messageToSend :>> ', messageToSend)
+
+  const sendResult = await sendMessage(messageToSend)
   // console.log('sendResult :>> ', sendResult)
   const nextCommand = result.nextCommand
   if (nextCommand) {

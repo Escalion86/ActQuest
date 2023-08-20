@@ -7,7 +7,7 @@ const array = [
   {
     prop: 'name',
     message: 'Введите название команды',
-    answerMessage: (answer) => `Задано название команды "${answer}"`,
+    answerMessage: (answer) => `Задано название команды: "${answer}"`,
     buttons: (jsonCommand) => [{ c: 'menuTeams', text: '\u{2B05} Назад' }],
   },
   // {

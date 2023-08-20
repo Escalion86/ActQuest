@@ -23,6 +23,7 @@ const commandHandler = async (
   document
 ) => {
   try {
+    console.log('message :>> ', message)
     if (message === '/main_menu' || message === '/start') {
       return await executeCommand(
         userTelegramId,
@@ -39,6 +40,7 @@ const commandHandler = async (
       jsonCommand = jsonParser(message)
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
       if (!jsonCommand || !jsonCommand?.c || jsonCommand?.prevC) {
+        console.log('1')
         // console.log('Полученная команда не полная или это не команда')
         await dbConnect()
         const last = await LastCommands.findOne({
@@ -46,6 +48,7 @@ const commandHandler = async (
         })
 
         if (!last) {
+          console.log('2')
           return await sendMessage({
             chat_id: userTelegramId,
             // text: JSON.stringify({ body, headers: req.headers.origin }),
@@ -53,7 +56,8 @@ const commandHandler = async (
           })
         }
         // Если отправлено сообщение
-        if (!jsonCommand)
+        if (!jsonCommand) {
+          console.log('3')
           jsonCommand = {
             ...Object.fromEntries(last.command),
             message:
@@ -61,8 +65,10 @@ const commandHandler = async (
                 ? photo[photo.length - 1]?.file_id
                 : message,
           }
-        else {
+        } else {
+          console.log('4')
           if (jsonCommand?.prevC && last?.prevCommand) {
+            console.log('5')
             // console.log('last?.prevCommand :>> ', last?.prevCommand)
             delete jsonCommand.prevC
             jsonCommand = {
@@ -70,6 +76,7 @@ const commandHandler = async (
               ...jsonCommand,
             }
           } else {
+            console.log('6')
             jsonCommand = {
               ...Object.fromEntries(last.command),
               ...jsonCommand,
@@ -80,9 +87,9 @@ const commandHandler = async (
       }
     }
 
-    console.log('!!!jsonCommand :>> ', jsonCommand)
     // Если это был JSON
     if (jsonCommand) {
+      console.log('7')
       await executeCommand(
         userTelegramId,
         jsonCommand,
@@ -90,6 +97,7 @@ const commandHandler = async (
         callback_query
       )
     } else {
+      console.log('8')
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
       await dbConnect()
       const last = await LastCommands.findOne({
@@ -97,12 +105,14 @@ const commandHandler = async (
       })
 
       if (!last) {
+        console.log('9')
         return await sendMessage({
           chat_id: userTelegramId,
           // text: JSON.stringify({ body, headers: req.headers.origin }),
-          text: 'Ответ получен, но команда на которую дан ответ не найден',
+          text: 'Ответ получен, но команда на которую дан ответ не найдена',
         })
       }
+      console.log('10')
 
       const lastCommand = {
         ...Object.fromEntries(last.command),

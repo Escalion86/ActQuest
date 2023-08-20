@@ -132,8 +132,6 @@ export const DEFAULT_USER = Object.freeze({
   prevActivityAt: null,
   archive: false,
   haveKids: null,
-  security: DEFAULT_USERS_SECURITY,
-  notifications: DEFAULT_USERS_NOTIFICATIONS,
 })
 
 export const DEFAULT_ADDRESS = Object.freeze({

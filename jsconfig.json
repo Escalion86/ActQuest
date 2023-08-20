@@ -11,8 +11,7 @@
       "@state/*": ["state/*"],
       "@styles/*": ["styles/*"],
       "@schemas/*": ["schemas/*"],
-      "@layouts/*": ["layouts/*"],
-      "@blocks/*": ["blocks/*"]
+      "@layouts/*": ["layouts/*"]
     }
   }
 }

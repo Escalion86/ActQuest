@@ -59,6 +59,16 @@ import setCNum from './setCNum'
 import gameResult from './gameResult'
 import gameStatus from './gameStatus'
 import gameMsg from './gameMsg'
+import setTaskDuration from './setTaskDuration'
+import setBreakDuration from './setBreakDuration'
+import setCluesDuration from './setCluesDuration'
+import setTaskPenalty from './setTaskPenalty'
+import transferCaptainRights from './transferCaptainRights'
+import archiveGames from './archiveGames'
+import gameAnonsMsg from './gameAnonsMsg'
+
+export const numToCommand = {}
+export const commandToNum = {}
 
 const commandsArray = {
   setUserName,
@@ -122,6 +132,21 @@ const commandsArray = {
   gameResult,
   gameStatus,
   gameMsg,
+  setTaskDuration,
+  setBreakDuration,
+  setCluesDuration,
+  setTaskPenalty,
+  transferCaptainRights,
+  archiveGames,
+  gameAnonsMsg,
+}
+
+var i = 0
+for (const key in commandsArray) {
+  // const command = commandsArray[key]
+  numToCommand[i] = key
+  commandToNum[key] = i
+  i++
 }
 
 export default commandsArray
