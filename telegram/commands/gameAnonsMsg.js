@@ -40,7 +40,19 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
 
   await Promise.all(
     allUsersTelegramIds.map(async (telegramId) => {
+      // if (game.image) {
+      //   await sendMessage({
+      //     chat_id: telegramId,
+      //     // text: JSON.stringify({ body, headers: req.headers.origin }),
+      //     // text: result.message,
+      //     // parse_mode: result.parse_mode,
+      //     // keyboard,
+      //     // callback_query,
+      //     images: [game.image],
+      //   })
+      // }
       await sendMessage({
+        images: game.image ? [game.image] : undefined,
         chat_id: telegramId,
         text: `<b>АНОНС ИГРЫ "${game?.name}"</b>\n\n<b>Дата и время</b>:\n${
           game.dateStart
