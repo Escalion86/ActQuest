@@ -23,6 +23,7 @@ const commandHandler = async (
   document
 ) => {
   try {
+    console.log('message :>> ', message)
     if (message === '/main_menu' || message === '/start') {
       return await executeCommand(
         userTelegramId,
