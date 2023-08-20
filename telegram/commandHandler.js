@@ -36,6 +36,7 @@ const commandHandler = async (
     if (message && message[0] === '/') {
       jsonCommand = { c: message.substr(1) }
     } else {
+      console.log('commandHandler => jsonCommand :>> ', jsonCommand)
       jsonCommand = jsonParser(message)
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
       if (!jsonCommand || !jsonCommand?.c || jsonCommand?.prevC) {
