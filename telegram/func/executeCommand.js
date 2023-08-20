@@ -6,22 +6,12 @@ import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
 
 const lastCommandHandler = async (telegramId, jsonCommand) => {
-  console.log('jsonCommand.c :>> ', jsonCommand.c)
-  console.log('typeof jsonCommand.c :>> ', typeof jsonCommand.c)
   if (typeof jsonCommand.c === 'number') {
-    console.log(
-      '1lastCommandHandler => numToCommand[jsonCommand.c] :>> ',
-      numToCommand[jsonCommand.c]
-    )
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
       jsonCommand,
     })
   }
-  console.log(
-    '2lastCommandHandler => numToCommand[jsonCommand.c] :>> ',
-    numToCommand[jsonCommand.c]
-  )
   if (commandsArray[jsonCommand.c])
     return await commandsArray[jsonCommand.c]({ telegramId, jsonCommand })
   return {
@@ -38,12 +28,9 @@ const executeCommand = async (
   callback_query
 ) => {
   // const data = messageToCommandAndProps(command)
-  console.log('executeCommand => jsonCommand :>> ', jsonCommand)
   const result = await lastCommandHandler(userTelegramId, jsonCommand)
-  // console.log('result :>> ', result)
-
   const keyboard = keyboardFormer(result.buttons)
-  // console.log('keyboard ', keyboard?.inline_keyboard)
+  console.log('result :>> ', result)
 
   if (result.images) {
     await sendMessage({

@@ -137,11 +137,10 @@ const commandsArray = {
 
 var i = 0
 for (const key in commandsArray) {
-  const command = commandsArray[key]
+  // const command = commandsArray[key]
   numToCommand[i] = key
   commandToNum[key] = i
   i++
 }
-console.log('numToCommand :>> ', numToCommand)
 
 export default commandsArray

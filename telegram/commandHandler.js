@@ -101,7 +101,7 @@ const commandHandler = async (
         return await sendMessage({
           chat_id: userTelegramId,
           // text: JSON.stringify({ body, headers: req.headers.origin }),
-          text: 'Ответ получен, но команда на которую дан ответ не найден',
+          text: 'Ответ получен, но команда на которую дан ответ не найдена',
         })
       }
 
