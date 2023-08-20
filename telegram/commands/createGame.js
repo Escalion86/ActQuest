@@ -5,7 +5,7 @@ const array = [
   {
     prop: 'name',
     message: 'Введите название игры',
-    answerMessage: (answer) => `Задано название игры "${answer}"`,
+    answerMessage: (answer) => `Задано название игры: "${answer}"`,
     buttons: (jsonCommand) => [
       { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
@@ -13,7 +13,7 @@ const array = [
   {
     prop: 'description',
     message: 'Введите описание игры',
-    answerMessage: (answer) => `Задано описание игры "${answer}"`,
+    answerMessage: (answer) => `Задано описание игры: "${answer}"`,
     buttons: (jsonCommand) => [
       { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
