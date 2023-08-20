@@ -35,14 +35,14 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
   const users = await Users.find({})
 
   // Получаем telegramId всех пользователей
-  const allUsersTelegramIds = [261102161]
-  // const allUsersTelegramIds = users.map((user) => user.telegramId)
+  // const allUsersTelegramIds = [261102161]
+  const allUsersTelegramIds = users.map((user) => user.telegramId)
 
   await Promise.all(
     allUsersTelegramIds.map(async (telegramId) => {
       await sendMessage({
         chat_id: telegramId,
-        text: `АНОНС ИГРЫ "${game?.name}"</b>\n\n<b>Дата и время</b>:\n${
+        text: `<b>АНОНС ИГРЫ "${game?.name}"</b>\n\n<b>Дата и время</b>:\n${
           game.dateStart
             ? moment(game.dateStart)
                 .tz('Asia/Krasnoyarsk')
