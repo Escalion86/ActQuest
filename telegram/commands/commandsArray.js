@@ -138,7 +138,7 @@ const commandsArray = {
 var i = 0
 for (const key in commandsArray) {
   const command = commandsArray[key]
-  numToCommand[i] = command
+  numToCommand[i] = key
   commandToNum[key] = i
   i++
 }
