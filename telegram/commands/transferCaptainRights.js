@@ -63,7 +63,7 @@ const transferCaptainRights = async ({ telegramId, jsonCommand }) => {
       message: `Подтвердите передачу прав капитана команды "${team.name}" пользователю "${user.name}"`,
       buttons: [
         {
-          text: '\u{1F4A3} Передать права',
+          text: '\u{1F91D} Передать права',
           c: { confirm: true },
         },
         {
