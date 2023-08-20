@@ -30,6 +30,7 @@ const executeCommand = async (
   // const data = messageToCommandAndProps(command)
   const result = await lastCommandHandler(userTelegramId, jsonCommand)
   const keyboard = keyboardFormer(result.buttons)
+  console.log('keyboard :>> ', keyboard)
 
   if (result.images) {
     await sendMessage({
@@ -51,7 +52,7 @@ const executeCommand = async (
     keyboard,
     callback_query: result.images ? undefined : callback_query,
   }
-  console.log('messageToSend :>> ', messageToSend)
+  // console.log('messageToSend :>> ', messageToSend)
 
   const sendResult = await sendMessage(messageToSend)
   // console.log('sendResult :>> ', sendResult)
