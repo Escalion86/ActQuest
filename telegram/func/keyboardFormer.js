@@ -21,7 +21,7 @@ const keyboardFormer = (buttons) => {
                   url,
                 }
               else {
-                const convertedCommand = { ...c, c: commandToNum[c] }
+                const convertedCommand = { ...c, c: commandToNum[c.c] }
                 return {
                   text,
                   callback_data: c
