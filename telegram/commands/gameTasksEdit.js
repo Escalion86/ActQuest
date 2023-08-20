@@ -86,7 +86,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
             .map((task) => {
               const codes =
                 typeof task?.codes === 'object'
-                  ? codes.filter((code) => code !== '')
+                  ? task.codes.filter((code) => code !== '')
                   : []
               return ` - "${task.title}". Коды (${codes.length ?? 0} шт): ${
                 codes.length > 0 ? codes.join(', ') : '[не заданы]'

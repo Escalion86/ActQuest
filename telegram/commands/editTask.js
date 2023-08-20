@@ -21,7 +21,9 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     }
 
   const codes =
-    typeof task?.codes === 'object' ? codes.filter((code) => code !== '') : []
+    typeof task?.codes === 'object'
+      ? task.codes.filter((code) => code !== '')
+      : []
   return {
     // images: task.images ? task.images : undefined,
     message: `<b>Редактирование задания "${
