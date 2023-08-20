@@ -28,10 +28,12 @@ const executeCommand = async (
   callback_query
 ) => {
   // const data = messageToCommandAndProps(command)
+  console.log('executeCommand => jsonCommand :>> ', jsonCommand)
   const result = await lastCommandHandler(userTelegramId, jsonCommand)
   const keyboard = keyboardFormer(result.buttons)
 
   if (result.images) {
+    console.log('executeCommand 1')
     await sendMessage({
       chat_id: userTelegramId,
       // text: JSON.stringify({ body, headers: req.headers.origin }),
@@ -42,6 +44,8 @@ const executeCommand = async (
       images: result.images,
     })
   }
+
+  console.log('executeCommand => result :>> ', result)
 
   const messageToSend = {
     chat_id: userTelegramId,
