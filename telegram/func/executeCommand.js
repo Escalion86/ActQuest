@@ -45,7 +45,7 @@ const executeCommand = async (
     })
   }
 
-  console.log('executeCommand => result :>> ', result)
+  // console.log('executeCommand => result :>> ', result)
 
   const messageToSend = {
     chat_id: userTelegramId,
