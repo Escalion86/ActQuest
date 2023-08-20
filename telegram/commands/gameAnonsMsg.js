@@ -39,6 +39,14 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
   const allUsersTelegramIds = [261102161, 1984922390, 5960834042]
   // const allUsersTelegramIds = users.map((user) => user.telegramId)
 
+  const keyboard = keyboardFormer([
+    {
+      c: { c: 'joinGame', gameId: jsonCommand.gameId },
+      text: '\u{270F} Зарегистрироваться на игру',
+    },
+    mainMenuButton,
+  ])
+
   await Promise.all(
     allUsersTelegramIds.map(async (telegramId) => {
       await sendMessage({
@@ -67,13 +75,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
             ? 'отсутствует'
             : secondsToTimeStr(game?.taskFailurePenalty)
         }`,
-        buttons: [
-          {
-            c: { c: 'joinGame', gameId: jsonCommand.gameId },
-            text: '\u{270F} Зарегистрироваться на игру',
-          },
-          mainMenuButton,
-        ],
+        keyboard,
       })
     })
   )
