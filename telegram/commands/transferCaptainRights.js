@@ -36,13 +36,22 @@ const transferCaptainRights = async ({ telegramId, jsonCommand }) => {
 
   if (jsonCommand.teamUserId) {
     const teamUser = teamsUsers.find(
-      (teamUser) => teamUser._id === jsonCommand.teamUserId
+      (teamUser) => String(teamUser._id) === jsonCommand.teamUserId
+    )
+    const teamUserCapitan = teamsUsers.find(
+      (teamUser) => teamUser.role === 'capitan'
     )
     const user = users.find(
       (user) => teamUser.userTelegramId === user.telegramId
     )
 
     if (jsonCommand.confirm) {
+      await TeamsUsers.findByIdAndUpdate(teamUser._id, {
+        role: 'capitan',
+      })
+      await TeamsUsers.findByIdAndUpdate(teamUserCapitan._id, {
+        role: 'participant',
+      })
       return {
         message: `Права капитана команды "${team.name}" переданы пользователю "${user.name}"`,
         nextCommand: `editTeam`,
