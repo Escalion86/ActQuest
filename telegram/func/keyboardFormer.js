@@ -48,14 +48,14 @@ const keyboardFormer = (buttons) => {
           // console.log('JSON.stringify(c) :>> ', JSON.stringify(c))
           if (c) {
             const convertedCommand = { ...c, c: commandToNum[c] }
-            console.log(
-              'keyboard json length :>> ',
-              JSON.stringify(convertedCommand).length
-            )
-            console.log(
-              'keyboard json length old :>> ',
-              JSON.stringify(c).length
-            )
+            // console.log(
+            //   'keyboard json length :>> ',
+            //   JSON.stringify(convertedCommand).length
+            // )
+            // console.log(
+            //   'keyboard json length old :>> ',
+            //   JSON.stringify(c).length
+            // )
             return [
               {
                 text,

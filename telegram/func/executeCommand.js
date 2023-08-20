@@ -43,14 +43,17 @@ const executeCommand = async (
     })
   }
 
-  const sendResult = await sendMessage({
+  const messageToSend = {
     chat_id: userTelegramId,
     // text: JSON.stringify({ body, headers: req.headers.origin }),
     text: result.message,
     parse_mode: result.parse_mode,
     keyboard,
     callback_query: result.images ? undefined : callback_query,
-  })
+  }
+  console.log('messageToSend :>> ', messageToSend)
+
+  const sendResult = await sendMessage(messageToSend)
   // console.log('sendResult :>> ', sendResult)
   const nextCommand = result.nextCommand
   if (nextCommand) {
