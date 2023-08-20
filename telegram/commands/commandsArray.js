@@ -63,6 +63,7 @@ import setTaskDuration from './setTaskDuration'
 import setBreakDuration from './setBreakDuration'
 import setCluesDuration from './setCluesDuration'
 import setTaskPenalty from './setTaskPenalty'
+import transferCaptainRights from './transferCaptainRights'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -133,6 +134,7 @@ const commandsArray = {
   setBreakDuration,
   setCluesDuration,
   setTaskPenalty,
+  transferCaptainRights,
 }
 
 var i = 0
