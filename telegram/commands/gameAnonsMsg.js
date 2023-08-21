@@ -37,8 +37,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
   const users = await Users.find({})
 
   // Получаем telegramId всех пользователей
-  const allUsersTelegramIds = [261102161, 1984922390, 5960834042]
-  // const allUsersTelegramIds = users.map((user) => user.telegramId)
+  const allUsersTelegramIds = users.map((user) => user.telegramId)
 
   const keyboard = keyboardFormer([
     {
