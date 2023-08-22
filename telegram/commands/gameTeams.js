@@ -73,7 +73,7 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
   return {
     message: `<b>Команды зарегистрированные на игру ${formatGameName(
       game
-    )}</b>\n<b>Количество команд:</b>${getNoun(
+    )}</b>\n<b>Количество команд:</b> ${getNoun(
       teams.length,
       'команда',
       'команды',
@@ -90,7 +90,7 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
         {
           c: { page: page + 1 },
           text: `\u{25C0} ${page + 1}1-${page + 1}0`,
-          hide: teams.length < page * 10,
+          hide: teams.length * 15 < page * 10,
         },
       ],
       { c: 'menuGames', text: '\u{2B05} Назад' },
