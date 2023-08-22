@@ -12,6 +12,7 @@ function formatGameDateTimeFact(game, props = {}) {
     fullMonth,
     weekInBrackets,
     showDuration,
+    showSeconds,
   } = props
 
   const dateStart = dateToDateTimeStr(
@@ -38,13 +39,17 @@ function formatGameDateTimeFact(game, props = {}) {
   ) {
     date = `${dateStart[0]} ${dateStart[1]} ${
       weekInBrackets ? `(${dateStart[2]})` : dateStart[2]
-    } ${dateStart[4]}:${dateStart[5]} - ${dateEnd[4]}:${dateEnd[5]}`
+    } ${dateStart[4]}:${dateStart[5]}${showSeconds ? `:${dateEnd[6]}` : ''} - ${
+      dateEnd[4]
+    }:${dateEnd[5]}${showSeconds ? `:${dateEnd[6]}` : ''}`
   } else {
     date = `${dateStart[0]} ${dateStart[1]} ${
       weekInBrackets ? `(${dateStart[2]})` : dateStart[2]
-    } ${dateStart[4]}:${dateStart[5]} - ${dateEnd[0]} ${dateEnd[1]} ${
-      weekInBrackets ? `(${dateEnd[2]})` : dateEnd[2]
-    } ${dateEnd[4]}:${dateEnd[5]}`
+    } ${dateStart[4]}:${dateStart[5]}${showSeconds ? `:${dateEnd[6]}` : ''} - ${
+      dateEnd[0]
+    } ${dateEnd[1]} ${weekInBrackets ? `(${dateEnd[2]})` : dateEnd[2]} ${
+      dateEnd[4]
+    }:${dateEnd[5]}${showSeconds ? `:${dateEnd[6]}` : ''}`
   }
   return (
     date +

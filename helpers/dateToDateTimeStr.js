@@ -1,5 +1,6 @@
 import moment from 'moment-timezone'
 import { DAYS_OF_WEEK, MONTHS, MONTHS_FULL } from './constants'
+import padNum from 'telegram/func/padNum'
 
 const dateToDateTimeStr = (
   dateTime,
@@ -11,29 +12,28 @@ const dateToDateTimeStr = (
   var d = moment.tz(dateTime, 'Asia/Krasnoyarsk')
   var week = d.weekday()
   var obj = d.toObject()
-  const { minutes, hours, months, date, years } = obj
-
-  if (minutes.length < 2) minutes = '0' + minutes
-  if (hours.length < 2) hours = '0' + hours
+  const { minutes, hours, months, date, years, seconds } = obj
 
   if (fullSeparete)
     return [
       date,
-      MONTHS_FULL[months - 1],
+      MONTHS_FULL[months],
       DAYS_OF_WEEK[week],
       years.toString(),
-      hours,
-      minutes,
+      padNum(hours, 2),
+      padNum(minutes, 2),
+      padNum(seconds, 2),
     ]
 
   const strDateStart =
     date +
     ' ' +
-    (fullMonth ? MONTHS_FULL[months - 1] : MONTHS[months - 1]) +
+    (fullMonth ? MONTHS_FULL[months] : MONTHS[months]) +
     (showYear ? ' ' + years.toString() : '') +
     (showDayOfWeek ? ' ' + DAYS_OF_WEEK[week] : '')
 
-  const strTimeStart = hours + ':' + minutes
+  const strTimeStart =
+    padNum(hours, 2) + ':' + padNum(minutes, 2) + ':' + padNum(seconds, 2)
   return [strDateStart, strTimeStart]
 }
 
