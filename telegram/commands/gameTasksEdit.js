@@ -113,7 +113,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
               codes.length ?? 0
             } шт): ${codes.length > 0 ? codes.join(', ') : '[не заданы]'}`
           })
-          .join('\n')
+          .join('\n\n')
       : '[нет заданий]'
   }`
 
