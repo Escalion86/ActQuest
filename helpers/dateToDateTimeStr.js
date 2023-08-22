@@ -8,8 +8,9 @@ const dateToDateTimeStr = (
   showYear = true,
   fullSeparete = false
 ) => {
-  var d = moment(date).tz('Asia/Krasnoyarsk').format(),
-    minutes = '' + d.getMinutes(),
+  var d = moment(date).tz('Asia/Krasnoyarsk').format()
+  console.log('d :>> ', d)
+  var minutes = '' + d.getMinutes(),
     hours = '' + d.getHours(),
     month = '' + (d.getMonth() + 1),
     day = '' + d.getDate(),
