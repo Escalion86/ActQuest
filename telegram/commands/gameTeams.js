@@ -2,6 +2,7 @@ import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
@@ -34,41 +35,15 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     _id: { $in: teamsIds },
   })
 
-  const buttons = [
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-    ...teams,
-  ]
-    .filter((team, index) => index < page * 10 && index >= (page - 1) * 10)
-    .map((team, index) => {
-      const gameTeam = gameTeams.find(
-        (gameTeam) => gameTeam.teamId === String(team._id)
-      )
-      return {
-        text: `${index + 1 + (page - 1) * 10}. "${team.name}"`,
-        c: { c: 'gameTeam', gameTeamId: gameTeam._id },
-        // `teamUser/teamUserId=${teamUser._id}`,
-      }
-    })
-  // for (let i = 0; i < 12; i++) {
-  //   buttons.push({
-  //     text: `${i}. "test"`,
-  //     c: { c: 'gameTeam', gameTeamId: '123' },
-  //     // `teamUser/teamUserId=${teamUser._id}`,
-  //   })
-  // }
+  const buttons = buttonListConstructor(teams, page, (team) => {
+    const gameTeam = gameTeams.find(
+      (gameTeam) => gameTeam.teamId === String(team._id)
+    )
+    return {
+      text: `"${team.name}"`,
+      c: { c: 'gameTeam', gameTeamId: gameTeam._id },
+    }
+  })
 
   return {
     message: `<b>Команды зарегистрированные на игру ${formatGameName(
@@ -81,20 +56,6 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     )}`,
     buttons: [
       ...buttons,
-      [
-        {
-          c: { page: page - 1 },
-          text: `\u{25C0} ${page - 2 || ''}1-${page - 1}0`,
-          hide: page <= 1,
-        },
-        {
-          c: { page: page + 1 },
-          text: `${page}1-${
-            (page + 1) * 10 > teams.length ? teams.length : (page + 1) * 10
-          } \u{25B6}`,
-          hide: teams.length < page * 10,
-        },
-      ],
       { c: { c: 'game', gameId: jsonCommand?.gameId }, text: '\u{2B05} Назад' },
     ],
   }
