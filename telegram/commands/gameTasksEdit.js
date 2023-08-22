@@ -77,8 +77,6 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
     ]
   })
 
-  console.log('1 :>> ', 1)
-
   // const buttons = game.tasks
   //   ? game.tasks.map((task, index) => {
   //       return [
@@ -105,8 +103,8 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   )}</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
     game?.tasks?.length
       ? game?.tasks
+          .filter((task) => task)
           .map((task) => {
-            console.log('task :>> ', task)
             const codes =
               typeof task?.codes === 'object'
                 ? task.codes.filter((code) => code !== '')
@@ -119,26 +117,8 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
       : '[нет заданий]'
   }`
 
-  console.log('message :>> ', message)
-
   return {
-    message: `<b>Редактирование заданий игры ${formatGameName(
-      game
-    )}</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
-      game?.tasks?.length
-        ? game?.tasks
-            .map((task) => {
-              const codes =
-                typeof task?.codes === 'object'
-                  ? task.codes.filter((code) => code !== '')
-                  : []
-              return ` - "${task.title}". Коды (${codes.length ?? 0} шт): ${
-                codes.length > 0 ? codes.join(', ') : '[не заданы]'
-              }`
-            })
-            .join('\n')
-        : '[нет заданий]'
-    }`,
+    message,
     buttons: [
       ...buttons,
       {
