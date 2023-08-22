@@ -40,7 +40,7 @@ const executeCommand = async (
       // text: result.message,
       parse_mode: result.parse_mode,
       // keyboard,
-      // callback_query,
+      callback_query,
       images: result.images,
     })
   }
@@ -53,7 +53,7 @@ const executeCommand = async (
     text: result.message,
     parse_mode: result.parse_mode,
     keyboard,
-    callback_query: callback_query,
+    callback_query: result.images ? undefined : callback_query,
   }
   // console.log('messageToSend :>> ', messageToSend)
 

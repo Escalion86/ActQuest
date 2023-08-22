@@ -33,6 +33,27 @@ const sendMessage = async ({
         true
       )
     }
+    if (callback_query) {
+      await postData(
+        `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageReplyMarkup`,
+        {
+          message_id: callback_query?.message?.message_id,
+          chat_id,
+          // photo,
+          // parse_mode,
+          // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
+          // ...props,
+        },
+        // null,
+        null,
+        // (data) => console.log('post success', data),
+        null,
+        // (data) => console.log('post error', data),
+        true,
+        null,
+        true
+      )
+    }
     // if (images.length === 1) {
     //   const photo = images[0]
     //   // for (let i = 0; i < images.length; i++) {
