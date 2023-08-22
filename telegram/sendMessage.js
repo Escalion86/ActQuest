@@ -16,9 +16,30 @@ const sendMessage = async ({
       await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendPhoto`,
         {
-          // message_id: callback_query.message.message_id,
+          // message_id: callback_query?.message?.message_id,
           chat_id,
           photo,
+          // parse_mode,
+          // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
+          // ...props,
+        },
+        // null,
+        null,
+        // (data) => console.log('post success', data),
+        null,
+        // (data) => console.log('post error', data),
+        true,
+        null,
+        true
+      )
+    }
+    if (callback_query) {
+      await postData(
+        `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageReplyMarkup`,
+        {
+          message_id: callback_query?.message?.message_id,
+          chat_id,
+          // photo,
           // parse_mode,
           // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
           // ...props,
@@ -74,6 +95,7 @@ const sendMessage = async ({
             keyboard || remove_keyboard
               ? JSON.stringify({
                   ...(keyboard ?? {}),
+                  resize_keyboard: true,
                   ...(remove_keyboard ? { remove_keyboard: true } : {}),
                 })
               : undefined,
@@ -100,6 +122,7 @@ const sendMessage = async ({
           keyboard || remove_keyboard
             ? JSON.stringify({
                 ...(keyboard ?? {}),
+                // resize_keyboard: true,
                 ...(remove_keyboard ? { remove_keyboard: true } : {}),
               })
             : undefined,

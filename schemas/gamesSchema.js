@@ -84,6 +84,11 @@ const gamesSchema = {
     type: Boolean,
     default: true,
   },
+  creatorTelegramId: {
+    type: Number,
+    required: [true, 'Введите telegramId'],
+    default: null,
+  },
 }
 
 export default gamesSchema

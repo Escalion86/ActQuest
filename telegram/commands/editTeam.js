@@ -93,11 +93,11 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
       hide: !isCapitan,
       text: '\u{1F517} Пригласить в команду',
     },
-    {
-      c: { c: 'deleteTeam', teamId: jsonCommand.teamId },
-      hide: !isCapitan,
-      text: '\u{1F4A3} Удалить команду',
-    },
+    // {
+    //   c: { c: 'deleteTeam', teamId: jsonCommand.teamId },
+    //   hide: !isCapitan,
+    //   text: '\u{1F4A3} Удалить команду',
+    // },
     { c: b ?? 'joinedTeams', text: '\u{2B05} Назад' },
   ]
 

@@ -1,4 +1,5 @@
 import Games from '@models/Games'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
@@ -55,46 +56,69 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const buttons = game.tasks
-    ? game.tasks.map((task, index) => {
-        return [
-          {
-            c: { taskUp: index },
-            text: `Вверх`,
-            // hide: index === 0,
-          },
-          {
-            c: { c: 'editTask', gameId: jsonCommand.gameId, i: index },
-            //`setTeamName/teamId=${jsonCommand.teamId}`,
-            text: `\u{270F} "${task.title}"`,
-          },
-          {
-            c: { taskDown: index },
-            text: `Вниз`,
-            // hide: index >= game.tasks.length - 1,
-          },
-        ]
-      })
-    : []
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
+    return [
+      {
+        c: { taskUp: number > 1 ? number - 1 : undefined },
+        text: `${number > 1 ? `\u{2B06}` : `\u{1F6AB}`}`,
+        // hide: index === 0,
+      },
+      {
+        c: { c: 'editTask', gameId: jsonCommand.gameId, i: number - 1 },
+        //`setTeamName/teamId=${jsonCommand.teamId}`,
+        text: `\u{270F} ${number}. "${task.title}"`,
+      },
+      {
+        c: { taskDown: number < game.tasks.length ? number - 1 : undefined },
+        text: `${number < game.tasks.length ? `\u{2B07}` : `\u{1F6AB}`}`,
+        // hide: index >= game.tasks.length - 1,
+      },
+    ]
+  })
+
+  // const buttons = game.tasks
+  //   ? game.tasks.map((task, index) => {
+  //       return [
+  //         {
+  //           c: { taskUp: index },
+  //           text: `Вверх`,
+  //           // hide: index === 0,
+  //         },
+  //         {
+  //           c: { c: 'editTask', gameId: jsonCommand.gameId, i: index },
+  //           //`setTeamName/teamId=${jsonCommand.teamId}`,
+  //           text: `\u{270F} "${task.title}"`,
+  //         },
+  //         {
+  //           c: { taskDown: index },
+  //           text: `Вниз`,
+  //           // hide: index >= game.tasks.length - 1,
+  //         },
+  //       ]
+  //     })
+  //   : []
+  const message = `<b>Редактирование заданий игры ${formatGameName(
+    game
+  )}</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
+    game?.tasks?.length
+      ? game?.tasks
+          .filter((task) => task)
+          .map((task, index) => {
+            const codes =
+              typeof task?.codes === 'object'
+                ? task.codes.filter((code) => code !== '')
+                : []
+            return `\u{1F4CC} ${index + 1}. "${task.title}".\nКоды (${
+              codes.length ?? 0
+            } шт): ${codes.length > 0 ? codes.join(', ') : '[не заданы]'}`
+          })
+          .join('\n\n')
+      : '[нет заданий]'
+  }`
 
   return {
-    message: `<b>Редактирование заданий игры ${formatGameName(
-      game
-    )}</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
-      game?.tasks?.length
-        ? game?.tasks
-            .map((task) => {
-              const codes =
-                typeof task?.codes === 'object'
-                  ? task.codes.filter((code) => code !== '')
-                  : []
-              return ` - "${task.title}". Коды (${codes.length ?? 0} шт): ${
-                codes.length > 0 ? codes.join(', ') : '[не заданы]'
-              }`
-            })
-            .join('\n')
-        : '[нет заданий]'
-    }`,
+    message,
     buttons: [
       ...buttons,
       {

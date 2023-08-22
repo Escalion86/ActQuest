@@ -1,6 +1,7 @@
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const users = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
@@ -21,19 +22,24 @@ const users = async ({ telegramId, jsonCommand }) => {
     }
   }
 
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(
+    usersWithNoTeam,
+    page,
+    (user, number) => ({
+      text: `${number}. ${user.name}`,
+      c: {
+        c: 'userAdmin',
+        userTId: user.telegramId,
+        // p: 1,
+      },
+    })
+  )
+
   return {
     message: '<b>Обзор пользователей без команды</b>',
     buttons: [
-      ...usersWithNoTeam.map((user) => {
-        return {
-          text: user.name,
-          c: {
-            c: 'userAdmin',
-            userTId: user.telegramId,
-            // p: 1,
-          },
-        }
-      }),
+      ...buttons,
       {
         c: 'mainMenu',
         text: '\u{2B05} Назад',

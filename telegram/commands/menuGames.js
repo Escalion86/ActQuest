@@ -6,6 +6,7 @@ import dbConnect from '@utils/dbConnect'
 import { ADMIN_TELEGRAM_ID } from 'telegram/constants'
 import formatGameName from 'telegram/func/formatGameName'
 import mainMenuButton from './menuItems/mainMenuButton'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const menuGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
@@ -50,27 +51,30 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
     teamId: { $in: teamsIds },
   })
 
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(filteredGames, page, (game, number) => {
+    // TODO поправить вывод зарегистрированных команд пользователя на угру
+    const gameTeam = gamesTeams.find((gameTeam) => {
+      return gameTeam.gameId === String(game._id)
+    })
+    const isTeamRegistred = !!gameTeam
+    // const team = isTeamRegistred
+    //   ? teams.find((team) => String(team._id) === gameTeam.teamId)
+    //   : null
+    // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
+    return {
+      text: `${formatGameName(game)}${isTeamRegistred ? ` (записан)` : ''}`,
+      c: { c: 'game', gameId: game._id },
+    }
+  })
+
   return {
     message:
       !filteredGames || filteredGames.length === 0
         ? '<b>Предстоящих игр не запланировано</b>'
         : '<b>Предстоящие игры</b>',
     buttons: [
-      ...filteredGames.map((game) => {
-        // TODO поправить вывод зарегистрированных команд пользователя на угру
-        const gameTeam = gamesTeams.find((gameTeam) => {
-          return gameTeam.gameId === String(game._id)
-        })
-        const isTeamRegistred = !!gameTeam
-        // const team = isTeamRegistred
-        //   ? teams.find((team) => String(team._id) === gameTeam.teamId)
-        //   : null
-        // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
-        return {
-          text: `${formatGameName(game)}${isTeamRegistred ? ` (записан)` : ''}`,
-          c: { c: 'game', gameId: game._id },
-        }
-      }),
+      ...buttons,
       { c: 'archiveGames', text: '\u{1F4DA} Архив игр' },
       mainMenuButton,
     ],

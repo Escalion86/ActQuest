@@ -15,6 +15,23 @@ const gameStop = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
+  if (!jsonCommand.confirm) {
+    return {
+      success: true,
+      message: `Подтвердите остановку игры ${formatGameName(game)}`,
+      buttons: [
+        {
+          text: '\u{26D4} СТОП ИГРА',
+          c: { confirm: true },
+        },
+        {
+          text: '\u{1F6AB} Отмена',
+          c: { c: 'editGame', gameId: jsonCommand.gameId },
+        },
+      ],
+    }
+  }
+
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
     status: 'finished',
   })
