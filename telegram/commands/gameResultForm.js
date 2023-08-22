@@ -164,6 +164,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     // weekInBrackets,
     showDuration: true,
     durationOnNextLine: true,
+    showSeconds: true,
   })
 
   await dbConnect()
