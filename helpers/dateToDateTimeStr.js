@@ -1,3 +1,4 @@
+import moment from 'moment-timezone'
 import { DAYS_OF_WEEK, MONTHS, MONTHS_FULL } from './constants'
 
 const dateToDateTimeStr = (
@@ -7,7 +8,7 @@ const dateToDateTimeStr = (
   showYear = true,
   fullSeparete = false
 ) => {
-  var d = new Date(date),
+  var d = moment.tz(new Date(date), 'Asia/Krasnoyarsk'),
     minutes = '' + d.getMinutes(),
     hours = '' + d.getHours(),
     month = '' + (d.getMonth() + 1),
