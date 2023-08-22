@@ -60,8 +60,8 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
     return [
       {
-        c: { taskUp: number - 1 },
-        text: `\u{2B06}`,
+        c: { taskUp: number > 1 ? number - 1 : undefined },
+        text: `\u{2B06}${number > 1 ? '' : `\u{1F6AB}`}`,
         // hide: index === 0,
       },
       {
@@ -70,8 +70,8 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
         text: `\u{270F} ${number}. "${task.title}"`,
       },
       {
-        c: { taskDown: number - 1 },
-        text: `\u{2B07}`,
+        c: { taskDown: number < game.tasks.length ? number - 1 : undefined },
+        text: `\u{2B07}${number < game.tasks.length ? '' : `\u{1F6AB}`}`,
         // hide: index >= game.tasks.length - 1,
       },
     ]
