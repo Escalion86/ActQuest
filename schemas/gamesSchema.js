@@ -1,3 +1,4 @@
+import { Schema } from 'mongoose'
 import gamesTeamsSchema from './gamesTeamsSchema'
 import teamsSchema from './teamsSchema'
 import teamsUsersSchema from './teamsUsersSchema'
