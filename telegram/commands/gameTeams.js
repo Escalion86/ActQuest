@@ -34,17 +34,19 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     _id: { $in: teamsIds },
   })
 
-  const buttons = teams.map((team, index) => {
-    const gameTeam = gameTeams.find(
-      (gameTeam) => gameTeam.teamId === String(team._id)
-    )
-    return {
-      text: `${index + 1 + (page - 1) * 10}. "${team.name}"`,
-      c: { c: 'gameTeam', gameTeamId: gameTeam._id },
-      // `teamUser/teamUserId=${teamUser._id}`,
-    }
-  })
-  for (let i = 0; i < 9; i++) {
+  const buttons = teams
+    .filter((team, index) => index < page * 10 && index >= (page - 1) * 10)
+    .map((team, index) => {
+      const gameTeam = gameTeams.find(
+        (gameTeam) => gameTeam.teamId === String(team._id)
+      )
+      return {
+        text: `${index + 1 + (page - 1) * 10}. "${team.name}"`,
+        c: { c: 'gameTeam', gameTeamId: gameTeam._id },
+        // `teamUser/teamUserId=${teamUser._id}`,
+      }
+    })
+  for (let i = 0; i < 12; i++) {
     buttons.push({
       text: `${i}. "test"`,
       c: { c: 'gameTeam', gameTeamId: '123' },
