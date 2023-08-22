@@ -26,7 +26,7 @@ const sortFunc = (a, b) => {
 }
 
 const getAverage = (numbers) =>
-  numbers.reduce((acc, number) => acc + number, 0) / numbers.length
+  Math.round(numbers.reduce((acc, number) => acc + number, 0) / numbers.length)
 
 const durationCalc = ({ startTime, endTime, activeNum }) => {
   if (!startTime || !endTime) return null
