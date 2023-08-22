@@ -101,10 +101,11 @@ const sendMessage = async ({
           keyboard || remove_keyboard
             ? JSON.stringify({
                 ...(keyboard ?? {}),
-                resize_keyboard: true,
+                // resize_keyboard: true,
                 ...(remove_keyboard ? { remove_keyboard: true } : {}),
               })
             : undefined,
+        resize_keyboard: true,
         ...props,
       },
       null,
