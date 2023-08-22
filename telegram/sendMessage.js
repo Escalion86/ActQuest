@@ -16,7 +16,7 @@ const sendMessage = async ({
       await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendPhoto`,
         {
-          // message_id: callback_query.message.message_id,
+          message_id: callback_query?.message?.message_id,
           chat_id,
           photo,
           // parse_mode,
