@@ -6,6 +6,7 @@ import dbConnect from '@utils/dbConnect'
 import { ADMIN_TELEGRAM_ID } from 'telegram/constants'
 import formatGameName from 'telegram/func/formatGameName'
 import mainMenuButton from './menuItems/mainMenuButton'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const archiveGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
@@ -44,29 +45,29 @@ const archiveGames = async ({ telegramId, jsonCommand }) => {
     teamId: { $in: teamsIds },
   })
 
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(filteredGames, page, (game, number) => {
+    // TODO поправить вывод зарегистрированных команд пользователя на угру
+    const gameTeam = gamesTeams.find((gameTeam) => {
+      return gameTeam.gameId === String(game._id)
+    })
+    const isTeamRegistred = !!gameTeam
+    // const team = isTeamRegistred
+    //   ? teams.find((team) => String(team._id) === gameTeam.teamId)
+    //   : null
+    // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
+    return {
+      text: `${formatGameName(game)}${isTeamRegistred ? ` (записан)` : ''}`,
+      c: { c: 'game', gameId: game._id },
+    }
+  })
+
   return {
     message:
       !filteredGames || filteredGames.length === 0
         ? '<b>Прошедших игр небыло</b>'
         : '<b>Прошедшие игры</b>',
-    buttons: [
-      ...filteredGames.map((game) => {
-        // TODO поправить вывод зарегистрированных команд пользователя на угру
-        const gameTeam = gamesTeams.find((gameTeam) => {
-          return gameTeam.gameId === String(game._id)
-        })
-        const isTeamRegistred = !!gameTeam
-        // const team = isTeamRegistred
-        //   ? teams.find((team) => String(team._id) === gameTeam.teamId)
-        //   : null
-        // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
-        return {
-          text: `${formatGameName(game)}${isTeamRegistred ? ` (записан)` : ''}`,
-          c: { c: 'game', gameId: game._id },
-        }
-      }),
-      { c: 'menuGames', text: '\u{2B05} Назад' },
-    ],
+    buttons: [...buttons, { c: 'menuGames', text: '\u{2B05} Назад' }],
   }
 }
 

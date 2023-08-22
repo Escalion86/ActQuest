@@ -1,4 +1,5 @@
 import Games from '@models/Games'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
@@ -55,27 +56,46 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const buttons = game.tasks
-    ? game.tasks.map((task, index) => {
-        return [
-          {
-            c: { taskUp: index },
-            text: `Вверх`,
-            // hide: index === 0,
-          },
-          {
-            c: { c: 'editTask', gameId: jsonCommand.gameId, i: index },
-            //`setTeamName/teamId=${jsonCommand.teamId}`,
-            text: `\u{270F} "${task.title}"`,
-          },
-          {
-            c: { taskDown: index },
-            text: `Вниз`,
-            // hide: index >= game.tasks.length - 1,
-          },
-        ]
-      })
-    : []
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(game.tasks, page, (task, number) => [
+    {
+      c: { taskUp: number },
+      text: `\u{2B06}`,
+      // hide: index === 0,
+    },
+    {
+      c: { c: 'editTask', gameId: jsonCommand.gameId, i: number },
+      //`setTeamName/teamId=${jsonCommand.teamId}`,
+      text: `\u{270F} ${number}. "${task.title}"`,
+    },
+    {
+      c: { taskDown: number },
+      text: `\u{2B07}`,
+      // hide: index >= game.tasks.length - 1,
+    },
+  ])
+
+  // const buttons = game.tasks
+  //   ? game.tasks.map((task, index) => {
+  //       return [
+  //         {
+  //           c: { taskUp: index },
+  //           text: `Вверх`,
+  //           // hide: index === 0,
+  //         },
+  //         {
+  //           c: { c: 'editTask', gameId: jsonCommand.gameId, i: index },
+  //           //`setTeamName/teamId=${jsonCommand.teamId}`,
+  //           text: `\u{270F} "${task.title}"`,
+  //         },
+  //         {
+  //           c: { taskDown: index },
+  //           text: `Вниз`,
+  //           // hide: index >= game.tasks.length - 1,
+  //         },
+  //       ]
+  //     })
+  //   : []
 
   return {
     message: `<b>Редактирование заданий игры ${formatGameName(
