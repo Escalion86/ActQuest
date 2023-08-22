@@ -61,7 +61,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
     return [
       {
         c: { taskUp: number > 1 ? number - 1 : undefined },
-        text: `\u{2B06}${number > 1 ? '' : `\u{1F6AB}`}`,
+        text: `${number > 1 ? `\u{2B06}` : `\u{1F6AB}`}`,
         // hide: index === 0,
       },
       {
@@ -71,7 +71,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
       },
       {
         c: { taskDown: number < game.tasks.length ? number - 1 : undefined },
-        text: `\u{2B07}${number < game.tasks.length ? '' : `\u{1F6AB}`}`,
+        text: `${number < game.tasks.length ? `\u{2B07}` : `\u{1F6AB}`}`,
         // hide: index >= game.tasks.length - 1,
       },
     ]
