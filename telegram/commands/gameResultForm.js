@@ -163,15 +163,17 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     // fullMonth,
     // weekInBrackets,
     showDuration: true,
+    durationOnNextLine: true,
+    showSeconds: true,
   })
 
   await dbConnect()
   // const game = await Games.findById(jsonCommand.gameId)
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
     result: {
-      text: `<b>Результаты игры: ${formatGameName(
+      text: `<b>Результаты игры:\n${formatGameName(
         game
-      )}</b>\n\n<b>Фактический период игры</b>: ${gameDateTimeFact}\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
+      )}</b>\n\n<b>Фактический период игры</b>:\n${gameDateTimeFact}\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
         game.tasks[mostEasyTaskIndex]?.title
       }" - среднее время ${secondsToTime(
         taskAverageTimes[mostEasyTaskIndex]
