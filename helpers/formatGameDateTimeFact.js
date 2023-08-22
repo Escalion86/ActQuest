@@ -13,6 +13,7 @@ function formatGameDateTimeFact(game, props = {}) {
     weekInBrackets,
     showDuration,
     showSeconds,
+    durationOnNextLine,
   } = props
 
   const dateStart = dateToDateTimeStr(
@@ -54,7 +55,7 @@ function formatGameDateTimeFact(game, props = {}) {
   return (
     date +
     (showDuration
-      ? ` (${secondsToTimeStr(
+      ? `${durationOnNextLine ? '\n' : ' '}(${secondsToTimeStr(
           getSecondsBetween(game.dateStartFact, game.dateEndFact)
         )})`
       : '')
