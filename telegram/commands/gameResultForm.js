@@ -1,9 +1,13 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
+import TeamsUsers from '@models/TeamsUsers'
+import dbConnect from '@utils/dbConnect'
 import moment from 'moment-timezone'
 import { CLUE_DURATION_SEC } from 'telegram/constants'
 import check from 'telegram/func/check'
+import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import secondsToTime from 'telegram/func/secondsToTime'
 
@@ -44,7 +48,7 @@ const durationCalc = ({ startTime, endTime, activeNum }) => {
   return tempArray
 }
 
-const gameResult = async ({ telegramId, jsonCommand }) => {
+const gameResultForm = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -58,15 +62,20 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  if (!game.result) {
-    return {
-      message: 'Результаты игры еще не сформированы',
-      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
-    }
-  }
-
   // Получаем список команд участвующих в игре
-  const { gameTeams, teams, teamsUsers } = game.result
+  const gameTeams = await GamesTeams.find({
+    gameId: jsonCommand.gameId,
+  })
+
+  const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
+
+  const teams = await Teams.find({
+    _id: { $in: teamsIds },
+  })
+
+  const teamsUsers = await TeamsUsers.find({
+    teamId: { $in: teamsIds },
+  })
 
   const tasksDuration = gameTeams.map((gameTeam) => ({
     teamId: gameTeam.teamId,
@@ -146,28 +155,44 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     Math.max.apply(null, taskAverageTimes)
   )
 
+  await dbConnect()
+  // const game = await Games.findById(jsonCommand.gameId)
+  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+    result: {
+      text: `<b>Результаты игры: "${game.name}"${
+        game.dateStart
+          ? ' ' +
+            moment(game.dateStart)
+              .tz('Asia/Krasnoyarsk')
+              .format('DD.MM.yyyy H:mm')
+          : ''
+      }</b>\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
+        game.tasks[mostEasyTaskIndex]?.title
+      }" - среднее время ${secondsToTime(
+        taskAverageTimes[mostEasyTaskIndex]
+      )}\n\n<b>\u{1F608} Самое сложное задание:</b>\n"${
+        game.tasks[mostHardTaskIndex]?.title
+      }" - среднее время ${secondsToTime(
+        taskAverageTimes[mostHardTaskIndex]
+      )}\n\n<b>\u{1F680} Самое быстрое выполнение задания:</b>\n"${
+        fastestTask.taskTitle
+      }" команда "${fastestTask.teamName}" - ${secondsToTime(
+        fastestTask.seconds
+      )}`,
+      teams,
+      gameTeams,
+      teamsUsers: teamsUsers,
+    },
+  })
+
   return {
-    message: `<b>Результаты игры: "${game.name}"${
-      game.dateStart
-        ? ' ' +
-          moment(game.dateStart)
-            .tz('Asia/Krasnoyarsk')
-            .format('DD.MM.yyyy H:mm')
-        : ''
-    }</b>\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
-      game.tasks[mostEasyTaskIndex]?.title
-    }" - среднее время ${secondsToTime(
-      taskAverageTimes[mostEasyTaskIndex]
-    )}\n\n<b>\u{1F608} Самое сложное задание:</b>\n"${
-      game.tasks[mostHardTaskIndex]?.title
-    }" - среднее время ${secondsToTime(
-      taskAverageTimes[mostHardTaskIndex]
-    )}\n\n<b>\u{1F680} Самое быстрое выполнение задания:</b>\n"${
-      fastestTask.taskTitle
-    }" команда "${fastestTask.teamName}" - ${secondsToTime(
-      fastestTask.seconds
-    )}`,
+    message: `<b>Результаты игры ${formatGameName(game.name)} сформированы!`,
     buttons: [
+      {
+        c: { c: 'gameResult', gameId: jsonCommand.gameId },
+        text: '\u{1F4CB} Посмотреть результаты игры',
+        hide: game.status !== 'finished',
+      },
       {
         text: '\u{2B05} Назад',
         c: { c: 'game', gameId: jsonCommand.gameId },
@@ -176,4 +201,4 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default gameResult
+export default gameResultForm

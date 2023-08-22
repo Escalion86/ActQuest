@@ -58,15 +58,16 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  if (!game.result) {
-    return {
-      message: 'Результаты игры еще не сформированы',
-      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
-    }
-  }
-
   // Получаем список команд участвующих в игре
-  const { gameTeams, teams, teamsUsers } = game.result
+  const gameTeams = await GamesTeams.find({
+    gameId: jsonCommand.gameId,
+  })
+
+  const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
+
+  const teams = await Teams.find({
+    _id: { $in: teamsIds },
+  })
 
   const tasksDuration = gameTeams.map((gameTeam) => ({
     teamId: gameTeam.teamId,

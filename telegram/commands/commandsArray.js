@@ -66,6 +66,7 @@ import setTaskPenalty from './setTaskPenalty'
 import transferCaptainRights from './transferCaptainRights'
 import archiveGames from './archiveGames'
 import gameAnonsMsg from './gameAnonsMsg'
+import gameResultForm from './gameResultForm'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -139,6 +140,7 @@ const commandsArray = {
   transferCaptainRights,
   archiveGames,
   gameAnonsMsg,
+  gameResultForm,
 }
 
 var i = 0

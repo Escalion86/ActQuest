@@ -1,3 +1,11 @@
+import gamesTeamsSchema from './gamesTeamsSchema'
+import teamsSchema from './teamsSchema'
+import teamsUsersSchema from './teamsUsersSchema'
+
+const TeamsSchema = new Schema(teamsSchema)
+const GamesTeamsSchema = new Schema(gamesTeamsSchema)
+const TeamsUsersSchema = new Schema(teamsUsersSchema)
+
 const gamesSchema = {
   name: {
     type: String,
@@ -87,6 +95,15 @@ const gamesSchema = {
   creatorTelegramId: {
     type: Number,
     required: [true, 'Введите telegramId'],
+    default: null,
+  },
+  result: {
+    type: {
+      text: String,
+      teams: [TeamsSchema],
+      gameTeams: [GamesTeamsSchema],
+      teamsUsers: [TeamsUsersSchema],
+    },
     default: null,
   },
 }
