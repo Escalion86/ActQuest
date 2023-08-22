@@ -1,3 +1,4 @@
+import formatGameDateTimeFact from '@helpers/formatGameDateTimeFact'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
@@ -155,13 +156,22 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     Math.max.apply(null, taskAverageTimes)
   )
 
+  const gameDateTimeFact = formatGameDateTimeFact(game, {
+    dontShowDayOfWeek: false,
+    fullWeek: false,
+    // showYear,
+    // fullMonth,
+    // weekInBrackets,
+    showDuration: true,
+  })
+
   await dbConnect()
   // const game = await Games.findById(jsonCommand.gameId)
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
     result: {
       text: `<b>Результаты игры: ${formatGameName(
         game
-      )}</b>\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
+      )}</b>\n\n<b>Фактический период игры</b>: ${gameDateTimeFact}\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
         game.tasks[mostEasyTaskIndex]?.title
       }" - среднее время ${secondsToTime(
         taskAverageTimes[mostEasyTaskIndex]
