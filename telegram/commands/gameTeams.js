@@ -1,3 +1,4 @@
+import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
@@ -21,6 +22,8 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     }
   }
 
+  const page = jsonCommand?.page ?? 1
+
   const teamsIds = gameTeams.map(
     (gameTeam) =>
       // mongoose.Types.ObjectId(teamUser.teamId)
@@ -31,22 +34,50 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     _id: { $in: teamsIds },
   })
 
-  const buttons = teams.map((team) => {
+  const buttons = teams.map((team, index) => {
     const gameTeam = gameTeams.find(
       (gameTeam) => gameTeam.teamId === String(team._id)
     )
     return {
-      text: `"${team.name}"`,
+      text: `${index + (page - 1) * 10}. "${team.name}"`,
       c: { c: 'gameTeam', gameTeamId: gameTeam._id },
       // `teamUser/teamUserId=${teamUser._id}`,
     }
   })
+  for (let i = 0; i < 9; i++) {
+    const element = array[i]
+    teams.push({
+      text: `${index + (page - 1) * 10}. "test"`,
+      c: { c: 'gameTeam', gameTeamId: '123' },
+      // `teamUser/teamUserId=${teamUser._id}`,
+    })
+  }
 
   return {
     message: `<b>Команды зарегистрированные на игру ${formatGameName(
       game
-    )}</b>`,
-    buttons: [...buttons, { c: 'menuGames', text: '\u{2B05} Назад' }],
+    )}</b>\n<b>Количество команд:</b>${getNoun(
+      teams.length,
+      'команда',
+      'команды',
+      'команд'
+    )}`,
+    buttons: [
+      ...buttons,
+      [
+        {
+          page: page - 1,
+          text: `\u{25C0} ${page - 1 > 0 || ''}1-${page - 1 > 0 || ''}0`,
+          hide: page <= 1,
+        },
+        {
+          page: page + 1,
+          text: `\u{25C0} ${page + 1}1-${page + 1}0`,
+          hide: teams.length < page * 10,
+        },
+      ],
+      { c: 'menuGames', text: '\u{2B05} Назад' },
+    ],
   }
 }
 
