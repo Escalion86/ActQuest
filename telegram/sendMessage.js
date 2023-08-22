@@ -105,7 +105,6 @@ const sendMessage = async ({
                 ...(remove_keyboard ? { remove_keyboard: true } : {}),
               })
             : undefined,
-        resize_keyboard: true,
         ...props,
       },
       null,

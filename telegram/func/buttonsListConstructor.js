@@ -2,7 +2,7 @@ const buttonListConstructor = (array, page = 1, itemFunc) => {
   if (array?.length === 0) return []
   const buttons = array
     .filter((item, index) => index < page * 10 && index >= (page - 1) * 10)
-    .map((item, index) => itemFunc(item, `${index + 1 + (page - 1) * 10}`))
+    .map((item, index) => itemFunc(item, index + 1 + (page - 1) * 10))
 
   return [
     ...buttons,
