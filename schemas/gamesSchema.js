@@ -21,7 +21,11 @@ const gamesSchema = {
     type: Date,
     default: null,
   },
-  dateEnd: {
+  dateStartFact: {
+    type: Date,
+    default: null,
+  },
+  dateEndFact: {
     type: Date,
     default: null,
   },
