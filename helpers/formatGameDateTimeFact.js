@@ -1,4 +1,5 @@
 import dateToDateTimeStr from './dateToDateTimeStr'
+import getGameDuration from './getGameDuration'
 
 function formatGameDateTimeFact(game, props = {}) {
   if (!game) return undefined
