@@ -56,7 +56,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       {
         c: { c: 'gameAnonsMsg', gameId: jsonCommand.gameId },
         text: '\u{26A1} Отправить анонс игры всем подписчикам',
-        hide: game.hidden,
+        hide: game.hidden || game.status !== 'active',
       },
       {
         c: { c: 'gameMsg', gameId: jsonCommand.gameId },
