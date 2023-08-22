@@ -39,14 +39,14 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
       (gameTeam) => gameTeam.teamId === String(team._id)
     )
     return {
-      text: `${index + (page - 1) * 10}. "${team.name}"`,
+      text: `${index + 1 + (page - 1) * 10}. "${team.name}"`,
       c: { c: 'gameTeam', gameTeamId: gameTeam._id },
       // `teamUser/teamUserId=${teamUser._id}`,
     }
   })
   for (let i = 0; i < 9; i++) {
     teams.push({
-      text: `${i + teams.length + 1 + (page - 1) * 10}. "test"`,
+      text: `${i}. "test"`,
       c: { c: 'gameTeam', gameTeamId: '123' },
       // `teamUser/teamUserId=${teamUser._id}`,
     })
