@@ -1,3 +1,4 @@
+import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
@@ -9,7 +10,30 @@ const deleteTeam = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
 
-  //TODO добавить проверку, что команда не играла
+  const team = await getTeam(jsonCommand.teamId)
+  if (team.success === false) return team
+
+  // Получаем количество игр в которых участвовала команда
+  const gameTeams = await GamesTeams.find({ teamId: jsonCommand.teamId })
+  if (gameTeams.length > 0) {
+    return {
+      success: true,
+      message: `Команда "${
+        team.name
+      }" не может быть удалена, так как уже участвовала в ${getNoun(
+        gameTeams.length,
+        'игре',
+        'играх',
+        'играх'
+      )}`,
+      buttons: [
+        {
+          text: '\u{1F6AB} Назад',
+          c: { c: 'editTeam', teamId: jsonCommand.teamId },
+        },
+      ],
+    }
+  }
 
   if (!jsonCommand.confirm) {
     return {
@@ -29,9 +53,10 @@ const deleteTeam = async ({ telegramId, jsonCommand }) => {
     }
   }
   await dbConnect()
-  const team = await Teams.findByIdAndRemove(jsonCommand.teamId)
-  const teamUsers = await TeamsUsers.deleteMany({ teamId: jsonCommand.teamId })
-  const gameTeams = await GamesTeams.deleteMany({ teamId: jsonCommand.teamId })
+  await Teams.findByIdAndRemove(jsonCommand.teamId)
+  await TeamsUsers.deleteMany({ teamId: jsonCommand.teamId })
+  await GamesTeams.deleteMany({ teamId: jsonCommand.teamId })
+
   return {
     success: true,
     message: 'Команда удалена',
