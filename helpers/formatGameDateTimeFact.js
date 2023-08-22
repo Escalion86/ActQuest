@@ -1,7 +1,7 @@
 import dateToDateTimeStr from './dateToDateTimeStr'
 
 function formatGameDateTimeFact(game, props = {}) {
-  if (!event) return undefined
+  if (!game) return undefined
 
   const {
     dontShowDayOfWeek,
