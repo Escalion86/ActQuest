@@ -186,7 +186,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: `<b>Результаты игры ${formatGameName(game.name)} сформированы!`,
+    message: `Результаты игры ${formatGameName(game.name)} сформированы!`,
     buttons: [
       {
         c: { c: 'gameResult', gameId: jsonCommand.gameId },
