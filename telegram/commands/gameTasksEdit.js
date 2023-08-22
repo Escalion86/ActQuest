@@ -58,7 +58,6 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
-    console.log('task :>> ', task)
     return [
       {
         c: { taskUp: number },
@@ -77,6 +76,8 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
       },
     ]
   })
+
+  console.log('1 :>> ', 1)
 
   // const buttons = game.tasks
   //   ? game.tasks.map((task, index) => {
@@ -99,6 +100,25 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   //       ]
   //     })
   //   : []
+  const message = `<b>Редактирование заданий игры ${formatGameName(
+    game
+  )}</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
+    game?.tasks?.length
+      ? game?.tasks
+          .map((task) => {
+            const codes =
+              typeof task?.codes === 'object'
+                ? task.codes.filter((code) => code !== '')
+                : []
+            return ` - "${task.title}". Коды (${codes.length ?? 0} шт): ${
+              codes.length > 0 ? codes.join(', ') : '[не заданы]'
+            }`
+          })
+          .join('\n')
+      : '[нет заданий]'
+  }`
+
+  console.log('message :>> ', message)
 
   return {
     message: `<b>Редактирование заданий игры ${formatGameName(
