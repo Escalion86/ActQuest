@@ -1,5 +1,6 @@
 import dateToDateTimeStr from './dateToDateTimeStr'
-import getGameDuration from './getGameDuration'
+import getSecondsBetween from './getSecondsBetween'
+import secondsToTimeStr from './secondsToTimeStr'
 
 function formatGameDateTimeFact(game, props = {}) {
   if (!game) return undefined
@@ -45,7 +46,14 @@ function formatGameDateTimeFact(game, props = {}) {
       weekInBrackets ? `(${dateEnd[2]})` : dateEnd[2]
     } ${dateEnd[4]}:${dateEnd[5]}`
   }
-  return date + (showDuration ? ` (${getGameDuration(game)})` : '')
+  return (
+    date +
+    (showDuration
+      ? ` (${secondsToTimeStr(
+          getSecondsBetween(game.dateStartFact, game.dateEndFact)
+        )})`
+      : '')
+  )
 }
 
 export default formatGameDateTimeFact
