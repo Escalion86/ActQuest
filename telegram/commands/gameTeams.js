@@ -84,12 +84,12 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
       [
         {
           c: { page: page - 1 },
-          text: `\u{25C0} ${page - 1 > 0 || ''}1-${page - 1 > 0 || ''}0`,
+          text: `\u{25C0} ${page - 1 || ''}1-${page}0`,
           hide: page <= 1,
         },
         {
           c: { page: page + 1 },
-          text: `\u{25C0} ${page + 1}1-${page + 1}0`,
+          text: `\u{25C0} ${page}1-${page + 1}0`,
           hide: teams.length * 15 < page * 10,
         },
       ],
