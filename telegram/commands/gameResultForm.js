@@ -159,14 +159,9 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   // const game = await Games.findById(jsonCommand.gameId)
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
     result: {
-      text: `<b>Результаты игры: "${game.name}"${
-        game.dateStart
-          ? ' ' +
-            moment(game.dateStart)
-              .tz('Asia/Krasnoyarsk')
-              .format('DD.MM.yyyy H:mm')
-          : ''
-      }</b>\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
+      text: `<b>Результаты игры: ${formatGameName(
+        game
+      )}</b>\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
         game.tasks[mostEasyTaskIndex]?.title
       }" - среднее время ${secondsToTime(
         taskAverageTimes[mostEasyTaskIndex]
@@ -186,7 +181,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: `Результаты игры ${formatGameName(game.name)} сформированы!`,
+    message: `Результаты игры ${formatGameName(game)} сформированы!`,
     buttons: [
       {
         c: { c: 'gameResult', gameId: jsonCommand.gameId },
