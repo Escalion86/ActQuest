@@ -190,7 +190,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       },
       {
         text: '\u{2B05} Назад',
-        c: { c: 'game', gameId: jsonCommand.gameId },
+        c: { c: 'editGame', gameId: jsonCommand.gameId },
       },
     ],
   }

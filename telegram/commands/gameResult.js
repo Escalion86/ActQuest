@@ -147,26 +147,7 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
   )
 
   return {
-    message: `<b>Результаты игры: "${game.name}"${
-      game.dateStart
-        ? ' ' +
-          moment(game.dateStart)
-            .tz('Asia/Krasnoyarsk')
-            .format('DD.MM.yyyy H:mm')
-        : ''
-    }</b>\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
-      game.tasks[mostEasyTaskIndex]?.title
-    }" - среднее время ${secondsToTime(
-      taskAverageTimes[mostEasyTaskIndex]
-    )}\n\n<b>\u{1F608} Самое сложное задание:</b>\n"${
-      game.tasks[mostHardTaskIndex]?.title
-    }" - среднее время ${secondsToTime(
-      taskAverageTimes[mostHardTaskIndex]
-    )}\n\n<b>\u{1F680} Самое быстрое выполнение задания:</b>\n"${
-      fastestTask.taskTitle
-    }" команда "${fastestTask.teamName}" - ${secondsToTime(
-      fastestTask.seconds
-    )}`,
+    message: game.result.text,
     buttons: [
       {
         text: '\u{2B05} Назад',
