@@ -87,7 +87,7 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
         if (!fastestTask.seconds || fastestTask.seconds > seconds) {
           fastestTask.seconds = seconds
           fastestTask.teamName = team.name
-          fastestTask.taskTitle = task.title
+          fastestTask.taskTitle = task?.title
         }
         return { team, seconds }
       })
@@ -103,7 +103,7 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
       //   a.seconds < b.seconds ? -1 : 1
       // )
 
-      return `\n<b>\u{1F4CC} "${task.title}"</b>\n${sortedTeamsSeconds
+      return `\n<b>\u{1F4CC} "${task?.title}"</b>\n${sortedTeamsSeconds
         .map(
           ({ team, seconds }) =>
             `${
@@ -156,11 +156,11 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
             .format('DD.MM.yyyy H:mm')
         : ''
     }</b>\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
-      game.tasks[mostEasyTaskIndex].title
+      game.tasks[mostEasyTaskIndex]?.title
     }" - среднее время ${secondsToTime(
       taskAverageTimes[mostEasyTaskIndex]
     )}\n\n<b>\u{1F608} Самое сложное задание:</b>\n"${
-      game.tasks[mostHardTaskIndex].title
+      game.tasks[mostHardTaskIndex]?.title
     }" - среднее время ${secondsToTime(
       taskAverageTimes[mostHardTaskIndex]
     )}\n\n<b>\u{1F680} Самое быстрое выполнение задания:</b>\n"${
