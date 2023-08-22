@@ -58,116 +58,15 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  // Получаем список команд участвующих в игре
-  const gameTeams = await GamesTeams.find({
-    gameId: jsonCommand.gameId,
-  })
-
-  const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
-
-  const teams = await Teams.find({
-    _id: { $in: teamsIds },
-  })
-
-  const tasksDuration = gameTeams.map((gameTeam) => ({
-    teamId: gameTeam.teamId,
-    duration: durationCalc(gameTeam),
-  }))
-
-  const taskAverageTimes = Array(game.tasks.length)
-  const fastestTask = {}
-
-  const text = game.tasks
-    .map((task, index) => {
-      const teamsSeconds = teams.map((team) => {
-        const dur = tasksDuration.find(
-          (item) => item.teamId === String(team._id)
-        )
-        const seconds = dur?.duration[index] ?? '[не начато]'
-        if (!fastestTask.seconds || fastestTask.seconds > seconds) {
-          fastestTask.seconds = seconds
-          fastestTask.teamName = team.name
-          fastestTask.taskTitle = task.title
-        }
-        return { team, seconds }
-      })
-
-      taskAverageTimes[index] = getAverage(
-        teamsSeconds
-          .map(({ seconds }) => seconds)
-          .filter((seconds) => typeof seconds === 'number')
-      )
-
-      const sortedTeamsSeconds = [...teamsSeconds].sort(sortFunc)
-      // .sort((a, b) =>
-      //   a.seconds < b.seconds ? -1 : 1
-      // )
-
-      return `\n<b>\u{1F4CC} "${task.title}"</b>\n${sortedTeamsSeconds
-        .map(
-          ({ team, seconds }) =>
-            `${
-              typeof seconds === 'number' ? secondsToTime(seconds) : seconds
-            } - ${team.name}`
-        )
-        .join('\n')}`
-    })
-    .join('\n')
-
-  const totalTeamsSeconds = [
-    ...teams.map((team, index) => {
-      const dur = tasksDuration.find((item) => item.teamId === String(team._id))
-      const seconds = dur?.duration.reduce(
-        (partialSum, a) =>
-          typeof a === 'number' && typeof partialSum === 'number'
-            ? partialSum + a
-            : '[стоп игра]',
-        0
-      )
-      return { team, seconds }
-    }),
-  ]
-  const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort(sortFunc)
-  // .sort((a, b) =>
-  //   typeof a.seconds === number ? (a.seconds < b.seconds ? -1 : 1) : -1
-  // )
-
-  const total = sortedTotalTeamsSeconds
-    .map(({ team, seconds }) => {
-      return `${
-        typeof seconds === 'number' ? secondsToTime(seconds) : seconds
-      } - ${team.name}`
-    })
-    .join('\n')
-
-  const mostEasyTaskIndex = taskAverageTimes.indexOf(
-    Math.min.apply(null, taskAverageTimes)
-  )
-  const mostHardTaskIndex = taskAverageTimes.indexOf(
-    Math.max.apply(null, taskAverageTimes)
-  )
+  if (!game.result) {
+    return {
+      message: 'Результаты игры еще не сформированы',
+      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+    }
+  }
 
   return {
-    message: `<b>Результаты игры: "${game.name}"${
-      game.dateStart
-        ? ' ' +
-          moment(game.dateStart)
-            .tz('Asia/Krasnoyarsk')
-            .format('DD.MM.yyyy H:mm')
-        : ''
-    }</b>\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
-      game.tasks[mostEasyTaskIndex].title
-    }" - среднее время ${secondsToTime(
-      taskAverageTimes[mostEasyTaskIndex]
-    )}\n\n<b>\u{1F608} Самое сложное задание:</b>\n"${
-      game.tasks[mostHardTaskIndex].title
-    }" - среднее время ${secondsToTime(
-      taskAverageTimes[mostHardTaskIndex]
-    )}\n\n<b>\u{1F680} Самое быстрое выполнение задания:</b>\n"${
-      fastestTask.taskTitle
-    }" команда "${fastestTask.teamName}" - ${secondsToTime(
-      fastestTask.seconds
-    )}`,
+    message: game.result.text,
     buttons: [
       {
         text: '\u{2B05} Назад',
