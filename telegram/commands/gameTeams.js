@@ -45,7 +45,6 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     }
   })
   for (let i = 0; i < 9; i++) {
-    const element = array[i]
     teams.push({
       text: `${index + (page - 1) * 10}. "test"`,
       c: { c: 'gameTeam', gameTeamId: '123' },
