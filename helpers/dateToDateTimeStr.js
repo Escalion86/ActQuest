@@ -8,32 +8,29 @@ const dateToDateTimeStr = (
   showYear = true,
   fullSeparete = false
 ) => {
-  var d = moment(date).tz('Asia/Krasnoyarsk').toDate()
-  var minutes = '' + d.getMinutes(),
-    hours = '' + d.getHours(),
-    month = '' + (d.getMonth() + 1),
-    day = '' + d.getDate(),
-    week = d.getDay(),
-    year = d.getFullYear()
+  var d = moment(date).tz('Asia/Krasnoyarsk')
+  var week = d.weekday()
+  var obj = d.toObject()
+  const { minutes, hours, months, date, years } = obj
 
   if (minutes.length < 2) minutes = '0' + minutes
   if (hours.length < 2) hours = '0' + hours
 
   if (fullSeparete)
     return [
-      day,
-      MONTHS_FULL[month - 1],
+      date,
+      MONTHS_FULL[months - 1],
       DAYS_OF_WEEK[week],
-      year.toString(),
+      years.toString(),
       hours,
       minutes,
     ]
 
   const strDateStart =
-    day +
+    date +
     ' ' +
-    (fullMonth ? MONTHS_FULL[month - 1] : MONTHS[month - 1]) +
-    (showYear ? ' ' + year.toString() : '') +
+    (fullMonth ? MONTHS_FULL[months - 1] : MONTHS[months - 1]) +
+    (showYear ? ' ' + years.toString() : '') +
     (showDayOfWeek ? ' ' + DAYS_OF_WEEK[week] : '')
 
   const strTimeStart = hours + ':' + minutes
