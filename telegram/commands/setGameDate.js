@@ -1,4 +1,3 @@
-import formatDateTime from '@helpers/formatDateTime'
 import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
 import moment from 'moment-timezone'
