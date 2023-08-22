@@ -1,4 +1,4 @@
-const buttonListConstructor = (array, page, itemFunc) => {
+const buttonListConstructor = (array, page = 1, itemFunc) => {
   if (array?.length === 0) return []
   const buttons = array
     .filter((item, index) => index < page * 10 && index >= (page - 1) * 10)
@@ -14,10 +14,13 @@ const buttonListConstructor = (array, page, itemFunc) => {
       },
       {
         c: { page: page + 1 },
-        text: `${page}1-${
-          (page + 1) * 10 > array.length ? array.length : (page + 1) * 10
-        } \u{25B6}`,
-        hide: array.length < page * 10,
+        text:
+          array.length === page * 10 + 1
+            ? `${page * 10 + 1} \u{25B6}`
+            : `${page}1-${
+                (page + 1) * 10 > array.length ? array.length : (page + 1) * 10
+              } \u{25B6}`,
+        hide: array.length <= page * 10,
       },
     ],
   ]
