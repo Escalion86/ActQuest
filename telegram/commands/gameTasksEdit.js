@@ -106,6 +106,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
     game?.tasks?.length
       ? game?.tasks
           .map((task) => {
+            console.log('task :>> ', task)
             const codes =
               typeof task?.codes === 'object'
                 ? task.codes.filter((code) => code !== '')
