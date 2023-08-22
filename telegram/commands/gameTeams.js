@@ -45,7 +45,7 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     }
   })
   for (let i = 0; i < 9; i++) {
-    teams.push({
+    buttons.push({
       text: `${i}. "test"`,
       c: { c: 'gameTeam', gameTeamId: '123' },
       // `teamUser/teamUserId=${teamUser._id}`,
@@ -65,12 +65,12 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
       ...buttons,
       [
         {
-          page: page - 1,
+          c: { page: page - 1 },
           text: `\u{25C0} ${page - 1 > 0 || ''}1-${page - 1 > 0 || ''}0`,
           hide: page <= 1,
         },
         {
-          page: page + 1,
+          c: { page: page + 1 },
           text: `\u{25C0} ${page + 1}1-${page + 1}0`,
           hide: teams.length < page * 10,
         },
