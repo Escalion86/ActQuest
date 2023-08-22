@@ -93,7 +93,7 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
           hide: teams.length * 15 < page * 10,
         },
       ],
-      { c: 'menuGames', text: '\u{2B05} Назад' },
+      { c: { c: 'game', gameId: jsonCommand?.gameId }, text: '\u{2B05} Назад' },
     ],
   }
 }
