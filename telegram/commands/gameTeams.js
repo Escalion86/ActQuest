@@ -34,7 +34,23 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     _id: { $in: teamsIds },
   })
 
-  const buttons = teams
+  const buttons = [
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+    ...teams,
+  ]
     .filter((team, index) => index < page * 10 && index >= (page - 1) * 10)
     .map((team, index) => {
       const gameTeam = gameTeams.find(
@@ -46,13 +62,13 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
         // `teamUser/teamUserId=${teamUser._id}`,
       }
     })
-  for (let i = 0; i < 12; i++) {
-    buttons.push({
-      text: `${i}. "test"`,
-      c: { c: 'gameTeam', gameTeamId: '123' },
-      // `teamUser/teamUserId=${teamUser._id}`,
-    })
-  }
+  // for (let i = 0; i < 12; i++) {
+  //   buttons.push({
+  //     text: `${i}. "test"`,
+  //     c: { c: 'gameTeam', gameTeamId: '123' },
+  //     // `teamUser/teamUserId=${teamUser._id}`,
+  //   })
+  // }
 
   return {
     message: `<b>Команды зарегистрированные на игру ${formatGameName(
