@@ -60,17 +60,17 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
     return [
       {
-        c: { taskUp: number },
+        c: { taskUp: number - 1 },
         text: `\u{2B06}`,
         // hide: index === 0,
       },
       {
-        c: { c: 'editTask', gameId: jsonCommand.gameId, i: number },
+        c: { c: 'editTask', gameId: jsonCommand.gameId, i: number - 1 },
         //`setTeamName/teamId=${jsonCommand.teamId}`,
         text: `\u{270F} ${number}. "${task.title}"`,
       },
       {
-        c: { taskDown: number },
+        c: { taskDown: number - 1 },
         text: `\u{2B07}`,
         // hide: index >= game.tasks.length - 1,
       },
