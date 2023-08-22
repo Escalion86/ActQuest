@@ -23,8 +23,6 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const page = jsonCommand?.page ?? 1
-
   const teamsIds = gameTeams.map(
     (gameTeam) =>
       // mongoose.Types.ObjectId(teamUser.teamId)
@@ -35,12 +33,13 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     _id: { $in: teamsIds },
   })
 
-  const buttons = buttonListConstructor(teams, page, (team) => {
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(teams, page, (team, number) => {
     const gameTeam = gameTeams.find(
       (gameTeam) => gameTeam.teamId === String(team._id)
     )
     return {
-      text: `"${team.name}"`,
+      text: `${number}. "${team.name}"`,
       c: { c: 'gameTeam', gameTeamId: gameTeam._id },
     }
   })
