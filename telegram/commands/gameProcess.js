@@ -1,11 +1,8 @@
-import getMinutesBetween from '@helpers/getMinutesBetween'
 import getNoun from '@helpers/getNoun'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import GamesTeams from '@models/GamesTeams'
 import TeamsUsers from '@models/TeamsUsers'
-// import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
-import { CLUE_DURATION_SEC } from 'telegram/constants'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
@@ -108,8 +105,10 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
+  const taskDuration = game.taskDuration ?? 3600
+
   // Проверяем не вышло ли время
-  if (getSecondsBetween(startTime[activeNum]) > CLUE_DURATION_SEC * 3) {
+  if (getSecondsBetween(startTime[activeNum]) > taskDuration) {
     // const endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
 
     const startTimeTemp = startTimeNextSet(
@@ -163,6 +162,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         taskNum,
         findedCodes,
         startTaskTime: startTime[taskNum],
+        cluesDuration: game.cluesDuration ?? 1200,
       }),
       buttons: buttonRefresh,
       // nextCommand: { showTask: false },
@@ -268,7 +268,11 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
           usersTelegramIdsOfTeam.map(async (telegramId) => {
             await sendMessage({
               chat_id: telegramId,
-              text: taskText({ tasks: game.tasks, taskNum: newActiveNum }),
+              text: taskText({
+                tasks: game.tasks,
+                taskNum: newActiveNum,
+                cluesDuration: game.cluesDuration ?? 1200,
+              }),
               keyboard,
               images: game.tasks[taskNum].images,
             })
@@ -291,6 +295,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               taskNum: newActiveNum,
               findedCodes: isTaskComplite ? [] : newAllFindedCodes,
               startTaskTime: startTime[newActiveNum],
+              cluesDuration: game.cluesDuration ?? 1200,
             })}`
           : ''
       }`,

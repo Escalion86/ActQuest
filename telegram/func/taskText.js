@@ -1,24 +1,35 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
-import { CLUE_DURATION_SEC } from 'telegram/constants'
 import secondsToTime from './secondsToTime'
 
-const taskText = ({ tasks, taskNum, findedCodes, startTaskTime }) => {
+const taskText = ({
+  tasks,
+  taskNum,
+  findedCodes,
+  startTaskTime,
+  cluesDuration = 1200,
+}) => {
   const { task, codes, clues, numCodesToCompliteTask } = tasks[taskNum]
-  console.log('numCodesToCompliteTask :>> ', numCodesToCompliteTask)
 
   const taskDuration = Math.floor(getSecondsBetween(startTaskTime))
 
-  const showClue1 = taskDuration >= CLUE_DURATION_SEC
-  const showClue2 = taskDuration >= CLUE_DURATION_SEC * 2
+  // const showClue1 = taskDuration >= cluesDuration
+  // const showClue2 = taskDuration >= cluesDuration * 2
 
-  return `<b>Задание №${taskNum + 1}:</b>\n${task}${
-    showClue1 ? `\n\n<b>Подсказка №1</b>:\n${clues[0].clue}` : ''
-  }${
-    showClue2 ? `\n\n<b>Подсказка №2</b>:\n${clues[1].clue}` : ''
-  }${`\n\n<b>Время до ${
-    taskDuration < CLUE_DURATION_SEC * 2 ? 'подсказки' : 'завершения задания'
+  const showCluesNum = Math.floor(taskDuration / cluesDuration)
+
+  const cluesText = ''
+  if (showCluesNum > 0)
+    for (let i = 0; i < showCluesNum; i++) {
+      if (clues[i]?.clue)
+        cluesText += `\n\n<b>Подсказка №${i + 1}</b>:\n${clues[i].clue}`
+    }
+
+  return `<b>Задание №${
+    taskNum + 1
+  }:</b>\n${task}${cluesText}${`\n\n<b>Время до ${
+    taskDuration < cluesDuration * 2 ? 'подсказки' : 'завершения задания'
   }</b>: ${secondsToTime(
-    CLUE_DURATION_SEC - (taskDuration % CLUE_DURATION_SEC)
+    cluesDuration - (taskDuration % cluesDuration)
   )}`}\n\nКоличество кодов на локации: ${codes?.length ?? 0}${
     numCodesToCompliteTask
       ? `\nКоличество кодов необходимое для выполнения задания: ${numCodesToCompliteTask}`
@@ -27,7 +38,7 @@ const taskText = ({ tasks, taskNum, findedCodes, startTaskTime }) => {
     findedCodes && findedCodes[taskNum]?.length > 0
       ? `\n\nНайденые коды: ${findedCodes[taskNum].join(', ')}`
       : ''
-  }\n\nВведите код`
+  }\n\n<b>ВВЕДИТЕ КОД</b>`
 }
 
 export default taskText
