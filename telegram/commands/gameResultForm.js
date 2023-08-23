@@ -132,7 +132,8 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
         penalty += game.taskFailurePenalty ?? 0
       return res
     }, 0)
-    const result = typeof seconds === 'number' ? seconds + penalty : seconds
+    const result =
+      (typeof seconds === 'number' ? seconds : game.taskDuration) + penalty
 
     return { team, seconds, penalty, result }
   })
@@ -158,11 +159,9 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     })
     .join('\n')
 
-  const totalResult = sortedTotalTeamsSeconds
-    .map(({ team, seconds }) => {
-      return `${
-        typeof seconds === 'number' ? secondsToTime(result) : result
-      } - ${team.name}`
+  const totalResult = sortedTotalTeamsResult
+    .map(({ team, result }) => {
+      return `${secondsToTime(result)} - ${team.name}`
     })
     .join('\n')
 
