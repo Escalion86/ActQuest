@@ -123,9 +123,6 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
 
   const totalTeamsSeconds = teams.map((team, index) => {
     const dur = tasksDuration.find((item) => item.teamId === String(team._id))
-    if (team.name === 'Тайная Фантазия 18+') {
-      console.log('dur :>> ', dur)
-    }
     let penalty = 0
     let result = 0
     const seconds = dur?.duration.reduce((partialSum, a) => {
@@ -133,7 +130,6 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
         typeof a === 'number' && typeof partialSum === 'number'
           ? partialSum + a
           : '[стоп игра]'
-      // if (!a || a > 3500 || typeof a !== 'number') console.log('a :>> ', a)
       if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
         penalty += game.taskFailurePenalty ?? 0
         result += game.taskDuration ?? 3600
