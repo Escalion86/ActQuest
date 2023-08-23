@@ -136,6 +136,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       } else result += a
       return res
     }, 0)
+    result += penalty
 
     return { team, seconds, penalty, result }
   })
