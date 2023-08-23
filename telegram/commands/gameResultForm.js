@@ -124,11 +124,13 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     const dur = tasksDuration.find((item) => item.teamId === String(team._id))
     let penalty = 0
     const seconds = dur?.duration.reduce((partialSum, a) => {
-      if (typeof seconds === 'string' || a >= game.taskDuration)
+      const res =
+        typeof a === 'number' && typeof partialSum === 'number'
+          ? partialSum + a
+          : '[стоп игра]'
+      if (typeof res === 'string' || a >= game.taskDuration)
         penalty += game.taskFailurePenalty ?? 0
-      return typeof a === 'number' && typeof partialSum === 'number'
-        ? partialSum + a
-        : '[стоп игра]'
+      return res
     }, 0)
     const result = typeof seconds === 'number' ? seconds + penalty : seconds
 
