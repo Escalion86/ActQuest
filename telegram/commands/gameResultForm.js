@@ -12,20 +12,21 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import secondsToTime from 'telegram/func/secondsToTime'
 
-const sortFunc = (a, b, key = 'seconds') => {
+const sortFunc = (a, b, key = 'seconds', direction = 'ASC') => {
   const isNumericA = typeof a[key] === 'number'
   const isNumericB = typeof b[key] === 'number'
 
   if (isNumericA && isNumericB) {
-    return a[key] - b[key]
+    if (direction === 'ASC') return a[key] - b[key]
+    return b[key] - a[key]
   }
 
   if (isNumericA && !isNumericB) {
-    return -1
+    return direction === 'ASC' ? -1 : 1
   }
 
   if (!isNumericA && isNumericB) {
-    return 1
+    return direction === 'ASC' ? 1 : -1
   }
   return 0
 }
@@ -123,30 +124,34 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   const totalTeamsSeconds = teams.map((team, index) => {
     const dur = tasksDuration.find((item) => item.teamId === String(team._id))
     let penalty = 0
+    let result = 0
     const seconds = dur?.duration.reduce((partialSum, a) => {
       const res =
         typeof a === 'number' && typeof partialSum === 'number'
           ? partialSum + a
           : '[стоп игра]'
-      if (typeof res === 'string' || a >= (game.taskDuration ?? 3600))
+      if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
         penalty += game.taskFailurePenalty ?? 0
+        result += game.taskDuration ?? 3600
+      } else result += a
       return res
     }, 0)
-    const result =
-      (typeof seconds === 'number' ? seconds : game.taskDuration ?? 3600) +
-      penalty
 
     return { team, seconds, penalty, result }
   })
 
   const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort(sortFunc)
-  // const sortedTotalTeamsPenalty = [...totalTeamsSeconds].sort((a,b) => sortFunc(a,b,'penalty'))
+  const sortedTotalTeamsPenalty = [...totalTeamsSeconds].sort((a, b) =>
+    sortFunc(a, b, 'penalty', 'DESC')
+  )
   const sortedTotalTeamsResult = [...totalTeamsSeconds].sort((a, b) =>
     sortFunc(a, b, 'result')
   )
 
-  const totalPenalty = totalTeamsSeconds
-    .filter(({ penalty }) => penalty > 0)
+  const totalTeamsWithPenalty = sortedTotalTeamsPenalty.filter(
+    ({ penalty }) => penalty > 0
+  )
+  const totalPenalty = totalTeamsWithPenalty
     .map(({ team, penalty }) => {
       return `${secondsToTime(penalty)} - ${team.name}`
     })
