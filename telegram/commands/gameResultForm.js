@@ -190,7 +190,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     result: {
       text: `<b>Результаты игры:\n${formatGameName(
         game
-      )}</b>\n\n<b>Фактический период игры</b>:\n${gameDateTimeFact}\n${text}\n\n<b>\u{231A} ИТОГО без учета штрафов:</b>\n${totalSeconds}\n\n<b>\u{1F534} Штрафы:</b>\n${totalPenalty}\n\n<b>\u{2B50} ИТОГО:</b>\n${totalResult}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
+      )}</b>\n\n<b>Фактический период игры</b>:\n${gameDateTimeFact}\n${text}\n\n\n<b>\u{2B50}РЕЗУЛЬТАТЫ:</b>\n<b>\u{231A}Без учета штрафов:</b>\n${totalSeconds}\n\n<b>\u{1F534} Штрафы:</b>\n${totalPenalty}\n\n<b>\u{1F3C6} ИТОГО:</b>\n${totalResult}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
         game.tasks[mostEasyTaskIndex]?.title
       }" - среднее время ${secondsToTime(
         taskAverageTimes[mostEasyTaskIndex]
