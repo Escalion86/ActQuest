@@ -34,10 +34,10 @@ const sortFunc = (a, b, key = 'seconds', direction = 'ASC') => {
 const getAverage = (numbers) =>
   Math.round(numbers.reduce((acc, number) => acc + number, 0) / numbers.length)
 
-const durationCalc = ({ startTime, endTime, activeNum }) => {
+const durationCalc = ({ startTime, endTime, activeNum }, tasksCount) => {
   if (!startTime || !endTime) return null
   const tempArray = []
-  for (let i = 0; i < startTime.length; i++) {
+  for (let i = 0; i < tasksCount; i++) {
     if (activeNum > i) {
       if (!endTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
       else tempArray.push(getSecondsBetween(startTime[i], endTime[i]))
@@ -81,7 +81,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
 
   const tasksDuration = gameTeams.map((gameTeam) => ({
     teamId: gameTeam.teamId,
-    duration: durationCalc(gameTeam),
+    duration: durationCalc(gameTeam, game.tasks.length),
   }))
 
   const taskAverageTimes = Array(game.tasks.length)
