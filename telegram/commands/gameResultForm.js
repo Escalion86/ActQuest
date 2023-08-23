@@ -12,12 +12,12 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import secondsToTime from 'telegram/func/secondsToTime'
 
-const sortFunc = (a, b) => {
-  const isNumericA = typeof a.seconds === 'number'
-  const isNumericB = typeof b.seconds === 'number'
+const sortFunc = (a, b, key = 'seconds') => {
+  const isNumericA = typeof a[key] === 'number'
+  const isNumericB = typeof b[key] === 'number'
 
   if (isNumericA && isNumericB) {
-    return a.seconds - b.seconds
+    return a[key] - b[key]
   }
 
   if (isNumericA && !isNumericB) {
@@ -103,14 +103,11 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
 
       taskAverageTimes[index] = getAverage(
         teamsSeconds
+          .filter(({ seconds }) => typeof seconds === 'number')
           .map(({ seconds }) => seconds)
-          .filter((seconds) => typeof seconds === 'number')
       )
 
       const sortedTeamsSeconds = [...teamsSeconds].sort(sortFunc)
-      // .sort((a, b) =>
-      //   a.seconds < b.seconds ? -1 : 1
-      // )
 
       return `\n<b>\u{1F4CC} "${task?.title}"</b>\n${sortedTeamsSeconds
         .map(
@@ -123,28 +120,46 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     })
     .join('\n')
 
-  const totalTeamsSeconds = [
-    ...teams.map((team, index) => {
-      const dur = tasksDuration.find((item) => item.teamId === String(team._id))
-      const seconds = dur?.duration.reduce(
-        (partialSum, a) =>
-          typeof a === 'number' && typeof partialSum === 'number'
-            ? partialSum + a
-            : '[стоп игра]',
-        0
-      )
-      return { team, seconds }
-    }),
-  ]
-  const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort(sortFunc)
-  // .sort((a, b) =>
-  //   typeof a.seconds === number ? (a.seconds < b.seconds ? -1 : 1) : -1
-  // )
+  const totalTeamsSeconds = teams.map((team, index) => {
+    const dur = tasksDuration.find((item) => item.teamId === String(team._id))
+    let penalty = 0
+    const seconds = dur?.duration.reduce((partialSum, a) => {
+      if (typeof seconds === 'string' || a >= game.taskDuration)
+        penalty += game.taskFailurePenalty ?? 0
+      return typeof a === 'number' && typeof partialSum === 'number'
+        ? partialSum + a
+        : '[стоп игра]'
+    }, 0)
+    const result = typeof seconds === 'number' ? seconds + penalty : seconds
 
-  const total = sortedTotalTeamsSeconds
+    return { team, seconds, penalty, result }
+  })
+
+  const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort(sortFunc)
+  // const sortedTotalTeamsPenalty = [...totalTeamsSeconds].sort((a,b) => sortFunc(a,b,'penalty'))
+  const sortedTotalTeamsResult = [...totalTeamsSeconds].sort((a, b) =>
+    sortFunc(a, b, 'result')
+  )
+
+  const totalPenalty = totalTeamsSeconds
+    .filter(({ penalty }) => penalty > 0)
+    .map(({ team, penalty }) => {
+      return `${secondsToTime(penalty)} - ${team.name}`
+    })
+    .join('\n')
+
+  const totalSeconds = sortedTotalTeamsSeconds
     .map(({ team, seconds }) => {
       return `${
         typeof seconds === 'number' ? secondsToTime(seconds) : seconds
+      } - ${team.name}`
+    })
+    .join('\n')
+
+  const totalResult = sortedTotalTeamsSeconds
+    .map(({ team, seconds }) => {
+      return `${
+        typeof seconds === 'number' ? secondsToTime(result) : result
       } - ${team.name}`
     })
     .join('\n')
@@ -173,7 +188,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     result: {
       text: `<b>Результаты игры:\n${formatGameName(
         game
-      )}</b>\n\n<b>Фактический период игры</b>:\n${gameDateTimeFact}\n${text}\n\n<b>\u{2B50} ИТОГО:</b>\n${total}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
+      )}</b>\n\n<b>Фактический период игры</b>:\n${gameDateTimeFact}\n${text}\n\n<b>\u{231A} ИТОГО без учета штрафов:</b>\n${totalSeconds}\n\n<b>\u{1F534} Штрафы:</b>\n${totalPenalty}\n\n<b>\u{2B50} ИТОГО:</b>\n${totalResult}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
         game.tasks[mostEasyTaskIndex]?.title
       }" - среднее время ${secondsToTime(
         taskAverageTimes[mostEasyTaskIndex]
@@ -188,7 +203,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       )}`,
       teams,
       gameTeams,
-      teamsUsers: teamsUsers,
+      teamsUsers,
     },
   })
 
