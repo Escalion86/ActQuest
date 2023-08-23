@@ -12,9 +12,6 @@ const taskText = ({
 
   const taskDuration = Math.floor(getSecondsBetween(startTaskTime))
 
-  // const showClue1 = taskDuration >= cluesDuration
-  // const showClue2 = taskDuration >= cluesDuration * 2
-
   const showCluesNum = Math.floor(taskDuration / cluesDuration)
 
   const cluesText = ''

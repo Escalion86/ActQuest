@@ -1,10 +1,8 @@
-import getSecondsBetween from '@helpers/getSecondsBetween'
+import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
-import { CLUE_DURATION_SEC } from 'telegram/constants'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
-import secondsToTime from 'telegram/func/secondsToTime'
 
 const gameStatus = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -40,13 +38,22 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       gameTeam.startTime.forEach((time) => {
         if (time) ++startedTasks
       })
+      const findedCodes = gameTeam.findedCodes?.length
 
       if (startedTasks === gameTeam.startTime.length)
-        return `"${team.name}" - завершили`
+        return `"${team.name}" - завершили все задания`
 
-      return `"${team.name}" - на ${startedTasks} задании`
+      const task = game.tasks[startedTasks - 1]
+
+      return `"${team.name}" - выполняют задание №${startedTasks} "${
+        task.title
+      }".${
+        findedCodes > 0
+          ? `\nНайдено ${getNoun(findedCodes, 'код', 'кода', 'кодов')}`
+          : ''
+      }`
     })
-    .join('\n')
+    .join('\n\n')
 
   // const tasksDuration = gameTeams.map((gameTeam) => ({
   //   teamId: gameTeam.teamId,
@@ -61,7 +68,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
   // })
 
   return {
-    message: `<b>Состояние игры:</b>\n${text}`,
+    message: `<b>Состояние игры "${game.name}":</b>\n${text}`,
     buttons: [
       {
         text: '\u{2B05} Назад',
