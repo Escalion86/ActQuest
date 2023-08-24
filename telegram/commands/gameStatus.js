@@ -77,9 +77,12 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     message: `<b>Состояние игры "${game.name}":</b>\n${text}`,
     buttons: [
       {
+        text: '\u{1F504} Обновить статус игры',
+        c: { c: 'editGame', gameId: jsonCommand.gameId },
+      },
+      {
         text: '\u{2B05} Назад',
-        c: 'editGame',
-        gameId: jsonCommand.gameId,
+        c: { c: 'editGame', gameId: jsonCommand.gameId },
       },
     ],
   }
