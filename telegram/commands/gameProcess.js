@@ -117,7 +117,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   const taskDuration = game.taskDuration ?? 3600
   const cluesDuration = game.cluesDuration ?? 1200
   // Идет перерыв
-  console.log('activeNum :>> ', activeNum)
   if (endTime[activeNum] && breakDuration > 0) {
     const secondsAfterEndTime = getSecondsBetween(endTime[activeNum])
     if (secondsAfterEndTime < breakDuration)
@@ -127,6 +126,33 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         )}`}`,
         buttons: buttonRefresh,
       }
+    else {
+      const startTimeTemp = startTimeNextSet(
+        startTime,
+        taskNum,
+        game.tasks.length
+      )
+
+      await dbConnect()
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+        // findedCodes: newAllFindedCodes,
+        startTime: startTimeTemp,
+        // endTime: endTimeTemp,
+        activeNum: activeNum + 1,
+      })
+      const message = taskText({
+        tasks: game.tasks,
+        taskNum,
+        findedCodes,
+        startTaskTime: startTime[activeNum + 1],
+        cluesDuration,
+      })
+      return {
+        images,
+        message,
+        buttons: buttonRefresh,
+      }
+    }
   }
 
   // Проверяем не вышло ли время
@@ -219,6 +245,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
     var endTimeTemp = endTime
     var startTimeTemp = startTime
+    const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
 
     if (isTaskComplite) {
       endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
@@ -232,8 +259,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       const usersTelegramIdsOfTeam = teamsUsers
         // .filter((teamUser) => teamUser.userTelegramId !== telegramId)
         .map((teamUser) => teamUser.userTelegramId)
-
-      const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
 
       // Если игра завершена
       if (newActiveNum > game.tasks.length - 1) {

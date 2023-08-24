@@ -54,6 +54,8 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
     }
   )
 
+  const cluesDuration = game.cluesDuration ?? 1200
+
   await Promise.all(
     teamsIds.map(async (teamId) => {
       const gameTeam = gameTeams.find((gameTeam) => gameTeam.teamId === teamId)
@@ -90,7 +92,7 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
           await sendMessage({
             chat_id: telegramId,
             text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\u{26A0}\n\n\n${taskText(
-              { tasks: game.tasks, taskNum, findedCodes }
+              { tasks: game.tasks, taskNum, findedCodes, cluesDuration }
             )}`,
             keyboard,
             images: game.tasks[taskNum].images,
