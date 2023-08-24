@@ -221,16 +221,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
       startTimeTemp = startTimeNextSet(startTime, taskNum, game.tasks.length)
 
-      const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
-
-      await dbConnect()
-      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-        findedCodes: newAllFindedCodes,
-        startTime: startTimeTemp,
-        endTime: endTimeTemp,
-        activeNum: newActiveNum,
-      })
-
       const teamId = gameTeam.teamId
       const teamsUsers = await TeamsUsers.find({
         teamId,
@@ -240,8 +230,18 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         .filter((teamUser) => teamUser.userTelegramId !== telegramId)
         .map((teamUser) => teamUser.userTelegramId)
 
+      const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
+
       // Если игра завершена
       if (newActiveNum > game.tasks.length - 1) {
+        await dbConnect()
+        await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+          findedCodes: newAllFindedCodes,
+          startTime: startTimeTemp,
+          endTime: endTimeTemp,
+          activeNum: newActiveNum,
+        })
+
         const keyboard = keyboardFormer([mainMenuButton])
 
         await Promise.all(
@@ -260,6 +260,31 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
           nextCommand: 'mainMenu',
         }
       } else {
+        //Если должен быть перерыв
+        if (breakDuration > 0) {
+          await dbConnect()
+          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+            findedCodes: newAllFindedCodes,
+            // startTime: startTimeTemp,
+            endTime: endTimeTemp,
+            // activeNum: newActiveNum,
+          })
+
+          const keyboard = keyboardFormer(buttonRefresh)
+
+          await Promise.all(
+            usersTelegramIdsOfTeam.map(async (telegramId) => {
+              await sendMessage({
+                chat_id: telegramId,
+                text: `<b>КОД "${code}" ПРИНЯТ\nЗадание выполнено!\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
+                  breakDuration
+                )}`}`,
+                keyboard,
+                images: game.tasks[taskNum].images,
+              })
+            })
+          )
+        }
         const keyboard = keyboardFormer(buttonRefresh)
 
         await Promise.all(
