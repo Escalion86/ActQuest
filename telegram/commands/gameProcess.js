@@ -189,15 +189,17 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
   const code = jsonCommand.message
   if (!code) {
+    const message = taskText({
+      tasks: game.tasks,
+      taskNum,
+      findedCodes,
+      startTaskTime: startTime[taskNum],
+      cluesDuration,
+    })
+    console.log('!!6 :>> ')
     return {
       images,
-      message: taskText({
-        tasks: game.tasks,
-        taskNum,
-        findedCodes,
-        startTaskTime: startTime[taskNum],
-        cluesDuration,
-      }),
+      message,
       buttons: buttonRefresh,
     }
   }
