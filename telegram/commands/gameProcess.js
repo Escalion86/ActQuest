@@ -114,18 +114,17 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   ]
   const breakDuration = game.breakDuration ?? 0
   const taskDuration = game.taskDuration ?? 3600
+  const cluesDuration = game.cluesDuration ?? 1200
   // Идет перерыв
-  if (
-    endTime[activeNum] &&
-    breakDuration > 0 &&
-    getSecondsBetween(endTime[activeNum]) < breakDuration
-  ) {
-    return {
-      message: `<b>ПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
-        taskDuration + cluesDuration - secondsLeftAfterStartTask
-      )}`}`,
-      buttons: buttonRefresh,
-    }
+  if (endTime[activeNum] && breakDuration > 0) {
+    const secondsAfterEndTime = getSecondsBetween(endTime[activeNum])
+    if (secondsAfterEndTime < breakDuration)
+      return {
+        message: `<b>ПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
+          breakDuration - secondsAfterEndTime
+        )}`}`,
+        buttons: buttonRefresh,
+      }
   }
 
   // Проверяем не вышло ли время
@@ -148,7 +147,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       // })
       return {
         message: `<b>Время вышло\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
-          taskDuration + cluesDuration - secondsLeftAfterStartTask
+          taskDuration + breakDuration - secondsLeftAfterStartTask
         )}`}`,
         buttons: buttonRefresh,
       }
@@ -191,7 +190,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         taskNum,
         findedCodes,
         startTaskTime: startTime[taskNum],
-        cluesDuration: game.cluesDuration ?? 1200,
+        cluesDuration,
       }),
       buttons: buttonRefresh,
     }
@@ -295,7 +294,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               text: taskText({
                 tasks: game.tasks,
                 taskNum: newActiveNum,
-                cluesDuration: game.cluesDuration ?? 1200,
+                cluesDuration,
               }),
               keyboard,
               images: game.tasks[taskNum].images,
@@ -319,7 +318,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               taskNum: newActiveNum,
               findedCodes: isTaskComplite ? [] : newAllFindedCodes,
               startTaskTime: startTime[newActiveNum],
-              cluesDuration: game.cluesDuration ?? 1200,
+              cluesDuration,
             })}`
           : ''
       }`,
