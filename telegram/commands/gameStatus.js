@@ -39,9 +39,15 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         if (time) ++startedTasks
       })
       const findedCodes = gameTeam.findedCodes?.length
+      const taskDuration = game.taskDuration ?? 3600
 
-      if (startedTasks === gameTeam.startTime.length)
-        return `"${team.name}" - завершили все задания`
+      const isTeamFinished =
+        gameTeam.endTime[game.tasks.length - 1] ||
+        (gameTeam.startTime[game.tasks.length - 1] &&
+          getSecondsBetween(gameTeam.startTime[game.tasks.length - 1]) >
+            taskDuration)
+
+      if (isTeamFinished) return `"${team.name}" - завершили все задания`
 
       const task = game.tasks[startedTasks - 1]
 
