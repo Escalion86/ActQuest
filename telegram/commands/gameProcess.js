@@ -113,6 +113,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     },
   ]
   const breakDuration = game.breakDuration ?? 0
+  const taskDuration = game.taskDuration ?? 3600
   // Идет перерыв
   if (
     endTime[activeNum] &&
@@ -128,7 +129,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   }
 
   // Проверяем не вышло ли время
-  const taskDuration = game.taskDuration ?? 3600
   const secondsLeftAfterStartTask = getSecondsBetween(startTime[activeNum])
   if (secondsLeftAfterStartTask > taskDuration) {
     // Проверяем есть ли перерыв и если есть то закончился ли
