@@ -58,7 +58,9 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         task.title
       }".${
         findedCodes > 0
-          ? `\nНайдено ${getNoun(findedCodes, 'код', 'кода', 'кодов')}`
+          ? `\nНайденые коды (${findedCodes} шт.): "${gameTeam.findedCodes[
+              startedTasks - 1
+            ].join(`", "`)}"`
           : ''
       }`
     })
