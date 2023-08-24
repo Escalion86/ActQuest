@@ -98,7 +98,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
   const taskNum = activeNum ?? 0
 
-  console.log('1 :>> ')
   // Если больше заданий нет (все выолнены)
   if (taskNum > game.tasks.length - 1) {
     return {
@@ -113,7 +112,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       text: '\u{1F504} Обновить',
     },
   ]
-  console.log('2 :>> ')
 
   const breakDuration = game.breakDuration ?? 0
   const taskDuration = game.taskDuration ?? 3600
@@ -129,7 +127,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         buttons: buttonRefresh,
       }
   }
-  console.log('3 :>> ')
 
   // Проверяем не вышло ли время
   const secondsLeftAfterStartTask = getSecondsBetween(startTime[activeNum])
@@ -156,7 +153,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         buttons: buttonRefresh,
       }
     }
-    console.log('4 :>> ')
 
     const startTimeTemp = startTimeNextSet(
       startTime,
@@ -183,7 +179,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       nextCommand: {},
     }
   }
-  console.log('5 :>> ')
 
   const { task, codes, numCodesToCompliteTask, images } = game.tasks[taskNum]
 
@@ -196,14 +191,12 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       startTaskTime: startTime[taskNum],
       cluesDuration,
     })
-    console.log('!!6 :>> ')
     return {
       images,
       message,
       buttons: buttonRefresh,
     }
   }
-  console.log('6 :>> ')
 
   const allFindedCodes = findedCodes ?? Array(game.tasks.length).map(() => [])
   const findedCodesInTask = allFindedCodes[taskNum] ?? []
@@ -213,7 +206,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       message: 'Такой код уже найден. Введите код',
     }
   }
-  console.log('7 :>> ')
 
   if (codes.includes(code)) {
     // Если код введен верно и ранее его не вводили
@@ -226,19 +218,15 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
     var endTimeTemp = endTime
     var startTimeTemp = startTime
-    console.log('8 :>> ')
 
     if (isTaskComplite) {
-      console.log('9 :>> ')
       endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
       startTimeTemp = startTimeNextSet(startTime, taskNum, game.tasks.length)
-      console.log('10 :>> ')
 
       const teamId = gameTeam.teamId
       const teamsUsers = await TeamsUsers.find({
         teamId,
       })
-      console.log('11 :>> ')
 
       const usersTelegramIdsOfTeam = teamsUsers
         // .filter((teamUser) => teamUser.userTelegramId !== telegramId)
