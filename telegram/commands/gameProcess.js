@@ -117,6 +117,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   const taskDuration = game.taskDuration ?? 3600
   const cluesDuration = game.cluesDuration ?? 1200
   // Идет перерыв
+  console.log('activeNum :>> ', activeNum)
   if (endTime[activeNum] && breakDuration > 0) {
     const secondsAfterEndTime = getSecondsBetween(endTime[activeNum])
     if (secondsAfterEndTime < breakDuration)
