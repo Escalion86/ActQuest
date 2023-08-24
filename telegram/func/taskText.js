@@ -33,7 +33,7 @@ const taskText = ({
       : ''
   }${
     findedCodes && findedCodes[taskNum]?.length > 0
-      ? `\n\nНайденые коды: ${findedCodes[taskNum].join(', ')}`
+      ? `\n\nНайденые коды: "${findedCodes[taskNum].join('", "')}"`
       : ''
   }\n\n<b>ВВЕДИТЕ КОД</b>`
 }

@@ -227,7 +227,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       })
 
       const usersTelegramIdsOfTeam = teamsUsers
-        .filter((teamUser) => teamUser.userTelegramId !== telegramId)
+        // .filter((teamUser) => teamUser.userTelegramId !== telegramId)
         .map((teamUser) => teamUser.userTelegramId)
 
       const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
@@ -272,7 +272,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
           const keyboard = keyboardFormer(buttonRefresh)
 
-          await Promise.all(
+          return await Promise.all(
             usersTelegramIdsOfTeam.map(async (telegramId) => {
               await sendMessage({
                 chat_id: telegramId,
@@ -287,7 +287,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         }
         const keyboard = keyboardFormer(buttonRefresh)
 
-        await Promise.all(
+        return await Promise.all(
           usersTelegramIdsOfTeam.map(async (telegramId) => {
             await sendMessage({
               chat_id: telegramId,
