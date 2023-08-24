@@ -43,14 +43,20 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
 
   // let timerId = setTimeout(() => console.log('!'), 1000)
   // console.log('timerId :>> ', timerId)
-
-  const startTime = [new Date()]
+  const gameTasksCount = game.tasks.length
+  const startTime = new Array(gameTasksCount).fill(null)
+  startTime[0] = new Date()
+  const endTime = new Array(gameTasksCount).fill(null)
+  const findedCodes = new Array(gameTasksCount).fill([])
   await GamesTeams.updateMany(
     {
       gameId: jsonCommand.gameId,
     },
     {
       startTime,
+      endTime,
+      activeNum: 0,
+      findedCodes,
     }
   )
 
