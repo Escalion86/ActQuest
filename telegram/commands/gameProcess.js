@@ -116,7 +116,11 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   const breakDuration = game.breakDuration ?? 0
   const taskDuration = game.taskDuration ?? 3600
   const cluesDuration = game.cluesDuration ?? 1200
-  // Идет перерыв
+
+  // Если задание было закончено успешно и идет перерыв
+  // выдаем сообщение об остатке времени,
+  // либо если перерыв окончен, то даем след задание
+
   if (endTime[activeNum] && breakDuration > 0) {
     const secondsAfterEndTime = getSecondsBetween(endTime[activeNum])
     if (secondsAfterEndTime < breakDuration)
@@ -155,6 +159,10 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       }
     }
   }
+
+  // Если задание небыло закончено и идет перерыв
+  // выдаем сообщение об остатке времени,
+  // либо если перерыв окончен, то даем след задание
 
   // Проверяем не вышло ли время
   const secondsLeftAfterStartTask = getSecondsBetween(startTime[activeNum])
@@ -332,6 +340,14 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         )
       }
     }
+
+    await dbConnect()
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      findedCodes: newAllFindedCodes,
+      // startTime: startTimeTemp,
+      // endTime: endTimeTemp,
+      // activeNum: newActiveNum,
+    })
 
     return {
       images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
