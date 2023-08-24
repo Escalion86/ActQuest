@@ -10,6 +10,7 @@ import keyboardFormer from 'telegram/func/keyboardFormer'
 import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
+import secondsToTime from 'telegram/func/secondsToTime'
 
 const endTimeSet = (endTime, taskNum, gameTasksLength) => {
   const newDate = new Date()
