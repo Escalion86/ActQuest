@@ -270,9 +270,12 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
   if (codes.includes(code)) {
     // Если код введен верно и ранее его не вводили
+    console.log('allFindedCodes :>> ', allFindedCodes)
     const newAllFindedCodes = [...allFindedCodes]
     const newFindedCodesInTask = [...findedCodesInTask, code]
     newAllFindedCodes[taskNum] = newFindedCodesInTask
+    console.log('findedCodesInTask :>> ', findedCodesInTask)
+    console.log('newAllFindedCodes :>> ', newAllFindedCodes)
     const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
     const numOfCodesToFindLeft = numOfCodesToFind - newFindedCodesInTask.length
     const isTaskComplite = numOfCodesToFindLeft <= 0
