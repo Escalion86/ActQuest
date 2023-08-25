@@ -102,6 +102,10 @@ const gamesSchema = {
     required: [true, 'Введите telegramId'],
     default: null,
   },
+  individualStart: {
+    type: Boolean,
+    default: false,
+  },
   result: {
     type: {
       text: String,
