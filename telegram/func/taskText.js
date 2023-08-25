@@ -12,7 +12,8 @@ const taskText = ({
   const { task, codes, clues, numCodesToCompliteTask } = tasks[taskNum]
   const taskDuration = Math.floor(getSecondsBetween(startTaskTime))
 
-  const showCluesNum = Math.floor(taskDuration / cluesDuration)
+  const showCluesNum =
+    cluesDuration > 0 ? Math.floor(taskDuration / cluesDuration) : 0
   var cluesText = ''
   if (cluesDuration > 0 && showCluesNum > 0)
     for (let i = 0; i < showCluesNum; i++) {
@@ -26,9 +27,11 @@ const taskText = ({
     cluesDuration > 0 && showCluesNum < clues?.length
       ? 'подсказки'
       : 'завершения задания'
-  }</b>: ${secondsToTime(
-    cluesDuration - (taskDuration % cluesDuration)
-  )}`}\n\nКоличество кодов на локации: ${codes?.length ?? 0}${
+  }</b>: ${
+    cluesDuration > 0
+      ? secondsToTime(cluesDuration - (taskDuration % cluesDuration))
+      : secondsToTime(taskDuration)
+  }`}\n\nКоличество кодов на локации: ${codes?.length ?? 0}${
     numCodesToCompliteTask
       ? `\nКоличество кодов необходимое для выполнения задания: ${numCodesToCompliteTask}`
       : ''
