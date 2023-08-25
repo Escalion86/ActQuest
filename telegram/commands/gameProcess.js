@@ -275,7 +275,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     const newFindedCodesInTask = [...findedCodesInTask, code]
     newAllFindedCodes[taskNum] = newFindedCodesInTask
     console.log('findedCodesInTask :>> ', findedCodesInTask)
-    console.log('newAllFindedCodes :>> ', newAllFindedCodes)
+
     const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
     const numOfCodesToFindLeft = numOfCodesToFind - newFindedCodesInTask.length
     const isTaskComplite = numOfCodesToFindLeft <= 0
@@ -350,6 +350,15 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
             })
           )
         }
+
+        await dbConnect()
+        await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+          findedCodes: newAllFindedCodes,
+          startTime: startTimeTemp,
+          // endTime: endTimeTemp,
+          activeNum: newActiveNum,
+        })
+
         const keyboard = keyboardFormer(buttonRefresh)
 
         return await Promise.all(
@@ -370,6 +379,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
 
     console.log('ОБНОВЛЯЕМ КОДЫ :>> ')
+    console.log('newAllFindedCodes :>> ', newAllFindedCodes)
     await dbConnect()
     const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedCodes: newAllFindedCodes,
