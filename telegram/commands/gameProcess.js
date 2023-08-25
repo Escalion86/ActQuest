@@ -47,6 +47,21 @@ const startTimeNextSet = (startTime, taskNum, gameTasksLength) => {
   return startTimeTemp
 }
 
+const teamGameStart = async (gameTeamId, game) => {
+  const gameTasksCount = game.tasks.length
+  const startTime = new Array(gameTasksCount).fill(null)
+  startTime[0] = new Date()
+  const endTime = new Array(gameTasksCount).fill(null)
+  const findedCodes = new Array(gameTasksCount).fill([])
+  await dbConnect()
+  await GamesTeams.findByIdAndUpdate(gameTeamId, {
+    startTime,
+    endTime,
+    activeNum: 0,
+    findedCodes,
+  })
+}
+
 const gameProcess = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
@@ -98,17 +113,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   if (!gameTeam.startTime && gameTeam.startTime.length === 0) {
     console.log('gameTeam :>> ', gameTeam)
     console.log('СТАРТУЕТ КОМАНДА :>> ')
-    const gameTasksCount = game.tasks.length
-    const startTime = new Array(gameTasksCount).fill(null)
-    startTime[0] = new Date()
-    const endTime = new Array(gameTasksCount).fill(null)
-    const findedCodes = new Array(gameTasksCount).fill([])
-    await GamesTeams.findByIdAndUpdate(gameTeam._id, {
-      startTime,
-      endTime,
-      activeNum: 0,
-      findedCodes,
-    })
+    await teamGameStart(gameTeam._id, game)
   }
 
   const { findedCodes, activeNum, startTime, endTime } = gameTeam
