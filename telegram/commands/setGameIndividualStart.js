@@ -29,7 +29,7 @@ const setGameIndividualStart = async ({ telegramId, jsonCommand }) => {
   }
   await dbConnect()
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
-    idividualStart: jsonCommand.iStart,
+    individualStart: jsonCommand.iStart,
   })
 
   return {

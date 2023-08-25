@@ -101,7 +101,8 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   // Если больше заданий нет (все выолнены)
   if (taskNum > game.tasks.length - 1) {
     return {
-      message: 'Поздравляем Вы завершили все задания!',
+      message:
+        'Поздравляем Вы завершили все задания! Вы можете выдвигаться на точку сбора',
       nextCommand: 'mainMenu',
     }
   }
