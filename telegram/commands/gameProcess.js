@@ -313,7 +313,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
         const keyboard = keyboardFormer([mainMenuButton])
 
-        await Promise.all(
+        return await Promise.all(
           usersTelegramIdsOfTeam.map(async (telegramId) => {
             await sendMessage({
               chat_id: telegramId,
@@ -323,11 +323,11 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
           })
         )
 
-        return {
-          message:
-            'Поздравляем Вы завершили все задания! Игра окончена. Вы можете выдвигаться на точку сбора',
-          nextCommand: 'mainMenu',
-        }
+        // return {
+        //   message:
+        //     'Поздравляем Вы завершили все задания! Игра окончена. Вы можете выдвигаться на точку сбора',
+        //   nextCommand: 'mainMenu',
+        // }
       } else {
         //Если должен быть перерыв
         if (breakDuration > 0) {
