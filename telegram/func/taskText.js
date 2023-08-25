@@ -7,13 +7,14 @@ const taskText = ({
   findedCodes,
   startTaskTime,
   cluesDuration = 1200,
+  taskDuration = 3600,
 }) => {
   console.log('taskText=>startTaskTime :>> ', startTaskTime)
   const { task, codes, clues, numCodesToCompliteTask } = tasks[taskNum]
-  const taskDuration = Math.floor(getSecondsBetween(startTaskTime))
+  const taskSecondsLeft = Math.floor(getSecondsBetween(startTaskTime))
 
   const showCluesNum =
-    cluesDuration > 0 ? Math.floor(taskDuration / cluesDuration) : 0
+    cluesDuration > 0 ? Math.floor(taskSecondsLeft / cluesDuration) : 0
   var cluesText = ''
   if (cluesDuration > 0 && showCluesNum > 0)
     for (let i = 0; i < showCluesNum; i++) {
@@ -29,8 +30,8 @@ const taskText = ({
       : 'завершения задания'
   }</b>: ${
     cluesDuration > 0
-      ? secondsToTime(cluesDuration - (taskDuration % cluesDuration))
-      : secondsToTime(taskDuration)
+      ? secondsToTime(cluesDuration - (taskSecondsLeft % cluesDuration))
+      : secondsToTime(taskDuration - taskSecondsLeft)
   }`}\n\nКоличество кодов на локации: ${codes?.length ?? 0}${
     numCodesToCompliteTask
       ? `\nКоличество кодов необходимое для выполнения задания: ${numCodesToCompliteTask}`

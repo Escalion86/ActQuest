@@ -174,6 +174,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         // findedCodes,
         // startTaskTime: startTime[activeNum + 1],
         cluesDuration,
+        taskDuration,
       })
       return {
         images: game.tasks[activeNum + 1].images,
@@ -253,6 +254,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       findedCodes,
       startTaskTime: startTime[taskNum],
       cluesDuration,
+      taskDuration,
     })
     return {
       images,
@@ -375,6 +377,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
                 taskNum: newActiveNum,
                 startTaskTime: startTimeTemp[newActiveNum],
                 cluesDuration,
+                taskDuration,
               }),
               keyboard,
               images: game.tasks[taskNum].images,
@@ -409,6 +412,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               findedCodes: isTaskComplite ? [] : newAllFindedCodes,
               startTaskTime: startTime[newActiveNum],
               cluesDuration,
+              taskDuration,
             })}`
           : ''
       }`,
