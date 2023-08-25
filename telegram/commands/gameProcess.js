@@ -245,6 +245,8 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     ? jsonCommand.message.toLowerCase()
     : undefined
   if (!code) {
+    console.log('!code => startTime :>> ', startTime)
+    console.log('taskNum :>> ', taskNum)
     const message = taskText({
       tasks: game.tasks,
       taskNum,

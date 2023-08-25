@@ -8,6 +8,7 @@ const taskText = ({
   startTaskTime,
   cluesDuration = 1200,
 }) => {
+  console.log('taskText=>startTaskTime :>> ', startTaskTime)
   const { task, codes, clues, numCodesToCompliteTask } = tasks[taskNum]
   const taskDuration = Math.floor(getSecondsBetween(startTaskTime))
 
