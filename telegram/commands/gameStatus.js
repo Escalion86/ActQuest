@@ -1,10 +1,8 @@
-import getSecondsBetween from '@helpers/getSecondsBetween'
+import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
-import { CLUE_DURATION_SEC } from 'telegram/constants'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
-import secondsToTime from 'telegram/func/secondsToTime'
 
 const gameStatus = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -40,13 +38,33 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       gameTeam.startTime.forEach((time) => {
         if (time) ++startedTasks
       })
+      const findedCodes =
+        gameTeam.findedCodes.length >= startedTasks
+          ? gameTeam.findedCodes[startedTasks - 1].length
+          : 0
+      const taskDuration = game.taskDuration ?? 3600
 
-      if (startedTasks === gameTeam.startTime.length)
-        return `"${team.name}" - завершили`
+      const isTeamFinished =
+        gameTeam.endTime[game.tasks.length - 1] ||
+        (gameTeam.startTime[game.tasks.length - 1] &&
+          getSecondsBetween(gameTeam.startTime[game.tasks.length - 1]) >
+            taskDuration)
 
-      return `"${team.name}" - на ${startedTasks} задании`
+      if (isTeamFinished) return `"${team.name}" - завершили все задания`
+
+      const task = game.tasks[startedTasks - 1]
+
+      return `"${team.name}" - выполняют задание №${startedTasks} "${
+        task.title
+      }".${
+        findedCodes > 0
+          ? `\nНайденые коды (${findedCodes} шт.): "${gameTeam.findedCodes[
+              startedTasks - 1
+            ].join(`", "`)}"`
+          : ''
+      }`
     })
-    .join('\n')
+    .join('\n\n')
 
   // const tasksDuration = gameTeams.map((gameTeam) => ({
   //   teamId: gameTeam.teamId,
@@ -61,12 +79,15 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
   // })
 
   return {
-    message: `<b>Состояние игры:</b>\n${text}`,
+    message: `<b>Состояние игры "${game.name}":</b>\n${text}`,
     buttons: [
       {
+        text: '\u{1F504} Обновить статус игры',
+        c: { c: 'gameStatus', gameId: jsonCommand.gameId },
+      },
+      {
         text: '\u{2B05} Назад',
-        c: 'editGame',
-        gameId: jsonCommand.gameId,
+        c: { c: 'editGame', gameId: jsonCommand.gameId },
       },
     ],
   }

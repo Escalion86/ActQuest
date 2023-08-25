@@ -2,10 +2,11 @@ import getSecondsBetween from '@helpers/getSecondsBetween'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import moment from 'moment-timezone'
-import { CLUE_DURATION_SEC } from 'telegram/constants'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import secondsToTime from 'telegram/func/secondsToTime'
+
+const CLUE_DURATION_SEC = 1200
 
 const sortFunc = (a, b) => {
   const isNumericA = typeof a.seconds === 'number'

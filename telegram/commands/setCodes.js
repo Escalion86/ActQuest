@@ -37,7 +37,7 @@ const setCodes = async ({ telegramId, jsonCommand }) => {
   tasks[jsonCommand.i].codes = jsonCommand.noCodes
     ? []
     : jsonCommand.message !== ''
-    ? jsonCommand.message.split(',')
+    ? jsonCommand.message.toLowerCase().split(',')
     : []
   // console.log('task :>> ', task)
   // const newTask = { ...task, title: jsonCommand.message }

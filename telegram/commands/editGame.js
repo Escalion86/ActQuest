@@ -24,7 +24,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       game?.description ? `"${game?.description}"` : '[без описания]'
     }\n\n<b>Количество заданий</b>: ${
       game?.tasks?.length ?? 0
-    }\n<b>Продолжительность одного задания</b>: ${secondsToTimeStr(
+    }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
       game?.taskDuration ?? 3600
     )}\n<b>Время до подсказки</b>: ${secondsToTimeStr(
       game?.cluesDuration ?? 1200
@@ -36,6 +36,8 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       !game?.taskFailurePenalty
         ? 'отсутствует'
         : secondsToTimeStr(game?.taskFailurePenalty)
+    }\n\n<b>Режим выдачи заданий</b>: ${
+      game.individualStart ? 'Индивидуальный' : 'Одновременно со всеми'
     }`,
     buttons: [
       {
@@ -150,6 +152,13 @@ const editGame = async ({ telegramId, jsonCommand }) => {
           text: '\u{270F} Штраф за провал',
         },
       ],
+      {
+        c: {
+          c: 'setGameIndividualStart',
+          gameId: jsonCommand.gameId,
+        },
+        text: '\u{270F} Режим выдачи заданий',
+      },
       {
         c: {
           c: 'hideGame',

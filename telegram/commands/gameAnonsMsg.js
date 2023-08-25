@@ -62,7 +62,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
           game?.description ? `"${game?.description}"` : '[без описания]'
         }\n\n<b>Количество заданий</b>: ${
           game?.tasks?.length ?? 0
-        }\n<b>Продолжительность одного задания</b>: ${secondsToTimeStr(
+        }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
           game?.taskDuration ?? 3600
         )}\n<b>Время до подсказки</b>: ${secondsToTimeStr(
           game?.cluesDuration ?? 1200

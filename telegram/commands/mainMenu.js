@@ -1,4 +1,4 @@
-import { ADMIN_TELEGRAM_ID } from 'telegram/constants'
+import { ADMIN_TELEGRAM_ID, MODERS_TELEGRAM_IDS } from 'telegram/constants'
 
 const mainMenu = async ({ telegramId, jsonCommand }) => {
   return {
@@ -21,7 +21,9 @@ const mainMenu = async ({ telegramId, jsonCommand }) => {
       {
         c: 'menuGamesEdit',
         text: '\u{1F6E0} Конструктор игр',
-        hide: telegramId !== ADMIN_TELEGRAM_ID,
+        hide:
+          telegramId !== ADMIN_TELEGRAM_ID &&
+          !MODERS_TELEGRAM_IDS.includes(telegramId),
       },
     ],
   }

@@ -5,8 +5,6 @@ import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
-import moment from 'moment-timezone'
-import { CLUE_DURATION_SEC } from 'telegram/constants'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
@@ -34,12 +32,15 @@ const sortFunc = (a, b, key = 'seconds', direction = 'ASC') => {
 const getAverage = (numbers) =>
   Math.round(numbers.reduce((acc, number) => acc + number, 0) / numbers.length)
 
-const durationCalc = ({ startTime, endTime, activeNum }, tasksCount) => {
+const durationCalc = ({ startTime, endTime, activeNum }, game) => {
   if (!startTime || !endTime) return null
   const tempArray = []
+  const tasksCount = game.tasks.length
+  const taskDuration = game.taskDuration ?? 3600
+
   for (let i = 0; i < tasksCount; i++) {
     if (activeNum > i) {
-      if (!endTime[i]) tempArray.push(CLUE_DURATION_SEC * 3)
+      if (!endTime[i]) tempArray.push(taskDuration)
       else tempArray.push(getSecondsBetween(startTime[i], endTime[i]))
     } else if (activeNum === i) {
       tempArray.push('[не завершено]')
@@ -81,7 +82,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
 
   const tasksDuration = gameTeams.map((gameTeam) => ({
     teamId: gameTeam.teamId,
-    duration: durationCalc(gameTeam, game.tasks.length),
+    duration: durationCalc(gameTeam, game),
   }))
 
   const taskAverageTimes = Array(game.tasks.length)
