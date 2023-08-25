@@ -371,7 +371,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               text: taskText({
                 tasks: game.tasks,
                 taskNum: newActiveNum,
-                startTaskTime: startTime[newActiveNum],
+                startTaskTime: startTimeTemp[newActiveNum],
                 cluesDuration,
               }),
               keyboard,
