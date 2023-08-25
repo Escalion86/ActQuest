@@ -22,8 +22,8 @@ const mainMenu = async ({ telegramId, jsonCommand }) => {
         c: 'menuGamesEdit',
         text: '\u{1F6E0} Конструктор игр',
         hide:
-          telegramId !== ADMIN_TELEGRAM_ID ||
-          MODERS_TELEGRAM_IDS.includes(telegramId),
+          telegramId !== ADMIN_TELEGRAM_ID &&
+          !MODERS_TELEGRAM_IDS.includes(telegramId),
       },
     ],
   }
