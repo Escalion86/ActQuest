@@ -327,6 +327,8 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       } else {
         //Если должен быть перерыв
         if (breakDuration > 0) {
+          console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВ ЕСТЬ :>> ')
+          console.log('newAllFindedCodes :>> ', newAllFindedCodes)
           await dbConnect()
           await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
             findedCodes: newAllFindedCodes,
@@ -350,7 +352,8 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
             })
           )
         }
-
+        console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВА НЕТ :>> ')
+        console.log('newAllFindedCodes :>> ', newAllFindedCodes)
         await dbConnect()
         await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
           findedCodes: newAllFindedCodes,
@@ -378,7 +381,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       }
     }
 
-    console.log('ОБНОВЛЯЕМ КОДЫ :>> ')
+    console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ВЫПОЛНЕНО:>> ')
     console.log('newAllFindedCodes :>> ', newAllFindedCodes)
     await dbConnect()
     const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
@@ -387,7 +390,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       // endTime: endTimeTemp,
       // activeNum: newActiveNum,
     })
-    console.log('result :>> ', result)
 
     return {
       images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
