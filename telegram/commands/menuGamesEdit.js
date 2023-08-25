@@ -4,11 +4,14 @@ import formatGameName from 'telegram/func/formatGameName'
 import mainMenuButton from './menuItems/mainMenuButton'
 import getNoun from '@helpers/getNoun'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
+import { ADMIN_TELEGRAM_ID } from 'telegram/constants'
 
 const menuGamesEdit = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   // Получаем список игр
-  const games = await Games.find({ creatorTelegramId: telegramId })
+  var games = []
+  if (ADMIN_TELEGRAM_ID === telegramId) games = await Games.find({})
+  else games = await Games.find({ creatorTelegramId: telegramId })
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(games, page, (game, number) => ({
