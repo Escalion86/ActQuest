@@ -369,13 +369,15 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       }
     }
 
+    console.log('ОБНОВЛЯЕМ КОДЫ :>> ')
     await dbConnect()
-    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+    const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedCodes: newAllFindedCodes,
       // startTime: startTimeTemp,
       // endTime: endTimeTemp,
       // activeNum: newActiveNum,
     })
+    console.log('result :>> ', result)
 
     return {
       images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
