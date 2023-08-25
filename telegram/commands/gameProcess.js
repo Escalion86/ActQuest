@@ -95,8 +95,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   }
 
   // Если начало игры индивидуальное, то нужно создать запись в БД для старта
-  console.log('gameTeam :>> ', gameTeam)
-  if (!gameTeam.startTime || gameTeam.startTime.length === 0) {
+  if (!gameTeam.startTime && gameTeam.startTime.length === 0) {
     const gameTasksCount = game.tasks.length
     const startTime = new Array(gameTasksCount).fill(null)
     startTime[0] = new Date()
