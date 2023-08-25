@@ -94,6 +94,26 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
+  // Если начало игры индивидуальное, то нужно создать запись в БД для старта
+  if (!gameTeam.startTime || gameTeam.startTime.length === 0) {
+    const gameTasksCount = game.tasks.length
+    const startTime = new Array(gameTasksCount).fill(null)
+    startTime[0] = new Date()
+    const endTime = new Array(gameTasksCount).fill(null)
+    const findedCodes = new Array(gameTasksCount).fill([])
+    await GamesTeams.updateMany(
+      {
+        gameId: jsonCommand.gameId,
+      },
+      {
+        startTime,
+        endTime,
+        activeNum: 0,
+        findedCodes,
+      }
+    )
+  }
+
   const { findedCodes, activeNum, startTime, endTime } = gameTeam
 
   const taskNum = activeNum ?? 0

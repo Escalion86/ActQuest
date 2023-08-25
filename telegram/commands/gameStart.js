@@ -21,6 +21,7 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
     status: 'started',
     dateStartFact: new Date(),
   })
+
   if (!game.individualStart) {
     // Получаем список команд
     const gameTeams = await GamesTeams.find({
