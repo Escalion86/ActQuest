@@ -358,7 +358,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
           findedCodes: newAllFindedCodes,
           startTime: startTimeTemp,
-          // endTime: endTimeTemp,
+          endTime: endTimeTemp,
           activeNum: newActiveNum,
         })
 
@@ -381,7 +381,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       }
     }
 
-    console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ВЫПОЛНЕНО:>> ')
+    console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
     console.log('newAllFindedCodes :>> ', newAllFindedCodes)
     await dbConnect()
     const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
