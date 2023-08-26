@@ -1,4 +1,5 @@
 import getNoun from '@helpers/getNoun'
+import getSecondsBetween from '@helpers/getSecondsBetween'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import check from 'telegram/func/check'
