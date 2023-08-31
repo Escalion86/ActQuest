@@ -29,7 +29,7 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
 
   const users = await Users.find({
     telegramId: { $in: usersTelegramIds },
-  }).lean()
+  })
 
   const usersWithRoleInTeam = users.map((user) => {
     const teamUser = teamsUsers.find((teamUser) => {
