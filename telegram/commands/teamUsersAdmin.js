@@ -1,6 +1,7 @@
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 
@@ -29,17 +30,26 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
   const users = await Users.find({
     telegramId: { $in: usersTelegramIds },
   })
-  const buttons = users.map((user) => {
+
+  const usersWithRoleInTeam = users.map((user) => {
     const teamUser = teamsUsers.find((teamUser) => {
       return teamUser.userTelegramId === user.telegramId
     })
-    // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
-    return {
-      text: `${user.name}${teamUser?.role === 'capitan' ? ' (капитан)' : ''}`,
-      c: { c: 'teamUserAdmin', teamUserId: teamUser._id },
-      // `teamUser/teamUserId=${teamUser._id}`,
-    }
+    return { ...user, role: teamUser?.role, teamUserId: teamUser._id }
   })
+  usersWithRoleInTeam.sort((user) => (user?.role === 'capitan' ? 1 : -1))
+
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(
+    usersWithRoleInTeam,
+    page,
+    (user, number) => ({
+      text: `${number}. ${user.name}${
+        user.role === 'capitan' ? ' (капитан)' : ''
+      }`,
+      c: { c: 'teamUserAdmin', teamUserId: user.teamUserId },
+    })
+  )
 
   return {
     message: `<b>АДМИНИСТРИРОВАНИЕ</b>\n\n<b>Состав команды "${team.name}"</b>`,
