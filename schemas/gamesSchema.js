@@ -65,6 +65,10 @@ const gamesSchema = {
           type: [String],
           default: [],
         },
+        penaltyCodes: {
+          type: [{ code: String, penalty: Number, name: String }],
+          default: [],
+        },
         numCodesToCompliteTask: {
           type: Number,
           default: null,

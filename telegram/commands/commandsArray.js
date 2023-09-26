@@ -68,6 +68,11 @@ import archiveGames from './archiveGames'
 import gameAnonsMsg from './gameAnonsMsg'
 import gameResultForm from './gameResultForm'
 import setGameIndividualStart from './setGameIndividualStart'
+import editPenaltyCodes from './editPenaltyCodes'
+import editPanaltyCode from './editPanaltyCode'
+import setPenaltyCodeCode from './setPenaltyCodeCode'
+import setPenaltyCodePenalty from './setPenaltyCodePenalty'
+import setPenaltyCodeDescription from './setPenaltyCodeDescription'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -143,6 +148,11 @@ const commandsArray = {
   gameAnonsMsg,
   gameResultForm,
   setGameIndividualStart,
+  editPenaltyCodes,
+  editPanaltyCode,
+  setPenaltyCodeCode,
+  setPenaltyCodePenalty,
+  setPenaltyCodeDescription,
 }
 
 var i = 0
