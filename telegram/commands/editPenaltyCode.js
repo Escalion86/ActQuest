@@ -1,7 +1,7 @@
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const editPanaltyCode = async ({ telegramId, jsonCommand }) => {
+const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i', 'j'])
   if (checkData) return checkData
@@ -70,4 +70,4 @@ const editPanaltyCode = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default editPanaltyCode
+export default editPenaltyCode

@@ -69,7 +69,7 @@ import gameAnonsMsg from './gameAnonsMsg'
 import gameResultForm from './gameResultForm'
 import setGameIndividualStart from './setGameIndividualStart'
 import editPenaltyCodes from './editPenaltyCodes'
-import editPanaltyCode from './editPanaltyCode'
+import editPenaltyCode from './editPenaltyCode'
 import setPenaltyCodeCode from './setPenaltyCodeCode'
 import setPenaltyCodePenalty from './setPenaltyCodePenalty'
 import setPenaltyCodeDescription from './setPenaltyCodeDescription'
@@ -149,7 +149,7 @@ const commandsArray = {
   gameResultForm,
   setGameIndividualStart,
   editPenaltyCodes,
-  editPanaltyCode,
+  editPenaltyCode,
   setPenaltyCodeCode,
   setPenaltyCodePenalty,
   setPenaltyCodeDescription,
