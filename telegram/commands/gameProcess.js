@@ -116,7 +116,8 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     await teamGameStart(gameTeam._id, game)
   }
 
-  const { findedCodes, activeNum, startTime, endTime } = gameTeam
+  const { findedCodes, findedPenaltyCodes, activeNum, startTime, endTime } =
+    gameTeam
 
   const taskNum = activeNum ?? 0
 
@@ -240,7 +241,8 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const { task, codes, numCodesToCompliteTask, images } = game.tasks[taskNum]
+  const { task, codes, numCodesToCompliteTask, images, penaltyCodes } =
+    game.tasks[taskNum]
 
   const code = jsonCommand.message
     ? jsonCommand.message.toLowerCase()
@@ -252,6 +254,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       tasks: game.tasks,
       taskNum,
       findedCodes,
+      findedPenaltyCodes,
       startTaskTime: startTime[taskNum],
       cluesDuration,
       taskDuration,
@@ -263,22 +266,73 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
+  // Проверяем штрафной ли код
+  const allFindedPenaltyCodes =
+    findedPenaltyCodes ?? Array(game.tasks.length).map(() => [])
+  const findedPenaltyCodesInTask = allFindedPenaltyCodes[taskNum] ?? []
+  if (findedPenaltyCodesInTask.includes(code)) {
+    return {
+      message: 'Вы уже нашли этот штрафной код. Хотите еще?',
+    }
+  }
+
+  // Проверяем нужный ли код
   const allFindedCodes = findedCodes ?? Array(game.tasks.length).map(() => [])
   const findedCodesInTask = allFindedCodes[taskNum] ?? []
-
   if (findedCodesInTask.includes(code)) {
     return {
       message: 'Такой код уже найден. Введите код',
     }
   }
 
+  // Проверяем не введен ли штрафной код
+  const penaltyCode = penaltyCodes.find(
+    (penaltyCode) => penaltyCode.code.toLowerCase() == code
+  )
+
+  if (penaltyCode) {
+    const newAllFindedPenaltyCodes = [...allFindedPenaltyCodes]
+    const newFindedPenaltyCodesInTask = [...findedPenaltyCodesInTask, code]
+    newAllFindedPenaltyCodes[taskNum] = newFindedPenaltyCodesInTask
+    console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
+    console.log('newAllFindedPenaltyCodes :>> ', newAllFindedPenaltyCodes)
+    await dbConnect()
+    const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      findedPenaltyCodes: newAllFindedPenaltyCodes,
+    })
+
+    const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
+    const numOfCodesToFindLeft = numOfCodesToFind - findedCodesInTask.length
+
+    return {
+      images: game.tasks[taskNum]?.images,
+      message: `КОД "${code}" - ШТРАФНОЙ!${
+        !isTaskComplite
+          ? `\nОсталось найти ${getNoun(
+              numOfCodesToFindLeft,
+              'код',
+              'кода',
+              'кодов'
+            )}\n\n${taskText({
+              tasks: game.tasks,
+              taskNum: taskNum,
+              findedCodes: allFindedCodes,
+              findedPenaltyCodes: newAllFindedPenaltyCodes,
+              startTaskTime: startTime[taskNum],
+              cluesDuration,
+              taskDuration,
+            })}`
+          : ''
+      }`,
+      buttons: buttonRefresh,
+    }
+  }
+
   if (codes.includes(code)) {
     // Если код введен верно и ранее его не вводили
-    console.log('allFindedCodes :>> ', allFindedCodes)
     const newAllFindedCodes = [...allFindedCodes]
     const newFindedCodesInTask = [...findedCodesInTask, code]
     newAllFindedCodes[taskNum] = newFindedCodesInTask
-    console.log('findedCodesInTask :>> ', findedCodesInTask)
 
     const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
     const numOfCodesToFindLeft = numOfCodesToFind - newFindedCodesInTask.length
@@ -410,6 +464,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               tasks: game.tasks,
               taskNum: newActiveNum,
               findedCodes: isTaskComplite ? [] : newAllFindedCodes,
+              findedPenaltyCodes: isTaskComplite ? [] : allFindedPenaltyCodes,
               startTaskTime: startTime[newActiveNum],
               cluesDuration,
               taskDuration,
