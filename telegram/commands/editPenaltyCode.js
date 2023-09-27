@@ -1,8 +1,7 @@
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
+import updateGame from 'telegram/func/updateGame'
 
 const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
@@ -26,8 +25,7 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
     penaltyCodes.splice(jsonCommand.j, 1)
     tasks[jsonCommand.i].penaltyCodes = penaltyCodes
 
-    await dbConnect()
-    await Games.findByIdAndUpdate(jsonCommand.gameId, {
+    await updateGame(jsonCommand.gameId, {
       tasks: game.tasks,
     })
 
