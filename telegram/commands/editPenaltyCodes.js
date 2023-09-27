@@ -52,7 +52,7 @@ const editPenaltyCodes = async ({ telegramId, jsonCommand }) => {
         },
       },
       {
-        text: '\u{1F6AB} Назад',
+        text: '\u{2B05} Назад',
         c: {
           c: 'editTask',
           gameId: jsonCommand.gameId,
