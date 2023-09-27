@@ -13,13 +13,13 @@ const delPenaltyCode = async ({ telegramId, jsonCommand }) => {
       message: 'Подтвердите удаление штрафного кода',
       buttons: [
         {
-          text: '\u{1F4A3} Удалить штрафной код',
+          text: '\u{1F5D1} Удалить штрафной код',
           c: { confirm: true },
         },
         {
           text: '\u{1F6AB} Я передумал',
           c: {
-            c: 'editPenaltyCode',
+            c: 'editPenaltyCodes',
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
             j: jsonCommand.j,

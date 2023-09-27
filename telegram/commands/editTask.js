@@ -122,7 +122,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{1F4A3} Удалить задание',
+        text: '\u{1F5D1} Удалить задание',
       },
       {
         c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },

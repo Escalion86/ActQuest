@@ -1,4 +1,5 @@
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
+import Games from '@models/Games'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
@@ -15,14 +16,20 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
     }
 
-  const task = game.tasks[jsonCommand.i]
+  const { tasks } = game
 
-  const { penaltyCodes } = task
+  const { penaltyCodes } = tasks[jsonCommand.i]
   const penaltyCode = penaltyCodes[jsonCommand.j]
 
   if (jsonCommand.delete) {
     penaltyCodes.splice(jsonCommand.j, 1)
-    task.penaltyCodes = penaltyCodes
+    tasks[jsonCommand.i].penaltyCodes = penaltyCodes
+
+    await dbConnect()
+    await Games.findByIdAndUpdate(jsonCommand.gameId, {
+      tasks: game.tasks,
+    })
+
     return {
       success: true,
       message: 'Штрафной код удален',

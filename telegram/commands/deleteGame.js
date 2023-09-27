@@ -14,7 +14,7 @@ const deleteGame = async ({ telegramId, jsonCommand }) => {
       message: 'Подтвердите удаление игры',
       buttons: [
         {
-          text: '\u{1F4A3} Удалить',
+          text: '\u{1F5D1} Удалить',
           c: { confirm: true },
         },
         {
