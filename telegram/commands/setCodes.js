@@ -1,5 +1,6 @@
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
+import updateGame from 'telegram/func/updateGame'
 
 const setCodes = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
