@@ -29,13 +29,20 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       : []
   const penaltyCodes =
     typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
+
+  const { clues } = task
+  const cluesText =
+    typeof clues === 'object'
+      ? clues
+          .map(({ clue, images }) => `\n\n<b>Подсказка №1</b>:\n"${clue}"`)
+          .join('')
+      : ''
+
   return {
     // images: task.images ? task.images : undefined,
     message: `<b>Редактирование задания</b>\n"${
       task?.title
-    }"\n\n<b>Текст задания</b>:\n"${task?.task}"\n\n<b>Подсказка №1</b>:\n"${
-      task.clues[0].clue
-    }"\n\n<b>Подсказка №2</b>:\n"${task.clues[1].clue}"\n\n<b>Коды (${
+    }"\n\n<b>Текст задания</b>:\n"${task?.task}"${cluesText}\n\n<b>Коды (${
       codes.length ?? 0
     } шт)</b>:\n${
       codes.length > 0 ? codes.join(', ') : '[не задыны]'
