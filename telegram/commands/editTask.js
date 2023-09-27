@@ -44,7 +44,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Изменить заголовок',
+        text: '\u{270F} Заголовок',
       },
       {
         c: {
@@ -52,7 +52,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Изменить текст задания',
+        text: '\u{270F} Задание',
       },
       {
         c: {
@@ -60,7 +60,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Изменить картинку',
+        text: '\u{270F} Картинка',
       },
       {
         c: {
@@ -68,7 +68,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Изменить текст подсказки №1',
+        text: '\u{270F} Подсказка №1',
       },
       {
         c: {
@@ -76,7 +76,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Изменить текст подсказки №2',
+        text: '\u{270F} Подсказка №2',
       },
       [
         {
@@ -85,7 +85,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
-          text: '\u{270F} Изменить коды',
+          text: '\u{270F} Коды',
         },
         {
           c: {
@@ -93,7 +93,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
-          text: '\u{270F} Изменить штрафные коды',
+          text: '\u{270F} Штрафные коды',
         },
       ],
       {
@@ -102,7 +102,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Указать кол-во кодов для выполнения',
+        text: '\u{270F} Кол-во кодов для выполнения',
       },
       {
         c: {
