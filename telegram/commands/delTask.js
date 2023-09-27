@@ -1,6 +1,6 @@
-import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
+import getGame from 'telegram/func/getGame'
+import updateGame from 'telegram/func/updateGame'
 
 const delTask = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
@@ -28,18 +28,12 @@ const delTask = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  await dbConnect()
-  const game = await Games.findById(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId)
+  if (game.success === false) return game
   const tasks = [...game.tasks]
   tasks.splice(jsonCommand.i, 1)
-  // const task = tasks[jsonCommand.i]
-  // tasks[jsonCommand.i].clues[1].clue = jsonCommand.message
-  // console.log('task :>> ', task)
-  // const newTask = { ...task, title: jsonCommand.message }
-  // console.log('newTask :>> ', newTask)
-  // tasks[jsonCommand.i] = newTask
 
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  await updateGame(jsonCommand.gameId, {
     tasks,
   })
 
