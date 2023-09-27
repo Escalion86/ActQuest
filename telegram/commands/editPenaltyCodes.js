@@ -19,7 +19,7 @@ const editPenaltyCodes = async ({ telegramId, jsonCommand }) => {
 
   const { penaltyCodes } = task
   const buttons =
-    !penaltyCodes || typeof penaltyCodes === 'object'
+    !penaltyCodes || typeof penaltyCodes !== 'object'
       ? []
       : penaltyCodes.map(({ code, penalty, description }, index) => {
           return {
