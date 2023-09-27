@@ -17,24 +17,34 @@ const editPenaltyCodes = async ({ telegramId, jsonCommand }) => {
   const task = game.tasks[jsonCommand.i]
 
   const { penaltyCodes } = task
-  const buttons = !penaltyCodes
-    ? []
-    : penaltyCodes.map(({ code, penalty, description }, index) => {
-        return {
-          text: `Код: ${code}`,
-          c: {
-            c: 'editPenaltyCode',
-            gameId: jsonCommand.gameId,
-            i: jsonCommand.i,
-            j: index,
-          },
-        }
-      })
+  const buttons =
+    !penaltyCodes || typeof penaltyCodes === 'object'
+      ? []
+      : penaltyCodes.map(({ code, penalty, description }, index) => {
+          return {
+            text: `Код: ${code}`,
+            c: {
+              c: 'editPenaltyCode',
+              gameId: jsonCommand.gameId,
+              i: jsonCommand.i,
+              j: index,
+            },
+          }
+        })
 
   // if (!jsonCommand.message) {
   return {
     success: true,
-    message: 'Список штрафных кодов',
+    message: `Список штрафных кодов\n\n${
+      penaltyCodes.length > 0
+        ? penaltyCodes
+            .map(
+              ({ code, penalty, description }) =>
+                `"${code}" - ${secondsToTimeStr(penalty)} - ${description}`
+            )
+            .join(',\n')
+        : ''
+    }`,
     buttons: [
       ...buttons,
       {
