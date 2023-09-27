@@ -109,9 +109,17 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
               typeof task?.codes === 'object'
                 ? task.codes.filter((code) => code !== '')
                 : []
+            const penaltyCodes =
+              typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
             return `\u{1F4CC} ${index + 1}. "${task.title}".\nКоды (${
               codes.length ?? 0
-            } шт): ${codes.length > 0 ? codes.join(', ') : '[не заданы]'}`
+            } шт): ${codes.length > 0 ? codes.join(', ') : '[не заданы]'}${
+              penaltyCodes.length > 0
+                ? `<b>Штрафные коды (${
+                    penaltyCodes.length
+                  } шт)</b>:${penaltyCodes.map(({ code }) => code).join(', ')}`
+                : ''
+            }`
           })
           .join('\n\n')
       : '[нет заданий]'
