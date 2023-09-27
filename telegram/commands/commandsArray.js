@@ -74,6 +74,7 @@ import setPenaltyCodeCode from './setPenaltyCodeCode'
 import setPenaltyCodePenalty from './setPenaltyCodePenalty'
 import setPenaltyCodeDescription from './setPenaltyCodeDescription'
 import addPenaltyCode from './addPenaltyCode'
+import delPenaltyCode from './delPenaltyCode'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -154,7 +155,8 @@ const commandsArray = {
   setPenaltyCodeCode,
   setPenaltyCodePenalty,
   setPenaltyCodeDescription,
-  addPenaltyCode
+  addPenaltyCode,
+  delPenaltyCode,
 }
 
 var i = 0
