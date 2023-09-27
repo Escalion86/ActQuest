@@ -69,7 +69,7 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
           },
         },
         {
-          text: ':wastebasket: Удалить код',
+          text: '\u{1F5D1} Удалить код',
           c: {
             delete: true,
           },
