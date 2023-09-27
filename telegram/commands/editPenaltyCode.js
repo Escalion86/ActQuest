@@ -25,7 +25,7 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
       message: `Штрафной код "${penaltyCode.code}"\n${penaltyCode.description}\n${penaltyCode.penalty}`,
       buttons: [
         {
-          text: '\u{270F} Изменить код',
+          text: '\u{270F} Штрафной код',
           c: {
             c: 'setPenaltyCodeCode',
             gameId: jsonCommand.gameId,
@@ -34,7 +34,7 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
           },
         },
         {
-          text: '\u{270F} Изменить штраф',
+          text: '\u{270F} Штраф по времени',
           c: {
             c: 'setPenaltyCodePenalty',
             gameId: jsonCommand.gameId,
@@ -43,7 +43,7 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
           },
         },
         {
-          text: '\u{270F} Изменить описание',
+          text: '\u{270F} Описание',
           c: {
             c: 'setPenaltyCodeDescription',
             gameId: jsonCommand.gameId,
@@ -58,7 +58,7 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
         //   },
         // },
         {
-          text: '\u{1F6AB} Назад',
+          text: '\u{2B05} Назад',
           c: {
             c: 'editTask',
             gameId: jsonCommand.gameId,
