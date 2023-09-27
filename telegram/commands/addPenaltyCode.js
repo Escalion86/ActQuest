@@ -1,6 +1,7 @@
 import check from 'telegram/func/check'
 import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 
 const cancelButton = (jsonCommand) => ({
   c: { c: 'editPenaltyCodes', gameId: jsonCommand.gameId, i: jsonCommand.i },
@@ -9,15 +10,16 @@ const cancelButton = (jsonCommand) => ({
 
 const array = [
   {
-    prop: 'penalty',
-    message: 'Введите штраф в секундах',
-    answerMessage: (answer) => `Задан штраф по времени "${answer}"`,
-    buttons: (jsonCommand) => [cancelButton(jsonCommand)],
-  },
-  {
     prop: 'code',
     message: 'Введите штрафной код',
     answerMessage: (answer) => `Штрафной код "${answer}"`,
+    buttons: (jsonCommand) => [cancelButton(jsonCommand)],
+  },
+  {
+    prop: 'penalty',
+    message: 'Введите штраф в секундах',
+    answerMessage: (answer) =>
+      `Задан штраф по времени "${secondsToTimeStr(answer)}"`,
     buttons: (jsonCommand) => [cancelButton(jsonCommand)],
   },
   {
