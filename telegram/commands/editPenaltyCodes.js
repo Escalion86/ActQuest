@@ -57,12 +57,6 @@ const editPenaltyCodes = async ({ telegramId, jsonCommand }) => {
         },
       },
       {
-        text: '\u{1F4A3} Удалить все штрафные коды',
-        c: {
-          noCodes: true,
-        },
-      },
-      {
         text: '\u{2B05} Назад',
         c: {
           c: 'editTask',
