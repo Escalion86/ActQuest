@@ -1,3 +1,4 @@
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
@@ -26,15 +27,24 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       : []
   return {
     // images: task.images ? task.images : undefined,
-    message: `<b>Редактирование задания "${
+    message: `<b>Редактирование задания</b>\n"${
       task?.title
-    }"</b>\n\n<b>Задание</b>:\n"${task?.task}"\n\n<b>Подсказка №1</b>:\n"${
+    }"\n\n<b>Текст задания</b>:\n"${task?.task}"\n\n<b>Подсказка №1</b>:\n"${
       task.clues[0].clue
     }"\n\n<b>Подсказка №2</b>:\n"${task.clues[1].clue}"\n\n<b>Коды (${
       codes.length ?? 0
     } шт)</b>:\n${
       codes.length > 0 ? codes.join(', ') : '[не задыны]'
-    }\n\nКоличество кодов для выполнения: ${
+    }\n\n<b>Штрафные коды (${penaltyCodes.length ?? 0} шт)</b>:\n${
+      penaltyCodes.length > 0
+        ? penaltyCodes
+            .map(
+              ({ code, penalty, description }) =>
+                `"${code}" - ${secondsToTimeStr(penalty)} - ${description}`
+            )
+            .join(',\n')
+        : '[не задыны]'
+    }\n\n<b>Количество кодов для выполнения</b>: ${
       task.numCodesToCompliteTask ?? 'Все'
     }`,
     buttons: [

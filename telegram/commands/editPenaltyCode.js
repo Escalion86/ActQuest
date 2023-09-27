@@ -1,3 +1,4 @@
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
@@ -22,7 +23,9 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message) {
     return {
       success: true,
-      message: `Штрафной код "${penaltyCode.code}"\n${penaltyCode.description}\n${penaltyCode.penalty}`,
+      message: `Штрафной код "${penaltyCode.code}"\n\n${
+        penaltyCode.description
+      }\n\nШтраф: ${secondsToTimeStr(penaltyCode.penalty)}`,
       buttons: [
         {
           text: '\u{270F} Штрафной код',
