@@ -20,6 +20,20 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
   const { penaltyCodes } = task
   const penaltyCode = penaltyCodes[jsonCommand.j]
 
+  if (jsonCommand.delete) {
+    penaltyCodes.splice(jsonCommand.j, 1)
+    task.penaltyCodes = penaltyCodes
+    return {
+      success: true,
+      message: 'Штрафной код удален',
+      nextCommand: {
+        c: 'editPenaltyCodes',
+        gameId: jsonCommand.gameId,
+        i: jsonCommand.i,
+      },
+    }
+  }
+
   if (!jsonCommand.message) {
     return {
       success: true,
@@ -54,12 +68,12 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
             j: jsonCommand.j,
           },
         },
-        // {
-        //   text: '\u{1F4A3} Удалить код',
-        //   c: {
-        //     delete: true,
-        //   },
-        // },
+        {
+          text: ':wastebasket: Удалить код',
+          c: {
+            delete: true,
+          },
+        },
         {
           text: '\u{2B05} Назад',
           c: {
