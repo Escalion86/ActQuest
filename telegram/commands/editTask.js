@@ -29,6 +29,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       : []
   const penaltyCodes =
     typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
+  const bonusCodes = typeof task?.bonusCodes === 'object' ? task.bonusCodes : []
 
   const { clues } = task
   const cluesText =
@@ -124,6 +125,14 @@ const editTask = async ({ telegramId, jsonCommand }) => {
             i: jsonCommand.i,
           },
           text: '\u{270F} Коды',
+        },
+        {
+          c: {
+            c: 'editBonusCodes',
+            gameId: jsonCommand.gameId,
+            i: jsonCommand.i,
+          },
+          text: '\u{270F} Бонусные коды',
         },
         {
           c: {
