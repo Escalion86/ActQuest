@@ -1,6 +1,7 @@
 import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
+import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
@@ -33,6 +34,8 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     _id: { $in: teamsIds },
   })
 
+  const teamsUsers = await TeamsUsers.find({ teamId: { $in: teamsIds } })
+
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(teams, page, (team, number) => {
     const gameTeam = gameTeams.find(
@@ -45,14 +48,19 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: `<b>Команды зарегистрированные на игру ${formatGameName(
-      game
-    )}</b>\n<b>Количество команд:</b> ${getNoun(
+    message: `На игру <b>${formatGameName(game)}</b> зарегистрировано ${getNoun(
       teams.length,
       'команда',
       'команды',
       'команд'
-    )}`,
+    )} (${teamsUsers.length} чел.)\n${teams
+      .map(
+        (team) =>
+          `\n"${team.name}" (${
+            teamsUsers.filter(({ teamId }) => teamId === team._id).length
+          } чел.)`
+      )
+      .join('')}`,
     buttons: [
       ...buttons,
       { c: { c: 'game', gameId: jsonCommand?.gameId }, text: '\u{2B05} Назад' },
