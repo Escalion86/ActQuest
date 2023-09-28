@@ -57,7 +57,8 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
       .map(
         (team) =>
           `\n"${team.name}" (${
-            teamsUsers.filter(({ teamId }) => teamId === team._id).length
+            teamsUsers.filter(({ teamId }) => teamId === String(team._id))
+              .length
           } чел.)`
       )
       .join('')}`,
