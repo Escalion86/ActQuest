@@ -1,3 +1,4 @@
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
@@ -20,21 +21,59 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
     }
 
+  console.log('task :>> ', task)
+
   const codes =
     typeof task?.codes === 'object'
       ? task.codes.filter((code) => code !== '')
       : []
+  const penaltyCodes =
+    typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
+  const bonusCodes = typeof task?.bonusCodes === 'object' ? task.bonusCodes : []
+
+  const { clues } = task
+  const cluesText =
+    typeof clues === 'object'
+      ? clues
+          .map(({ clue, images }) => `\n\n<b>Подсказка №1</b>:\n"${clue}"`)
+          .join('')
+      : ''
+
   return {
     // images: task.images ? task.images : undefined,
-    message: `<b>Редактирование задания "${
+    message: `<b>Редактирование задания</b>\n"${
       task?.title
-    }"</b>\n\n<b>Задание</b>:\n"${task?.task}"\n\n<b>Подсказка №1</b>:\n"${
-      task.clues[0].clue
-    }"\n\n<b>Подсказка №2</b>:\n"${task.clues[1].clue}"\n\n<b>Коды (${
+    }"\n\n<b>Текст задания</b>:\n"${task?.task}"${cluesText}\n\n<b>Коды (${
       codes.length ?? 0
-    } шт)</b>:\n${
-      codes.length > 0 ? codes.join(', ') : '[не задыны]'
-    }\n\nКоличество кодов для выполнения: ${
+    } шт)</b>:\n${codes.length > 0 ? codes.join(', ') : '[не задыны]'}${
+      bonusCodes.length > 0
+        ? `\n\n<b>Бонусные коды (${bonusCodes.length} шт)</b>:\n${
+            bonusCodes.length > 0
+              ? bonusCodes
+                  .map(
+                    ({ code, bonus, description }) =>
+                      `"${code}" - ${secondsToTimeStr(bonus)} - ${description}`
+                  )
+                  .join(',\n')
+              : '[не задыны]'
+          }`
+        : ''
+    }${
+      penaltyCodes.length > 0
+        ? `\n\n<b>Штрафные коды (${penaltyCodes.length} шт)</b>:\n${
+            penaltyCodes.length > 0
+              ? penaltyCodes
+                  .map(
+                    ({ code, penalty, description }) =>
+                      `"${code}" - ${secondsToTimeStr(
+                        penalty
+                      )} - ${description}`
+                  )
+                  .join(',\n')
+              : '[не задыны]'
+          }`
+        : ''
+    }\n\n<b>Количество кодов для выполнения</b>: ${
       task.numCodesToCompliteTask ?? 'Все'
     }`,
     buttons: [
@@ -44,7 +83,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Изменить заголовок',
+        text: '\u{270F} Заголовок',
       },
       {
         c: {
@@ -52,7 +91,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Изменить текст задания',
+        text: '\u{270F} Задание',
       },
       {
         c: {
@@ -60,7 +99,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Изменить картинку',
+        text: '\u{270F} Картинка',
       },
       {
         c: {
@@ -68,7 +107,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Изменить текст подсказки №1',
+        text: '\u{270F} Подсказка №1',
       },
       {
         c: {
@@ -76,7 +115,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Изменить текст подсказки №2',
+        text: '\u{270F} Подсказка №2',
       },
       [
         {
@@ -85,7 +124,25 @@ const editTask = async ({ telegramId, jsonCommand }) => {
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
-          text: '\u{270F} Изменить коды',
+          text: '\u{270F} Коды',
+        },
+        {
+          c: {
+            c: 'setCNum',
+            gameId: jsonCommand.gameId,
+            i: jsonCommand.i,
+          },
+          text: '\u{270F} Кол-во кодов для выполнения',
+        },
+      ],
+      [
+        {
+          c: {
+            c: 'editBonusCodes',
+            gameId: jsonCommand.gameId,
+            i: jsonCommand.i,
+          },
+          text: '\u{270F} Бонусные коды',
         },
         {
           c: {
@@ -93,7 +150,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
-          text: '\u{270F} Изменить штрафные коды',
+          text: '\u{270F} Штрафные коды',
         },
       ],
       {
@@ -102,7 +159,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Указать кол-во кодов для выполнения',
+        text: '\u{270F} Кол-во кодов для выполнения',
       },
       {
         c: {
@@ -110,7 +167,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{1F4A3} Удалить задание',
+        text: '\u{1F5D1} Удалить задание',
       },
       {
         c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },

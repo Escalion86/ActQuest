@@ -40,17 +40,17 @@ const array = [
       },
     ],
   },
-  {
-    prop: 'clue1',
-    message: 'Введите первую подсказку',
-    answerMessage: (answer) => `Первая подсказка введена`,
-    buttons: (jsonCommand) => [
-      {
-        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
-        text: '\u{1F6AB} Отмена создания задания',
-      },
-    ],
-  },
+  // {
+  //   prop: 'clue1',
+  //   message: 'Введите первую подсказку',
+  //   answerMessage: (answer) => `Первая подсказка введена`,
+  //   buttons: (jsonCommand) => [
+  //     {
+  //       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
+  //       text: '\u{1F6AB} Отмена создания задания',
+  //     },
+  //   ],
+  // },
   // {
   //   prop: 'clueImage1',
   //   message: 'Отправьте картинку первой подсказки (не обязательно)',
@@ -66,34 +66,34 @@ const array = [
   //     },
   //   ],
   // },
-  {
-    prop: 'clue2',
-    message: 'Введите вторую подсказку',
-    answerMessage: (answer) => `Вторая подсказка введена`,
-    buttons: (jsonCommand) => [
-      {
-        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
-        text: '\u{1F6AB} Отмена создания задания',
-      },
-    ],
-  },
-  {
-    prop: 'codes',
-    message: 'Введите коды через запятую',
-    answerMessage: (answer) =>
-      `Введено ${getNoun(answer.split(',').length, 'код', 'кода', 'кодов')}`,
-    buttons: (jsonCommand) => [
-      {
-        c: { codes: '' },
-        text: 'Без кодов',
-      },
-      {
-        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
-        text: '\u{1F6AB} Отмена создания задания',
-      },
-    ],
-    answerConverter: (answer) => (answer !== '' ? answer.split(',') : []),
-  },
+  // {
+  //   prop: 'clue2',
+  //   message: 'Введите вторую подсказку',
+  //   answerMessage: (answer) => `Вторая подсказка введена`,
+  //   buttons: (jsonCommand) => [
+  //     {
+  //       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
+  //       text: '\u{1F6AB} Отмена создания задания',
+  //     },
+  //   ],
+  // },
+  // {
+  //   prop: 'codes',
+  //   message: 'Введите коды через запятую',
+  //   answerMessage: (answer) =>
+  //     `Введено ${getNoun(answer.split(',').length, 'код', 'кода', 'кодов')}`,
+  //   buttons: (jsonCommand) => [
+  //     {
+  //       c: { codes: '' },
+  //       text: 'Без кодов',
+  //     },
+  //     {
+  //       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
+  //       text: '\u{1F6AB} Отмена создания задания',
+  //     },
+  //   ],
+  //   answerConverter: (answer) => (answer !== '' ? answer.split(',') : []),
+  // },
   // {
   //   prop: 'clueImage2',
   //   message: 'Отправьте картинку второй подсказки (не обязательно)',
@@ -153,17 +153,17 @@ const createTask = async ({ telegramId, jsonCommand }) => {
     title: jsonCommand.title,
     task: jsonCommand.task,
     images: jsonCommand.image ? [jsonCommand.image] : [],
-    clues: [
-      {
-        clue: jsonCommand.clue1,
-        images: jsonCommand.clueImage1 ? [jsonCommand.clueImage1] : [],
-      },
-      {
-        clue: jsonCommand.clue2,
-        images: jsonCommand.clueImage2 ? [jsonCommand.clueImage2] : [],
-      },
-    ],
-    codes: jsonCommand.codes,
+    // clues: [
+    //   {
+    //     clue: jsonCommand.clue1,
+    //     images: jsonCommand.clueImage1 ? [jsonCommand.clueImage1] : [],
+    //   },
+    //   {
+    //     clue: jsonCommand.clue2,
+    //     images: jsonCommand.clueImage2 ? [jsonCommand.clueImage2] : [],
+    //   },
+    // ],
+    // codes: jsonCommand.codes,
   }
 
   // Если все переменные на месте, то создаем команду

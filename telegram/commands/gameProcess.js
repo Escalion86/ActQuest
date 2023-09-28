@@ -116,8 +116,14 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     await teamGameStart(gameTeam._id, game)
   }
 
-  const { findedCodes, findedPenaltyCodes, activeNum, startTime, endTime } =
-    gameTeam
+  const {
+    findedCodes,
+    findedPenaltyCodes,
+    findedBonusCodes,
+    activeNum,
+    startTime,
+    endTime,
+  } = gameTeam
 
   const taskNum = activeNum ?? 0
 
@@ -241,8 +247,14 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const { task, codes, numCodesToCompliteTask, images, penaltyCodes } =
-    game.tasks[taskNum]
+  const {
+    task,
+    codes,
+    numCodesToCompliteTask,
+    images,
+    penaltyCodes,
+    bonusCodes,
+  } = game.tasks[taskNum]
 
   const code = jsonCommand.message
     ? jsonCommand.message.toLowerCase()
@@ -255,6 +267,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       taskNum,
       findedCodes,
       findedPenaltyCodes,
+      findedBonusCodes,
       startTaskTime: startTime[taskNum],
       cluesDuration,
       taskDuration,
@@ -263,6 +276,16 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       images,
       message,
       buttons: buttonRefresh,
+    }
+  }
+
+  // Проверяем бонусный ли код
+  const allFindedBonusCodes =
+    findedBonusCodes ?? Array(game.tasks.length).map(() => [])
+  const findedBonusCodesInTask = allFindedBonusCodes[taskNum] ?? []
+  if (findedBonusCodesInTask.includes(code)) {
+    return {
+      message: 'Вы уже нашли этот штрафной код. Хотите еще?',
     }
   }
 
@@ -282,6 +305,50 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   if (findedCodesInTask.includes(code)) {
     return {
       message: 'Такой код уже найден. Введите код',
+    }
+  }
+
+  // Проверяем не введен ли бонусный код
+  const bonusCode = bonusCodes.find(
+    (bonusCode) => bonusCode.code.toLowerCase() == code
+  )
+
+  if (bonusCode) {
+    const newAllFindedBonusCodes = [...allFindedBonusCodes]
+    const newFindedBonusCodesInTask = [...findedBonusCodesInTask, code]
+    newAllFindedBonusCodes[taskNum] = newFindedBonusCodesInTask
+    console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
+    console.log('newAllFindedBonusCodes :>> ', newAllFindedBonusCodes)
+    await dbConnect()
+    const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      findedBonusCodes: newAllFindedBonusCodes,
+    })
+
+    const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
+    const numOfCodesToFindLeft = numOfCodesToFind - findedCodesInTask.length
+
+    return {
+      images: game.tasks[taskNum]?.images,
+      message: `КОД "${code}" - БОНУСНЫЙ!${
+        !isTaskComplite
+          ? `\nОсталось найти ${getNoun(
+              numOfCodesToFindLeft,
+              'код',
+              'кода',
+              'кодов'
+            )}\n\n${taskText({
+              tasks: game.tasks,
+              taskNum: taskNum,
+              findedCodes: allFindedCodes,
+              findedBonusCodes: newAllFindedBonusCodes,
+              findedPenaltyCodes: allFindedPenaltyCodes,
+              startTaskTime: startTime[taskNum],
+              cluesDuration,
+              taskDuration,
+            })}`
+          : ''
+      }`,
+      buttons: buttonRefresh,
     }
   }
 
@@ -317,6 +384,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               tasks: game.tasks,
               taskNum: taskNum,
               findedCodes: allFindedCodes,
+              findedBonusCodes: allFindedBonusCodes,
               findedPenaltyCodes: newAllFindedPenaltyCodes,
               startTaskTime: startTime[taskNum],
               cluesDuration,
@@ -464,6 +532,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               tasks: game.tasks,
               taskNum: newActiveNum,
               findedCodes: isTaskComplite ? [] : newAllFindedCodes,
+              findedBonusCodes: isTaskComplite ? [] : allFindedBonusCodes,
               findedPenaltyCodes: isTaskComplite ? [] : allFindedPenaltyCodes,
               startTaskTime: startTime[newActiveNum],
               cluesDuration,

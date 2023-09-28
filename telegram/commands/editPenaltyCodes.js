@@ -1,7 +1,8 @@
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const editPanaltyCodes = async ({ telegramId, jsonCommand }) => {
+const editPenaltyCodes = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
@@ -17,24 +18,34 @@ const editPanaltyCodes = async ({ telegramId, jsonCommand }) => {
   const task = game.tasks[jsonCommand.i]
 
   const { penaltyCodes } = task
-  const buttons = !penaltyCodes
-    ? []
-    : penaltyCodes.map(({ code, penalty, description }, index) => {
-        return {
-          text: `Код: ${code}`,
-          c: {
-            c: 'editPenaltyCode',
-            gameId: jsonCommand.gameId,
-            i: jsonCommand.i,
-            j: index,
-          },
-        }
-      })
+  const buttons =
+    !penaltyCodes || typeof penaltyCodes !== 'object'
+      ? []
+      : penaltyCodes.map(({ code, penalty, description }, index) => {
+          return {
+            text: `Код: ${code}`,
+            c: {
+              c: 'editPenaltyCode',
+              gameId: jsonCommand.gameId,
+              i: jsonCommand.i,
+              j: index,
+            },
+          }
+        })
 
   // if (!jsonCommand.message) {
   return {
     success: true,
-    message: 'Список штрафных кодов',
+    message: `Список штрафных кодов\n\n${
+      penaltyCodes.length > 0
+        ? penaltyCodes
+            .map(
+              ({ code, penalty, description }) =>
+                `"${code}" - ${secondsToTimeStr(penalty)} - ${description}`
+            )
+            .join(',\n')
+        : ''
+    }`,
     buttons: [
       ...buttons,
       {
@@ -46,13 +57,7 @@ const editPanaltyCodes = async ({ telegramId, jsonCommand }) => {
         },
       },
       {
-        text: '\u{1F4A3} Удалить все штрафные коды',
-        c: {
-          noCodes: true,
-        },
-      },
-      {
-        text: '\u{1F6AB} Назад',
+        text: '\u{2B05} Назад',
         c: {
           c: 'editTask',
           gameId: jsonCommand.gameId,
@@ -92,4 +97,4 @@ const editPanaltyCodes = async ({ telegramId, jsonCommand }) => {
   // }
 }
 
-export default editPanaltyCodes
+export default editPenaltyCodes
