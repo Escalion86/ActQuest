@@ -151,7 +151,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       )
         codePenaltyBonusText += `"${title}":`
       if (findedPenaltyCodes[index]?.length > 0) {
-        console.log('penaltyCode :>> ', code)
+        console.log('findedPenaltyCodes[index] :>> ', findedPenaltyCodes[index])
         console.log('penaltyCodes :>> ', penaltyCodes)
         const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) => {
           findedPenaltyCodes[index].includes(code)
