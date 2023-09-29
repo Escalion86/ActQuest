@@ -18,6 +18,8 @@ const getNoun = (number, one, two, five, withNumber = true) => {
 
 export default getNoun
 
+export const getNounCodes = (number) => getNoun(number, 'код', 'кода', 'кодов')
+
 export const getNounEvents = (number) =>
   getNoun(number, 'мероприятие', 'мероприятия', 'мероприятий')
 

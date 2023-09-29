@@ -1,5 +1,6 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import secondsToTime from './secondsToTime'
+import { getNounCodes } from '@helpers/getNoun'
 
 const taskText = ({
   tasks,
@@ -12,6 +13,13 @@ const taskText = ({
   console.log('taskText=>startTaskTime :>> ', startTaskTime)
   const { task, codes, clues, numCodesToCompliteTask } = tasks[taskNum]
   const taskSecondsLeft = Math.floor(getSecondsBetween(startTaskTime))
+
+  const findedCodesInTask =
+    typeof findedCodes === 'object' && findedCodes[taskNum]
+      ? findedCodes[taskNum]
+      : []
+  const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
+  const numOfCodesToFindLeft = numOfCodesToFind - findedCodesInTask.length
 
   const showCluesNum =
     cluesDuration > 0 ? Math.floor(taskSecondsLeft / cluesDuration) : 0
@@ -38,7 +46,9 @@ const taskText = ({
       : ''
   }${
     findedCodes && findedCodes[taskNum]?.length > 0
-      ? `\n\nНайденые коды: "${findedCodes[taskNum].join('", "')}"`
+      ? `\n\nНайденые коды: "${findedCodes[taskNum].join(
+          '", "'
+        )}"\n\nОсталось найти ${getNounCodes(numOfCodesToFindLeft)}`
       : ''
   }\n\n<b>ВВЕДИТЕ КОД</b>`
 }

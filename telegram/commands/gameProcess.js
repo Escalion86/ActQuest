@@ -324,17 +324,12 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       findedBonusCodes: newAllFindedBonusCodes,
     })
 
-    const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
-    const numOfCodesToFindLeft = numOfCodesToFind - findedCodesInTask.length
+    // const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
+    // const numOfCodesToFindLeft = numOfCodesToFind - findedCodesInTask.length
 
     return {
       images: game.tasks[taskNum]?.images,
-      message: `КОД "${code}" - БОНУСНЫЙ!\nОсталось найти ${getNoun(
-        numOfCodesToFindLeft,
-        'код',
-        'кода',
-        'кодов'
-      )}\n\n${taskText({
+      message: `КОД "${code}" - БОНУСНЫЙ!\n\n${taskText({
         tasks: game.tasks,
         taskNum: taskNum,
         findedCodes: allFindedCodes,
