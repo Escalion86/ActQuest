@@ -77,6 +77,10 @@ const gamesSchema = {
           type: Number,
           default: null,
         },
+        postMessage: {
+          type: String,
+          default: '',
+        },
       },
     ],
     default: [],

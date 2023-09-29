@@ -80,6 +80,7 @@ import setBonusCodeCode from './setBonusCodeCode'
 import setBonusCodeBonus from './setBonusCodeBonus'
 import setBonusCodeDescription from './setBonusCodeDescription'
 import addBonusCode from './addBonusCode'
+import setTaskPostMessage from './setTaskPostMessage'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -167,6 +168,7 @@ const commandsArray = {
   setBonusCodeBonus,
   setBonusCodeDescription,
   addBonusCode,
+  setTaskPostMessage,
 }
 
 var i = 0
