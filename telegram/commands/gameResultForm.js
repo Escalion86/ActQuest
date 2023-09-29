@@ -208,11 +208,14 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     })
     .join('\n\n')
 
-  const totalPenalty = totalTeamsWithPenalty
-    .map(({ team, penalty }) => {
-      return `${secondsToTime(penalty)} - ${team.name}`
-    })
-    .join('\n')
+  const totalPenalty =
+    totalTeamsWithPenalty.length > 0
+      ? totalTeamsWithPenalty
+          .map(({ team, penalty }) => {
+            return `${secondsToTime(penalty)} - ${team.name}`
+          })
+          .join('\n')
+      : undefined
 
   const totalSeconds = sortedTotalTeamsSeconds
     .map(({ team, seconds }) => {
