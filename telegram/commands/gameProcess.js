@@ -329,25 +329,21 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
     return {
       images: game.tasks[taskNum]?.images,
-      message: `КОД "${code}" - БОНУСНЫЙ!${
-        !isTaskComplite
-          ? `\nОсталось найти ${getNoun(
-              numOfCodesToFindLeft,
-              'код',
-              'кода',
-              'кодов'
-            )}\n\n${taskText({
-              tasks: game.tasks,
-              taskNum: taskNum,
-              findedCodes: allFindedCodes,
-              findedBonusCodes: newAllFindedBonusCodes,
-              findedPenaltyCodes: allFindedPenaltyCodes,
-              startTaskTime: startTime[taskNum],
-              cluesDuration,
-              taskDuration,
-            })}`
-          : ''
-      }`,
+      message: `КОД "${code}" - БОНУСНЫЙ!\nОсталось найти ${getNoun(
+        numOfCodesToFindLeft,
+        'код',
+        'кода',
+        'кодов'
+      )}\n\n${taskText({
+        tasks: game.tasks,
+        taskNum: taskNum,
+        findedCodes: allFindedCodes,
+        findedBonusCodes: newAllFindedBonusCodes,
+        findedPenaltyCodes: allFindedPenaltyCodes,
+        startTaskTime: startTime[taskNum],
+        cluesDuration,
+        taskDuration,
+      })}`,
       buttons: buttonRefresh,
     }
   }
@@ -373,25 +369,21 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
     return {
       images: game.tasks[taskNum]?.images,
-      message: `КОД "${code}" - ШТРАФНОЙ!${
-        !isTaskComplite
-          ? `\nОсталось найти ${getNoun(
-              numOfCodesToFindLeft,
-              'код',
-              'кода',
-              'кодов'
-            )}\n\n${taskText({
-              tasks: game.tasks,
-              taskNum: taskNum,
-              findedCodes: allFindedCodes,
-              findedBonusCodes: allFindedBonusCodes,
-              findedPenaltyCodes: newAllFindedPenaltyCodes,
-              startTaskTime: startTime[taskNum],
-              cluesDuration,
-              taskDuration,
-            })}`
-          : ''
-      }`,
+      message: `КОД "${code}" - ШТРАФНОЙ!\nОсталось найти ${getNoun(
+        numOfCodesToFindLeft,
+        'код',
+        'кода',
+        'кодов'
+      )}\n\n${taskText({
+        tasks: game.tasks,
+        taskNum: taskNum,
+        findedCodes: allFindedCodes,
+        findedBonusCodes: allFindedBonusCodes,
+        findedPenaltyCodes: newAllFindedPenaltyCodes,
+        startTaskTime: startTime[taskNum],
+        cluesDuration,
+        taskDuration,
+      })}`,
       buttons: buttonRefresh,
     }
   }
