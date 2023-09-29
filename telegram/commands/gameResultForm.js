@@ -254,9 +254,9 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
         game
       )}</b>\n\n<b>Фактический период игры</b>:\n${gameDateTimeFact}\n${text}\n\n\n<b>\u{2B50}РЕЗУЛЬТАТЫ:</b>\n<b>\u{231A}Без учета бонусов и штрафов:</b>\n${totalSeconds}${
         game.taskFailurePenalty
-          ? totalPenalty
-            ? `\n\n<b>\u{1F534} Штрафы за невыполненные задания:</b>\n${totalPenalty}\n\n`
-            : 'штрафов нет!'
+          ? `\n\n<b>\u{1F534} Штрафы за невыполненные задания:</b>\n${
+              totalPenalty ? totalPenalty : 'штрафов нет!'
+            }\n\n`
           : ''
       }\n\n<b>\u{1F534} Штрафы и \u{1F7E2} бонусы за коды:</b>\n${totalCodePenaltyBonus}\n\n<b>\u{1F3C6} ИТОГО:</b>\n${totalResult}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
         game.tasks[mostEasyTaskIndex]?.title
