@@ -53,8 +53,15 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
 
       if (isTeamFinished) return `"${team.name}" - завершили все задания`
 
-      const task = game.tasks[startedTasks - 1]
+      // Проверяем, может задание выполнено и команда на перерыве
+      if (gameTeam.endTime[startedTasks - 1]) {
+        const nextTask = game.tasks[startedTasks]
+        return `"${team.name}" - на перерыве след задание №${
+          startedTasks + 1
+        } "${nextTask.title}"`
+      }
 
+      const task = game.tasks[startedTasks - 1]
       return `"${team.name}" - выполняют задание №${startedTasks} "${
         task.title
       }".${

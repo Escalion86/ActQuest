@@ -55,8 +55,8 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
       'команд'
     )} (${teamsUsers.length} чел.)\n${teams
       .map(
-        (team) =>
-          `\n"${team.name}" (${
+        (team, index) =>
+          `\n${index + 1}. "${team.name}" (${
             teamsUsers.filter(({ teamId }) => teamId === String(team._id))
               .length
           } чел.)`

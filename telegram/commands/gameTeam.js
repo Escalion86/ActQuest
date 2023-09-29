@@ -41,7 +41,7 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
       .map(
         (user) =>
           ` - ${user.name}${
-            capitanTelegramId === user.telegramId ? '(капитан)' : ''
+            capitanTelegramId === user.telegramId ? ' (капитан)' : ''
           }`
       )
       .join('\n')}`,
