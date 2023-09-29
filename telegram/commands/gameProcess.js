@@ -157,7 +157,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       return {
         message: `${
           game.tasks[taskNum].postMessage
-            ? `Сообщение от прошлого задания:\n"${game.tasks[activeNum].postMessage}"\n\n`
+            ? `<b>Сообщение от прошлого задания:</b>\n"${game.tasks[activeNum].postMessage}"\n\n`
             : ''
         }<b>ПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           breakDuration - secondsAfterEndTime
@@ -220,7 +220,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       return {
         message: `${
           game.tasks[taskNum].postMessage
-            ? `Сообщение от прошлого задания:\n"${game.tasks[activeNum].postMessage}"\n\n`
+            ? `<b>Сообщение от прошлого задания:</b>\n"${game.tasks[activeNum].postMessage}"\n\n`
             : ''
         }<b>Время вышло\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           taskDuration + breakDuration - secondsLeftAfterStartTask
@@ -425,7 +425,13 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
           usersTelegramIdsOfTeam.map(async (telegramId) => {
             await sendMessage({
               chat_id: telegramId,
-              text: 'Поздравляем Вы завершили все задания! Игра окончена. Вы можете выдвигаться на точку сбора',
+              text: `Поздравляем Вы завершили все задания! Игра окончена. Вы можете выдвигаться на точку сбора${
+                game.tasks[game.tasks.length - 1].postMessage
+                  ? `<b>Сообщение от прошлого задания:</b>\n"${
+                      game.tasks[game.tasks.length - 1].postMessage
+                    }"\n\n`
+                  : ''
+              }`,
               keyboard,
             })
           })
@@ -457,7 +463,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
                 chat_id: telegramId,
                 text: `<b>КОД "${code}" ПРИНЯТ\nЗадание выполнено!${
                   game.tasks[taskNum].postMessage
-                    ? `\n\nСообщение от прошлого задания:\n"${game.tasks[taskNum].postMessage}"`
+                    ? `\n\n<b>Сообщение от прошлого задания:</b>\n"${game.tasks[taskNum].postMessage}"`
                     : ''
                 }\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
                   breakDuration
