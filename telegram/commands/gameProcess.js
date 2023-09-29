@@ -364,12 +364,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
     return {
       images: game.tasks[taskNum]?.images,
-      message: `КОД "${code}" - ШТРАФНОЙ!\nОсталось найти ${getNoun(
-        numOfCodesToFindLeft,
-        'код',
-        'кода',
-        'кодов'
-      )}\n\n${taskText({
+      message: `КОД "${code}" - ШТРАФНОЙ!\n\n${taskText({
         tasks: game.tasks,
         taskNum: taskNum,
         findedCodes: allFindedCodes,
@@ -510,12 +505,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
       message: `КОД "${code}" ПРИНЯТ${
         !isTaskComplite
-          ? `\nОсталось найти ${getNoun(
-              numOfCodesToFindLeft,
-              'код',
-              'кода',
-              'кодов'
-            )}\n\n${taskText({
+          ? `\n\n${taskText({
               tasks: game.tasks,
               taskNum: newActiveNum,
               findedCodes: isTaskComplite ? [] : newAllFindedCodes,
