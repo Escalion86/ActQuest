@@ -109,11 +109,19 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
               typeof task?.codes === 'object'
                 ? task.codes.filter((code) => code !== '')
                 : []
+            const bonusCodes =
+              typeof task?.bonusCodes === 'object' ? task.bonusCodes : []
             const penaltyCodes =
               typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
             return `\u{1F4CC} ${index + 1}. "${task.title}".\nКоды (${
               codes.length ?? 0
             } шт): ${codes.length > 0 ? codes.join(', ') : '[не заданы]'}${
+              bonusCodes.length > 0
+                ? `\nБонусные коды (${bonusCodes.length} шт): ${bonusCodes
+                    .map(({ code }) => code)
+                    .join(', ')}`
+                : ''
+            }${
               penaltyCodes.length > 0
                 ? `\nШтрафные коды (${penaltyCodes.length} шт): ${penaltyCodes
                     .map(({ code }) => code)
