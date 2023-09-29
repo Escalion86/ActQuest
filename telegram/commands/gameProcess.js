@@ -285,7 +285,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   const findedBonusCodesInTask = allFindedBonusCodes[taskNum] ?? []
   if (findedBonusCodesInTask.includes(code)) {
     return {
-      message: 'Вы уже нашли этот штрафной код. Хотите еще?',
+      message: 'Вы уже нашли этот бонусный код. Хотите еще?',
     }
   }
 

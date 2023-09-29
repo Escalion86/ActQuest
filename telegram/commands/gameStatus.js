@@ -100,7 +100,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     // Проверяем, может задание выполнено и команда на перерыве
     if (gameTeam.endTime[startedTasks - 1]) {
       const nextTask = game.tasks[startedTasks]
-      return `"${team.name}" - на перерыве след задание ${numberToEmojis(
+      return `<b>"${team.name}"</b> - перерыв, след. задание ${numberToEmojis(
         startedTasks + 1
       )} "${nextTask.title}"`
     }
