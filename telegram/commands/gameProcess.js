@@ -391,10 +391,9 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  console.log('timeToCodeStr() :>> ', timeToCodeStr())
   if (
-    (codes[0] !== 'time' && codes.includes(code)) ||
-    (codes[0] === 'time' && timeToCodeStr() === code)
+    (codes[0] !== '[time]' && codes.includes(code)) ||
+    (codes[0] === '[time]' && timeToCodeStr() === code)
   ) {
     // Если код введен верно и ранее его не вводили
     const newAllFindedCodes = [...allFindedCodes]

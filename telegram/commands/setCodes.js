@@ -13,9 +13,15 @@ const setCodes = async ({ telegramId, jsonCommand }) => {
       message: 'Введите коды через запятую',
       buttons: [
         {
-          text: 'Без кодов',
+          text: `\u{274C} Без кодов`,
           c: {
             noCodes: true,
+          },
+        },
+        {
+          text: `\u{231A} Динамический код - Время HHmm`,
+          c: {
+            time: true,
           },
         },
         {
@@ -36,6 +42,8 @@ const setCodes = async ({ telegramId, jsonCommand }) => {
   // const task = tasks[jsonCommand.i]
   tasks[jsonCommand.i].codes = jsonCommand.noCodes
     ? []
+    : jsonCommand.time
+    ? ['[time]']
     : jsonCommand.message !== ''
     ? jsonCommand.message.toLowerCase().split(',')
     : []
