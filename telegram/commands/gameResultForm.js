@@ -151,12 +151,9 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       )
         codePenaltyBonusText += `"${title}":`
       if (findedPenaltyCodes[index]?.length > 0) {
-        console.log('findedPenaltyCodes[index] :>> ', findedPenaltyCodes[index])
-        console.log('penaltyCodes :>> ', penaltyCodes)
-        const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) => {
+        const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) =>
           findedPenaltyCodes[index].includes(code)
-        })
-        console.log('findedPenaltyCodesFull :>> ', findedPenaltyCodesFull)
+        )
         codePenaltyBonusText += findedPenaltyCodesFull.map(
           ({ penalty, description }) =>
             `\n${secondsToTime(penalty)} - ${description}`
@@ -167,9 +164,9 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
         )
       }
       if (findedBonusCodes[index]?.length > 0) {
-        const findedBonusCodesFull = bonusCodes.filter(({ code }) => {
+        const findedBonusCodesFull = bonusCodes.filter(({ code }) =>
           findedBonusCodes[index].includes(code)
-        })
+        )
         codePenaltyBonusText += findedBonusCodesFull.map(
           ({ bonus, description }) =>
             `\n${secondsToTime(bonus)} - ${description}`
