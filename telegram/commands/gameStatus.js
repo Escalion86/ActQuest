@@ -5,6 +5,37 @@ import Teams from '@models/Teams'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
+const numberToEmojis = (number) => {
+  var digits = number.toString().split('')
+  const emojis = digits.map((digit) => {
+    switch (digit) {
+      case '0':
+        return `\u{0030}`
+      case '1':
+        return `\u{0031}`
+      case '2':
+        return `\u{0032}`
+      case '3':
+        return `\u{0033}`
+      case '4':
+        return `\u{0034}`
+      case '5':
+        return `\u{0035}`
+      case '6':
+        return `\u{0036}`
+      case '7':
+        return `\u{0037}`
+      case '8':
+        return `\u{0038}`
+      case '9':
+        return `\u{0039}`
+      default:
+        return `\u{002A}`
+    }
+  })
+  return emojis.join('')
+}
+
 const gameStatus = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
@@ -58,20 +89,20 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         getSecondsBetween(gameTeam.startTime[game.tasks.length - 1]) >
           taskDuration)
 
-    if (isTeamFinished) return `"${team.name}" - завершили все задания`
+    if (isTeamFinished) return `"${team.name}" - \u{2705} завершили все задания`
 
     // Проверяем, может задание выполнено и команда на перерыве
     if (gameTeam.endTime[startedTasks - 1]) {
       const nextTask = game.tasks[startedTasks]
-      return `"${team.name}" - на перерыве след задание №${startedTasks + 1} "${
-        nextTask.title
-      }"`
+      return `"${team.name}" - на перерыве след задание ${numberToEmojis(
+        startedTasks + 1
+      )} "${nextTask.title}"`
     }
 
     const task = game.tasks[startedTasks - 1]
-    return `"${team.name}" - выполняют задание №${startedTasks} "${
-      task.title
-    }".${
+    return `"${team.name}" - выполняют задание ${numberToEmojis(
+      startedTasks
+    )} "${task.title}".${
       findedCodes > 0
         ? `\nНайденые коды (${findedCodes} шт.): "${gameTeam.findedCodes[
             startedTasks - 1
@@ -107,15 +138,13 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
   // })
 
   return {
-    message: `<b>Состояние игры "${
-      game.name
-    }":</b>\n${text}\n\n${dateToDateTimeStr(
+    message: `<b>Состояние игры "${game.name}"</b>\n${dateToDateTimeStr(
       new Date(),
       false,
       false,
-      true,
+      false,
       false
-    ).join(' ')}`,
+    ).join(' ')}\n\n${text}`,
     buttons: [
       {
         text: '\u{1F504} Обновить статус игры',
