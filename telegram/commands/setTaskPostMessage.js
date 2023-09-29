@@ -11,7 +11,7 @@ const setTaskPostMessage = async ({ telegramId, jsonCommand }) => {
     await dbConnect()
     const game = await Games.findById(jsonCommand.gameId)
     const tasks = [...game.tasks]
-    tasks[jsonCommand.i].postMessage = jsonCommand.message
+    tasks[jsonCommand.i].postMessage = ''
 
     await Games.findByIdAndUpdate(jsonCommand.gameId, {
       tasks,

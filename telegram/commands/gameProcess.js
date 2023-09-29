@@ -425,7 +425,11 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
           usersTelegramIdsOfTeam.map(async (telegramId) => {
             await sendMessage({
               chat_id: telegramId,
-              text: `Поздравляем Вы завершили все задания! Игра окончена. Вы можете выдвигаться на точку сбора${
+              text: `Поздравляем Вы завершили все задания! Игра окончена. ${
+                game.finishingPlace
+                  ? `Вы можете выдвигаться на точку сбора: ${game.finishingPlace}`
+                  : ''
+              }${
                 game.tasks[game.tasks.length - 1].postMessage
                   ? `<b>Сообщение от прошлого задания:</b>\n"${
                       game.tasks[game.tasks.length - 1].postMessage
