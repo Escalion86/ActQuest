@@ -1,4 +1,3 @@
-import getNoun from '@helpers/getNoun'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
@@ -30,13 +29,10 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     _id: { $in: teamsIds },
   })
 
-  console.log('teams :>> ', teams)
-
   const textArray = teams.map((team) => {
     const gameTeam = gameTeams.find(
       (gameTeam) => gameTeam.teamId === String(team._id)
     )
-    console.log('gameTeam :>> ', gameTeam)
     var startedTasks = 0
     gameTeam.startTime.forEach((time) => {
       if (time) ++startedTasks
@@ -61,14 +57,9 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         getSecondsBetween(gameTeam.startTime[game.tasks.length - 1]) >
           taskDuration)
 
-    console.log('isTeamFinished :>> ', isTeamFinished)
     if (isTeamFinished) return `"${team.name}" - завершили все задания`
 
     // Проверяем, может задание выполнено и команда на перерыве
-    console.log(
-      'gameTeam.endTime[startedTasks - 1] :>> ',
-      gameTeam.endTime[startedTasks - 1]
-    )
     if (gameTeam.endTime[startedTasks - 1]) {
       const nextTask = game.tasks[startedTasks]
       return `"${team.name}" - на перерыве след задание №${startedTasks + 1} "${
@@ -77,7 +68,6 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     }
 
     const task = game.tasks[startedTasks - 1]
-    console.log('!')
     return `"${team.name}" - выполняют задание №${startedTasks} "${
       task.title
     }".${
@@ -100,7 +90,6 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         : ''
     }`
   })
-  console.log('textArray :>> ', textArray)
 
   const text = textArray.join('\n\n')
 
