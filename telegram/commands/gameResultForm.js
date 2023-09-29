@@ -149,7 +149,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
         findedPenaltyCodes[index]?.length > 0 ||
         findedBonusCodes[index]?.length > 0
       )
-        codePenaltyBonusText += `\u{1F4CC} "${title}":`
+        codePenaltyBonusText += `\n\u{1F4CC} "${title}":`
       if (findedPenaltyCodes[index]?.length > 0) {
         const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) =>
           findedPenaltyCodes[index].includes(code)
@@ -204,7 +204,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   )
   const totalCodePenaltyBonus = totalTeamsSeconds
     .map(({ team, codePenaltyBonusText }) => {
-      return `Команда "${team.name}":\n${codePenaltyBonusText}`
+      return `Команда "${team.name}":${codePenaltyBonusText}`
     })
     .join('\n\n')
 
