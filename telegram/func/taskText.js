@@ -50,33 +50,33 @@ const taskText = ({
     cluesDuration > 0
       ? secondsToTime(cluesDuration - (taskSecondsLeft % cluesDuration))
       : secondsToTime(taskDuration - taskSecondsLeft)
-  }`}\n\nКоличество кодов на локации: ${codes?.length ?? 0}${
+  }`}\n\n<b>Количество кодов на локации:</b> ${codes?.length ?? 0}${
     numCodesToCompliteTask
-      ? `\nКоличество кодов необходимое для выполнения задания: ${numCodesToCompliteTask}`
+      ? `\n<b>Количество кодов необходимое для выполнения задания:</b> ${numCodesToCompliteTask}`
       : ''
   }${
     findedBonusCodes && findedBonusCodes[taskNum]?.length > 0
-      ? `\n\nНайденые бонусные коды:\n${bonusCodes
+      ? `\n\n<b>Найденые бонусные коды:</b>\n${bonusCodes
           .filter(({ code }) => findedBonusCodes[taskNum].includes(code))
           .map(
             ({ code, bonus, description }) =>
               `"${code}" - ${secondsToTimeStr(bonus)} - ${description}`
           )
-          .join(', ')}`
+          .join('\n')}`
       : ''
   }${
     findedPenaltyCodes && findedPenaltyCodes[taskNum]?.length > 0
-      ? `\n\nНайденые штрафные коды:\n${penaltyCodes
+      ? `\n\n<b>Найденые штрафные коды:</b>\n${penaltyCodes
           .filter(({ code }) => findedPenaltyCodes[taskNum].includes(code))
           .map(
             ({ code, penalty, description }) =>
               `"${code}" - ${secondsToTimeStr(penalty)} - ${description}`
           )
-          .join(', ')}`
+          .join('\n')}`
       : ''
   }${
     findedCodes && findedCodes[taskNum]?.length > 0
-      ? `\n\nНайденые коды:\n"${findedCodes[taskNum].join(
+      ? `\n\n<b>Найденые коды:</b>\n"${findedCodes[taskNum].join(
           '", "'
         )}"\n\nОсталось найти ${getNounCodes(numOfCodesToFindLeft)}`
       : ''
