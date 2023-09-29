@@ -61,14 +61,20 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     _id: { $in: teamsIds },
   })
 
-  const textArray = teams.map((team) => {
-    const gameTeam = gameTeams.find(
-      (gameTeam) => gameTeam.teamId === String(team._id)
-    )
-    var startedTasks = 0
-    gameTeam.startTime.forEach((time) => {
-      if (time) ++startedTasks
-    })
+  const sortedTeams = [
+    ...teams.map((team) => {
+      const gameTeam = gameTeams.find(
+        (gameTeam) => gameTeam.teamId === String(team._id)
+      )
+      var startedTasks = 0
+      gameTeam.startTime.forEach((time) => {
+        if (time) ++startedTasks
+      })
+      return { team, startedTasks, gameTeam }
+    }),
+  ].sort((a, b) => b.startedTasks - a.startedTasks)
+
+  const textArray = sortedTeams.map(({ team, startedTasks, gameTeam }) => {
     const findedCodes =
       gameTeam.findedCodes?.length >= startedTasks
         ? gameTeam.findedCodes[startedTasks - 1].length
