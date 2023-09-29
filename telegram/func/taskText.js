@@ -69,8 +69,8 @@ const taskText = ({
       ? `\n\nНайденые штрафные коды:\n${penaltyCodes
           .filter(({ code }) => findedPenaltyCodes[taskNum].includes(code))
           .map(
-            ({ code, bonus, description }) =>
-              `"${code}" - ${secondsToTimeStr(bonus)} - ${description}`
+            ({ code, penalty, description }) =>
+              `"${code}" - ${secondsToTimeStr(penalty)} - ${description}`
           )
           .join(', ')}`
       : ''
