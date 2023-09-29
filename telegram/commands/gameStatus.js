@@ -1,3 +1,4 @@
+import dateToDateTimeStr from '@helpers/dateToDateTimeStr'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
@@ -106,7 +107,15 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
   // })
 
   return {
-    message: `<b>Состояние игры "${game.name}":</b>\n${text}\n\n${new Date()}`,
+    message: `<b>Состояние игры "${
+      game.name
+    }":</b>\n${text}\n\n${dateToDateTimeStr(
+      new Date(),
+      false,
+      false,
+      true,
+      false
+    ).join(' ')}`,
     buttons: [
       {
         text: '\u{1F504} Обновить статус игры',
