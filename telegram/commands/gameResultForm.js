@@ -83,6 +83,8 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   const tasksDuration = gameTeams.map((gameTeam) => ({
     teamId: gameTeam.teamId,
     duration: durationCalc(gameTeam, game),
+    findedPenaltyCodes: gameTeam.findedPenaltyCodes,
+    findedBonusCodes: gameTeam.findedBonusCodes,
   }))
 
   const taskAverageTimes = Array(game.tasks.length)
@@ -123,10 +125,14 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     .join('\n')
 
   const totalTeamsSeconds = teams.map((team, index) => {
-    const dur = tasksDuration.find((item) => item.teamId === String(team._id))
+    const { teamId, duration, findedPenaltyCodes, findedBonusCodes } =
+      tasksDuration.find((item) => item.teamId === String(team._id))
     let penalty = 0
     let result = 0
-    const seconds = dur?.duration.reduce((partialSum, a) => {
+    let codePenalty = 0
+    let codeBonus = 0
+    let codePenaltyBonusText = ''
+    const seconds = duration.reduce((partialSum, a) => {
       const res =
         typeof a === 'number' && typeof partialSum === 'number'
           ? partialSum + a
@@ -137,9 +143,52 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       } else result += a
       return res
     }, 0)
-    result += penalty
 
-    return { team, seconds, penalty, result }
+    game.tasks.forEach(({ title, penaltyCodes, bonusCodes }, index) => {
+      if (
+        findedPenaltyCodes[index]?.length > 0 ||
+        findedBonusCodes[index]?.length > 0
+      )
+        codePenaltyText += `"${title}":`
+      if (findedPenaltyCodes[index]?.length > 0) {
+        const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) => {
+          findedPenaltyCodes[index].includes(code)
+        })
+        codePenaltyBonusText += findedPenaltyCodesFull.map(
+          ({ penalty, description }) =>
+            `\n${secondsToTime(penalty)} - ${description}`
+        )
+        codePenalty += findedPenaltyCodesFull.reduce(
+          (sum, { penalty }) => sum + penalty,
+          0
+        )
+      }
+      if (findedBonusCodes[index]?.length > 0) {
+        const findedBonusCodesFull = bonusCodes.filter(({ code }) => {
+          findedBonusCodes[index].includes(code)
+        })
+        codePenaltyBonusText += findedBonusCodesFull.map(
+          ({ bonus, description }) =>
+            `\n${secondsToTime(bonus)} - ${description}`
+        )
+        codeBonus += findedBonusCodesFull.reduce(
+          (sum, { bonus }) => sum + bonus,
+          0
+        )
+      }
+    })
+
+    result += penalty + codePenalty - codeBonus
+
+    return {
+      team,
+      seconds,
+      penalty,
+      codePenalty,
+      codeBonus,
+      codePenaltyBonusText,
+      result,
+    }
   })
 
   const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort(sortFunc)
@@ -153,6 +202,12 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   const totalTeamsWithPenalty = sortedTotalTeamsPenalty.filter(
     ({ penalty }) => penalty > 0
   )
+  const totalCodePenaltyBonus = totalTeamsSeconds
+    .map(({ team, codePenaltyBonusText }) => {
+      return `"${team.name}":\n${codePenaltyBonusText}`
+    })
+    .join('\n\n')
+
   const totalPenalty = totalTeamsWithPenalty
     .map(({ team, penalty }) => {
       return `${secondsToTime(penalty)} - ${team.name}`
@@ -199,9 +254,9 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
         game
       )}</b>\n\n<b>Фактический период игры</b>:\n${gameDateTimeFact}\n${text}\n\n\n${
         game.taskFailurePenalty
-          ? `<b>\u{2B50}РЕЗУЛЬТАТЫ:</b>\n<b>\u{231A}Без учета штрафов:</b>\n${totalSeconds}\n\n<b>\u{1F534} Штрафы:</b>\n${totalPenalty}\n\n`
+          ? `<b>\u{2B50}РЕЗУЛЬТАТЫ:</b>\n<b>\u{231A}Без учета штрафов:</b>\n${totalSeconds}\n\n<b>\u{1F534} Штрафы за невыполненные задания:</b>\n${totalPenalty}\n\n`
           : ''
-      }<b>\u{1F3C6} ИТОГО:</b>\n${totalResult}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
+      }\n\nШтрафы и бонусы за коды:</b>\n${totalCodePenaltyBonus}\n\n<b>\u{1F3C6} ИТОГО:</b>\n${totalResult}\n\n\n<b>\u{1F607} Самое легкое задание:</b>\n"${
         game.tasks[mostEasyTaskIndex]?.title
       }" - среднее время ${secondsToTime(
         taskAverageTimes[mostEasyTaskIndex]
