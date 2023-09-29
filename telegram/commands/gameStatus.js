@@ -87,13 +87,13 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
           ].join(`", "`)}"`
         : ''
     }${
-      findedCodes > 0
+      findedBonusCodes > 0
         ? `\nНайденые бонусные коды (${findedBonusCodes} шт.): "${gameTeam.findedBonusCodes[
             startedTasks - 1
           ].join(`", "`)}"`
         : ''
     }${
-      findedCodes > 0
+      findedPenaltyCodes > 0
         ? `\nНайденые штрафные коды (${findedPenaltyCodes} шт.): "${gameTeam.findedPenaltyCodes[
             startedTasks - 1
           ].join(`", "`)}"`
