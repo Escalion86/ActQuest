@@ -43,6 +43,14 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         gameTeam.findedCodes.length >= startedTasks
           ? gameTeam.findedCodes[startedTasks - 1].length
           : 0
+      const findedBonusCodes =
+        gameTeam.findedBonusCodes.length >= startedTasks
+          ? gameTeam.findedBonusCodes[startedTasks - 1].length
+          : 0
+      const findedPenaltyCodes =
+        gameTeam.findedPenaltyCodes.length >= startedTasks
+          ? gameTeam.findedPenaltyCodes[startedTasks - 1].length
+          : 0
       const taskDuration = game.taskDuration ?? 3600
 
       const isTeamFinished =
@@ -70,6 +78,18 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
               startedTasks - 1
             ].join(`", "`)}"`
           : ''
+      }${
+        findedCodes > 0
+          ? `\nНайденые бонусные коды (${findedBonusCodes} шт.): "${gameTeam.findedBonusCodes[
+              startedTasks - 1
+            ].join(`", "`)}"`
+          : ''
+      }${
+        findedCodes > 0
+          ? `\nНайденые штрафные коды (${findedPenaltyCodes} шт.): "${gameTeam.findedPenaltyCodes[
+              startedTasks - 1
+            ].join(`", "`)}"`
+          : ''
       }`
     })
     .join('\n\n')
@@ -87,7 +107,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
   // })
 
   return {
-    message: `<b>Состояние игры "${game.name}":</b>\n${text}`,
+    message: `<b>Состояние игры "${game.name}":</b>\n${text}\n\n${new Date()}`,
     buttons: [
       {
         text: '\u{1F504} Обновить статус игры',

@@ -258,7 +258,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     `<b>\u{2B50}РЕЗУЛЬТАТЫ:</b>\n<b>\u{231A}Без учета бонусов и штрафов:</b>\n${totalSeconds}`,
     game.taskFailurePenalty &&
       `<b>\u{1F534} Штрафы за невыполненные задания:</b>\n${
-        totalPenalty ?? 'штрафов нет!'
+        totalPenalty ?? 'отсутствуют'
       }`,
     `<b>\u{1F534} Штрафы и \u{1F7E2} бонусы за коды:</b>\n${totalCodePenaltyBonus}`,
     `<b>\u{1F3C6} ИТОГО:</b>\n${totalResult}\n`,
