@@ -30,6 +30,8 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     _id: { $in: teamsIds },
   })
 
+  console.log('teams :>> ', teams)
+
   const text = teams
     .map((team) => {
       const gameTeam = gameTeams.find(
@@ -40,15 +42,15 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         if (time) ++startedTasks
       })
       const findedCodes =
-        gameTeam.findedCodes.length >= startedTasks
+        gameTeam.findedCodes?.length >= startedTasks
           ? gameTeam.findedCodes[startedTasks - 1].length
           : 0
       const findedBonusCodes =
-        gameTeam.findedBonusCodes.length >= startedTasks
+        gameTeam.findedBonusCodes?.length >= startedTasks
           ? gameTeam.findedBonusCodes[startedTasks - 1].length
           : 0
       const findedPenaltyCodes =
-        gameTeam.findedPenaltyCodes.length >= startedTasks
+        gameTeam.findedPenaltyCodes?.length >= startedTasks
           ? gameTeam.findedPenaltyCodes[startedTasks - 1].length
           : 0
       const taskDuration = game.taskDuration ?? 3600
