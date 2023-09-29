@@ -364,7 +364,9 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
     return {
       images: game.tasks[taskNum]?.images,
-      message: `КОД "${code}" - ШТРАФНОЙ!\n\n${taskText({
+      message: `КОД "${code}" - ШТРАФНОЙ!\nОписание штрафа: "${
+        penaltyCode.description
+      }"\n\n${taskText({
         tasks: game.tasks,
         taskNum: taskNum,
         findedCodes: allFindedCodes,
