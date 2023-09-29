@@ -112,6 +112,8 @@ const sendMessage = async ({
       )
     }
 
+    console.log('keyboard :>> ', keyboard)
+
     return await postData(
       `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
       {

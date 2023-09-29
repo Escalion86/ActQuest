@@ -285,7 +285,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   const findedBonusCodesInTask = allFindedBonusCodes[taskNum] ?? []
   if (findedBonusCodesInTask.includes(code)) {
     return {
-      message: 'Вы уже нашли этот штрафной код. Хотите еще?',
+      message: 'Вы уже нашли этот бонусный код. Хотите еще?',
     }
   }
 
@@ -324,30 +324,21 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       findedBonusCodes: newAllFindedBonusCodes,
     })
 
-    const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
-    const numOfCodesToFindLeft = numOfCodesToFind - findedCodesInTask.length
+    // const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
+    // const numOfCodesToFindLeft = numOfCodesToFind - findedCodesInTask.length
 
     return {
       images: game.tasks[taskNum]?.images,
-      message: `КОД "${code}" - БОНУСНЫЙ!${
-        !isTaskComplite
-          ? `\nОсталось найти ${getNoun(
-              numOfCodesToFindLeft,
-              'код',
-              'кода',
-              'кодов'
-            )}\n\n${taskText({
-              tasks: game.tasks,
-              taskNum: taskNum,
-              findedCodes: allFindedCodes,
-              findedBonusCodes: newAllFindedBonusCodes,
-              findedPenaltyCodes: allFindedPenaltyCodes,
-              startTaskTime: startTime[taskNum],
-              cluesDuration,
-              taskDuration,
-            })}`
-          : ''
-      }`,
+      message: `КОД "${code}" - БОНУСНЫЙ!\n\n${taskText({
+        tasks: game.tasks,
+        taskNum: taskNum,
+        findedCodes: allFindedCodes,
+        findedBonusCodes: newAllFindedBonusCodes,
+        findedPenaltyCodes: allFindedPenaltyCodes,
+        startTaskTime: startTime[taskNum],
+        cluesDuration,
+        taskDuration,
+      })}`,
       buttons: buttonRefresh,
     }
   }
@@ -373,25 +364,18 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
     return {
       images: game.tasks[taskNum]?.images,
-      message: `КОД "${code}" - ШТРАФНОЙ!${
-        !isTaskComplite
-          ? `\nОсталось найти ${getNoun(
-              numOfCodesToFindLeft,
-              'код',
-              'кода',
-              'кодов'
-            )}\n\n${taskText({
-              tasks: game.tasks,
-              taskNum: taskNum,
-              findedCodes: allFindedCodes,
-              findedBonusCodes: allFindedBonusCodes,
-              findedPenaltyCodes: newAllFindedPenaltyCodes,
-              startTaskTime: startTime[taskNum],
-              cluesDuration,
-              taskDuration,
-            })}`
-          : ''
-      }`,
+      message: `КОД "${code}" - ШТРАФНОЙ!\nОписание штрафа: "${
+        penaltyCode.description
+      }"\n\n${taskText({
+        tasks: game.tasks,
+        taskNum: taskNum,
+        findedCodes: allFindedCodes,
+        findedBonusCodes: allFindedBonusCodes,
+        findedPenaltyCodes: newAllFindedPenaltyCodes,
+        startTaskTime: startTime[taskNum],
+        cluesDuration,
+        taskDuration,
+      })}`,
       buttons: buttonRefresh,
     }
   }
@@ -523,12 +507,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
       message: `КОД "${code}" ПРИНЯТ${
         !isTaskComplite
-          ? `\nОсталось найти ${getNoun(
-              numOfCodesToFindLeft,
-              'код',
-              'кода',
-              'кодов'
-            )}\n\n${taskText({
+          ? `\n\n${taskText({
               tasks: game.tasks,
               taskNum: newActiveNum,
               findedCodes: isTaskComplite ? [] : newAllFindedCodes,

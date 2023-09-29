@@ -13,6 +13,7 @@ const gamesTeamsSchema = {
   },
   findedCodes: [[String]],
   findedPenaltyCodes: [[String]],
+  findedBonusCodes: [[String]],
   startTime: [Date],
   endTime: [Date],
   timerId: String,

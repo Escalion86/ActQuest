@@ -3,7 +3,7 @@ import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
-import { ADMIN_TELEGRAM_ID } from 'telegram/constants'
+import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
 import formatGameName from 'telegram/func/formatGameName'
 import mainMenuButton from './menuItems/mainMenuButton'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
@@ -16,7 +16,7 @@ const archiveGames = async ({ telegramId, jsonCommand }) => {
     ? games.filter(
         (game) =>
           game.status === 'finished' &&
-          (!game.hidden || telegramId === ADMIN_TELEGRAM_ID)
+          (!game.hidden || ADMIN_TELEGRAM_IDS.includes(telegramId))
       )
     : undefined
   // Получаем список команд в которых присутствует пользователь
