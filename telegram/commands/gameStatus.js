@@ -5,6 +5,7 @@ import Teams from '@models/Teams'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import numberToEmojis from 'telegram/func/numberToEmojis'
+import secondsToTime from 'telegram/func/secondsToTime'
 
 const gameStatus = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -47,17 +48,18 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
   const textArray = sortedTeams.map(({ team, startedTasks, gameTeam }) => {
     const findedCodes =
       gameTeam.findedCodes?.length >= startedTasks
-        ? gameTeam.findedCodes[startedTasks - 1].length
+        ? gameTeam.findedCodes[startedTasks - 1]?.length ?? 0
         : 0
     const findedBonusCodes =
       gameTeam.findedBonusCodes?.length >= startedTasks
-        ? gameTeam.findedBonusCodes[startedTasks - 1].length
+        ? gameTeam.findedBonusCodes[startedTasks - 1]?.length ?? 0
         : 0
     const findedPenaltyCodes =
       gameTeam.findedPenaltyCodes?.length >= startedTasks
-        ? gameTeam.findedPenaltyCodes[startedTasks - 1].length
+        ? gameTeam.findedPenaltyCodes[startedTasks - 1]?.length ?? 0
         : 0
     const taskDuration = game.taskDuration ?? 3600
+    const cluesDuration = game.cluesDuration ?? 1200
 
     const isTeamFinished =
       gameTeam.endTime[game.tasks.length - 1] ||
@@ -65,20 +67,31 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         getSecondsBetween(gameTeam.startTime[game.tasks.length - 1]) >
           taskDuration)
 
-    if (isTeamFinished) return `"${team.name}" - \u{2705} завершили все задания`
+    if (isTeamFinished)
+      return `\u{2705} <b>"${team.name}"</b> - завершили все задания`
 
     // Проверяем, может задание выполнено и команда на перерыве
     if (gameTeam.endTime[startedTasks - 1]) {
       const nextTask = game.tasks[startedTasks]
-      return `<b>"${team.name}"</b> - перерыв, след. задание ${numberToEmojis(
-        startedTasks + 1
-      )} "${nextTask.title}"`
+      const taskNumber = numberToEmojis(startedTasks + 1)
+      return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${
+        team.name
+      }"</b> - перерыв, след. задание №${startedTasks + 1} "${nextTask.title}"`
     }
 
+    const taskNumber = numberToEmojis(startedTasks)
     const task = game.tasks[startedTasks - 1]
-    return `"${team.name}" - выполняют задание ${numberToEmojis(
-      startedTasks
-    )} "${task.title}".${
+    const taskSecondsLeft = Math.floor(
+      getSecondsBetween(gameTeam.startTime[startedTasks - 1])
+    )
+    const showCluesNum =
+      cluesDuration > 0 ? Math.floor(taskSecondsLeft / cluesDuration) : 0
+
+    return `\u{1F3C3}${taskNumber} <b>"${
+      team.name
+    }"</b> - выполняют задание №${startedTasks} "${task.title}"${
+      showCluesNum > 0 ? `, получена подсказка №${showCluesNum}` : ''
+    } (осталось ${secondsToTime(taskDuration - taskSecondsLeft)}).${
       findedCodes > 0
         ? `\nНайденые коды (${findedCodes} шт.): "${gameTeam.findedCodes[
             startedTasks - 1
