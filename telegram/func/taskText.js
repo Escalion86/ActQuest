@@ -47,7 +47,7 @@ const taskText = ({
       ? 'подсказки'
       : 'завершения задания'
   }</b>: ${
-    cluesDuration > 0
+    cluesDuration > 0 && showCluesNum < clues?.length
       ? secondsToTime(cluesDuration - (taskSecondsLeft % cluesDuration))
       : secondsToTime(taskDuration - taskSecondsLeft)
   }`}\n\n<b>Количество кодов на локации:</b> ${codes?.length ?? 0}${
