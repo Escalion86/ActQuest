@@ -45,18 +45,17 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
   ].sort((a, b) => b.startedTasks - a.startedTasks)
 
   const textArray = sortedTeams.map(({ team, startedTasks, gameTeam }) => {
-    console.log('gameTeam :>> ', gameTeam)
     const findedCodes =
       gameTeam.findedCodes?.length >= startedTasks
-        ? gameTeam.findedCodes[startedTasks - 1].length
+        ? gameTeam.findedCodes[startedTasks - 1]?.length ?? 0
         : 0
     const findedBonusCodes =
       gameTeam.findedBonusCodes?.length >= startedTasks
-        ? gameTeam.findedBonusCodes[startedTasks - 1].length
+        ? gameTeam.findedBonusCodes[startedTasks - 1]?.length ?? 0
         : 0
     const findedPenaltyCodes =
       gameTeam.findedPenaltyCodes?.length >= startedTasks
-        ? gameTeam.findedPenaltyCodes[startedTasks - 1].length
+        ? gameTeam.findedPenaltyCodes[startedTasks - 1]?.length ?? 0
         : 0
     const taskDuration = game.taskDuration ?? 3600
 
