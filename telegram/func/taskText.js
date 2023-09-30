@@ -44,7 +44,7 @@ const taskText = ({
 
   return `<b>Задание №${taskNum + 1}:</b>\n${task}${cluesText}${
     haveBonusCodes || havePenaltyCodes
-      ? `<b>Внимание:</b> На месте есть ${
+      ? `\n\n<b>Внимание:</b> На месте есть ${
           haveBonusCodes && havePenaltyCodes
             ? 'бонусные и штрафные'
             : haveBonusCodes
