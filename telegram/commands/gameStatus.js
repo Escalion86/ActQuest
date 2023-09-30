@@ -59,6 +59,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         ? gameTeam.findedPenaltyCodes[startedTasks - 1]?.length ?? 0
         : 0
     const taskDuration = game.taskDuration ?? 3600
+    const cluesDuration = game.cluesDuration ?? 1200
 
     const isTeamFinished =
       gameTeam.endTime[game.tasks.length - 1] ||
@@ -80,15 +81,17 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
 
     const taskNumber = numberToEmojis(startedTasks)
     const task = game.tasks[startedTasks - 1]
-    const timeLeft = secondsToTime(
-      taskDuration - getSecondsBetween(gameTeam.startTime[startedTasks - 1])
+    const taskSecondsLeft = Math.floor(
+      getSecondsBetween(gameTeam.startTime[startedTasks - 1])
     )
+    const showCluesNum =
+      cluesDuration > 0 ? Math.floor(taskSecondsLeft / cluesDuration) : 0
 
     return `\u{1F3C3}${taskNumber} <b>"${
       team.name
-    }"</b> - выполняют задание №${startedTasks} "${
-      task.title
-    }" (осталось ${timeLeft})).${
+    }"</b> - выполняют задание №${startedTasks} "${task.title}"${
+      showCluesNum > 0 ? `, получена подсказка №${showCluesNum}` : ''
+    } (осталось ${secondsToTime(taskDuration - taskSecondsLeft)})).${
       findedCodes > 0
         ? `\nНайденые коды (${findedCodes} шт.): "${gameTeam.findedCodes[
             startedTasks - 1
