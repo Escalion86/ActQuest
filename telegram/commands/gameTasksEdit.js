@@ -3,6 +3,7 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
+import numberToEmojis from 'telegram/func/numberToEmojis'
 
 const swapElements = (array, index1, index2) =>
   ([array[index1], array[index2]] = [array[index2], array[index1]])
@@ -113,9 +114,11 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
               typeof task?.bonusCodes === 'object' ? task.bonusCodes : []
             const penaltyCodes =
               typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
-            return `\u{1F4CC} ${index + 1}. "${task.title}".\nКоды (${
-              codes.length ?? 0
-            } шт): ${codes.length > 0 ? codes.join(', ') : '[не заданы]'}${
+            return `\u{1F4CC} ${numberToEmojis(index + 1)} "${
+              task.title
+            }".\nКоды (${codes.length ?? 0} шт): ${
+              codes.length > 0 ? codes.join(', ') : '[не заданы]'
+            }${
               bonusCodes.length > 0
                 ? `\nБонусные коды (${bonusCodes.length} шт): ${bonusCodes
                     .map(({ code }) => code)

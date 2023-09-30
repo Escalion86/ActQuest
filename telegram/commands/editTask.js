@@ -75,6 +75,10 @@ const editTask = async ({ telegramId, jsonCommand }) => {
         : ''
     }\n\n<b>Количество кодов для выполнения</b>: ${
       task.numCodesToCompliteTask ?? 'Все'
+    }${
+      task.postMessage
+        ? `\n\n<b>Сообщение после задания</b>:\n"${task.postMessage}"`
+        : ''
     }`,
     buttons: [
       {
@@ -160,6 +164,14 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           i: jsonCommand.i,
         },
         text: '\u{270F} Кол-во кодов для выполнения',
+      },
+      {
+        c: {
+          c: 'setTaskPostMessage',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+        },
+        text: '\u{270F} Сообщение после задания',
       },
       {
         c: {

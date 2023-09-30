@@ -77,6 +77,10 @@ const gamesSchema = {
           type: Number,
           default: null,
         },
+        postMessage: {
+          type: String,
+          default: '',
+        },
       },
     ],
     default: [],
@@ -113,6 +117,14 @@ const gamesSchema = {
   individualStart: {
     type: Boolean,
     default: false,
+  },
+  startingPlace: {
+    type: String,
+    default: '',
+  },
+  finishingPlace: {
+    type: String,
+    default: '',
   },
   result: {
     type: {

@@ -74,7 +74,11 @@ const gameStop = async ({ telegramId, jsonCommand }) => {
       const mainMenuButtons = await mainMenu({ telegramId }).buttons
       await sendMessage({
         chat_id: telegramId,
-        text: '\u{26D4}\u{26D4}\u{26D4} СТОП ИГРА \u{26D4}\u{26D4}\u{26D4}\n\n\nКоды больше не принимаются. Просим все команды прибыть на точку сбора!',
+        text: `\u{26D4}\u{26D4}\u{26D4} СТОП ИГРА \u{26D4}\u{26D4}\u{26D4}\n\n\nКоды больше не принимаются. ${
+          game.finishingPlace
+            ? `Просим все команды прибыть на точку сбора: ${game.finishingPlace}`
+            : ''
+        }`,
         keyboard: keyboardFormer(mainMenuButtons),
       })
     })

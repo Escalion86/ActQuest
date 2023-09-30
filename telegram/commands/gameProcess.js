@@ -155,7 +155,11 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     const secondsAfterEndTime = getSecondsBetween(endTime[activeNum])
     if (secondsAfterEndTime < breakDuration)
       return {
-        message: `<b>ПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
+        message: `${
+          game.tasks[taskNum].postMessage
+            ? `<b>Сообщение от прошлого задания:</b>\n"${game.tasks[activeNum].postMessage}"\n\n`
+            : ''
+        }<b>ПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           breakDuration - secondsAfterEndTime
         )}`}`,
         buttons: buttonRefresh,
@@ -214,7 +218,11 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       //   // activeNum: activeNum + 1,
       // })
       return {
-        message: `<b>Время вышло\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
+        message: `${
+          game.tasks[taskNum].postMessage
+            ? `<b>Сообщение от прошлого задания:</b>\n"${game.tasks[activeNum].postMessage}"\n\n`
+            : ''
+        }<b>Время вышло\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           taskDuration + breakDuration - secondsLeftAfterStartTask
         )}`}`,
         buttons: buttonRefresh,
@@ -324,9 +332,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       findedBonusCodes: newAllFindedBonusCodes,
     })
 
-    // const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
-    // const numOfCodesToFindLeft = numOfCodesToFind - findedCodesInTask.length
-
     return {
       images: game.tasks[taskNum]?.images,
       message: `КОД "${code}" - БОНУСНЫЙ!\n\n${taskText({
@@ -358,9 +363,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedPenaltyCodes: newAllFindedPenaltyCodes,
     })
-
-    const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
-    const numOfCodesToFindLeft = numOfCodesToFind - findedCodesInTask.length
 
     return {
       images: game.tasks[taskNum]?.images,
@@ -423,7 +425,17 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
           usersTelegramIdsOfTeam.map(async (telegramId) => {
             await sendMessage({
               chat_id: telegramId,
-              text: 'Поздравляем Вы завершили все задания! Игра окончена. Вы можете выдвигаться на точку сбора',
+              text: `Поздравляем Вы завершили все задания! Игра окончена. ${
+                game.finishingPlace
+                  ? `Вы можете выдвигаться на точку сбора: ${game.finishingPlace}`
+                  : ''
+              }${
+                game.tasks[game.tasks.length - 1].postMessage
+                  ? `<b>Сообщение от прошлого задания:</b>\n"${
+                      game.tasks[game.tasks.length - 1].postMessage
+                    }"\n\n`
+                  : ''
+              }`,
               keyboard,
             })
           })
@@ -453,11 +465,15 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
             usersTelegramIdsOfTeam.map(async (telegramId) => {
               await sendMessage({
                 chat_id: telegramId,
-                text: `<b>КОД "${code}" ПРИНЯТ\nЗадание выполнено!\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
+                text: `<b>КОД "${code}" ПРИНЯТ\nЗадание выполнено!${
+                  game.tasks[taskNum].postMessage
+                    ? `\n\n<b>Сообщение от прошлого задания:</b>\n"${game.tasks[taskNum].postMessage}"`
+                    : ''
+                }\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
                   breakDuration
                 )}`}`,
                 keyboard,
-                images: game.tasks[taskNum].images,
+                // images: game.tasks[taskNum].images,
               })
             })
           )
