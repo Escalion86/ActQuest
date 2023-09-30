@@ -35,20 +35,17 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
     const teamUser = teamsUsers.find((teamUser) => {
       return teamUser.userTelegramId === user.telegramId
     })
-    return { ...user, role: teamUser?.role, teamUserId: teamUser._id }
+    return { name: user.name, role: teamUser?.role, teamUserId: teamUser._id }
   })
   usersWithRoleInTeam.sort((user) => (user?.role === 'capitan' ? -1 : 1))
 
-  console.log('usersWithRoleInTeam :>> ', usersWithRoleInTeam)
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(
     usersWithRoleInTeam,
     page,
-    (user, number) => ({
-      text: `${number}. ${user.name}${
-        user.role === 'capitan' ? ' (капитан)' : ''
-      }`,
-      c: { c: 'teamUserAdmin', teamUserId: user.teamUserId },
+    ({ name, role, teamUserId }, number) => ({
+      text: `${number}. ${name}${role === 'capitan' ? ' (капитан)' : ''}`,
+      c: { c: 'teamUserAdmin', teamUserId: teamUserId },
     })
   )
 
