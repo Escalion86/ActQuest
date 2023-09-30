@@ -94,7 +94,9 @@ const game = async ({ telegramId, jsonCommand }) => {
         } ${teamsOfUserInAGame.map((team) => `"${team.name}"`).join(', ')}`
       : ''
   }${
-    game?.description ? `\n\n<b>Описание</b>:\n"${game?.description}"` : ''
+    game?.startingPlace
+      ? `\n\n<b>Время и место сбора</b>: ${game?.startingPlace}`
+      : ''
   }\n\n<b>Количество заданий</b>: ${
     game?.tasks?.length ?? 0
   }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
