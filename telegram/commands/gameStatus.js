@@ -65,20 +65,23 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         getSecondsBetween(gameTeam.startTime[game.tasks.length - 1]) >
           taskDuration)
 
-    if (isTeamFinished) return `"${team.name}" - \u{2705} завершили все задания`
+    if (isTeamFinished)
+      return `\u{2705} <b>"${team.name}"</b> - завершили все задания`
 
     // Проверяем, может задание выполнено и команда на перерыве
     if (gameTeam.endTime[startedTasks - 1]) {
       const nextTask = game.tasks[startedTasks]
-      return `<b>"${team.name}"</b> - перерыв, след. задание ${numberToEmojis(
-        startedTasks + 1
-      )} "${nextTask.title}"`
+      const taskNumber = numberToEmojis(startedTasks + 1)
+      return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${
+        team.name
+      }"</b> - перерыв, след. задание №${startedTasks + 1} "${nextTask.title}"`
     }
 
+    const taskNumber = numberToEmojis(startedTasks)
     const task = game.tasks[startedTasks - 1]
-    return `"${team.name}" - выполняют задание ${numberToEmojis(
-      startedTasks
-    )} "${task.title}".${
+    return `\u{1F3C3}${taskNumber} <b>"${
+      team.name
+    }"</b> - выполняют задание №${startedTasks} "${task.title}".${
       findedCodes > 0
         ? `\nНайденые коды (${findedCodes} шт.): "${gameTeam.findedCodes[
             startedTasks - 1
