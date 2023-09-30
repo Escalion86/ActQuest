@@ -81,7 +81,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     const taskNumber = numberToEmojis(startedTasks)
     const task = game.tasks[startedTasks - 1]
     const timeLeft = secondsToTime(
-      getSecondsBetween(gameTeam.startTime[startedTasks - 1])
+      taskDuration - getSecondsBetween(gameTeam.startTime[startedTasks - 1])
     )
 
     return `\u{1F3C3}${taskNumber} <b>"${
