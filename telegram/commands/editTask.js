@@ -36,7 +36,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     typeof clues === 'object'
       ? clues
           .map(
-            ({ clue, images, index }) =>
+            ({ clue, images }, index) =>
               `\n\n<b>Подсказка №${index + 1}</b>:\n"${clue}"`
           )
           .join('')
