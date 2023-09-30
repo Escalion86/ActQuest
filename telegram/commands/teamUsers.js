@@ -33,6 +33,7 @@ const teamUsers = async ({ telegramId, jsonCommand }) => {
   const users = await Users.find({
     telegramId: { $in: usersTelegramIds },
   })
+
   const buttons = users.map((user) => {
     const teamUser = teamsUsers.find((teamUser) => {
       return teamUser.userTelegramId === user.telegramId
