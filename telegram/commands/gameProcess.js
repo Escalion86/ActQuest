@@ -11,6 +11,15 @@ import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
 import secondsToTime from 'telegram/func/secondsToTime'
+import padNum from 'telegram/func/padNum'
+import moment from 'moment-timezone'
+
+const timeToCodeStr = () => {
+  var d = moment.tz(new Date(), 'Asia/Krasnoyarsk')
+  var obj = d.toObject()
+  const { minutes, hours } = obj
+  return padNum(hours, 2) + padNum(minutes, 2)
+}
 
 const endTimeSet = (endTime, taskNum, gameTasksLength) => {
   const newDate = new Date()
@@ -130,8 +139,17 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   // Если больше заданий нет (все выолнены)
   if (taskNum > game.tasks.length - 1) {
     return {
-      message:
-        'Поздравляем Вы завершили все задания! Вы можете выдвигаться на точку сбора',
+      message: `Поздравляем Вы завершили все задания! Игра окончена. ${
+        game.finishingPlace
+          ? `Вы можете выдвигаться на точку сбора: ${game.finishingPlace}`
+          : ''
+      }${
+        game.tasks[game.tasks.length - 1].postMessage
+          ? `\n\n<b>Сообщение от прошлого задания:</b>\n"${
+              game.tasks[game.tasks.length - 1].postMessage
+            }"`
+          : ''
+      }`,
       nextCommand: 'mainMenu',
     }
   }
@@ -382,7 +400,10 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  if (codes.includes(code)) {
+  if (
+    (codes[0] !== '[time]' && codes.includes(code)) ||
+    (codes[0] === '[time]' && timeToCodeStr() === code)
+  ) {
     // Если код введен верно и ранее его не вводили
     const newAllFindedCodes = [...allFindedCodes]
     const newFindedCodesInTask = [...findedCodesInTask, code]
@@ -431,9 +452,9 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
                   : ''
               }${
                 game.tasks[game.tasks.length - 1].postMessage
-                  ? `<b>Сообщение от прошлого задания:</b>\n"${
+                  ? `\n\n<b>Сообщение от прошлого задания:</b>\n"${
                       game.tasks[game.tasks.length - 1].postMessage
-                    }"\n\n`
+                    }"`
                   : ''
               }`,
               keyboard,

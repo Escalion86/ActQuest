@@ -3,7 +3,7 @@ import { DAYS_OF_WEEK, MONTHS, MONTHS_FULL } from './constants'
 import padNum from 'telegram/func/padNum'
 
 const dateToDateTimeStr = (
-  dateTime,
+  dateTime = new Date(),
   showDayOfWeek = true,
   fullMonth,
   showYear = true,

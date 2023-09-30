@@ -9,6 +9,7 @@ import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 import mainMenu from './mainMenu'
 import keyboardFormer from 'telegram/func/keyboardFormer'
+import mainMenuButton from './menuItems/mainMenuButton'
 
 const gameStop = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -69,6 +70,8 @@ const gameStop = async ({ telegramId, jsonCommand }) => {
     { upsert: true }
   )
 
+  const keyboard = keyboardFormer([mainMenuButton])
+
   await Promise.all(
     allUsersTelegramIds.map(async (telegramId) => {
       const mainMenuButtons = await mainMenu({ telegramId }).buttons
@@ -79,7 +82,7 @@ const gameStop = async ({ telegramId, jsonCommand }) => {
             ? `Просим все команды прибыть на точку сбора: ${game.finishingPlace}`
             : ''
         }`,
-        keyboard: keyboardFormer(mainMenuButtons),
+        keyboard,
       })
     })
   )
