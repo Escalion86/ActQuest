@@ -1,4 +1,8 @@
 const numberToEmojis = (number) => {
+  if (!number) return '\u{0030}\u{20E3}'
+
+  if (number == 10) return `\u{1F51F}`
+
   var digits = number.toString().split('')
   const emojis = digits.map((digit) => {
     switch (digit) {
