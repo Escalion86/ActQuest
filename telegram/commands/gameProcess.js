@@ -139,8 +139,17 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   // Если больше заданий нет (все выолнены)
   if (taskNum > game.tasks.length - 1) {
     return {
-      message:
-        'Поздравляем Вы завершили все задания! Вы можете выдвигаться на точку сбора',
+      message: `Поздравляем Вы завершили все задания! Игра окончена. ${
+        game.finishingPlace
+          ? `Вы можете выдвигаться на точку сбора: ${game.finishingPlace}`
+          : ''
+      }${
+        game.tasks[game.tasks.length - 1].postMessage
+          ? `\n\n<b>Сообщение от прошлого задания:</b>\n"${
+              game.tasks[game.tasks.length - 1].postMessage
+            }"`
+          : ''
+      }`,
       nextCommand: 'mainMenu',
     }
   }
@@ -443,9 +452,9 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
                   : ''
               }${
                 game.tasks[game.tasks.length - 1].postMessage
-                  ? `<b>Сообщение от прошлого задания:</b>\n"${
+                  ? `\n\n<b>Сообщение от прошлого задания:</b>\n"${
                       game.tasks[game.tasks.length - 1].postMessage
-                    }"\n\n`
+                    }"`
                   : ''
               }`,
               keyboard,
