@@ -39,6 +39,7 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
   })
   usersWithRoleInTeam.sort((user) => (user?.role === 'capitan' ? -1 : 1))
 
+  console.log('usersWithRoleInTeam :>> ', usersWithRoleInTeam)
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(
     usersWithRoleInTeam,
