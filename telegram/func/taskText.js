@@ -40,16 +40,14 @@ const taskText = ({
         cluesText += `\n\n<b>Подсказка №${i + 1}</b>:\n${clues[i].clue}`
     }
 
-  return `<b>Задание №${
-    taskNum + 1
-  }:</b>\n${task}${cluesText}${`\n\n<b>Время до ${
+  return `<b>Задание №${taskNum + 1}:</b>\n${task}${cluesText}${`\n\n${
     cluesDuration > 0 && showCluesNum < clues?.length
-      ? 'подсказки'
-      : 'завершения задания'
-  }</b>: ${
-    cluesDuration > 0 && showCluesNum < clues?.length
-      ? secondsToTime(cluesDuration - (taskSecondsLeft % cluesDuration))
-      : secondsToTime(taskDuration - taskSecondsLeft)
+      ? `<b>Время до подсказки</b>: ${secondsToTime(
+          cluesDuration - (taskSecondsLeft % cluesDuration)
+        )}`
+      : `<b>Время до завершения задания</b>: ${secondsToTime(
+          taskDuration - taskSecondsLeft
+        )}`
   }`}\n\n<b>Количество кодов на локации:</b> ${codes?.length ?? 0}${
     numCodesToCompliteTask
       ? `\n<b>Количество кодов необходимое для выполнения задания:</b> ${numCodesToCompliteTask}`

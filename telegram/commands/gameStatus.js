@@ -91,7 +91,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       team.name
     }"</b> - выполняют задание №${startedTasks} "${task.title}"${
       showCluesNum > 0 ? `, получена подсказка №${showCluesNum}` : ''
-    } (осталось ${secondsToTime(taskDuration - taskSecondsLeft)})).${
+    } (осталось ${secondsToTime(taskDuration - taskSecondsLeft)}).${
       findedCodes > 0
         ? `\nНайденые коды (${findedCodes} шт.): "${gameTeam.findedCodes[
             startedTasks - 1
