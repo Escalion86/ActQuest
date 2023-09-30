@@ -12,6 +12,7 @@ import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
 import secondsToTime from 'telegram/func/secondsToTime'
 import padNum from 'telegram/func/padNum'
+import moment from 'moment-timezone'
 
 const timeToCodeStr = () => {
   var d = moment.tz(new Date(), 'Asia/Krasnoyarsk')
@@ -390,6 +391,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
+  console.log('timeToCodeStr() :>> ', timeToCodeStr())
   if (
     (codes[0] !== 'time' && codes.includes(code)) ||
     (codes[0] === 'time' && timeToCodeStr() === code)
