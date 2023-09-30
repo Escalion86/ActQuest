@@ -5,6 +5,7 @@ import Teams from '@models/Teams'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import numberToEmojis from 'telegram/func/numberToEmojis'
+import secondsToTime from 'telegram/func/secondsToTime'
 
 const gameStatus = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -79,9 +80,15 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
 
     const taskNumber = numberToEmojis(startedTasks)
     const task = game.tasks[startedTasks - 1]
+    const timeLeft = secondsToTime(
+      getSecondsBetween(gameTeam.startTime[startedTasks - 1])
+    )
+
     return `\u{1F3C3}${taskNumber} <b>"${
       team.name
-    }"</b> - выполняют задание №${startedTasks} "${task.title}".${
+    }"</b> - выполняют задание №${startedTasks} "${
+      task.title
+    }" (осталось ${timeLeft})).${
       findedCodes > 0
         ? `\nНайденые коды (${findedCodes} шт.): "${gameTeam.findedCodes[
             startedTasks - 1
