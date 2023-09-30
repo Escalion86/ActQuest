@@ -13,7 +13,6 @@ const taskText = ({
   cluesDuration = 1200,
   taskDuration = 3600,
 }) => {
-  console.log('taskText=>startTaskTime :>> ', startTaskTime)
   const {
     task,
     codes,
@@ -23,6 +22,9 @@ const taskText = ({
     numCodesToCompliteTask,
   } = tasks[taskNum]
   const taskSecondsLeft = Math.floor(getSecondsBetween(startTaskTime))
+
+  const haveBonusCodes = bonusCodes?.length > 0
+  const havePenaltyCodes = penaltyCodes?.length > 0
 
   const findedCodesInTask =
     typeof findedCodes === 'object' && findedCodes[taskNum]
@@ -40,7 +42,17 @@ const taskText = ({
         cluesText += `\n\n<b>Подсказка №${i + 1}</b>:\n${clues[i].clue}`
     }
 
-  return `<b>Задание №${taskNum + 1}:</b>\n${task}${cluesText}${`\n\n${
+  return `<b>Задание №${taskNum + 1}:</b>\n${task}${cluesText}${
+    haveBonusCodes || havePenaltyCodes
+      ? `<b>Внимание:</b> На месте есть ${
+          haveBonusCodes && havePenaltyCodes
+            ? 'бонусные и штрафные'
+            : haveBonusCodes
+            ? 'бонусные'
+            : 'штрафные'
+        } коды!`
+      : ''
+  }${`\n\n${
     cluesDuration > 0 && showCluesNum < clues?.length
       ? `<b>Время до подсказки</b>: ${secondsToTime(
           cluesDuration - (taskSecondsLeft % cluesDuration)
