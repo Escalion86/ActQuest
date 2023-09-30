@@ -11,6 +11,14 @@ import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
 import secondsToTime from 'telegram/func/secondsToTime'
+import padNum from 'telegram/func/padNum'
+
+const timeToCodeStr = () => {
+  var d = moment.tz(new Date(), 'Asia/Krasnoyarsk')
+  var obj = d.toObject()
+  const { minutes, hours } = obj
+  return padNum(hours, 2) + padNum(minutes, 2)
+}
 
 const endTimeSet = (endTime, taskNum, gameTasksLength) => {
   const newDate = new Date()
@@ -382,7 +390,10 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  if (codes.includes(code)) {
+  if (
+    (codes[0] !== 'time' && codes.includes(code)) ||
+    (codes[0] === 'time' && timeToCodeStr() === code)
+  ) {
     // Если код введен верно и ранее его не вводили
     const newAllFindedCodes = [...allFindedCodes]
     const newFindedCodesInTask = [...findedCodesInTask, code]
