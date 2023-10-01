@@ -1,6 +1,22 @@
 import { postData } from '@helpers/CRUD'
 import { DEV_TELEGRAM_ID } from './constants'
 
+const sendErrorToDev = (chat_id, type) => async (error) =>
+  await postData(
+    `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+    {
+      chat_id: DEV_TELEGRAM_ID,
+      text: `ОШИБКА!\ntype=${type}\nchat_id=${chat_id}\n${
+        JSON.parse(error.message).description
+      }`,
+    },
+    null,
+    null,
+    true,
+    null,
+    true
+  )
+
 const sendMessage = async ({
   chat_id,
   text,
@@ -27,7 +43,7 @@ const sendMessage = async ({
         // null,
         null,
         // (data) => console.log('post success', data),
-        null,
+        sendErrorToDev(chat_id, 'sendPhoto'),
         // (data) => console.log('post error', data),
         true,
         null,
@@ -48,7 +64,7 @@ const sendMessage = async ({
         // null,
         null,
         // (data) => console.log('post success', data),
-        null,
+        sendErrorToDev(chat_id, 'editMessageReplyMarkup'),
         // (data) => console.log('post error', data),
         true,
         null,
@@ -106,21 +122,7 @@ const sendMessage = async ({
         null,
         // (data) => console.log('post success', data),
         // null,
-        (data) =>
-          postData(
-            `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
-            {
-              chat_id: DEV_TELEGRAM_ID,
-              text: `ОШИБКА!\nchat_id=${chat_id}\n${
-                JSON.parse(data.message).description
-              }`,
-            },
-            null,
-            null,
-            true,
-            null,
-            true
-          ),
+        sendErrorToDev(chat_id, 'editMessageText'),
         true,
         null,
         true
@@ -144,7 +146,7 @@ const sendMessage = async ({
         ...props,
       },
       null,
-      null,
+      sendErrorToDev(chat_id, 'sendMessage'),
       // (data) => console.log('post success', data),
       // (data) => console.log('post error', data),
       true,
