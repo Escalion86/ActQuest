@@ -28,7 +28,7 @@ const setBonusCodeCode = async ({ telegramId, jsonCommand }) => {
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = game.tasks
   const bonusCodes = [...tasks[jsonCommand.i].bonusCodes]
-  bonusCodes[jsonCommand.j].code = jsonCommand.message
+  bonusCodes[jsonCommand.j].code = jsonCommand.message.trim().toLowerCase()
   tasks[jsonCommand.i].bonusCodes = bonusCodes
 
   await Games.findByIdAndUpdate(jsonCommand.gameId, {

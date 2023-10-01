@@ -12,10 +12,12 @@ const gamesSchema = {
     type: String,
     required: [true, 'Введите название игры'],
     default: '',
+    trim: true,
   },
   description: {
     type: String,
     default: '',
+    trim: true,
   },
   dateStart: {
     type: Date,
@@ -40,6 +42,7 @@ const gamesSchema = {
           type: String,
           required: [true, 'Введите название уровня'],
           default: '',
+          trim: true,
         },
         task: {
           type: String,
@@ -62,15 +65,27 @@ const gamesSchema = {
           default: [],
         },
         codes: {
-          type: [String],
+          type: [{ type: String, trim: true }],
           default: [],
         },
         penaltyCodes: {
-          type: [{ code: String, penalty: Number, description: String }],
+          type: [
+            {
+              code: { type: String, trim: true },
+              penalty: Number,
+              description: { type: String, trim: true },
+            },
+          ],
           default: [],
         },
         bonusCodes: {
-          type: [{ code: String, bonus: Number, description: String }],
+          type: [
+            {
+              code: { type: String, trim: true },
+              bonus: Number,
+              description: { type: String, trim: true },
+            },
+          ],
           default: [],
         },
         numCodesToCompliteTask: {
@@ -80,6 +95,7 @@ const gamesSchema = {
         postMessage: {
           type: String,
           default: '',
+          trim: true,
         },
       },
     ],

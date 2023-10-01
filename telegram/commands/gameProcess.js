@@ -283,7 +283,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   } = game.tasks[taskNum]
 
   const code = jsonCommand.message
-    ? jsonCommand.message.toLowerCase()
+    ? jsonCommand.message.trim().toLowerCase()
     : undefined
   if (!code) {
     console.log('!code => startTime :>> ', startTime)

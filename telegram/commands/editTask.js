@@ -21,8 +21,6 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
     }
 
-  console.log('task :>> ', task)
-
   const codes =
     typeof task?.codes === 'object'
       ? task.codes.filter((code) => code !== '')
