@@ -32,85 +32,120 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     _id: { $in: teamsIds },
   })
 
+  const taskDuration = game.taskDuration ?? 3600
+  const cluesDuration = game.cluesDuration ?? 1200
+
   const sortedTeams = [
     ...teams.map((team) => {
       const gameTeam = gameTeams.find(
         (gameTeam) => gameTeam.teamId === String(team._id)
       )
+      const {
+        activeNum,
+        findedCodes,
+        startTime,
+        findedBonusCodes,
+        findedPenaltyCodes,
+      } = gameTeam
+      const taskIndex = activeNum - 1
+
       var startedTasks = 0
-      gameTeam.startTime.forEach((time) => {
+      startTime.forEach((time) => {
         if (time) ++startedTasks
       })
-      return { team, startedTasks, gameTeam }
+      const findedCodesCount =
+        findedCodes?.length >= startedTasks
+          ? findedCodes[taskIndex]?.length ?? 0
+          : 0
+      const findedBonusCodesCount =
+        findedBonusCodes?.length >= startedTasks
+          ? findedBonusCodes[taskIndex]?.length ?? 0
+          : 0
+      const findedPenaltyCodesCount =
+        findedPenaltyCodes?.length >= startedTasks
+          ? findedPenaltyCodes[taskIndex]?.length ?? 0
+          : 0
+      const allFindedCodesCount =
+        findedCodesCount + findedBonusCodesCount + findedPenaltyCodesCount
+
+      return {
+        team,
+        startedTasks,
+        gameTeam,
+        allFindedCodesCount,
+        findedCodesCount,
+        findedBonusCodesCount,
+        findedPenaltyCodesCount,
+      }
     }),
-  ].sort((a, b) => b.startedTasks - a.startedTasks)
+  ].sort((a, b) =>
+    b.startedTasks - a.startedTasks === 0
+      ? b.findedCodesCount - a.findedCodesCount
+      : b.startedTasks - a.startedTasks
+  )
 
-  const textArray = sortedTeams.map(({ team, startedTasks, gameTeam }) => {
-    const findedCodes =
-      gameTeam.findedCodes?.length >= startedTasks
-        ? gameTeam.findedCodes[startedTasks - 1]?.length ?? 0
-        : 0
-    const findedBonusCodes =
-      gameTeam.findedBonusCodes?.length >= startedTasks
-        ? gameTeam.findedBonusCodes[startedTasks - 1]?.length ?? 0
-        : 0
-    const findedPenaltyCodes =
-      gameTeam.findedPenaltyCodes?.length >= startedTasks
-        ? gameTeam.findedPenaltyCodes[startedTasks - 1]?.length ?? 0
-        : 0
-    const taskDuration = game.taskDuration ?? 3600
-    const cluesDuration = game.cluesDuration ?? 1200
+  const textArray = sortedTeams.map(
+    ({
+      team,
+      startedTasks,
+      gameTeam,
+      findedCodesCount,
+      findedBonusCodesCount,
+      findedPenaltyCodesCount,
+    }) => {
+      const isTeamFinished =
+        gameTeam.endTime[game.tasks.length - 1] ||
+        (gameTeam.startTime[game.tasks.length - 1] &&
+          getSecondsBetween(gameTeam.startTime[game.tasks.length - 1]) >
+            taskDuration)
 
-    const isTeamFinished =
-      gameTeam.endTime[game.tasks.length - 1] ||
-      (gameTeam.startTime[game.tasks.length - 1] &&
-        getSecondsBetween(gameTeam.startTime[game.tasks.length - 1]) >
-          taskDuration)
+      if (isTeamFinished)
+        return `\u{2705} <b>"${team.name}"</b> - завершили все задания`
 
-    if (isTeamFinished)
-      return `\u{2705} <b>"${team.name}"</b> - завершили все задания`
+      // Проверяем, может задание выполнено и команда на перерыве
+      if (gameTeam.endTime[startedTasks - 1]) {
+        const nextTask = game.tasks[startedTasks]
+        const taskNumber = numberToEmojis(startedTasks + 1)
+        return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${
+          team.name
+        }"</b> - перерыв, след. задание №${startedTasks + 1} "${
+          nextTask.title
+        }"`
+      }
 
-    // Проверяем, может задание выполнено и команда на перерыве
-    if (gameTeam.endTime[startedTasks - 1]) {
-      const nextTask = game.tasks[startedTasks]
-      const taskNumber = numberToEmojis(startedTasks + 1)
-      return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${
+      const taskNumber = numberToEmojis(startedTasks)
+      const task = game.tasks[startedTasks - 1]
+      const taskSecondsLeft = Math.floor(
+        getSecondsBetween(gameTeam.startTime[startedTasks - 1])
+      )
+      const showCluesNum =
+        cluesDuration > 0 ? Math.floor(taskSecondsLeft / cluesDuration) : 0
+
+      return `\u{1F3C3}${taskNumber} <b>"${
         team.name
-      }"</b> - перерыв, след. задание №${startedTasks + 1} "${nextTask.title}"`
+      }"</b> - выполняют задание №${startedTasks} "${task.title}"${
+        showCluesNum > 0 ? `, получена подсказка №${showCluesNum}` : ''
+      } (осталось ${secondsToTime(taskDuration - taskSecondsLeft)}).${
+        findedCodesCount > 0
+          ? `\nНайденые коды (${findedCodesCount} шт.): "${gameTeam.findedCodes[
+              startedTasks - 1
+            ].join(`", "`)}"`
+          : ''
+      }${
+        findedBonusCodesCount > 0
+          ? `\nНайденые бонусные коды (${findedBonusCodesCount} шт.): "${gameTeam.findedBonusCodes[
+              startedTasks - 1
+            ].join(`", "`)}"`
+          : ''
+      }${
+        findedPenaltyCodesCount > 0
+          ? `\nНайденые штрафные коды (${findedPenaltyCodesCount} шт.): "${gameTeam.findedPenaltyCodes[
+              startedTasks - 1
+            ].join(`", "`)}"`
+          : ''
+      }`
     }
-
-    const taskNumber = numberToEmojis(startedTasks)
-    const task = game.tasks[startedTasks - 1]
-    const taskSecondsLeft = Math.floor(
-      getSecondsBetween(gameTeam.startTime[startedTasks - 1])
-    )
-    const showCluesNum =
-      cluesDuration > 0 ? Math.floor(taskSecondsLeft / cluesDuration) : 0
-
-    return `\u{1F3C3}${taskNumber} <b>"${
-      team.name
-    }"</b> - выполняют задание №${startedTasks} "${task.title}"${
-      showCluesNum > 0 ? `, получена подсказка №${showCluesNum}` : ''
-    } (осталось ${secondsToTime(taskDuration - taskSecondsLeft)}).${
-      findedCodes > 0
-        ? `\nНайденые коды (${findedCodes} шт.): "${gameTeam.findedCodes[
-            startedTasks - 1
-          ].join(`", "`)}"`
-        : ''
-    }${
-      findedBonusCodes > 0
-        ? `\nНайденые бонусные коды (${findedBonusCodes} шт.): "${gameTeam.findedBonusCodes[
-            startedTasks - 1
-          ].join(`", "`)}"`
-        : ''
-    }${
-      findedPenaltyCodes > 0
-        ? `\nНайденые штрафные коды (${findedPenaltyCodes} шт.): "${gameTeam.findedPenaltyCodes[
-            startedTasks - 1
-          ].join(`", "`)}"`
-        : ''
-    }`
-  })
+  )
 
   const text = textArray.join('\n\n')
 
