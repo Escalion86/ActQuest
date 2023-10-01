@@ -111,7 +111,12 @@ const sendMessage = async ({
             {
               chat_id,
               message: `ОШИБКА! ${JSON.stringify(data)}`,
-            }
+            },
+            null,
+            null,
+            true,
+            null,
+            true
           )
         },
         true,
