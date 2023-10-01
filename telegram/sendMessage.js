@@ -104,14 +104,16 @@ const sendMessage = async ({
         null,
         // (data) => console.log('post success', data),
         // null,
-        (data) =>
+        (data) => {
+          console.log('!! :>> ')
           postData(
             `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
             {
               chat_id,
               text: `ОШИБКА! ${JSON.stringify(data)}`,
             }
-          ),
+          )
+        },
         true,
         null,
         true
