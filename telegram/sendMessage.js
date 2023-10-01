@@ -1,4 +1,5 @@
 import { postData } from '@helpers/CRUD'
+import { DEV_TELEGRAM_ID } from './constants'
 
 const sendMessage = async ({
   chat_id,
@@ -82,6 +83,7 @@ const sendMessage = async ({
     //   // }
     // }
   }
+
   if (text) {
     if (callback_query?.message?.message_id) {
       return await postData(
@@ -104,21 +106,21 @@ const sendMessage = async ({
         null,
         // (data) => console.log('post success', data),
         // null,
-        (data) => {
-          console.log('data :>> ', data)
+        (data) =>
           postData(
             `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
             {
-              chat_id,
-              text: `ОШИБКА! ${JSON.parse(data.message).description}`,
+              DEV_TELEGRAM_ID,
+              text: `ОШИБКА!\nchat_id=${chat_id}\n${
+                JSON.parse(data.message).description
+              }`,
             },
             null,
             null,
             true,
             null,
             true
-          )
-        },
+          ),
         true,
         null,
         true
