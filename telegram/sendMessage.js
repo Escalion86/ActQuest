@@ -110,10 +110,7 @@ const sendMessage = async ({
             `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
             {
               chat_id,
-              text: `ОШИБКА! ${JSON.stringify(
-                data,
-                Object.getOwnPropertyNames(data)
-              )}`,
+              text: `ОШИБКА! ${JSON.stringify(data.description)}`,
             },
             null,
             null,
