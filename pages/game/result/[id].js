@@ -951,7 +951,7 @@ const GameBlock = ({ game }) => {
                 className="z-10 flex items-center"
                 style={{
                   position: 'absolute',
-                  top: rowHeight * index + tableTitleHeight,
+                  top: rowHeight * index + tableTitleHeight + 20,
                 }}
                 animate={{
                   x: start
