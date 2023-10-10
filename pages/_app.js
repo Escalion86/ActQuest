@@ -4,6 +4,8 @@ import { RecoilRoot, RecoilEnv } from 'recoil'
 
 import Script from 'next/script'
 
+import '../styles/global.css'
+
 RecoilEnv.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = false
 
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {

@@ -7,6 +7,7 @@ const usersSchema = {
   name: {
     type: String,
     default: '',
+    trim: true,
   },
   gender: {
     type: String,
