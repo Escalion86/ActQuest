@@ -665,7 +665,7 @@ const GameBlock = ({ game }) => {
             display: 'flex',
             flexDirection: 'row',
             flexWrap: 'nowrap',
-            height: gameTeamsWithTeams.length * 60 + rowHeight,
+            height: gameTeamsWithTeams.length * rowHeight + 100,
           }}
         >
           <div
