@@ -1,4 +1,4 @@
-const colors = require('tailwindcss/colors')
+// const colors = require('tailwindcss/colors')
 
 module.exports = {
   important: true,
@@ -297,13 +297,13 @@ module.exports = {
     scale: ['hover', 'responsive', 'group-hover'],
     translate: ['hover', 'responsive', 'group-hover'],
   },
-  plugins: [
-    require('@tailwindcss/aspect-ratio'),
-    require('tailwindcss-scoped-groups')({
-      groups: ['one', 'two'],
-    }),
-    require('preline/plugin'),
-  ],
+  // plugins: [
+  // require('@tailwindcss/aspect-ratio'),
+  // require('tailwindcss-scoped-groups')({
+  //   groups: ['one', 'two'],
+  // }),
+  // require('preline/plugin'),
+  // ],
   future: {
     purgeLayersByDefault: true,
   },
