@@ -955,6 +955,10 @@ const GameBlock = ({ game }) => {
             })}
           </div>
           {gameTeamsWithTeams.map(({ team }, index) => {
+            const finalStep =
+              preparedTeamsAnimateSteps[index][
+                preparedTeamsAnimateSteps[index].length - 1
+              ] * 1.01
             return (
               <motion.div
                 key={'car' + index}
@@ -981,9 +985,7 @@ const GameBlock = ({ game }) => {
                     ? [
                         0,
                         ...preparedTeamsAnimateSteps[index],
-                        preparedTeamsAnimateSteps[index][
-                          preparedTeamsAnimateSteps[index].length - 1
-                        ] * 1.01,
+                        finalStep > 1 ? 1 : finalStep,
                       ]
                     : 0,
                 }}
