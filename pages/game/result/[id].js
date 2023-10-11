@@ -425,7 +425,7 @@ l-15 -73 3006 7 c1653 4 3007 8 3009 9 1 1 -8 37 -20 81 -19 67 -22 105 -22
         lineHeight: '10px',
       }}
     >
-      {name}
+      {name ?? '???'}
     </div>
   </div>
 )
@@ -555,7 +555,7 @@ const GameBlock = ({ game }) => {
 
   const teamsAnimateSteps = gameTeams.map(({ startTime, endTime }, index) => {
     const tempResult = []
-    for (let i = 0; i < startTime.length; i++) {
+    for (let i = 0; i < tasks.length; i++) {
       const prevSum = i === 0 ? 0 : tempResult[i - 1]
       if (!endTime[i] || !startTime[i]) tempResult.push(prevSum + taskDuration)
       else
@@ -590,7 +590,7 @@ const GameBlock = ({ game }) => {
         }
       }
       if (taskFailurePenalty) {
-        for (let i = 0; i < startTime.length; i++) {
+        for (let i = 0; i < tasks.length; i++) {
           if (!endTime[i] || !startTime[i]) {
             tempResult[i] += taskFailurePenalty
           }
@@ -989,7 +989,7 @@ const GameBlock = ({ game }) => {
                 }}
               >
                 <Car
-                  name={team.name}
+                  name={team?.name}
                   color={PASTEL_COLORS[index]}
                   rowHeight={rowHeight}
                 />
