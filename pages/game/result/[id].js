@@ -551,6 +551,7 @@ const GameBlock = ({ game }) => {
   const rowHeight = 60
   const taskDuration = game.taskDuration ?? 3600
   const cluesDuration = game.cluesDuration ?? 1200
+  const taskFailurePenalty = game.taskFailurePenalty ?? 0
 
   const teamsAnimateSteps = gameTeams.map(({ startTime, endTime }, index) => {
     const tempResult = []
@@ -570,25 +571,34 @@ const GameBlock = ({ game }) => {
     })
   )
 
-  const teamsTaskPenalty = gameTeams.map(({ findedPenaltyCodes }, index) => {
-    const tempResult = []
-    if (findedPenaltyCodes?.length > 0) {
-      for (let i = 0; i < findedPenaltyCodes.length; i++) {
-        if (findedPenaltyCodes[i]?.length > 0) {
-          const codes = findedPenaltyCodes[i].map((code) => code.toLowerCase())
-          const penalty = tasks[i].penaltyCodes
-            .filter(({ code }) => {
-              return codes.includes(code.toLowerCase())
-            })
-            .reduce((sum, { penalty }) => sum + penalty, 0)
-          tempResult.push(penalty)
-        } else {
-          tempResult.push(0)
+  const teamsTaskPenalty = gameTeams.map(
+    ({ findedPenaltyCodes, startTime, endTime }, index) => {
+      const tempResult = Array(tasks.length).fill(0)
+      if (findedPenaltyCodes?.length > 0) {
+        for (let i = 0; i < findedPenaltyCodes.length; i++) {
+          if (findedPenaltyCodes[i]?.length > 0) {
+            const codes = findedPenaltyCodes[i].map((code) =>
+              code.toLowerCase()
+            )
+            const penalty = tasks[i].penaltyCodes
+              .filter(({ code }) => {
+                return codes.includes(code.toLowerCase())
+              })
+              .reduce((sum, { penalty }) => sum + penalty, 0)
+            tempResult[i] += penalty
+          }
         }
       }
+      if (taskFailurePenalty) {
+        for (let i = 0; i < startTime.length; i++) {
+          if (!endTime[i] || !startTime[i]) {
+            tempResult[i] += taskFailurePenalty
+          }
+        }
+      }
+      return tempResult
     }
-    return tempResult
-  })
+  )
 
   const teamsTaskBonus = gameTeams.map(({ findedBonusCodes }, index) => {
     const tempResult = []
