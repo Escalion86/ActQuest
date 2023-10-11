@@ -685,7 +685,61 @@ const GameBlock = ({ game }) => {
               minWidth: 200,
               borderRight: '1px solid',
             }}
-          />
+          >
+            <div
+              style={{
+                borderRight: '1px solid',
+                height: '100%',
+                width: '100%',
+              }}
+            >
+              <div
+                className="flex flex-col items-center px-1 font-bold"
+                style={{
+                  width: '100%',
+                  borderBottom: '1px solid',
+                  lineHeight: '10px',
+                  fontSize: '12px',
+                  textAlign: 'center',
+                  height: tableTitleHeight,
+                  minHeight: tableTitleHeight,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  // marginBottom: tableTitleHeight - 40,
+                }}
+              >
+                Команды
+              </div>
+              {gameTeamsWithTeams.map(({ team }, index) => {
+                return (
+                  <motion.div
+                    key={'order' + index}
+                    animate={{
+                      opacity: start ? [0, 0, 1] : 0,
+                    }}
+                    transition={{
+                      ease: 'linear',
+                      duration: start ? duration : 0,
+                      times: start ? [0, 0.99, 1] : 0,
+                    }}
+                    className="flex items-center justify-center w-full text-lg leading-5 text-center"
+                    style={{
+                      height: rowHeight,
+                      minHeight: rowHeight,
+                    }}
+                  >
+                    {/* <Image
+                    height={30}
+                    width={30}
+                    src={`/img/medals/${place}.svg`}
+                  /> */}
+                    {team?.name}
+                  </motion.div>
+                )
+              })}
+            </div>
+          </div>
           {tasks.map(({ title }, index) => (
             <div
               key={'task' + index}
