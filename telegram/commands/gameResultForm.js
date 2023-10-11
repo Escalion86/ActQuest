@@ -311,6 +311,11 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     message: `Результаты игры ${formatGameName(game)} сформированы!`,
     buttons: [
       {
+        url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
+        text: '\u{1F30F} Посмотреть результаты игры на сайте',
+        hide: game.status !== 'finished' || !game.result,
+      },
+      {
         c: { c: 'gameResult', gameId: jsonCommand.gameId },
         text: '\u{1F4CB} Посмотреть результаты игры',
         hide: game.status !== 'finished',
