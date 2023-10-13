@@ -17,6 +17,23 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
+  if (!jsonCommand.confirm) {
+    return {
+      success: true,
+      message: `Подтвердите запуск игры ${formatGameName(game)}`,
+      buttons: [
+        {
+          text: '\u{2705} ЗАПУСТИТЬ ИГРУ',
+          c: { confirm: true },
+        },
+        {
+          text: '\u{1F6AB} Отмена',
+          c: { c: 'editGame', gameId: jsonCommand.gameId },
+        },
+      ],
+    }
+  }
+
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
     status: 'started',
     dateStartFact: new Date(),
