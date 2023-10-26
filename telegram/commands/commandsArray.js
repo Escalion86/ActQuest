@@ -84,6 +84,7 @@ import setTaskPostMessage from './setTaskPostMessage'
 import setGameFinishingPlace from './setGameFinishingPlace'
 import setGameStartingPlace from './setGameStartingPlace'
 import allUsers from './allUsers'
+import adminMenu from './adminMenu'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -175,6 +176,7 @@ const commandsArray = {
   setGameFinishingPlace,
   setGameStartingPlace,
   allUsers,
+  adminMenu,
 }
 
 var i = 0

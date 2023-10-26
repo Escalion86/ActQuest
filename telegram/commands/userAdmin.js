@@ -20,7 +20,7 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
         },
       },
       {
-        c: 'users',
+        c: 'allUsers',
         text: '\u{2B05} Назад',
       },
     ],
