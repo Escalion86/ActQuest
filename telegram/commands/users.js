@@ -37,11 +37,11 @@ const users = async ({ telegramId, jsonCommand }) => {
   )
 
   return {
-    message: '<b>Обзор пользователей без команды</b>',
+    message: '<b>Пользователи без команды</b>',
     buttons: [
       ...buttons,
       {
-        c: 'mainMenu',
+        c: 'adminMenu',
         text: '\u{2B05} Назад',
       },
     ],

@@ -41,7 +41,7 @@ const allUsers = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...buttons,
       {
-        c: 'mainMenu',
+        c: 'adminMenu',
         text: '\u{2B05} Назад',
       },
     ],
