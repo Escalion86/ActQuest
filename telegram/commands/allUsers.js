@@ -9,22 +9,8 @@ const allUsers = async ({ telegramId, jsonCommand }) => {
   const users = await Users.find({})
   const teamsUsers = await TeamsUsers.find({})
 
-  const usersWithNoTeam = users.filter(
-    (user) =>
-      !teamsUsers.find(
-        (teamUser) => teamUser.userTelegramId === user.telegramId
-      )
-  )
-
-  if (!usersWithNoTeam || usersWithNoTeam.length === 0) {
-    return {
-      message: 'Нет пользователей неприсоединенных к какой-либо команде',
-      nextCommand: `mainMenu`,
-    }
-  }
-
   const games = await Games.find({})
-  const allTeamsUsersInFinishedGames = []
+  var allTeamsUsersInFinishedGames = []
   games.forEach(({ result }) => {
     if (result) {
       allTeamsUsersInFinishedGames = [
