@@ -1,4 +1,5 @@
 import { ADMIN_TELEGRAM_IDS, MODERS_TELEGRAM_IDS } from 'telegram/constants'
+import mainMenuButton from './menuItems/mainMenuButton'
 
 const adminMenu = async ({ telegramId }) => {
   const isAdmin = ADMIN_TELEGRAM_IDS.includes(telegramId)
@@ -21,6 +22,7 @@ const adminMenu = async ({ telegramId }) => {
         text: '\u{1F6E0} Все команды',
         hide: !isAdmin,
       },
+      mainMenuButton,
     ],
   }
 }
