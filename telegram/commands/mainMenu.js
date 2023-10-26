@@ -10,19 +10,14 @@ const mainMenu = async ({ telegramId }) => {
       { c: 'menuTeams', text: '\u{1F465} Команды' },
       { c: 'menuUser', text: '\u{1F464} Моя анкета' },
       {
-        c: 'users',
-        text: '\u{1F6E0} Пользователи без команд',
-        hide: !isAdmin,
-      },
-      {
-        c: 'teams',
-        text: '\u{1F6E0} Обзор всех команд',
-        hide: !isAdmin,
-      },
-      {
         c: 'menuGamesEdit',
         text: '\u{1F6E0} Конструктор игр',
         hide: !isAdmin && !MODERS_TELEGRAM_IDS.includes(telegramId),
+      },
+      {
+        c: 'adminMenu',
+        text: '\u{26A1} Меню АДМИНИСТРАТОРА',
+        hide: !isAdmin,
       },
     ],
   }

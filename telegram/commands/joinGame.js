@@ -23,7 +23,18 @@ const joinGame = async ({ telegramId, jsonCommand }) => {
   if (!teamsUser || teamsUser.length === 0) {
     return {
       message: 'Для регистрации на игру вы должны быть капитаном команды',
-      nextCommand: `menuGames`,
+      // nextCommand: `menuGames`,
+      buttons: [
+        {
+          c: 'joinTeam',
+          text: '\u{1F517} Присоединиться к команде',
+        },
+        {
+          c: 'createTeam',
+          text: '\u{2795} Создать команду',
+        },
+        { c: 'menuGames', text: '\u{2B05} Назад' },
+      ],
     }
   }
 
@@ -39,7 +50,12 @@ const joinGame = async ({ telegramId, jsonCommand }) => {
       message: `Вы зарегистрировались на игру ${formatGameName(
         game
       )} от лица команды "${team.name}"`,
-      nextCommand: `menuGames`,
+      buttons: [
+        {
+          text: `\u{2B05} Перейти к описанию игры`,
+          c: { c: 'game', gameId: game._id },
+        },
+      ],
     }
   }
 

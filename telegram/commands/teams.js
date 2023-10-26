@@ -25,11 +25,11 @@ const teams = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: '<b>Обзор всех команд</b>',
+    message: '<b>Все команды</b>',
     buttons: [
       ...buttons,
       {
-        c: 'mainMenu',
+        c: 'adminMenu',
         text: '\u{2B05} Назад',
       },
     ],
