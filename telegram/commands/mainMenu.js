@@ -10,6 +10,11 @@ const mainMenu = async ({ telegramId }) => {
       { c: 'menuTeams', text: '\u{1F465} Команды' },
       { c: 'menuUser', text: '\u{1F464} Моя анкета' },
       {
+        c: 'allUsers',
+        text: '\u{1F6E0} Все пользователи',
+        hide: !isAdmin,
+      },
+      {
         c: 'users',
         text: '\u{1F6E0} Пользователи без команд',
         hide: !isAdmin,

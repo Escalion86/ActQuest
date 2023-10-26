@@ -83,6 +83,7 @@ import addBonusCode from './addBonusCode'
 import setTaskPostMessage from './setTaskPostMessage'
 import setGameFinishingPlace from './setGameFinishingPlace'
 import setGameStartingPlace from './setGameStartingPlace'
+import allUsers from './allUsers'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -173,6 +174,7 @@ const commandsArray = {
   setTaskPostMessage,
   setGameFinishingPlace,
   setGameStartingPlace,
+  allUsers,
 }
 
 var i = 0
