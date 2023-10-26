@@ -51,7 +51,10 @@ const joinGame = async ({ telegramId, jsonCommand }) => {
         game
       )} от лица команды "${team.name}"`,
       buttons: [
-        { text: `Перейти к описанию игры`, c: { c: 'game', gameId: game._id } },
+        {
+          text: `\u{2B05} Перейти к описанию игры`,
+          c: { c: 'game', gameId: game._id },
+        },
       ],
     }
   }
