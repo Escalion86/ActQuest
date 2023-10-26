@@ -9,17 +9,17 @@ const adminMenu = async ({ telegramId }) => {
     buttons: [
       {
         c: 'allUsers',
-        text: '\u{1F6E0} Все пользователи',
+        text: '\u{1F464} Все пользователи',
         hide: !isAdmin,
       },
       {
         c: 'users',
-        text: '\u{1F6E0} Пользователи без команд',
+        text: '\u{1F464} Пользователи без команд',
         hide: !isAdmin,
       },
       {
         c: 'teams',
-        text: '\u{1F6E0} Все команды',
+        text: '\u{1F465} Все команды',
         hide: !isAdmin,
       },
       mainMenuButton,
