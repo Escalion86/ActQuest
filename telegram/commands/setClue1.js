@@ -27,7 +27,11 @@ const setClue1 = async ({ telegramId, jsonCommand }) => {
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = [...game.tasks]
   // const task = tasks[jsonCommand.i]
-  tasks[jsonCommand.i].clues[0].clue = jsonCommand.message
+  if (!tasks[jsonCommand.i].clues[0]) {
+    tasks[jsonCommand.i].clues[0] = { clue: jsonCommand.message, images: [] }
+  } else {
+    tasks[jsonCommand.i].clues[0].clue = jsonCommand.message
+  }
   // console.log('task :>> ', task)
   // const newTask = { ...task, title: jsonCommand.message }
   // console.log('newTask :>> ', newTask)
