@@ -1,6 +1,7 @@
 import padNum from './padNum'
 
 const secondsToTime = (sec) => {
+  if (sec === 0) return '00:00:00'
   if (!sec) return null
   const hours = Math.floor(sec / 3600)
   const minutes = Math.floor((sec % 3600) / 60)

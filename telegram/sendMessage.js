@@ -1,7 +1,9 @@
 import { postData } from '@helpers/CRUD'
 import { DEV_TELEGRAM_ID } from './constants'
 
-const sendErrorToDev = (chat_id, type) => async (error) =>
+const sendErrorToDev = (chat_id, type) => async (error) => {
+  return
+
   await postData(
     `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
     {
@@ -16,6 +18,7 @@ const sendErrorToDev = (chat_id, type) => async (error) =>
     null,
     true
   )
+}
 
 const sendMessage = async ({
   chat_id,
