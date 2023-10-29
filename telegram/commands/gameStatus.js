@@ -99,6 +99,8 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       findedBonusCodesCount,
       findedPenaltyCodesCount,
     }) => {
+      console.log('activeTaskIndex :>> ', activeTaskIndex)
+      console.log('startedTasks :>> ', startedTasks)
       const isActiveTaskFinished =
         gameTeam.endTime[activeTaskIndex] ||
         getSecondsBetween(gameTeam.startTime[activeTaskIndex]) > taskDuration
@@ -132,7 +134,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
 
       return `\u{1F3C3}${taskNumber} <b>"${
         team.name
-      }"</b> - выполняют задание №${startedTasks} "${task.title}"${
+      }"</b> - задание №${startedTasks} "${task.title}"${
         showCluesNum > 0 ? `, получена подсказка №${showCluesNum}` : ''
       } (осталось ${secondsToTime(taskDuration - taskSecondsLeft)}).${
         findedCodesCount > 0
