@@ -75,6 +75,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         startedTasks,
         activeTaskIndex,
         gameTeam,
+        activeTaskStartTime: startTime[activeTaskIndex],
         allFindedCodesCount,
         findedCodesCount,
         findedBonusCodesCount,
@@ -83,9 +84,9 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     }),
   ].sort((a, b) => {
     return (
-      b.startedTasks - a.startedTasks ||
+      b.activeTaskIndex - a.activeTaskIndex ||
       b.findedCodesCount - a.findedCodesCount ||
-      b.startTime[b.startedTasks] - a.startTime[a.startedTasks]
+      b.activeTaskStartTime - a.activeTaskStartTime
     )
   })
 
