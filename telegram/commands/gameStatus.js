@@ -48,7 +48,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         findedBonusCodes,
         findedPenaltyCodes,
       } = gameTeam
-      const activeTaskIndex = activeNum - 1
+      const activeTaskIndex = activeNum
 
       var startedTasks = 0
       startTime.forEach((time) => {
