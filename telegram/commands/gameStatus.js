@@ -115,7 +115,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       if (isTeamOnBreak) {
         const timeAfterEndTask = gameTeam.endTime[activeTaskIndex]
           ? getSecondsBetween(gameTeam.endTime[activeTaskIndex])
-          : getSecondsBetween(gameTeam.startTime[activeTaskIndex]) +
+          : getSecondsBetween(gameTeam.startTime[activeTaskIndex]) -
             taskDuration
         const breakTimeLeft = breakDuration - timeAfterEndTask
         console.log('timeAfterEndTask :>> ', timeAfterEndTask)
