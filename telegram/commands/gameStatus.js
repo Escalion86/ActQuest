@@ -117,7 +117,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       if (isTeamOnBreak) {
         const breakTimeLeft = getSecondsBetween(
           (gameTeam.endTime[activeTaskIndex] ??
-            gameTeam.startTime[activeTaskIndex] + taskDuration) - breakDuration
+            gameTeam.startTime[activeTaskIndex] + taskDuration) + breakDuration
         )
         const nextTask = game.tasks[startedTasks]
         const taskNumber = numberToEmojis(startedTasks + 1)
