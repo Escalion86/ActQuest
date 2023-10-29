@@ -101,6 +101,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     }) => {
       console.log('activeTaskIndex :>> ', activeTaskIndex)
       console.log('startedTasks :>> ', startedTasks)
+      console.log('breakDuration :>> ', breakDuration)
       const isActiveTaskFinished =
         gameTeam.endTime[activeTaskIndex] ||
         getSecondsBetween(gameTeam.startTime[activeTaskIndex]) > taskDuration
