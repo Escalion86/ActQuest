@@ -116,8 +116,8 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       // Проверяем, может задание выполнено или провалено и команда на перерыве
       if (isTeamOnBreak) {
         const breakTimeLeft = getSecondsBetween(
-          gameTeam.endTime[activeTaskIndex] ??
-            gameTeam.startTime[activeTaskIndex] + taskDuration - breakDuration
+          (gameTeam.endTime[activeTaskIndex] ??
+            gameTeam.startTime[activeTaskIndex] + taskDuration) - breakDuration
         )
         const nextTask = game.tasks[startedTasks]
         const taskNumber = numberToEmojis(startedTasks + 1)
