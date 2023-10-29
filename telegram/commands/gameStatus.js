@@ -34,6 +34,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
 
   const taskDuration = game.taskDuration ?? 3600
   const cluesDuration = game.cluesDuration ?? 1200
+  const breakDuration = game.breakDuration ?? 0
 
   const sortedTeams = [
     ...teams.map((team) => {
@@ -47,23 +48,26 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         findedBonusCodes,
         findedPenaltyCodes,
       } = gameTeam
-      const taskIndex = activeNum - 1
+      const activeTaskIndex = activeNum - 1
 
       var startedTasks = 0
       startTime.forEach((time) => {
         if (time) ++startedTasks
       })
+
+      console.log('startedTasks :>> ', startedTasks)
+
       const findedCodesCount =
         findedCodes?.length >= startedTasks
-          ? findedCodes[taskIndex]?.length ?? 0
+          ? findedCodes[activeTaskIndex]?.length ?? 0
           : 0
       const findedBonusCodesCount =
         findedBonusCodes?.length >= startedTasks
-          ? findedBonusCodes[taskIndex]?.length ?? 0
+          ? findedBonusCodes[activeTaskIndex]?.length ?? 0
           : 0
       const findedPenaltyCodesCount =
         findedPenaltyCodes?.length >= startedTasks
-          ? findedPenaltyCodes[taskIndex]?.length ?? 0
+          ? findedPenaltyCodes[activeTaskIndex]?.length ?? 0
           : 0
       const allFindedCodesCount =
         findedCodesCount + findedBonusCodesCount + findedPenaltyCodesCount
@@ -71,6 +75,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       return {
         team,
         startedTasks,
+        activeTaskIndex,
         gameTeam,
         allFindedCodesCount,
         findedCodesCount,
@@ -88,22 +93,26 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
     ({
       team,
       startedTasks,
+      activeTaskIndex,
       gameTeam,
       findedCodesCount,
       findedBonusCodesCount,
       findedPenaltyCodesCount,
     }) => {
-      const isTeamFinished =
-        gameTeam.endTime[game.tasks.length - 1] ||
-        (gameTeam.startTime[game.tasks.length - 1] &&
-          getSecondsBetween(gameTeam.startTime[game.tasks.length - 1]) >
-            taskDuration)
+      const isActiveTaskFinished =
+        gameTeam.endTime[activeTaskIndex] ||
+        getSecondsBetween(gameTeam.startTime[activeTaskIndex]) > taskDuration
+      const isAllTasksStarted =
+        gameTeam.startTime?.length === game.tasks.length &&
+        gameTeam.startTime.filter((item) => item).length === game.tasks.length
+      const isTeamFinished = isAllTasksStarted && isActiveTaskFinished
 
       if (isTeamFinished)
         return `\u{2705} <b>"${team.name}"</b> - завершили все задания`
 
-      // Проверяем, может задание выполнено и команда на перерыве
-      if (gameTeam.endTime[startedTasks - 1]) {
+      const isTeamOnBreak = !!breakDuration && isActiveTaskFinished
+      // Проверяем, может задание выполнено или провалено и команда на перерыве
+      if (isTeamOnBreak) {
         const nextTask = game.tasks[startedTasks]
         const taskNumber = numberToEmojis(startedTasks + 1)
         return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${
