@@ -120,11 +120,11 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         const breakTimeLeft = breakDuration - timeAfterEndTask
         const nextTask = game.tasks[startedTasks]
         const taskNumber = numberToEmojis(startedTasks + 1)
-        return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${
-          team.name
-        }"</b> - перерыв, до окончания перерыва ${secondsToTime(
-          breakTimeLeft
-        )}, след. задание №${startedTasks + 1} "${nextTask.title}"`
+        return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${team.name}"</b> - ${
+          breakTimeLeft <= 0
+            ? `Перерыв окончен, ожидаем получение командой`
+            : `перерыв, до окончания перерыва ${secondsToTime(breakTimeLeft)},`
+        } след. задание №${startedTasks + 1} "${nextTask.title}"`
       }
 
       const taskNumber = numberToEmojis(startedTasks)
