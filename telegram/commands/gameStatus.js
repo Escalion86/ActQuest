@@ -55,8 +55,6 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         if (time) ++startedTasks
       })
 
-      console.log('startedTasks :>> ', startedTasks)
-
       const findedCodesCount =
         findedCodes?.length >= startedTasks
           ? findedCodes[activeTaskIndex]?.length ?? 0
@@ -83,11 +81,13 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         findedPenaltyCodesCount,
       }
     }),
-  ].sort((a, b) =>
-    b.startedTasks - a.startedTasks === 0
-      ? b.findedCodesCount - a.findedCodesCount
-      : b.startedTasks - a.startedTasks
-  )
+  ].sort((a, b) => {
+    return (
+      b.startedTasks - a.startedTasks ||
+      b.startTime[b.startedTasks] - a.startTime[a.startedTasks] ||
+      b.findedCodesCount - a.findedCodesCount
+    )
+  })
 
   const textArray = sortedTeams.map(
     ({
