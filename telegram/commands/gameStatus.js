@@ -99,9 +99,6 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       findedBonusCodesCount,
       findedPenaltyCodesCount,
     }) => {
-      console.log('activeTaskIndex :>> ', activeTaskIndex)
-      console.log('startedTasks :>> ', startedTasks)
-      console.log('breakDuration :>> ', breakDuration)
       const isActiveTaskFinished =
         gameTeam.endTime[activeTaskIndex] ||
         getSecondsBetween(gameTeam.startTime[activeTaskIndex]) > taskDuration
@@ -116,11 +113,11 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       const isTeamOnBreak = !!breakDuration && isActiveTaskFinished
       // Проверяем, может задание выполнено или провалено и команда на перерыве
       if (isTeamOnBreak) {
-        const breakTimeLeft = gameTeam.endTime[activeTaskIndex]
-          ? getSecondsBetween(gameTeam.endTime[activeTaskIndex])
-          : getSecondsBetween(gameTeam.startTime[activeTaskIndex]) +
-            taskDuration +
-            breakDuration
+        const breakTimeLeft =
+          (gameTeam.endTime[activeTaskIndex]
+            ? getSecondsBetween(gameTeam.endTime[activeTaskIndex])
+            : getSecondsBetween(gameTeam.startTime[activeTaskIndex]) +
+              taskDuration) + breakDuration
         const nextTask = game.tasks[startedTasks]
         const taskNumber = numberToEmojis(startedTasks + 1)
         return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${
