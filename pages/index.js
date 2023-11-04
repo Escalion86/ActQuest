@@ -1,19 +1,7 @@
 import ReactDOM from 'react-dom'
 import Head from 'next/head'
 import Script from 'next/script'
-import TelegramLoginButton from 'react-telegram-login'
-
-const handleTelegramResponse = (response) => {
-  console.log(response)
-}
-
-ReactDOM.render(
-  <TelegramLoginButton
-    dataOnauth={handleTelegramResponse}
-    botName="ActQuest_dev_bot"
-  />,
-  document.getElementById('telegramButton')
-)
+import { TLoginButton, TLoginButtonSize } from 'react-telegram-auth'
 
 export default function Home(props) {
   return (
@@ -22,11 +10,18 @@ export default function Home(props) {
         <title>{`ActQuest`}</title>
       </Head>
       <div>{'ActQuest'}</div>
-      {/* <TelegramLoginButton
-        dataOnauth={handleTelegramResponse}
+      <TLoginButton
         botName="ActQuest_dev_bot"
-      /> */}
-      <button id="telegramButton">Test</button>
+        buttonSize={TLoginButtonSize.Large}
+        lang="en"
+        usePic={false}
+        cornerRadius={20}
+        onAuthCallback={(user) => {
+          console.log('Hello, user!', user)
+        }}
+        requestAccess={'write'}
+        additionalClasses={'css-class-for-wrapper'}
+      />
       <div>раврв</div>
       {/* <Script
         async
