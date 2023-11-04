@@ -1,3 +1,4 @@
+import ReactDOM from 'react-dom'
 import Head from 'next/head'
 import Script from 'next/script'
 import TelegramLoginButton from 'react-telegram-login'
@@ -6,6 +7,14 @@ const handleTelegramResponse = (response) => {
   console.log(response)
 }
 
+ReactDOM.render(
+  <TelegramLoginButton
+    dataOnauth={handleTelegramResponse}
+    botName="ActQuest_dev_bot"
+  />,
+  document.getElementById('telegramButton')
+)
+
 export default function Home(props) {
   return (
     <>
@@ -13,10 +22,11 @@ export default function Home(props) {
         <title>{`ActQuest`}</title>
       </Head>
       <div>{'ActQuest'}</div>
-      <TelegramLoginButton
+      {/* <TelegramLoginButton
         dataOnauth={handleTelegramResponse}
         botName="ActQuest_dev_bot"
-      />
+      /> */}
+      <button id="telegramButton">Test</button>
       <div>раврв</div>
       {/* <Script
         async
