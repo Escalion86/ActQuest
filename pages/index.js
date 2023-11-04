@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { TLoginButton, TLoginButtonSize } from 'react-telegram-auth'
+// import { TLoginButton, TLoginButtonSize } from 'react-telegram-auth'
 
 export default function Home(props) {
   return (
@@ -8,7 +8,7 @@ export default function Home(props) {
         <title>{`ActQuest`}</title>
       </Head>
       <div>{'ActQuest'}</div>
-      <TLoginButton
+      {/* <TLoginButton
         botName="ActQuest_dev_bot"
         buttonSize={TLoginButtonSize.Large}
         lang="ru"
@@ -20,7 +20,7 @@ export default function Home(props) {
         requestAccess={'write'}
         additionalClasses={'css-class-for-wrapper'}
       />
-      <div>раврв</div>
+      <div>раврв</div> */}
       {/* <Script
         async
         src="https://telegram.org/js/telegram-widget.js?22"
