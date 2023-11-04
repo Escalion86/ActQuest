@@ -1,6 +1,4 @@
-import ReactDOM from 'react-dom'
 import Head from 'next/head'
-import Script from 'next/script'
 import { TLoginButton, TLoginButtonSize } from 'react-telegram-auth'
 
 export default function Home(props) {
