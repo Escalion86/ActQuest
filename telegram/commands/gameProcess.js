@@ -134,10 +134,20 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     endTime,
   } = gameTeam
 
+  const breakDuration = game.breakDuration ?? 0
+  const taskDuration = game.taskDuration ?? 3600
+  const cluesDuration = game.cluesDuration ?? 1200
+
   const taskNum = activeNum ?? 0
 
-  // Если больше заданий нет (все выолнены)
-  if (taskNum > game.tasks.length - 1) {
+  const secondsLeftAfterStartTask = getSecondsBetween(startTime[taskNum])
+
+  // Если больше заданий нет (все выполнены или последнее провалено)
+  if (
+    taskNum > game.tasks.length - 1 ||
+    (taskNum === game.tasks.length - 1 &&
+      secondsLeftAfterStartTask >= taskDuration)
+  ) {
     return {
       message: `Поздравляем Вы завершили все задания! Игра окончена. ${
         game.finishingPlace
@@ -161,21 +171,17 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     },
   ]
 
-  const breakDuration = game.breakDuration ?? 0
-  const taskDuration = game.taskDuration ?? 3600
-  const cluesDuration = game.cluesDuration ?? 1200
-
   // Если задание было закончено успешно и идет перерыв
   // выдаем сообщение об остатке времени,
   // либо если перерыв окончен, то даем след задание
 
-  if (endTime[activeNum] && breakDuration > 0) {
-    const secondsAfterEndTime = getSecondsBetween(endTime[activeNum])
+  if (endTime[taskNum] && breakDuration > 0) {
+    const secondsAfterEndTime = getSecondsBetween(endTime[taskNum])
     if (secondsAfterEndTime < breakDuration)
       return {
         message: `${
           game.tasks[taskNum].postMessage
-            ? `<b>Сообщение от прошлого задания:</b>\n"${game.tasks[activeNum].postMessage}"\n\n`
+            ? `<b>Сообщение от прошлого задания:</b>\n"${game.tasks[taskNum].postMessage}"\n\n`
             : ''
         }<b>ПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           breakDuration - secondsAfterEndTime
@@ -194,19 +200,19 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         // findedCodes: newAllFindedCodes,
         startTime: startTimeTemp,
         // endTime: endTimeTemp,
-        activeNum: activeNum + 1,
+        activeNum: taskNum + 1,
       })
 
       const message = taskText({
         tasks: game.tasks,
-        taskNum: activeNum + 1,
+        taskNum: taskNum + 1,
         // findedCodes,
         // startTaskTime: startTime[activeNum + 1],
         cluesDuration,
         taskDuration,
       })
       return {
-        images: game.tasks[activeNum + 1].images,
+        images: game.tasks[taskNum + 1].images,
         message,
         buttons: buttonRefresh,
       }
@@ -218,11 +224,10 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
   // либо если перерыв окончен, то даем след задание
 
   // Проверяем не вышло ли время
-  const secondsLeftAfterStartTask = getSecondsBetween(startTime[activeNum])
   if (secondsLeftAfterStartTask > taskDuration) {
     // Проверяем есть ли перерыв и если есть то закончился ли
     if (
-      !endTime[activeNum] &&
+      !endTime[taskNum] &&
       breakDuration > 0 &&
       secondsLeftAfterStartTask < taskDuration + breakDuration
     ) {
@@ -238,7 +243,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       return {
         message: `${
           game.tasks[taskNum].postMessage
-            ? `<b>Сообщение от прошлого задания:</b>\n"${game.tasks[activeNum].postMessage}"\n\n`
+            ? `<b>Сообщение от прошлого задания:</b>\n"${game.tasks[taskNum].postMessage}"\n\n`
             : ''
         }<b>Время вышло\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           taskDuration + breakDuration - secondsLeftAfterStartTask
@@ -258,7 +263,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       // findedCodes: newAllFindedCodes,
       startTime: startTimeTemp,
       // endTime: endTimeTemp,
-      activeNum: activeNum + 1,
+      activeNum: taskNum + 1,
     })
 
     if (breakDuration > 0)
@@ -286,8 +291,6 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     ? jsonCommand.message.trim().toLowerCase()
     : undefined
   if (!code) {
-    console.log('!code => startTime :>> ', startTime)
-    console.log('taskNum :>> ', taskNum)
     const message = taskText({
       tasks: game.tasks,
       taskNum,
