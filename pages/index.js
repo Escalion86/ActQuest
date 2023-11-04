@@ -11,7 +11,7 @@ export default function Home(props) {
       <TLoginButton
         botName="ActQuest_dev_bot"
         buttonSize={TLoginButtonSize.Large}
-        lang="en"
+        lang="ru"
         usePic={false}
         cornerRadius={20}
         onAuthCallback={(user) => {
