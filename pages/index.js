@@ -17,6 +17,7 @@ export default function Home(props) {
         dataOnauth={handleTelegramResponse}
         botName="ActQuest_dev_bot"
       />
+      <div>раврв</div>
       {/* <Script
         async
         src="https://telegram.org/js/telegram-widget.js?22"
