@@ -1,4 +1,4 @@
-import { getNounTeams } from '@helpers/getNoun'
+import getNoun from '@helpers/getNoun'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
@@ -25,8 +25,15 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: `<b>"${user.name}"</b>\nСостоит в ${getNounTeams(teams?.length)}${
-      teams.length > 0 ? `:\n${teams.map(({ name }) => name).join('\n')}` : ''
+    message: `<b>"${user.name}"</b>\nСостоит в ${getNoun(
+      teams?.length,
+      'команде',
+      'командах',
+      'командах'
+    )}${
+      teams.length > 0
+        ? `:\n${teams.map(({ name }) => ` - ${name}`).join('\n')}`
+        : ''
     }\n\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,
     buttons: [
       {
