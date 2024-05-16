@@ -33,11 +33,20 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
       'командах'
     )}${
       teams.length > 0
-        ? `:\n${teams.map(({ name }) => ` - ${name}`).join('\n')}`
+        ? `:\n${teams
+            .map(({ _id, name }) => {
+              const teamUser = teamsUser.find(
+                ({ teamId }) => teamId === String(_id)
+              )
+              return ` - ${name}${
+                teamUser?.role === 'capitan' ? ' (капитан)' : ''
+              }`
+            })
+            .join('\n')}`
         : ''
     }\n\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,
     buttons: [
-      ...teamsUser.map(({ _id, teamId }) => {
+      ...teamsUser.map(({ _id, role, teamId }) => {
         const team = teams.find(({ _id }) => String(_id) === teamId)
         return {
           c: {
