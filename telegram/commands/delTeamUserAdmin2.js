@@ -9,8 +9,10 @@ const delTeamUserAdmin2 = async ({ telegramId, jsonCommand }) => {
 
   const teamUser = await getTeamUser(jsonCommand.teamUserId)
   if (teamUser.success === false) return teamUser
+  console.log('teamUser :>> ', teamUser)
 
-  const user = await Users.findOne({ telegramId: teamUser.userTId })
+  const user = await Users.findOne({ telegramId: teamUser.userTelegramId })
+  console.log('user :>> ', user)
 
   if (!jsonCommand.confirm) {
     return {
