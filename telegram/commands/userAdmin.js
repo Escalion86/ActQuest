@@ -1,3 +1,4 @@
+import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
@@ -8,9 +9,14 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
 
   await dbConnect()
   const user = await Users.findOne({ telegramId: jsonCommand.userTId })
+  const teamsUsers = await TeamsUsers.find({ telegramId: jsonCommand.userTId })
 
   return {
-    message: `<b>"${user.name}"</b>\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,
+    message: `<b>"${user.name}"</b>\nСостоит в ${teamsUsers.length} командах${
+      teamsUsers.length > 0
+        ? `:\n${teamsUsers.map(({ name }) => name).join('\n')}))}`
+        : ''
+    }\n\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,
     buttons: [
       {
         text: '\u{1F517} Записать в команду',
