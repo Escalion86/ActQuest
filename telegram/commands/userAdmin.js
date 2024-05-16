@@ -39,7 +39,7 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...teamsUser.map(({ _id, teamId }) => {
         console.log('teamId :>> ', teamId)
-        const team = teams.find((team) => team._id === teamId)
+        const team = teams.find(({ _id }) => _id === teamId)
         console.log('team :>> ', team)
         return {
           c: {
