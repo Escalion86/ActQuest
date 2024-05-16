@@ -1,4 +1,5 @@
 import { getNounTeams } from '@helpers/getNoun'
+import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
@@ -10,17 +11,22 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
 
   await dbConnect()
   const user = await Users.findOne({ telegramId: jsonCommand.userTId })
-  const teamsUsers = await TeamsUsers.find({
+  const teamsUser = await TeamsUsers.find({
     userTelegramId: jsonCommand.userTId,
+  })
+  const teamsIds = teamsUser.map(
+    (teamUser) =>
+      // mongoose.Types.ObjectId(teamUser.teamId)
+      teamUser.teamId
+  )
+
+  const teams = await Teams.find({
+    _id: { $in: teamsIds },
   })
 
   return {
-    message: `<b>"${user.name}"</b>\nСостоит в ${getNounTeams(
-      teamsUsers?.length
-    )}${
-      teamsUsers.length > 0
-        ? `:\n${teamsUsers.map(({ name }) => name).join('\n')}`
-        : ''
+    message: `<b>"${user.name}"</b>\nСостоит в ${getNounTeams(teams?.length)}${
+      teams.length > 0 ? `:\n${teams.map(({ name }) => name).join('\n')}` : ''
     }\n\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,
     buttons: [
       {
