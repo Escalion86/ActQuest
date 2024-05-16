@@ -8,7 +8,7 @@ import check from 'telegram/func/check'
 const userAdmin = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['userTId'])
   if (checkData) return checkData
-
+  console.log('jsonCommand :>> ', jsonCommand)
   await dbConnect()
   const user = await Users.findOne({ telegramId: jsonCommand.userTId })
   const teamsUser = await TeamsUsers.find({
