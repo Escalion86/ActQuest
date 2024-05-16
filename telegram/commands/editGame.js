@@ -43,9 +43,13 @@ const editGame = async ({ telegramId, jsonCommand }) => {
     }\n\n<b>Режим выдачи заданий</b>: ${
       game.individualStart ? 'Индивидуальный' : 'Одновременно со всеми'
     }${
-      game.result
-        ? `\n\nРезультаты сформированы и ${
-            game.hideResult ? 'СКРЫТЫ \u{1F648}' : 'ОТКРЫТЫ \u{1F441}'
+      game.status === 'finished'
+        ? `\n\n<b>Результаты</b>: ${
+            game.result
+              ? `сформированы и ${
+                  game.hideResult ? 'СКРЫТЫ \u{1F648}' : 'ОТКРЫТЫ \u{1F441}'
+                }`
+              : 'не сформированы'
           }`
         : ''
     }`,
