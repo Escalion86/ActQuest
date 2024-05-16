@@ -42,6 +42,16 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         : secondsToTimeStr(game?.taskFailurePenalty)
     }\n\n<b>Режим выдачи заданий</b>: ${
       game.individualStart ? 'Индивидуальный' : 'Одновременно со всеми'
+    }${
+      game.status === 'finished'
+        ? `\n\n<b>Результаты</b>: ${
+            game.result
+              ? `сформированы и ${
+                  game.hideResult ? 'СКРЫТЫ \u{1F648}' : 'ОТКРЫТЫ \u{1F441}'
+                }`
+              : 'не сформированы'
+          }`
+        : ''
     }`,
     buttons: [
       {
@@ -72,20 +82,34 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       [
         {
           c: { c: 'gameResultForm', gameId: jsonCommand.gameId },
-          text: '\u{26A1} Сформировать результаты игры',
+          text: game.result
+            ? '\u{1F504} Обновить результаты'
+            : '\u{26A1} Сформировать результаты',
           hide: game.status !== 'finished',
         },
         {
+          c: {
+            c: game.hideResult ? 'gameResultShow' : 'gameResultHide',
+            gameId: jsonCommand.gameId,
+          },
+          text: game.hideResult
+            ? '\u{1F441} Открыть результаты'
+            : '\u{1F648} Скрыть результаты',
+          hide: !game.result,
+        },
+      ],
+      [
+        {
           c: { c: 'gameResult', gameId: jsonCommand.gameId },
-          text: '\u{1F4CB} Посмотреть результаты игры',
+          text: '\u{1F4CB} Посмотреть результаты',
+          hide: game.status !== 'finished' || !game.result,
+        },
+        {
+          url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
+          text: '\u{1F30F} на сайте',
           hide: game.status !== 'finished' || !game.result,
         },
       ],
-      {
-        url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
-        text: '\u{1F30F} Посмотреть результаты игры на сайте',
-        hide: game.status !== 'finished' || !game.result,
-      },
       {
         c: { c: 'gameStatus', gameId: jsonCommand.gameId },
         text: '\u{26A1} Посмотреть статус игры',

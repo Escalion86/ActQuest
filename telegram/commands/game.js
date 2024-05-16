@@ -118,12 +118,12 @@ const game = async ({ telegramId, jsonCommand }) => {
       {
         url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
         text: '\u{1F30F} Посмотреть результаты игры на сайте',
-        hide: game.status !== 'finished' || !game.result,
+        hide: game.status !== 'finished' || !game.result || game.hideResult,
       },
       {
         c: { c: 'gameResult', gameId: jsonCommand.gameId },
         text: '\u{1F4CB} Посмотреть результаты игры',
-        hide: game.status !== 'finished' || !game.result,
+        hide: game.status !== 'finished' || !game.result || game.hideResult,
       },
       {
         c: { c: 'joinGame', gameId: jsonCommand.gameId },

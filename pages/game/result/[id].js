@@ -1,10 +1,10 @@
 import { getData } from '@helpers/CRUD'
-import { getSession } from 'next-auth/react'
+// import { getSession } from 'next-auth/react'
 import Head from 'next/head'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import getSecondsBetween from '@helpers/getSecondsBetween'
-import Image from 'next/image'
+// import Image from 'next/image'
 import cn from 'classnames'
 
 const PASTEL_COLORS = [
@@ -538,6 +538,8 @@ const GameBlock = ({ game }) => {
   const [duration, setDuration] = useState(40) //totalSeconds / 100
 
   const { result, tasks } = game
+  if (!result) return <div>Результаты игры не сформированы</div>
+
   const { gameTeams, teamsUsers, teams } = result
 
   const gameTeamsWithTeams = gameTeams.map((gameTeam) => ({
@@ -1084,11 +1086,10 @@ function EventPage(props) {
     <>
       <Head>
         <title>{`ActQuest - Игра`}</title>
-        {/* <meta name="description" content={activeLecture.description} /> */}
       </Head>
       {/* <StateLoader {...props}>
         <Header /> */}
-      <GameBlock game={game} />
+      {game && <GameBlock game={game} />}
       {/* </StateLoader> */}
     </>
   )
@@ -1126,7 +1127,7 @@ export default EventPage
 // }
 
 export const getServerSideProps = async (context) => {
-  const session = await getSession({ req: context.req })
+  // const session = await getSession({ req: context.req })
 
   const { params } = context
   const { id } = params
@@ -1137,7 +1138,7 @@ export const getServerSideProps = async (context) => {
     props: {
       // ...fetchedProps,
       id,
-      loggedUser: session?.user ?? null,
+      // loggedUser: session?.user ?? null,
     },
   }
 }

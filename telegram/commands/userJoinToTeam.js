@@ -4,6 +4,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 import { MAX_TEAMS } from 'telegram/constants'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 
 const userJoinToTeam = async ({ telegramId, jsonCommand }) => {
@@ -57,21 +58,39 @@ const userJoinToTeam = async ({ telegramId, jsonCommand }) => {
     (team) => !teamsOfUserIds.includes(toString(team._id))
   )
 
+  const page = jsonCommand?.page ?? 1
+
+  const buttons = buttonListConstructor(filteredTeams, page, (team, number) => {
+    const participansCount = teamsUsers.reduce(
+      (p, c) => p + (c.teamId === String(team._id) ? 1 : 0),
+      0
+    )
+    return {
+      text: `"${team.name}" (${participansCount} чел)`,
+      c: {
+        // c: 'editTeamAdmin',
+        teamId: team._id,
+        // p: 1,
+      },
+    }
+  })
+
   return {
     message: `Выберите команду куда записать пользователя ${user.name}`,
     buttons: [
-      ...filteredTeams.map((team) => {
-        const participansCount = teamsUsers.reduce(
-          (p, c) => p + (c.teamId === String(team._id) ? 1 : 0),
-          0
-        )
-        return {
-          text: `"${team.name}" (${participansCount} чел)`,
-          c: {
-            teamId: team._id,
-          },
-        }
-      }),
+      // ...filteredTeams.map((team) => {
+      //   const participansCount = teamsUsers.reduce(
+      //     (p, c) => p + (c.teamId === String(team._id) ? 1 : 0),
+      //     0
+      //   )
+      //   return {
+      //     text: `"${team.name}" (${participansCount} чел)`,
+      //     c: {
+      //       teamId: team._id,
+      //     },
+      //   }
+      // }),
+      ...buttons,
       {
         c: { c: 'userAdmin', userTId: jsonCommand.userTId },
         text: '\u{2B05} Назад',

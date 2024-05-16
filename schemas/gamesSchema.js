@@ -151,6 +151,10 @@ const gamesSchema = {
     },
     default: null,
   },
+  hideResult: {
+    type: Boolean,
+    default: false,
+  },
 }
 
 export default gamesSchema

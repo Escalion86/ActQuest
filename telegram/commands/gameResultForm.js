@@ -305,6 +305,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       gameTeams,
       teamsUsers,
     },
+    hideResult: game.result ? game.hideResult : true,
   })
 
   return {

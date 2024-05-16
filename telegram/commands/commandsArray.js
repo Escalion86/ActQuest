@@ -44,6 +44,7 @@ import teams from './teams'
 import teamUsersAdmin from './teamUsersAdmin'
 import teamUserAdmin from './teamUserAdmin'
 import delTeamUserAdmin from './delTeamUserAdmin'
+import delTeamUserAdmin2 from './delTeamUserAdmin2'
 import deleteTeamAdmin from './deleteTeamAdmin'
 import editTeamAdmin from './editTeamAdmin'
 import joinGameAdmin from './joinGameAdmin'
@@ -85,6 +86,8 @@ import setGameFinishingPlace from './setGameFinishingPlace'
 import setGameStartingPlace from './setGameStartingPlace'
 import allUsers from './allUsers'
 import adminMenu from './adminMenu'
+import gameResultShow from './gameResultShow'
+import gameResultHide from './gameResultHide'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -177,6 +180,9 @@ const commandsArray = {
   setGameStartingPlace,
   allUsers,
   adminMenu,
+  delTeamUserAdmin2,
+  gameResultShow,
+  gameResultHide,
 }
 
 var i = 0
