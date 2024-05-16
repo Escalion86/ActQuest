@@ -14,7 +14,6 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
   const teamsUser = await TeamsUsers.find({
     userTelegramId: jsonCommand.userTId,
   })
-  console.log('user :>> ', user)
   const teamsIds = teamsUser.map(
     (teamUser) =>
       // mongoose.Types.ObjectId(teamUser.teamId)
@@ -24,6 +23,7 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
   const teams = await Teams.find({
     _id: { $in: teamsIds },
   })
+  console.log('teams :>> ', teams)
 
   return {
     message: `<b>"${user.name}"</b>\nСостоит в ${getNoun(
