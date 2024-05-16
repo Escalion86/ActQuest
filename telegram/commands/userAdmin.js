@@ -9,7 +9,9 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
 
   await dbConnect()
   const user = await Users.findOne({ telegramId: jsonCommand.userTId })
-  const teamsUsers = await TeamsUsers.find({ telegramId: jsonCommand.userTId })
+  const teamsUsers = await TeamsUsers.find({
+    userTelegramId: jsonCommand.userTId,
+  })
 
   return {
     message: `<b>"${user.name}"</b>\nСостоит в ${teamsUsers.length} командах${
