@@ -36,6 +36,17 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
         : ''
     }\n\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,
     buttons: [
+      ...teamsUser.map(({ _id, teamId }) => {
+        const team = teams.find((team) => team._id === teamId)
+        return {
+          c: {
+            c: 'delTeamUserAdmin',
+            teamUserId: _id,
+          },
+          hide: isCapitan,
+          text: `\u{1F4A3} Удалить из "${team.name}"`,
+        }
+      }),
       {
         text: '\u{1F517} Записать в команду',
         c: {
