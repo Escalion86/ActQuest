@@ -81,7 +81,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
             gameId: jsonCommand.gameId,
           },
           text: game.hideResult
-            ? '\u{1F648} Открыть результаты'
+            ? '\u{1F441} Открыть результаты'
             : '\u{1F648} Скрыть результаты',
           hide: !game.result,
         },
