@@ -14,6 +14,7 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
   const teamsUser = await TeamsUsers.find({
     userTelegramId: jsonCommand.userTId,
   })
+  console.log('user :>> ', user)
   const teamsIds = teamsUser.map(
     (teamUser) =>
       // mongoose.Types.ObjectId(teamUser.teamId)
@@ -37,7 +38,9 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
     }\n\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,
     buttons: [
       ...teamsUser.map(({ _id, teamId }) => {
+        console.log('teamId :>> ', teamId)
         const team = teams.find((team) => team._id === teamId)
+        console.log('team :>> ', team)
         return {
           c: {
             c: 'delTeamUserAdmin2',
