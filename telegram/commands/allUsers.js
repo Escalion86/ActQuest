@@ -7,7 +7,7 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 const allUsers = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   const users = await Users.find({})
-  // const teamsUsers = await TeamsUsers.find({})
+  const teamsUsers = await TeamsUsers.find({})
 
   const games = await Games.find({})
   var allTeamsUsersInFinishedGames = []
@@ -22,11 +22,14 @@ const allUsers = async ({ telegramId, jsonCommand }) => {
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(users, page, (user, number) => {
+    const teamsOfUserCount = teamsUsers.filter(
+      (teamsUser) => teamsUser.userTelegramId === user.telegramId
+    ).length
     const finishedGamesCount = allTeamsUsersInFinishedGames.filter(
       ({ userTelegramId }) => userTelegramId === user.telegramId
     ).length
     return {
-      text: `${number}. ${user.name} (${finishedGamesCount})`,
+      text: `${number}. ${user.name} (${teamsOfUserCount}/${finishedGamesCount})`,
       c: {
         c: 'userAdmin',
         userTId: user.telegramId,
@@ -36,8 +39,7 @@ const allUsers = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message:
-      '<b>Обзор всех пользователей.\nВ скобках указано количество сыграных игр</b>',
+    message: `<b>Обзор всех пользователей (${users.length} чел.)\nВ скобках указано количество команд / сыграных игр</b>`,
     buttons: [
       ...buttons,
       {
