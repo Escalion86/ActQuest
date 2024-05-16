@@ -1072,26 +1072,21 @@ const GameBlock = ({ game }) => {
 
 function EventPage(props) {
   const gameId = props.id
-  console.log('gameId :>> ', gameId)
   const [game, setGame] = useState()
 
   useEffect(() => {
-    console.log('useEffect :>> ')
     const getGame = async (gameId) => {
       const game = await getData('/api/games/' + gameId)
-      console.log('game :>> ', game)
       setGame(game.data)
     }
     if (gameId) getGame(gameId)
   }, [])
 
-  console.log('test :>> ')
-
   return (
     <>
-      {/* <Head>
+      <Head>
         <title>{`ActQuest - Игра`}</title>
-      </Head> */}
+      </Head>
       {/* <StateLoader {...props}>
         <Header /> */}
       {game && <GameBlock game={game} />}
@@ -1135,7 +1130,6 @@ export const getServerSideProps = async (context) => {
   // const session = await getSession({ req: context.req })
 
   const { params } = context
-  console.log('params :>> ', params)
   const { id } = params
 
   // const fetchedProps = await fetchProps(session?.user)
