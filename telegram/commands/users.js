@@ -37,7 +37,7 @@ const users = async ({ telegramId, jsonCommand }) => {
   )
 
   return {
-    message: '<b>Пользователи без команды</b>',
+    message: `<b>Пользователи без команды</b>: ${usersWithNoTeam.length} чел.`,
     buttons: [
       ...buttons,
       {
