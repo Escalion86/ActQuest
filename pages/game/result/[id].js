@@ -1072,6 +1072,7 @@ const GameBlock = ({ game }) => {
 
 function EventPage(props) {
   const gameId = props.id
+  console.log('gameId :>> ', gameId)
   const [game, setGame] = useState()
 
   useEffect(() => {
