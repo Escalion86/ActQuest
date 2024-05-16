@@ -43,7 +43,6 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
             c: 'delTeamUserAdmin2',
             teamUserId: _id,
           },
-          hide: isCapitan,
           text: `\u{1F4A3} Удалить из "${team.name}"`,
         }
       }),
