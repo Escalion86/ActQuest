@@ -22,7 +22,7 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
 
   const teams = await Teams.find({
     _id: { $in: teamsIds },
-  })
+  }).lean()
   console.log('teams :>> ', teams)
 
   return {
