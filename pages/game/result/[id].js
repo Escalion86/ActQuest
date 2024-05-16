@@ -1130,7 +1130,7 @@ export default EventPage
 
 export const getServerSideProps = async (context) => {
   const session = await getSession({ req: context.req })
-
+  console.log('params :>> ', params)
   const { params } = context
   const { id } = params
 
