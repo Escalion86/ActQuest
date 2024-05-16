@@ -1,5 +1,5 @@
 import { getData } from '@helpers/CRUD'
-import { getSession } from 'next-auth/react'
+// import { getSession } from 'next-auth/react'
 import Head from 'next/head'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -1130,7 +1130,7 @@ export default EventPage
 // }
 
 export const getServerSideProps = async (context) => {
-  const session = await getSession({ req: context.req })
+  // const session = await getSession({ req: context.req })
 
   const { params } = context
   console.log('params :>> ', params)
@@ -1142,7 +1142,7 @@ export const getServerSideProps = async (context) => {
     props: {
       // ...fetchedProps,
       id,
-      loggedUser: session?.user ?? null,
+      // loggedUser: session?.user ?? null,
     },
   }
 }
