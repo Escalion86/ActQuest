@@ -72,20 +72,32 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       [
         {
           c: { c: 'gameResultForm', gameId: jsonCommand.gameId },
-          text: '\u{26A1} Сформировать результаты игры',
+          text: '\u{26A1} Сформировать результаты',
           hide: game.status !== 'finished',
         },
         {
+          c: { c: 'gameResultHide', gameId: jsonCommand.gameId },
+          text: '\u{1F648} Скрыть результаты',
+          hide: !game.result || !game.hideResult,
+        },
+        {
+          c: { c: 'gameResultShow', gameId: jsonCommand.gameId },
+          text: '\u{1F648} Открыть результаты',
+          hide: game.result || game.hideResult,
+        },
+      ],
+      [
+        {
           c: { c: 'gameResult', gameId: jsonCommand.gameId },
-          text: '\u{1F4CB} Посмотреть результаты игры',
+          text: '\u{1F4CB} Посмотреть результаты',
+          hide: game.status !== 'finished' || !game.result,
+        },
+        {
+          url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
+          text: '\u{1F30F} на сайте',
           hide: game.status !== 'finished' || !game.result,
         },
       ],
-      {
-        url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
-        text: '\u{1F30F} Посмотреть результаты игры на сайте',
-        hide: game.status !== 'finished' || !game.result,
-      },
       {
         c: { c: 'gameStatus', gameId: jsonCommand.gameId },
         text: '\u{26A1} Посмотреть статус игры',

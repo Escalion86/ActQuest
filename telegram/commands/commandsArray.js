@@ -86,6 +86,8 @@ import setGameFinishingPlace from './setGameFinishingPlace'
 import setGameStartingPlace from './setGameStartingPlace'
 import allUsers from './allUsers'
 import adminMenu from './adminMenu'
+import gameResultShow from './gameResultShow'
+import gameResultHide from './gameResultHide'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -179,6 +181,8 @@ const commandsArray = {
   allUsers,
   adminMenu,
   delTeamUserAdmin2,
+  gameResultShow,
+  gameResultHide,
 }
 
 var i = 0

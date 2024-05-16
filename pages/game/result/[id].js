@@ -534,12 +534,12 @@ const TimeResult = ({
 
 const GameBlock = ({ game }) => {
   if (!game) return null
-  console.log('game :>> ', game)
   const [start, setStart] = useState(false)
   const [duration, setDuration] = useState(40) //totalSeconds / 100
 
   const { result, tasks } = game
-  console.log('result :>> ', result)
+  if (!result) return <div>Результаты игры не сформированы</div>
+
   const { gameTeams, teamsUsers, teams } = result
 
   const gameTeamsWithTeams = gameTeams.map((gameTeam) => ({
