@@ -40,7 +40,7 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
         const team = teams.find((team) => team._id === teamId)
         return {
           c: {
-            c: 'delTeamUserAdmin',
+            c: 'delTeamUserAdmin2',
             teamUserId: _id,
           },
           hide: isCapitan,

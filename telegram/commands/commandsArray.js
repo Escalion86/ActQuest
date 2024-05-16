@@ -44,6 +44,7 @@ import teams from './teams'
 import teamUsersAdmin from './teamUsersAdmin'
 import teamUserAdmin from './teamUserAdmin'
 import delTeamUserAdmin from './delTeamUserAdmin'
+import delTeamUserAdmin2 from './delTeamUserAdmin2'
 import deleteTeamAdmin from './deleteTeamAdmin'
 import editTeamAdmin from './editTeamAdmin'
 import joinGameAdmin from './joinGameAdmin'
@@ -177,6 +178,7 @@ const commandsArray = {
   setGameStartingPlace,
   allUsers,
   adminMenu,
+  delTeamUserAdmin2,
 }
 
 var i = 0
