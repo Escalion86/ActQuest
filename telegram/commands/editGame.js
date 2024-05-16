@@ -42,7 +42,13 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         : secondsToTimeStr(game?.taskFailurePenalty)
     }\n\n<b>Режим выдачи заданий</b>: ${
       game.individualStart ? 'Индивидуальный' : 'Одновременно со всеми'
-    }\n\n\n${game.hideResult ? 'результаты скрыты' : 'результаты открыты'}`,
+    }${
+      game.result
+        ? `\n\nРезультаты сформированы и ${
+            game.hideResult ? 'СКРЫТЫ \u{1F648}' : 'ОТКРЫТЫ \u{1F441}'
+          }`
+        : ''
+    }`,
     buttons: [
       {
         c: { c: 'gameStart', gameId: jsonCommand.gameId },
@@ -72,7 +78,9 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       [
         {
           c: { c: 'gameResultForm', gameId: jsonCommand.gameId },
-          text: '\u{26A1} Сформировать результаты',
+          text: game.result
+            ? '\u{1F504} Обновить результаты'
+            : '\u{26A1} Сформировать результаты',
           hide: game.status !== 'finished',
         },
         {
