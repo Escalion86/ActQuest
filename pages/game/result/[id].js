@@ -1075,15 +1075,15 @@ function EventPage(props) {
   console.log('gameId :>> ', gameId)
   const [game, setGame] = useState()
 
-  useEffect(() => {
-    console.log('useEffect :>> ')
-    const getGame = async (gameId) => {
-      const game = await getData('/api/games/' + gameId)
-      console.log('game :>> ', game)
-      setGame(game.data)
-    }
-    if (gameId) getGame(gameId)
-  }, [])
+  // useEffect(() => {
+  //   console.log('useEffect :>> ')
+  //   const getGame = async (gameId) => {
+  //     const game = await getData('/api/games/' + gameId)
+  //     console.log('game :>> ', game)
+  //     setGame(game.data)
+  //   }
+  //   if (gameId) getGame(gameId)
+  // }, [])
 
   return (
     <>
