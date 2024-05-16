@@ -35,7 +35,7 @@ const delTeamUserAdmin2 = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Пользователь "${user.name}" удален из команды "${team.name}"`,
-    nextCommand: { c: 'userAdmin', userTId: teamUser.userId },
+    nextCommand: { c: 'userAdmin', userTId: teamUser.userTelegramId },
   }
 }
 
