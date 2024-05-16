@@ -13,7 +13,7 @@ export const getData = async (
   }
 
   const actualUrl = url + (getArray.length > 0 ? '?' + getArray.join('&') : '')
-
+  console.log('actualUrl :>> ', actualUrl)
   try {
     const res = await fetch(actualUrl, {
       method: 'GET',
@@ -22,6 +22,7 @@ export const getData = async (
         'Content-Type': contentType,
       },
     })
+    console.log('res :>> ', res)
     // Throw error with status code in case Fetch API req failed
     if (!res.ok) {
       const text = await res.text()

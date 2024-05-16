@@ -4,7 +4,7 @@ import Head from 'next/head'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import getSecondsBetween from '@helpers/getSecondsBetween'
-import Image from 'next/image'
+// import Image from 'next/image'
 import cn from 'classnames'
 
 const PASTEL_COLORS = [
@@ -1076,6 +1076,7 @@ function EventPage(props) {
   const [game, setGame] = useState()
 
   useEffect(() => {
+    console.log('useEffect :>> ')
     const getGame = async (gameId) => {
       const game = await getData('/api/games/' + gameId)
       setGame(game.data)
