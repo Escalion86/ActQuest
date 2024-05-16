@@ -1079,6 +1079,7 @@ function EventPage(props) {
     console.log('useEffect :>> ')
     const getGame = async (gameId) => {
       const game = await getData('/api/games/' + gameId)
+      console.log('game :>> ', game)
       setGame(game.data)
     }
     if (gameId) getGame(gameId)
@@ -1086,10 +1087,9 @@ function EventPage(props) {
 
   return (
     <>
-      <Head>
+      {/* <Head>
         <title>{`ActQuest - Игра`}</title>
-        {/* <meta name="description" content={activeLecture.description} /> */}
-      </Head>
+      </Head> */}
       {/* <StateLoader {...props}>
         <Header /> */}
       {game && <GameBlock game={game} />}
