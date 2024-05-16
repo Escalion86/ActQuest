@@ -23,6 +23,7 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
   const teams = await Teams.find({
     _id: { $in: teamsIds },
   }).lean()
+  console.log('teams :>> ', teams)
 
   return {
     message: `<b>"${user.name}"</b>\nСостоит в ${getNoun(
@@ -38,6 +39,7 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...teamsUser.map(({ _id, teamId }) => {
         const team = teams.find(({ _id }) => String(_id) === teamId)
+        console.log('team :>> ', team)
         return {
           c: {
             c: 'delTeamUserAdmin2',
