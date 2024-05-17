@@ -70,6 +70,11 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         hide: game.status === 'active' || game.status === 'started',
       },
       {
+        c: { c: 'checkGameTeamsDoubles', gameId: jsonCommand.gameId },
+        text: '\u{26A1} Проверить игроков на задвоение',
+        hide: game.status !== 'active',
+      },
+      {
         c: { c: 'gameAnonsMsg', gameId: jsonCommand.gameId },
         text: '\u{26A1} Отправить анонс игры всем подписчикам',
         hide: game.hidden || game.status !== 'active',
