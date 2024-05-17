@@ -40,7 +40,7 @@ const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
   return {
     message: `<b>Проверка игры "${game.name}" на задвоение</b>\n\n${
       duplicatesUsersIds.length > 0
-        ? `Есть задвоения:\n - ${duplicateUsers
+        ? `Есть задвоения:\n${duplicateUsers
             .map(({ name, telegramId }) => {
               const userTeams = teamsUsers.filter(
                 (teamUser) => teamUser.userTelegramId === telegramId
@@ -52,7 +52,7 @@ const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
                 .map(({ name }) => name)
                 .join('\n - ')}`
             })
-            .join('\n - ')}`
+            .join('\n')}`
         : 'Задвоений не обнаружено'
     }`,
     buttons: [
