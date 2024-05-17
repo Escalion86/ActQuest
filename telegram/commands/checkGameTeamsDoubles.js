@@ -34,7 +34,7 @@ const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
   })
 
   const duplicateUsers = await Users.find({
-    _id: { $in: duplicatesUsersIds },
+    telegramId: { $in: duplicatesUsersIds },
   })
 
   return {
