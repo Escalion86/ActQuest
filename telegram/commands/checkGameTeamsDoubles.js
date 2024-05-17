@@ -1,11 +1,7 @@
-import dateToDateTimeStr from '@helpers/dateToDateTimeStr'
-import getSecondsBetween from '@helpers/getSecondsBetween'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
-import numberToEmojis from 'telegram/func/numberToEmojis'
-import secondsToTime from 'telegram/func/secondsToTime'
 
 const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
