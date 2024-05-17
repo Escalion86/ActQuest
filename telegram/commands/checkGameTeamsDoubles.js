@@ -1,5 +1,7 @@
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
+import TeamsUsers from '@models/TeamsUsers'
+import Users from '@models/Users'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
@@ -15,7 +17,14 @@ const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
     gameId: jsonCommand.gameId,
   })
 
-  const usersIds = gameTeams.map((gameTeam) => gameTeam.userId)
+  const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
+  const teams = await Teams.find({
+    _id: { $in: teamsIds },
+  })
+  const teamsUsers = await TeamsUsers.find({
+    teamId: { $in: teamsIds },
+  })
+  const usersIds = teamsUsers.map(({ userTelegramId }) => userTelegramId)
 
   const duplicatesUsersIds = usersIds.filter((number, index, numbers) => {
     // console.log(number); // number - элемент массива
@@ -24,10 +33,14 @@ const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
     return numbers.indexOf(number) !== index
   })
 
+  const duplicateUsers = await Users.find({
+    _id: { $in: duplicatesUsersIds },
+  })
+
   return {
     message: `<b>Проверка игры "${game.name}" на задвоение</b>\n\n${
       duplicatesUsersIds.length > 0
-        ? ` - ${duplicatesUsersIds.join('\n - ')}`
+        ? ` - ${duplicateUsers.map(({ name }) => name).join('\n - ')}`
         : 'Задвоений не обнаружено'
     }`,
     buttons: [
