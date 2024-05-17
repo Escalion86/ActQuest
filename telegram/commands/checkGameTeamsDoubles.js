@@ -45,10 +45,10 @@ const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
               const userTeams = teamsUsers.filter(
                 (teamUser) => teamUser.userTelegramId === telegramId
               )
-              const teams = userTeams.map((teamUser) =>
+              const userTeamsFull = userTeams.map((teamUser) =>
                 teams.find(({ _id }) => String(_id) === teamUser.teamId)
               )
-              return `"${name}" в командах:\n - ${teams
+              return `"${name}" в командах:\n - ${userTeamsFull
                 .map(({ name }) => name)
                 .join('\n - ')}`
             })
