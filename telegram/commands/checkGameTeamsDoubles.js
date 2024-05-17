@@ -10,13 +10,6 @@ const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
-  if (game.status !== 'started') {
-    return {
-      message: 'Игра должна быть в процессе',
-      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
-    }
-  }
-
   // Получаем список команд участвующих в игре
   const gameTeams = await GamesTeams.find({
     gameId: jsonCommand.gameId,
