@@ -88,6 +88,7 @@ import allUsers from './allUsers'
 import adminMenu from './adminMenu'
 import gameResultShow from './gameResultShow'
 import gameResultHide from './gameResultHide'
+import checkGameTeamsDoubles from './checkGameTeamsDoubles'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -183,6 +184,7 @@ const commandsArray = {
   delTeamUserAdmin2,
   gameResultShow,
   gameResultHide,
+  checkGameTeamsDoubles,
 }
 
 var i = 0
