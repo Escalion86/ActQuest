@@ -203,6 +203,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     ({ penalty }) => penalty > 0
   )
   const totalCodePenaltyBonus = totalTeamsSeconds
+    .filter(({ codePenaltyBonusText }) => codePenaltyBonusText)
     .map(({ team, codePenaltyBonusText }) => {
       return `Команда "${team.name}":${codePenaltyBonusText}`
     })
