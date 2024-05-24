@@ -107,7 +107,9 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         gameTeam.startTime?.length === game.tasks.length &&
         gameTeam.startTime.filter((item) => item).length === game.tasks.length
       const isTeamFinished = isAllTasksStarted && isActiveTaskFinished
-
+      if (String(team._id) === '6477123e79af067ef4b14cf5') {
+        console.log('object :>> ', { isActiveTaskFinished, isAllTasksStarted })
+      }
       if (isTeamFinished)
         return `\u{2705} <b>"${team.name}"</b> - завершили все задания`
 
