@@ -1,5 +1,6 @@
 import createGameFunc from 'telegram/func/createGameFunc'
 import moment from 'moment-timezone'
+import { getNounTasks } from '@helpers/getNoun'
 
 const array = [
   {
@@ -54,6 +55,32 @@ const array = [
     buttons: (jsonCommand) => [
       { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
+  },
+  {
+    prop: 'tasks',
+    message: 'Сколько заданий будет на игре?\nВведите число от 1 до 20',
+    checkAnswer: (answer) => {
+      const answerNum = Number(answer)
+      answerNum == answer && answerNum <= 20 && answerNum > 0
+    },
+    errorMessage: (answer) =>
+      `Количество заданий должно быть в числовом формате, быть больше 0 и не превышать 20`,
+    answerMessage: (answer) => `На игре будет ${getNounTasks(answer)} заданий`,
+    buttons: (jsonCommand) => [
+      { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
+    ],
+    answerConverter: (answer) => {
+      const answerNum = Number(answer)
+      const tasks = Array.from({ length: answerNum }, () => ({
+        title: '',
+        task: '',
+        clues: [],
+        images: [],
+        codes: [],
+        numCodesToCompliteTask: null,
+      }))
+      return tasks
+    },
   },
 ]
 
