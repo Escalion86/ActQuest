@@ -20,6 +20,16 @@ const sendErrorToDev = (chat_id, type) => async (error) => {
   )
 }
 
+function splitText(text) {
+  const chunks = []
+  let i = 0
+  while (i < text.length) {
+    chunks.push(text.slice(i, Math.min(i + 4096, text.length)))
+    i += 4096
+  }
+  return chunks
+}
+
 const sendMessage = async ({
   chat_id,
   text,
@@ -104,6 +114,41 @@ const sendMessage = async ({
   }
 
   if (text) {
+    if (text.length > 4096) {
+      const preparedText = splitText(text)
+      for (let i = 0; i < preparedText.length; i++) {
+        await postData(
+          `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+          {
+            message_id:
+              i < preparedText.length - 1
+                ? undefined
+                : callback_query?.message?.message_id,
+            chat_id,
+            text: preparedText[i],
+            parse_mode,
+            reply_markup:
+              i < preparedText.length - 1
+                ? undefined
+                : keyboard || remove_keyboard
+                ? JSON.stringify({
+                    ...(keyboard ?? {}),
+                    // resize_keyboard: true,
+                    ...(remove_keyboard ? { remove_keyboard: true } : {}),
+                  })
+                : undefined,
+            ...props,
+          },
+          null,
+          sendErrorToDev(chat_id, 'sendMessage'),
+          // (data) => console.log('post success', data),
+          // (data) => console.log('post error', data),
+          true,
+          null,
+          true
+        )
+      }
+    }
     if (callback_query?.message?.message_id) {
       return await postData(
         `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageText`,

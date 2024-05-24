@@ -203,6 +203,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     ({ penalty }) => penalty > 0
   )
   const totalCodePenaltyBonus = totalTeamsSeconds
+    .filter(({ codePenaltyBonusText }) => codePenaltyBonusText)
     .map(({ team, codePenaltyBonusText }) => {
       return `Команда "${team.name}":${codePenaltyBonusText}`
     })
@@ -260,7 +261,9 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       `<b>\u{1F534} Штрафы за невыполненные задания:</b>\n${
         totalPenalty ?? 'отсутствуют'
       }`,
-    `<b>\u{1F534} Штрафы и \u{1F7E2} бонусы за коды:</b>\n${totalCodePenaltyBonus}`,
+    totalCodePenaltyBonus
+      ? `<b>\u{1F534} Штрафы и \u{1F7E2} бонусы за коды:</b>\n${totalCodePenaltyBonus}`
+      : '',
     `<b>\u{1F3C6} ИТОГО:</b>\n${totalResult}\n`,
     `<b>\u{1F607} Самое легкое задание:</b>\n"${
       game.tasks[mostEasyTaskIndex]?.title
