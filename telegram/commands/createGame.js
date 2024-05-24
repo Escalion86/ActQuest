@@ -71,8 +71,8 @@ const array = [
     ],
     answerConverter: (answer) => {
       const answerNum = Number(answer)
-      const tasks = Array.from({ length: answerNum }, () => ({
-        title: '',
+      const tasks = Array.from({ length: answerNum }, (v, k) => ({
+        title: String(k + 1),
         task: '',
         clues: [],
         images: [],
