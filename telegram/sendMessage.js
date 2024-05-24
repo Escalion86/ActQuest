@@ -120,6 +120,10 @@ const sendMessage = async ({
         await postData(
           `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
           {
+            message_id:
+              i < preparedText.length - 1
+                ? undefined
+                : callback_query?.message?.message_id,
             chat_id,
             text: preparedText[i],
             parse_mode,
