@@ -100,8 +100,8 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       findedBonusCodesCount,
       findedPenaltyCodesCount,
     }) => {
-      const isActiveTaskFinished =
-        gameTeam.endTime[activeTaskIndex] ||
+      const isActiveTaskFinished = activeTaskIndex >= game.tasks.length
+      gameTeam.endTime[activeTaskIndex] ||
         getSecondsBetween(gameTeam.startTime[activeTaskIndex]) > taskDuration
       const isAllTasksStarted =
         gameTeam.startTime?.length === game.tasks.length &&
