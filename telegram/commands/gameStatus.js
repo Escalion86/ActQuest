@@ -107,7 +107,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         gameTeam.startTime?.length === game.tasks.length &&
         gameTeam.startTime.filter((item) => item).length === game.tasks.length
       const isTeamFinished = isAllTasksStarted && isActiveTaskFinished
-      if (String(team._id) === '6477123e79af067ef4b14cf5') {
+      if (String(team._id) === '664359c7f2a70a9a28c3b682') {
         console.log('object :>> ', {
           test: getSecondsBetween(gameTeam.startTime[activeTaskIndex]),
           activeTaskIndex,
