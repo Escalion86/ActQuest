@@ -61,3 +61,6 @@ export const getNounServicesUsers = (number) =>
 
 export const getNounTeams = (number) =>
   getNoun(number, 'команда', 'команды', 'команд')
+
+export const getNounTasks = (number) =>
+  getNoun(number, 'задание', 'задания', 'заданий')

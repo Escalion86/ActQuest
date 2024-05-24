@@ -89,6 +89,7 @@ import adminMenu from './adminMenu'
 import gameResultShow from './gameResultShow'
 import gameResultHide from './gameResultHide'
 import checkGameTeamsDoubles from './checkGameTeamsDoubles'
+import sendMessageToAll from './sendMessageToAll'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -185,6 +186,7 @@ const commandsArray = {
   gameResultShow,
   gameResultHide,
   checkGameTeamsDoubles,
+  sendMessageToAll,
 }
 
 var i = 0
