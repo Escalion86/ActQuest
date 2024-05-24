@@ -61,12 +61,7 @@ const array = [
     message: 'Сколько заданий будет на игре?\nВведите число от 1 до 20',
     checkAnswer: (answer) => {
       const answerNum = Number(answer)
-      console.log('answerNum :>> ', answerNum)
-      console.log('answer :>> ', answer)
-      console.log('answerNum == answer :>> ', answerNum == answer)
-      console.log('answerNum <= 20 :>> ', answerNum <= 20)
-      console.log('answerNum > 0 :>> ', answerNum > 0)
-      answerNum == answer && answerNum <= 20 && answerNum > 0
+      return answerNum == answer && answerNum <= 20 && answerNum > 0
     },
     errorMessage: (answer) =>
       `Количество заданий должно быть в числовом формате, быть больше 0 и не превышать 20`,
