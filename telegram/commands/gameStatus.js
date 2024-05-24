@@ -44,6 +44,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       const {
         activeNum,
         findedCodes,
+        wrongCodes,
         startTime,
         findedBonusCodes,
         findedPenaltyCodes,
@@ -54,7 +55,6 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       startTime.forEach((time) => {
         if (time) ++startedTasks
       })
-
       const findedCodesCount =
         findedCodes?.length >= startedTasks
           ? findedCodes[activeTaskIndex]?.length ?? 0
@@ -69,6 +69,10 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
           : 0
       const allFindedCodesCount =
         findedCodesCount + findedBonusCodesCount + findedPenaltyCodesCount
+      const wrongCodesCount =
+        wrongCodes?.length >= startedTasks
+          ? wrongCodes[activeTaskIndex]?.length ?? 0
+          : 0
 
       return {
         team,
@@ -77,6 +81,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         gameTeam,
         activeTaskStartTime: startTime[activeTaskIndex],
         allFindedCodesCount,
+        wrongCodesCount,
         findedCodesCount,
         findedBonusCodesCount,
         findedPenaltyCodesCount,
@@ -97,10 +102,12 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       activeTaskIndex,
       gameTeam,
       findedCodesCount,
+      wrongCodesCount,
       findedBonusCodesCount,
       findedPenaltyCodesCount,
     }) => {
       const isActiveTaskFinished =
+        activeTaskIndex >= game.tasks.length ||
         gameTeam.endTime[activeTaskIndex] ||
         getSecondsBetween(gameTeam.startTime[activeTaskIndex]) > taskDuration
       const isAllTasksStarted =
@@ -119,8 +126,6 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
           : getSecondsBetween(gameTeam.startTime[activeTaskIndex]) -
             taskDuration
         const breakTimeLeft = breakDuration - timeAfterEndTask
-        console.log('timeAfterEndTask :>> ', timeAfterEndTask)
-        console.log('breakDuration :>> ', breakDuration)
         const nextTask = game.tasks[startedTasks]
         const taskNumber = numberToEmojis(startedTasks + 1)
         return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${team.name}"</b> - ${
@@ -159,6 +164,12 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       }${
         findedPenaltyCodesCount > 0
           ? `\nНайденые штрафные коды (${findedPenaltyCodesCount} шт.): "${gameTeam.findedPenaltyCodes[
+              startedTasks - 1
+            ].join(`", "`)}"`
+          : ''
+      }${
+        wrongCodesCount > 0
+          ? `\nНеверно набраные коды (${wrongCodesCount} шт.): "${gameTeam.wrongCodes[
               startedTasks - 1
             ].join(`", "`)}"`
           : ''

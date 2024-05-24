@@ -62,12 +62,17 @@ const teamGameStart = async (gameTeamId, game) => {
   startTime[0] = new Date()
   const endTime = new Array(gameTasksCount).fill(null)
   const findedCodes = new Array(gameTasksCount).fill([])
-  await dbConnect()
+  const wrongCodes = new Array(gameTasksCount).fill([])
+  const findedPenaltyCodes = new Array(gameTasksCount).fill([])
+  const findedBonusCodes = new Array(gameTasksCount).fill([])
   await GamesTeams.findByIdAndUpdate(gameTeamId, {
     startTime,
     endTime,
     activeNum: 0,
     findedCodes,
+    wrongCodes,
+    findedPenaltyCodes,
+    findedBonusCodes,
   })
 }
 
@@ -127,6 +132,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
   const {
     findedCodes,
+    wrongCodes,
     findedPenaltyCodes,
     findedBonusCodes,
     activeNum,
@@ -295,6 +301,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       tasks: game.tasks,
       taskNum,
       findedCodes,
+      wrongCodes,
       findedPenaltyCodes,
       findedBonusCodes,
       startTaskTime: startTime[taskNum],
@@ -567,6 +574,18 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         : undefined,
     }
   } else {
+    const allWrongCodes = wrongCodes ?? Array(game.tasks.length).map(() => [])
+    const newAllWrongCodes = [...allWrongCodes]
+    const wrongCodesInTask = allWrongCodes[taskNum] ?? []
+    const newWrongCodesInTask = [...wrongCodesInTask, code]
+    newAllWrongCodes[taskNum] = newWrongCodesInTask
+
+    const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      wrongCodes: newAllWrongCodes,
+      // startTime: startTimeTemp,
+      // endTime: endTimeTemp,
+      // activeNum: newActiveNum,
+    })
     return {
       message: 'Код не верен. Введите код',
     }
