@@ -121,7 +121,7 @@ const sendMessage = async ({
           `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
           {
             chat_id,
-            text,
+            text: preparedText[i],
             parse_mode,
             reply_markup:
               i < preparedText.length - 1
