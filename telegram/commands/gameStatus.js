@@ -113,7 +113,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
   ].sort((a, b) => {
     return (
       b.activeTaskIndex - a.activeTaskIndex ||
-      (a.activeTaskFinishTime && b.activeTaskFinishTime
+      (a.isActiveTaskFinished && b.isActiveTaskFinished
         ? a.activeTaskFinishTime - b.activeTaskFinishTime
         : a.isActiveTaskFinished
         ? 1
