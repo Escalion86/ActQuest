@@ -157,7 +157,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
             ? `Перерыв окончен\nОжидаем получение командой след. задания`
             : `Перерыв\nДо окончания перерыва ${secondsToTime(
                 breakTimeLeft
-              )}, след. задание`
+              )}\nСлед. задание`
         } №${startedTasks + 1} "${nextTask.title}"${
           isActiveTaskFailed
             ? '\nПредыдущее задание провалено'
