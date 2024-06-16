@@ -26,7 +26,11 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
         ({ id, name, time }, number) => {
           return {
             text: `Удалить ${time < 0 ? `\u{1F534}` : `\u{1F7E2}`} ${name}`,
-            c: { c: 'delGameTeamAdding', i: number - 1 },
+            c: {
+              c: 'delGameTeamAdding',
+              gameTeamId: jsonCommand.gameTeamId,
+              i: number - 1,
+            },
           }
         }
       )
