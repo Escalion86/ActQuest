@@ -1,3 +1,4 @@
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import dbConnect from '@utils/dbConnect'
@@ -36,12 +37,19 @@ const gameAddings = async ({ telegramId, jsonCommand }) => {
     const gameTeam = gameTeams.find(
       (gameTeam) => gameTeam.teamId === String(team._id)
     )
+    const timeAdding =
+      gameTeam.timeAddings?.length > 0
+        ? gameTeam.timeAddings.reduce((acc, { time }) => {
+            return acc + time
+          }, 0)
+        : undefined
+
     return {
       text: `${number}. "${team.name}"${
-        gameTeam.timeAddings?.length > 0
-          ? ` ${gameTeam.timeAddings
-              .map(({ time }) => (time < 0 ? `\u{1F534}` : `\u{1F7E2}`))
-              .join('')}`
+        typeof timeAdding === 'number'
+          ? ` ${timeAdding < 0 ? `\u{1F7E2}` : `\u{1F534}`} ${secondsToTimeStr(
+              timeAdding
+            )}`
           : ''
       }`,
       c: { c: 'gameTeamAddings', gameTeamId: gameTeam._id },

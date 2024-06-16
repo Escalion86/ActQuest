@@ -18,7 +18,7 @@ const array = [
   },
   {
     prop: 'time',
-    message: 'Введите бонсу/штраф в секундах (если штраф то со знаком "-")',
+    message: 'Введите бонсу/штраф в секундах (если бонус то со знаком "-")',
     answerMessage: (answer) =>
       `Задан бонус/штраф по времени "${secondsToTimeStr(answer)}"`,
     buttons: (jsonCommand) => [cancelButton(jsonCommand)],
