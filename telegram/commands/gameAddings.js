@@ -48,7 +48,7 @@ const gameAddings = async ({ telegramId, jsonCommand }) => {
       text: `${number}. "${team.name}"${
         typeof timeAdding === 'number'
           ? ` ${timeAdding < 0 ? `\u{1F7E2}` : `\u{1F534}`} ${secondsToTimeStr(
-              timeAdding
+              Math.abs(timeAdding)
             )}`
           : ''
       }`,
