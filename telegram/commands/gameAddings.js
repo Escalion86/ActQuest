@@ -37,7 +37,13 @@ const gameAddings = async ({ telegramId, jsonCommand }) => {
       (gameTeam) => gameTeam.teamId === String(team._id)
     )
     return {
-      text: `${number}. "${team.name}"`,
+      text: `${number}. "${team.name}"${
+        gameTeam.timeAddings?.length > 0
+          ? ` ${gameTeam.timeAddings
+              .map(({ time }) => (time < 0 ? `\u{1F534}` : `\u{1F7E2}`))
+              .join('')}`
+          : ''
+      }`,
       c: { c: 'gameTeamAddings', gameTeamId: gameTeam._id },
     }
   })
