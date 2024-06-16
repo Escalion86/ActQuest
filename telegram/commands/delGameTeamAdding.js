@@ -10,9 +10,9 @@ const delGameTeamAdding = async ({ telegramId, jsonCommand }) => {
   const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
   if (gameTeam.success === false) return gameTeam
 
-  if (!jsonCommand.addingId)
+  if (!jsonCommand.i)
     return {
-      message: 'Ошибка, не указан id бонуса/штрафа',
+      message: 'Ошибка, не указан номер бонуса/штрафа',
       nextCommand: `menuGames`,
     }
 
@@ -36,7 +36,7 @@ const delGameTeamAdding = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   await GamesTeams.findByIdAndUpdate(jsonCommand.gameTeamId, {
     timeAddings: gameTeam.timeAddings.filter(
-      ({ id }) => id !== jsonCommand.addingId
+      (adding, number) => number != jsonCommand.i
     ),
   })
   return {
