@@ -83,7 +83,7 @@ const addGameTeamAdding = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Бонус/штраф добавлен',
-    nextCommand: { c: 'gameTeamAddings', gameTeamId: gameTeam.gameTeamId },
+    nextCommand: { c: 'gameTeamAddings', gameTeamId: jsonCommand.gameTeamId },
   }
 }
 
