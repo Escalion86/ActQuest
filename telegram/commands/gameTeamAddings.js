@@ -40,7 +40,7 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
     message: `<b>Игра ${formatGameName(game)}\n\nКоманда "${
       team?.name
     }"</b>\n\n<b>Текущие бонусы/штрафы:</b>${
-      gameTeam?.timeAddings
+      gameTeam?.timeAddings && gameTeam.timeAddings.length > 0
         ? gameTeam.timeAddings.map(({ name, time }) => {
             return `\n${time < 0 ? `\u{1F534}` : `\u{1F7E2}`} ${time} - ${name}`
           })
