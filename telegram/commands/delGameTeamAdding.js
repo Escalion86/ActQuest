@@ -42,7 +42,7 @@ const delGameTeamAdding = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Бонус/штраф удален',
-    nextCommand: { c: 'gameTeamAddings', gameTeamId: gameTeam.gameTeamId },
+    nextCommand: { c: 'gameTeamAddings', gameTeamId: jsonCommand.gameTeamId },
   }
 }
 
