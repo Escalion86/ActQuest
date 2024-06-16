@@ -18,9 +18,9 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
   if (team.success === false) return team
 
   const page = jsonCommand?.page ?? 1
-  const buttons = gameTeam?.addings
+  const buttons = gameTeam?.timeAddings
     ? buttonListConstructor(
-        gameTeam.addings,
+        gameTeam.timeAddings,
         page,
         ({ id, name, time }, number) => {
           return {
@@ -35,8 +35,8 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
     message: `<b>Игра ${formatGameName(game)}\n\nКоманда "${
       team?.name
     }"</b>\n\n<b>Текущие бонусы/штрафы:</b>${
-      gameTeam?.addings
-        ? gameTeam.addings.map(({ name, time }) => {
+      gameTeam?.timeAddings
+        ? gameTeam.timeAddings.map(({ name, time }) => {
             return `\n${time < 0 ? `\u{1F534}` : `\u{1F7E2}`} ${time} - ${name}`
           })
         : ' отсутвуют'
