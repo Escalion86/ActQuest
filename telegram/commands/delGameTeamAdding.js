@@ -10,7 +10,7 @@ const delGameTeamAdding = async ({ telegramId, jsonCommand }) => {
   const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
   if (gameTeam.success === false) return gameTeam
 
-  if (!jsonCommand.i)
+  if (jsonCommand.i === undefined)
     return {
       message: 'Ошибка, не указан номер бонуса/штрафа',
       nextCommand: `menuGames`,
