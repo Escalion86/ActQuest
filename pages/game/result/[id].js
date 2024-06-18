@@ -486,6 +486,7 @@ const TimeResult = ({
   color,
   penalty,
   bonus,
+  addings,
   rowHeight,
   ...props
 }) => (
@@ -889,8 +890,15 @@ const GameBlock = ({ game }) => {
                     start={start}
                     delay={delay}
                     timeResult={timeResult}
-                    penalty={totalPenalty[index]}
-                    bonus={totalBonus[index]}
+                    penalty={
+                      totalPenalty[index] +
+                      (totalAddings[index] > 0 ? totalAddings[index] : 0)
+                    }
+                    bonus={
+                      totalBonus[index] -
+                      (totalAddings[index] < 0 ? totalAddings[index] : 0)
+                    }
+                    addings={totalAddings[index]}
                     rowHeight={rowHeight}
                   />
                 )
