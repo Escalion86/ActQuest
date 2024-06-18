@@ -223,10 +223,11 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   const sortedTotalTeamsAddings = [...totalTeamsSeconds].sort((a, b) =>
     sortFunc(a, b, 'addings')
   )
+  console.log('sortedTotalTeamsAddings :>> ', sortedTotalTeamsAddings)
 
-  const totalTeamsWithAddings = sortedTotalTeamsAddings.filter(
-    ({ addings }) => addings !== 0
-  )
+  // const totalTeamsWithAddings = sortedTotalTeamsAddings.filter(
+  //   ({ addings }) => addings !== 0
+  // )
   // const totalAddings =
   // totalTeamsWithAddings.length > 0
   //   ? totalTeamsWithAddings
@@ -236,12 +237,14 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   //       .join('\n')
   //   : undefined
 
-  const totalAddingsText = totalTeamsSeconds
+  const totalAddingsText = sortedTotalTeamsAddings
     .filter(({ addingsText }) => addingsText)
     .map(({ team, addingsText }) => {
       return `Команда "${team.name}":${addingsText}`
     })
     .join('\n\n')
+
+  console.log('totalAddingsText :>> ', totalAddingsText)
 
   const totalTeamsWithPenalty = sortedTotalTeamsPenalty.filter(
     ({ penalty }) => penalty > 0
