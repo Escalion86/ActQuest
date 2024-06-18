@@ -90,6 +90,10 @@ import gameResultShow from './gameResultShow'
 import gameResultHide from './gameResultHide'
 import checkGameTeamsDoubles from './checkGameTeamsDoubles'
 import sendMessageToAll from './sendMessageToAll'
+import gameAddings from './gameAddings'
+import gameTeamAddings from './gameTeamAddings'
+import delGameTeamAdding from './delGameTeamAdding'
+import addGameTeamAdding from './addGameTeamAdding'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -187,6 +191,10 @@ const commandsArray = {
   gameResultHide,
   checkGameTeamsDoubles,
   sendMessageToAll,
+  gameAddings,
+  gameTeamAddings,
+  delGameTeamAdding,
+  addGameTeamAdding,
 }
 
 var i = 0

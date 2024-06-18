@@ -74,6 +74,24 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
           ? wrongCodes[activeTaskIndex]?.length ?? 0
           : 0
 
+      const isActiveTaskFinished =
+        activeTaskIndex >= game.tasks.length ||
+        gameTeam.endTime[activeTaskIndex] ||
+        getSecondsBetween(gameTeam.startTime[activeTaskIndex]) > taskDuration
+      const isAllTasksStarted =
+        gameTeam.startTime?.length === game.tasks.length &&
+        gameTeam.startTime.filter((item) => item).length === game.tasks.length
+      const isTeamFinished = isAllTasksStarted && isActiveTaskFinished
+      const isTeamOnBreak = !!breakDuration && isActiveTaskFinished
+
+      const isActiveTaskFailed = isActiveTaskFinished
+        ? !gameTeam.endTime[activeTaskIndex]
+        : false
+      const activeTaskFinishTime = isActiveTaskFinished
+        ? gameTeam.endTime[activeTaskIndex] ||
+          gameTeam.startTime[activeTaskIndex] + taskDuration
+        : null
+
       return {
         team,
         startedTasks,
@@ -85,13 +103,24 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         findedCodesCount,
         findedBonusCodesCount,
         findedPenaltyCodesCount,
+        isTeamFinished,
+        isTeamOnBreak,
+        isActiveTaskFinished,
+        isActiveTaskFailed,
+        activeTaskFinishTime,
       }
     }),
   ].sort((a, b) => {
     return (
       b.activeTaskIndex - a.activeTaskIndex ||
-      b.findedCodesCount - a.findedCodesCount ||
-      b.activeTaskStartTime - a.activeTaskStartTime
+      (a.isActiveTaskFinished && b.isActiveTaskFinished
+        ? a.activeTaskFinishTime - b.activeTaskFinishTime
+        : a.isActiveTaskFinished
+        ? 1
+        : b.isActiveTaskFinished
+        ? -1
+        : b.findedCodesCount - a.findedCodesCount ||
+          a.activeTaskStartTime - b.activeTaskStartTime)
     )
   })
 
@@ -105,20 +134,15 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       wrongCodesCount,
       findedBonusCodesCount,
       findedPenaltyCodesCount,
+      isTeamFinished,
+      isTeamOnBreak,
+      isActiveTaskFinished,
+      isActiveTaskFailed,
+      activeTaskFinishTime,
     }) => {
-      const isActiveTaskFinished =
-        activeTaskIndex >= game.tasks.length ||
-        gameTeam.endTime[activeTaskIndex] ||
-        getSecondsBetween(gameTeam.startTime[activeTaskIndex]) > taskDuration
-      const isAllTasksStarted =
-        gameTeam.startTime?.length === game.tasks.length &&
-        gameTeam.startTime.filter((item) => item).length === game.tasks.length
-      const isTeamFinished = isAllTasksStarted && isActiveTaskFinished
-
       if (isTeamFinished)
         return `\u{2705} <b>"${team.name}"</b> - завершили все задания`
 
-      const isTeamOnBreak = !!breakDuration && isActiveTaskFinished
       // Проверяем, может задание выполнено или провалено и команда на перерыве
       if (isTeamOnBreak) {
         const timeAfterEndTask = gameTeam.endTime[activeTaskIndex]
@@ -130,11 +154,20 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         const taskNumber = numberToEmojis(startedTasks + 1)
         return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${team.name}"</b> - ${
           breakTimeLeft <= 0
-            ? `Перерыв окончен, ожидаем получение командой след. задания`
-            : `перерыв, до окончания перерыва ${secondsToTime(
+            ? `Перерыв окончен\nОжидаем получение командой след. задания`
+            : `Перерыв\nДо окончания перерыва ${secondsToTime(
                 breakTimeLeft
-              )}, след. задание`
-        } №${startedTasks + 1} "${nextTask.title}"`
+              )}\nСлед. задание`
+        } №${startedTasks + 1} "${nextTask.title}"${
+          isActiveTaskFailed
+            ? '\nПредыдущее задание провалено'
+            : `\nПредыдущее задание выполнено за ${secondsToTime(
+                getSecondsBetween(
+                  gameTeam.startTime[activeTaskIndex],
+                  gameTeam.endTime[activeTaskIndex]
+                )
+              )}`
+        }`
       }
 
       const taskNumber = numberToEmojis(startedTasks)

@@ -1,5 +1,6 @@
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
+import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
@@ -7,6 +8,8 @@ import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
 
 const gameTeam = async ({ telegramId, jsonCommand }) => {
+  const isAdmin = ADMIN_TELEGRAM_IDS.includes(telegramId)
+
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
@@ -52,7 +55,9 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
           gameTeamId: jsonCommand.gameTeamId,
         },
         text: '\u{1F4A3} Удалить команду из игры',
-        hide: capitanTelegramId !== telegramId || game.status !== 'active',
+        hide:
+          !isAdmin &&
+          (capitanTelegramId !== telegramId || game.status !== 'active'),
       },
       {
         c: { c: 'gameTeams', gameId: String(game._id) },

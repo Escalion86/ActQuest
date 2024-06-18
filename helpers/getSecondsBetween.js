@@ -1,6 +1,8 @@
 function getSecondsBetween(start = new Date(), finish = new Date()) {
   return Math.floor(
-    (new Date(finish).getTime() - new Date(start).getTime()) / 1000
+    (new Date(finish || undefined).getTime() -
+      new Date(start || undefined).getTime()) /
+      1000
   )
 }
 
