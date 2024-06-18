@@ -628,13 +628,19 @@ const GameBlock = ({ game }) => {
   const totalBonus = teamsTaskBonus.map((bonusArray) =>
     bonusArray.reduce((sum, bonus) => sum + bonus, 0)
   )
+  const totalAddings = gameTeams.map(({ timeAddings }, index) =>
+    timeAddings.reduce((acc, { time }) => {
+      return acc + time
+    }, 0)
+  )
 
   const totalTeamsTime = teamsAnimateSteps.map(
     (timeArray) => timeArray[timeArray.length - 1]
   )
 
   const totalTeamsTimeWithBonusAndPenalty = totalTeamsTime.map(
-    (totalTime, index) => totalTime + totalPenalty[index] - totalBonus[index]
+    (totalTime, index) =>
+      totalTime + totalPenalty[index] - totalBonus[index] + totalAddings[index]
   )
 
   const orderPlaces = totalTeamsTimeWithBonusAndPenalty.map(

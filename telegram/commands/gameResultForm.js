@@ -1,5 +1,6 @@
 import formatGameDateTimeFact from '@helpers/formatGameDateTimeFact'
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
@@ -85,6 +86,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     duration: durationCalc(gameTeam, game),
     findedPenaltyCodes: gameTeam.findedPenaltyCodes,
     findedBonusCodes: gameTeam.findedBonusCodes,
+    timeAddings: gameTeam.timeAddings,
   }))
 
   const taskAverageTimes = Array(game.tasks.length)
@@ -125,13 +127,31 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     .join('\n')
 
   const totalTeamsSeconds = teams.map((team, index) => {
-    const { teamId, duration, findedPenaltyCodes, findedBonusCodes } =
-      tasksDuration.find((item) => item.teamId === String(team._id))
+    const {
+      teamId,
+      duration,
+      findedPenaltyCodes,
+      findedBonusCodes,
+      timeAddings,
+    } = tasksDuration.find((item) => item.teamId === String(team._id))
     let penalty = 0
     let result = 0
     let codePenalty = 0
     let codeBonus = 0
     let codePenaltyBonusText = ''
+    const addings = timeAddings.reduce((acc, { time }) => {
+      return acc + time
+    }, 0)
+    const addingsText = timeAddings
+      .map(
+        ({ name, time }) =>
+          `${time < 0 ? '\u{1F7E2}' : '\u{1F534}'} ${secondsToTimeStr(
+            time,
+            true
+          )} - ${name}`
+      )
+      .join('\n')
+
     const seconds = duration.reduce((partialSum, a) => {
       const res =
         typeof a === 'number' && typeof partialSum === 'number'
@@ -178,7 +198,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       }
     })
 
-    result += penalty + codePenalty - codeBonus
+    result += penalty + codePenalty - codeBonus + addings
 
     return {
       team,
@@ -187,6 +207,8 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       codePenalty,
       codeBonus,
       codePenaltyBonusText,
+      addings,
+      addingsText,
       result,
     }
   })
@@ -198,6 +220,28 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   const sortedTotalTeamsResult = [...totalTeamsSeconds].sort((a, b) =>
     sortFunc(a, b, 'result')
   )
+  const sortedTotalTeamsAddings = [...totalTeamsSeconds].sort((a, b) =>
+    sortFunc(a, b, 'addings')
+  )
+
+  const totalTeamsWithAddings = sortedTotalTeamsAddings.filter(
+    ({ addings }) => addings !== 0
+  )
+  // const totalAddings =
+  // totalTeamsWithAddings.length > 0
+  //   ? totalTeamsWithAddings
+  //       .map(({ team, addings }) => {
+  //         return `${secondsToTime(addings)} - ${team.name}`
+  //       })
+  //       .join('\n')
+  //   : undefined
+
+  const totalAddingsText = totalTeamsSeconds
+    .filter(({ addingsText }) => addingsText)
+    .map(({ team, addingsText }) => {
+      return `Команда "${team.name}":${addingsText}`
+    })
+    .join('\n\n')
 
   const totalTeamsWithPenalty = sortedTotalTeamsPenalty.filter(
     ({ penalty }) => penalty > 0
@@ -264,7 +308,11 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     totalCodePenaltyBonus
       ? `<b>\u{1F534} Штрафы и \u{1F7E2} бонусы за коды:</b>\n${totalCodePenaltyBonus}`
       : '',
+    totalAddingsText
+      ? `<b>Прочие \u{1F534} штрафы и \u{1F7E2} бонусы:</b>\n${totalAddingsText}`
+      : '',
     `<b>\u{1F3C6} ИТОГО:</b>\n${totalResult}\n`,
+
     `<b>\u{1F607} Самое легкое задание:</b>\n"${
       game.tasks[mostEasyTaskIndex]?.title
     }" - среднее время ${secondsToTime(taskAverageTimes[mostEasyTaskIndex])}`,
