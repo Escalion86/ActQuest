@@ -629,10 +629,10 @@ const GameBlock = ({ game }) => {
     bonusArray.reduce((sum, bonus) => sum + bonus, 0)
   )
   const totalAddings = gameTeams.map(({ timeAddings }, index) =>
-    timeAddings.reduce((acc, { time }) => {
-      return acc + time
-    }, 0)
+    timeAddings.reduce((acc, { time }) => acc + time, 0)
   )
+
+  console.log('totalAddings :>> ', totalAddings)
 
   const totalTeamsTime = teamsAnimateSteps.map(
     (timeArray) => timeArray[timeArray.length - 1]
