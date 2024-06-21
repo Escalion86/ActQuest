@@ -35,7 +35,9 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       ? clues
           .map(
             ({ clue, images }, index) =>
-              `\n\n<b>Подсказка №${index + 1}</b>:\n"${clue}"`
+              `\n\n<b>Подсказка №${
+                index + 1
+              }</b>:\n<blockquote>${clue}</blockquote>`
           )
           .join('')
       : ''
@@ -44,9 +46,11 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     // images: task.images ? task.images : undefined,
     message: `<b>Редактирование задания</b>\n"${
       task?.title
-    }"\n\n<b>Текст задания</b>:\n"${task?.task}"${cluesText}\n\n<b>Коды (${
-      codes.length ?? 0
-    } шт)</b>:\n${codes.length > 0 ? codes.join(', ') : '[не задыны]'}${
+    }"\n\n<b>Текст задания</b>:\n<blockquote>${
+      task?.task
+    }</blockquote>${cluesText}\n\n<b>Коды (${codes.length ?? 0} шт)</b>:\n${
+      codes.length > 0 ? codes.join(', ') : '[не задыны]'
+    }${
       bonusCodes.length > 0
         ? `\n\n<b>Бонусные коды (${bonusCodes.length} шт)</b>:\n${
             bonusCodes.length > 0
