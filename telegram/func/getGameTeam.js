@@ -4,7 +4,10 @@ import mongoose from 'mongoose'
 
 const getGameTeam = async (id) => {
   await dbConnect()
-  if (id === undefined || !mongoose.Types.ObjectId.isValid(id))
+  if (
+    id === undefined
+    //  || !mongoose.Types.ObjectId.isValid(id)
+  )
     return {
       success: false,
       message: 'Ошибка. gameTeamId не указан',
@@ -15,7 +18,7 @@ const getGameTeam = async (id) => {
   if (!gamesTeams) {
     return {
       success: false,
-      message: 'Ошибка. Нет такого gameTeamId',
+      message: 'Ошибка. Нет такой регистрации',
       nextCommand: `mainMenu`,
     }
   }

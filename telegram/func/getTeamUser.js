@@ -5,7 +5,10 @@ import mongoose from 'mongoose'
 const getTeamUser = async (id) => {
   await dbConnect()
   // const preparedId = mongoose.Types.ObjectId(id)
-  if (id === undefined || !mongoose.Types.ObjectId.isValid(id))
+  if (
+    id === undefined
+    //  || !mongoose.Types.ObjectId.isValid(id)
+  )
     return {
       success: false,
       message: 'Ошибка. teamUserId не указан',
@@ -16,7 +19,7 @@ const getTeamUser = async (id) => {
   if (!teamsUsers) {
     return {
       success: false,
-      message: 'Ошибка. Нет такого teamUserId',
+      message: 'Ошибка. Нет такого пользователя в команде',
       nextCommand: `mainMenu`,
     }
   }
