@@ -39,10 +39,14 @@ const taskText = ({
   if (cluesDuration > 0 && showCluesNum > 0)
     for (let i = 0; i < showCluesNum; i++) {
       if (clues[i]?.clue)
-        cluesText += `\n\n<b>Подсказка №${i + 1}</b>:\n${clues[i].clue}`
+        cluesText += `\n\n<b>Подсказка №${i + 1}</b>:\n<blockquote>${
+          clues[i].clue
+        }</blockquote>`
     }
 
-  return `<b>Задание №${taskNum + 1}:</b>\n${task}${cluesText}${
+  return `<b>Задание №${
+    taskNum + 1
+  }:</b>\n<blockquote>${task}</blockquote>${cluesText}${
     haveBonusCodes || havePenaltyCodes
       ? `\n\n<b>Внимание:</b> На месте есть ${
           haveBonusCodes && havePenaltyCodes
