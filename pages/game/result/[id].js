@@ -552,6 +552,7 @@ const GameBlock = ({ game }) => {
 
   const tableTitleHeight = 60
   const rowHeight = 60
+  const breakDuration = game.breakDuration ?? 0
   const taskDuration = game.taskDuration ?? 3600
   const cluesDuration = game.cluesDuration ?? 1200
   const taskFailurePenalty = game.taskFailurePenalty ?? 0
@@ -566,6 +567,7 @@ const GameBlock = ({ game }) => {
     }
     return tempResult
   })
+  console.log('teamsAnimateSteps :>> ', teamsAnimateSteps)
 
   const preparedTeamsAnimateSteps = teamsAnimateSteps.map((item) =>
     item.map((el) => {
