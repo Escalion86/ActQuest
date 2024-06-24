@@ -556,6 +556,7 @@ const GameBlock = ({ game }) => {
   const taskDuration = game.taskDuration ?? 3600
   const cluesDuration = game.cluesDuration ?? 1200
   const taskFailurePenalty = game.taskFailurePenalty ?? 0
+  var maxTeamTime = 0
 
   const teamsAnimateSteps = gameTeams.map(({ startTime, endTime }, index) => {
     const tempResult = []
@@ -565,14 +566,15 @@ const GameBlock = ({ game }) => {
       else
         tempResult.push(prevSum + getSecondsBetween(startTime[i], endTime[i]))
     }
+
+    maxTeamTime = Math.max(maxTeamTime, tempResult[tempResult.length - 1])
     return tempResult
   })
-  console.log('teamsAnimateSteps :>> ', teamsAnimateSteps)
 
   const preparedTeamsAnimateSteps = teamsAnimateSteps.map((item) =>
     item.map((el) => {
-      if (el * 0.99 > totalSeconds) return 0.99
-      return (el * 0.99) / totalSeconds
+      if (el * 0.99 > maxTeamTime) return 0.99
+      return (el * 0.99) / maxTeamTime
     })
   )
 
@@ -662,6 +664,7 @@ const GameBlock = ({ game }) => {
               value={String(duration)}
               onChange={(e) => setDuration(Number(e.target.value))}
             >
+              <option value={0.01}>Без демонистрации</option>
               <option value={10}>Быстро</option>
               <option value={40}>Нормально</option>
               <option value={80}>Медленно</option>
@@ -673,8 +676,9 @@ const GameBlock = ({ game }) => {
               {start ? 'Сброс' : 'Старт'}
             </div>
           </div>
-          <div className="flex justify-center mb-2">
-            <Time start={start} seconds={totalSeconds} duration={duration} />
+          <div className="flex justify-center mb-2 gap-x-1">
+            <div>Время игры{breakDuration ? ' (без учета перерыва)' : ''}:</div>
+            <Time start={start} seconds={maxTeamTime} duration={duration} />
           </div>
         </div>
         <div
@@ -787,9 +791,9 @@ const GameBlock = ({ game }) => {
                   const timeResult =
                     time - (index > 0 ? timeResults[index - 1] : 0)
                   const delay =
-                    time / totalSeconds > 1
+                    time / maxTeamTime > 1
                       ? duration
-                      : (time / totalSeconds) * duration
+                      : (time / maxTeamTime) * duration
                   const clues =
                     cluesDuration > 0
                       ? Math.floor(timeResult / cluesDuration)
@@ -881,9 +885,9 @@ const GameBlock = ({ game }) => {
               </div>
               {totalTeamsTime.map((timeResult, index) => {
                 const delay =
-                  timeResult / totalSeconds > 1
+                  timeResult / maxTeamTime > 1
                     ? duration
-                    : (timeResult / totalSeconds) * duration
+                    : (timeResult / maxTeamTime) * duration
                 return (
                   <TimeResult
                     key={'team' + index + 'result'}
