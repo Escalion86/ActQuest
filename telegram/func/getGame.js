@@ -4,10 +4,7 @@ import mongoose from 'mongoose'
 
 const getGame = async (id) => {
   await dbConnect()
-  if (
-    id === undefined
-    //  || !mongoose.Types.ObjectId.isValid(id)
-  )
+  if (id === undefined || !mongoose.Types.ObjectId.isValid(id))
     return {
       success: false,
       message: 'Ошибка. gameId не указан',
