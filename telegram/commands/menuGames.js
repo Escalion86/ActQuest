@@ -1,6 +1,6 @@
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
+// import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
@@ -11,12 +11,32 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 const menuGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   // Получаем список игр
-  const games = await Games.find({})
+  const games = (await Games.find({}).lean()).filter(
+    (game) => game.status !== 'finished'
+  )
+  if (!games || games.length === 0) {
+    return {
+      message: 'Предстоящих игр не запланировано',
+      nextCommand: `mainMenu`,
+    }
+  }
+  // Получаем список команд в которых присутствует пользователь
+  const userTeams = await TeamsUsers.find({ userTelegramId: telegramId }).lean()
+  // Получаем IDs команд
+  const userTeamsIds = userTeams.map(({ teamId }) => teamId)
+  // Получаем список игр в которых присутствует пользователь
+  const gamesTeamsWithUser = await GamesTeams.find({
+    teamId: { $in: userTeamsIds },
+  }).lean()
+  // Получаем IDs игр
+  const gamesWithUserIds = gamesTeamsWithUser.map(({ gameId }) => gameId)
+  // Фильтруем список игр
   const filteredGames = games
     ? games.filter(
         (game) =>
-          game.status !== 'finished' &&
-          (!game.hidden || ADMIN_TELEGRAM_IDS.includes(telegramId))
+          gamesWithUserIds.includes(String(game._id)) ||
+          !game.hidden ||
+          ADMIN_TELEGRAM_IDS.includes(telegramId)
       )
     : undefined
   // if (!filteredGames || filteredGames.length === 0) {
@@ -26,18 +46,16 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   //   }
   // }
   // Получаем список команд в которых присутствует пользователь
-  const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
+  // const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
   // if (!teamsUser || teamsUser.length === 0) {
   //   return {
   //     message: 'Вы не состоите ни в какой команде',
   //     nextCommand: `/menuTeams`,
   //   }
   // }
-  const teamsIds = teamsUser.map(
-    (teamUser) =>
-      // mongoose.Types.ObjectId(teamUser.teamId)
-      teamUser.teamId
-  )
+  // const teamsIds = userTeams.map(
+  //   ({teamId}) => teamId
+  // )
   //  Получаем сами команды где пользователь есть
   // const teams =
   //   teamsIds.length > 0
@@ -47,17 +65,14 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   //     : []
 
   // Получаем список игр где команды пользователей зарегистрированы
-  const gamesTeams = await GamesTeams.find({
-    teamId: { $in: teamsIds },
-  })
+  // const gamesTeams = await GamesTeams.find({
+  //   teamId: { $in: teamsIds },
+  // })
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(filteredGames, page, (game, number) => {
-    // TODO поправить вывод зарегистрированных команд пользователя на угру
-    const gameTeam = gamesTeams.find((gameTeam) => {
-      return gameTeam.gameId === String(game._id)
-    })
-    const isTeamRegistred = !!gameTeam
+    // TODO поправить вывод зарегистрированных команд пользователя на игру
+    const isTeamRegistred = gamesWithUserIds.includes(String(game._id))
     // const team = isTeamRegistred
     //   ? teams.find((team) => String(team._id) === gameTeam.teamId)
     //   : null
@@ -76,6 +91,10 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...buttons,
       { c: 'archiveGames', text: '\u{1F4DA} Архив игр' },
+      {
+        c: 'joinToGameWithCode',
+        text: '\u{1F517} Присоединиться с помощью кода',
+      },
       mainMenuButton,
     ],
   }

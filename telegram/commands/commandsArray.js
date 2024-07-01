@@ -94,6 +94,7 @@ import gameAddings from './gameAddings'
 import gameTeamAddings from './gameTeamAddings'
 import delGameTeamAdding from './delGameTeamAdding'
 import addGameTeamAdding from './addGameTeamAdding'
+import joinToGameWithCode from './joinToGameWithCode'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -195,6 +196,7 @@ const commandsArray = {
   gameTeamAddings,
   delGameTeamAdding,
   addGameTeamAdding,
+  joinToGameWithCode,
 }
 
 var i = 0
