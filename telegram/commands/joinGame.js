@@ -42,6 +42,22 @@ const joinGame = async ({ telegramId, jsonCommand }) => {
   if (jsonCommand.teamId) {
     const team = await getTeam(jsonCommand.teamId)
     if (team.success === false) return team
+
+    // Проверяем не заригистрирована ли команда
+    const gameTeams = await GamesTeams.find({
+      teamId: jsonCommand.teamId,
+      gameId: jsonCommand.gameId,
+    })
+    if (gameTeams.length > 0) {
+      return {
+        success: true,
+        message: `Вы уже зарегистрировались на игру ${formatGameName(
+          game
+        )} от лица команды "${team.name}"`,
+      }
+    }
+
+    // Создаем запись команды на игру
     await GamesTeams.create({
       teamId: jsonCommand.teamId,
       gameId: jsonCommand.gameId,

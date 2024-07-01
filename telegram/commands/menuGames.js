@@ -11,7 +11,7 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 const menuGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   // Получаем список игр
-  const games = await Games.find({})
+  const games = await Games.find({}).lean()
   if (!games || games.length === 0) {
     return {
       message: 'Предстоящих игр не запланировано',
@@ -20,14 +20,17 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   }
   // Получаем список команд в которых присутствует пользователь
   const userTeams = await TeamsUsers.find({ userTelegramId: telegramId }).lean()
+  console.log('userTeams :>> ', userTeams)
   // Получаем IDs команд
   const userTeamsIds = userTeams.map(({ teamId }) => teamId)
   // Получаем список игр в которых присутствует пользователь
   const gamesTeamsWithUser = await GamesTeams.find({
     teamId: { $in: userTeamsIds },
   }).lean()
+  console.log('gamesTeamsWithUser :>> ', gamesTeamsWithUser)
   // Получаем IDs игр
   const gamesWithUserIds = gamesTeamsWithUser.map(({ gameId }) => gameId)
+  console.log('gamesWithUserIds :>> ', gamesWithUserIds)
   // Фильтруем список игр
   const filteredGames = games
     ? games.filter(
