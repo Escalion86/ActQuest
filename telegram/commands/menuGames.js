@@ -16,8 +16,15 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   )
   if (!games || games.length === 0) {
     return {
-      message: 'Предстоящих игр не запланировано',
-      nextCommand: `mainMenu`,
+      message: '<b>Предстоящих игр не запланировано</b>',
+      buttons: [
+        { c: 'archiveGames', text: '\u{1F4DA} Архив игр' },
+        {
+          c: 'joinToGameWithCode',
+          text: '\u{1F517} Присоединиться с помощью кода',
+        },
+        mainMenuButton,
+      ],
     }
   }
   // Получаем список команд в которых присутствует пользователь
