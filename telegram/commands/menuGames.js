@@ -1,6 +1,6 @@
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
+// import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
 import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
@@ -11,7 +11,9 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 const menuGames = async ({ telegramId, jsonCommand }) => {
   await dbConnect()
   // Получаем список игр
-  const games = await Games.find({}).lean()
+  const games = (await Games.find({}).lean()).filter(
+    (game) => game.status !== 'finished'
+  )
   if (!games || games.length === 0) {
     return {
       message: 'Предстоящих игр не запланировано',
@@ -20,25 +22,21 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   }
   // Получаем список команд в которых присутствует пользователь
   const userTeams = await TeamsUsers.find({ userTelegramId: telegramId }).lean()
-  console.log('userTeams :>> ', userTeams)
   // Получаем IDs команд
   const userTeamsIds = userTeams.map(({ teamId }) => teamId)
   // Получаем список игр в которых присутствует пользователь
   const gamesTeamsWithUser = await GamesTeams.find({
     teamId: { $in: userTeamsIds },
   }).lean()
-  console.log('gamesTeamsWithUser :>> ', gamesTeamsWithUser)
   // Получаем IDs игр
   const gamesWithUserIds = gamesTeamsWithUser.map(({ gameId }) => gameId)
-  console.log('gamesWithUserIds :>> ', gamesWithUserIds)
   // Фильтруем список игр
   const filteredGames = games
     ? games.filter(
         (game) =>
-          game.status !== 'finished' &&
-          (gamesWithUserIds.includes(String(game._id)) ||
-            !game.hidden ||
-            ADMIN_TELEGRAM_IDS.includes(telegramId))
+          gamesWithUserIds.includes(String(game._id)) ||
+          !game.hidden ||
+          ADMIN_TELEGRAM_IDS.includes(telegramId)
       )
     : undefined
   // if (!filteredGames || filteredGames.length === 0) {
