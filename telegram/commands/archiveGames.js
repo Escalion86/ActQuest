@@ -16,8 +16,8 @@ const archiveGames = async ({ telegramId, jsonCommand }) => {
   )
   if (games.length === 0) {
     return {
-      message: 'Прошедших игр небыло',
-      nextCommand: `mainMenu`,
+      message: '<b>Прошедших игр небыло</b>',
+      buttons: [{ c: 'menuGames', text: '\u{2B05} Назад' }],
     }
   }
   // Получаем список команд в которых присутствует пользователь
