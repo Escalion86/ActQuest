@@ -1,6 +1,7 @@
 import getNoun from '@helpers/getNoun'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
+import mongoose from 'mongoose'
 import { MAX_TEAMS } from 'telegram/constants'
 import getGame from 'telegram/func/getGame'
 import getTeam from 'telegram/func/getTeam'
@@ -24,6 +25,13 @@ const joinToGameWithCode = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message) {
     return {
       message: 'Введите код игры',
+      buttons: [{ c: 'menuGames', text: '\u{2B05} Назад' }],
+    }
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(jsonCommand.message)) {
+    return {
+      message: 'Введен не верный код игры.\nПроверьте код и повторите попытку',
       buttons: [{ c: 'menuGames', text: '\u{2B05} Назад' }],
     }
   }
