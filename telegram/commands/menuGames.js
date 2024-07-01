@@ -76,6 +76,10 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...buttons,
       { c: 'archiveGames', text: '\u{1F4DA} Архив игр' },
+      {
+        c: 'joinToGameWithCode',
+        text: '\u{1F517} Присоединиться с помощью кода',
+      },
       mainMenuButton,
     ],
   }

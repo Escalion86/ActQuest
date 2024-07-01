@@ -52,7 +52,9 @@ const editGame = async ({ telegramId, jsonCommand }) => {
               : 'не сформированы'
           }`
         : ''
-    }`,
+    }\n\nКод для присоединения к игре:\n<b><code>${
+      jsonCommand.gameId
+    }</code></b>`,
     buttons: [
       {
         c: { c: 'gameStart', gameId: jsonCommand.gameId },
