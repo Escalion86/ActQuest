@@ -1,4 +1,4 @@
-import getNoun from '@helpers/getNoun'
+// import getNoun from '@helpers/getNoun'
 import Games from '@models/Games'
 import dbConnect from '@utils/dbConnect'
 
@@ -14,32 +14,33 @@ const array = [
       },
     ],
   },
-  {
-    prop: 'task',
-    message: 'Введите задание',
-    answerMessage: (answer) => `Задание введено`,
-    buttons: (jsonCommand) => [
-      {
-        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
-        text: '\u{1F6AB} Отмена создания задания',
-      },
-    ],
-  },
-  {
-    prop: 'image',
-    message: 'Отправьте картинку к заданию (если есть)',
-    answerMessage: (answer) => `Картинка задания загружена`,
-    buttons: (jsonCommand) => [
-      {
-        c: { image: '' },
-        text: 'Без картинки',
-      },
-      {
-        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
-        text: '\u{1F6AB} Отмена создания задания',
-      },
-    ],
-  },
+  // {
+  //   prop: 'task',
+  //   message: 'Введите задание',
+  //   answerMessage: (answer) => `Задание введено`,
+  //   buttons: (jsonCommand) => [
+  //     {
+  //       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
+  //       text: '\u{1F6AB} Отмена создания задания',
+  //     },
+  //   ],
+  // },
+  // {
+  //   prop: 'images',
+  //   message: 'Отправьте картинку к заданию (если есть)',
+  //   answerMessage: (answer) => `Картинка задания загружена`,
+  //   answerConverter: (answer) => [answer],
+  //   buttons: (jsonCommand) => [
+  //     {
+  //       c: { images: [] },
+  //       text: 'Без картинки',
+  //     },
+  //     {
+  //       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
+  //       text: '\u{1F6AB} Отмена создания задания',
+  //     },
+  //   ],
+  // },
   // {
   //   prop: 'clue1',
   //   message: 'Введите первую подсказку',
