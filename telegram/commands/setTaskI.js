@@ -16,6 +16,16 @@ const setTaskI = async ({ telegramId, jsonCommand }) => {
     await Games.findByIdAndUpdate(jsonCommand.gameId, {
       tasks,
     })
+
+    return {
+      success: true,
+      message: `Картинка задания убрана обновлено`,
+      nextCommand: {
+        c: 'editTask',
+        gameId: jsonCommand.gameId,
+        i: jsonCommand.i,
+      },
+    }
   }
 
   if (!jsonCommand.message) {
@@ -55,7 +65,7 @@ const setTaskI = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Задание обновлено`,
+    message: `Картинка задания установлена`,
     nextCommand: {
       c: 'editTask',
       gameId: jsonCommand.gameId,
