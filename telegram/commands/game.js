@@ -32,7 +32,7 @@ const game = async ({ telegramId, jsonCommand }) => {
   })
 
   const creator = game?.creatorTelegramId
-    ? await Users.find({
+    ? await Users.findOne({
         telegramId: game?.creatorTelegramId,
       })
     : undefined
