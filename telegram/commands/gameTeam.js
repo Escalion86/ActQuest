@@ -43,7 +43,7 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
     }"</b>\n\n<b>Состав команды</b>:\n${users
       .map(
         (user) =>
-          ` - ${user.name}${
+          ` - <a href="tg://user?id=${user.telegramId}">${user.name}</a>${
             capitanTelegramId === user.telegramId ? ' (капитан)' : ''
           }`
       )
