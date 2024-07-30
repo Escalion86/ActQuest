@@ -36,7 +36,13 @@ const checkContactRecive = async (body, domen) => {
       domen,
     })
 
-    await executeCommand(user_id, { c: 'mainMenu' })
+    await executeCommand(
+      user_id,
+      { c: 'mainMenu' },
+      undefined,
+      undefined,
+      domen
+    )
 
     return false
   }

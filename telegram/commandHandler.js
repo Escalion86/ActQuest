@@ -28,7 +28,8 @@ const commandHandler = async (
         userTelegramId,
         { c: 'mainMenu' },
         messageId,
-        callback_query
+        callback_query,
+        domen
       )
     }
 
@@ -87,7 +88,8 @@ const commandHandler = async (
         userTelegramId,
         jsonCommand,
         messageId,
-        callback_query
+        callback_query,
+        domen
       )
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
@@ -114,7 +116,8 @@ const commandHandler = async (
         userTelegramId,
         lastCommand,
         messageId,
-        callback_query
+        callback_query,
+        domen
       )
     }
   } catch (e) {
