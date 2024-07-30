@@ -133,14 +133,21 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null }
 }
 
+let prevDbConnection
+
 async function dbConnect(db) {
   var dbName = process.env.MONGODB_DBNAME
   if (db === 'nrsk') dbName = process.env.MONGODB_NRSK_DBNAME
+
+  console.log('prevDbConnection :>> ', prevDbConnection)
+  if (prevDbConnection !== dbName) {
+    prevDbConnection = dbName
+  }
   console.log('dbName :>> ', dbName)
   if (cached.conn) {
     console.log('dbConnect: используется текущее соединение')
     // console.log('dbConnect: cached.conn', cached.conn)
-    console.log('cached :>> ', Object.keys(cached))
+    // console.log('cached :>> ', Object.keys(cached))
     // console.log('cached.conn :>> ', Object.keys(cached.conn))
     return cached.conn
   }
