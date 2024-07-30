@@ -11,14 +11,16 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 const menuGames = async ({ telegramId, jsonCommand }) => {
   // await dbConnect() // TODO: Нужно ли это?
   // Получаем список игр
-  const games = (await Games.find({}).lean()).filter(
-    (game) => game.status !== 'finished'
-  )
-  if (!games || games.length === 0) {
+  const games = await Games.find({}).lean()
+  const finishedGames = games.filter((game) => game.status === 'finished')
+  const notFinishedGames = games.filter((game) => game.status !== 'finished')
+  if (!notFinishedGames || notFinishedGames.length === 0) {
     return {
       message: '<b>Предстоящих игр не запланировано</b>',
       buttons: [
-        { c: 'archiveGames', text: '\u{1F4DA} Архив игр' },
+        ...(finishedGames?.length > 0
+          ? [{ c: 'archiveGames', text: '\u{1F4DA} Архив игр' }]
+          : []),
         {
           c: 'joinToGameWithCode',
           text: '\u{1F517} Присоединиться с помощью кода',
@@ -38,8 +40,8 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   // Получаем IDs игр
   const gamesWithUserIds = gamesTeamsWithUser.map(({ gameId }) => gameId)
   // Фильтруем список игр
-  const filteredGames = games
-    ? games.filter(
+  const filteredGames = notFinishedGames
+    ? notFinishedGames.filter(
         (game) =>
           gamesWithUserIds.includes(String(game._id)) ||
           !game.hidden ||
@@ -97,7 +99,9 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
         : '<b>Предстоящие игры</b>',
     buttons: [
       ...buttons,
-      { c: 'archiveGames', text: '\u{1F4DA} Архив игр' },
+      ...(finishedGames?.length > 0
+        ? [{ c: 'archiveGames', text: '\u{1F4DA} Архив игр' }]
+        : []),
       {
         c: 'joinToGameWithCode',
         text: '\u{1F517} Присоединиться с помощью кода',
