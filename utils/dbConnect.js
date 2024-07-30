@@ -139,7 +139,11 @@ async function dbConnect(db) {
   var dbName = process.env.MONGODB_DBNAME
   if (db === 'nrsk') dbName = process.env.MONGODB_NRSK_DBNAME
 
-  if (prevDbConnection === dbName && cached.conn) {
+  if (prevDbConnection !== dbName) {
+    cached = { conn: null, promise: null }
+  }
+
+  if (cached.conn) {
     // console.log('dbConnect: используется текущее соединение')
     // console.log('dbConnect: cached.conn', cached.conn)
     // console.log('cached :>> ', Object.keys(cached))
@@ -147,7 +151,7 @@ async function dbConnect(db) {
     return cached.conn
   }
 
-  if (prevDbConnection !== dbName || !cached.promise) {
+  if (!cached.promise) {
     // console.log('dbConnect: соединяем')
     const opts = {
       // useNewUrlParser: true,
@@ -170,6 +174,7 @@ async function dbConnect(db) {
   } else {
     console.log('dbConnect: ожидаем соединения (повторно)')
   }
+
   if (prevDbConnection !== dbName) {
     prevDbConnection = dbName
   }
