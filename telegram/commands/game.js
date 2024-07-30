@@ -127,7 +127,7 @@ const game = async ({ telegramId, jsonCommand }) => {
     images: game.image ? [game.image] : undefined,
     buttons: [
       {
-        url: `tg://openmessage?user_id=${creator.telegramId}`,
+        url: `tg://user?id=${creator.telegramId}`,
         text: '\u{1F4AC} Написать орагнизатору',
       },
       {
