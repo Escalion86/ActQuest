@@ -1,5 +1,5 @@
 import TeamsUsers from '@models/TeamsUsers'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import { MAX_TEAMS } from 'telegram/constants'
 import createTeamFunc from 'telegram/func/createTeamFunc'
 
@@ -25,7 +25,7 @@ const array = [
 ]
 
 const createTeam = async ({ telegramId, jsonCommand }) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const teamsUser = await TeamsUsers.find({
     userTelegramId: telegramId,
   })

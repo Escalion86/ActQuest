@@ -1,11 +1,11 @@
 import TeamsUsers from '@models/TeamsUsers'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import { MAX_TEAMS } from 'telegram/constants'
 import joinedTeams from './joinedTeams'
 import mainMenuButton from './menuItems/mainMenuButton'
 
 const menuTeams = async ({ telegramId, jsonCommand }) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
 
   if (teamsUser.length >= MAX_TEAMS)

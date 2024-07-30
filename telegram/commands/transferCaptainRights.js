@@ -1,6 +1,6 @@
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 
@@ -13,7 +13,7 @@ const transferCaptainRights = async ({ telegramId, jsonCommand }) => {
 
   const { p } = jsonCommand
 
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const teamsUsers = await TeamsUsers.find({ teamId: jsonCommand?.teamId })
   if (!teamsUsers || teamsUsers.length === 0) {
     return {

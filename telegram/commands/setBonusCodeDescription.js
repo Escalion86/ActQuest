@@ -1,5 +1,5 @@
 import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
 const setBonusCodeDescription = async ({ telegramId, jsonCommand }) => {
@@ -24,7 +24,7 @@ const setBonusCodeDescription = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = game.tasks
   const bonusCodes = [...tasks[jsonCommand.i].bonusCodes]

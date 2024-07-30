@@ -1,5 +1,5 @@
 import Users from '@models/Users'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 
 const setUserName = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message)
@@ -8,7 +8,7 @@ const setUserName = async ({ telegramId, jsonCommand }) => {
       message: 'Введите имя',
       buttons: [{ text: '\u{1F6AB} Отмена', c: 'menuUser' }],
     }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const user = await Users.findOneAndUpdate(
     { telegramId },
     {

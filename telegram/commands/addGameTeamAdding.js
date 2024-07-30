@@ -1,5 +1,5 @@
 import GamesTeams from '@models/GamesTeams'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getGameTeam from 'telegram/func/getGameTeam'
 // import { v4 as uuidv4 } from 'uuid'
@@ -75,7 +75,7 @@ const addGameTeamAdding = async ({ telegramId, jsonCommand }) => {
     time: jsonCommand.time,
   }
 
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   await GamesTeams.findByIdAndUpdate(jsonCommand.gameTeamId, {
     timeAddings: [...(gameTeam.timeAddings ?? []), newAdding],
   })

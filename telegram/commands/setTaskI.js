@@ -1,5 +1,5 @@
 import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
 const setTaskI = async ({ telegramId, jsonCommand }) => {
@@ -8,7 +8,7 @@ const setTaskI = async ({ telegramId, jsonCommand }) => {
   if (checkData) return checkData
 
   if (jsonCommand.noImage) {
-    await dbConnect()
+    // await dbConnect() // TODO: Нужно ли это?
     const game = await Games.findById(jsonCommand.gameId)
     const tasks = [...game.tasks]
     tasks[jsonCommand.i].images = []
@@ -49,7 +49,7 @@ const setTaskI = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = [...game.tasks]
   // const task = tasks[jsonCommand.i]
