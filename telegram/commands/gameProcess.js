@@ -76,7 +76,7 @@ const teamGameStart = async (gameTeamId, game) => {
   })
 }
 
-const gameProcess = async ({ telegramId, jsonCommand }) => {
+const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
@@ -468,6 +468,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
                   : ''
               }`,
               keyboard,
+              domen,
             })
           })
         )
@@ -505,6 +506,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
                 )}`}`,
                 keyboard,
                 // images: game.tasks[taskNum].images,
+                domen,
               })
             })
           )
@@ -534,6 +536,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
               }),
               keyboard,
               images: game.tasks[taskNum].images,
+              domen,
             })
           })
         )

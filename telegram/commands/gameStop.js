@@ -11,7 +11,7 @@ import mainMenu from './mainMenu'
 import keyboardFormer from 'telegram/func/keyboardFormer'
 import mainMenuButton from './menuItems/mainMenuButton'
 
-const gameStop = async ({ telegramId, jsonCommand }) => {
+const gameStop = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -83,6 +83,7 @@ const gameStop = async ({ telegramId, jsonCommand }) => {
             : ''
         }`,
         keyboard,
+        domen,
       })
     })
   )

@@ -1,7 +1,7 @@
 import Users from '@models/Users'
 import sendMessage from 'telegram/sendMessage'
 
-const sendMessageToAll = async ({ telegramId, jsonCommand }) => {
+const sendMessageToAll = async ({ telegramId, jsonCommand, domen }) => {
   // const checkData = check(jsonCommand, ['gameId'])
   // if (checkData) return checkData
 
@@ -41,6 +41,7 @@ const sendMessageToAll = async ({ telegramId, jsonCommand }) => {
         chat_id: telegramId,
         text: jsonCommand.message,
         // keyboard,
+        domen,
       })
     })
   )

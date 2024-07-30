@@ -20,7 +20,7 @@ const commandHandler = async (
   messageId,
   callback_query,
   photo,
-  document
+  domen
 ) => {
   try {
     if (message === '/main_menu' || message === '/start') {
@@ -50,6 +50,7 @@ const commandHandler = async (
             chat_id: userTelegramId,
             // text: JSON.stringify({ body, headers: req.headers.origin }),
             text: 'Ответ получен, но команда на которую дан ответ не найден',
+            domen,
           })
         }
         // Если отправлено сообщение
@@ -100,6 +101,7 @@ const commandHandler = async (
           chat_id: userTelegramId,
           // text: JSON.stringify({ body, headers: req.headers.origin }),
           text: 'Ответ получен, но команда на которую дан ответ не найдена',
+          domen,
         })
       }
 

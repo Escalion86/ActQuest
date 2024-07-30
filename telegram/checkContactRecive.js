@@ -3,7 +3,7 @@ import Users from '@models/Users'
 import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
 
-const checkContactRecive = async (body) => {
+const checkContactRecive = async (body, domen) => {
   // Проверяем не отправлен ли нам контакт
   const contact = body?.message?.contact
   if (contact) {
@@ -33,6 +33,7 @@ const checkContactRecive = async (body) => {
       //   ],
       // },
       remove_keyboard: true,
+      domen,
     })
 
     await executeCommand(user_id, { c: 'mainMenu' })

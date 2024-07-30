@@ -8,7 +8,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 
-const gameMsg = async ({ telegramId, jsonCommand }) => {
+const gameMsg = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -54,6 +54,7 @@ const gameMsg = async ({ telegramId, jsonCommand }) => {
       await sendMessage({
         chat_id: telegramId,
         text: jsonCommand.message,
+        domen,
       })
     })
   )

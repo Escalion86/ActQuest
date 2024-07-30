@@ -8,7 +8,7 @@ import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
 import keyboardFormer from 'telegram/func/keyboardFormer'
 
-const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
+const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -76,6 +76,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand }) => {
             : secondsToTimeStr(game?.taskFailurePenalty)
         }\n\n<b>Организатор игры</b>: <a href="tg://user?id=261102161">Алексей Белинский</a> (кликните, чтобы написать организатору)`,
         keyboard,
+        domen,
       })
     })
   )

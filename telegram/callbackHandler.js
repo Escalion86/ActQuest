@@ -28,7 +28,7 @@ const test_callback = {
   },
 }
 
-const callbackHandler = async (body, res) => {
+const callbackHandler = async (body, res, domen) => {
   const { callback_query } = body
   const { id, from, message, data, chat_instance } = callback_query
   // console.log('callback_query :>> ', callback_query)
@@ -75,13 +75,15 @@ const callbackHandler = async (body, res) => {
   //   null,
   //   true
   // )
-  if (await checkContactRecive(body))
-    if (await checkUserData(from.id))
+  if (await checkContactRecive(body, domen))
+    if (await checkUserData(from.id, undefined, domen))
       return await commandHandler(
         from.id,
         data,
         message.message_id,
-        callback_query
+        callback_query,
+        undefined,
+        domen
       )
 }
 
