@@ -1,9 +1,9 @@
 import Users from '@models/Users'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import mongoose from 'mongoose'
 
 const getUser = async (id) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   // const preparedId = mongoose.Types.ObjectId(id)
   if (id === undefined || !mongoose.Types.ObjectId.isValid(id))
     return {

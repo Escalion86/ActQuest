@@ -1,9 +1,9 @@
 import Teams from '@models/Teams'
-import dbConnect from '@utils/dbConnect'
-import mongoose from 'mongoose'
+// import dbConnect from '@utils/dbConnect'
+// import mongoose from 'mongoose'
 
 const getTeam = async (id) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   // const preparedId = mongoose.Types.ObjectId(id)
   if (
     id === undefined

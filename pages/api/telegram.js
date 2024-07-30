@@ -1,4 +1,5 @@
 import { postData } from '@helpers/CRUD'
+import dbConnect from '@utils/dbConnect'
 import callbackHandler from 'telegram/callbackHandler'
 import messageHandler from 'telegram/messageHandler'
 
@@ -61,93 +62,94 @@ export default async function handler(req, res) {
     }
   }
 
-  const test_callback = {
-    update_id: 173172137,
-    callback_query: {
-      id: '1121425242543370968',
-      from: {
-        id: 261102161,
-        is_bot: false,
-        first_name: 'Алексей',
-        last_name: 'Белинский Иллюзионист',
-        username: 'Escalion',
-        language_code: 'ru',
-        is_premium: true,
-      },
-      message: {
-        message_id: 91,
-        from: '[Object]',
-        chat: ' [Object]',
-        date: 1683689196,
-        text: 'Неизвестная команда',
-        reply_markup: '[Object]',
-      },
-      chat_instance: '3955131192076482535',
-      data: '/createTeam',
-    },
-  }
-  const rtest = {
-    body: {
-      update_id: 173172081,
-      message: {
-        message_id: 14,
-        from: {
-          id: 261102161,
-          is_bot: false,
-          first_name: 'Алексей',
-          last_name: 'Белинский Иллюзионист',
-          username: 'Escalion',
-          language_code: 'ru',
-          is_premium: true,
-        },
-        chat: {
-          id: 261102161,
-          first_name: 'Алексей',
-          last_name: 'Белинский Иллюзионист',
-          username: 'Escalion',
-          type: 'private',
-        },
-        date: 1683645745,
-        text: '/new_team',
-        entities: [{ offset: 0, length: 12, type: 'bot_command' }],
-      },
-    },
-  }
-  var keyboard = {
-    inline_keyboard: [
-      // [
-      //   { text: 'Yes', url: 'http://www.cigam.ru/' },
-      //   { text: 'No', url: 'https://cigam.ru/' },
-      // ],
-      // [
-      //   { text: 'Yes', url: 'http://www.cigam.ru/' },
-      //   { text: 'MayBe', url: 'https://cigam.ru/' },
-      //   { text: 'No', url: 'https://cigam.ru/' },
-      // ],
+  // const test_callback = {
+  //   update_id: 173172137,
+  //   callback_query: {
+  //     id: '1121425242543370968',
+  //     from: {
+  //       id: 261102161,
+  //       is_bot: false,
+  //       first_name: 'Алексей',
+  //       last_name: 'Белинский Иллюзионист',
+  //       username: 'Escalion',
+  //       language_code: 'ru',
+  //       is_premium: true,
+  //     },
+  //     message: {
+  //       message_id: 91,
+  //       from: '[Object]',
+  //       chat: ' [Object]',
+  //       date: 1683689196,
+  //       text: 'Неизвестная команда',
+  //       reply_markup: '[Object]',
+  //     },
+  //     chat_instance: '3955131192076482535',
+  //     data: '/createTeam',
+  //   },
+  // }
+  // const rtest = {
+  //   body: {
+  //     update_id: 173172081,
+  //     message: {
+  //       message_id: 14,
+  //       from: {
+  //         id: 261102161,
+  //         is_bot: false,
+  //         first_name: 'Алексей',
+  //         last_name: 'Белинский Иллюзионист',
+  //         username: 'Escalion',
+  //         language_code: 'ru',
+  //         is_premium: true,
+  //       },
+  //       chat: {
+  //         id: 261102161,
+  //         first_name: 'Алексей',
+  //         last_name: 'Белинский Иллюзионист',
+  //         username: 'Escalion',
+  //         type: 'private',
+  //       },
+  //       date: 1683645745,
+  //       text: '/new_team',
+  //       entities: [{ offset: 0, length: 12, type: 'bot_command' }],
+  //     },
+  //   },
+  // }
+  // var keyboard = {
+  //   inline_keyboard: [
+  //     // [
+  //     //   { text: 'Yes', url: 'http://www.cigam.ru/' },
+  //     //   { text: 'No', url: 'https://cigam.ru/' },
+  //     // ],
+  //     // [
+  //     //   { text: 'Yes', url: 'http://www.cigam.ru/' },
+  //     //   { text: 'MayBe', url: 'https://cigam.ru/' },
+  //     //   { text: 'No', url: 'https://cigam.ru/' },
+  //     // ],
 
-      [
-        {
-          text: 'Создать команду',
-          callback_data: '/createTeam',
-        },
-      ],
-      [
-        {
-          text: 'Редактировать команду',
-          callback_data: '/editTeam',
-        },
-      ],
-      [
-        {
-          text: 'Присоединиться к команде',
-          callback_data: '/joinTeam',
-        },
-      ],
-    ],
-  }
+  //     [
+  //       {
+  //         text: 'Создать команду',
+  //         callback_data: '/createTeam',
+  //       },
+  //     ],
+  //     [
+  //       {
+  //         text: 'Редактировать команду',
+  //         callback_data: '/editTeam',
+  //       },
+  //     ],
+  //     [
+  //       {
+  //         text: 'Присоединиться к команде',
+  //         callback_data: '/joinTeam',
+  //       },
+  //     ],
+  //   ],
+  // }
   if (method === 'POST') {
     try {
       // console.log(body)
+      await dbConnect()
       if (body?.callback_query) {
         // Принимаем команду
         // console.log('callback_body :>> ', body)

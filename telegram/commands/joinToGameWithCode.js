@@ -1,13 +1,13 @@
-import getNoun from '@helpers/getNoun'
-import TeamsUsers from '@models/TeamsUsers'
-import dbConnect from '@utils/dbConnect'
+// import getNoun from '@helpers/getNoun'
+// import TeamsUsers from '@models/TeamsUsers'
+// import dbConnect from '@utils/dbConnect'
 import mongoose from 'mongoose'
-import { MAX_TEAMS } from 'telegram/constants'
+// import { MAX_TEAMS } from 'telegram/constants'
 import getGame from 'telegram/func/getGame'
-import getTeam from 'telegram/func/getTeam'
+// import getTeam from 'telegram/func/getTeam'
 
 const joinToGameWithCode = async ({ telegramId, jsonCommand }) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   // const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
 
   // if (teamsUser.length >= MAX_TEAMS) {

@@ -1,5 +1,5 @@
 import Teams from '@models/Teams'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
 const setTeamDesc = async ({ telegramId, jsonCommand }) => {
@@ -8,7 +8,7 @@ const setTeamDesc = async ({ telegramId, jsonCommand }) => {
   if (checkData) return checkData
 
   if (jsonCommand.noDescription) {
-    await dbConnect()
+    // await dbConnect() // TODO: Нужно ли это?
     const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
       description: '',
     })
@@ -35,7 +35,7 @@ const setTeamDesc = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
     description: jsonCommand.message,
   })

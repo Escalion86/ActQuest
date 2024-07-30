@@ -1,5 +1,5 @@
 import Users from '@models/Users'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 import getTeamUser from 'telegram/func/getTeamUser'
@@ -16,7 +16,7 @@ const teamUser = async ({ telegramId, jsonCommand }) => {
   const team = await getTeam(teamUser.teamId)
   if (team.success === false) return team
 
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const user = await Users.findOne({
     telegramId: teamUser.userTelegramId,
   })

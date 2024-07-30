@@ -1,5 +1,5 @@
 import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
 const setGameImage = async ({ telegramId, jsonCommand }) => {
@@ -19,7 +19,7 @@ const setGameImage = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     image: jsonCommand.message,
   })

@@ -1,5 +1,5 @@
 import Teams from '@models/Teams'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
 const setTeamName = async ({ telegramId, jsonCommand }) => {
@@ -19,7 +19,7 @@ const setTeamName = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
     name: jsonCommand.message,
     name_lowered: jsonCommand.message.toLowerCase(),

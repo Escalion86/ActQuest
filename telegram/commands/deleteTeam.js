@@ -2,7 +2,7 @@ import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 
@@ -53,7 +53,7 @@ const deleteTeam = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   await Teams.findByIdAndRemove(jsonCommand.teamId)
   await TeamsUsers.deleteMany({ teamId: jsonCommand.teamId })
   await GamesTeams.deleteMany({ teamId: jsonCommand.teamId })

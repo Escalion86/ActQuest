@@ -1,9 +1,9 @@
 import Users from '@models/Users'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import sendMessage from './sendMessage'
 
 const checkUserData = async (telegramId, text) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const user = await Users.findOne({
     telegramId,
   })

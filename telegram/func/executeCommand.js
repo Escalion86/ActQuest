@@ -1,5 +1,5 @@
 import LastCommands from '@models/LastCommands'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import commandsArray, { numToCommand } from 'telegram/commands/commandsArray'
 import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 import sendMessage from 'telegram/sendMessage'
@@ -85,7 +85,7 @@ const executeCommand = async (
   } else {
     const actualCommand = { ...jsonCommand }
     delete actualCommand.message
-    await dbConnect()
+    // await dbConnect() // TODO: Нужно ли это?
     const prevCommand = await LastCommands.findOne({
       userTelegramId,
     })

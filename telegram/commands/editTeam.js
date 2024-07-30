@@ -1,4 +1,4 @@
-import GamesTeams from '@models/GamesTeams'
+// import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import dbConnect from '@utils/dbConnect'
@@ -6,8 +6,8 @@ import getTeam from 'telegram/func/getTeam'
 
 const editTeam = async ({ telegramId, jsonCommand }) => {
   const { b } = jsonCommand
+  // await dbConnect() // TODO: Нужно ли это?
   if (!jsonCommand?.teamId) {
-    await dbConnect()
     const teamsUser = await TeamsUsers.find({
       userTelegramId: telegramId,
       // role: 'capitan',
@@ -42,7 +42,6 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  await dbConnect()
   const teamsUser = await TeamsUsers.findOne({
     userTelegramId: telegramId,
     teamId: jsonCommand.teamId,

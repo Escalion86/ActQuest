@@ -1,8 +1,8 @@
-import getNoun from '@helpers/getNoun'
+// import getNoun from '@helpers/getNoun'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import GamesTeams from '@models/GamesTeams'
 import TeamsUsers from '@models/TeamsUsers'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
@@ -201,7 +201,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         game.tasks.length
       )
 
-      await dbConnect()
+      // await dbConnect() // TODO: Нужно ли это?
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
         // findedCodes: newAllFindedCodes,
         startTime: startTimeTemp,
@@ -264,7 +264,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
       game.tasks.length
     )
 
-    await dbConnect()
+    // await dbConnect() // TODO: Нужно ли это?
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       // findedCodes: newAllFindedCodes,
       startTime: startTimeTemp,
@@ -355,7 +355,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     newAllFindedBonusCodes[taskNum] = newFindedBonusCodesInTask
     console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
     console.log('newAllFindedBonusCodes :>> ', newAllFindedBonusCodes)
-    await dbConnect()
+    // await dbConnect() // TODO: Нужно ли это?
     const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedBonusCodes: newAllFindedBonusCodes,
     })
@@ -387,7 +387,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
     newAllFindedPenaltyCodes[taskNum] = newFindedPenaltyCodesInTask
     console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
     console.log('newAllFindedPenaltyCodes :>> ', newAllFindedPenaltyCodes)
-    await dbConnect()
+    // await dbConnect() // TODO: Нужно ли это?
     const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedPenaltyCodes: newAllFindedPenaltyCodes,
     })
@@ -442,7 +442,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
       // Если игра завершена
       if (newActiveNum > game.tasks.length - 1) {
-        await dbConnect()
+        // await dbConnect() // TODO: Нужно ли это?
         await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
           findedCodes: newAllFindedCodes,
           startTime: startTimeTemp,
@@ -482,7 +482,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         if (breakDuration > 0) {
           // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВ ЕСТЬ :>> ')
           // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
-          await dbConnect()
+          // await dbConnect() // TODO: Нужно ли это?
           await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
             findedCodes: newAllFindedCodes,
             // startTime: startTimeTemp,
@@ -511,7 +511,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
         }
         // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВА НЕТ :>> ')
         // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
-        await dbConnect()
+        // await dbConnect() // TODO: Нужно ли это?
         await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
           findedCodes: newAllFindedCodes,
           startTime: startTimeTemp,
@@ -542,7 +542,7 @@ const gameProcess = async ({ telegramId, jsonCommand }) => {
 
     // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
     // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
-    await dbConnect()
+    // await dbConnect() // TODO: Нужно ли это?
     const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       findedCodes: newAllFindedCodes,
       // startTime: startTimeTemp,

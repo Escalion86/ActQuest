@@ -1,9 +1,9 @@
 import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 
 const createGameFunc = async (userTelegramId, props) => {
   console.log('createGameFunc props :>> ', props)
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.create({
     ...props,
     creatorTelegramId: userTelegramId,

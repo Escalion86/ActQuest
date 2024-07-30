@@ -2,14 +2,14 @@ import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
 // import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
 import formatGameName from 'telegram/func/formatGameName'
 // import mainMenuButton from './menuItems/mainMenuButton'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const archiveGames = async ({ telegramId, jsonCommand }) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   // Получаем список игр
   const games = (await Games.find({}).lean()).filter(
     (game) => game.status === 'finished'

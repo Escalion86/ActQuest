@@ -1,6 +1,6 @@
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
 const setBreakDuration = async ({ telegramId, jsonCommand }) => {
@@ -20,7 +20,7 @@ const setBreakDuration = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const value = parseInt(jsonCommand.message)
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     breakDuration: value,

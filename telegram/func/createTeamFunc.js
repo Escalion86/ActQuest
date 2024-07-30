@@ -1,9 +1,9 @@
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 
 const createTeamFunc = async (userTelegramId, jsonCommand) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const team = await Teams.create({
     // capitanId: userTelegramId,
     name: jsonCommand.name,

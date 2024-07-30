@@ -1,5 +1,5 @@
 import Users from '@models/Users'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
 
@@ -8,7 +8,7 @@ const checkContactRecive = async (body) => {
   const contact = body?.message?.contact
   if (contact) {
     console.log('body :>> ', body)
-    await dbConnect()
+    // await dbConnect() // TODO: Нужно ли это?
     const { phone_number, first_name, last_name, user_id } = contact
     const name = (first_name + (last_name ? ' ' + last_name : '')).trim()
     const user = await Users.findOneAndUpdate(

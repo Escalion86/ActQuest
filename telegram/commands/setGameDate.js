@@ -1,5 +1,5 @@
 import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 
@@ -50,7 +50,7 @@ const setGameDate = async ({ telegramId, jsonCommand }) => {
     'Asia/Krasnoyarsk'
   )
 
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     dateStart,
   })

@@ -1,9 +1,9 @@
 import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import mongoose from 'mongoose'
 
 const updateGame = async (id, props) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   if (id === undefined || !mongoose.Types.ObjectId.isValid(id))
     return {
       success: false,

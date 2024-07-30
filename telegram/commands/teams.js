@@ -1,10 +1,10 @@
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const teams = async ({ telegramId, jsonCommand }) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const teams = await Teams.find({})
   const teamsUsers = await TeamsUsers.find({})
 

@@ -1,5 +1,5 @@
 import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
 const setGameIndividualStart = async ({ telegramId, jsonCommand }) => {
@@ -27,7 +27,7 @@ const setGameIndividualStart = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     individualStart: jsonCommand.iStart,
   })

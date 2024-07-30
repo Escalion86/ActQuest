@@ -1,7 +1,7 @@
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
 const deleteTeamAdmin = async ({ telegramId, jsonCommand }) => {
@@ -28,7 +28,7 @@ const deleteTeamAdmin = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const team = await Teams.findByIdAndRemove(jsonCommand.teamId)
   const teamUsers = await TeamsUsers.deleteMany({ teamId: jsonCommand.teamId })
   const gameTeams = await GamesTeams.deleteMany({ teamId: jsonCommand.teamId })

@@ -133,7 +133,9 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null }
 }
 
-async function dbConnect() {
+async function dbConnect(db) {
+  var dbName = process.env.MONGODB_DBNAME
+  if (db === 'nrsk') dbName = process.env.MONGODB_NRSK_DBNAME
   if (cached.conn) {
     // console.log('dbConnect: используется текущее соединение')
     // console.log('dbConnect: cached.conn', cached.conn)
@@ -147,7 +149,7 @@ async function dbConnect() {
       // useUnifiedTopology: true,
       // bufferCommands: false,
       // useFindAndModify: false,
-      dbName: process.env.MONGODB_DBNAME,
+      dbName,
     }
 
     const db = mongoose.connection

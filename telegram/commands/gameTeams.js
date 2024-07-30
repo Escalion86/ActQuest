@@ -2,7 +2,7 @@ import getNoun from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
@@ -15,7 +15,7 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand?.gameId)
   if (game.success === false) return game
 
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })
   if (!gameTeams || gameTeams.length === 0) {
     return {

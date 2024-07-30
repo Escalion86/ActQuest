@@ -1,9 +1,9 @@
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 
 const getGameTeamsRegistredInAGame = async (gameId) => {
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const gameTeams = await GamesTeams.find({
     gameId,
   })

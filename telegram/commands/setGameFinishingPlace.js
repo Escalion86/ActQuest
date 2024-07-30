@@ -1,5 +1,5 @@
 import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
 const setGameFinishingPlace = async ({ telegramId, jsonCommand }) => {
@@ -8,7 +8,7 @@ const setGameFinishingPlace = async ({ telegramId, jsonCommand }) => {
   if (checkData) return checkData
 
   if (jsonCommand.noFinishingPlace) {
-    await dbConnect()
+    // await dbConnect() // TODO: Нужно ли это?
     const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
       finishingPlace: '',
     })
@@ -36,7 +36,7 @@ const setGameFinishingPlace = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     finishingPlace: jsonCommand.message,
   })

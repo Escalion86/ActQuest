@@ -1,6 +1,6 @@
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getTeam from 'telegram/func/getTeam'
@@ -12,7 +12,7 @@ const teamGamesAdmin = async ({ telegramId, jsonCommand }) => {
   const team = await getTeam(jsonCommand.teamId)
   if (team.success === false) return team
 
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const gameTeams = await GamesTeams.find({ teamId: jsonCommand?.teamId })
   // if (!gameTeams || gameTeams.length === 0) {
   //   return {

@@ -1,5 +1,5 @@
 import Games from '@models/Games'
-import dbConnect from '@utils/dbConnect'
+// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 
@@ -8,7 +8,7 @@ const gameResultHide = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  await dbConnect()
+  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     hideResult: true,
   })
