@@ -10,7 +10,7 @@ import keyboardFormer from 'telegram/func/keyboardFormer'
 import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 
-const gameStart = async ({ telegramId, jsonCommand }) => {
+const gameStart = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -123,6 +123,7 @@ const gameStart = async ({ telegramId, jsonCommand }) => {
               )}`,
               keyboard,
               images: game.tasks[taskNum].images,
+              domen,
             })
           })
         )

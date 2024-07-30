@@ -11,10 +11,10 @@ export default async function handler(req, res) {
       await dbConnect('nrsk')
       if (body?.callback_query) {
         // Принимаем команду
-        const result = await callbackHandler(body, res)
+        const result = await callbackHandler(body, res, 'nrsk')
       } else if (body?.message) {
         // Пользователь написал текст
-        const result = await messageHandler(body, res)
+        const result = await messageHandler(body, res, 'nrsk')
       }
 
       return res?.status(200).json({ success: true })

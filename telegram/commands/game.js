@@ -115,16 +115,21 @@ const game = async ({ telegramId, jsonCommand }) => {
     !game?.taskFailurePenalty
       ? 'отсутствует'
       : secondsToTimeStr(game?.taskFailurePenalty)
-  }${
-    creator
-      ? `\n\n<b>Организатор игры</b>: <a href="tg://user?id=${creator.telegramId}">${creator.name}</a> (кликните, чтобы написать организатору)`
-      : ''
-  }`
+  }${creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''}`
+  // ${
+  //   creator
+  //     ? `\n\n<b>Организатор игры</b>: <a href="tg://user?id=${creator.telegramId}">${creator.name}</a> (кликните, чтобы написать организатору)`
+  //     : ''
+  // }
 
   return {
     message,
     images: game.image ? [game.image] : undefined,
     buttons: [
+      {
+        url: `tg://user?id=${creator.telegramId}`,
+        text: '\u{1F4AC} Написать орагнизатору',
+      },
       {
         url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
         text: '\u{1F30F} Посмотреть результаты игры на сайте',

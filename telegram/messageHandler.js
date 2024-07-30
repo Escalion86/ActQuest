@@ -33,7 +33,7 @@ import commandHandler from './commandHandler'
 //   },
 // }
 
-const messageHandler = async (body, res) => {
+const messageHandler = async (body, res, domen) => {
   const { update_id, message } = body
   const {
     message_id,
@@ -49,15 +49,15 @@ const messageHandler = async (body, res) => {
   } = message
   // await dbConnect() // TODO: Нужно ли это?
 
-  if (await checkContactRecive(body))
-    if (await checkUserData(from.id, text))
+  if (await checkContactRecive(body, domen))
+    if (await checkUserData(from.id, text, domen))
       return await commandHandler(
         from.id,
         text,
         message_id,
         undefined,
         photo,
-        document
+        domen
       )
 }
 

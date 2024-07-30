@@ -1,11 +1,9 @@
 import { postData } from '@helpers/CRUD'
 import { DEV_TELEGRAM_ID } from './constants'
 
-const sendErrorToDev = (chat_id, type) => async (error) => {
-  return
-
-  await postData(
-    `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+const sendErrorToDev = (chat_id, type, telegramToken) => async (error) => {
+  return await postData(
+    `https://api.telegram.org/bot${telegramToken}/sendMessage`,
     {
       chat_id: DEV_TELEGRAM_ID,
       text: `ОШИБКА!\ntype=${type}\nchat_id=${chat_id}\n${
@@ -39,12 +37,15 @@ const sendMessage = async ({
   callback_query,
   images,
   remove_keyboard,
+  domen,
 }) => {
+  var telegramToken = process.env.TELEGRAM_TOKEN
+  if (domen === 'nrsk') telegramToken = process.env.TELEGRAM_NRSK_TOKEN
   if (images) {
     for (let i = 0; i < images.length; i++) {
       const photo = images[i]
       await postData(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendPhoto`,
+        `https://api.telegram.org/bot${telegramToken}/sendPhoto`,
         {
           // message_id: callback_query?.message?.message_id,
           chat_id,
@@ -56,7 +57,7 @@ const sendMessage = async ({
         // null,
         null,
         // (data) => console.log('post success', data),
-        sendErrorToDev(chat_id, 'sendPhoto'),
+        sendErrorToDev(chat_id, 'sendPhoto', telegramToken),
         // (data) => console.log('post error', data),
         true,
         null,
@@ -65,7 +66,7 @@ const sendMessage = async ({
     }
     if (callback_query) {
       await postData(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageReplyMarkup`,
+        `https://api.telegram.org/bot${telegramToken}/editMessageReplyMarkup`,
         {
           message_id: callback_query?.message?.message_id,
           chat_id,
@@ -77,7 +78,7 @@ const sendMessage = async ({
         // null,
         null,
         // (data) => console.log('post success', data),
-        sendErrorToDev(chat_id, 'editMessageReplyMarkup'),
+        sendErrorToDev(chat_id, 'editMessageReplyMarkup', telegramToken),
         // (data) => console.log('post error', data),
         true,
         null,
@@ -118,7 +119,7 @@ const sendMessage = async ({
       const preparedText = splitText(text)
       for (let i = 0; i < preparedText.length; i++) {
         await postData(
-          `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+          `https://api.telegram.org/bot${telegramToken}/sendMessage`,
           {
             message_id:
               i < preparedText.length - 1
@@ -140,7 +141,7 @@ const sendMessage = async ({
             ...props,
           },
           null,
-          sendErrorToDev(chat_id, 'sendMessage'),
+          sendErrorToDev(chat_id, 'sendMessage', telegramToken),
           // (data) => console.log('post success', data),
           // (data) => console.log('post error', data),
           true,
@@ -151,7 +152,7 @@ const sendMessage = async ({
     }
     if (callback_query?.message?.message_id) {
       return await postData(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/editMessageText`,
+        `https://api.telegram.org/bot${telegramToken}/editMessageText`,
         {
           message_id: callback_query?.message?.message_id,
           chat_id,
@@ -170,7 +171,7 @@ const sendMessage = async ({
         null,
         // (data) => console.log('post success', data),
         // null,
-        sendErrorToDev(chat_id, 'editMessageText'),
+        sendErrorToDev(chat_id, 'editMessageText', telegramToken),
         true,
         null,
         true
@@ -178,7 +179,7 @@ const sendMessage = async ({
     }
 
     return await postData(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+      `https://api.telegram.org/bot${telegramToken}/sendMessage`,
       {
         chat_id,
         text,
@@ -194,7 +195,7 @@ const sendMessage = async ({
         ...props,
       },
       null,
-      sendErrorToDev(chat_id, 'sendMessage'),
+      sendErrorToDev(chat_id, 'sendMessage', telegramToken),
       // (data) => console.log('post success', data),
       // (data) => console.log('post error', data),
       true,

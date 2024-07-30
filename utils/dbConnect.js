@@ -133,12 +133,27 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null }
 }
 
+let prevDbConnection
+
 async function dbConnect(db) {
   var dbName = process.env.MONGODB_DBNAME
   if (db === 'nrsk') dbName = process.env.MONGODB_NRSK_DBNAME
+
+  if (prevDbConnection !== dbName) {
+    console.log('db changed !!')
+    cached = { conn: null, promise: null }
+    await mongoose.disconnect()
+  }
+
+  if (prevDbConnection !== dbName) {
+    prevDbConnection = dbName
+  }
+
   if (cached.conn) {
     // console.log('dbConnect: используется текущее соединение')
     // console.log('dbConnect: cached.conn', cached.conn)
+    // console.log('cached :>> ', Object.keys(cached))
+    // console.log('cached.conn :>> ', Object.keys(cached.conn))
     return cached.conn
   }
 
@@ -165,6 +180,7 @@ async function dbConnect(db) {
   } else {
     console.log('dbConnect: ожидаем соединения (повторно)')
   }
+
   cached.conn = await cached.promise
   // console.log('cached.conn.connections[0]', cached.conn.connections[0])
   // autoIncrement.initialize(cached.conn)

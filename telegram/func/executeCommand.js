@@ -5,15 +5,20 @@ import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
 
-const lastCommandHandler = async (telegramId, jsonCommand) => {
+const lastCommandHandler = async (telegramId, jsonCommand, domen) => {
   if (typeof jsonCommand.c === 'number') {
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
       jsonCommand,
+      domen,
     })
   }
   if (commandsArray[jsonCommand.c])
-    return await commandsArray[jsonCommand.c]({ telegramId, jsonCommand })
+    return await commandsArray[jsonCommand.c]({
+      telegramId,
+      jsonCommand,
+      domen,
+    })
   return {
     success: false,
     message: 'Неизвестная команда',
@@ -25,11 +30,10 @@ const executeCommand = async (
   userTelegramId,
   jsonCommand,
   messageId,
-  callback_query
+  callback_query,
+  domen
 ) => {
-  // const data = messageToCommandAndProps(command)
-  console.log('executeCommand => jsonCommand :>> ', jsonCommand)
-  const result = await lastCommandHandler(userTelegramId, jsonCommand)
+  const result = await lastCommandHandler(userTelegramId, jsonCommand, domen)
   const keyboard = keyboardFormer(result.buttons)
 
   if (result.images) {
@@ -42,31 +46,29 @@ const executeCommand = async (
       // keyboard,
       callback_query,
       images: result.images,
+      domen,
     })
   }
 
-  // console.log('executeCommand => result :>> ', result)
-
-  const messageToSend = {
+  const sendResult = await sendMessage({
     chat_id: userTelegramId,
     // text: JSON.stringify({ body, headers: req.headers.origin }),
     text: result.message,
     parse_mode: result.parse_mode,
     keyboard,
     callback_query: result.images ? undefined : callback_query,
-  }
-  // console.log('messageToSend :>> ', messageToSend)
+    domen,
+  })
 
-  const sendResult = await sendMessage(messageToSend)
-  // console.log('sendResult :>> ', sendResult)
   const nextCommand = result.nextCommand
   if (nextCommand) {
     if (typeof nextCommand === 'string') {
       return await executeCommand(
         userTelegramId,
         { c: nextCommand },
-        messageId
-        // callback_query
+        messageId,
+        undefined, // callback_query,
+        domen
       )
     }
     // Если команда содержит в себе command, то значт это готовая команда,
@@ -79,8 +81,9 @@ const executeCommand = async (
     return await executeCommand(
       userTelegramId,
       actualCommand,
-      messageId
-      // callback_query
+      messageId,
+      undefined, // callback_query
+      domen
     )
   } else {
     const actualCommand = { ...jsonCommand }
