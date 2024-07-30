@@ -115,11 +115,12 @@ const game = async ({ telegramId, jsonCommand }) => {
     !game?.taskFailurePenalty
       ? 'отсутствует'
       : secondsToTimeStr(game?.taskFailurePenalty)
-  }${
-    creator
-      ? `\n\n<b>Организатор игры</b>: <a href="tg://user?id=${creator.telegramId}">${creator.name}</a> (кликните, чтобы написать организатору)`
-      : ''
-  }`
+  }${creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''}`
+  // ${
+  //   creator
+  //     ? `\n\n<b>Организатор игры</b>: <a href="tg://user?id=${creator.telegramId}">${creator.name}</a> (кликните, чтобы написать организатору)`
+  //     : ''
+  // }
 
   return {
     message,
