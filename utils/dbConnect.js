@@ -138,8 +138,8 @@ async function dbConnect(db) {
   if (db === 'nrsk') dbName = process.env.MONGODB_NRSK_DBNAME
   console.log('dbName :>> ', dbName)
   if (cached.conn) {
-    // console.log('dbConnect: используется текущее соединение')
-    // console.log('dbConnect: cached.conn', cached.conn)
+    console.log('dbConnect: используется текущее соединение')
+    console.log('dbConnect: cached.conn', cached.conn)
     return cached.conn
   }
 
