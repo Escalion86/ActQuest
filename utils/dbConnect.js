@@ -140,7 +140,8 @@ async function dbConnect(db) {
   if (cached.conn) {
     console.log('dbConnect: используется текущее соединение')
     // console.log('dbConnect: cached.conn', cached.conn)
-    console.log('! :>> ', Object.keys(cached.conn))
+    console.log('cached :>> ', Object.keys(cached))
+    // console.log('cached.conn :>> ', Object.keys(cached.conn))
     return cached.conn
   }
 
