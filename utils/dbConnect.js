@@ -140,7 +140,13 @@ async function dbConnect(db) {
   if (db === 'nrsk') dbName = process.env.MONGODB_NRSK_DBNAME
 
   if (prevDbConnection !== dbName) {
+    console.log('db changed !!')
     cached = { conn: null, promise: null }
+    await mongoose.disconnect()
+  }
+
+  if (prevDbConnection !== dbName) {
+    prevDbConnection = dbName
   }
 
   if (cached.conn) {
@@ -175,9 +181,6 @@ async function dbConnect(db) {
     console.log('dbConnect: ожидаем соединения (повторно)')
   }
 
-  if (prevDbConnection !== dbName) {
-    prevDbConnection = dbName
-  }
   cached.conn = await cached.promise
   // console.log('cached.conn.connections[0]', cached.conn.connections[0])
   // autoIncrement.initialize(cached.conn)
