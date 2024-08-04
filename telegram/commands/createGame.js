@@ -1,6 +1,7 @@
 import createGameFunc from 'telegram/func/createGameFunc'
 import moment from 'moment-timezone'
 import { getNounTasks } from '@helpers/getNoun'
+import arrayOfCommands from 'telegram/func/arrayOfCommands'
 
 const array = [
   {
@@ -85,65 +86,19 @@ const array = [
 ]
 
 const createGame = async ({ telegramId, jsonCommand }) => {
-  // Если это запрос (команда), то отправляем текст пользователю
-  if (!jsonCommand.message) {
-    for (let i = 0; i < array.length; i++) {
-      const data = array[i]
-      if (jsonCommand[data.prop] === undefined) {
-        return {
-          success: true,
-          message: data.message,
-          buttons: data.buttons(jsonCommand),
-          // nextCommand: `/menuTeams`,
-        }
+  return await arrayOfCommands({
+    array,
+    jsonCommand,
+    onFinish: async (result) => {
+      const game = await createGameFunc(telegramId, result)
+
+      return {
+        success: true,
+        message: `Игра "${result.name}" создана`,
+        nextCommand: `menuGamesEdit`,
       }
-    }
-  }
-
-  // Если это ответ на запрос, то смотрим какую переменную (key) последнюю внесли
-  for (let i = 0; i < array.length; i++) {
-    const data = array[i]
-    if (jsonCommand[data.prop] === undefined) {
-      if (
-        array[i].checkAnswer !== undefined &&
-        !array[i].checkAnswer(jsonCommand.message)
-      ) {
-        return {
-          success: false,
-          message: array[i].errorMessage(jsonCommand.message),
-          // buttons: data.buttons(props),
-          nextCommand: jsonCommand,
-          // `/createGame` + propsToStr(props),
-        }
-      }
-
-      const value =
-        typeof array[i].answerConverter === 'function'
-          ? array[i].answerConverter(jsonCommand.message)
-          : jsonCommand.message
-
-      if (i < array.length - 1) {
-        return {
-          success: true,
-          message: array[i].answerMessage(jsonCommand.message),
-          // buttons: data.buttons(props),
-          nextCommand: { [data.prop]: value },
-          // `/createGame` + propsToStr(props),
-        }
-      } else {
-        jsonCommand[data.prop] = value
-      }
-    }
-  }
-
-  // Если все переменные на месте, то создаем команду
-  const game = await createGameFunc(telegramId, jsonCommand)
-
-  return {
-    success: true,
-    message: `Игра "${jsonCommand.name}" создана`,
-    nextCommand: `menuGamesEdit`,
-  }
+    },
+  })
 }
 
 export default createGame
