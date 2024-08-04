@@ -43,7 +43,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
         : secondsToTimeStr(game?.taskFailurePenalty)
     }${
       game.manyCodesPenalty && game.manyCodesPenalty[0] > 0
-        ? `\n<b>Штраф за неверные коды</b>: ${secondsToTimeStr(
+        ? `\n<b>Штраф за большое кол-во неверно введенных кодов в одном задании</b>: ${secondsToTimeStr(
             game.manyCodesPenalty[1]
           )} за ${getNounCodes(game.manyCodesPenalty[0])}`
         : ''
