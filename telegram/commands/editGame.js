@@ -44,8 +44,8 @@ const editGame = async ({ telegramId, jsonCommand }) => {
     }${
       game.manyCodesPenalty && game.manyCodesPenalty[0] > 0
         ? `\n<b>Штраф за неверные коды</b>: ${secondsToTimeStr(
-            game.manyCodesPenalty[0]
-          )} за ${getNounCodes(count)}`
+            game.manyCodesPenalty[1]
+          )} за ${getNounCodes(game.manyCodesPenalty[0])}`
         : ''
     }\n\n<b>Режим выдачи заданий</b>: ${
       game.individualStart ? 'Индивидуальный' : 'Одновременно со всеми'
