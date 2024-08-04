@@ -95,6 +95,7 @@ import gameTeamAddings from './gameTeamAddings'
 import delGameTeamAdding from './delGameTeamAdding'
 import addGameTeamAdding from './addGameTeamAdding'
 import joinToGameWithCode from './joinToGameWithCode'
+import setManyCodesPenalty from './setManyCodesPenalty'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -197,6 +198,7 @@ const commandsArray = {
   delGameTeamAdding,
   addGameTeamAdding,
   joinToGameWithCode,
+  setManyCodesPenalty,
 }
 
 var i = 0
