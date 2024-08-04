@@ -1,3 +1,4 @@
+import { getNounCodes } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import Games from '@models/Games'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
@@ -102,9 +103,9 @@ const setManyCodesPenalty = async ({ telegramId, jsonCommand }) => {
       })
       return {
         success: true,
-        message: `Штраф за введение большого кол-ва неверных кодов обновлен на "за ${count} кодов штраф ${secondsToTimeStr(
-          penalty
-        )}"`,
+        message: `Штраф за введение большого кол-ва неверных кодов обновлен на "за ${getNounCodes(
+          count
+        )} кодов штраф ${secondsToTimeStr(penalty)}"`,
         nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
       }
     },
