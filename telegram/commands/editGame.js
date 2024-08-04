@@ -181,14 +181,21 @@ const editGame = async ({ telegramId, jsonCommand }) => {
           },
           text: '\u{270F} До подсказки',
         },
-      ],
-      [
         {
           c: {
             c: 'setBreakDuration',
             gameId: jsonCommand.gameId,
           },
           text: '\u{270F} Перерыв',
+        },
+      ],
+      [
+        {
+          c: {
+            c: 'setManyCodesPenalty',
+            gameId: jsonCommand.gameId,
+          },
+          text: '\u{270F} Штраф за много кодов',
         },
         {
           c: {

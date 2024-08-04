@@ -117,6 +117,10 @@ const gamesSchema = {
     type: Number,
     default: 0,
   },
+  manyCodesPenalty: {
+    type: [Number, Number],
+    default: 0,
+  },
   status: {
     type: String,
     default: 'active',
