@@ -190,6 +190,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
         const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
         if (
           typeof wrongCodes[index] === 'object' &&
+          wrongCodes[index] !== null &&
           wrongCodes[index].length >= maxCodes
         ) {
           manyWrongCodePenalty +=
