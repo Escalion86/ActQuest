@@ -565,6 +565,8 @@ const GameBlock = ({ game }) => {
       if (!endTime[i] || !startTime[i]) tempResult.push(prevSum + taskDuration)
       else
         tempResult.push(prevSum + getSecondsBetween(startTime[i], endTime[i]))
+      // if (breakDuration > 0 && i < tasks.length - 1)
+      //   tempResult.push(tempResult[i] + breakDuration)
     }
 
     maxTeamTime = Math.max(maxTeamTime, tempResult[tempResult.length - 1])
@@ -677,8 +679,8 @@ const GameBlock = ({ game }) => {
             </div>
           </div>
           <div className="flex justify-center mb-2 gap-x-1">
-            <div>Время игры{breakDuration ? ' (без учета перерыва)' : ''}:</div>
-            <Time start={start} seconds={maxTeamTime} duration={duration} />
+            <div>Время игры:</div>
+            <Time start={start} seconds={totalSeconds} duration={duration} />
           </div>
         </div>
         <div
