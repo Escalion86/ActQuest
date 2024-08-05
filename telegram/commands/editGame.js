@@ -253,7 +253,7 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
         hide: !game.hidden,
       },
       {
-        c: { c: 'deleteGame', gameId: jsonCommand.gameId },
+        c: { c: 'delGame', gameId: jsonCommand.gameId },
         text: '\u{1F4A3} Удалить игру',
       },
       { c: 'menuGamesEdit', text: '\u{2B05} Назад' },
