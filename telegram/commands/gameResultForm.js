@@ -398,22 +398,23 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
 
   return {
     message: `Результаты игры ${formatGameName(game)} сформированы!`,
-    buttons: [
-      {
-        url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
-        text: '\u{1F30F} Посмотреть результаты игры на сайте',
-        hide: game.status !== 'finished' || !game.result,
-      },
-      {
-        c: { c: 'gameResult', gameId: jsonCommand.gameId },
-        text: '\u{1F4CB} Посмотреть результаты игры',
-        hide: game.status !== 'finished',
-      },
-      {
-        text: '\u{2B05} Назад',
-        c: { c: 'editGame', gameId: jsonCommand.gameId },
-      },
-    ],
+    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+    // buttons: [
+    //   {
+    //     url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
+    //     text: '\u{1F30F} Посмотреть результаты игры на сайте',
+    //     hide: game.status !== 'finished' || !game.result,
+    //   },
+    //   {
+    //     c: { c: 'gameResult', gameId: jsonCommand.gameId },
+    //     text: '\u{1F4CB} Посмотреть результаты игры',
+    //     hide: game.status !== 'finished',
+    //   },
+    //   {
+    //     text: '\u{2B05} Назад',
+    //     c: { c: 'editGame', gameId: jsonCommand.gameId },
+    //   },
+    // ],
   }
 }
 
