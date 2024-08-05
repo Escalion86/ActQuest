@@ -133,16 +133,18 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       findedPenaltyCodes,
       findedBonusCodes,
       timeAddings,
+      wrongCodes,
     } = tasksDuration.find((item) => item.teamId === String(team._id))
     let penalty = 0
     let result = 0
+    let manyWrongCodePenalty = 0
     let codePenalty = 0
     let codeBonus = 0
     let codePenaltyBonusText = ''
     const addings = timeAddings.reduce((acc, { time }) => {
       return acc + time
     }, 0)
-    const addingsText = timeAddings
+    var addingsText = timeAddings
       .map(
         ({ name, time }) =>
           `${time < 0 ? '\u{1F7E2}' : '\u{1F534}'} ${secondsToTimeStr(
@@ -170,6 +172,18 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
         findedBonusCodes[index]?.length > 0
       )
         codePenaltyBonusText += `\n\u{1F4CC} "${title}":`
+
+      if (
+        typeof game.manyCodesPenalty === 'object' &&
+        game.manyCodesPenalty[0] > 0 &&
+        typeof wrongCodes === 'object'
+      ) {
+        const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
+        if (wrongCodes[index] >= maxCodes) {
+          manyWrongCodePenalty +=
+            Math.floor(wrongCodes[index] / maxCodes) * penaltyForMaxCodes
+        }
+      }
       if (findedPenaltyCodes[index]?.length > 0) {
         const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) =>
           findedPenaltyCodes[index].includes(code)
@@ -198,12 +212,23 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       }
     })
 
-    result += penalty + codePenalty - codeBonus + addings
+    const totalPenalty = penalty + codePenalty + manyWrongCodePenalty
+
+    if (manyWrongCodePenalty > 0) {
+      addingsText += `\n\u{1F534} ${secondsToTimeStr(
+        Math.abs(manyWrongCodePenalty),
+        true
+      )} - подбор кода`
+    }
+
+    result += totalPenalty - codeBonus + addings
 
     return {
       team,
       seconds,
+      totalPenalty,
       penalty,
+      manyWrongCodePenalty,
       codePenalty,
       codeBonus,
       codePenaltyBonusText,
