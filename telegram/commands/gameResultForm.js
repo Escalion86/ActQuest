@@ -87,6 +87,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     findedPenaltyCodes: gameTeam.findedPenaltyCodes,
     findedBonusCodes: gameTeam.findedBonusCodes,
     timeAddings: gameTeam.timeAddings,
+    wrongCodes: gameTeam.wrongCodes,
   }))
 
   const taskAverageTimes = Array(game.tasks.length)
@@ -173,14 +174,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       )
         codePenaltyBonusText += `\n\u{1F4CC} "${title}":`
 
-      console.log(
-        'typeof game.manyCodesPenalty === object :>> ',
-        typeof game.manyCodesPenalty === 'object'
-      )
-      console.log(
-        'game.manyCodesPenalty[0] > 0 :>> ',
-        game.manyCodesPenalty[0] > 0
-      )
+      console.log('typeof wrongCodes :>> ', typeof wrongCodes)
       console.log(
         'typeof wrongCodes === object :>> ',
         typeof wrongCodes === 'object'
