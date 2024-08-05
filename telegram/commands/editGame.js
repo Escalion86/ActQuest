@@ -1,4 +1,4 @@
-import { getNounCodes } from '@helpers/getNoun'
+import { getNounWrongCodes } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
@@ -45,7 +45,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       game.manyCodesPenalty && game.manyCodesPenalty[0] > 0
         ? `\n<b>Штраф за большое кол-во неверно введенных кодов в одном задании</b>: ${secondsToTimeStr(
             game.manyCodesPenalty[1]
-          )} за ${getNounCodes(game.manyCodesPenalty[0])}`
+          )} за ${getNounWrongCodes(game.manyCodesPenalty[0])}`
         : ''
     }\n\n<b>Режим выдачи заданий</b>: ${
       game.individualStart ? 'Индивидуальный' : 'Одновременно со всеми'
