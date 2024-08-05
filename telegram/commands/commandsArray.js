@@ -1,5 +1,5 @@
 import createTeam from './createTeam'
-import deleteTeam from './deleteTeam'
+import delTeam from './delTeam'
 import editTeam from './editTeam'
 import linkToJoinTeam from './linkToJoinTeam'
 import joinedTeams from './joinedTeams'
@@ -17,7 +17,7 @@ import menuGames from './menuGames'
 import createGame from './createGame'
 import menuGamesEdit from './menuGamesEdit'
 import editGame from './editGame'
-import deleteGame from './deleteGame'
+import delGame from './delGame'
 import setGameDesc from './setGameDesc'
 import setGameName from './setGameName'
 import gameTeams from './gameTeams'
@@ -45,7 +45,7 @@ import teamUsersAdmin from './teamUsersAdmin'
 import teamUserAdmin from './teamUserAdmin'
 import delTeamUserAdmin from './delTeamUserAdmin'
 import delTeamUserAdmin2 from './delTeamUserAdmin2'
-import deleteTeamAdmin from './deleteTeamAdmin'
+import delTeamAdmin from './delTeamAdmin'
 import editTeamAdmin from './editTeamAdmin'
 import joinGameAdmin from './joinGameAdmin'
 import teamGamesAdmin from './teamGamesAdmin'
@@ -110,7 +110,7 @@ const commandsArray = {
   mainMenu,
   editTeam,
   menuUser,
-  deleteTeam,
+  delTeam,
   joinTeam,
   joinedTeams,
   teamUsers,
@@ -121,7 +121,7 @@ const commandsArray = {
   createGame,
   menuGamesEdit,
   editGame,
-  deleteGame,
+  delGame,
   setGameDesc,
   setGameName,
   gameTeams,
@@ -148,7 +148,7 @@ const commandsArray = {
   teamUsersAdmin,
   teamUserAdmin,
   delTeamUserAdmin,
-  deleteTeamAdmin,
+  delTeamAdmin,
   editTeamAdmin,
   joinGameAdmin,
   teamGamesAdmin,

@@ -39,7 +39,7 @@ const editTeamAdmin = async ({ telegramId, jsonCommand }) => {
     //   text: '\u{1F517} Пригласить в команду',
     // },
     {
-      c: { c: 'deleteTeamAdmin', teamId: jsonCommand.teamId },
+      c: { c: 'delTeamAdmin', teamId: jsonCommand.teamId },
       text: '\u{1F4A3} Удалить команду',
     },
     { c: 'teams', text: '\u{2B05} Назад' },

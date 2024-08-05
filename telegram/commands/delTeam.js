@@ -6,7 +6,7 @@ import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 
-const deleteTeam = async ({ telegramId, jsonCommand }) => {
+const delTeam = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
@@ -44,7 +44,7 @@ const deleteTeam = async ({ telegramId, jsonCommand }) => {
         {
           text: '\u{1F5D1} Удалить',
           c: { confirm: true },
-          // `deleteTeam` + propsToStr(props)
+          // `delTeam` + propsToStr(props)
         },
         {
           text: '\u{1F6AB} Отмена',
@@ -65,4 +65,4 @@ const deleteTeam = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default deleteTeam
+export default delTeam
