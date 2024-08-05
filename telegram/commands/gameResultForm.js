@@ -173,14 +173,31 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       )
         codePenaltyBonusText += `\n\u{1F4CC} "${title}":`
 
+      console.log(
+        'typeof game.manyCodesPenalty === object :>> ',
+        typeof game.manyCodesPenalty === 'object'
+      )
+      console.log(
+        'game.manyCodesPenalty[0] > 0 :>> ',
+        game.manyCodesPenalty[0] > 0
+      )
+      console.log(
+        'typeof wrongCodes === object :>> ',
+        typeof wrongCodes === 'object'
+      )
+      console.log('wrongCodes !== null :>> ', wrongCodes !== null)
       if (
         typeof game.manyCodesPenalty === 'object' &&
         game.manyCodesPenalty[0] > 0 &&
-        typeof wrongCodes === 'object'
+        typeof wrongCodes === 'object' &&
+        wrongCodes !== null
       ) {
         console.log('111 :>> ')
         const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
-        if (wrongCodes[index] >= maxCodes) {
+        if (
+          typeof wrongCodes[index] === 'object' &&
+          wrongCodes[index].length >= maxCodes
+        ) {
           manyWrongCodePenalty +=
             Math.floor(wrongCodes[index] / maxCodes) * penaltyForMaxCodes
         }
