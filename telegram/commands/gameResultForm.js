@@ -148,7 +148,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     var addingsText = timeAddings
       .map(
         ({ name, time }) =>
-          `${time < 0 ? '\u{1F7E2}' : '\u{1F534}'} ${secondsToTimeStr(
+          `${time < 0 ? '\u{1F7E2}' : '\u{1F534}'} ${secondsToTime(
             Math.abs(time),
             true
           )} - ${name}`
@@ -174,19 +174,12 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       )
         codePenaltyBonusText += `\n\u{1F4CC} "${title}":`
 
-      console.log('typeof wrongCodes :>> ', typeof wrongCodes)
-      console.log(
-        'typeof wrongCodes === object :>> ',
-        typeof wrongCodes === 'object'
-      )
-      console.log('wrongCodes !== null :>> ', wrongCodes !== null)
       if (
         typeof game.manyCodesPenalty === 'object' &&
         game.manyCodesPenalty[0] > 0 &&
         typeof wrongCodes === 'object' &&
         wrongCodes !== null
       ) {
-        console.log('111 :>> ')
         const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
         if (
           typeof wrongCodes[index] === 'object' &&
@@ -228,9 +221,8 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     const totalPenalty = penalty + codePenalty + manyWrongCodePenalty
 
     if (manyWrongCodePenalty > 0) {
-      addingsText += `${addingsText ? '\n' : ''}\u{1F534} ${secondsToTimeStr(
-        Math.abs(manyWrongCodePenalty),
-        true
+      addingsText += `${addingsText ? '\n' : ''}\u{1F534} ${secondsToTime(
+        manyWrongCodePenalty
       )} - подбор кода`
     }
 
