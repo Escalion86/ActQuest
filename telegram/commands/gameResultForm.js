@@ -66,6 +66,25 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     }
   }
 
+  if (game.result && !jsonCommand.confirm) {
+    return {
+      success: true,
+      message: `Подтвердите обновление результатов игры ${formatGameName(
+        game
+      )}`,
+      buttons: [
+        {
+          text: '\u{1F504} Обновить результаты',
+          c: { confirm: true },
+        },
+        {
+          text: '\u{1F6AB} Отмена',
+          c: { c: 'editGame', gameId: jsonCommand.gameId },
+        },
+      ],
+    }
+  }
+
   // Получаем список команд участвующих в игре
   const gameTeams = await GamesTeams.find({
     gameId: jsonCommand.gameId,
@@ -87,6 +106,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     findedPenaltyCodes: gameTeam.findedPenaltyCodes,
     findedBonusCodes: gameTeam.findedBonusCodes,
     timeAddings: gameTeam.timeAddings,
+    wrongCodes: gameTeam.wrongCodes,
   }))
 
   const taskAverageTimes = Array(game.tasks.length)
@@ -133,19 +153,21 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       findedPenaltyCodes,
       findedBonusCodes,
       timeAddings,
+      wrongCodes,
     } = tasksDuration.find((item) => item.teamId === String(team._id))
     let penalty = 0
     let result = 0
+    let manyWrongCodePenalty = 0
     let codePenalty = 0
     let codeBonus = 0
     let codePenaltyBonusText = ''
     const addings = timeAddings.reduce((acc, { time }) => {
       return acc + time
     }, 0)
-    const addingsText = timeAddings
+    var addingsText = timeAddings
       .map(
         ({ name, time }) =>
-          `${time < 0 ? '\u{1F7E2}' : '\u{1F534}'} ${secondsToTimeStr(
+          `${time < 0 ? '\u{1F7E2}' : '\u{1F534}'} ${secondsToTime(
             Math.abs(time),
             true
           )} - ${name}`
@@ -170,6 +192,23 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
         findedBonusCodes[index]?.length > 0
       )
         codePenaltyBonusText += `\n\u{1F4CC} "${title}":`
+
+      if (
+        typeof game.manyCodesPenalty === 'object' &&
+        game.manyCodesPenalty[0] > 0 &&
+        typeof wrongCodes === 'object' &&
+        wrongCodes !== null
+      ) {
+        const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
+        if (
+          typeof wrongCodes[index] === 'object' &&
+          wrongCodes[index] !== null &&
+          wrongCodes[index].length >= maxCodes
+        ) {
+          manyWrongCodePenalty +=
+            Math.floor(wrongCodes[index].length / maxCodes) * penaltyForMaxCodes
+        }
+      }
       if (findedPenaltyCodes[index]?.length > 0) {
         const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) =>
           findedPenaltyCodes[index].includes(code)
@@ -198,12 +237,22 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       }
     })
 
-    result += penalty + codePenalty - codeBonus + addings
+    const totalPenalty = penalty + codePenalty + manyWrongCodePenalty
+
+    if (manyWrongCodePenalty > 0) {
+      addingsText += `${addingsText ? '\n' : ''}\u{1F534} ${secondsToTime(
+        manyWrongCodePenalty
+      )} - подбор кода`
+    }
+
+    result += totalPenalty - codeBonus + addings
 
     return {
       team,
       seconds,
+      totalPenalty,
       penalty,
+      manyWrongCodePenalty,
       codePenalty,
       codeBonus,
       codePenaltyBonusText,
@@ -361,22 +410,23 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
 
   return {
     message: `Результаты игры ${formatGameName(game)} сформированы!`,
-    buttons: [
-      {
-        url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
-        text: '\u{1F30F} Посмотреть результаты игры на сайте',
-        hide: game.status !== 'finished' || !game.result,
-      },
-      {
-        c: { c: 'gameResult', gameId: jsonCommand.gameId },
-        text: '\u{1F4CB} Посмотреть результаты игры',
-        hide: game.status !== 'finished',
-      },
-      {
-        text: '\u{2B05} Назад',
-        c: { c: 'editGame', gameId: jsonCommand.gameId },
-      },
-    ],
+    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+    // buttons: [
+    //   {
+    //     url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
+    //     text: '\u{1F30F} Посмотреть результаты игры на сайте',
+    //     hide: game.status !== 'finished' || !game.result,
+    //   },
+    //   {
+    //     c: { c: 'gameResult', gameId: jsonCommand.gameId },
+    //     text: '\u{1F4CB} Посмотреть результаты игры',
+    //     hide: game.status !== 'finished',
+    //   },
+    //   {
+    //     text: '\u{2B05} Назад',
+    //     c: { c: 'editGame', gameId: jsonCommand.gameId },
+    //   },
+    // ],
   }
 }
 

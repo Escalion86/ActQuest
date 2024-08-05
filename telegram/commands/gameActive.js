@@ -10,8 +10,28 @@ const gameActive = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
+  if (!jsonCommand.confirm) {
+    return {
+      success: true,
+      message: `Подтвердите активацию игры ${formatGameName(
+        game
+      )}\n\nВНИМАНИЕ: Это приведет к удалению результатов текущей игры, однако запись на игру команд останется без изменений`,
+      buttons: [
+        {
+          text: '\u{26A1} Активировать игру',
+          c: { confirm: true },
+        },
+        {
+          text: '\u{1F6AB} Отмена',
+          c: { c: 'editGame', gameId: jsonCommand.gameId },
+        },
+      ],
+    }
+  }
+
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
     status: 'active',
+    result: null,
   })
 
   return {

@@ -20,6 +20,9 @@ export default getNoun
 
 export const getNounCodes = (number) => getNoun(number, 'код', 'кода', 'кодов')
 
+export const getNounWrongCodes = (number) =>
+  getNoun(number, 'неверный код', 'неверных кода', 'неверных кодов')
+
 export const getNounEvents = (number) =>
   getNoun(number, 'мероприятие', 'мероприятия', 'мероприятий')
 

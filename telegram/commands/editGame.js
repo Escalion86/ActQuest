@@ -1,4 +1,4 @@
-import { getNounCodes } from '@helpers/getNoun'
+import { getNounWrongCodes } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
@@ -45,7 +45,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       game.manyCodesPenalty && game.manyCodesPenalty[0] > 0
         ? `\n<b>Штраф за большое кол-во неверно введенных кодов в одном задании</b>: ${secondsToTimeStr(
             game.manyCodesPenalty[1]
-          )} за ${getNounCodes(game.manyCodesPenalty[0])}`
+          )} за ${getNounWrongCodes(game.manyCodesPenalty[0])}`
         : ''
     }\n\n<b>Режим выдачи заданий</b>: ${
       game.individualStart ? 'Индивидуальный' : 'Одновременно со всеми'
@@ -114,14 +114,7 @@ const editGame = async ({ telegramId, jsonCommand }) => {
       ],
       [
         {
-          c: { c: 'gameAddings', gameId: jsonCommand.gameId },
-          text: '\u{1F48A} Добавить бонусы/штрафы командам',
-          // hide: game.status !== 'finished',
-        },
-      ],
-      [
-        {
-          c: { c: 'gameResult', gameId: jsonCommand.gameId },
+          c: { c: 'gameResultAdminBack', gameId: jsonCommand.gameId },
           text: '\u{1F4CB} Посмотреть результаты',
           hide: game.status !== 'finished' || !game.result,
         },
@@ -210,6 +203,13 @@ const editGame = async ({ telegramId, jsonCommand }) => {
             gameId: jsonCommand.gameId,
           },
           text: '\u{270F} Штраф за провал',
+        },
+      ],
+      [
+        {
+          c: { c: 'gameAddings', gameId: jsonCommand.gameId },
+          text: '\u{1F48A} Добавить бонусы/штрафы командам',
+          // hide: game.status !== 'finished',
         },
       ],
       {
