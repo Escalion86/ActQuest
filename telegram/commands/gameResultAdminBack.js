@@ -1,7 +1,7 @@
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const gameResult = async ({ telegramId, jsonCommand }) => {
+const gameResultAdminBack = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -11,14 +11,14 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
   if (game.status !== 'finished') {
     return {
       message: 'Игра еще не завершена',
-      nextCommand: { c: 'game', gameId: jsonCommand.gameId },
+      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
     }
   }
 
   if (!game.result) {
     return {
       message: 'Результаты игры еще не сформированы',
-      nextCommand: { c: 'game', gameId: jsonCommand.gameId },
+      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
     }
   }
 
@@ -27,10 +27,10 @@ const gameResult = async ({ telegramId, jsonCommand }) => {
     buttons: [
       {
         text: '\u{2B05} Назад',
-        c: { c: 'game', gameId: jsonCommand.gameId },
+        c: { c: 'editGame', gameId: jsonCommand.gameId },
       },
     ],
   }
 }
 
-export default gameResult
+export default gameResultAdminBack
