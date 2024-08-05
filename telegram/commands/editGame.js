@@ -120,9 +120,9 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
         },
         {
           url:
-            'https://actquest.ru/' +
+            'https://actquest.ru/game/result/' +
             domen +
-            '/game/result/' +
+            '/' +
             jsonCommand.gameId,
           text: '\u{1F30F} на сайте',
           hide: game.status !== 'finished' || !game.result,
