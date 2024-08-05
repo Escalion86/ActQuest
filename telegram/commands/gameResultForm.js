@@ -66,6 +66,25 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     }
   }
 
+  if (game.result && !jsonCommand.confirm) {
+    return {
+      success: true,
+      message: `Подтвердите обновление результатов игры ${formatGameName(
+        game
+      )}`,
+      buttons: [
+        {
+          text: '\u{1F504} Обновить результаты',
+          c: { confirm: true },
+        },
+        {
+          text: '\u{1F6AB} Отмена',
+          c: { c: 'editGame', gameId: jsonCommand.gameId },
+        },
+      ],
+    }
+  }
+
   // Получаем список команд участвующих в игре
   const gameTeams = await GamesTeams.find({
     gameId: jsonCommand.gameId,
