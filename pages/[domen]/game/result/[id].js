@@ -1092,11 +1092,12 @@ const GameBlock = ({ game }) => {
 
 function EventPage(props) {
   const gameId = props.id
+  const domen = props.domen
   const [game, setGame] = useState()
 
   useEffect(() => {
     const getGame = async (gameId) => {
-      const game = await getData('/api/games/' + gameId)
+      const game = await getData('/api/games/' + domen + '/' + gameId)
       setGame(game.data)
     }
     if (gameId) getGame(gameId)

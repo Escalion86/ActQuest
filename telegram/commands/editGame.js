@@ -4,7 +4,7 @@ import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const editGame = async ({ telegramId, jsonCommand }) => {
+const editGame = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -119,7 +119,11 @@ const editGame = async ({ telegramId, jsonCommand }) => {
           hide: game.status !== 'finished' || !game.result,
         },
         {
-          url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
+          url:
+            'https://actquest.ru/' +
+            domen +
+            '/game/result/' +
+            jsonCommand.gameId,
           text: '\u{1F30F} на сайте',
           hide: game.status !== 'finished' || !game.result,
         },
