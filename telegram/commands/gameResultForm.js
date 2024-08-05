@@ -228,7 +228,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     const totalPenalty = penalty + codePenalty + manyWrongCodePenalty
 
     if (manyWrongCodePenalty > 0) {
-      addingsText += `\n\u{1F534} ${secondsToTimeStr(
+      addingsText += `${addingsText ? '\n' : ''}\u{1F534} ${secondsToTimeStr(
         Math.abs(manyWrongCodePenalty),
         true
       )} - подбор кода`
