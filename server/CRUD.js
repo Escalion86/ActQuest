@@ -11,8 +11,10 @@ export default async function handler(Schema, req, res, params = null) {
   const { query, method, body } = req
 
   const id = query?.id
+  const domen = query?.domen
+  console.log('domen :>> ', domen)
 
-  await dbConnect()
+  await dbConnect(domen)
 
   let data
   console.log('Schema', Schema)

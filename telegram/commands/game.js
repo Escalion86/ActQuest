@@ -8,7 +8,7 @@ import getGameTeamsRegistredInAGame from 'telegram/func/getGameTeamsRegistredInA
 import getTeamOfUserRegistredInAGame from 'telegram/func/getTeamOfUserRegistredInAGame'
 import getTeamsUserOfUser from 'telegram/func/getTeamsUserOfUser'
 
-const game = async ({ telegramId, jsonCommand }) => {
+const game = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -131,7 +131,8 @@ const game = async ({ telegramId, jsonCommand }) => {
         text: '\u{1F4AC} Написать орагнизатору',
       },
       {
-        url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
+        url:
+          'https://actquest.ru/' + domen + '/game/result/' + jsonCommand.gameId,
         text: '\u{1F30F} Посмотреть результаты игры на сайте',
         hide: game.status !== 'finished' || !game.result || game.hideResult,
       },
