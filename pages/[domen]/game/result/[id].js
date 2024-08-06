@@ -612,13 +612,15 @@ const GameBlock = ({ game }) => {
         wrongCodes !== null
       ) {
         const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
-        if (
-          typeof wrongCodes[i] === 'object' &&
-          wrongCodes[i] !== null &&
-          wrongCodes[i].length >= maxCodes
-        ) {
-          tempResult[i] +=
-            Math.floor(wrongCodes[i].length / maxCodes) * penaltyForMaxCodes
+        for (let i = 0; i < tasks.length; i++) {
+          if (
+            typeof wrongCodes[i] === 'object' &&
+            wrongCodes[i] !== null &&
+            wrongCodes[i].length >= maxCodes
+          ) {
+            tempResult[i] +=
+              Math.floor(wrongCodes[i].length / maxCodes) * penaltyForMaxCodes
+          }
         }
       }
       return tempResult
