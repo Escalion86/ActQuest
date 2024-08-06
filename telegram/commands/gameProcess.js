@@ -161,9 +161,9 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
           : ''
       }${
         game.tasks[game.tasks.length - 1].postMessage
-          ? `\n\n<b>Сообщение от прошлого задания:</b>\n"${
+          ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${
               game.tasks[game.tasks.length - 1].postMessage
-            }"`
+            }</blockquote>`
           : ''
       }`,
       nextCommand: 'mainMenu',
@@ -187,7 +187,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       return {
         message: `${
           game.tasks[taskNum].postMessage
-            ? `<b>Сообщение от прошлого задания:</b>\n"${game.tasks[taskNum].postMessage}"\n\n`
+            ? `<b>Сообщение от прошлого задания:</b>\n<blockquote>${game.tasks[taskNum].postMessage}</blockquote>\n\n`
             : ''
         }<b>ПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           breakDuration - secondsAfterEndTime
@@ -249,7 +249,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       return {
         message: `${
           game.tasks[taskNum].postMessage
-            ? `<b>Сообщение от прошлого задания:</b>\n"${game.tasks[taskNum].postMessage}"\n\n`
+            ? `<b>Сообщение от прошлого задания:</b>\n<blockquote>${game.tasks[taskNum].postMessage}</blockquote>\n\n`
             : ''
         }<b>Время вышло\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           taskDuration + breakDuration - secondsLeftAfterStartTask
@@ -462,9 +462,9 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
                   : ''
               }${
                 game.tasks[game.tasks.length - 1].postMessage
-                  ? `\n\n<b>Сообщение от прошлого задания:</b>\n"${
+                  ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${
                       game.tasks[game.tasks.length - 1].postMessage
-                    }"`
+                    }</blockquote>`
                   : ''
               }`,
               keyboard,
@@ -499,7 +499,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
                 chat_id: telegramId,
                 text: `<b>КОД "${code}" ПРИНЯТ\nЗадание выполнено!${
                   game.tasks[taskNum].postMessage
-                    ? `\n\n<b>Сообщение от прошлого задания:</b>\n"${game.tasks[taskNum].postMessage}"`
+                    ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${game.tasks[taskNum].postMessage}</blockquote>`
                     : ''
                 }\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
                   breakDuration
