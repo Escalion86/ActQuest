@@ -50,11 +50,15 @@ const taskText = ({
     haveBonusCodes || havePenaltyCodes
       ? `\n\n<b>Внимание:</b> На месте есть ${
           haveBonusCodes && havePenaltyCodes
-            ? 'бонусные и штрафные'
+            ? `бонусные (${bonusCodes.length} шт.) и штрафные (${penaltyCodes.length} шт.)`
             : haveBonusCodes
-            ? 'бонусные'
-            : 'штрафные'
-        } коды!`
+            ? `бонусные (${bonusCodes.length} шт.)`
+            : `штрафные (${penaltyCodes.length} шт.)`
+        } коды!${
+          haveBonusCodes
+            ? ' Бонусные коды сработают, только если ввести его до завершения задания (ввода основных кодов)'
+            : ''
+        }`
       : ''
   }${`\n\n${
     cluesDuration > 0 && showCluesNum < clues?.length

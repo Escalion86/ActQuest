@@ -486,7 +486,7 @@ const TimeResult = ({
   color,
   penalty,
   bonus,
-  addings,
+  addings, // Не используется
   rowHeight,
   ...props
 }) => (
@@ -581,7 +581,7 @@ const GameBlock = ({ game }) => {
   )
 
   const teamsTaskPenalty = gameTeams.map(
-    ({ findedPenaltyCodes, startTime, endTime }, index) => {
+    ({ findedPenaltyCodes, startTime, endTime, wrongCodes }, index) => {
       const tempResult = Array(tasks.length).fill(0)
       if (findedPenaltyCodes?.length > 0) {
         for (let i = 0; i < findedPenaltyCodes.length; i++) {
@@ -603,6 +603,22 @@ const GameBlock = ({ game }) => {
           if (!endTime[i] || !startTime[i]) {
             tempResult[i] += taskFailurePenalty
           }
+        }
+      }
+      if (
+        typeof game.manyCodesPenalty === 'object' &&
+        game.manyCodesPenalty[0] > 0 &&
+        typeof wrongCodes === 'object' &&
+        wrongCodes !== null
+      ) {
+        const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
+        if (
+          typeof wrongCodes[i] === 'object' &&
+          wrongCodes[i] !== null &&
+          wrongCodes[i].length >= maxCodes
+        ) {
+          tempResult[i] +=
+            Math.floor(wrongCodes[i].length / maxCodes) * penaltyForMaxCodes
         }
       }
       return tempResult
