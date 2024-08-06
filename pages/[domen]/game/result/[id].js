@@ -1111,6 +1111,7 @@ const GameBlock = ({ game }) => {
 function EventPage(props) {
   const gameId = props.id
   const domen = props.domen
+  console.log('props :>> ', props)
   const [game, setGame] = useState()
 
   useEffect(() => {
