@@ -1,4 +1,4 @@
-import getNoun from '@helpers/getNoun'
+import { getNounTeams } from '@helpers/getNoun'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
@@ -48,12 +48,11 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
   })
 
   return {
-    message: `На игру <b>${formatGameName(game)}</b> зарегистрировано ${getNoun(
-      teams.length,
-      'команда',
-      'команды',
-      'команд'
-    )} (${teamsUsers.length} чел.)\n${teams
+    message: `На игру <b>${formatGameName(
+      game
+    )}</b> зарегистрировано ${getNounTeams(teams.length)} (${
+      teamsUsers.length
+    } чел.)\n${teams
       .map(
         (team, index) =>
           `\n${index + 1}. "${team.name}" (${
