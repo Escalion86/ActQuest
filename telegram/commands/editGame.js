@@ -75,7 +75,7 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
         : ''
     }\n\nКод для присоединения к игре:\n<b><code>${
       jsonCommand.gameId
-    }</code></b>\nНа игру зарегистрировано ${getNounTeams(teams.length)}`,
+    }</code></b>\n\nНа игру зарегистрировано ${getNounTeams(teams.length)}`,
     buttons: [
       {
         c: { c: 'gameStart', gameId: jsonCommand.gameId },
