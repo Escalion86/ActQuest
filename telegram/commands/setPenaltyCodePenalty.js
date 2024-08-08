@@ -10,7 +10,8 @@ const setPenaltyCodePenalty = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message) {
     return {
       success: true,
-      message: 'Введите штраф за введение кода в секундах',
+      message:
+        'Введите штраф за введение кода в секундах. Число должно быть больше нуля',
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
@@ -24,11 +25,31 @@ const setPenaltyCodePenalty = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
+
+  const penalty = parseInt(jsonCommand.message)
+  if (penalty <= 0) {
+    return {
+      success: true,
+      message: 'Штраф должен быть в секундах и больше нуля!',
+      buttons: [
+        {
+          text: '\u{1F6AB} Отмена',
+          c: {
+            c: 'editPenaltyCode',
+            gameId: jsonCommand.gameId,
+            i: jsonCommand.i,
+            j: jsonCommand.j,
+          },
+        },
+      ],
+    }
+  }
+
   // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = game.tasks
   const penaltyCodes = [...tasks[jsonCommand.i].penaltyCodes]
-  penaltyCodes[jsonCommand.j].penalty = jsonCommand.message
+  penaltyCodes[jsonCommand.j].penalty = penalty
   tasks[jsonCommand.i].penaltyCodes = penaltyCodes
 
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
