@@ -82,10 +82,6 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   const buttons = buttonListConstructor(filteredGames, page, (game, number) => {
     // TODO поправить вывод зарегистрированных команд пользователя на игру
     const isTeamRegistred = gamesWithUserIds.includes(String(game._id))
-    // const team = isTeamRegistred
-    //   ? teams.find((team) => String(team._id) === gameTeam.teamId)
-    //   : null
-    // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
     return {
       text: `${formatGameName(game)}${isTeamRegistred ? ` (записан)` : ''}${
         game.hidden ? ` (СКРЫТА)` : ''

@@ -211,6 +211,12 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
       ],
       [
         {
+          c: { c: 'gameTeamsAdmin', gameId: jsonCommand.gameId },
+          text: '\u{1F465} Зарегистрированные команды',
+        },
+      ],
+      [
+        {
           c: { c: 'gameAddings', gameId: jsonCommand.gameId },
           text: '\u{1F48A} Добавить бонусы/штрафы командам',
           // hide: game.status !== 'finished',

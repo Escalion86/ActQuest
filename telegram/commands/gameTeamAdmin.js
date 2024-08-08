@@ -1,13 +1,14 @@
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
 
-const gameTeam = async ({ telegramId, jsonCommand }) => {
+const gameTeamAdmin = async ({ telegramId, jsonCommand }) => {
   const isAdmin = ADMIN_TELEGRAM_IDS.includes(telegramId)
 
   const checkData = check(jsonCommand, ['gameTeamId'])
@@ -37,6 +38,14 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
     (teamUser) => teamUser.role === 'capitan'
   )?.userTelegramId
 
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(users, page, (user, number) => ({
+    text: `\u{1F4AC} ${user.name}${
+      capitanTelegramId === user.telegramId ? ' (капитан)' : ''
+    }`,
+    url: `tg://user?id=${user.telegramId}`,
+  }))
+
   return {
     message: `<b>Игра ${formatGameName(game)}\n\nКоманда "${
       team?.name
@@ -49,6 +58,7 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
       )
       .join('\n')}`,
     buttons: [
+      ...buttons,
       {
         c: {
           c: 'delGameTeam',
@@ -61,11 +71,11 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
         ),
       },
       {
-        c: { c: 'gameTeams', gameId: String(game._id) },
+        c: { c: 'gameTeamsAdmin', gameId: String(game._id) },
         text: '\u{2B05} Назад',
       },
     ],
   }
 }
 
-export default gameTeam
+export default gameTeamAdmin
