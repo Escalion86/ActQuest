@@ -19,7 +19,7 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
     gameTeams?.length > 0 ? gameTeams.map((gameTeam) => gameTeam.teamId) : []
 
   const teams =
-    teamsIds.lwength > 0
+    teamsIds.length > 0
       ? await Teams.find({
           _id: { $in: teamsIds },
         })
