@@ -1,5 +1,7 @@
-import { getNounWrongCodes } from '@helpers/getNoun'
+import { getNounTeams, getNounWrongCodes } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
+import GamesTeams from '@models/GamesTeams'
+import Teams from '@models/Teams'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
@@ -10,6 +12,18 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
 
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
+
+  const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })
+
+  const teamsIds =
+    gameTeams?.length > 0 ? gameTeams.map((gameTeam) => gameTeam.teamId) : []
+
+  const teams =
+    teamsIds.lwength > 0
+      ? await Teams.find({
+          _id: { $in: teamsIds },
+        })
+      : []
 
   return {
     images: game.image ? [game.image] : undefined,
@@ -61,7 +75,7 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
         : ''
     }\n\nКод для присоединения к игре:\n<b><code>${
       jsonCommand.gameId
-    }</code></b>`,
+    }</code></b>\nНа игру зарегистрировано ${getNounTeams(teams.length)}`,
     buttons: [
       {
         c: { c: 'gameStart', gameId: jsonCommand.gameId },
@@ -212,7 +226,8 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
       [
         {
           c: { c: 'gameTeamsAdmin', gameId: jsonCommand.gameId },
-          text: '\u{1F465} Зарегистрированные команды',
+          text: `\u{1F465} Зарегистрированные команды (${teams.length})`,
+          hidden: teams.length === 0,
         },
       ],
       [
