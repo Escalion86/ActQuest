@@ -26,8 +26,8 @@ const setBonusCodeBonus = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const bonus = parseInt(jsonCommand.message)
-  if (bonus <= 0) {
+  const bonus = jsonCommand.message
+  if (!(bonus == Number(bonus) && Number(bonus) > 0)) {
     return {
       success: true,
       message: 'Бонус должен быть в секундах и больше нуля!',

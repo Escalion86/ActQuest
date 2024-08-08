@@ -26,8 +26,8 @@ const setPenaltyCodePenalty = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const penalty = parseInt(jsonCommand.message)
-  if (penalty <= 0) {
+  const penalty = jsonCommand.message
+  if (!(penalty == Number(penalty) && Number(penalty) > 0)) {
     return {
       success: true,
       message: 'Штраф должен быть в секундах и больше нуля!',
