@@ -35,7 +35,7 @@ const editBonusCodes = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Список бонусный кодов\n\n${
+    message: `Список бонусных кодов\n\n${
       bonusCodes.length > 0
         ? bonusCodes
             .map(

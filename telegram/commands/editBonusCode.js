@@ -45,7 +45,7 @@ const editBonusCode = async ({ telegramId, jsonCommand }) => {
       success: true,
       message: `Бонусный код "${bonusCode.code}"\n\n${
         bonusCode.description
-      }\n\nШтраф: ${secondsToTimeStr(bonusCode.bonus)}`,
+      }\n\nБонус: ${secondsToTimeStr(bonusCode.bonus)}`,
       buttons: [
         {
           text: '\u{270F} Бонусный код',
