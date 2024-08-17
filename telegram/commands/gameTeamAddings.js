@@ -45,7 +45,7 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
         ? gameTeam.timeAddings.map(({ name, time }) => {
             return `\n${
               time < 0 ? `\u{1F7E2}` : `\u{1F534}`
-            } ${secondsToTimeStr(time, true)} - ${name}`
+            } ${secondsToTimeStr(Math.abs(time), true)} - ${name}`
           })
         : ' отсутвуют'
     }`,
