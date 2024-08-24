@@ -8,7 +8,6 @@ const unhideGame = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     hidden: false,
   })
@@ -16,7 +15,7 @@ const unhideGame = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Игра ${formatGameName(game)} открыта`,
-    nextCommand: { c: `editGame`, gameId: jsonCommand.gameId },
+    nextCommand: { c: `editGameGeneral`, gameId: jsonCommand.gameId },
   }
 }
 

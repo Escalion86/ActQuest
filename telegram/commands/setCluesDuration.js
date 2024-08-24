@@ -20,7 +20,6 @@ const setCluesDuration = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  // await dbConnect() // TODO: Нужно ли это?
   const value = parseInt(jsonCommand.message)
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     cluesDuration: value,

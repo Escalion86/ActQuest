@@ -9,7 +9,6 @@ import formatGameName from 'telegram/func/formatGameName'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const archiveGames = async ({ telegramId, jsonCommand }) => {
-  // await dbConnect() // TODO: Нужно ли это?
   // Получаем список игр
   const games = (await Games.find({}).lean()).filter(
     (game) => game.status === 'finished'

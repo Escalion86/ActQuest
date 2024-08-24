@@ -8,7 +8,6 @@ const setUserName = async ({ telegramId, jsonCommand }) => {
       message: 'Введите имя',
       buttons: [{ text: '\u{1F6AB} Отмена', c: 'menuUser' }],
     }
-  // await dbConnect() // TODO: Нужно ли это?
   const user = await Users.findOneAndUpdate(
     { telegramId },
     {

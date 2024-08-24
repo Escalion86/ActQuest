@@ -7,7 +7,6 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
 
 const menuGamesEdit = async ({ telegramId, jsonCommand }) => {
-  // await dbConnect() // TODO: Нужно ли это?
   // Получаем список игр
   var games = []
   if (ADMIN_TELEGRAM_IDS.includes(telegramId)) games = await Games.find({})
@@ -16,7 +15,7 @@ const menuGamesEdit = async ({ telegramId, jsonCommand }) => {
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(games, page, (game, number) => ({
     text: `\u{270F} ${formatGameName(game)}`,
-    c: { c: 'editGame', gameId: game._id },
+    c: { c: 'editGameGeneral', gameId: game._id },
     //`editGame/gameId=${game._id}`,
   }))
 

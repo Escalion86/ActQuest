@@ -25,7 +25,6 @@ const array = [
 ]
 
 const createTeam = async ({ telegramId, jsonCommand }) => {
-  // await dbConnect() // TODO: Нужно ли это?
   const teamsUser = await TeamsUsers.find({
     userTelegramId: telegramId,
   })

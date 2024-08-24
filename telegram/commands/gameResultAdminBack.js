@@ -11,14 +11,14 @@ const gameResultAdminBack = async ({ telegramId, jsonCommand }) => {
   if (game.status !== 'finished') {
     return {
       message: 'Игра еще не завершена',
-      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+      nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
     }
   }
 
   if (!game.result) {
     return {
       message: 'Результаты игры еще не сформированы',
-      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+      nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
     }
   }
 
@@ -27,7 +27,7 @@ const gameResultAdminBack = async ({ telegramId, jsonCommand }) => {
     buttons: [
       {
         text: '\u{2B05} Назад',
-        c: { c: 'editGame', gameId: jsonCommand.gameId },
+        c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
       },
     ],
   }

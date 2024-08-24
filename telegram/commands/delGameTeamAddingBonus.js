@@ -1,9 +1,8 @@
 import GamesTeams from '@models/GamesTeams'
-// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getGameTeam from 'telegram/func/getGameTeam'
 
-const delGameTeamAdding = async ({ telegramId, jsonCommand }) => {
+const delGameTeamAddingBonus = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
@@ -12,17 +11,17 @@ const delGameTeamAdding = async ({ telegramId, jsonCommand }) => {
 
   if (jsonCommand.i === undefined)
     return {
-      message: 'Ошибка, не указан номер бонуса/штрафа',
+      message: 'Ошибка, не указан номер бонуса',
       nextCommand: `menuGames`,
     }
 
   if (!jsonCommand.confirm) {
     return {
       success: true,
-      message: 'Подтвердите удаление бонуса/штрафа',
+      message: 'Подтвердите удаление бонуса',
       buttons: [
         {
-          text: '\u{1F4A3} Удалить',
+          text: '\u{1F5D1} Удалить',
           c: { confirm: true },
         },
         {
@@ -33,7 +32,6 @@ const delGameTeamAdding = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  // await dbConnect() // TODO: Нужно ли это?
   await GamesTeams.findByIdAndUpdate(jsonCommand.gameTeamId, {
     timeAddings: gameTeam.timeAddings.filter(
       (adding, number) => number != jsonCommand.i
@@ -41,9 +39,9 @@ const delGameTeamAdding = async ({ telegramId, jsonCommand }) => {
   })
   return {
     success: true,
-    message: 'Бонус/штраф удален',
+    message: 'Бонус удален',
     nextCommand: { c: 'gameTeamAddings', gameTeamId: jsonCommand.gameTeamId },
   }
 }
 
-export default delGameTeamAdding
+export default delGameTeamAddingBonus

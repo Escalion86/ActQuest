@@ -9,7 +9,6 @@ import mainMenuButton from './menuItems/mainMenuButton'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const menuGames = async ({ telegramId, jsonCommand }) => {
-  // await dbConnect() // TODO: Нужно ли это?
   // Получаем список игр
   const games = await Games.find({}).lean()
   const finishedGames = games.filter((game) => game.status === 'finished')

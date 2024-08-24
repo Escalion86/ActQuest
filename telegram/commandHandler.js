@@ -41,7 +41,6 @@ const commandHandler = async (
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
       if (!jsonCommand || !jsonCommand?.c || jsonCommand?.prevC) {
         // console.log('Полученная команда не полная или это не команда')
-        // await dbConnect() // TODO: Нужно ли это?
         const last = await LastCommands.findOne({
           userTelegramId,
         })
@@ -93,7 +92,6 @@ const commandHandler = async (
       )
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
-      // await dbConnect() // TODO: Нужно ли это?
       const last = await LastCommands.findOne({
         userTelegramId,
       })

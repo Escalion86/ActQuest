@@ -16,7 +16,6 @@ const teamUserAdmin = async ({ telegramId, jsonCommand }) => {
   const team = await getTeam(teamUser.teamId)
   if (team.success === false) return team
 
-  // await dbConnect() // TODO: Нужно ли это?
   const user = await Users.findOne({
     telegramId: teamUser.userTelegramId,
   })
@@ -28,10 +27,10 @@ const teamUserAdmin = async ({ telegramId, jsonCommand }) => {
   }
 
   const buttons = [
-    // {
-    //   url: `https://web.telegram.org/k/#${user.telegramId}`,
-    //   text: '\u{2712} Написать в личку',
-    // },
+    {
+      url: `t.me/+${user.phone}`,
+      text: '\u{1F4AC} Написать в личку',
+    },
     {
       c: {
         c: 'delTeamUserAdmin',
@@ -49,9 +48,7 @@ const teamUserAdmin = async ({ telegramId, jsonCommand }) => {
   return {
     message: `<b>АДМИНИСТРИРОВАНИЕ</b>\n\n<b>"${user.name}" ${
       isCapitan ? 'капитан' : 'участник'
-    } команды "${team.name}"</b>\n<a href="tg://user?id=${
-      user.telegramId
-    }">Написать в личку</a>`,
+    } команды "${team.name}"</b>`,
     buttons,
     // parse_mode: 'Markdown',
   }

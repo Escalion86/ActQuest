@@ -3,7 +3,6 @@ import Teams from '@models/Teams'
 // import mongoose from 'mongoose'
 
 const getTeam = async (id) => {
-  // await dbConnect() // TODO: Нужно ли это?
   // const preparedId = mongoose.Types.ObjectId(id)
   if (
     id === undefined

@@ -8,7 +8,6 @@ const setTeamDesc = async ({ telegramId, jsonCommand }) => {
   if (checkData) return checkData
 
   if (jsonCommand.noDescription) {
-    // await dbConnect() // TODO: Нужно ли это?
     const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
       description: '',
     })
@@ -35,7 +34,6 @@ const setTeamDesc = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  // await dbConnect() // TODO: Нужно ли это?
   const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
     description: jsonCommand.message,
   })

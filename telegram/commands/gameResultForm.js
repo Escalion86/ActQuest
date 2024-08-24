@@ -62,7 +62,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   if (game.status !== 'finished') {
     return {
       message: 'Игра еще не завершена',
-      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+      nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
     }
   }
 
@@ -79,7 +79,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
         },
         {
           text: '\u{1F6AB} Отмена',
-          c: { c: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -343,7 +343,6 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     showSeconds: true,
   })
 
-  // await dbConnect() // TODO: Нужно ли это?
   // const game = await Games.findById(jsonCommand.gameId)
 
   const messageText = [
@@ -410,7 +409,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
 
   return {
     message: `Результаты игры ${formatGameName(game)} сформированы!`,
-    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+    nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
     // buttons: [
     //   {
     //     url: 'https://actquest.ru/game/result/' + jsonCommand.gameId,
@@ -424,7 +423,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     //   },
     //   {
     //     text: '\u{2B05} Назад',
-    //     c: { c: 'editGame', gameId: jsonCommand.gameId },
+    //     c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
     //   },
     // ],
   }

@@ -27,7 +27,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
         },
         {
           text: '\u{1F6AB} Я передумал',
-          c: { c: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -36,10 +36,19 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
   // Получаем список всех пользователей
   const users = await Users.find({})
 
+  const creator = game?.creatorTelegramId
+    ? users.find((user) => user.telegramId == game?.creatorTelegramId)
+    : undefined
+
   // Получаем telegramId всех пользователей
   const allUsersTelegramIds = users.map((user) => user.telegramId)
 
   const keyboard = keyboardFormer([
+    {
+      url: `t.me/+${creator?.phone}`,
+      text: '\u{1F4AC} Написать орагнизатору',
+      hide: !creator,
+    },
     {
       c: { c: 'joinGame', gameId: jsonCommand.gameId },
       text: '\u{270F} Зарегистрироваться на игру',
@@ -74,7 +83,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
           !game?.taskFailurePenalty
             ? 'отсутствует'
             : secondsToTimeStr(game?.taskFailurePenalty)
-        }\n\n<b>Организатор игры</b>: <a href="tg://user?id=261102161">Алексей Белинский</a> (кликните, чтобы написать организатору)`,
+        }${creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''}`,
         keyboard,
         domen,
       })
@@ -83,7 +92,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
 
   return {
     message: `Анонс отправлен всем!`,
-    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+    nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
   }
 }
 

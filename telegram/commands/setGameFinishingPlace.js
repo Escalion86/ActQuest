@@ -8,7 +8,6 @@ const setGameFinishingPlace = async ({ telegramId, jsonCommand }) => {
   if (checkData) return checkData
 
   if (jsonCommand.noFinishingPlace) {
-    // await dbConnect() // TODO: Нужно ли это?
     const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
       finishingPlace: '',
     })
@@ -36,7 +35,6 @@ const setGameFinishingPlace = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     finishingPlace: jsonCommand.message,
   })

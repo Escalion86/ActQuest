@@ -19,7 +19,6 @@ const setTeamName = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  // await dbConnect() // TODO: Нужно ли это?
   const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
     name: jsonCommand.message,
     name_lowered: jsonCommand.message.toLowerCase(),

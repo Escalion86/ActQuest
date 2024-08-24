@@ -8,7 +8,6 @@ const checkContactRecive = async (body, domen) => {
   const contact = body?.message?.contact
   if (contact) {
     console.log('body :>> ', body)
-    // await dbConnect() // TODO: Нужно ли это?
     const { phone_number, first_name, last_name, user_id } = contact
     const name = (first_name + (last_name ? ' ' + last_name : '')).trim()
     const user = await Users.findOneAndUpdate(

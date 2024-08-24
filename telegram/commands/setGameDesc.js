@@ -19,7 +19,6 @@ const setGameDesc = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     description: jsonCommand.message,
   })

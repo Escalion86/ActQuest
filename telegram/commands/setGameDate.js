@@ -50,7 +50,6 @@ const setGameDate = async ({ telegramId, jsonCommand }) => {
     'Asia/Krasnoyarsk'
   )
 
-  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     dateStart,
   })

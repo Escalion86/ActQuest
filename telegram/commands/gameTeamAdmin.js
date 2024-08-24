@@ -1,3 +1,4 @@
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
@@ -43,7 +44,7 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand }) => {
     text: `\u{1F4AC} ${user.name}${
       capitanTelegramId === user.telegramId ? ' (капитан)' : ''
     }`,
-    url: `tg://user?id=${user.telegramId}`,
+    url: `t.me/+${user.phone}`,
   }))
 
   return {
@@ -56,12 +57,24 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand }) => {
             capitanTelegramId === user.telegramId ? ' (капитан)' : ''
           }`
       )
-      .join('\n')}`,
+      .join('\n')}\n\n<b>Текущие бонусы/штрафы:</b>${
+      gameTeam?.timeAddings && gameTeam.timeAddings.length > 0
+        ? gameTeam.timeAddings.map(({ name, time }) => {
+            return `\n${
+              time < 0 ? `\u{1F7E2}` : `\u{1F534}`
+            } ${secondsToTimeStr(Math.abs(time), true)} - ${name}`
+          })
+        : ' отсутвуют'
+    }`,
     buttons: [
       ...buttons,
       {
+        c: { c: 'gameTeamAddings', gameTeamId: gameTeam._id },
+        text: '\u{1F48A} Редактировать бонусы/штрафы команды',
+      },
+      {
         c: {
-          c: 'delGameTeam',
+          c: 'delGameTeamAdmin',
           gameTeamId: jsonCommand.gameTeamId,
         },
         text: '\u{1F4A3} Удалить команду из игры',

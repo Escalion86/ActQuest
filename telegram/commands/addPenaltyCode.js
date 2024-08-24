@@ -51,7 +51,6 @@ const addPenaltyCode = async ({ telegramId, jsonCommand }) => {
       }
 
       // Если все переменные на месте, то создаем команду
-      // await dbConnect() // TODO: Нужно ли это?
       const game = await Games.findById(jsonCommand.gameId)
       game.tasks[jsonCommand.i].penaltyCodes.push(newPenaltyCode)
 

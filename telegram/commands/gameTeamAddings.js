@@ -26,9 +26,9 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
         page,
         ({ id, name, time }, number) => {
           return {
-            text: `Удалить ${time < 0 ? `\u{1F7E2}` : `\u{1F534}`} ${name}`,
+            text: `\u{1F5D1} ${time < 0 ? `\u{1F7E2}` : `\u{1F534}`} ${name}`,
             c: {
-              c: 'delGameTeamAdding',
+              c: `delGameTeamAdding${time < 0 ? 'Bonus' : 'Penalty'}`,
               gameTeamId: jsonCommand.gameTeamId,
               i: number - 1,
             },
@@ -51,15 +51,24 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
     }`,
     buttons: [
       ...buttons,
-      {
-        text: '\u{2795} Добавить бонус/штраф',
-        c: {
-          c: 'addGameTeamAdding',
-          gameTeamId: jsonCommand.gameTeamId,
+      [
+        {
+          text: '\u{2795} \u{1F7E2} Бонус',
+          c: {
+            c: 'addGameTeamAddingBonus',
+            gameTeamId: jsonCommand.gameTeamId,
+          },
         },
-      },
+        {
+          text: '\u{2795} \u{1F534} Штраф',
+          c: {
+            c: 'addGameTeamAddingPenalty',
+            gameTeamId: jsonCommand.gameTeamId,
+          },
+        },
+      ],
       {
-        c: { c: 'gameAddings', gameId: String(game._id) },
+        c: { c: 'gameTeamAdmin', gameTeamId: jsonCommand.gameTeamId },
         text: '\u{2B05} Назад',
       },
     ],

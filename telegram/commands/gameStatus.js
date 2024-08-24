@@ -17,7 +17,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
   if (game.status !== 'started') {
     return {
       message: 'Игра должна быть в процессе',
-      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+      nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
     }
   }
 
@@ -239,7 +239,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       },
       {
         text: '\u{2B05} Назад',
-        c: { c: 'editGame', gameId: jsonCommand.gameId },
+        c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
       },
     ],
   }

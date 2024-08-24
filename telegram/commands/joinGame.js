@@ -14,7 +14,6 @@ const joinGame = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
 
-  // await dbConnect() // TODO: Нужно ли это?
   const teamsUser = await TeamsUsers.find({
     userTelegramId: telegramId,
     role: 'capitan',

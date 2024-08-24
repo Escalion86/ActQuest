@@ -3,7 +3,6 @@ import Games from '@models/Games'
 // import mongoose from 'mongoose'
 
 const getGame = async (id) => {
-  // await dbConnect() // TODO: Нужно ли это?
   if (
     id === undefined
     //  || !mongoose.Types.ObjectId.isValid(id)

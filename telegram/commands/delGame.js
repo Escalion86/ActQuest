@@ -24,13 +24,12 @@ const delGame = async ({ telegramId, jsonCommand }) => {
         },
         {
           text: '\u{1F6AB} Отмена',
-          c: { c: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
         },
       ],
     }
   }
 
-  // await dbConnect() // TODO: Нужно ли это?
   await Games.findByIdAndRemove(jsonCommand.gameId)
   await GamesTeams.deleteMany({ gameId: jsonCommand.gameId })
   return {

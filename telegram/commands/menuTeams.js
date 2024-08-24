@@ -5,7 +5,6 @@ import joinedTeams from './joinedTeams'
 import mainMenuButton from './menuItems/mainMenuButton'
 
 const menuTeams = async ({ telegramId, jsonCommand }) => {
-  // await dbConnect() // TODO: Нужно ли это?
   const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
 
   if (teamsUser.length >= MAX_TEAMS)

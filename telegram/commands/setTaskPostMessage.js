@@ -8,7 +8,6 @@ const setTaskPostMessage = async ({ telegramId, jsonCommand }) => {
   if (checkData) return checkData
 
   if (jsonCommand.noPostMessage) {
-    // await dbConnect() // TODO: Нужно ли это?
     const game = await Games.findById(jsonCommand.gameId)
     const tasks = [...game.tasks]
     tasks[jsonCommand.i].postMessage = ''
@@ -49,7 +48,6 @@ const setTaskPostMessage = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = [...game.tasks]
   // const task = tasks[jsonCommand.i]

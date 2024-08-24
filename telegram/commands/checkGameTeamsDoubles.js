@@ -62,7 +62,7 @@ const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
       // },
       {
         text: '\u{2B05} Назад',
-        c: { c: 'editGame', gameId: jsonCommand.gameId },
+        c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
       },
     ],
   }
