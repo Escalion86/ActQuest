@@ -28,25 +28,18 @@ function EventPage(props) {
   const gameId = props.id
   const domen = props.domen
 
-  const [game, setGame] = useState()
-  const [gameTeams, setGameTeams] = useState()
-  const [teams, setTeams] = useState()
-  const [users, setUsers] = useState()
+  const [result, setResult] = useState()
+  console.log('result :>> ', result)
 
   useEffect(() => {
-    const getGame = async (gameId) => {
-      const game = await getData('/api/games/' + domen + '/' + gameId)
-      if (!game) return
-      const gameTeams = await getData(
-        '/api/gamesteams/' + domen + '/' + gameId,
-        { gameId }
-      )
-      const teamsIDs = gameTeams.map((gameTeam) => gameTeam.teamId)
-      setGame(game.data)
-      setGameTeams(gameTeams)
+    const getGameData = async (gameId) => {
+      const result = await getData('/api/usersingame/' + domen + '/' + gameId)
+      if (!result) return
+
+      setResult(result.data)
     }
     if (gameId) {
-      getGame(gameId)
+      getGameData(gameId)
     }
   }, [])
 

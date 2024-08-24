@@ -16,18 +16,23 @@ export default async function UsersInGame(req, res) {
       try {
         await dbConnect(domen)
         const game = await Games.findById(id).lean()
+        console.log('game :>> ', game)
         const gameTeams = await GamesTeams.find({ gameId: id }).lean()
+        console.log('gameTeams :>> ', gameTeams)
         const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
         const teams = await Teams.find({
           _id: { $in: teamsIds },
         }).lean()
+        console.log('teams :>> ', teams)
         const teamsUsers = await TeamsUsers.find({
           teamId: { $in: teamsIds },
         }).lean()
+        console.log('teamsUsers :>> ', teamsUsers)
         const usersIds = teamsUsers.map((teamsUser) => teamsUser.userTelegramId)
         const users = await Users.find({
           _id: { $in: usersIds },
         }).lean()
+        console.log('users :>> ', users)
         return res?.status(200).json({
           success: true,
           data: { game, gameTeams, teams, teamsUsers, users },
