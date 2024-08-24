@@ -41,7 +41,8 @@ const GameMap = ({ usersWithLocation }) => {
                 iconCaption: team.name,
               }}
               options={{
-                preset: 'islands#greenDotIconWithCaption',
+                // islands#violetStretchyIcon
+                preset: 'islands#blueAutoIcon', //'islands#greenDotIconWithCaption',
                 iconColor: '#aeca3b',
                 controls: [],
               }}
