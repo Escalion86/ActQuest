@@ -149,7 +149,7 @@ export default async function handler(req, res) {
   // }
   if (method === 'POST') {
     try {
-      console.log(body)
+      // console.log(body)
       await dbConnect('krsk')
       if (body?.callback_query) {
         // Принимаем команду
