@@ -68,7 +68,7 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
         },
       ],
       {
-        c: { c: 'gameAddings', gameId: String(game._id) },
+        c: { c: 'gameTeamAdmin', gameTeamId: jsonCommand.gameTeamId },
         text: '\u{2B05} Назад',
       },
     ],
