@@ -114,7 +114,7 @@ function EventPage(props) {
 
   const usersWithLocation = result?.users
     ? result.users.filter(
-        ({ location }) => roleInTeam === 'capitan' && location
+        ({ location, roleInTeam }) => roleInTeam === 'capitan' && location
       )
     : []
 
