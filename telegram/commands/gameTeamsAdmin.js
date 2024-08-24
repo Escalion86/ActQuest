@@ -21,7 +21,9 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
   const isGameStarted = game.status === 'started'
   const isGameFinished = game.status === 'finished'
 
-  const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })
+  const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId }).sort(
+    { createdAt: 1 }
+  )
   // if (!gameTeams || gameTeams.length === 0) {
   //   return {
   //     message: 'Никто не записался на игру',
@@ -50,10 +52,14 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
       ? await TeamsUsers.find({ teamId: { $in: teamsIds } })
       : []
 
+  const sortedTeams = gameTeams.map(({ teamId }) =>
+    teams.find(({ _id }) => String(_id) === teamId)
+  )
+
   const page = jsonCommand?.page ?? 1
   const buttons =
-    teams.length > 0
-      ? buttonListConstructor(teams, page, (team, number) => {
+    sortedTeams.length > 0
+      ? buttonListConstructor(sortedTeams, page, (team, number) => {
           const gameTeam = gameTeams.find(
             (gameTeam) => gameTeam.teamId === String(team._id)
           )
@@ -67,9 +73,9 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
   return {
     message: `На игру <b>${formatGameName(
       game
-    )}</b> зарегистрировано ${getNounTeams(teams.length)} (${
+    )}</b> зарегистрировано ${getNounTeams(sortedTeams.length)} (${
       teamsUsers.length
-    } чел.)\n${teams
+    } чел.)\n${sortedTeams
       .map(
         (team, index) =>
           `\n${index + 1}. "${team.name}" (${
