@@ -13,8 +13,8 @@ import { useRef } from 'react'
 import { PASTEL_COLORS } from '@helpers/constants'
 
 const townsCenter = {
-  krsk: [92.871295, 56.012083],
-  nrsk: [88.080232, 69.408366],
+  krsk: [56.012083, 92.871295],
+  nrsk: [69.408366, 88.080232],
 }
 
 const islands = [
