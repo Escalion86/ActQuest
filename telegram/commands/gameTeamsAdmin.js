@@ -22,9 +22,9 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
   const isGameStarted = game.status === 'started'
   const isGameFinished = game.status === 'finished'
 
-  const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId }).sort(
-    { createdAt: 1 }
-  )
+  const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })
+    .lean()
+    .sort({ createdAt: 1 })
   // if (!gameTeams || gameTeams.length === 0) {
   //   return {
   //     message: 'Никто не записался на игру',
@@ -45,12 +45,12 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
     teamsIds.length > 0
       ? await Teams.find({
           _id: { $in: teamsIds },
-        })
+        }).lean()
       : []
 
   const teamsUsers =
     teamsIds.length > 0
-      ? await TeamsUsers.find({ teamId: { $in: teamsIds } })
+      ? await TeamsUsers.find({ teamId: { $in: teamsIds } }).lean()
       : []
 
   const sortedTeams = gameTeams.map(({ _id, teamId, timeAddings }) => {
