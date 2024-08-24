@@ -26,7 +26,7 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
         page,
         ({ id, name, time }, number) => {
           return {
-            text: `Удалить ${time < 0 ? `\u{1F7E2}` : `\u{1F534}`} ${name}`,
+            text: `\u{1F4A3} ${time < 0 ? `\u{1F7E2}` : `\u{1F534}`} ${name}`,
             c: {
               c: 'delGameTeamAdding',
               gameTeamId: jsonCommand.gameTeamId,
@@ -53,14 +53,14 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
       ...buttons,
       [
         {
-          text: '\u{2795} Добавить \u{1F7E2} бонус',
+          text: '\u{2795} \u{1F7E2} бонус',
           c: {
             c: 'addGameTeamAddingBonus',
             gameTeamId: jsonCommand.gameTeamId,
           },
         },
         {
-          text: '\u{2795} Добавить \u{1F534} штраф',
+          text: '\u{2795} \u{1F534} штраф',
           c: {
             c: 'addGameTeamAddingPenalty',
             gameTeamId: jsonCommand.gameTeamId,
