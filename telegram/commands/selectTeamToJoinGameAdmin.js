@@ -1,5 +1,6 @@
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
+import check from 'telegram/func/check'
 // import dbConnect from '@utils/dbConnect'
 // import moment from 'moment-timezone'
 // import check from 'telegram/func/check'

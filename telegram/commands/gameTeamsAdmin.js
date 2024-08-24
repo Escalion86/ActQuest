@@ -82,7 +82,7 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
       ...buttons,
       {
         c: { c: 'selectTeamToJoinGameAdmin', gameId: jsonCommand.gameId },
-        text: '\u{270F} Зарегистрировать команду на игру',
+        text: '\u{1F517} Зарегистрировать команду на игру',
         hide: !isAdmin || isGameStarted || isGameFinished,
       },
       {
