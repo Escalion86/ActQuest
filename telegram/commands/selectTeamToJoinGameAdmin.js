@@ -1,5 +1,6 @@
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 // import dbConnect from '@utils/dbConnect'
 // import moment from 'moment-timezone'
@@ -38,17 +39,19 @@ const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
     return !alreadyJoinedTeamsIDs.includes(team._id)
   })
 
+  const buttons = buttonListConstructor(filteredTeams, page, (team, number) => {
+    return {
+      text: `"${team.name}"`,
+      c: { teamId: team._id },
+    }
+  })
+
   return {
     message: `<b>АДМИНИСТРИРОВАНИЕ</b>\n\nВыберите команду которую вы хотите зарегистрировать на игру ${formatGameName(
       game
     )}`,
     buttons: [
-      ...filteredTeams.map((team) => {
-        return {
-          text: team.name,
-          c: { teamId: team._id },
-        }
-      }),
+      ...buttons,
       {
         c: { c: `gameTeamsAdmin`, gameId: jsonCommand.gameId },
         text: '\u{2B05} Назад',
