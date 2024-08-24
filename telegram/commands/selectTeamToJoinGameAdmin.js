@@ -39,6 +39,7 @@ const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
     return !alreadyJoinedTeamsIDs.includes(team._id)
   })
 
+  const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(filteredTeams, page, (team, number) => {
     return {
       text: `"${team.name}"`,
