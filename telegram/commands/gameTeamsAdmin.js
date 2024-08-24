@@ -52,22 +52,36 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
       ? await TeamsUsers.find({ teamId: { $in: teamsIds } })
       : []
 
-  const sortedTeams = gameTeams.map(({ teamId }) =>
-    teams.find(({ _id }) => String(_id) === teamId)
-  )
+  const sortedTeams = gameTeams.map(({ _id, teamId, timeAddings }) => {
+    const team = teams.find(({ _id }) => String(_id) === teamId)
+    const timeAdding =
+      timeAddings?.length > 0
+        ? timeAddings.reduce((acc, { time }) => {
+            return acc + time
+          }, 0)
+        : undefined
+    return { ...team, timeAdding, gameTeamId: _id }
+  })
 
   const page = jsonCommand?.page ?? 1
   const buttons =
     sortedTeams.length > 0
-      ? buttonListConstructor(sortedTeams, page, (team, number) => {
-          const gameTeam = gameTeams.find(
-            (gameTeam) => gameTeam.teamId === String(team._id)
-          )
-          return {
-            text: `${number}. "${team.name}"`,
-            c: { c: 'gameTeamAdmin', gameTeamId: gameTeam._id },
+      ? buttonListConstructor(
+          sortedTeams,
+          page,
+          ({ timeAdding, gameTeamId, name }, number) => {
+            return {
+              text: `${number}. "${name}"${
+                typeof timeAdding === 'number'
+                  ? ` ${
+                      timeAdding < 0 ? `\u{1F7E2}` : `\u{1F534}`
+                    } ${secondsToTimeStr(Math.abs(timeAdding), true)}`
+                  : ''
+              }`,
+              c: { c: 'gameTeamAdmin', gameTeamId },
+            }
           }
-        })
+        )
       : []
 
   return {
