@@ -12,7 +12,6 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
   const team = await getTeam(jsonCommand?.teamId)
   if (team.success === false) return team
 
-  // await dbConnect() // TODO: Нужно ли это?
   const teamsUsers = await TeamsUsers.find({ teamId: jsonCommand?.teamId })
   if (!teamsUsers || teamsUsers.length === 0) {
     return {

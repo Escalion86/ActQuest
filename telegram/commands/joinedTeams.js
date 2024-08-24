@@ -4,7 +4,6 @@ import TeamsUsers from '@models/TeamsUsers'
 import { MAX_TEAMS } from 'telegram/constants'
 
 const joinedTeams = async ({ telegramId, jsonCommand }) => {
-  // await dbConnect() // TODO: Нужно ли это?
   const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
   if (!teamsUser || teamsUser.length === 0) {
     return {

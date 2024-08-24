@@ -26,7 +26,6 @@ const delGameTeam = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  // await dbConnect() // TODO: Нужно ли это?
   await GamesTeams.findByIdAndDelete(jsonCommand.gameTeamId)
   return {
     success: true,

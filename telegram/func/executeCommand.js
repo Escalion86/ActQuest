@@ -88,7 +88,6 @@ const executeCommand = async (
   } else {
     const actualCommand = { ...jsonCommand }
     delete actualCommand.message
-    // await dbConnect() // TODO: Нужно ли это?
     const prevCommand = await LastCommands.findOne({
       userTelegramId,
     })

@@ -7,7 +7,6 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
 
 const menuGamesEdit = async ({ telegramId, jsonCommand }) => {
-  // await dbConnect() // TODO: Нужно ли это?
   // Получаем список игр
   var games = []
   if (ADMIN_TELEGRAM_IDS.includes(telegramId)) games = await Games.find({})

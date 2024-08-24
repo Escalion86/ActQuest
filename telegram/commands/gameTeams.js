@@ -15,7 +15,6 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(jsonCommand?.gameId)
   if (game.success === false) return game
 
-  // await dbConnect() // TODO: Нужно ли это?
   const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })
   if (!gameTeams || gameTeams.length === 0) {
     return {

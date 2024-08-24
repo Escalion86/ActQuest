@@ -5,7 +5,6 @@ import { MAX_TEAMS } from 'telegram/constants'
 import getTeam from 'telegram/func/getTeam'
 
 const joinTeam = async ({ telegramId, jsonCommand }) => {
-  // await dbConnect() // TODO: Нужно ли это?
   const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
 
   if (teamsUser.length >= MAX_TEAMS) {

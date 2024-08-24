@@ -5,7 +5,6 @@ import Users from '@models/Users'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const allUsers = async ({ telegramId, jsonCommand }) => {
-  // await dbConnect() // TODO: Нужно ли это?
   const users = await Users.find({})
   const teamsUsers = await TeamsUsers.find({})
 

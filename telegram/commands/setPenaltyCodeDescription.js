@@ -24,7 +24,6 @@ const setPenaltyCodeDescription = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = game.tasks
   const penaltyCodes = [...tasks[jsonCommand.i].penaltyCodes]

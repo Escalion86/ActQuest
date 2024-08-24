@@ -168,7 +168,6 @@ const createTask = async ({ telegramId, jsonCommand }) => {
   }
 
   // Если все переменные на месте, то создаем команду
-  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findById(jsonCommand.gameId)
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
     tasks: game.tasks ? [...game.tasks, newTask] : [newTask],

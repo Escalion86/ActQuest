@@ -47,7 +47,6 @@ const messageHandler = async (body, res, domen) => {
     document,
     photo,
   } = message
-  // await dbConnect() // TODO: Нужно ли это?
 
   if (await checkContactRecive(body, domen))
     if (await checkUserData(from.id, text, domen))

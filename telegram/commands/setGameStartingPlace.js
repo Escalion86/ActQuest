@@ -8,7 +8,6 @@ const setGameStartingPlace = async ({ telegramId, jsonCommand }) => {
   if (checkData) return checkData
 
   if (jsonCommand.noStartingPlace) {
-    // await dbConnect() // TODO: Нужно ли это?
     const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
       startingPlace: '',
     })
@@ -36,7 +35,6 @@ const setGameStartingPlace = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  // await dbConnect() // TODO: Нужно ли это?
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     startingPlace: jsonCommand.message,
   })

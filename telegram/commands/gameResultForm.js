@@ -343,7 +343,6 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     showSeconds: true,
   })
 
-  // await dbConnect() // TODO: Нужно ли это?
   // const game = await Games.findById(jsonCommand.gameId)
 
   const messageText = [

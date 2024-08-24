@@ -3,7 +3,6 @@ import Users from '@models/Users'
 import mongoose from 'mongoose'
 
 const getUser = async (id) => {
-  // await dbConnect() // TODO: Нужно ли это?
   // const preparedId = mongoose.Types.ObjectId(id)
   if (id === undefined || !mongoose.Types.ObjectId.isValid(id))
     return {

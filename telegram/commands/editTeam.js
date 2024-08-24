@@ -6,7 +6,6 @@ import getTeam from 'telegram/func/getTeam'
 
 const editTeam = async ({ telegramId, jsonCommand }) => {
   const { b } = jsonCommand
-  // await dbConnect() // TODO: Нужно ли это?
   if (!jsonCommand?.teamId) {
     const teamsUser = await TeamsUsers.find({
       userTelegramId: telegramId,

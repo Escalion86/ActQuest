@@ -7,7 +7,6 @@ import getGame from 'telegram/func/getGame'
 // import getTeam from 'telegram/func/getTeam'
 
 const joinToGameWithCode = async ({ telegramId, jsonCommand }) => {
-  // await dbConnect() // TODO: Нужно ли это?
   // const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
 
   // if (teamsUser.length >= MAX_TEAMS) {

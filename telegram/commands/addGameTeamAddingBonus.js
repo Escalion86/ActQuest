@@ -49,7 +49,6 @@ const addGameTeamAddingBonus = async ({ telegramId, jsonCommand }) => {
         time: result.time,
       }
 
-      // await dbConnect() // TODO: Нужно ли это?
       await GamesTeams.findByIdAndUpdate(jsonCommand.gameTeamId, {
         timeAddings: [...(gameTeam.timeAddings ?? []), newAdding],
       })

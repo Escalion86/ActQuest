@@ -5,7 +5,6 @@ import mainMenuButton from './menuItems/mainMenuButton'
 const menuUser = async ({ telegramId, jsonCommand }) => {
   var user
   if (telegramId) {
-    // await dbConnect() // TODO: Нужно ли это?
     user = await Users.findOne({ telegramId })
   }
 

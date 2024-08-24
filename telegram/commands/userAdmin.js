@@ -9,7 +9,6 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['userTId'])
   if (checkData) return checkData
 
-  // await dbConnect() // TODO: Нужно ли это?
   const user = await Users.findOne({ telegramId: jsonCommand.userTId })
   const teamsUser = await TeamsUsers.find({
     userTelegramId: jsonCommand.userTId,

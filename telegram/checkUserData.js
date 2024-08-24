@@ -3,7 +3,6 @@ import Users from '@models/Users'
 import sendMessage from './sendMessage'
 
 const checkUserData = async (telegramId, text, domen) => {
-  // await dbConnect() // TODO: Нужно ли это?
   const user = await Users.findOne({
     telegramId,
   })

@@ -4,7 +4,6 @@ import TeamsUsers from '@models/TeamsUsers'
 // import dbConnect from '@utils/dbConnect'
 
 const getGameTeamsOfUserRegistredInAGame = async (userTelegramId, gameId) => {
-  // await dbConnect() // TODO: Нужно ли это?
   const teamsUser = await TeamsUsers.find({ userTelegramId: userTelegramId })
   if (!teamsUser || teamsUser.length === 0) return []
 
