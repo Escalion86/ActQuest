@@ -42,7 +42,7 @@ const GameMap = ({ usersWithLocation, teamsColors }) => {
   const ref = useRef()
   const defaultState = {
     center: [56.039911, 92.878677],
-    zoom: 3,
+    zoom: 10,
   }
 
   useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
