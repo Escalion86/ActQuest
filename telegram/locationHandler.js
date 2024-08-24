@@ -43,7 +43,7 @@ const locationHandler = async (
       undefined,
       message_id,
       undefined,
-      photo,
+      undefined,
       domen,
       location,
       edit_date ? edit_date : date
