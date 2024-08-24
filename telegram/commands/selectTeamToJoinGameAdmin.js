@@ -14,23 +14,24 @@ const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
   if (checkData) return checkData
 
   const game = await getGame(jsonCommand.gameId)
-  if (game.success === false)
-    if (jsonCommand.gameId) {
-      // Проверяем выбрана ли игра
-      const team = await getTeam(jsonCommand.teamId)
-      if (team.success === false) return team
+  if (game.success === false) return
 
-      await GamesTeams.create({
-        teamId: jsonCommand.teamId,
-        gameId: jsonCommand.gameId,
-      })
-      return {
-        message: `Вы зарегистрировали команду "${
-          team?.name
-        }" на игру ${formatGameName(game)}`,
-        nextCommand: { c: `gameTeamsAdmin`, gameId: jsonCommand.gameId },
-      }
+  // Проверяем выбрана ли команда
+  if (jsonCommand.teamId) {
+    const team = await getTeam(jsonCommand.teamId)
+    if (team.success === false) return team
+
+    await GamesTeams.create({
+      teamId: jsonCommand.teamId,
+      gameId: jsonCommand.gameId,
+    })
+    return {
+      message: `Вы зарегистрировали команду "${
+        team?.name
+      }" на игру ${formatGameName(game)}`,
+      nextCommand: { c: `gameTeamsAdmin`, gameId: jsonCommand.gameId },
     }
+  }
 
   const gameTeams = await GamesTeams.find({ gameId: jsonCommand.gameId })
   const alreadyJoinedTeamsIDs = gameTeams.map((gameTeam) => gameTeam.teamId)
