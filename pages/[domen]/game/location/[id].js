@@ -62,7 +62,7 @@ export const getServerSideProps = async (context) => {
   // const session = await getSession({ req: context.req })
 
   const { params } = context
-  const { id } = params
+  const { id, domen } = params
 
   // const fetchedProps = await fetchProps(session?.user)
 
@@ -70,6 +70,7 @@ export const getServerSideProps = async (context) => {
     props: {
       // ...fetchedProps,
       id,
+      domen,
       // loggedUser: session?.user ?? null,
     },
   }
