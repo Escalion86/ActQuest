@@ -35,9 +35,17 @@ export default async function UsersInGame(req, res) {
           telegramId: { $in: usersTelegramIds },
         }).lean()
         console.log('users :>> ', users)
+        const usersWithTeams = users.map((user) => {
+          const userTeam = teamsUsers
+            .filter((teamsUser) => teamsUser.userTelegramId === user.telegramId)
+            .map((teamsUser) =>
+              teams.find((team) => team._id === teamsUser.teamId)
+            )
+          return { ...user, team: userTeam }
+        })
         return res?.status(200).json({
           success: true,
-          data: { game, gameTeams, teams, teamsUsers, users },
+          data: { game, gameTeams, teams, teamsUsers, users: usersWithTeams },
         })
       } catch (error) {
         console.log(error)

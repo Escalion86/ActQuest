@@ -18,8 +18,21 @@ const GameMap = ({ usersWithLocation }) => {
   return (
     <YMaps className="w-screen h-screen">
       <Map defaultState={defaultState}>
-        {usersWithLocation.map(({ location }) => (
-          <Placemark geometry={[location.latitude, location.longitude]} />
+        {usersWithLocation.map(({ name, team, location }) => (
+          <Placemark
+            geometry={[location.latitude, location.longitude]}
+            properties={{
+              balloonContent: () => (
+                <span onClick={() => console.log(location)}>{name}</span>
+              ),
+              iconCaption: team.name,
+            }}
+            options={{
+              preset: 'islands#greenDotIconWithCaption',
+              iconColor: '#aeca3b',
+              controls: [],
+            }}
+          />
         ))}
       </Map>
     </YMaps>
