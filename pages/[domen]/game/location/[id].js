@@ -45,7 +45,7 @@ const GameMap = ({ usersWithLocation }) => {
           )
         })}
         <FullscreenControl />
-        <ZoomControl options={{ float: 'right' }} />
+        <ZoomControl state={true} options={{ size: 'large' }} />
       </Map>
     </YMaps>
   )
