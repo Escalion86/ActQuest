@@ -15,6 +15,7 @@ import {
   ZoomControl,
 } from '@pbe/react-yandex-maps'
 import { useRef } from 'react'
+import { PASTEL_COLORS } from '@helpers/constants'
 
 const islands = [
   'islands#blueIcon',
