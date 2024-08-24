@@ -46,6 +46,38 @@ import {
   faHeart,
 } from '@fortawesome/free-solid-svg-icons'
 
+export const PASTEL_COLORS = [
+  '#B6D8F2',
+  '#CCD4BF',
+  '#D0BCAC',
+  '#F4CFDF',
+  '#F7F6CF',
+  '#9AC8EB',
+  '#98D4BB',
+  '#E7CBA9',
+  '#EEBAB2',
+  '#F5F3E7',
+  '#F5BFD2',
+  '#E5DB9C',
+  '#F5E2E4',
+  '#D0BCAC',
+  '#BEB4C5',
+  '#E6A57E',
+  '#9AD9DB',
+  '#E5DBD9',
+  '#EB96AA',
+  '#C6C9D0',
+  '#E5B3BB',
+  '#F9968B',
+  '#F27348',
+  '#76CDCD',
+  '#7B92AA',
+  '#E4CEE0',
+  '#DC828F',
+  '#F7CE76',
+  '#E8D595',
+]
+
 export const MONTHS = [
   'янв',
   'фев',

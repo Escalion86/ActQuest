@@ -1,6 +1,5 @@
 // import Users from '@models/Users'
 // import dbConnect from '@utils/dbConnect'
-import checkContactRecive from './checkContactRecive'
 import checkUserData from './checkUserData'
 import commandHandler from './commandHandler'
 // import sendMessage from './sendMessage'
@@ -33,31 +32,22 @@ import commandHandler from './commandHandler'
 //   },
 // }
 
-const messageHandler = async (body, res, domen) => {
-  const { update_id, message } = body
-  const {
-    message_id,
-    from,
-    chat,
-    date,
-    text,
-    entities,
-    contact,
-    reply_to_message,
-    document,
-    photo,
-  } = message
-
-  if (await checkContactRecive(body?.message?.contact, domen))
-    if (await checkUserData(from.id, text, domen))
-      return await commandHandler(
-        from.id,
-        text,
-        message_id,
-        undefined,
-        photo,
-        domen
-      )
+const locationHandler = async (
+  { message_id, from, chat, date, edit_date, location },
+  res,
+  domen
+) => {
+  if (await checkUserData(from.id, undefined, domen))
+    return await commandHandler(
+      from.id,
+      undefined,
+      message_id,
+      undefined,
+      undefined,
+      domen,
+      location,
+      edit_date ? edit_date : date
+    )
 }
 
-export default messageHandler
+export default locationHandler

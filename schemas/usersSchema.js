@@ -17,6 +17,16 @@ const usersSchema = {
     type: Number,
     default: null,
   },
+  location: {
+    type: {
+      date: Date,
+      latitude: Number,
+      longitude: Number,
+      live_period: Number,
+      heading: Number,
+      horizontal_accuracy: Number,
+    },
+  },
 }
 
 export default usersSchema

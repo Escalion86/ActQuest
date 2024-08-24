@@ -2,6 +2,7 @@ import LastCommands from '@models/LastCommands'
 // import dbConnect from '@utils/dbConnect'
 import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
+import Users from '@models/Users'
 
 function jsonParser(str) {
   try {
@@ -20,9 +21,24 @@ const commandHandler = async (
   messageId,
   callback_query,
   photo,
-  domen
+  domen,
+  location,
+  date
 ) => {
   try {
+    // Если пользователь прислал геопозицию
+    if (location) {
+      await Users.findOneAndUpdate(
+        {
+          telegramId: userTelegramId,
+        },
+        {
+          location: { ...location, date: date ? Date(date) : Date() },
+        }
+      )
+      return
+    }
+
     if (message === '/main_menu' || message === '/start') {
       return await executeCommand(
         userTelegramId,

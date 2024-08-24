@@ -3,11 +3,8 @@ import Users from '@models/Users'
 import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
 
-const checkContactRecive = async (body, domen) => {
-  // Проверяем не отправлен ли нам контакт
-  const contact = body?.message?.contact
+const checkContactRecive = async (contact, domen) => {
   if (contact) {
-    console.log('body :>> ', body)
     const { phone_number, first_name, last_name, user_id } = contact
     const name = (first_name + (last_name ? ' ' + last_name : '')).trim()
     const user = await Users.findOneAndUpdate(

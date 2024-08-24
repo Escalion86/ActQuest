@@ -75,7 +75,7 @@ const callbackHandler = async (body, res, domen) => {
   //   null,
   //   true
   // )
-  if (await checkContactRecive(body, domen))
+  if (await checkContactRecive(body?.message?.contact, domen))
     if (await checkUserData(from.id, undefined, domen))
       return await commandHandler(
         from.id,

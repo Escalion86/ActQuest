@@ -1,6 +1,7 @@
 import { postData } from '@helpers/CRUD'
 import dbConnect from '@utils/dbConnect'
 import callbackHandler from 'telegram/callbackHandler'
+import locationHandler from 'telegram/locationHandler'
 import messageHandler from 'telegram/messageHandler'
 
 export default async function handler(req, res) {
@@ -187,6 +188,10 @@ export default async function handler(req, res) {
         //   text: messageHandler(body, res),
         //   keyboard,
         // })
+      } else if (body?.edited_message) {
+        if (body.edited_message.location) {
+          const result = await locationHandler(body.edited_message, res, 'krsk')
+        }
       }
       // console.log('telegram body', body)
       // if (message.text === '/activate' || message.text === '/deactivate') {
