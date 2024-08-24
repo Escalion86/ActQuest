@@ -36,7 +36,7 @@ const islands = [
   'islands#invertedBlueClusterIcons',
 ]
 
-const GameMap = ({ usersWithLocation }) => {
+const GameMap = ({ usersWithLocation, teamsColors }) => {
   const [index, setIndex] = useState(0)
   const ref = useRef()
   const defaultState = {
@@ -53,7 +53,7 @@ const GameMap = ({ usersWithLocation }) => {
       <button onClick={() => setIndex(index + 1)}>{islands[index]}</button>
       <YMaps ref={ref} width="100%" height="100%">
         <Map defaultState={defaultState}>
-          {usersWithLocation.map(({ name, team, location }) => {
+          {usersWithLocation.map(({ name, team, location }, num) => {
             return (
               <Placemark
                 geometry={[location.latitude, location.longitude]}
@@ -66,7 +66,7 @@ const GameMap = ({ usersWithLocation }) => {
                 options={{
                   // islands#violetStretchyIcon islands#violetIcon
                   preset: islands[index], //'islands#greenDotIconWithCaption',
-                  iconColor: '#aeca3b',
+                  iconColor: teamsColors[num], //'#aeca3b',
                   controls: [],
                 }}
               />
@@ -85,6 +85,7 @@ function EventPage(props) {
   const domen = props.domen
 
   const [result, setResult] = useState()
+  const [teamsColors, setTeamsColors] = useState()
 
   const usersWithLocation = result?.users
     ? result.users.filter(({ location }) => location)
@@ -94,8 +95,13 @@ function EventPage(props) {
     const getGameData = async (gameId) => {
       const result = await getData('/api/usersingame/' + domen + '/' + gameId)
       if (!result) return
-
+      const teamsIds = result.data.teams.map(({ _id }) => _id)
+      const teamsColorsToSet = {}
+      for (let i = 0; i < teamsIds.length; i++) {
+        teamsColorsToSet[teamsIds[i]] = PASTEL_COLORS[i] % PASTEL_COLORS.length
+      }
       setResult(result.data)
+      setTeamsColors(teamsColorsToSet)
     }
     if (gameId) {
       getGameData(gameId)
@@ -109,7 +115,13 @@ function EventPage(props) {
       </Head>
       {/* <StateLoader {...props}>
         <Header /> */}
-      {result && <GameMap {...result} usersWithLocation={usersWithLocation} />}
+      {result && (
+        <GameMap
+          {...result}
+          usersWithLocation={usersWithLocation}
+          teamsColors={teamsColors}
+        />
+      )}
       {/* </StateLoader> */}
     </>
   )
