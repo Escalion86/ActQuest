@@ -1,3 +1,4 @@
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
@@ -56,7 +57,15 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand }) => {
             capitanTelegramId === user.telegramId ? ' (капитан)' : ''
           }`
       )
-      .join('\n')}`,
+      .join('\n')}\n\n<b>Текущие бонусы/штрафы:</b>${
+      gameTeam?.timeAddings && gameTeam.timeAddings.length > 0
+        ? gameTeam.timeAddings.map(({ name, time }) => {
+            return `\n${
+              time < 0 ? `\u{1F7E2}` : `\u{1F534}`
+            } ${secondsToTimeStr(Math.abs(time), true)} - ${name}`
+          })
+        : ' отсутвуют'
+    }`,
     buttons: [
       ...buttons,
       {
