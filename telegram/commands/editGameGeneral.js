@@ -154,7 +154,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
       [
         {
           c: { c: 'gameTeamsAdmin', gameId: jsonCommand.gameId },
-          text: `\u{1F465} Зарегистрированные команды (${teams.length})`,
+          text: `\u{1F465} Управление командами (${teams.length})`,
           hidden: teams.length === 0,
         },
       ],

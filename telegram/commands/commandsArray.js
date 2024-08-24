@@ -102,6 +102,7 @@ import gameResultAdminBack from './gameResultAdminBack'
 import gameTeamAdmin from './gameTeamAdmin'
 import gameTeamsAdmin from './gameTeamsAdmin'
 import editGameGeneral from './editGameGeneral'
+import selectTeamToJoinGameAdmin from './selectTeamToJoinGameAdmin'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -211,6 +212,7 @@ const commandsArray = {
   addGameTeamAddingPenalty,
   delGameTeamAddingPenalty,
   editGameGeneral,
+  selectTeamToJoinGameAdmin,
 }
 
 var i = 0
