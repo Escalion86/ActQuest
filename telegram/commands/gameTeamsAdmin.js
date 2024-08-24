@@ -67,20 +67,22 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
   const page = jsonCommand?.page ?? 1
   const buttons =
     sortedTeams.length > 0
-      ? buttonListConstructor(sortedTeams, page, (team, number) => {
-          console.log('team :>> ', team)
-          const { timeAdding, gameTeamId, name } = team
-          return {
-            text: `${number}. "${name}"${
-              typeof timeAdding === 'number'
-                ? ` ${
-                    timeAdding < 0 ? `\u{1F7E2}` : `\u{1F534}`
-                  } ${secondsToTimeStr(Math.abs(timeAdding), true)}`
-                : ''
-            }`,
-            c: { c: 'gameTeamAdmin', gameTeamId },
+      ? buttonListConstructor(
+          sortedTeams,
+          page,
+          ({ timeAdding, gameTeamId, name }, number) => {
+            return {
+              text: `${number}. "${name}"${
+                typeof timeAdding === 'number'
+                  ? ` ${
+                      timeAdding < 0 ? `\u{1F7E2}` : `\u{1F534}`
+                    } ${secondsToTimeStr(Math.abs(timeAdding), true)}`
+                  : ''
+              }`,
+              c: { c: 'gameTeamAdmin', gameTeamId },
+            }
           }
-        })
+        )
       : []
 
   return {
