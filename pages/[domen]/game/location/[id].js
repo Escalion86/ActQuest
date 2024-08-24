@@ -37,12 +37,12 @@ const islands = [
   'islands#invertedBlueClusterIcons',
 ]
 
-const GameMap = ({ usersWithLocation, teamsColors }) => {
+const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
   const [index, setIndex] = useState(0)
   const ref = useRef()
   const defaultState = {
-    center: [56.039911, 92.878677],
-    zoom: 10,
+    center: defaultMapState,
+    zoom: 12,
   }
 
   useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
@@ -81,6 +81,30 @@ const GameMap = ({ usersWithLocation, teamsColors }) => {
   )
 }
 
+const calcMapCenter = (usersWithLocation) => {
+  var minLatitude
+  var maxLatitude
+  var minLongitude
+  var maxLongitude
+  for (let i = 0; i < usersWithLocation.length; i++) {
+    const { location } = usersWithLocation[i]
+    const { latitude, longitude } = location
+    if (!minLatitude || latitude < minLatitude) {
+      minLatitude = latitude
+    }
+    if (!maxLatitude || latitude > maxLatitude) {
+      maxLatitude = latitude
+    }
+    if (!minLongitude || longitude < minLongitude) {
+      minLongitude = longitude
+    }
+    if (!maxLongitude || longitude > maxLongitude) {
+      maxLongitude = longitude
+    }
+  }
+  return [(minLatitude + maxLatitude) / 2, (minLongitude + maxLongitude) / 2]
+}
+
 function EventPage(props) {
   const gameId = props.id
   const domen = props.domen
@@ -91,6 +115,8 @@ function EventPage(props) {
   const usersWithLocation = result?.users
     ? result.users.filter(({ location }) => location)
     : []
+
+  const defaultMapState = useMemo(() => calcMapCenter(usersWithLocation), [])
 
   useEffect(() => {
     const getGameData = async (gameId) => {
@@ -103,6 +129,10 @@ function EventPage(props) {
       }
       setResult(result.data)
       setTeamsColors(teamsColorsToSet)
+      setInterval(async () => {
+        const result = await getData('/api/usersingame/' + domen + '/' + gameId)
+        if (result) setResult(result.data)
+      }, 10000)
     }
     if (gameId) {
       getGameData(gameId)
@@ -121,6 +151,7 @@ function EventPage(props) {
           {...result}
           usersWithLocation={usersWithLocation}
           teamsColors={teamsColors}
+          defaultMapState={defaultMapState}
         />
       )}
       {/* </StateLoader> */}
