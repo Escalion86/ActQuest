@@ -52,9 +52,16 @@ const gameTeamAddings = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...buttons,
       {
-        text: '\u{2795} Добавить бонус/штраф',
+        text: '\u{2795} Добавить \u{1F534} бонус',
         c: {
-          c: 'addGameTeamAdding',
+          c: 'addGameTeamAddingBonus',
+          gameTeamId: jsonCommand.gameTeamId,
+        },
+      },
+      {
+        text: '\u{2795} Добавить \u{1F7E2} штраф',
+        c: {
+          c: 'addGameTeamAddingPenalty',
           gameTeamId: jsonCommand.gameTeamId,
         },
       },

@@ -93,7 +93,8 @@ import sendMessageToAll from './sendMessageToAll'
 import gameAddings from './gameAddings'
 import gameTeamAddings from './gameTeamAddings'
 import delGameTeamAdding from './delGameTeamAdding'
-import addGameTeamAdding from './addGameTeamAdding'
+import addGameTeamAddingBonus from './addGameTeamAddingBonus'
+import addGameTeamAddingPenalty from './addGameTeamAddingPenalty'
 import joinToGameWithCode from './joinToGameWithCode'
 import setManyCodesPenalty from './setManyCodesPenalty'
 import gameResultAdminBack from './gameResultAdminBack'
@@ -199,12 +200,13 @@ const commandsArray = {
   gameAddings,
   gameTeamAddings,
   delGameTeamAdding,
-  addGameTeamAdding,
+  addGameTeamAddingBonus,
   joinToGameWithCode,
   setManyCodesPenalty,
   gameResultAdminBack,
   gameTeamAdmin,
   gameTeamsAdmin,
+  addGameTeamAddingPenalty,
 }
 
 var i = 0
