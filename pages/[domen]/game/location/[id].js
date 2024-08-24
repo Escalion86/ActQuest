@@ -116,7 +116,10 @@ function EventPage(props) {
     ? result.users.filter(({ location }) => location)
     : []
 
-  const defaultMapState = useMemo(() => calcMapCenter(usersWithLocation), [])
+  const defaultMapState = useMemo(
+    () => calcMapCenter(usersWithLocation),
+    [!result?.users]
+  )
 
   console.log('defaultMapState :>> ', defaultMapState)
 
