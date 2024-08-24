@@ -43,7 +43,7 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand }) => {
     text: `\u{1F4AC} ${user.name}${
       capitanTelegramId === user.telegramId ? ' (капитан)' : ''
     }`,
-    url: `tg://user?id=${user.telegramId}`,
+    url: `t.me/+${user.phone}`,
   }))
 
   return {
