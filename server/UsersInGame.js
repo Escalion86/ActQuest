@@ -28,9 +28,11 @@ export default async function UsersInGame(req, res) {
           teamId: { $in: teamsIds },
         }).lean()
         console.log('teamsUsers :>> ', teamsUsers)
-        const usersIds = teamsUsers.map((teamsUser) => teamsUser.userTelegramId)
+        const usersTelegramIds = teamsUsers.map(
+          (teamsUser) => teamsUser.userTelegramId
+        )
         const users = await Users.find({
-          _id: { $in: usersIds },
+          telegramId: { $in: usersTelegramIds },
         }).lean()
         console.log('users :>> ', users)
         return res?.status(200).json({
