@@ -118,6 +118,8 @@ function EventPage(props) {
 
   const defaultMapState = useMemo(() => calcMapCenter(usersWithLocation), [])
 
+  console.log('defaultMapState :>> ', defaultMapState)
+
   useEffect(() => {
     const getGameData = async (gameId) => {
       const result = await getData('/api/usersingame/' + domen + '/' + gameId)
