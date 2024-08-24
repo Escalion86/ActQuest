@@ -7,7 +7,13 @@ import getSecondsBetween from '@helpers/getSecondsBetween'
 // import Image from 'next/image'
 import cn from 'classnames'
 
-import { YMaps, Map, Placemark } from '@pbe/react-yandex-maps'
+import {
+  YMaps,
+  Map,
+  Placemark,
+  FullscreenControl,
+  ZoomControl,
+} from '@pbe/react-yandex-maps'
 
 const GameMap = ({ usersWithLocation }) => {
   const defaultState = {
@@ -15,25 +21,31 @@ const GameMap = ({ usersWithLocation }) => {
     zoom: 5,
   }
 
+  console.log('usersWithLocation :>> ', usersWithLocation)
+
   return (
     <YMaps className="w-screen h-screen">
       <Map defaultState={defaultState}>
-        {usersWithLocation.map(({ name, team, location }) => (
-          <Placemark
-            geometry={[location.latitude, location.longitude]}
-            properties={{
-              balloonContent: () => (
-                <span onClick={() => console.log(location)}>{name}</span>
-              ),
-              iconCaption: team.name,
-            }}
-            options={{
-              preset: 'islands#greenDotIconWithCaption',
-              iconColor: '#aeca3b',
-              controls: [],
-            }}
-          />
-        ))}
+        {usersWithLocation.map(({ name, team, location }) => {
+          return (
+            <Placemark
+              geometry={[location.latitude, location.longitude]}
+              properties={{
+                balloonContent: () => (
+                  <span onClick={() => console.log(location)}>{name}</span>
+                ),
+                iconCaption: team.name,
+              }}
+              options={{
+                preset: 'islands#greenDotIconWithCaption',
+                iconColor: '#aeca3b',
+                controls: [],
+              }}
+            />
+          )
+        })}
+        <FullscreenControl />
+        <ZoomControl options={{ float: 'right' }} />
       </Map>
     </YMaps>
   )
@@ -48,7 +60,6 @@ function EventPage(props) {
   const usersWithLocation = result?.users
     ? result.users.filter(({ location }) => location)
     : []
-  console.log('usersWithLocation :>> ', usersWithLocation)
 
   useEffect(() => {
     const getGameData = async (gameId) => {
