@@ -35,9 +35,9 @@ const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
   const gameTeams = await GamesTeams.find({ gameId: jsonCommand.gameId })
   const alreadyJoinedTeamsIDs = gameTeams.map((gameTeam) => gameTeam.teamId)
   const teams = await Teams.find({})
-  const filteredTeams = teams.filter((team) => {
-    return !alreadyJoinedTeamsIDs.includes(team._id)
-  })
+  const filteredTeams = teams.filter(
+    (team) => !alreadyJoinedTeamsIDs.includes(String(team._id))
+  )
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(filteredTeams, page, (team, number) => {
