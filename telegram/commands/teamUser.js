@@ -29,7 +29,7 @@ const teamUser = async ({ telegramId, jsonCommand }) => {
   const buttons = [
     {
       url: `t.me/+${user.phone}`,
-      text: '\u{2712} Написать в личку',
+      text: '\u{1F4AC} Написать в личку',
     },
     {
       c: {
