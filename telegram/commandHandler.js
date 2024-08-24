@@ -33,7 +33,7 @@ const commandHandler = async (
           telegramId: userTelegramId,
         },
         {
-          location: { ...location, date:  },
+          location: { ...location, date },
         }
       )
       return
