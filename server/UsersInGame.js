@@ -34,7 +34,7 @@ export default async function UsersInGame(req, res) {
           const userTeam = teamsUsers.find(
             (teamsUser) => teamsUser.userTelegramId === user.telegramId
           )
-          const team = teams.find((team) => team._id === userTeam.teamId)
+          const team = teams.find((team) => String(team._id) == userTeam.teamId)
 
           return { ...user, team }
         })
