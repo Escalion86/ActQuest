@@ -61,7 +61,7 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand }) => {
       ...buttons,
       {
         c: {
-          c: 'delGameTeam',
+          c: 'delGameTeamAdmin',
           gameTeamId: jsonCommand.gameTeamId,
         },
         text: '\u{1F4A3} Удалить команду из игры',
