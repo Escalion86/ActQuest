@@ -50,7 +50,7 @@ function EventPage(props) {
       </Head>
       {/* <StateLoader {...props}>
         <Header /> */}
-      {game && <GameMap game={game} />}
+      {result && <GameMap {...result} />}
       {/* </StateLoader> */}
     </>
   )
