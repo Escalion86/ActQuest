@@ -9,16 +9,18 @@ import cn from 'classnames'
 
 import { YMaps, Map, Placemark } from '@pbe/react-yandex-maps'
 
-const GameMap = () => {
+const GameMap = ({ usersWithLocation }) => {
   const defaultState = {
-    center: [55.751574, 37.573856],
+    center: [56.039911, 92.878677],
     zoom: 5,
   }
 
   return (
-    <YMaps>
+    <YMaps className="w-screen h-screen">
       <Map defaultState={defaultState}>
-        <Placemark geometry={[55.684758, 37.738521]} />
+        {usersWithLocation.map(({ location }) => (
+          <Placemark geometry={[location.latitude, location.longitude]} />
+        ))}
       </Map>
     </YMaps>
   )
@@ -29,7 +31,11 @@ function EventPage(props) {
   const domen = props.domen
 
   const [result, setResult] = useState()
-  console.log('result :>> ', result)
+
+  const usersWithLocation = result?.users
+    ? result.users.filter(({ location }) => location)
+    : []
+  console.log('usersWithLocation :>> ', usersWithLocation)
 
   useEffect(() => {
     const getGameData = async (gameId) => {
@@ -50,7 +56,7 @@ function EventPage(props) {
       </Head>
       {/* <StateLoader {...props}>
         <Header /> */}
-      {result && <GameMap {...result} />}
+      {result && <GameMap {...result} usersWithLocation={usersWithLocation} />}
       {/* </StateLoader> */}
     </>
   )
