@@ -118,7 +118,7 @@ const game = async ({ telegramId, jsonCommand, domen }) => {
   }${creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''}`
   // ${
   //   creator
-  //     ? `\n\n<b>Организатор игры</b>: <a href="tg://user?id=${creator.telegramId}">${creator.name}</a> (кликните, чтобы написать организатору)`
+  //     ? `\n\n<b>Организатор игры</b>: <a href="t.me/+${creator.phone}">${creator.name}</a> (кликните, чтобы написать организатору)`
   //     : ''
   // }
 
@@ -127,8 +127,9 @@ const game = async ({ telegramId, jsonCommand, domen }) => {
     images: game.image ? [game.image] : undefined,
     buttons: [
       {
-        url: `tg://user?id=${creator.telegramId}`,
+        url: `t.me/+${creator?.phone}`,
         text: '\u{1F4AC} Написать орагнизатору',
+        hide: !creator,
       },
       {
         url:

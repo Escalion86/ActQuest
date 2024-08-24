@@ -22,7 +22,6 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
   const teams = await Teams.find({
     _id: { $in: teamsIds },
   }).lean()
-  console.log('teams :>> ', teams)
 
   return {
     message: `<b>"${user.name}"</b>\nСостоит в ${getNoun(
@@ -43,7 +42,7 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
             })
             .join('\n')}`
         : ''
-    }\n\n<a href="tg://user?id=${user.telegramId}">Написать в личку</a>`,
+    }`,
     buttons: [
       ...teamsUser.map(({ _id, role, teamId }) => {
         const team = teams.find(({ _id }) => String(_id) === teamId)
@@ -61,6 +60,10 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
           c: 'userJoinToTeam',
           userTId: jsonCommand.userTId,
         },
+      },
+      {
+        url: `t.me/+${user.phone}`,
+        text: '\u{2712} Написать в личку',
       },
       {
         c: 'allUsers',
