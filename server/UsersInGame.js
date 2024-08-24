@@ -36,7 +36,7 @@ export default async function UsersInGame(req, res) {
           )
           const team = teams.find((team) => String(team._id) == userTeam.teamId)
 
-          return { ...user, team }
+          return { ...user, team, roleInTeam: userTeam.role }
         })
         return res?.status(200).json({
           success: true,

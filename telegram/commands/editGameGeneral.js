@@ -148,6 +148,15 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
         hide: game.status !== 'started',
       },
       {
+        url:
+          'https://actquest.ru/' +
+          domen +
+          '/game/location/' +
+          jsonCommand.gameId,
+        text: '\u{1F30F} команды на карте',
+        hide: game.status !== 'started',
+      },
+      {
         c: { c: 'editGame', gameId: jsonCommand.gameId },
         text: '\u{270F} Редактировать игру',
       },

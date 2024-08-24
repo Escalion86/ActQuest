@@ -113,7 +113,9 @@ function EventPage(props) {
   const [teamsColors, setTeamsColors] = useState()
 
   const usersWithLocation = result?.users
-    ? result.users.filter(({ location }) => location)
+    ? result.users.filter(
+        ({ location }) => roleInTeam === 'capitan' && location
+      )
     : []
 
   const defaultMapState = useMemo(
