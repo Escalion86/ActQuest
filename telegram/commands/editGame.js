@@ -147,7 +147,10 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
           text: '\u{1F4CC} Место сбора после игры',
         },
       ],
-      { c: 'editGameGeneral', text: '\u{2B05} Назад' },
+      {
+        c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
+        text: '\u{2B05} Назад',
+      },
     ],
   }
 }
