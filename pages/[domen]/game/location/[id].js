@@ -1,7 +1,7 @@
 import { getData } from '@helpers/CRUD'
 // import { getSession } from 'next-auth/react'
 import Head from 'next/head'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 // import Image from 'next/image'
