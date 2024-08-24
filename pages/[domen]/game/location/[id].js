@@ -42,7 +42,7 @@ const GameMap = ({ usersWithLocation }) => {
               }}
               options={{
                 // islands#violetStretchyIcon islands#violetIcon
-                preset: 'islands#violetStretchyIcon', //'islands#greenDotIconWithCaption',
+                preset: 'islands#violetIcon', //'islands#greenDotIconWithCaption',
                 iconColor: '#aeca3b',
                 controls: [],
               }}
