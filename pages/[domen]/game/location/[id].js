@@ -1,11 +1,6 @@
 import { getData } from '@helpers/CRUD'
-// import { getSession } from 'next-auth/react'
 import Head from 'next/head'
 import { useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
-import getSecondsBetween from '@helpers/getSecondsBetween'
-// import Image from 'next/image'
-import cn from 'classnames'
 
 import {
   YMaps,
@@ -16,6 +11,11 @@ import {
 } from '@pbe/react-yandex-maps'
 import { useRef } from 'react'
 import { PASTEL_COLORS } from '@helpers/constants'
+
+const townsCenter = {
+  krsk: [92.871295, 56.012083],
+  nrsk: [88.080232, 69.408366],
+}
 
 const islands = [
   'islands#blueIcon',
@@ -46,8 +46,6 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
   }
 
   useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
-
-  console.log('usersWithLocation :>> ', usersWithLocation)
 
   return (
     <div className="w-screen h-screen">
@@ -119,7 +117,10 @@ function EventPage(props) {
     : []
 
   const defaultMapState = useMemo(
-    () => calcMapCenter(usersWithLocation),
+    () =>
+      usersWithLocation.length > 0
+        ? calcMapCenter(usersWithLocation)
+        : townsCenter[domen] || townsCenter['krsk'],
     [!result?.users]
   )
 
