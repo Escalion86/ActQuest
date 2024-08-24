@@ -14,17 +14,21 @@ import {
   FullscreenControl,
   ZoomControl,
 } from '@pbe/react-yandex-maps'
+import { useRef } from 'react'
 
 const GameMap = ({ usersWithLocation }) => {
+  const ref = useRef()
   const defaultState = {
     center: [56.039911, 92.878677],
     zoom: 5,
   }
 
+  useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
+
   console.log('usersWithLocation :>> ', usersWithLocation)
 
   return (
-    <YMaps className="w-screen h-screen">
+    <YMaps ref={ref} className="w-screen h-screen">
       <Map defaultState={defaultState}>
         {usersWithLocation.map(({ name, team, location }) => {
           return (
@@ -44,10 +48,7 @@ const GameMap = ({ usersWithLocation }) => {
             />
           )
         })}
-        <FullscreenControl
-          state={{ expanded: true }}
-          data={{ expanded: true, state: { expanded: true } }}
-        />
+        <FullscreenControl />
         <ZoomControl options={{ size: 'large' }} />
       </Map>
     </YMaps>
