@@ -1,7 +1,5 @@
-import { getNounTeams, getNounWrongCodes } from '@helpers/getNoun'
+import { getNounWrongCodes } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
