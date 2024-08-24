@@ -1,6 +1,7 @@
 import { postData } from '@helpers/CRUD'
 import dbConnect from '@utils/dbConnect'
 import callbackHandler from 'telegram/callbackHandler'
+import locationHandler from 'telegram/locationHandler'
 import messageHandler from 'telegram/messageHandler'
 
 export default async function handler(req, res) {
