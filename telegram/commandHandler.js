@@ -3,7 +3,6 @@ import LastCommands from '@models/LastCommands'
 import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
 import Users from '@models/Users'
-import dateToDateTimeStr from '@helpers/dateToDateTimeStr'
 
 function jsonParser(str) {
   try {
@@ -29,15 +28,12 @@ const commandHandler = async (
   try {
     // Если пользователь прислал геопозицию
     if (location) {
-      console.log('date :>> ', date)
-      const test = dateToDateTimeStr(date)
-      console.log('test :>> ', test)
       await Users.findOneAndUpdate(
         {
           telegramId: userTelegramId,
         },
         {
-          location: { ...location, date },
+          location: { ...location, date: date ? Date(date) : Date() },
         }
       )
       return
