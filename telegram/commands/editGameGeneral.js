@@ -158,13 +158,13 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
           hidden: teams.length === 0,
         },
       ],
-      [
-        {
-          c: { c: 'gameAddings', gameId: jsonCommand.gameId },
-          text: '\u{1F48A} Добавить бонусы/штрафы командам',
-          // hide: game.status !== 'finished',
-        },
-      ],
+      // [
+      //   {
+      //     c: { c: 'gameAddings', gameId: jsonCommand.gameId },
+      //     text: '\u{1F48A} Добавить бонусы/штрафы командам',
+      //     // hide: game.status !== 'finished',
+      //   },
+      // ],
       {
         c: {
           c: 'hideGame',
