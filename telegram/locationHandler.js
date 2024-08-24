@@ -1,6 +1,5 @@
 // import Users from '@models/Users'
 // import dbConnect from '@utils/dbConnect'
-import checkContactRecive from './checkContactRecive'
 import checkUserData from './checkUserData'
 import commandHandler from './commandHandler'
 // import sendMessage from './sendMessage'
@@ -38,18 +37,17 @@ const locationHandler = async (
   res,
   domen
 ) => {
-  if (await checkContactRecive(body, domen))
-    if (await checkUserData(from.id, undefined, domen))
-      return await commandHandler(
-        from.id,
-        undefined,
-        message_id,
-        undefined,
-        photo,
-        domen,
-        location,
-        edit_date ? edit_date : date
-      )
+  if (await checkUserData(from.id, undefined, domen))
+    return await commandHandler(
+      from.id,
+      undefined,
+      message_id,
+      undefined,
+      photo,
+      domen,
+      location,
+      edit_date ? edit_date : date
+    )
 }
 
 export default locationHandler

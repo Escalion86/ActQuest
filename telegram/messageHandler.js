@@ -48,7 +48,7 @@ const messageHandler = async (body, res, domen) => {
     photo,
   } = message
 
-  if (await checkContactRecive(body, domen))
+  if (await checkContactRecive(body?.message?.contact, domen))
     if (await checkUserData(from.id, text, domen))
       return await commandHandler(
         from.id,
