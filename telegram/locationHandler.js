@@ -46,7 +46,7 @@ const locationHandler = async (
       undefined,
       domen,
       location,
-      edit_date ? edit_date : date
+      edit_date ? Date(edit_date) : date ? Date(date) : undefined
     )
 }
 
