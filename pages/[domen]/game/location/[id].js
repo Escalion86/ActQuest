@@ -16,7 +16,28 @@ import {
 } from '@pbe/react-yandex-maps'
 import { useRef } from 'react'
 
+const islands = [
+  'islands#blueIcon',
+  'islands#darkGreenIcon',
+  'islands#blueStretchyIcon',
+  'islands#darkGreenStretchyIcon',
+  'islands#blueDotIcon',
+  'islands#darkGreenDotIcon',
+  'islands#blueCircleIcon',
+  'islands#darkGreenCircleIcon',
+  'islands#blueCircleDotIcon',
+  'islands#darkGreenCircleDotIcon',
+  'islands#blueAirportIcon',
+  'islands#blueAttentionIcon',
+  'islands#blueHomeCircleIcon',
+  'islands#blueScienceCircleIcon',
+  'islands#geolocationIcon',
+  'islands#blueClusterIcons',
+  'islands#invertedBlueClusterIcons',
+]
+
 const GameMap = ({ usersWithLocation }) => {
+  const [index, setIndex] = useState(0)
   const ref = useRef()
   const defaultState = {
     center: [56.039911, 92.878677],
@@ -28,31 +49,34 @@ const GameMap = ({ usersWithLocation }) => {
   console.log('usersWithLocation :>> ', usersWithLocation)
 
   return (
-    <YMaps ref={ref} className="w-screen h-screen">
-      <Map defaultState={defaultState}>
-        {usersWithLocation.map(({ name, team, location }) => {
-          return (
-            <Placemark
-              geometry={[location.latitude, location.longitude]}
-              properties={{
-                balloonContent: () => (
-                  <span onClick={() => console.log(location)}>{name}</span>
-                ),
-                iconCaption: team.name,
-              }}
-              options={{
-                // islands#violetStretchyIcon islands#violetIcon
-                preset: 'islands#violetIcon', //'islands#greenDotIconWithCaption',
-                iconColor: '#aeca3b',
-                controls: [],
-              }}
-            />
-          )
-        })}
-        <FullscreenControl />
-        <ZoomControl options={{ size: 'large' }} />
-      </Map>
-    </YMaps>
+    <div className="w-screen h-screen">
+      <button onClick={() => setIndex(index + 1)}>{islands[index]}</button>
+      <YMaps ref={ref} width="100%" height="100%">
+        <Map defaultState={defaultState}>
+          {usersWithLocation.map(({ name, team, location }) => {
+            return (
+              <Placemark
+                geometry={[location.latitude, location.longitude]}
+                properties={{
+                  balloonContent: () => (
+                    <span onClick={() => console.log(location)}>{name}</span>
+                  ),
+                  iconCaption: team.name,
+                }}
+                options={{
+                  // islands#violetStretchyIcon islands#violetIcon
+                  preset: islands[index], //'islands#greenDotIconWithCaption',
+                  iconColor: '#aeca3b',
+                  controls: [],
+                }}
+              />
+            )
+          })}
+          <FullscreenControl />
+          <ZoomControl options={{ size: 'large' }} />
+        </Map>
+      </YMaps>
+    </div>
   )
 }
 
