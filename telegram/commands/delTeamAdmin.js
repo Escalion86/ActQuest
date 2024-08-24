@@ -17,7 +17,7 @@ const delTeamAdmin = async ({ telegramId, jsonCommand }) => {
       message: 'Подтвердите удаление команды',
       buttons: [
         {
-          text: '\u{1F5D1} Удалить',
+          text: '\u{1F4A3} Удалить',
           c: { confirm: true },
           // `delTeam` + propsToStr(props)
         },
