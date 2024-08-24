@@ -1,4 +1,5 @@
 import { getNounTeams } from '@helpers/getNoun'
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
