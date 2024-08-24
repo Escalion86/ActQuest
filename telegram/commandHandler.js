@@ -29,6 +29,7 @@ const commandHandler = async (
   try {
     // Если пользователь прислал геопозицию
     if (location) {
+      console.log('date :>> ', date)
       const test = dateToDateTimeStr(date)
       console.log('test :>> ', test)
       await Users.findOneAndUpdate(
