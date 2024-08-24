@@ -28,7 +28,7 @@ const gameStart = async ({ telegramId, jsonCommand, domen }) => {
         },
         {
           text: '\u{1F6AB} Отмена',
-          c: { c: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -134,14 +134,14 @@ const gameStart = async ({ telegramId, jsonCommand, domen }) => {
       message: `Игра ${formatGameName(
         game
       )} ЗАПУЩЕНА.\n\n\u{26A0} Все игроки оповещены!`,
-      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+      nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
     }
   } else {
     return {
       message: `Игра ${formatGameName(
         game
       )} ЗАПУЩЕНА.\n\n\u{26A0} Для начала игры игрокам нужно в списке игр выбрать игру и нажать ЗАЙТИ В ИГРУ!`,
-      nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+      nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
     }
   }
 }

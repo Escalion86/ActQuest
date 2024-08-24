@@ -15,7 +15,7 @@ const menuGamesEdit = async ({ telegramId, jsonCommand }) => {
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(games, page, (game, number) => ({
     text: `\u{270F} ${formatGameName(game)}`,
-    c: { c: 'editGame', gameId: game._id },
+    c: { c: 'editGameGeneral', gameId: game._id },
     //`editGame/gameId=${game._id}`,
   }))
 

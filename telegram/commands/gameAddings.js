@@ -61,7 +61,7 @@ const gameAddings = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...buttons,
       {
-        c: { c: 'editGame', gameId: jsonCommand?.gameId },
+        c: { c: 'editGameGeneral', gameId: jsonCommand?.gameId },
         text: '\u{2B05} Назад',
       },
     ],

@@ -27,7 +27,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
         },
         {
           text: '\u{1F6AB} Я передумал',
-          c: { c: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -83,7 +83,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
 
   return {
     message: `Анонс отправлен всем!`,
-    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+    nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
   }
 }
 

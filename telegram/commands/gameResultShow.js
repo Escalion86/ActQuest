@@ -15,7 +15,7 @@ const gameResultShow = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Результаты игры ${formatGameName(game)} открыты`,
-    nextCommand: { c: `editGame`, gameId: jsonCommand.gameId },
+    nextCommand: { c: `editGameGeneral`, gameId: jsonCommand.gameId },
   }
 }
 

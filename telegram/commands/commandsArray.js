@@ -101,6 +101,7 @@ import setManyCodesPenalty from './setManyCodesPenalty'
 import gameResultAdminBack from './gameResultAdminBack'
 import gameTeamAdmin from './gameTeamAdmin'
 import gameTeamsAdmin from './gameTeamsAdmin'
+import editGameGeneral from './editGameGeneral'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -209,6 +210,7 @@ const commandsArray = {
   gameTeamsAdmin,
   addGameTeamAddingPenalty,
   delGameTeamAddingPenalty,
+  editGameGeneral,
 }
 
 var i = 0

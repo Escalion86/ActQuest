@@ -23,7 +23,7 @@ const gameActive = async ({ telegramId, jsonCommand }) => {
         },
         {
           text: '\u{1F6AB} Отмена',
-          c: { c: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -36,7 +36,7 @@ const gameActive = async ({ telegramId, jsonCommand }) => {
 
   return {
     message: `Игра ${formatGameName(game)} активирована.`,
-    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+    nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
   }
 }
 

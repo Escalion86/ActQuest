@@ -29,7 +29,7 @@ const gameStop = async ({ telegramId, jsonCommand, domen }) => {
         },
         {
           text: '\u{1F6AB} Отмена',
-          c: { c: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -94,7 +94,7 @@ const gameStop = async ({ telegramId, jsonCommand, domen }) => {
     message: `СТОП ИГРА!!\n\nИгра ${formatGameName(
       game
     )} ОСТАНОВЛЕНА.\n\n\u{26A0} Все игроки оповещены!`,
-    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+    nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
   }
 }
 

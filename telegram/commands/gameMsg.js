@@ -24,7 +24,7 @@ const gameMsg = async ({ telegramId, jsonCommand, domen }) => {
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
-          c: { c: 'editGame', gameId: jsonCommand.gameId },
+          c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
         },
       ],
     }
@@ -63,7 +63,7 @@ const gameMsg = async ({ telegramId, jsonCommand, domen }) => {
 
   return {
     message: `Все игроки оповещены!`,
-    nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
+    nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
   }
 }
 

@@ -19,7 +19,7 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
   if (!gameTeams || gameTeams.length === 0) {
     return {
       message: 'Никто не записался на игру',
-      nextCommand: { c: 'editGame', gameId: jsonCommand?.gameId },
+      nextCommand: { c: 'editGameGeneral', gameId: jsonCommand?.gameId },
     }
   }
 
@@ -63,7 +63,7 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
     buttons: [
       ...buttons,
       {
-        c: { c: 'editGame', gameId: jsonCommand?.gameId },
+        c: { c: 'editGameGeneral', gameId: jsonCommand?.gameId },
         text: '\u{2B05} Назад',
       },
     ],

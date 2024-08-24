@@ -15,7 +15,7 @@ const gameResultHide = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: `Результаты игры ${formatGameName(game)} скрыты`,
-    nextCommand: { c: `editGame`, gameId: jsonCommand.gameId },
+    nextCommand: { c: `editGameGeneral`, gameId: jsonCommand.gameId },
   }
 }
 
