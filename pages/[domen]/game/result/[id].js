@@ -1108,10 +1108,10 @@ const GameBlock = ({ game }) => {
   )
 }
 
-function EventPage(props) {
+function ResultPage(props) {
   const gameId = props.id
   const domen = props.domen
-  console.log('props :>> ', props)
+
   const [game, setGame] = useState()
 
   useEffect(() => {
@@ -1135,7 +1135,7 @@ function EventPage(props) {
   )
 }
 
-export default EventPage
+export default ResultPage
 
 // export const getStaticPaths = async () => {
 //   console.log('getStaticPaths fetching...')
