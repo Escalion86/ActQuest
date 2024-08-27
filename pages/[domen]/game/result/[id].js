@@ -521,7 +521,8 @@ const GameBlock = ({ game }) => {
 
   const tableTitleHeight = 60
   const rowHeight = 60
-  const breakDuration = game.breakDuration ?? 0
+  // const breakDuration = game.breakDuration ?? 0
+  const tasksCount = tasks?.length ?? 0
   const taskDuration = game.taskDuration ?? 3600
   const cluesDuration = game.cluesDuration ?? 1200
   const taskFailurePenalty = game.taskFailurePenalty ?? 0
@@ -529,12 +530,12 @@ const GameBlock = ({ game }) => {
 
   const teamsAnimateSteps = gameTeams.map(({ startTime, endTime }, index) => {
     const tempResult = []
-    for (let i = 0; i < tasks.length; i++) {
+    for (let i = 0; i < tasksCount; i++) {
       const prevSum = i === 0 ? 0 : tempResult[i - 1]
       if (!endTime[i] || !startTime[i]) tempResult.push(prevSum + taskDuration)
       else
         tempResult.push(prevSum + getSecondsBetween(startTime[i], endTime[i]))
-      // if (breakDuration > 0 && i < tasks.length - 1)
+      // if (breakDuration > 0 && i < tasksCount - 1)
       //   tempResult.push(tempResult[i] + breakDuration)
     }
 
@@ -551,7 +552,7 @@ const GameBlock = ({ game }) => {
 
   const teamsTaskPenalty = gameTeams.map(
     ({ findedPenaltyCodes, startTime, endTime, wrongCodes }, index) => {
-      const tempResult = Array(tasks.length).fill(0)
+      const tempResult = Array(tasksCount).fill(0)
       if (findedPenaltyCodes?.length > 0) {
         for (let i = 0; i < findedPenaltyCodes.length; i++) {
           if (findedPenaltyCodes[i]?.length > 0) {
@@ -568,7 +569,7 @@ const GameBlock = ({ game }) => {
         }
       }
       if (taskFailurePenalty) {
-        for (let i = 0; i < tasks.length; i++) {
+        for (let i = 0; i < tasksCount; i++) {
           if (!endTime[i] || !startTime[i]) {
             tempResult[i] += taskFailurePenalty
           }
@@ -581,7 +582,7 @@ const GameBlock = ({ game }) => {
         wrongCodes !== null
       ) {
         const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
-        for (let i = 0; i < tasks.length; i++) {
+        for (let i = 0; i < tasksCount; i++) {
           if (
             typeof wrongCodes[i] === 'object' &&
             wrongCodes[i] !== null &&
@@ -640,6 +641,13 @@ const GameBlock = ({ game }) => {
       totalTeamsTimeWithBonusAndPenalty.filter((totalTime) => totalTime <= time)
         .length
   )
+
+  const stapWidth = 120
+  const animateSteps = Array.from(
+    { length: tasksCount + 1 },
+    (_, i) => i * stapWidth
+  )
+  animateSteps.push(animateSteps[animateSteps.length - 1] + 450)
 
   return (
     <div className="relative">
@@ -1031,12 +1039,7 @@ const GameBlock = ({ game }) => {
                   top: rowHeight * index + tableTitleHeight + 20,
                 }}
                 animate={{
-                  x: start
-                    ? [
-                        0, 120, 240, 360, 480, 600, 720, 840, 960, 1080, 1200,
-                        1650,
-                      ]
-                    : 0,
+                  x: start ? animateSteps : 0,
                 }}
                 transition={{
                   // type: 'just',
