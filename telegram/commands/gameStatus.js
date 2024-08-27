@@ -46,6 +46,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         findedCodes,
         wrongCodes,
         startTime,
+        endTime,
         findedBonusCodes,
         findedPenaltyCodes,
       } = gameTeam
@@ -76,28 +77,37 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
 
       const isActiveTaskFinished =
         activeTaskIndex >= game.tasks.length ||
-        gameTeam.endTime[activeTaskIndex] ||
-        getSecondsBetween(gameTeam.startTime[activeTaskIndex]) > taskDuration
+        endTime[activeTaskIndex] ||
+        getSecondsBetween(startTime[activeTaskIndex]) > taskDuration
       const gameFinishTime = isActiveTaskFinished
-        ? gameTeam.endTime[activeTaskIndex - 1] ||
-          Date(
-            getSecondsBetween(gameTeam.startTime[activeTaskIndex - 1]) +
-              taskDuration
-          )
+        ? endTime[activeTaskIndex - 1] ||
+          Date(getSecondsBetween(startTime[activeTaskIndex - 1]) + taskDuration)
         : null
       const isAllTasksStarted =
-        gameTeam.startTime?.length === game.tasks.length &&
-        gameTeam.startTime.filter((item) => item).length === game.tasks.length
+        startTime?.length === game.tasks.length &&
+        startTime.filter((item) => item).length === game.tasks.length
       const isTeamFinished = isAllTasksStarted && isActiveTaskFinished
       const isTeamOnBreak = !!breakDuration && isActiveTaskFinished
 
       const isActiveTaskFailed = isActiveTaskFinished
-        ? !gameTeam.endTime[activeTaskIndex]
+        ? !endTime[activeTaskIndex]
         : false
       const activeTaskFinishTime = isActiveTaskFinished
-        ? gameTeam.endTime[activeTaskIndex] ||
-          gameTeam.startTime[activeTaskIndex] + taskDuration
+        ? endTime[activeTaskIndex] || startTime[activeTaskIndex] + taskDuration
         : null
+
+      const sumTimeByAllTasks = isTeamFinished
+        ? startTime.reduce((sum, timeStart, index) => {
+            const timeEnd = endTime[index]
+            // const sum = startTimes.reduce((sum, timeStart, i) => {
+            // const timeEnd = endTimes[i]
+            return (
+              sum +
+              getSecondsBetween(timeStart, timeEnd || timeStart + taskDuration)
+            )
+            // },0)
+          }, 0)
+        : 0
 
       const timeAfterEndTask = isTeamOnBreak
         ? getSecondsBetween(activeTaskFinishTime)
@@ -123,6 +133,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
         activeTaskFinishTime,
         timeAfterEndTask,
         breakTimeLeft,
+        sumTimeByAllTasks,
       }
     }),
   ].sort((a, b) => {
@@ -138,7 +149,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       // Если только "b" команда закончила игру
       if (!a.isTeamFinished && b.isTeamFinished) return 1
       // Если обе команды закончили игру
-      return b.gameFinishTime - a.gameFinishTime
+      return a.gameFinishTime - b.gameFinishTime
     }
 
     // Если одна из команд на перерыве
@@ -148,7 +159,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       // Если только "b" команда на перерыве
       if (!a.isTeamOnBreak && b.isTeamOnBreak) return 1
       // Если обе команды на перерыве
-      return b.activeTaskFinishTime - a.activeTaskFinishTime
+      return a.activeTaskFinishTime - b.activeTaskFinishTime
     }
 
     // Если одна из команд нашла больше кодов
@@ -156,7 +167,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       return b.findedCodesCount - a.findedCodesCount
 
     // Сравниваем время начала задания команд
-    return b.activeTaskStartTime - a.activeTaskStartTime
+    return a.activeTaskStartTime - b.activeTaskStartTime
 
     // return (
     //   b.activeTaskIndex - a.activeTaskIndex ||
@@ -189,17 +200,20 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       activeTaskFinishTime,
       timeAfterEndTask,
       breakTimeLeft,
+      sumTimeByAllTasks,
     }) => {
       if (isTeamFinished)
         return `\u{2705} <b>"${
           team.name
-        }"</b> - завершили все задания в ${dateToDateTimeStr(
+        }"</b> - завершили все задания ${dateToDateTimeStr(
           gameFinishTime,
           false,
           false,
           false,
           false
-        ).join(' ')}`
+        ).join(' ')}. Суммарное время на задания ${secondsToTime(
+          sumTimeByAllTasks
+        )}`
 
       // Проверяем, может задание выполнено или провалено и команда на перерыве
       if (isTeamOnBreak) {
