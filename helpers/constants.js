@@ -69,13 +69,10 @@ export const PASTEL_COLORS = [
   '#C6C9D0',
   '#E5B3BB',
   '#F9968B',
-  '#F27348',
   '#76CDCD',
   '#7B92AA',
   '#E4CEE0',
   '#DC828F',
-  '#F7CE76',
-  '#E8D595',
 ]
 
 export const MONTHS = [
