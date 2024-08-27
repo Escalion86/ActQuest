@@ -148,7 +148,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       // Если только "b" команда на перерыве
       if (!a.isTeamOnBreak && b.isTeamOnBreak) return 1
       // Если обе команды на перерыве
-      return a.activeTaskFinishTime - ba.activeTaskFinishTime
+      return a.activeTaskFinishTime - b.activeTaskFinishTime
     }
 
     // Если одна из команд нашла больше кодов
