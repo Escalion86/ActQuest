@@ -149,7 +149,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       // Если только "b" команда закончила игру
       if (!a.isTeamFinished && b.isTeamFinished) return 1
       // Если обе команды закончили игру
-      return a.gameFinishTime - b.gameFinishTime
+      return a.sumTimeByAllTasks - b.sumTimeByAllTasks
     }
 
     // Если одна из команд на перерыве
