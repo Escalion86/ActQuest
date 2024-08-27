@@ -138,7 +138,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       // Если только "b" команда закончила игру
       if (!a.isTeamFinished && b.isTeamFinished) return 1
       // Если обе команды закончили игру
-      return b.gameFinishTime - a.gameFinishTime
+      return a.gameFinishTime - b.gameFinishTime
     }
 
     // Если одна из команд на перерыве
@@ -148,7 +148,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       // Если только "b" команда на перерыве
       if (!a.isTeamOnBreak && b.isTeamOnBreak) return 1
       // Если обе команды на перерыве
-      return b.activeTaskFinishTime - a.activeTaskFinishTime
+      return a.activeTaskFinishTime - ba.activeTaskFinishTime
     }
 
     // Если одна из команд нашла больше кодов
@@ -156,7 +156,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       return b.findedCodesCount - a.findedCodesCount
 
     // Сравниваем время начала задания команд
-    return b.activeTaskStartTime - a.activeTaskStartTime
+    return a.activeTaskStartTime - b.activeTaskStartTime
 
     // return (
     //   b.activeTaskIndex - a.activeTaskIndex ||
