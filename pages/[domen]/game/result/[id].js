@@ -652,7 +652,7 @@ const GameBlock = ({ game }) => {
   return (
     <div className="relative">
       <div className="relative z-50 overflow-x-auto">
-        <div className="fixed w-full pt-5">
+        <div className="w-full pt-5">
           <div className="font-bold text-center h-[30px]">{game.name}</div>
           <div className="flex items-center justify-center mb-2 gap-x-2">
             <div className="text-xs tablet:text-sm">Скорость демонстрации:</div>
@@ -679,7 +679,7 @@ const GameBlock = ({ game }) => {
           </div>
         </div>
         <div
-          className="p-5 mt-[100px] -translate-x-[20%] tablet:-translate-x-[10%] laptop:translate-x-0 -translate-y-[19%] tablet:-translate-y-[12%] laptop:translate-y-0 scale-[60%] tablet:scale-75 laptop:scale-100"
+          className="p-5 -translate-x-[20%] tablet:-translate-x-[10%] laptop:translate-x-0 -translate-y-[19%] tablet:-translate-y-[12%] laptop:translate-y-0 scale-[60%] tablet:scale-75 laptop:scale-100"
           style={{
             position: 'relative',
             display: 'flex',
