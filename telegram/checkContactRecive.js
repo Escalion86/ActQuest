@@ -21,7 +21,7 @@ const checkContactRecive = async (message, domen) => {
 
     await sendMessage({
       chat_id: user_id,
-      text: `Регистрация успешна! Ваши данные:\n - Имя: ${name}\n - Телефон: +${phone_number}`,
+      text: `Регистрация успешна! Ваши данные:\n - Имя: ${name}\n - Телефон: ${phone_number}`,
       // keyboard: {
       //   keyboard: [],
       //   inline_keyboard: [
