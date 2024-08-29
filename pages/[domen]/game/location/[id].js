@@ -11,6 +11,7 @@ import {
 } from '@pbe/react-yandex-maps'
 import { useRef } from 'react'
 import { PASTEL_COLORS } from '@helpers/constants'
+import getSecondsBetween from '@helpers/getSecondsBetween'
 
 const townsCenter = {
   krsk: [56.012083, 92.871295],
@@ -45,6 +46,8 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
     zoom: 12,
   }
 
+  var dateNow = new Date()
+
   useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
 
   return (
@@ -53,6 +56,7 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
       <YMaps ref={ref} width="100%" height="100%">
         <Map defaultState={defaultState}>
           {usersWithLocation.map(({ name, team, location }, num) => {
+            const dataActualitySeconds = getSecondsBetween(location.date)
             return (
               <Placemark
                 geometry={[location.latitude, location.longitude]}
@@ -64,8 +68,16 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
                 }}
                 options={{
                   // islands#violetStretchyIcon islands#violetIcon
-                  preset: islands[index], //'islands#greenDotIconWithCaption',
-                  iconColor: teamsColors[num], //'#aeca3b',
+                  preset:
+                    dataActualitySeconds < 60
+                      ? islands[index]
+                      : 'islands#blueAttentionIcon', //'islands#greenDotIconWithCaption',
+                  iconColor:
+                    dataActualitySeconds < 60
+                      ? teamsColors[num]
+                      : dataActualitySeconds < 300
+                      ? 'yellow'
+                      : 'red',
                   controls: [],
                 }}
               />

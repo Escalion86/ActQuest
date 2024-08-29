@@ -101,6 +101,10 @@ const gamesSchema = {
     ],
     default: [],
   },
+  type: {
+    type: String,
+    default: 'classic',
+  },
   taskDuration: {
     type: Number,
     default: 3600,

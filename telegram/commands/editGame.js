@@ -51,6 +51,12 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
       game.individualStart ? 'Индивидуальный' : 'Одновременно со всеми'
     }`,
     buttons: [
+      {
+        c: { c: 'setGameType', gameId: jsonCommand.gameId },
+        text: `Тип игры ${
+          game.type === 'photo' ? '\u{1F4F7} Фотоквест' : '\u{1F697} Классика'
+        }`,
+      },
       [
         {
           c: { c: 'setGameName', gameId: jsonCommand.gameId },
