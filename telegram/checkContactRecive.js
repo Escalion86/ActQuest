@@ -3,13 +3,14 @@ import Users from '@models/Users'
 import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
 
-const checkContactRecive = async (contact, domen) => {
+const checkContactRecive = async (message, domen) => {
+  const { contact, from } = message
   if (contact) {
     const { phone_number, first_name, last_name, user_id } = contact
     const name = (first_name + (last_name ? ' ' + last_name : '')).trim()
     const user = await Users.findOneAndUpdate(
       {
-        telegramId: body?.message?.from.id,
+        telegramId: from.id,
       },
       {
         name,
