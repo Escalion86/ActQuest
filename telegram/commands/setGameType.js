@@ -2,23 +2,23 @@ import Games from '@models/Games'
 // import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 
-const setGameIndividualStart = async ({ telegramId, jsonCommand }) => {
+const setGameType = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  if (typeof jsonCommand.iStart !== 'boolean') {
+  if (typeof jsonCommand.type !== 'boolean') {
     return {
       success: true,
-      message: 'Выберите режим выдачи заданий при старте',
+      message: 'Выберите тип игры',
       buttons: [
         {
-          text: 'Индивидуальный',
-          c: { iStart: true },
+          c: { type: 'classic' },
+          text: '\u{1F697} Классика',
         },
         {
-          text: 'Одновременно со всеми',
-          c: { iStart: false },
+          c: { type: 'photo' },
+          text: '\u{1F4F7} Фотоквест',
         },
         {
           text: '\u{1F6AB} Отмена',
@@ -28,16 +28,18 @@ const setGameIndividualStart = async ({ telegramId, jsonCommand }) => {
     }
   }
   const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
-    individualStart: jsonCommand.iStart,
+    type: jsonCommand.type,
   })
 
   return {
     success: true,
-    message: `Установлен режим выдачи заданий на "${
-      jsonCommand.iStart ? 'Индивидуальный' : 'Одновременно со всеми'
+    message: `Установлен тип игры "${
+      jsonCommand.type === 'photo'
+        ? '\u{1F4F7} Фотоквест'
+        : '\u{1F697} Классика'
     }"`,
     nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
   }
 }
 
-export default setGameIndividualStart
+export default setGameType

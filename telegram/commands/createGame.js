@@ -5,8 +5,42 @@ import arrayOfCommands from 'telegram/func/arrayOfCommands'
 
 const array = [
   {
+    prop: 'type',
+    message:
+      'Выберите тип игры:\n\u{1F697} Классика - в качестве ответа на задание должен быть какой-либо текст\n\u{1F4F7} Фотоквест - в качестве ответа на задание должно быть изображение',
+    answerMessage: (answer) =>
+      `Задан тип игры "${
+        answer === 'photo' ? '\u{1F4F7} Фотоквест' : '\u{1F697} Классика'
+      }"`,
+    buttons: (jsonCommand) => [
+      {
+        c: { type: 'classic' },
+        text: '\u{1F697} Классика',
+      },
+      {
+        c: { type: 'photo' },
+        text: '\u{1F4F7} Фотоквест',
+      },
+      { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
+    ],
+    answerConverter: (answer) => {
+      const [date, time] = answer.split(' ')
+      const [day, month, year] = date.split('.')
+      const [hours, minutes] = time.split(':')
+      return moment.tz(
+        `${year}-${month}-${day} ${hours}:${minutes}`,
+        'Asia/Krasnoyarsk'
+      )
+    },
+  },
+  {
     prop: 'name',
-    message: 'Введите название игры',
+    message: 'Введите название игры (не должно превышать 50 символов)',
+    checkAnswer: (answer) =>
+      // '^(?:(?:31(/|-|.)(?:0?[13578]|1[02]))\1|(?:(?:29|30)(/|-|.)(?:0?[13-9]|1[0-2])\2))(?:(?:1[6-9]|[2-9]d)?d{2})$|^(?:29(/|-|.)0?2\3(?:(?:(?:1[6-9]|[2-9]d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00))))$|^(?:0?[1-9]|1d|2[0-8])(/|-|.)(?:(?:0?[1-9])|(?:1[0-2]))\4(?:(?:1[6-9]|[2-9]d)?d{2})$'.test(
+      /^.{2,51}$/.test(answer),
+    errorMessage: (answer) =>
+      `Название не должно превышать 50 символов. Попробуйте ещё раз`,
     answerMessage: (answer) => `Задано название игры: "${answer}"`,
     buttons: (jsonCommand) => [
       { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
