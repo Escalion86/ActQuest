@@ -23,15 +23,6 @@ const array = [
       },
       { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],
-    answerConverter: (answer) => {
-      const [date, time] = answer.split(' ')
-      const [day, month, year] = date.split('.')
-      const [hours, minutes] = time.split(':')
-      return moment.tz(
-        `${year}-${month}-${day} ${hours}:${minutes}`,
-        'Asia/Krasnoyarsk'
-      )
-    },
   },
   {
     prop: 'name',
