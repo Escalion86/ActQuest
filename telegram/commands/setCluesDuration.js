@@ -15,7 +15,7 @@ const setCluesDuration = async ({ telegramId, jsonCommand }) => {
       buttons: [
         {
           text: 'Без подсказок',
-          message: '0',
+          c: { message: '0' },
         },
         {
           text: '\u{1F6AB} Отмена',
