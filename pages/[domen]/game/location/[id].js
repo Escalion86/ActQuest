@@ -242,7 +242,7 @@ function EventPage(props) {
           />
           Показывать места заданий
         </label>
-        <div className="flex-1 w-full">
+        <div className="flex-1 w-full overflow-hidden">
           {result && (
             <GameMap
               {...result}
