@@ -63,7 +63,7 @@ const GameMap = ({
   return (
     // {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
     <YMaps ref={ref} width="100%" height="100%">
-      <Map defaultState={defaultState}>
+      <Map defaultState={defaultState} controls={[]}>
         {showTasks &&
           tasks.map(({ coordinates, title }) => {
             const longitude = coordinates?.longitude
@@ -215,7 +215,7 @@ function EventPage(props) {
     //     elements[0].parentNode.removeChild(copyrights[0]);
     // }
 
-    setTimout(
+    setTimeout(
       () =>
         document
           .querySelectorAll('.ymaps-2-1-79-copyrights-pane')
