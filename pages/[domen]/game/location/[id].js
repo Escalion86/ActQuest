@@ -81,7 +81,7 @@ const GameMap = ({
           onClick={() => setInfo(null)}
         >
           {showTasks &&
-            tasks.map(({ coordinates, title }) => {
+            tasks.map(({ coordinates, title }, index) => {
               const longitude = coordinates?.longitude
               const latitude = coordinates?.latitude
               const radius = coordinates?.radius
@@ -92,13 +92,17 @@ const GameMap = ({
                   <Placemark
                     onClick={() => {
                       console.log('1 :>> ', 1)
-                      setInfo(<div>Задание "{title}"</div>)
+                      setInfo(
+                        <div>
+                          Задание №{index + 1} - "{title}"
+                        </div>
+                      )
                     }}
                     geometry={[latitude, longitude]}
                     properties={{
                       balloonContent: () => (
                         <span onClick={() => console.log(location)}>
-                          {title}
+                          №{index + 1} "{title}"
                         </span>
                       ),
                       iconCaption: title,
