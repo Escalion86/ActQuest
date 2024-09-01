@@ -68,6 +68,8 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
                 .tz('Asia/Krasnoyarsk')
                 .format('DD.MM.yyyy H:mm')
             : '[не заданы]'
+        }\n<b>Тип игры</b>: ${
+          game.type === 'photo' ? `\u{1F4F7} Фотоквест` : `\u{1F697} Классика`
         }\n\n<b>Описание</b>:\n${
           game?.description ? `"${game?.description}"` : '[без описания]'
         }\n\n<b>Количество заданий</b>: ${
