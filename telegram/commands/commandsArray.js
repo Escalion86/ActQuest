@@ -106,6 +106,7 @@ import selectTeamToJoinGameAdmin from './selectTeamToJoinGameAdmin'
 import delGameTeamAdmin from './delGameTeamAdmin'
 import setGameType from './setGameType'
 import editTaskClues from './editTaskClues'
+import addTaskClue from './addTaskClue'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -219,6 +220,7 @@ const commandsArray = {
   delGameTeamAdmin,
   setGameType,
   editTaskClues,
+  addTaskClue,
 }
 
 var i = 0

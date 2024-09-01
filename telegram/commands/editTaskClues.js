@@ -34,16 +34,15 @@ const editTaskClues = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Подсказки:\n\n${
-      clues.length > 0
+    message:
+      clues?.length > 0
         ? clues
             .map(
               ({ clue, images }, index) =>
                 `Подсказка №${index + 1}:\n<blockquote>${clue}</blockquote>`
             )
             .join('\n')
-        : ''
-    }`,
+        : `<b>Подсказок нет</b>`,
     buttons: [
       ...buttons,
       {
@@ -53,6 +52,7 @@ const editTaskClues = async ({ telegramId, jsonCommand }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
+        hide: clues?.length >= 10,
       },
       {
         text: '\u{2B05} Назад',
