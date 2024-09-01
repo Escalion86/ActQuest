@@ -21,6 +21,10 @@ const setTaskPenalty = async ({ telegramId, jsonCommand }) => {
       }`,
       buttons: [
         {
+          text: 'Без штрафа',
+          c: { message: '0' },
+        },
+        {
           text: '\u{1F6AB} Отмена',
           c: { c: 'editGame', gameId: jsonCommand.gameId },
         },
@@ -28,15 +32,21 @@ const setTaskPenalty = async ({ telegramId, jsonCommand }) => {
     }
   }
   const value = parseInt(jsonCommand.message)
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
     taskFailurePenalty: value,
   })
 
   return {
     success: true,
-    message: `Штраф за невыполнение задания обновлен на "${
-      game.type === 'photo' ? getNounPoints(value) : secondsToTimeStr(value)
-    }"`,
+    message: `Штраф за невыполнение задания ${
+      !value
+        ? 'удален'
+        : `обновлен на "${
+            game.type === 'photo'
+              ? getNounPoints(value)
+              : secondsToTimeStr(value)
+          }"`
+    }`,
     nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
   }
 }
