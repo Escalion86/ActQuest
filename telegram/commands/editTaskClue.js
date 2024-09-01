@@ -66,7 +66,10 @@ const editTaskClue = async ({ telegramId, jsonCommand }) => {
       {
         text: '\u{1F4A3} Удалить подсказку',
         c: {
-          delete: true,
+          c: 'delTaskClue',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+          j: jsonCommand.j,
         },
       },
       {

@@ -36,7 +36,7 @@ const array = [
 ]
 
 const addTaskClue = async ({ telegramId, jsonCommand }) => {
-  const checkData = check(jsonCommand, ['gameId', 'i', 'j'])
+  const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
 
   return await arrayOfCommands({
