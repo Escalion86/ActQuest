@@ -124,6 +124,7 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
             gameId: jsonCommand.gameId,
           },
           text: '\u{270F} Штраф за много кодов',
+          hide: game.type === 'photo',
         },
         {
           c: {
