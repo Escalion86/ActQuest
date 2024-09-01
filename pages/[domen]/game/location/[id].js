@@ -8,6 +8,7 @@ import {
   Placemark,
   FullscreenControl,
   ZoomControl,
+  Circle,
 } from '@pbe/react-yandex-maps'
 import { useRef } from 'react'
 import { PASTEL_COLORS } from '@helpers/constants'
@@ -38,13 +39,14 @@ const islands = [
   'islands#invertedBlueClusterIcons',
 ]
 
-const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
+const GameMap = ({ defaultMapState, usersWithLocation, teamsColors, game }) => {
   const [index, setIndex] = useState(0)
   const ref = useRef()
   const defaultState = {
     center: defaultMapState,
     zoom: 12,
   }
+  const { tasks } = game
 
   // var dateNow = new Date()
 
@@ -55,6 +57,13 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
       {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
       <YMaps ref={ref} width="100%" height="100%">
         <Map defaultState={defaultState}>
+          {tasks.map(({ coordinates }) => {
+            const longitude = coordinates?.longitude
+            const latitude = coordinates?.latitude
+            const radius = coordinates?.radius
+            if (!longitude || !latitude) return null
+            return <Circle geometry={[latitude, longitude]} />
+          })}
           {usersWithLocation.map(({ name, team, location }, num) => {
             const dataActualitySeconds = getSecondsBetween(location.date)
             return (
@@ -121,6 +130,7 @@ function EventPage(props) {
 
   const [result, setResult] = useState()
   const [teamsColors, setTeamsColors] = useState()
+  const [game, setGame] = useState()
 
   const usersWithLocation = result?.users
     ? result.users.filter(
@@ -157,6 +167,14 @@ function EventPage(props) {
     }
   }, [])
 
+  useEffect(() => {
+    const getGame = async (gameId) => {
+      const result = await getData('/api/games/' + domen + '/' + gameId)
+      setGame(result.data)
+    }
+    if (gameId) getGame(gameId)
+  }, [])
+
   return (
     <>
       <Head>
@@ -170,6 +188,7 @@ function EventPage(props) {
           usersWithLocation={usersWithLocation}
           teamsColors={teamsColors}
           defaultMapState={defaultMapState}
+          game={game}
         />
       )}
       {/* </StateLoader> */}
