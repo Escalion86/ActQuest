@@ -215,12 +215,14 @@ function EventPage(props) {
       {/* <StateLoader {...props}>
         <Header /> */}
       <div className="w-screen h-screen">
-        <input
-          name="Показывать места заданий"
-          type="checkbox"
-          checked={showTasks}
-          onClick={(e) => setShowTasks(e.target.checked)}
-        />
+        <label>
+          <input
+            type="checkbox"
+            checked={showTasks}
+            onChange={(e) => setShowTasks(e.target.checked)}
+          />
+          Показывать места заданий
+        </label>
 
         {result && (
           <GameMap
