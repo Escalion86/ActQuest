@@ -76,8 +76,11 @@ const array = [
   },
   {
     prop: 'image',
-    message: 'Отправьте картинку анонса',
+    message: 'Отправьте картинку анонса (со сжатием, тоесть НЕ файлом)',
     answerMessage: (answer) => `Картинка анонса загружена`,
+    checkAnswer: (answer, isPhoto) => isPhoto,
+    errorMessage: (answer) =>
+      `Вы не отправили картинку анонса. Попробуйте ещё раз`,
     buttons: (jsonCommand) => [
       { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
     ],

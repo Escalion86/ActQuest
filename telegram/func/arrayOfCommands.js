@@ -18,11 +18,14 @@ const arrayOfCommands = async ({ array, jsonCommand, onFinish }) => {
     if (jsonCommand[data.prop] === undefined) {
       if (
         array[i].checkAnswer !== undefined &&
-        !array[i].checkAnswer(jsonCommand.message)
+        !array[i].checkAnswer(jsonCommand.message, jsonCommand.isPhoto)
       ) {
         return {
           success: false,
-          message: array[i].errorMessage(jsonCommand.message),
+          message: array[i].errorMessage(
+            jsonCommand.message,
+            jsonCommand.isPhoto
+          ),
           // buttons: data.buttons(props),
           nextCommand: jsonCommand,
           // `/createGame` + propsToStr(props),
@@ -31,13 +34,16 @@ const arrayOfCommands = async ({ array, jsonCommand, onFinish }) => {
 
       const value =
         typeof array[i].answerConverter === 'function'
-          ? array[i].answerConverter(jsonCommand.message)
+          ? array[i].answerConverter(jsonCommand.message, jsonCommand.isPhoto)
           : jsonCommand.message
 
       if (i < array.length - 1) {
         return {
           success: true,
-          message: array[i].answerMessage(jsonCommand.message),
+          message: array[i].answerMessage(
+            jsonCommand.message,
+            jsonCommand.isPhoto
+          ),
           // buttons: data.buttons(props),
           nextCommand: { [data.prop]: value },
           // `/createGame` + propsToStr(props),
