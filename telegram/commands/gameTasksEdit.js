@@ -114,7 +114,9 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
               typeof task?.bonusCodes === 'object' ? task.bonusCodes : []
             const penaltyCodes =
               typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
-            return `\u{1F4CC} ${numberToEmojis(index + 1)} "${task.title}"\n${
+            return `${
+              game.type === 'photo' ? `\u{1F4F7}` : `\u{1F4CC}`
+            } ${numberToEmojis(index + 1)} "${task.title}"\n${
               game.type === 'photo'
                 ? ''
                 : `Коды (${codes.length ?? 0} шт): ${
