@@ -88,7 +88,7 @@ const GameMap = ({
               if (!longitude || !latitude) return null
               return (
                 <>
-                  <Circle geometry={[[latitude, longitude], radius || 1000]} />
+                  <Circle geometry={[[latitude, longitude], radius || 5]} />
                   <Placemark
                     onClick={() => {
                       console.log('1 :>> ', 1)
