@@ -14,6 +14,7 @@ const array = [
     prop: 'code',
     message: 'Введите бонусный код',
     answerMessage: (answer) => `Бонусный код "${answer}"`,
+    answerConverter: (answer) => answer.trim().toLowerCase(),
     buttons: (jsonCommand) => [cancelButton(jsonCommand)],
   },
   {
