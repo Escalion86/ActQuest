@@ -3,7 +3,7 @@ import Games from '@models/Games'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
 
 const cancelButton = (jsonCommand) => ({
-  c: { c: 'editPenaltyCodes', gameId: jsonCommand.gameId, i: jsonCommand.i },
+  c: { c: 'editTaskClues', gameId: jsonCommand.gameId, i: jsonCommand.i },
   text: '\u{1F6AB} Отмена создания подсказки',
 })
 
@@ -45,6 +45,7 @@ const addTaskClue = async ({ telegramId, jsonCommand }) => {
     onFinish: async (result) => {
       const newClue = {
         clue: result.clue,
+        images: [],
       }
 
       const game = await Games.findById(jsonCommand.gameId)
