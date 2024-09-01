@@ -1,4 +1,4 @@
-import { getNounWrongCodes } from '@helpers/getNoun'
+import { getNounPoints, getNounWrongCodes } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
@@ -44,6 +44,8 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
     }\n<b>Штраф за невыполнение задания</b>: ${
       !game?.taskFailurePenalty
         ? 'отсутствует'
+        : game.type === 'photo'
+        ? getNounPoints(game?.taskFailurePenalty)
         : secondsToTimeStr(game?.taskFailurePenalty)
     }${
       game.manyCodesPenalty && game.manyCodesPenalty[0] > 0

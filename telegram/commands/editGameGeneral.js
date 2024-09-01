@@ -1,4 +1,8 @@
-import { getNounTeams, getNounWrongCodes } from '@helpers/getNoun'
+import {
+  getNounPoints,
+  getNounTeams,
+  getNounWrongCodes,
+} from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
@@ -58,6 +62,8 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
     }\n<b>Штраф за невыполнение задания</b>: ${
       !game?.taskFailurePenalty
         ? 'отсутствует'
+        : game.type === 'photo'
+        ? getNounPoints(game?.taskFailurePenalty)
         : secondsToTimeStr(game?.taskFailurePenalty)
     }${
       game.manyCodesPenalty && game.manyCodesPenalty[0] > 0

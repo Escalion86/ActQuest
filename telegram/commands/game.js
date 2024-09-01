@@ -1,3 +1,4 @@
+import { getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import GamesTeams from '@models/GamesTeams'
 import Users from '@models/Users'
@@ -118,6 +119,8 @@ const game = async ({ telegramId, jsonCommand, domen }) => {
   }\n<b>Штраф за невыполнение задания</b>: ${
     !game?.taskFailurePenalty
       ? 'отсутствует'
+      : game.type === 'photo'
+      ? getNounPoints(game?.taskFailurePenalty)
       : secondsToTimeStr(game?.taskFailurePenalty)
   }${creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''}`
   // ${

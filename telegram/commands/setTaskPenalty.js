@@ -1,3 +1,4 @@
+import { getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import Games from '@models/Games'
 // import dbConnect from '@utils/dbConnect'
@@ -8,10 +9,15 @@ const setTaskPenalty = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
+  const game = await getGame(jsonCommand.gameId)
+  if (game.success === false) return game
+
   if (!jsonCommand.message) {
     return {
       success: true,
-      message: 'Введите штраф за невыполнение задания в секундах',
+      message: `Введите штраф за невыполнение задания в ${
+        game.type === 'photo' ? 'баллах' : 'секундах'
+      }`,
       buttons: [
         {
           text: '\u{1F6AB} Отмена',
@@ -21,15 +27,15 @@ const setTaskPenalty = async ({ telegramId, jsonCommand }) => {
     }
   }
   const value = parseInt(jsonCommand.message)
-  const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  await Games.findByIdAndUpdate(jsonCommand.gameId, {
     taskFailurePenalty: value,
   })
 
   return {
     success: true,
-    message: `Штраф за невыполнение задания обновлен на "${secondsToTimeStr(
-      value
-    )}"`,
+    message: `Штраф за невыполнение задания обновлен на "${
+      game.type === 'photo' ? getNounPoints(value) : secondsToTimeStr(value)
+    }"`,
     nextCommand: { c: 'editGame', gameId: jsonCommand.gameId },
   }
 }

@@ -7,6 +7,7 @@ import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
 import keyboardFormer from 'telegram/func/keyboardFormer'
+import { getNounPoints } from '@helpers/getNoun'
 
 const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -82,6 +83,8 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
         }\n<b>Штраф за невыполнение задания</b>: ${
           !game?.taskFailurePenalty
             ? 'отсутствует'
+            : game.type === 'photo'
+            ? getNounPoints(game?.taskFailurePenalty)
             : secondsToTimeStr(game?.taskFailurePenalty)
         }${creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''}`,
         keyboard,
