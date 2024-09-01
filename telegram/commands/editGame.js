@@ -31,9 +31,13 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
       game?.tasks?.length ?? 0
     }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
       game?.taskDuration ?? 3600
-    )}\n<b>Время до подсказки</b>: ${secondsToTimeStr(
-      game?.cluesDuration ?? 1200
-    )}\n<b>Перерыв между заданиями</b>: ${
+    )}\n${
+      game?.cluesDuration === 0
+        ? '<b>Подсказки отключены</b>'
+        : `<b>Время до подсказки</b>: ${secondsToTimeStr(
+            game?.cluesDuration ?? 1200
+          )}`
+    }\n<b>Перерыв между заданиями</b>: ${
       !game?.breakDuration
         ? 'отсутствует'
         : secondsToTimeStr(game?.breakDuration)

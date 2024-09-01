@@ -14,6 +14,10 @@ const setCluesDuration = async ({ telegramId, jsonCommand }) => {
       message: 'Введите время между подсказками в секундах',
       buttons: [
         {
+          text: 'Без подсказок',
+          message: '0',
+        },
+        {
           text: '\u{1F6AB} Отмена',
           c: { c: 'editGame', gameId: jsonCommand.gameId },
         },
