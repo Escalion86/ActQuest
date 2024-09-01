@@ -66,8 +66,8 @@ const GameMap = ({
     <>
       <div
         className={cn(
-          'absolute z-50 bottom-0 right-0 max-w-48 p-2 bg-gray-200',
-          info ? 'duration-500 h-0' : 'duration-0 h-auto'
+          'absolute z-50 bottom-0 right-0 max-w-48 p-2 bg-gray-200 rounded-tl text-sm tablet:text-lg',
+          info ? 'duration-500 h-auto' : 'duration-0 h-0'
         )}
       >
         {info}
