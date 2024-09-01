@@ -47,6 +47,7 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors, game }) => {
     zoom: 12,
   }
   const { tasks } = game
+  console.log('tasks :>> ', tasks)
 
   // var dateNow = new Date()
 
@@ -62,7 +63,7 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors, game }) => {
             const latitude = coordinates?.latitude
             const radius = coordinates?.radius
             if (!longitude || !latitude) return null
-            return <Circle geometry={[latitude, longitude]} />
+            return <Circle geometry={[[latitude, longitude], radius || 1000]} />
           })}
           {usersWithLocation.map(({ name, team, location }, num) => {
             const dataActualitySeconds = getSecondsBetween(location.date)
