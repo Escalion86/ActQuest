@@ -52,7 +52,7 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
 
   return (
     <div className="w-screen h-screen">
-      <button onClick={() => setIndex(index + 1)}>{islands[index]}</button>
+      {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
       <YMaps ref={ref} width="100%" height="100%">
         <Map defaultState={defaultState}>
           {usersWithLocation.map(({ name, team, location }, num) => {
