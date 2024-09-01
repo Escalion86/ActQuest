@@ -220,7 +220,7 @@ function EventPage(props) {
         document
           .querySelectorAll('.ymaps-2-1-79-copyrights-pane')
           .forEach((el) => el.remove()),
-      500
+      1000
     )
     // console.log('copyrights :>> ', copyrights)
     // copyrights[0].remove()
@@ -233,7 +233,7 @@ function EventPage(props) {
       </Head>
       {/* <StateLoader {...props}>
         <Header /> */}
-      <div className="w-screen h-screen">
+      <div className="flex flex-col items-stretch w-screen h-screen">
         <label>
           <input
             type="checkbox"
@@ -242,17 +242,18 @@ function EventPage(props) {
           />
           Показывать места заданий
         </label>
-
-        {result && (
-          <GameMap
-            {...result}
-            usersWithLocation={usersWithLocation}
-            teamsColors={teamsColors}
-            defaultMapState={defaultMapState}
-            game={game}
-            showTasks={showTasks}
-          />
-        )}
+        <div className="flex-1 w-full">
+          {result && (
+            <GameMap
+              {...result}
+              usersWithLocation={usersWithLocation}
+              teamsColors={teamsColors}
+              defaultMapState={defaultMapState}
+              game={game}
+              showTasks={showTasks}
+            />
+          )}
+        </div>
       </div>
       {/* </StateLoader> */}
     </>
