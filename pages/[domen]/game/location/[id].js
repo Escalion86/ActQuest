@@ -74,6 +74,7 @@ const GameMap = ({
               <>
                 <Circle geometry={[[latitude, longitude], radius || 1000]} />
                 <Placemark
+                  onClick={() => console.log(coordinates)}
                   geometry={[latitude, longitude]}
                   properties={{
                     balloonContent: () => (
@@ -234,14 +235,16 @@ function EventPage(props) {
       {/* <StateLoader {...props}>
         <Header /> */}
       <div className="flex flex-col items-stretch w-screen h-screen">
-        <label>
-          <input
-            type="checkbox"
-            checked={showTasks}
-            onChange={(e) => setShowTasks(e.target.checked)}
-          />
-          Показывать места заданий
-        </label>
+        <div className="px-2 flex justify-center py-0.5 items-center">
+          <label>
+            <input
+              type="checkbox"
+              checked={showTasks}
+              onChange={(e) => setShowTasks(e.target.checked)}
+            />
+            Показывать места заданий
+          </label>
+        </div>
         <div className="flex-1 w-full overflow-hidden">
           {result && (
             <GameMap
