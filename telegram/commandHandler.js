@@ -70,8 +70,9 @@ const commandHandler = async (
           })
         }
 
-        const isPhoto =
+        const isPhoto = Boolean(
           typeof photo === 'object' && photo[photo.length - 1]?.file_id
+        )
         // Если отправлено сообщение
         if (!jsonCommand) {
           jsonCommand = {
