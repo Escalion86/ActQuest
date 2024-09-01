@@ -48,38 +48,44 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       task?.title
     }"\n\n<b>Текст задания</b>:\n<blockquote>${
       task?.task
-    }</blockquote>${cluesText}\n\n<b>Коды (${codes.length ?? 0} шт)</b>:\n${
-      codes.length > 0 ? codes.join(', ') : '[не задыны]'
-    }${
-      bonusCodes.length > 0
-        ? `\n\n<b>Бонусные коды (${bonusCodes.length} шт)</b>:\n${
+    }</blockquote>${cluesText}\n\n${
+      game.type === 'photo'
+        ? ''
+        : `<b>Коды (${codes.length ?? 0} шт)</b>:\n${
+            codes.length > 0 ? codes.join(', ') : '[не задыны]'
+          }${
             bonusCodes.length > 0
-              ? bonusCodes
-                  .map(
-                    ({ code, bonus, description }) =>
-                      `"${code}" - ${secondsToTimeStr(bonus)} - ${description}`
-                  )
-                  .join(',\n')
-              : '[не задыны]'
-          }`
-        : ''
-    }${
-      penaltyCodes.length > 0
-        ? `\n\n<b>Штрафные коды (${penaltyCodes.length} шт)</b>:\n${
+              ? `\n\n<b>Бонусные коды (${bonusCodes.length} шт)</b>:\n${
+                  bonusCodes.length > 0
+                    ? bonusCodes
+                        .map(
+                          ({ code, bonus, description }) =>
+                            `"${code}" - ${secondsToTimeStr(
+                              bonus
+                            )} - ${description}`
+                        )
+                        .join(',\n')
+                    : '[не задыны]'
+                }`
+              : ''
+          }${
             penaltyCodes.length > 0
-              ? penaltyCodes
-                  .map(
-                    ({ code, penalty, description }) =>
-                      `"${code}" - ${secondsToTimeStr(
-                        penalty
-                      )} - ${description}`
-                  )
-                  .join(',\n')
-              : '[не задыны]'
+              ? `\n\n<b>Штрафные коды (${penaltyCodes.length} шт)</b>:\n${
+                  penaltyCodes.length > 0
+                    ? penaltyCodes
+                        .map(
+                          ({ code, penalty, description }) =>
+                            `"${code}" - ${secondsToTimeStr(
+                              penalty
+                            )} - ${description}`
+                        )
+                        .join(',\n')
+                    : '[не задыны]'
+                }`
+              : ''
+          }\n\n<b>Количество кодов для выполнения</b>: ${
+            task.numCodesToCompliteTask ?? 'Все'
           }`
-        : ''
-    }\n\n<b>Количество кодов для выполнения</b>: ${
-      task.numCodesToCompliteTask ?? 'Все'
     }${
       task.postMessage
         ? `\n\n<b>Сообщение после задания</b>:\n"${task.postMessage}"`
