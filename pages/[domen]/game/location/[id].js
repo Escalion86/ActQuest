@@ -215,9 +215,13 @@ function EventPage(props) {
     //     elements[0].parentNode.removeChild(copyrights[0]);
     // }
 
-    document
-      .querySelectorAll('.ymaps-2-1-79-copyrights-pane')
-      .forEach((el) => el.remove())
+    setTimout(
+      () =>
+        document
+          .querySelectorAll('.ymaps-2-1-79-copyrights-pane')
+          .forEach((el) => el.remove()),
+      1000
+    )
     // console.log('copyrights :>> ', copyrights)
     // copyrights[0].remove()
   }, [])
