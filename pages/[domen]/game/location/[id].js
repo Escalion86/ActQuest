@@ -40,7 +40,13 @@ const islands = [
   'islands#violetClusterIcons',
 ]
 
-const GameMap = ({ defaultMapState, usersWithLocation, teamsColors, game }) => {
+const GameMap = ({
+  defaultMapState,
+  usersWithLocation,
+  teamsColors,
+  game,
+  showTasks,
+}) => {
   const [index, setIndex] = useState(0)
   const ref = useRef()
   const defaultState = {
@@ -55,11 +61,11 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors, game }) => {
   useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
 
   return (
-    <div className="w-screen h-screen">
-      {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
-      <YMaps ref={ref} width="100%" height="100%">
-        <Map defaultState={defaultState}>
-          {tasks.map(({ coordinates, title }) => {
+    // {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
+    <YMaps ref={ref} width="100%" height="100%">
+      <Map defaultState={defaultState}>
+        {showTasks &&
+          tasks.map(({ coordinates, title }) => {
             const longitude = coordinates?.longitude
             const latitude = coordinates?.latitude
             const radius = coordinates?.radius
@@ -90,39 +96,38 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors, game }) => {
               </>
             )
           })}
-          {usersWithLocation.map(({ name, team, location }, num) => {
-            const dataActualitySeconds = getSecondsBetween(location.date)
-            return (
-              <Placemark
-                geometry={[location.latitude, location.longitude]}
-                properties={{
-                  balloonContent: () => (
-                    <span onClick={() => console.log(location)}>{name}</span>
-                  ),
-                  iconCaption: team.name,
-                }}
-                options={{
-                  // islands#violetStretchyIcon islands#violetIcon
-                  preset:
-                    dataActualitySeconds < 60
-                      ? islands[index]
-                      : 'islands#blueAttentionIcon', //'islands#greenDotIconWithCaption',
-                  iconColor:
-                    dataActualitySeconds < 60
-                      ? teamsColors[num]
-                      : dataActualitySeconds < 300
-                      ? 'yellow'
-                      : 'red',
-                  controls: [],
-                }}
-              />
-            )
-          })}
-          <FullscreenControl />
-          <ZoomControl options={{ size: 'large' }} />
-        </Map>
-      </YMaps>
-    </div>
+        {usersWithLocation.map(({ name, team, location }, num) => {
+          const dataActualitySeconds = getSecondsBetween(location.date)
+          return (
+            <Placemark
+              geometry={[location.latitude, location.longitude]}
+              properties={{
+                balloonContent: () => (
+                  <span onClick={() => console.log(location)}>{name}</span>
+                ),
+                iconCaption: team.name,
+              }}
+              options={{
+                // islands#violetStretchyIcon islands#violetIcon
+                preset:
+                  dataActualitySeconds < 60
+                    ? islands[index]
+                    : 'islands#blueAttentionIcon', //'islands#greenDotIconWithCaption',
+                iconColor:
+                  dataActualitySeconds < 60
+                    ? teamsColors[num]
+                    : dataActualitySeconds < 300
+                    ? 'yellow'
+                    : 'red',
+                controls: [],
+              }}
+            />
+          )
+        })}
+        <FullscreenControl />
+        <ZoomControl options={{ size: 'large' }} />
+      </Map>
+    </YMaps>
   )
 }
 
@@ -154,6 +159,7 @@ function EventPage(props) {
   const gameId = props.id
   const domen = props.domen
 
+  const [showTasks, setShowTasks] = useState(true)
   const [result, setResult] = useState()
   const [teamsColors, setTeamsColors] = useState()
   const [game, setGame] = useState()
@@ -208,15 +214,25 @@ function EventPage(props) {
       </Head>
       {/* <StateLoader {...props}>
         <Header /> */}
-      {result && (
-        <GameMap
-          {...result}
-          usersWithLocation={usersWithLocation}
-          teamsColors={teamsColors}
-          defaultMapState={defaultMapState}
-          game={game}
-        />
-      )}
+      <div className="w-screen h-screen">
+        <input
+          type="checkbox"
+          checked={showTasks}
+          onClick={(e) => setShowTasks(e.target.checked)}
+        >
+          Показывать места заданий
+        </input>
+        {result && (
+          <GameMap
+            {...result}
+            usersWithLocation={usersWithLocation}
+            teamsColors={teamsColors}
+            defaultMapState={defaultMapState}
+            game={game}
+            showTasks={showTasks}
+          />
+        )}
+      </div>
       {/* </StateLoader> */}
     </>
   )
