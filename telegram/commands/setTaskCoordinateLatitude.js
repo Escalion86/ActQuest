@@ -18,7 +18,7 @@ const setTaskCoordinateLongitude = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message) {
     return {
       success: true,
-      message: `Введите долготу`,
+      message: `Введите широту`,
       buttons: [
         {
           text: '\u{2B05} Назад',
@@ -34,7 +34,7 @@ const setTaskCoordinateLongitude = async ({ telegramId, jsonCommand }) => {
 
   const { tasks } = game
   const coordinates = tasks[jsonCommand.i].coordinates
-  coordinates.longtitude = jsonCommand.message
+  coordinates.latitude = jsonCommand.message
   tasks[jsonCommand.i].coordinates = coordinates
 
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
@@ -43,7 +43,7 @@ const setTaskCoordinateLongitude = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Долгота обновлена`,
+    message: `Широта обновлена`,
     nextCommand: {
       c: 'editTaskCoordinates',
       gameId: jsonCommand.gameId,
