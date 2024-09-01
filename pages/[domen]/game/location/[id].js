@@ -211,7 +211,8 @@ function EventPage(props) {
     const copyrights = document.getElementsByClassName(
       'ymaps-2-1-79-copyrights-pane'
     )
-    copyrights[0].remove()
+    console.log('copyrights :>> ', copyrights)
+    // copyrights[0].remove()
   }, [])
 
   return (
