@@ -62,15 +62,15 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
       await sendMessage({
         images: game.image ? [game.image] : undefined,
         chat_id: telegramId,
-        text: `<b>АНОНС ИГРЫ "${game?.name}"</b>\n\n<b>Дата и время</b>:\n${
+        text: `<b>АНОНС ИГРЫ "${game?.name}"</b>\n\n<b>Дата и время</b>: ${
           game.dateStart
             ? moment(game.dateStart)
                 .tz('Asia/Krasnoyarsk')
                 .format('DD.MM.yyyy H:mm')
             : '[не заданы]'
-        }\n<b>Тип игры</b>: ${
+        }\n\n<b>Тип игры</b>: ${
           game.type === 'photo' ? `\u{1F4F7} Фотоквест` : `\u{1F697} Классика`
-        }\n\n<b>Описание</b>:\n${
+        }* (см. подробнее внизу)\n\n<b>Описание</b>:\n${
           game?.description ? `"${game?.description}"` : '[без описания]'
         }\n\n<b>Количество заданий</b>: ${
           game?.tasks?.length ?? 0
@@ -88,7 +88,13 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
             : game.type === 'photo'
             ? getNounPoints(game?.taskFailurePenalty)
             : secondsToTimeStr(game?.taskFailurePenalty)
-        }${creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''}`,
+        }${
+          creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''
+        }\n\n* - тип игры ${
+          game.type === 'photo'
+            ? '"Фотоквест" - в качестве ответа на задание должно быть изображение. За каждое выполненное, а также дополнительные задания начисляются баллы. Побеждает команда набравшая больше всех баллов'
+            : '"Классика" - в качестве ответа на задание должен быть какой-либо текст. Побеждает та команда, которая выполнит задания быстрее всех с учетом бонусов и штрафов по времени'
+        }`,
         keyboard,
         domen,
       })

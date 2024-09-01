@@ -92,7 +92,7 @@ const game = async ({ telegramId, jsonCommand, domen }) => {
     game.dateStart
       ? moment(game.dateStart).tz('Asia/Krasnoyarsk').format('DD.MM.yyyy H:mm')
       : '[не заданы]'
-  }\n<b>Тип игры</b>: ${
+  }\n\n<b>Тип игры</b>: ${
     game.type === 'photo' ? `\u{1F4F7} Фотоквест` : `\u{1F697} Классика`
   }* (см. подробнее внизу)${
     teamsOfUserInAGame && teamsOfUserInAGame.length > 0
