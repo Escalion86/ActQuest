@@ -208,10 +208,17 @@ function EventPage(props) {
   }, [])
 
   useEffect(() => {
-    const copyrights = document.getElementsByClassName(
-      'ymaps-2-1-79-copyrights-pane'
-    )
-    console.log('copyrights :>> ', copyrights)
+    //   const copyrights = document.getElementsByClassName(
+    //     'ymaps-2-1-79-copyrights-pane'
+    //   )
+    //   while(copyrights.length > 0){
+    //     elements[0].parentNode.removeChild(copyrights[0]);
+    // }
+
+    document
+      .querySelectorAll('.ymaps-2-1-79-copyrights-pane')
+      .forEach((el) => el.remove())
+    // console.log('copyrights :>> ', copyrights)
     // copyrights[0].remove()
   }, [])
 
