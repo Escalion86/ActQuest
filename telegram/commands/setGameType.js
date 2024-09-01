@@ -7,7 +7,7 @@ const setGameType = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  if (typeof jsonCommand.type !== 'boolean') {
+  if (!jsonCommand.type) {
     return {
       success: true,
       message: 'Выберите тип игры',
