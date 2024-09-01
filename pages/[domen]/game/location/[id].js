@@ -13,6 +13,7 @@ import {
 import { useRef } from 'react'
 import { PASTEL_COLORS } from '@helpers/constants'
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import cn from 'classnames'
 
 const townsCenter = {
   krsk: [56.012083, 92.871295],
@@ -48,87 +49,104 @@ const GameMap = ({
   showTasks,
 }) => {
   const [index, setIndex] = useState(0)
+  const [info, setInfo] = useState(null)
   const ref = useRef()
   const defaultState = {
     center: defaultMapState,
     zoom: 12,
   }
   const { tasks } = game
-  console.log('tasks :>> ', tasks)
 
   // var dateNow = new Date()
 
   useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
+  // {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
 
   return (
-    // {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
-    <YMaps ref={ref} width="100%" height="100%">
-      <Map width="100%" height="100%" defaultState={defaultState} controls={[]}>
-        {showTasks &&
-          tasks.map(({ coordinates, title }) => {
-            const longitude = coordinates?.longitude
-            const latitude = coordinates?.latitude
-            const radius = coordinates?.radius
-            if (!longitude || !latitude) return null
+    <>
+      <div
+        className={cn(
+          'p-2 bg-gray-200',
+          info ? 'duration-500 h-0' : 'duration-0 h-auto'
+        )}
+      >
+        {info}
+      </div>
+      <YMaps ref={ref} width="100%" height="100%">
+        <Map
+          width="100%"
+          height="100%"
+          defaultState={defaultState}
+          controls={[]}
+        >
+          {showTasks &&
+            tasks.map(({ coordinates, title }) => {
+              const longitude = coordinates?.longitude
+              const latitude = coordinates?.latitude
+              const radius = coordinates?.radius
+              if (!longitude || !latitude) return null
+              return (
+                <>
+                  <Circle geometry={[[latitude, longitude], radius || 1000]} />
+                  <Placemark
+                    onClick={() => setInfo(<div>Задание "{title}"</div>)}
+                    geometry={[latitude, longitude]}
+                    properties={{
+                      balloonContent: () => (
+                        <span onClick={() => console.log(location)}>
+                          {title}
+                        </span>
+                      ),
+                      iconCaption: title,
+                    }}
+                    options={{
+                      // islands#violetStretchyIcon islands#violetIcon
+                      preset: 'islands#blueCircleDotIcon', //'islands#greenDotIconWithCaption',
+                      // iconColor:
+                      //   dataActualitySeconds < 60
+                      //     ? teamsColors[num]
+                      //     : dataActualitySeconds < 300
+                      //     ? 'yellow'
+                      //     : 'red',
+                      controls: [],
+                    }}
+                  />
+                </>
+              )
+            })}
+          {usersWithLocation.map(({ name, team, location }, num) => {
+            const dataActualitySeconds = getSecondsBetween(location.date)
             return (
-              <>
-                <Circle geometry={[[latitude, longitude], radius || 1000]} />
-                <Placemark
-                  onClick={() => console.log(coordinates)}
-                  geometry={[latitude, longitude]}
-                  properties={{
-                    balloonContent: () => (
-                      <span onClick={() => console.log(location)}>{title}</span>
-                    ),
-                    iconCaption: title,
-                  }}
-                  options={{
-                    // islands#violetStretchyIcon islands#violetIcon
-                    preset: 'islands#blueCircleDotIcon', //'islands#greenDotIconWithCaption',
-                    // iconColor:
-                    //   dataActualitySeconds < 60
-                    //     ? teamsColors[num]
-                    //     : dataActualitySeconds < 300
-                    //     ? 'yellow'
-                    //     : 'red',
-                    controls: [],
-                  }}
-                />
-              </>
+              <Placemark
+                geometry={[location.latitude, location.longitude]}
+                properties={{
+                  balloonContent: () => (
+                    <span onClick={() => console.log(location)}>{name}</span>
+                  ),
+                  iconCaption: team.name,
+                }}
+                options={{
+                  // islands#violetStretchyIcon islands#violetIcon
+                  preset:
+                    dataActualitySeconds < 60
+                      ? islands[index]
+                      : 'islands#blueAttentionIcon', //'islands#greenDotIconWithCaption',
+                  iconColor:
+                    dataActualitySeconds < 60
+                      ? teamsColors[num]
+                      : dataActualitySeconds < 300
+                      ? 'yellow'
+                      : 'red',
+                  controls: [],
+                }}
+              />
             )
           })}
-        {usersWithLocation.map(({ name, team, location }, num) => {
-          const dataActualitySeconds = getSecondsBetween(location.date)
-          return (
-            <Placemark
-              geometry={[location.latitude, location.longitude]}
-              properties={{
-                balloonContent: () => (
-                  <span onClick={() => console.log(location)}>{name}</span>
-                ),
-                iconCaption: team.name,
-              }}
-              options={{
-                // islands#violetStretchyIcon islands#violetIcon
-                preset:
-                  dataActualitySeconds < 60
-                    ? islands[index]
-                    : 'islands#blueAttentionIcon', //'islands#greenDotIconWithCaption',
-                iconColor:
-                  dataActualitySeconds < 60
-                    ? teamsColors[num]
-                    : dataActualitySeconds < 300
-                    ? 'yellow'
-                    : 'red',
-                controls: [],
-              }}
-            />
-          )
-        })}
-        <FullscreenControl />
-        <ZoomControl options={{ size: 'large' }} />
-      </Map>
-    </YMaps>
+          <FullscreenControl />
+          <ZoomControl options={{ size: 'large' }} />
+        </Map>
+      </YMaps>
+    </>
   )
 }
 
