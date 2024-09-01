@@ -61,7 +61,7 @@ const editTaskClue = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Введите новый текст подсказки`,
+    message: `Введите новый текст подсказки №${jsonCommand.j + 1}`,
     buttons: [
       {
         text: '\u{1F4A3} Удалить подсказку',
