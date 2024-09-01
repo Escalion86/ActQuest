@@ -100,12 +100,12 @@ const GameMap = ({
                     }}
                     geometry={[latitude, longitude]}
                     properties={{
-                      balloonContent: () => (
-                        <span onClick={() => console.log(location)}>
-                          №{index + 1} "{title}"
-                        </span>
-                      ),
-                      iconCaption: title,
+                      // balloonContent: () => (
+                      //   <span onClick={() => console.log(location)}>
+                      //     №{index + 1} "{title}"
+                      //   </span>
+                      // ),
+                      iconCaption: `№${index + 1} "${title}"`,
                     }}
                     options={{
                       // islands#violetStretchyIcon islands#violetIcon
