@@ -37,6 +37,7 @@ const islands = [
   'islands#geolocationIcon',
   'islands#blueClusterIcons',
   'islands#invertedBlueClusterIcons',
+  'islands#violetClusterIcons',
 ]
 
 const GameMap = ({ defaultMapState, usersWithLocation, teamsColors, game }) => {
@@ -55,7 +56,7 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors, game }) => {
 
   return (
     <div className="w-screen h-screen">
-      {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
+      <button onClick={() => setIndex(index + 1)}>{islands[index]}</button>
       <YMaps ref={ref} width="100%" height="100%">
         <Map defaultState={defaultState}>
           {tasks.map(({ coordinates, title }) => {
@@ -76,7 +77,7 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors, game }) => {
                   }}
                   options={{
                     // islands#violetStretchyIcon islands#violetIcon
-                    preset: 'islands#geolocationIcon', //'islands#greenDotIconWithCaption',
+                    preset: islands[index], //'islands#greenDotIconWithCaption',
                     // iconColor:
                     //   dataActualitySeconds < 60
                     //     ? teamsColors[num]
