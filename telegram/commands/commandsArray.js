@@ -107,6 +107,7 @@ import delGameTeamAdmin from './delGameTeamAdmin'
 import setGameType from './setGameType'
 import editTaskClues from './editTaskClues'
 import addTaskClue from './addTaskClue'
+import editTaskClue from './editTaskClue'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -221,6 +222,7 @@ const commandsArray = {
   setGameType,
   editTaskClues,
   addTaskClue,
+  editTaskClue,
 }
 
 var i = 0

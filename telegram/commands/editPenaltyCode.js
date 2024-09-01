@@ -40,56 +40,54 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  if (!jsonCommand.message) {
-    return {
-      success: true,
-      message: `Штрафной код "${penaltyCode.code}"\n\n${
-        penaltyCode.description
-      }\n\nШтраф: ${secondsToTimeStr(penaltyCode.penalty)}`,
-      buttons: [
-        {
-          text: '\u{270F} Штрафной код',
-          c: {
-            c: 'setPenaltyCodeCode',
-            gameId: jsonCommand.gameId,
-            i: jsonCommand.i,
-            j: jsonCommand.j,
-          },
+  return {
+    success: true,
+    message: `Штрафной код "${penaltyCode.code}"\n\n${
+      penaltyCode.description
+    }\n\nШтраф: ${secondsToTimeStr(penaltyCode.penalty)}`,
+    buttons: [
+      {
+        text: '\u{270F} Штрафной код',
+        c: {
+          c: 'setPenaltyCodeCode',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+          j: jsonCommand.j,
         },
-        {
-          text: '\u{270F} Штраф по времени',
-          c: {
-            c: 'setPenaltyCodePenalty',
-            gameId: jsonCommand.gameId,
-            i: jsonCommand.i,
-            j: jsonCommand.j,
-          },
+      },
+      {
+        text: '\u{270F} Штраф по времени',
+        c: {
+          c: 'setPenaltyCodePenalty',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+          j: jsonCommand.j,
         },
-        {
-          text: '\u{270F} Описание',
-          c: {
-            c: 'setPenaltyCodeDescription',
-            gameId: jsonCommand.gameId,
-            i: jsonCommand.i,
-            j: jsonCommand.j,
-          },
+      },
+      {
+        text: '\u{270F} Описание',
+        c: {
+          c: 'setPenaltyCodeDescription',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+          j: jsonCommand.j,
         },
-        {
-          text: '\u{1F5D1} Удалить код',
-          c: {
-            delete: true,
-          },
+      },
+      {
+        text: '\u{1F5D1} Удалить код',
+        c: {
+          delete: true,
         },
-        {
-          text: '\u{2B05} Назад',
-          c: {
-            c: 'editPenaltyCodes',
-            gameId: jsonCommand.gameId,
-            i: jsonCommand.i,
-          },
+      },
+      {
+        text: '\u{2B05} Назад',
+        c: {
+          c: 'editPenaltyCodes',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
         },
-      ],
-    }
+      },
+    ],
   }
 }
 

@@ -40,56 +40,54 @@ const editBonusCode = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  if (!jsonCommand.message) {
-    return {
-      success: true,
-      message: `Бонусный код "${bonusCode.code}"\n\n${
-        bonusCode.description
-      }\n\nБонус: ${secondsToTimeStr(bonusCode.bonus)}`,
-      buttons: [
-        {
-          text: '\u{270F} Бонусный код',
-          c: {
-            c: 'setBonusCodeCode',
-            gameId: jsonCommand.gameId,
-            i: jsonCommand.i,
-            j: jsonCommand.j,
-          },
+  return {
+    success: true,
+    message: `Бонусный код "${bonusCode.code}"\n\n${
+      bonusCode.description
+    }\n\nБонус: ${secondsToTimeStr(bonusCode.bonus)}`,
+    buttons: [
+      {
+        text: '\u{270F} Бонусный код',
+        c: {
+          c: 'setBonusCodeCode',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+          j: jsonCommand.j,
         },
-        {
-          text: '\u{270F} Бонус по времени',
-          c: {
-            c: 'setBonusCodeBonus',
-            gameId: jsonCommand.gameId,
-            i: jsonCommand.i,
-            j: jsonCommand.j,
-          },
+      },
+      {
+        text: '\u{270F} Бонус по времени',
+        c: {
+          c: 'setBonusCodeBonus',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+          j: jsonCommand.j,
         },
-        {
-          text: '\u{270F} Описание',
-          c: {
-            c: 'setBonusCodeDescription',
-            gameId: jsonCommand.gameId,
-            i: jsonCommand.i,
-            j: jsonCommand.j,
-          },
+      },
+      {
+        text: '\u{270F} Описание',
+        c: {
+          c: 'setBonusCodeDescription',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+          j: jsonCommand.j,
         },
-        {
-          text: '\u{1F5D1} Удалить код',
-          c: {
-            delete: true,
-          },
+      },
+      {
+        text: '\u{1F5D1} Удалить код',
+        c: {
+          delete: true,
         },
-        {
-          text: '\u{2B05} Назад',
-          c: {
-            c: 'editBonusCodes',
-            gameId: jsonCommand.gameId,
-            i: jsonCommand.i,
-          },
+      },
+      {
+        text: '\u{2B05} Назад',
+        c: {
+          c: 'editBonusCodes',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
         },
-      ],
-    }
+      },
+    ],
   }
 }
 
