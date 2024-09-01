@@ -4,6 +4,7 @@ import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
 
 const checkContactRecive = async (message, domen) => {
+  if (!message?.contact) return true
   const { contact, from } = message
   if (contact) {
     const { phone_number, first_name, last_name, user_id } = contact
