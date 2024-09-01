@@ -65,6 +65,7 @@ const teamGameStart = async (gameTeamId, game) => {
   const wrongCodes = new Array(gameTasksCount).fill([])
   const findedPenaltyCodes = new Array(gameTasksCount).fill([])
   const findedBonusCodes = new Array(gameTasksCount).fill([])
+  const photos = new Array(gameTasksCount).fill([])
   await GamesTeams.findByIdAndUpdate(gameTeamId, {
     startTime,
     endTime,
@@ -73,34 +74,13 @@ const teamGameStart = async (gameTeamId, game) => {
     wrongCodes,
     findedPenaltyCodes,
     findedBonusCodes,
+    photos,
   })
 }
 
 const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
-
-  // if (jsonCommand.showTask) {
-  //   const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
-  //   // const newActiveTaskNum = gameTeam?.activeNum ? gameTeam.activeNum + 1 : 1
-  //   // await dbConnect()
-  //   // await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-  //   //   activeNum: newActiveTaskNum,
-  //   // })
-  //   const game = await getGame(gameTeam.gameId)
-  //   if (game.success === false) return game
-
-  //   const taskNum = gameTeam?.activeNum ?? 0
-
-  //   return {
-  //     message: taskText({
-  //       tasks: game.tasks,
-  //       taskNum,
-  //       findedCodes: gameTeam?.findedCodes,
-  //     }),
-  //     nextCommand: { showTask: false },
-  //   }
-  // }
 
   const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
   if (gameTeam.success === false) return gameTeam
@@ -124,9 +104,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
   }
 
   // Если начало игры индивидуальное, то нужно создать запись в БД для старта
-  if (!gameTeam.startTime && gameTeam.startTime.length === 0) {
-    console.log('gameTeam :>> ', gameTeam)
-    console.log('СТАРТУЕТ КОМАНДА :>> ')
+  if (!gameTeam.startTime || gameTeam.startTime.length === 0) {
     await teamGameStart(gameTeam._id, game)
   }
 
