@@ -33,7 +33,7 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
       game?.taskDuration ?? 3600
     )}\n${
       game?.cluesDuration === 0
-        ? '<b>Подсказки отключены</b>'
+        ? '<b>Подсказки</b>: отключены'
         : `<b>Время до подсказки</b>: ${secondsToTimeStr(
             game?.cluesDuration ?? 1200
           )}`
