@@ -207,6 +207,13 @@ function EventPage(props) {
     if (gameId) getGame(gameId)
   }, [])
 
+  useEffect(() => {
+    const copyrights = document.getElementsByClassName(
+      'ymaps-2-1-79-copyrights-pane'
+    )
+    copyrights.remove()
+  }, [])
+
   return (
     <>
       <Head>
