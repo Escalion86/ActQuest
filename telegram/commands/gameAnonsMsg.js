@@ -62,7 +62,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
       await sendMessage({
         images: game.image ? [game.image] : undefined,
         chat_id: telegramId,
-        text: `<b>АНОНС ИГРЫ "${game?.name}"</b>\n\n<b>Дата и время</b>: ${
+        text: `<b>АНОНС ИГРЫ\n"${game?.name}"</b>\n\n<b>Дата и время</b>: ${
           game.dateStart
             ? moment(game.dateStart)
                 .tz('Asia/Krasnoyarsk')
