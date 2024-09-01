@@ -16,9 +16,12 @@ const editTaskCoordinates = async ({ telegramId, jsonCommand }) => {
     }
 
   const { tasks } = game
+  const task = tasks[jsonCommand.i]
 
-  const { coordinates } = tasks[jsonCommand.i]
-  const { latitude, longitude, radius } = coordinates
+  const coordinates = task.coordinates
+  const latitude = coordinates?.latitude
+  const longitude = coordinates?.longitude
+  const radius = coordinates?.radius
 
   if (jsonCommand.delete) {
     tasks[jsonCommand.i].coordinates = null
@@ -42,7 +45,7 @@ const editTaskCoordinates = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: `Координаты задания №${jsonCommand.i + 1} - "${
       tasks[jsonCommand.i].title
-    }"`,
+    }"\n\n<b>Широта</b>: ${latitude}\n<b>Долгота</b>: ${longitude}\n<b>Радиус</b>: ${radius}`,
     buttons: [
       {
         text: '\u{270F} Широта',
