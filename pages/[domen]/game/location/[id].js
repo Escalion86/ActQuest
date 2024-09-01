@@ -46,7 +46,7 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
     zoom: 12,
   }
 
-  var dateNow = new Date()
+  // var dateNow = new Date()
 
   useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
 

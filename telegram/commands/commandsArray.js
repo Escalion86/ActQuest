@@ -107,6 +107,10 @@ import editTaskClues from './editTaskClues'
 import addTaskClue from './addTaskClue'
 import editTaskClue from './editTaskClue'
 import delTaskClue from './delTaskClue'
+import editTaskCoordinates from './editTaskCoordinates'
+import setTaskCoordinateLatitude from './setTaskCoordinateLatitude'
+import setTaskCoordinateLongitude from './setTaskCoordinateLongitude'
+import setTaskCoordinateRadius from './setTaskCoordinateRadius'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -221,6 +225,10 @@ const commandsArray = {
   setGameType,
   editTaskClues,
   addTaskClue,
+  editTaskCoordinates,
+  setTaskCoordinateLatitude,
+  setTaskCoordinateLongitude,
+  setTaskCoordinateRadius,
 }
 
 var i = 0

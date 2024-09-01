@@ -68,6 +68,11 @@ const gamesSchema = {
           type: [{ type: String, trim: true }],
           default: [],
         },
+        coordinates: {
+          latitude: Number,
+          longitude: Number,
+          radius: Number,
+        },
         penaltyCodes: {
           type: [
             {
