@@ -66,7 +66,7 @@ const GameMap = ({
     <>
       <div
         className={cn(
-          'p-2 bg-gray-200',
+          'absolute top-0 right-0 max-w-48 p-2 bg-gray-200',
           info ? 'duration-500 h-0' : 'duration-0 h-auto'
         )}
       >
@@ -263,7 +263,7 @@ function EventPage(props) {
             Показывать места заданий
           </label>
         </div>
-        <div className="flex-1 w-full overflow-hidden">
+        <div className="relative flex-1 w-full overflow-hidden">
           {result && (
             <GameMap
               {...result}
