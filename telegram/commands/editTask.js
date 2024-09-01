@@ -102,6 +102,14 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       },
       {
         c: {
+          c: 'editTaskCoordinates',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+        },
+        text: '\u{1F4CD} Координаты',
+      },
+      {
+        c: {
           c: 'setTaskN',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
