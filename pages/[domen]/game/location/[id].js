@@ -58,12 +58,36 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors, game }) => {
       {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
       <YMaps ref={ref} width="100%" height="100%">
         <Map defaultState={defaultState}>
-          {tasks.map(({ coordinates }) => {
+          {tasks.map(({ coordinates, title }) => {
             const longitude = coordinates?.longitude
             const latitude = coordinates?.latitude
             const radius = coordinates?.radius
             if (!longitude || !latitude) return null
-            return <Circle geometry={[[latitude, longitude], radius || 1000]} />
+            return (
+              <>
+                <Circle geometry={[[latitude, longitude], radius || 1000]} />
+                <Placemark
+                  geometry={[latitude, longitude]}
+                  properties={{
+                    balloonContent: () => (
+                      <span onClick={() => console.log(location)}>{title}</span>
+                    ),
+                    iconCaption: title,
+                  }}
+                  options={{
+                    // islands#violetStretchyIcon islands#violetIcon
+                    preset: 'islands#geolocationIcon', //'islands#greenDotIconWithCaption',
+                    // iconColor:
+                    //   dataActualitySeconds < 60
+                    //     ? teamsColors[num]
+                    //     : dataActualitySeconds < 300
+                    //     ? 'yellow'
+                    //     : 'red',
+                    controls: [],
+                  }}
+                />
+              </>
+            )
           })}
           {usersWithLocation.map(({ name, team, location }, num) => {
             const dataActualitySeconds = getSecondsBetween(location.date)

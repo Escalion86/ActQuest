@@ -69,8 +69,8 @@ const gamesSchema = {
           default: [],
         },
         coordinates: {
-          latitude: Number,
-          longitude: Number,
+          latitude: Number, // Широта
+          longitude: Number, // Долгота
           radius: Number,
         },
         penaltyCodes: {
