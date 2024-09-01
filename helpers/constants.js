@@ -47,12 +47,12 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 export const PASTEL_COLORS = [
-  '#B6D8F2',
+  // '#B6D8F2',
   '#CCD4BF',
   '#D0BCAC',
   '#F4CFDF',
   '#F7F6CF',
-  '#9AC8EB',
+  // '#9AC8EB',
   '#98D4BB',
   '#E7CBA9',
   '#EEBAB2',
