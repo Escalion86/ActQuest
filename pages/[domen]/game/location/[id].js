@@ -66,7 +66,7 @@ const GameMap = ({
     <>
       <div
         className={cn(
-          'absolute z-50 top-0 right-0 max-w-48 p-2 bg-gray-200',
+          'absolute z-50 bottom-0 right-0 max-w-48 p-2 bg-gray-200',
           info ? 'duration-500 h-0' : 'duration-0 h-auto'
         )}
       >
@@ -78,6 +78,7 @@ const GameMap = ({
           height="100%"
           defaultState={defaultState}
           controls={[]}
+          onClick={() => setInfo(null)}
         >
           {showTasks &&
             tasks.map(({ coordinates, title }) => {
