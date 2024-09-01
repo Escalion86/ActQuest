@@ -23,6 +23,7 @@ const setTaskN = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
+
   const game = await Games.findById(jsonCommand.gameId)
   const tasks = [...game.tasks]
   // const task = tasks[jsonCommand.i]
