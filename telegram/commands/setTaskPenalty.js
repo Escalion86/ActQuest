@@ -10,10 +10,10 @@ const setTaskPenalty = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
-  if (game.success === false) return game
-
   if (!jsonCommand.message) {
+    const game = await getGame(jsonCommand.gameId)
+    if (game.success === false) return game
+
     return {
       success: true,
       message: `Введите штраф за невыполнение задания в ${
