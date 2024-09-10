@@ -6,7 +6,7 @@ import getNoun from '@helpers/getNoun'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import isUserAdmin from '@helpers/isUserAdmin'
 
-const menuGamesEdit = async ({ telegramId, jsonCommand, user }) => {
+const archiveGamesEdit = async ({ telegramId, jsonCommand, user }) => {
   const isAdmin = isUserAdmin(user)
 
   // Получаем список игр
@@ -14,11 +14,10 @@ const menuGamesEdit = async ({ telegramId, jsonCommand, user }) => {
   if (isAdmin) games = await Games.find({})
   else games = await Games.find({ creatorTelegramId: telegramId })
   const finishedGames = games.filter((game) => game.status === 'finished')
-  const notFinishedGames = games.filter((game) => game.status !== 'finished')
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(
-    notFinishedGames,
+    finishedGames,
     page,
     (game, number) => ({
       text: `\u{270F} ${formatGameName(game)}`,
@@ -28,25 +27,14 @@ const menuGamesEdit = async ({ telegramId, jsonCommand, user }) => {
   )
 
   return {
-    message: `<b>Конструктор игр</b>\nВ списке отображены только игры которые создали именно Вы\n\n<b>Количество игр</b>: ${getNoun(
-      notFinishedGames.length,
+    message: `<b>Конструктор архива игр</b>\nВ списке отображены только ЗАВЕРШЕННЫЕ и только игры которые создали именно Вы\n\n<b>Количество игр в архиве</b>: ${getNoun(
+      finishedGames.length,
       'игра',
       'игры',
       'игр'
-    )}${
-      finishedGames?.length > 0
-        ? ` (в архиве ${getNoun(finishedGames.length, 'игра', 'игры', 'игр')})`
-        : ''
-    }`,
-    buttons: [
-      ...buttons,
-      ...(finishedGames?.length > 0
-        ? [{ c: 'archiveGamesEdit', text: '\u{1F4DA} Архив игр' }]
-        : []),
-      { c: 'createGame', text: '\u{2795} Создать игру' },
-      mainMenuButton,
-    ],
+    )}`,
+    buttons: [...buttons, mainMenuButton],
   }
 }
 
-export default menuGamesEdit
+export default archiveGamesEdit
