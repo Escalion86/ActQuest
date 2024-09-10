@@ -128,9 +128,9 @@ const GameMap = ({
               <Placemark
                 geometry={[location.latitude, location.longitude]}
                 properties={{
-                  balloonContent: () => (
-                    <span onClick={() => console.log(location)}>{name}</span>
-                  ),
+                  // balloonContent: () => (
+                  //   <span onClick={() => console.log(location)}>{name}</span>
+                  // ),
                   iconCaption: team.name,
                 }}
                 options={{
