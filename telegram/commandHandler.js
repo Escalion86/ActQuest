@@ -23,7 +23,8 @@ const commandHandler = async (
   photo,
   domen,
   location,
-  date
+  date,
+  user
 ) => {
   try {
     // Если пользователь прислал геопозицию
@@ -45,7 +46,8 @@ const commandHandler = async (
         { c: 'mainMenu' },
         messageId,
         callback_query,
-        domen
+        domen,
+        user
       )
     }
 
@@ -110,7 +112,8 @@ const commandHandler = async (
         jsonCommand,
         messageId,
         callback_query,
-        domen
+        domen,
+        user
       )
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
@@ -137,7 +140,8 @@ const commandHandler = async (
         lastCommand,
         messageId,
         callback_query,
-        domen
+        domen,
+        user
       )
     }
   } catch (e) {

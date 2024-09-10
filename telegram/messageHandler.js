@@ -48,16 +48,21 @@ const messageHandler = async (body, res, domen) => {
     photo,
   } = message
 
-  if (await checkContactRecive(body?.message, domen))
-    if (await checkUserData(from.id, text, domen))
+  if (await checkContactRecive(body?.message, domen)) {
+    const user = await checkUserData(from.id, undefined, domen)
+    if (user)
       return await commandHandler(
         from.id,
         text,
         message_id,
         undefined,
         photo,
-        domen
+        domen,
+        undefined,
+        undefined,
+        user
       )
+  }
 }
 
 export default messageHandler

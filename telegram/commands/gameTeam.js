@@ -1,6 +1,5 @@
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
-// import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
@@ -8,8 +7,6 @@ import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
 
 const gameTeam = async ({ telegramId, jsonCommand }) => {
-  // const isAdmin = ADMIN_TELEGRAM_IDS.includes(telegramId)
-
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 

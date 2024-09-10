@@ -3,12 +3,12 @@ import GamesTeams from '@models/GamesTeams'
 // import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 // import dbConnect from '@utils/dbConnect'
-import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
 import formatGameName from 'telegram/func/formatGameName'
 import mainMenuButton from './menuItems/mainMenuButton'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
+import isUserAdmin from '@helpers/isUserAdmin'
 
-const menuGames = async ({ telegramId, jsonCommand }) => {
+const menuGames = async ({ telegramId, jsonCommand, user }) => {
   // Получаем список игр
   const games = await Games.find({}).lean()
   const finishedGames = games.filter((game) => game.status === 'finished')
@@ -28,6 +28,9 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
+
+  const isAdmin = isUserAdmin(user)
+
   // Получаем список команд в которых присутствует пользователь
   const userTeams = await TeamsUsers.find({ userTelegramId: telegramId }).lean()
   // Получаем IDs команд
@@ -42,9 +45,7 @@ const menuGames = async ({ telegramId, jsonCommand }) => {
   const filteredGames = notFinishedGames
     ? notFinishedGames.filter(
         (game) =>
-          gamesWithUserIds.includes(String(game._id)) ||
-          !game.hidden ||
-          ADMIN_TELEGRAM_IDS.includes(telegramId)
+          gamesWithUserIds.includes(String(game._id)) || !game.hidden || isAdmin
       )
     : undefined
   // if (!filteredGames || filteredGames.length === 0) {

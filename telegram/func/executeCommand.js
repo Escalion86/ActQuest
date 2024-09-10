@@ -5,12 +5,13 @@ import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
 
-const lastCommandHandler = async (telegramId, jsonCommand, domen) => {
+const lastCommandHandler = async (telegramId, jsonCommand, domen, user) => {
   if (typeof jsonCommand.c === 'number') {
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
       jsonCommand,
       domen,
+      user,
     })
   }
   if (commandsArray[jsonCommand.c])
@@ -18,6 +19,7 @@ const lastCommandHandler = async (telegramId, jsonCommand, domen) => {
       telegramId,
       jsonCommand,
       domen,
+      user,
     })
   return {
     success: false,
@@ -31,9 +33,15 @@ const executeCommand = async (
   jsonCommand,
   messageId,
   callback_query,
-  domen
+  domen,
+  user
 ) => {
-  const result = await lastCommandHandler(userTelegramId, jsonCommand, domen)
+  const result = await lastCommandHandler(
+    userTelegramId,
+    jsonCommand,
+    domen,
+    user
+  )
   const keyboard = keyboardFormer(result.buttons)
 
   if (result.images) {
@@ -68,7 +76,8 @@ const executeCommand = async (
         { c: nextCommand },
         messageId,
         undefined, // callback_query,
-        domen
+        domen,
+        user
       )
     }
     // Если команда содержит в себе command, то значт это готовая команда,
@@ -83,7 +92,8 @@ const executeCommand = async (
       actualCommand,
       messageId,
       undefined, // callback_query
-      domen
+      domen,
+      user
     )
   } else {
     const actualCommand = { ...jsonCommand }
