@@ -39,10 +39,8 @@ const menuGames = async ({ telegramId, jsonCommand, user }) => {
   const gamesTeamsWithUser = await GamesTeams.find({
     teamId: { $in: userTeamsIds },
   }).lean()
-  console.log('gamesTeamsWithUser :>> ', gamesTeamsWithUser)
   // Получаем IDs игр
   const gamesWithUserIds = gamesTeamsWithUser.map(({ gameId }) => gameId)
-  console.log('gamesWithUserIds :>> ', gamesWithUserIds)
   // Фильтруем список игр
   const filteredGames = notFinishedGames
     ? notFinishedGames.filter(
