@@ -103,6 +103,14 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     }
   }
 
+  const gameType = game?.type || 'classic'
+  if (gameType === 'photo' && jsonCommand.message) {
+    return {
+      message: `В качестве ответа на задание необходимо отправить фотографию!`,
+      // nextCommand: 'mainMenu',
+    }
+  }
+
   // Если начало игры индивидуальное, то нужно создать запись в БД для старта
   if (!gameTeam.startTime || gameTeam.startTime.length === 0) {
     await teamGameStart(gameTeam._id, game)
@@ -116,6 +124,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     activeNum,
     startTime,
     endTime,
+    photos,
   } = gameTeam
 
   const breakDuration = game.breakDuration ?? 0
