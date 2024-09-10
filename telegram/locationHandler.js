@@ -37,7 +37,8 @@ const locationHandler = async (
   res,
   domen
 ) => {
-  if (await checkUserData(from.id, undefined, domen))
+  const user = await checkUserData(from.id, undefined, domen)
+  if (user)
     return await commandHandler(
       from.id,
       undefined,
@@ -46,7 +47,8 @@ const locationHandler = async (
       undefined,
       domen,
       location,
-      edit_date ? edit_date : date
+      edit_date ? edit_date : date,
+      user
     )
 }
 

@@ -1,4 +1,4 @@
-import { getNounWrongCodes } from '@helpers/getNoun'
+import { getNounPoints, getNounWrongCodes } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
@@ -15,12 +15,14 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
     images: game.image ? [game.image] : undefined,
     message: `${
       game.hidden ? '<b>(ИГРА СКРЫТА!)</b>\n' : ''
-    }<b>Редактирование игры "${game?.name}"</b>\n\n<b>Дата и время</b>:\n${
+    }<b>Редактирование игры "${game?.name}"</b>\n\n<b>Дата и время</b>: ${
       game.dateStart
         ? moment(game.dateStart)
             .tz('Asia/Krasnoyarsk')
             .format('DD.MM.yyyy H:mm')
         : '[не заданы]'
+    }\n\n<b>Тип игры</b>: ${
+      game.type === 'photo' ? `\u{1F4F7} Фотоквест` : `\u{1F697} Классика`
     }\n\n<b>Описание</b>:\n${
       game?.description ? `"${game?.description}"` : '[без описания]'
     }\n\n<b>Время и место сбора</b>: ${
@@ -31,15 +33,21 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
       game?.tasks?.length ?? 0
     }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
       game?.taskDuration ?? 3600
-    )}\n<b>Время до подсказки</b>: ${secondsToTimeStr(
-      game?.cluesDuration ?? 1200
-    )}\n<b>Перерыв между заданиями</b>: ${
+    )}\n${
+      game?.cluesDuration === 0
+        ? '<b>Подсказки</b>: отключены'
+        : `<b>Время до подсказки</b>: ${secondsToTimeStr(
+            game?.cluesDuration ?? 1200
+          )}`
+    }\n<b>Перерыв между заданиями</b>: ${
       !game?.breakDuration
         ? 'отсутствует'
         : secondsToTimeStr(game?.breakDuration)
     }\n<b>Штраф за невыполнение задания</b>: ${
       !game?.taskFailurePenalty
         ? 'отсутствует'
+        : game.type === 'photo'
+        ? getNounPoints(game?.taskFailurePenalty)
         : secondsToTimeStr(game?.taskFailurePenalty)
     }${
       game.manyCodesPenalty && game.manyCodesPenalty[0] > 0
@@ -124,6 +132,7 @@ const editGame = async ({ telegramId, jsonCommand, domen }) => {
             gameId: jsonCommand.gameId,
           },
           text: '\u{270F} Штраф за много кодов',
+          hide: game.type === 'photo',
         },
         {
           c: {

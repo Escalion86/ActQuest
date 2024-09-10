@@ -8,10 +8,12 @@ import {
   Placemark,
   FullscreenControl,
   ZoomControl,
+  Circle,
 } from '@pbe/react-yandex-maps'
 import { useRef } from 'react'
 import { PASTEL_COLORS } from '@helpers/constants'
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import cn from 'classnames'
 
 const townsCenter = {
   krsk: [56.012083, 92.871295],
@@ -36,34 +38,99 @@ const islands = [
   'islands#geolocationIcon',
   'islands#blueClusterIcons',
   'islands#invertedBlueClusterIcons',
+  'islands#violetClusterIcons',
 ]
 
-const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
+const GameMap = ({
+  defaultMapState,
+  usersWithLocation,
+  teamsColors,
+  game,
+  showTasks,
+}) => {
   const [index, setIndex] = useState(0)
+  const [info, setInfo] = useState(null)
   const ref = useRef()
   const defaultState = {
     center: defaultMapState,
     zoom: 12,
   }
+  const { tasks } = game
 
-  var dateNow = new Date()
+  // var dateNow = new Date()
 
   useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
+  // {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
 
   return (
-    <div className="w-screen h-screen">
-      <button onClick={() => setIndex(index + 1)}>{islands[index]}</button>
+    <>
+      <div
+        className={cn(
+          'absolute z-50 bottom-0 right-0 max-w-48 p-2 bg-gray-200 rounded-tl text-sm tablet:text-lg',
+          info ? 'duration-500 h-auto' : 'duration-0 h-0'
+        )}
+      >
+        {info}
+      </div>
       <YMaps ref={ref} width="100%" height="100%">
-        <Map defaultState={defaultState}>
+        <Map
+          width="100%"
+          height="100%"
+          defaultState={defaultState}
+          controls={[]}
+          onClick={() => setInfo(null)}
+        >
+          {showTasks &&
+            tasks.map(({ coordinates, title }, index) => {
+              const longitude = coordinates?.longitude
+              const latitude = coordinates?.latitude
+              const radius = coordinates?.radius
+              if (!longitude || !latitude) return null
+              return (
+                <>
+                  <Circle geometry={[[latitude, longitude], radius || 5]} />
+                  <Placemark
+                    onClick={() => {
+                      console.log('1 :>> ', 1)
+                      setInfo(
+                        <div>
+                          Задание №{index + 1} - "{title}"
+                        </div>
+                      )
+                    }}
+                    geometry={[latitude, longitude]}
+                    properties={{
+                      // balloonContent: () => (
+                      //   <span onClick={() => console.log(location)}>
+                      //     №{index + 1} "{title}"
+                      //   </span>
+                      // ),
+                      iconCaption: `№${index + 1} "${title}"`,
+                    }}
+                    options={{
+                      // islands#violetStretchyIcon islands#violetIcon
+                      preset: 'islands#blueCircleDotIcon', //'islands#greenDotIconWithCaption',
+                      // iconColor:
+                      //   dataActualitySeconds < 60
+                      //     ? teamsColors[num]
+                      //     : dataActualitySeconds < 300
+                      //     ? 'yellow'
+                      //     : 'red',
+                      controls: [],
+                    }}
+                  />
+                </>
+              )
+            })}
           {usersWithLocation.map(({ name, team, location }, num) => {
             const dataActualitySeconds = getSecondsBetween(location.date)
             return (
               <Placemark
                 geometry={[location.latitude, location.longitude]}
                 properties={{
-                  balloonContent: () => (
-                    <span onClick={() => console.log(location)}>{name}</span>
-                  ),
+                  // balloonContent: () => (
+                  //   <span onClick={() => console.log(location)}>{name}</span>
+                  // ),
                   iconCaption: team.name,
                 }}
                 options={{
@@ -87,7 +154,7 @@ const GameMap = ({ defaultMapState, usersWithLocation, teamsColors }) => {
           <ZoomControl options={{ size: 'large' }} />
         </Map>
       </YMaps>
-    </div>
+    </>
   )
 }
 
@@ -119,8 +186,10 @@ function EventPage(props) {
   const gameId = props.id
   const domen = props.domen
 
+  const [showTasks, setShowTasks] = useState(true)
   const [result, setResult] = useState()
   const [teamsColors, setTeamsColors] = useState()
+  const [game, setGame] = useState()
 
   const usersWithLocation = result?.users
     ? result.users.filter(
@@ -157,6 +226,33 @@ function EventPage(props) {
     }
   }, [])
 
+  useEffect(() => {
+    const getGame = async (gameId) => {
+      const result = await getData('/api/games/' + domen + '/' + gameId)
+      setGame(result.data)
+    }
+    if (gameId) getGame(gameId)
+  }, [])
+
+  useEffect(() => {
+    //   const copyrights = document.getElementsByClassName(
+    //     'ymaps-2-1-79-copyrights-pane'
+    //   )
+    //   while(copyrights.length > 0){
+    //     elements[0].parentNode.removeChild(copyrights[0]);
+    // }
+
+    setTimeout(
+      () =>
+        document
+          .querySelectorAll('.ymaps-2-1-79-copyrights-pane')
+          .forEach((el) => el.remove()),
+      1000
+    )
+    // console.log('copyrights :>> ', copyrights)
+    // copyrights[0].remove()
+  }, [])
+
   return (
     <>
       <Head>
@@ -164,14 +260,30 @@ function EventPage(props) {
       </Head>
       {/* <StateLoader {...props}>
         <Header /> */}
-      {result && (
-        <GameMap
-          {...result}
-          usersWithLocation={usersWithLocation}
-          teamsColors={teamsColors}
-          defaultMapState={defaultMapState}
-        />
-      )}
+      <div className="flex flex-col items-stretch w-screen h-screen">
+        <div className="px-2 flex justify-center py-0.5 items-center">
+          <label>
+            <input
+              type="checkbox"
+              checked={showTasks}
+              onChange={(e) => setShowTasks(e.target.checked)}
+            />
+            Показывать места заданий
+          </label>
+        </div>
+        <div className="relative flex-1 w-full overflow-hidden">
+          {result && (
+            <GameMap
+              {...result}
+              usersWithLocation={usersWithLocation}
+              teamsColors={teamsColors}
+              defaultMapState={defaultMapState}
+              game={game}
+              showTasks={showTasks}
+            />
+          )}
+        </div>
+      </div>
       {/* </StateLoader> */}
     </>
   )

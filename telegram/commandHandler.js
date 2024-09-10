@@ -23,7 +23,8 @@ const commandHandler = async (
   photo,
   domen,
   location,
-  date
+  date,
+  user
 ) => {
   try {
     // Если пользователь прислал геопозицию
@@ -45,7 +46,8 @@ const commandHandler = async (
         { c: 'mainMenu' },
         messageId,
         callback_query,
-        domen
+        domen,
+        user
       )
     }
 
@@ -69,6 +71,10 @@ const commandHandler = async (
             domen,
           })
         }
+
+        const isPhoto = Boolean(
+          typeof photo === 'object' && photo[photo.length - 1]?.file_id
+        )
         // Если отправлено сообщение
         if (!jsonCommand) {
           jsonCommand = {
@@ -77,6 +83,7 @@ const commandHandler = async (
               typeof photo === 'object'
                 ? photo[photo.length - 1]?.file_id
                 : message,
+            isPhoto,
           }
         } else {
           if (jsonCommand?.prevC && last?.prevCommand) {
@@ -99,12 +106,14 @@ const commandHandler = async (
 
     // Если это был JSON
     if (jsonCommand) {
+      console.log('jsonCommand :>> ', jsonCommand)
       await executeCommand(
         userTelegramId,
         jsonCommand,
         messageId,
         callback_query,
-        domen
+        domen,
+        user
       )
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
@@ -131,7 +140,8 @@ const commandHandler = async (
         lastCommand,
         messageId,
         callback_query,
-        domen
+        domen,
+        user
       )
     }
   } catch (e) {

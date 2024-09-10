@@ -7,6 +7,7 @@ import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
 import keyboardFormer from 'telegram/func/keyboardFormer'
+import { getNounPoints } from '@helpers/getNoun'
 
 const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -61,13 +62,15 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
       await sendMessage({
         images: game.image ? [game.image] : undefined,
         chat_id: telegramId,
-        text: `<b>АНОНС ИГРЫ "${game?.name}"</b>\n\n<b>Дата и время</b>:\n${
+        text: `<b>АНОНС ИГРЫ\n"${game?.name}"</b>\n\n<b>Дата и время</b>: ${
           game.dateStart
             ? moment(game.dateStart)
                 .tz('Asia/Krasnoyarsk')
                 .format('DD.MM.yyyy H:mm')
             : '[не заданы]'
-        }\n\n<b>Описание</b>:\n${
+        }\n\n<b>Тип игры</b>: ${
+          game.type === 'photo' ? `\u{1F4F7} Фотоквест` : `\u{1F697} Классика`
+        }* (см. подробнее внизу)\n\n<b>Описание</b>:\n${
           game?.description ? `"${game?.description}"` : '[без описания]'
         }\n\n<b>Количество заданий</b>: ${
           game?.tasks?.length ?? 0
@@ -82,8 +85,16 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
         }\n<b>Штраф за невыполнение задания</b>: ${
           !game?.taskFailurePenalty
             ? 'отсутствует'
+            : game.type === 'photo'
+            ? getNounPoints(game?.taskFailurePenalty)
             : secondsToTimeStr(game?.taskFailurePenalty)
-        }${creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''}`,
+        }${
+          creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''
+        }\n\n* - тип игры ${
+          game.type === 'photo'
+            ? '"Фотоквест" - в качестве ответа на задание должно быть изображение. За каждое выполненное, а также дополнительные задания начисляются баллы. Побеждает команда набравшая больше всех баллов'
+            : '"Классика" - в качестве ответа на задание должен быть какой-либо текст. Побеждает та команда, которая выполнит задания быстрее всех с учетом бонусов и штрафов по времени'
+        }`,
         keyboard,
         domen,
       })

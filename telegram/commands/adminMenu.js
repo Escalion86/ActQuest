@@ -1,8 +1,8 @@
-import { ADMIN_TELEGRAM_IDS, MODERS_TELEGRAM_IDS } from 'telegram/constants'
 import mainMenuButton from './menuItems/mainMenuButton'
+import isUserAdmin from '@helpers/isUserAdmin'
 
-const adminMenu = async ({ telegramId }) => {
-  const isAdmin = ADMIN_TELEGRAM_IDS.includes(telegramId)
+const adminMenu = async ({ telegramId, user }) => {
+  const isAdmin = isUserAdmin(user)
   return {
     success: true,
     message: '<b>Меню АДМИНИСТРАТОРА</b>',

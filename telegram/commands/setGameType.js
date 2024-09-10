@@ -7,10 +7,11 @@ const setGameType = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  if (typeof jsonCommand.type !== 'boolean') {
+  if (!jsonCommand.type) {
     return {
       success: true,
-      message: 'Выберите тип игры',
+      message:
+        'Выберите тип игры:\n\u{1F697} Классика - в качестве ответа на задание должен быть какой-либо текст. Побеждает та команда, которая выполнит задания быстрее всех с учетом бонусов и штрафов по времени\n\u{1F4F7} Фотоквест - в качестве ответа на задание должно быть изображение. За каждое выполненное, а также дополнительные задания начисляются баллы. Побеждает команда набравшая больше всех баллов',
       buttons: [
         {
           c: { type: 'classic' },

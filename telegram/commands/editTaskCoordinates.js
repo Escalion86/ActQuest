@@ -1,11 +1,10 @@
-import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import updateGame from 'telegram/func/updateGame'
 
-const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
+const editTaskCoordinates = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
-  const checkData = check(jsonCommand, ['gameId', 'i', 'j'])
+  const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
 
   const game = await getGame(jsonCommand.gameId)
@@ -17,13 +16,15 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
     }
 
   const { tasks } = game
+  const task = tasks[jsonCommand.i]
 
-  const { penaltyCodes } = tasks[jsonCommand.i]
-  const penaltyCode = penaltyCodes[jsonCommand.j]
+  const coordinates = task.coordinates
+  const latitude = coordinates?.latitude
+  const longitude = coordinates?.longitude
+  const radius = coordinates?.radius
 
   if (jsonCommand.delete) {
-    penaltyCodes.splice(jsonCommand.j, 1)
-    tasks[jsonCommand.i].penaltyCodes = penaltyCodes
+    tasks[jsonCommand.i].coordinates = null
 
     await updateGame(jsonCommand.gameId, {
       tasks: game.tasks,
@@ -31,9 +32,9 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
 
     return {
       success: true,
-      message: 'Штрафной код удален',
+      message: 'Координаты удалены',
       nextCommand: {
-        c: 'editPenaltyCodes',
+        c: 'editTask',
         gameId: jsonCommand.gameId,
         i: jsonCommand.i,
       },
@@ -42,39 +43,36 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Штрафной код "${penaltyCode.code}"\n\n${
-      penaltyCode.description
-    }\n\nШтраф: ${secondsToTimeStr(penaltyCode.penalty)}`,
+    message: `Координаты задания №${jsonCommand.i + 1} - "${
+      tasks[jsonCommand.i].title
+    }"\n\n<b>Широта</b>: ${latitude}\n<b>Долгота</b>: ${longitude}\n<b>Радиус</b>: ${radius}`,
     buttons: [
       {
-        text: '\u{270F} Штрафной код',
+        text: '\u{270F} Широта',
         c: {
-          c: 'setPenaltyCodeCode',
+          c: 'setTaskCoordinateLatitude',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
-          j: jsonCommand.j,
         },
       },
       {
-        text: '\u{270F} Штраф по времени',
+        text: '\u{270F} Долгота',
         c: {
-          c: 'setPenaltyCodePenalty',
+          c: 'setTaskCoordinateLongitude',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
-          j: jsonCommand.j,
         },
       },
       {
-        text: '\u{270F} Описание',
+        text: '\u{270F} Радиус',
         c: {
-          c: 'setPenaltyCodeDescription',
+          c: 'setTaskCoordinateRadius',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
-          j: jsonCommand.j,
         },
       },
       {
-        text: '\u{1F5D1} Удалить код',
+        text: '\u{1F5D1} Удалить координаты',
         c: {
           delete: true,
         },
@@ -82,7 +80,7 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
       {
         text: '\u{2B05} Назад',
         c: {
-          c: 'editPenaltyCodes',
+          c: 'editTask',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
@@ -91,4 +89,4 @@ const editPenaltyCode = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default editPenaltyCode
+export default editTaskCoordinates

@@ -3,7 +3,7 @@ import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import updateGame from 'telegram/func/updateGame'
 
-const editBonusCode = async ({ telegramId, jsonCommand }) => {
+const editTaskClue = async ({ telegramId, jsonCommand }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i', 'j'])
   if (checkData) return checkData
@@ -18,12 +18,12 @@ const editBonusCode = async ({ telegramId, jsonCommand }) => {
 
   const { tasks } = game
 
-  const { bonusCodes } = tasks[jsonCommand.i]
-  const bonusCode = bonusCodes[jsonCommand.j]
+  const { clues } = tasks[jsonCommand.i]
+  // const clue = clues[jsonCommand.j]
 
   if (jsonCommand.delete) {
-    bonusCodes.splice(jsonCommand.j, 1)
-    tasks[jsonCommand.i].bonusCodes = bonusCodes
+    clues.splice(jsonCommand.j, 1)
+    tasks[jsonCommand.i].clues = clues
 
     await updateGame(jsonCommand.gameId, {
       tasks: game.tasks,
@@ -31,9 +31,28 @@ const editBonusCode = async ({ telegramId, jsonCommand }) => {
 
     return {
       success: true,
-      message: 'Бонусный код удален',
+      message: 'Подсказка удалена',
       nextCommand: {
-        c: 'editBonusCodes',
+        c: 'editTaskClues',
+        gameId: jsonCommand.gameId,
+        i: jsonCommand.i,
+      },
+    }
+  }
+
+  if (jsonCommand.message) {
+    clues[jsonCommand.j].clue = jsonCommand.message
+    tasks[jsonCommand.i].clues = clues
+
+    await updateGame(jsonCommand.gameId, {
+      tasks: game.tasks,
+    })
+
+    return {
+      success: true,
+      message: 'Подсказка обновлена',
+      nextCommand: {
+        c: 'editTaskClues',
         gameId: jsonCommand.gameId,
         i: jsonCommand.i,
       },
@@ -42,47 +61,21 @@ const editBonusCode = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Бонусный код "${bonusCode.code}"\n\n${
-      bonusCode.description
-    }\n\nБонус: ${secondsToTimeStr(bonusCode.bonus)}`,
+    message: `Введите новый текст подсказки №${jsonCommand.j + 1}`,
     buttons: [
       {
-        text: '\u{270F} Бонусный код',
+        text: '\u{1F4A3} Удалить подсказку',
         c: {
-          c: 'setBonusCodeCode',
+          c: 'delTaskClue',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
           j: jsonCommand.j,
-        },
-      },
-      {
-        text: '\u{270F} Бонус по времени',
-        c: {
-          c: 'setBonusCodeBonus',
-          gameId: jsonCommand.gameId,
-          i: jsonCommand.i,
-          j: jsonCommand.j,
-        },
-      },
-      {
-        text: '\u{270F} Описание',
-        c: {
-          c: 'setBonusCodeDescription',
-          gameId: jsonCommand.gameId,
-          i: jsonCommand.i,
-          j: jsonCommand.j,
-        },
-      },
-      {
-        text: '\u{1F5D1} Удалить код',
-        c: {
-          delete: true,
         },
       },
       {
         text: '\u{2B05} Назад',
         c: {
-          c: 'editBonusCodes',
+          c: 'editTaskClues',
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
@@ -91,4 +84,4 @@ const editBonusCode = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default editBonusCode
+export default editTaskClue

@@ -28,14 +28,14 @@ const joinToGameWithCode = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  if (!mongoose.Types.ObjectId.isValid(jsonCommand.message)) {
+  if (!mongoose.Types.ObjectId.isValid(jsonCommand.message.trim())) {
     return {
       message: 'Введен не верный код игры.\nПроверьте код и повторите попытку',
       buttons: [{ c: 'menuGames', text: '\u{2B05} Назад' }],
     }
   }
 
-  const game = await getGame(jsonCommand.message)
+  const game = await getGame(jsonCommand.message.trim())
   if (game.success === false)
     return {
       message: 'Игра не найдена.\nПроверьте код и повторите попытку',

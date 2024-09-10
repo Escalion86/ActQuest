@@ -36,7 +36,7 @@ const checkUserData = async (telegramId, text, domen) => {
     })
     return false
   }
-  return true
+  return user
 }
 
 export default checkUserData

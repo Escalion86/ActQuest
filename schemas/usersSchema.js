@@ -27,6 +27,10 @@ const usersSchema = {
       horizontal_accuracy: Number,
     },
   },
+  role: {
+    type: String,
+    default: 'client',
+  },
 }
 
 export default usersSchema

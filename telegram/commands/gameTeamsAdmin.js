@@ -1,17 +1,17 @@
 import { getNounTeams } from '@helpers/getNoun'
+import isUserAdmin from '@helpers/isUserAdmin'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
-import { ADMIN_TELEGRAM_IDS } from 'telegram/constants'
 // import dbConnect from '@utils/dbConnect'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 
-const gameTeamsAdmin = async ({ telegramId, jsonCommand }) => {
-  const isAdmin = ADMIN_TELEGRAM_IDS.includes(telegramId)
+const gameTeamsAdmin = async ({ telegramId, jsonCommand, uesr }) => {
+  const isAdmin = isUserAdmin(user)
 
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData

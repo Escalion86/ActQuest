@@ -36,8 +36,6 @@ import setGameImage from './setGameImage'
 import setTaskT from './setTaskT'
 import setTaskN from './setTaskN'
 import delTask from './delTask'
-import setClue1 from './setClue1'
-import setClue2 from './setClue2'
 import setCodes from './setCodes'
 import setTaskI from './setTaskI'
 import teams from './teams'
@@ -105,6 +103,14 @@ import editGameGeneral from './editGameGeneral'
 import selectTeamToJoinGameAdmin from './selectTeamToJoinGameAdmin'
 import delGameTeamAdmin from './delGameTeamAdmin'
 import setGameType from './setGameType'
+import editTaskClues from './editTaskClues'
+import addTaskClue from './addTaskClue'
+import editTaskClue from './editTaskClue'
+import delTaskClue from './delTaskClue'
+import editTaskCoordinates from './editTaskCoordinates'
+import setTaskCoordinateLatitude from './setTaskCoordinateLatitude'
+import setTaskCoordinateLongitude from './setTaskCoordinateLongitude'
+import setTaskCoordinateRadius from './setTaskCoordinateRadius'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -148,8 +154,8 @@ const commandsArray = {
   setTaskT,
   setTaskN,
   delTask,
-  setClue1,
-  setClue2,
+  delTaskClue,
+  editTaskClue,
   setCodes,
   setTaskI,
   teams,
@@ -217,6 +223,12 @@ const commandsArray = {
   selectTeamToJoinGameAdmin,
   delGameTeamAdmin,
   setGameType,
+  editTaskClues,
+  addTaskClue,
+  editTaskCoordinates,
+  setTaskCoordinateLatitude,
+  setTaskCoordinateLongitude,
+  setTaskCoordinateRadius,
 }
 
 var i = 0

@@ -1,7 +1,10 @@
-import { ADMIN_TELEGRAM_IDS, MODERS_TELEGRAM_IDS } from 'telegram/constants'
+import isUserAdmin from '@helpers/isUserAdmin'
+import isUserModer from '@helpers/isUserModer'
 
-const mainMenu = async ({ telegramId }) => {
-  const isAdmin = ADMIN_TELEGRAM_IDS.includes(telegramId)
+const mainMenu = async ({ telegramId, user }) => {
+  const isAdmin = isUserAdmin(user)
+  const isModer = isUserModer(user)
+
   return {
     success: true,
     message: '<b>Главное меню</b>',
@@ -12,7 +15,7 @@ const mainMenu = async ({ telegramId }) => {
       {
         c: 'menuGamesEdit',
         text: '\u{1F6E0} Конструктор игр',
-        hide: !isAdmin && !MODERS_TELEGRAM_IDS.includes(telegramId),
+        hide: !isModer,
       },
       {
         c: 'adminMenu',
