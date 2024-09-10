@@ -1,5 +1,6 @@
 import getNoun from '@helpers/getNoun'
 import TeamsUsers from '@models/TeamsUsers'
+import mongoose from 'mongoose'
 // import dbConnect from '@utils/dbConnect'
 import { MAX_TEAMS } from 'telegram/constants'
 import getTeam from 'telegram/func/getTeam'
@@ -26,7 +27,15 @@ const joinTeam = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const team = await getTeam(jsonCommand.message)
+  if (!mongoose.Types.ObjectId.isValid(jsonCommand.message.trim())) {
+    return {
+      message:
+        'Введен не верный код команды.\nПроверьте код и повторите попытку',
+      buttons: [{ c: 'menuTeams', text: '\u{2B05} Назад' }],
+    }
+  }
+
+  const team = await getTeam(jsonCommand.message.trim())
   if (team.success === false) return team
 
   const teamUser = await TeamsUsers.findOne({
