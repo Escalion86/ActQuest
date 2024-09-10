@@ -103,6 +103,14 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     }
   }
 
+  const gameType = game?.type || 'classic'
+  if (gameType === 'photo' && jsonCommand.message) {
+    return {
+      message: `В качестве ответа на задание необходимо отправить фотографию!`,
+      // nextCommand: 'mainMenu',
+    }
+  }
+
   // Если начало игры индивидуальное, то нужно создать запись в БД для старта
   if (!gameTeam.startTime || gameTeam.startTime.length === 0) {
     await teamGameStart(gameTeam._id, game)
@@ -116,6 +124,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     activeNum,
     startTime,
     endTime,
+    photos,
   } = gameTeam
 
   const breakDuration = game.breakDuration ?? 0
@@ -269,198 +278,247 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     bonusCodes,
   } = game.tasks[taskNum]
 
-  const code = jsonCommand.message
-    ? jsonCommand.message.trim().toLowerCase()
-    : undefined
-  if (!code) {
-    const message = taskText({
-      tasks: game.tasks,
-      taskNum,
-      findedCodes,
-      wrongCodes,
-      findedPenaltyCodes,
-      findedBonusCodes,
-      startTaskTime: startTime[taskNum],
-      cluesDuration,
-      taskDuration,
-    })
+  if (gameType === 'photo') {
+    if (!photos) {
+      return {
+        message: 'Неизвестная ошибка. Фото не получено. Попробуйте еще раз',
+      }
+    }
     return {
-      images,
-      message,
-      buttons: buttonRefresh,
+      message: 'Фото получено:\n' + JSON.stringify(photos),
     }
   }
 
-  // Проверяем бонусный ли код
-  const allFindedBonusCodes =
-    findedBonusCodes ?? Array(game.tasks.length).map(() => [])
-  const findedBonusCodesInTask = allFindedBonusCodes[taskNum] ?? []
-  if (findedBonusCodesInTask.includes(code)) {
-    return {
-      message: 'Вы уже нашли этот бонусный код. Хотите еще?',
-    }
-  }
+  if (gameType === 'classic') {
+    const code = jsonCommand.message
+      ? jsonCommand.message.trim().toLowerCase()
+      : undefined
 
-  // Проверяем штрафной ли код
-  const allFindedPenaltyCodes =
-    findedPenaltyCodes ?? Array(game.tasks.length).map(() => [])
-  const findedPenaltyCodesInTask = allFindedPenaltyCodes[taskNum] ?? []
-  if (findedPenaltyCodesInTask.includes(code)) {
-    return {
-      message: 'Вы уже нашли этот штрафной код. Хотите еще?',
-    }
-  }
-
-  // Проверяем нужный ли код
-  const allFindedCodes = findedCodes ?? Array(game.tasks.length).map(() => [])
-  const findedCodesInTask = allFindedCodes[taskNum] ?? []
-  if (findedCodesInTask.includes(code)) {
-    return {
-      message: 'Такой код уже найден. Введите код',
-    }
-  }
-
-  // Проверяем не введен ли бонусный код
-  const bonusCode = bonusCodes.find(
-    (bonusCode) => bonusCode.code.toLowerCase() == code
-  )
-
-  if (bonusCode) {
-    const newAllFindedBonusCodes = [...allFindedBonusCodes]
-    const newFindedBonusCodesInTask = [...findedBonusCodesInTask, code]
-    newAllFindedBonusCodes[taskNum] = newFindedBonusCodesInTask
-    console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
-    console.log('newAllFindedBonusCodes :>> ', newAllFindedBonusCodes)
-    const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-      findedBonusCodes: newAllFindedBonusCodes,
-    })
-
-    return {
-      images: game.tasks[taskNum]?.images,
-      message: `КОД "${code}" - БОНУСНЫЙ!\n\n${taskText({
+    if (!code) {
+      const message = taskText({
         tasks: game.tasks,
-        taskNum: taskNum,
-        findedCodes: allFindedCodes,
-        findedBonusCodes: newAllFindedBonusCodes,
-        findedPenaltyCodes: allFindedPenaltyCodes,
+        taskNum,
+        findedCodes,
+        wrongCodes,
+        findedPenaltyCodes,
+        findedBonusCodes,
         startTaskTime: startTime[taskNum],
         cluesDuration,
         taskDuration,
-      })}`,
-      buttons: buttonRefresh,
-    }
-  }
-
-  // Проверяем не введен ли штрафной код
-  const penaltyCode = penaltyCodes.find(
-    (penaltyCode) => penaltyCode.code.toLowerCase() == code
-  )
-
-  if (penaltyCode) {
-    const newAllFindedPenaltyCodes = [...allFindedPenaltyCodes]
-    const newFindedPenaltyCodesInTask = [...findedPenaltyCodesInTask, code]
-    newAllFindedPenaltyCodes[taskNum] = newFindedPenaltyCodesInTask
-    console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
-    console.log('newAllFindedPenaltyCodes :>> ', newAllFindedPenaltyCodes)
-    const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-      findedPenaltyCodes: newAllFindedPenaltyCodes,
-    })
-
-    return {
-      images: game.tasks[taskNum]?.images,
-      message: `КОД "${code}" - ШТРАФНОЙ!\nОписание штрафа: "${
-        penaltyCode.description
-      }"\n\n${taskText({
-        tasks: game.tasks,
-        taskNum: taskNum,
-        findedCodes: allFindedCodes,
-        findedBonusCodes: allFindedBonusCodes,
-        findedPenaltyCodes: newAllFindedPenaltyCodes,
-        startTaskTime: startTime[taskNum],
-        cluesDuration,
-        taskDuration,
-      })}`,
-      buttons: buttonRefresh,
-    }
-  }
-
-  if (
-    (codes[0] !== '[time]' && codes.includes(code)) ||
-    (codes[0] === '[time]' && timeToCodeStr() === code)
-  ) {
-    // Если код введен верно и ранее его не вводили
-    const newAllFindedCodes = [...allFindedCodes]
-    const newFindedCodesInTask = [...findedCodesInTask, code]
-    newAllFindedCodes[taskNum] = newFindedCodesInTask
-
-    const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
-    const numOfCodesToFindLeft = numOfCodesToFind - newFindedCodesInTask.length
-    const isTaskComplite = numOfCodesToFindLeft <= 0
-
-    var endTimeTemp = endTime
-    var startTimeTemp = startTime
-    const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
-
-    if (isTaskComplite) {
-      endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
-      startTimeTemp = startTimeNextSet(startTime, taskNum, game.tasks.length)
-
-      const teamId = gameTeam.teamId
-      const teamsUsers = await TeamsUsers.find({
-        teamId,
       })
+      return {
+        images,
+        message,
+        buttons: buttonRefresh,
+      }
+    }
 
-      const usersTelegramIdsOfTeam = teamsUsers
-        // .filter((teamUser) => teamUser.userTelegramId !== telegramId)
-        .map((teamUser) => teamUser.userTelegramId)
+    // Проверяем бонусный ли код
+    const allFindedBonusCodes =
+      findedBonusCodes ?? Array(game.tasks.length).map(() => [])
+    const findedBonusCodesInTask = allFindedBonusCodes[taskNum] ?? []
+    if (findedBonusCodesInTask.includes(code)) {
+      return {
+        message: 'Вы уже нашли этот бонусный код. Хотите еще?',
+      }
+    }
 
-      // Если игра завершена
-      if (newActiveNum > game.tasks.length - 1) {
-        await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-          findedCodes: newAllFindedCodes,
-          startTime: startTimeTemp,
-          endTime: endTimeTemp,
-          activeNum: newActiveNum,
+    // Проверяем штрафной ли код
+    const allFindedPenaltyCodes =
+      findedPenaltyCodes ?? Array(game.tasks.length).map(() => [])
+    const findedPenaltyCodesInTask = allFindedPenaltyCodes[taskNum] ?? []
+    if (findedPenaltyCodesInTask.includes(code)) {
+      return {
+        message: 'Вы уже нашли этот штрафной код. Хотите еще?',
+      }
+    }
+
+    // Проверяем нужный ли код
+    const allFindedCodes = findedCodes ?? Array(game.tasks.length).map(() => [])
+    const findedCodesInTask = allFindedCodes[taskNum] ?? []
+    if (findedCodesInTask.includes(code)) {
+      return {
+        message: 'Такой код уже найден. Введите код',
+      }
+    }
+
+    // Проверяем не введен ли бонусный код
+    const bonusCode = bonusCodes.find(
+      (bonusCode) => bonusCode.code.toLowerCase() == code
+    )
+
+    if (bonusCode) {
+      const newAllFindedBonusCodes = [...allFindedBonusCodes]
+      const newFindedBonusCodesInTask = [...findedBonusCodesInTask, code]
+      newAllFindedBonusCodes[taskNum] = newFindedBonusCodesInTask
+      console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
+      console.log('newAllFindedBonusCodes :>> ', newAllFindedBonusCodes)
+      const result = await GamesTeams.findByIdAndUpdate(
+        jsonCommand?.gameTeamId,
+        {
+          findedBonusCodes: newAllFindedBonusCodes,
+        }
+      )
+
+      return {
+        images: game.tasks[taskNum]?.images,
+        message: `КОД "${code}" - БОНУСНЫЙ!\n\n${taskText({
+          tasks: game.tasks,
+          taskNum: taskNum,
+          findedCodes: allFindedCodes,
+          findedBonusCodes: newAllFindedBonusCodes,
+          findedPenaltyCodes: allFindedPenaltyCodes,
+          startTaskTime: startTime[taskNum],
+          cluesDuration,
+          taskDuration,
+        })}`,
+        buttons: buttonRefresh,
+      }
+    }
+
+    // Проверяем не введен ли штрафной код
+    const penaltyCode = penaltyCodes.find(
+      (penaltyCode) => penaltyCode.code.toLowerCase() == code
+    )
+
+    if (penaltyCode) {
+      const newAllFindedPenaltyCodes = [...allFindedPenaltyCodes]
+      const newFindedPenaltyCodesInTask = [...findedPenaltyCodesInTask, code]
+      newAllFindedPenaltyCodes[taskNum] = newFindedPenaltyCodesInTask
+      console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
+      console.log('newAllFindedPenaltyCodes :>> ', newAllFindedPenaltyCodes)
+      const result = await GamesTeams.findByIdAndUpdate(
+        jsonCommand?.gameTeamId,
+        {
+          findedPenaltyCodes: newAllFindedPenaltyCodes,
+        }
+      )
+
+      return {
+        images: game.tasks[taskNum]?.images,
+        message: `КОД "${code}" - ШТРАФНОЙ!\nОписание штрафа: "${
+          penaltyCode.description
+        }"\n\n${taskText({
+          tasks: game.tasks,
+          taskNum: taskNum,
+          findedCodes: allFindedCodes,
+          findedBonusCodes: allFindedBonusCodes,
+          findedPenaltyCodes: newAllFindedPenaltyCodes,
+          startTaskTime: startTime[taskNum],
+          cluesDuration,
+          taskDuration,
+        })}`,
+        buttons: buttonRefresh,
+      }
+    }
+
+    if (
+      (codes[0] !== '[time]' && codes.includes(code)) ||
+      (codes[0] === '[time]' && timeToCodeStr() === code)
+    ) {
+      // Если код введен верно и ранее его не вводили
+      const newAllFindedCodes = [...allFindedCodes]
+      const newFindedCodesInTask = [...findedCodesInTask, code]
+      newAllFindedCodes[taskNum] = newFindedCodesInTask
+
+      const numOfCodesToFind = numCodesToCompliteTask ?? codes.length
+      const numOfCodesToFindLeft =
+        numOfCodesToFind - newFindedCodesInTask.length
+      const isTaskComplite = numOfCodesToFindLeft <= 0
+
+      var endTimeTemp = endTime
+      var startTimeTemp = startTime
+      const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
+
+      if (isTaskComplite) {
+        endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
+        startTimeTemp = startTimeNextSet(startTime, taskNum, game.tasks.length)
+
+        const teamId = gameTeam.teamId
+        const teamsUsers = await TeamsUsers.find({
+          teamId,
         })
 
-        const keyboard = keyboardFormer([mainMenuButton])
+        const usersTelegramIdsOfTeam = teamsUsers
+          // .filter((teamUser) => teamUser.userTelegramId !== telegramId)
+          .map((teamUser) => teamUser.userTelegramId)
 
-        return await Promise.all(
-          usersTelegramIdsOfTeam.map(async (telegramId) => {
-            await sendMessage({
-              chat_id: telegramId,
-              text: `Поздравляем Вы завершили все задания! Игра окончена. ${
-                game.finishingPlace
-                  ? `Вы можете выдвигаться на точку сбора: ${game.finishingPlace}`
-                  : ''
-              }${
-                game.tasks[game.tasks.length - 1].postMessage
-                  ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${
-                      game.tasks[game.tasks.length - 1].postMessage
-                    }</blockquote>`
-                  : ''
-              }`,
-              keyboard,
-              domen,
-            })
+        // Если игра завершена
+        if (newActiveNum > game.tasks.length - 1) {
+          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+            findedCodes: newAllFindedCodes,
+            startTime: startTimeTemp,
+            endTime: endTimeTemp,
+            activeNum: newActiveNum,
           })
-        )
 
-        // return {
-        //   message:
-        //     'Поздравляем Вы завершили все задания! Игра окончена. Вы можете выдвигаться на точку сбора',
-        //   nextCommand: 'mainMenu',
-        // }
-      } else {
-        //Если должен быть перерыв
-        if (breakDuration > 0) {
-          // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВ ЕСТЬ :>> ')
+          const keyboard = keyboardFormer([mainMenuButton])
+
+          return await Promise.all(
+            usersTelegramIdsOfTeam.map(async (telegramId) => {
+              await sendMessage({
+                chat_id: telegramId,
+                text: `Поздравляем Вы завершили все задания! Игра окончена. ${
+                  game.finishingPlace
+                    ? `Вы можете выдвигаться на точку сбора: ${game.finishingPlace}`
+                    : ''
+                }${
+                  game.tasks[game.tasks.length - 1].postMessage
+                    ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${
+                        game.tasks[game.tasks.length - 1].postMessage
+                      }</blockquote>`
+                    : ''
+                }`,
+                keyboard,
+                domen,
+              })
+            })
+          )
+
+          // return {
+          //   message:
+          //     'Поздравляем Вы завершили все задания! Игра окончена. Вы можете выдвигаться на точку сбора',
+          //   nextCommand: 'mainMenu',
+          // }
+        } else {
+          //Если должен быть перерыв
+          if (breakDuration > 0) {
+            // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВ ЕСТЬ :>> ')
+            // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
+            await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+              findedCodes: newAllFindedCodes,
+              // startTime: startTimeTemp,
+              endTime: endTimeTemp,
+              // activeNum: newActiveNum,
+            })
+
+            const keyboard = keyboardFormer(buttonRefresh)
+
+            return await Promise.all(
+              usersTelegramIdsOfTeam.map(async (telegramId) => {
+                await sendMessage({
+                  chat_id: telegramId,
+                  text: `<b>КОД "${code}" ПРИНЯТ\nЗадание выполнено!${
+                    game.tasks[taskNum].postMessage
+                      ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${game.tasks[taskNum].postMessage}</blockquote>`
+                      : ''
+                  }\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
+                    breakDuration
+                  )}`}`,
+                  keyboard,
+                  // images: game.tasks[taskNum].images,
+                  domen,
+                })
+              })
+            )
+          }
+          // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВА НЕТ :>> ')
           // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
           await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
             findedCodes: newAllFindedCodes,
-            // startTime: startTimeTemp,
+            startTime: startTimeTemp,
             endTime: endTimeTemp,
-            // activeNum: newActiveNum,
+            activeNum: newActiveNum,
           })
 
           const keyboard = keyboardFormer(buttonRefresh)
@@ -469,98 +527,76 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
             usersTelegramIdsOfTeam.map(async (telegramId) => {
               await sendMessage({
                 chat_id: telegramId,
-                text: `<b>КОД "${code}" ПРИНЯТ\nЗадание выполнено!${
-                  game.tasks[taskNum].postMessage
-                    ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${game.tasks[taskNum].postMessage}</blockquote>`
-                    : ''
-                }\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
-                  breakDuration
-                )}`}`,
+                text: taskText({
+                  tasks: game.tasks,
+                  taskNum: newActiveNum,
+                  startTaskTime: startTimeTemp[newActiveNum],
+                  cluesDuration,
+                  taskDuration,
+                }),
                 keyboard,
-                // images: game.tasks[taskNum].images,
+                images: game.tasks[taskNum].images,
                 domen,
               })
             })
           )
         }
-        // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВА НЕТ :>> ')
-        // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
-        await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      }
+
+      // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
+      // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
+      const result = await GamesTeams.findByIdAndUpdate(
+        jsonCommand?.gameTeamId,
+        {
           findedCodes: newAllFindedCodes,
-          startTime: startTimeTemp,
-          endTime: endTimeTemp,
-          activeNum: newActiveNum,
-        })
+          // startTime: startTimeTemp,
+          // endTime: endTimeTemp,
+          // activeNum: newActiveNum,
+        }
+      )
 
-        const keyboard = keyboardFormer(buttonRefresh)
-
-        return await Promise.all(
-          usersTelegramIdsOfTeam.map(async (telegramId) => {
-            await sendMessage({
-              chat_id: telegramId,
-              text: taskText({
+      return {
+        images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
+        message: `КОД "${code}" ПРИНЯТ${
+          !isTaskComplite
+            ? `\n\n${taskText({
                 tasks: game.tasks,
                 taskNum: newActiveNum,
-                startTaskTime: startTimeTemp[newActiveNum],
+                findedCodes: isTaskComplite ? [] : newAllFindedCodes,
+                findedBonusCodes: isTaskComplite ? [] : allFindedBonusCodes,
+                findedPenaltyCodes: isTaskComplite ? [] : allFindedPenaltyCodes,
+                startTaskTime: startTime[newActiveNum],
                 cluesDuration,
                 taskDuration,
-              }),
-              keyboard,
-              images: game.tasks[taskNum].images,
-              domen,
-            })
-          })
-        )
+              })}`
+            : ''
+        }`,
+        buttons: isTaskComplite ? undefined : buttonRefresh,
+        nextCommand: isTaskComplite
+          ? {
+              // showTask: true
+            }
+          : undefined,
       }
-    }
+    } else {
+      const allWrongCodes = wrongCodes ?? Array(game.tasks.length).map(() => [])
+      const newAllWrongCodes = [...allWrongCodes]
+      const wrongCodesInTask = allWrongCodes[taskNum] ?? []
+      const newWrongCodesInTask = [...wrongCodesInTask, code]
+      newAllWrongCodes[taskNum] = newWrongCodesInTask
 
-    // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
-    // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
-    const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-      findedCodes: newAllFindedCodes,
-      // startTime: startTimeTemp,
-      // endTime: endTimeTemp,
-      // activeNum: newActiveNum,
-    })
-
-    return {
-      images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
-      message: `КОД "${code}" ПРИНЯТ${
-        !isTaskComplite
-          ? `\n\n${taskText({
-              tasks: game.tasks,
-              taskNum: newActiveNum,
-              findedCodes: isTaskComplite ? [] : newAllFindedCodes,
-              findedBonusCodes: isTaskComplite ? [] : allFindedBonusCodes,
-              findedPenaltyCodes: isTaskComplite ? [] : allFindedPenaltyCodes,
-              startTaskTime: startTime[newActiveNum],
-              cluesDuration,
-              taskDuration,
-            })}`
-          : ''
-      }`,
-      buttons: isTaskComplite ? undefined : buttonRefresh,
-      nextCommand: isTaskComplite
-        ? {
-            // showTask: true
-          }
-        : undefined,
-    }
-  } else {
-    const allWrongCodes = wrongCodes ?? Array(game.tasks.length).map(() => [])
-    const newAllWrongCodes = [...allWrongCodes]
-    const wrongCodesInTask = allWrongCodes[taskNum] ?? []
-    const newWrongCodesInTask = [...wrongCodesInTask, code]
-    newAllWrongCodes[taskNum] = newWrongCodesInTask
-
-    const result = await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-      wrongCodes: newAllWrongCodes,
-      // startTime: startTimeTemp,
-      // endTime: endTimeTemp,
-      // activeNum: newActiveNum,
-    })
-    return {
-      message: 'Код не верен. Введите код',
+      const result = await GamesTeams.findByIdAndUpdate(
+        jsonCommand?.gameTeamId,
+        {
+          wrongCodes: newAllWrongCodes,
+          // startTime: startTimeTemp,
+          // endTime: endTimeTemp,
+          // activeNum: newActiveNum,
+        }
+      )
+      return {
+        message: 'Код не верен. Введите код',
+      }
     }
   }
 }

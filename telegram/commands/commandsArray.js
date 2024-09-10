@@ -111,6 +111,7 @@ import editTaskCoordinates from './editTaskCoordinates'
 import setTaskCoordinateLatitude from './setTaskCoordinateLatitude'
 import setTaskCoordinateLongitude from './setTaskCoordinateLongitude'
 import setTaskCoordinateRadius from './setTaskCoordinateRadius'
+import archiveGamesEdit from './archiveGamesEdit'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -229,6 +230,7 @@ const commandsArray = {
   setTaskCoordinateLatitude,
   setTaskCoordinateLongitude,
   setTaskCoordinateRadius,
+  archiveGamesEdit,
 }
 
 var i = 0

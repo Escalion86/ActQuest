@@ -10,7 +10,7 @@ import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 
-const gameTeamsAdmin = async ({ telegramId, jsonCommand, uesr }) => {
+const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
   const isAdmin = isUserAdmin(user)
 
   const checkData = check(jsonCommand, ['gameId'])
