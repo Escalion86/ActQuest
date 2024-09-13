@@ -1,4 +1,4 @@
-import { postData } from '@helpers/CRUD'
+// import { postData } from '@helpers/CRUD'
 import dbConnect from '@utils/dbConnect'
 import callbackHandler from 'telegram/callbackHandler'
 import locationHandler from 'telegram/locationHandler'
@@ -7,61 +7,61 @@ import messageHandler from 'telegram/messageHandler'
 export default async function handler(req, res) {
   const { query, method, body } = req
 
-  if (method === 'GET') {
-    try {
-      const { update_id, message } = body
-      console.log('query :>> ', query)
-      await postData(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
-        {
-          chat_id: '261102161',
-          text: `Проверка связи`,
-          parse_mode: 'html',
-          reply_markup:
-            req.headers?.origin?.substr(0, 5) === 'https'
-              ? JSON.stringify({
-                  inline_keyboard: [
-                    [
-                      {
-                        text: 'Тестовая кнопка1',
-                        url: 'https://cigam.ru',
-                      },
-                      {
-                        text: 'Тестовая кнопка2',
-                        url: 'https://cigam.ru',
-                      },
-                    ],
-                    [
-                      {
-                        text: 'Тестовая кнопка3',
-                        url: 'https://cigam.ru',
-                      },
-                      {
-                        text: 'Тестовая кнопка4',
-                        url: 'https://cigam.ru',
-                      },
-                      {
-                        text: 'Тестовая кнопка5',
-                        url: 'https://cigam.ru',
-                      },
-                    ],
-                  ],
-                })
-              : undefined,
-        },
-        (data) => console.log('data', data),
-        (data) => console.log('error', data),
-        true,
-        null,
-        true
-      )
+  // if (method === 'GET') {
+  //   try {
+  //     // const { update_id, message } = body
+  //     console.log('query :>> ', query)
+  //     await postData(
+  //       `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
+  //       {
+  //         chat_id: '261102161',
+  //         text: `Проверка связи`,
+  //         parse_mode: 'html',
+  //         reply_markup:
+  //           req.headers?.origin?.substr(0, 5) === 'https'
+  //             ? JSON.stringify({
+  //                 inline_keyboard: [
+  //                   [
+  //                     {
+  //                       text: 'Тестовая кнопка1',
+  //                       url: 'https://cigam.ru',
+  //                     },
+  //                     {
+  //                       text: 'Тестовая кнопка2',
+  //                       url: 'https://cigam.ru',
+  //                     },
+  //                   ],
+  //                   [
+  //                     {
+  //                       text: 'Тестовая кнопка3',
+  //                       url: 'https://cigam.ru',
+  //                     },
+  //                     {
+  //                       text: 'Тестовая кнопка4',
+  //                       url: 'https://cigam.ru',
+  //                     },
+  //                     {
+  //                       text: 'Тестовая кнопка5',
+  //                       url: 'https://cigam.ru',
+  //                     },
+  //                   ],
+  //                 ],
+  //               })
+  //             : undefined,
+  //       },
+  //       (data) => console.log('data', data),
+  //       (data) => console.log('error', data),
+  //       true,
+  //       null,
+  //       true
+  //     )
 
-      return res?.status(200).json({ success: true })
-    } catch (error) {
-      console.log(error)
-      return res?.status(400).json({ success: false, error })
-    }
-  }
+  //     return res?.status(200).json({ success: true })
+  //   } catch (error) {
+  //     console.log(error)
+  //     return res?.status(400).json({ success: false, error })
+  //   }
+  // }
 
   // const test_callback = {
   //   update_id: 173172137,
@@ -189,7 +189,7 @@ export default async function handler(req, res) {
         //   keyboard,
         // })
       } else if (body?.edited_message) {
-        if (body.edited_message.location) {
+        if (body.edited_message?.location) {
           const result = await locationHandler(body.edited_message, res, 'krsk')
         }
       }
