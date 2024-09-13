@@ -1,6 +1,7 @@
 // import { postData } from '@helpers/CRUD'
 import dbConnect from '@utils/dbConnect'
 import callbackHandler from 'telegram/callbackHandler'
+import locationHandler from 'telegram/locationHandler'
 import messageHandler from 'telegram/messageHandler'
 
 export default async function handler(req, res) {
@@ -15,6 +16,10 @@ export default async function handler(req, res) {
       } else if (body?.message) {
         // Пользователь написал текст
         const result = await messageHandler(body, res, 'nrsk')
+      } else if (body?.edited_message) {
+        if (body.edited_message?.location) {
+          const result = await locationHandler(body.edited_message, res, 'nrsk')
+        }
       }
 
       return res?.status(200).json({ success: true })

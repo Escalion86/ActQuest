@@ -104,7 +104,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
   }
 
   const gameType = game?.type || 'classic'
-  if (gameType === 'photo' && jsonCommand.message) {
+  if (gameType === 'photo' && !jsonCommand.isPhoto) {
     return {
       message: `В качестве ответа на задание необходимо отправить фотографию!`,
       // nextCommand: 'mainMenu',
@@ -279,13 +279,14 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
   } = game.tasks[taskNum]
 
   if (gameType === 'photo') {
-    if (!photos) {
-      return {
-        message: 'Неизвестная ошибка. Фото не получено. Попробуйте еще раз',
-      }
-    }
+    // if (!jsonCommand.isPhoto) {
+    //   return {
+    //     message: 'Неизвестная ошибка. Фото не получено. Попробуйте еще раз',
+    //   }
+    // }
     return {
-      message: 'Фото получено:\n' + JSON.stringify(photos),
+      message: 'Фото получено:\n' + JSON.stringify(jsonCommand.message),
+      images: [jsonCommand.message],
     }
   }
 
