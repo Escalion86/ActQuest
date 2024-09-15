@@ -101,10 +101,8 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
             const timeEnd = endTime[index]
             // const sum = startTimes.reduce((sum, timeStart, i) => {
             // const timeEnd = endTimes[i]
-            return (
-              sum +
-              getSecondsBetween(timeStart, timeEnd || timeStart + taskDuration)
-            )
+            if (!timeStart || !timeEnd) return sum + taskDuration
+            return sum + getSecondsBetween(timeStart, timeEnd)
             // },0)
           }, 0)
         : 0
