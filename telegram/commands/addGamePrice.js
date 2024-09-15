@@ -20,7 +20,7 @@ const array = [
     prop: 'price',
     message: 'Введите стоимость участия в рублях (укажите 0, если бесплатно)',
     checkAnswer: (answer) => answer == Number(answer),
-    errorMessage: (answer) => `Вариант участия должен быть числом!`,
+    errorMessage: (answer) => `Стоимость варианта участия должен быть числом!`,
     answerMessage: (answer) => `Задана стоимость участия: ${answer} руб.`,
     buttons: (jsonCommand) => [cancelButton(jsonCommand)],
   },

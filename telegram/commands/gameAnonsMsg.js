@@ -89,7 +89,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
             ? getNounPoints(game?.taskFailurePenalty)
             : secondsToTimeStr(game?.taskFailurePenalty)
         }\n\n<b>Стоимость участия</b>: ${
-          game.prices || game.prices?.length === 0
+          !game.prices || game.prices?.length === 0
             ? 'не указано'
             : game.prices.length === 1
             ? game.prices[0].price === 0
