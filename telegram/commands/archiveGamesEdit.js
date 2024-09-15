@@ -1,7 +1,6 @@
 import Games from '@models/Games'
 // import dbConnect from '@utils/dbConnect'
 import formatGameName from 'telegram/func/formatGameName'
-import mainMenuButton from './menuItems/mainMenuButton'
 import getNoun from '@helpers/getNoun'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import isUserAdmin from '@helpers/isUserAdmin'
@@ -33,7 +32,7 @@ const archiveGamesEdit = async ({ telegramId, jsonCommand, user }) => {
       'игры',
       'игр'
     )}`,
-    buttons: [...buttons, mainMenuButton],
+    buttons: [...buttons, { c: 'menuGamesEdit', text: '\u{2B05} Назад' }],
   }
 }
 
