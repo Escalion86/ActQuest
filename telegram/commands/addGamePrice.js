@@ -13,7 +13,7 @@ const array = [
     prop: 'name',
     message: 'Введите название варианта участия',
     answerMessage: (answer) => `Вариант участия "${answer}"`,
-    answerConverter: (answer) => answer.trim().toLowerCase(),
+    answerConverter: (answer) => answer.trim(),
     buttons: (jsonCommand) => [cancelButton(jsonCommand)],
   },
   {
