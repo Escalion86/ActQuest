@@ -75,6 +75,9 @@ const sendMessage = async ({
           // parse_mode,
           // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
           // ...props,
+          link_preview_options: {
+            is_disabled: true,
+          },
         },
         // null,
         null,
@@ -139,6 +142,9 @@ const sendMessage = async ({
                     ...(remove_keyboard ? { remove_keyboard: true } : {}),
                   })
                 : undefined,
+            link_preview_options: {
+              is_disabled: true,
+            },
             ...props,
           },
           null,
@@ -167,6 +173,9 @@ const sendMessage = async ({
                   ...(remove_keyboard ? { remove_keyboard: true } : {}),
                 })
               : undefined,
+          link_preview_options: {
+            is_disabled: true,
+          },
           ...props,
         },
         null,
@@ -193,6 +202,9 @@ const sendMessage = async ({
                 ...(remove_keyboard ? { remove_keyboard: true } : {}),
               })
             : undefined,
+        link_preview_options: {
+          is_disabled: true,
+        },
         ...props,
       },
       null,
