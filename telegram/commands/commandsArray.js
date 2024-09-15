@@ -112,6 +112,11 @@ import setTaskCoordinateLatitude from './setTaskCoordinateLatitude'
 import setTaskCoordinateLongitude from './setTaskCoordinateLongitude'
 import setTaskCoordinateRadius from './setTaskCoordinateRadius'
 import archiveGamesEdit from './archiveGamesEdit'
+import editGamePrices from './editGamePrices'
+import editGamePrice from './editGamePrice'
+import addGamePrice from './addGamePrice'
+import setGamePriceName from './setGamePriceName'
+import setGamePricePrice from './setGamePricePrice'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -231,6 +236,11 @@ const commandsArray = {
   setTaskCoordinateLongitude,
   setTaskCoordinateRadius,
   archiveGamesEdit,
+  editGamePrices,
+  editGamePrice,
+  addGamePrice,
+  setGamePriceName,
+  setGamePricePrice,
 }
 
 var i = 0

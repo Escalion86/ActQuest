@@ -111,6 +111,15 @@ const array = [
       return tasks
     },
   },
+  {
+    prop: 'prices',
+    message:
+      'Введите стоимость участия с человека в рублях (укажите 0 если бесплатно)',
+    answerMessage: (answer) => `Задана стоимость участия: "${answer} руб."`,
+    buttons: (jsonCommand) => [
+      { c: 'menuGamesEdit', text: '\u{1F6AB} Отмена создания игры' },
+    ],
+  },
 ]
 
 const createGame = async ({ telegramId, jsonCommand }) => {

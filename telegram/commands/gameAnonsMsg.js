@@ -88,6 +88,14 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
             : game.type === 'photo'
             ? getNounPoints(game?.taskFailurePenalty)
             : secondsToTimeStr(game?.taskFailurePenalty)
+        }\n\n<b>Стоимость участия</b>: ${
+          !game.prices || game.prices?.length === 0
+            ? 'не указано'
+            : game.prices.length === 1
+            ? game.prices[0].price === 0
+              ? 'бесплатно'
+              : `${game.prices[0].price} руб.`
+            : game.prices.map(({ name, price }) => `\n- ${name}: ${price} руб.`)
         }${
           creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''
         }\n\n* - тип игры ${
