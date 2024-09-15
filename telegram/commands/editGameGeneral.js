@@ -75,6 +75,14 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
         : ''
     }\n\n<b>Режим выдачи заданий</b>: ${
       game.individualStart ? 'Индивидуальный' : 'Одновременно со всеми'
+    }\n\n<b>Стоимость участия</b>: ${
+      game.prices || game.prices?.length === 0
+        ? 'не указано'
+        : game.prices.length === 1
+        ? game.prices[0].price === 0
+          ? 'бесплатно'
+          : `${game.prices[0].price} руб.`
+        : game.prices.map(({ name, price }) => `\n- ${name}: ${price} руб.`)
     }${
       game.status === 'finished'
         ? `\n\n<b>Результаты</b>: ${
