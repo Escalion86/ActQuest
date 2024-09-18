@@ -103,14 +103,6 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     }
   }
 
-  const gameType = game?.type || 'classic'
-  if (gameType === 'photo' && !jsonCommand.isPhoto) {
-    return {
-      message: `В качестве ответа на задание необходимо отправить фотографию!`,
-      // nextCommand: 'mainMenu',
-    }
-  }
-
   // Если начало игры индивидуальное, то нужно создать запись в БД для старта
   if (!gameTeam.startTime || gameTeam.startTime.length === 0) {
     await teamGameStart(gameTeam._id, game)
@@ -132,6 +124,22 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
   const cluesDuration = game.cluesDuration ?? 1200
 
   const taskNum = activeNum ?? 0
+
+  const gameType = game?.type || 'classic'
+  if (gameType === 'photo' && !jsonCommand.isPhoto) {
+    return {
+      message:
+        `В качестве ответа на задание необходимо отправить фотографию!\n\n` +
+        taskText({
+          tasks: game.tasks,
+          taskNum: taskNum,
+          startTaskTime: startTime[taskNum],
+          cluesDuration,
+          taskDuration,
+        }),
+      // nextCommand: 'mainMenu',
+    }
+  }
 
   const secondsLeftAfterStartTask = getSecondsBetween(startTime[taskNum])
 
@@ -284,9 +292,30 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     //     message: 'Неизвестная ошибка. Фото не получено. Попробуйте еще раз',
     //   }
     // }
+    // Если получаем фото-ответ на задание
+    if (!jsonCommand.isPhoto) {
+      return {
+        message:
+          'Фото-ответ получен!\nВремя на задание еще не завершилось, вы можете сделать еще снимок, удовлетворяющий максимальному числу доп. заданий\n\n' +
+          taskText({
+            tasks: game.tasks,
+            taskNum: taskNum,
+            startTaskTime: startTime[taskNum],
+            cluesDuration,
+            taskDuration,
+          }),
+        images: [jsonCommand.message],
+        nextCommand: {},
+      }
+    }
     return {
-      message: 'Фото получено:\n' + JSON.stringify(jsonCommand.message),
-      images: [jsonCommand.message],
+      message: taskText({
+        tasks: game.tasks,
+        taskNum: taskNum,
+        startTaskTime: startTime[taskNum],
+        cluesDuration,
+        taskDuration,
+      }),
     }
   }
 
