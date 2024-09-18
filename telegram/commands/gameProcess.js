@@ -292,7 +292,9 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     // Если получаем фото-ответ на задание
     if (jsonCommand.isPhoto) {
       const existedPhotos =
-        photos?.length > 0 ? [...photos] : new Array(gameTasksCount).fill([])
+        typeof photos?.length === 'number'
+          ? [...photos]
+          : new Array(gameTasksCount).fill([])
       existedPhotos[taskNum].push({ photo: jsonCommand.message, checks: {} })
 
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
