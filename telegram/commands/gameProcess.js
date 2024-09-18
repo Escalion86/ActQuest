@@ -126,6 +126,14 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
   const taskNum = activeNum ?? 0
 
   const gameType = game?.type || 'classic'
+
+  const buttonRefresh = [
+    {
+      c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
+      text: '\u{1F504} Обновить',
+    },
+  ]
+
   if (gameType === 'photo' && !jsonCommand.isPhoto) {
     return {
       message:
@@ -137,6 +145,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
           cluesDuration,
           taskDuration,
         }),
+      buttons: buttonRefresh,
       // nextCommand: 'mainMenu',
     }
   }
@@ -164,13 +173,6 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       nextCommand: 'mainMenu',
     }
   }
-
-  const buttonRefresh = [
-    {
-      c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
-      text: '\u{1F504} Обновить',
-    },
-  ]
 
   // Если задание было закончено успешно и идет перерыв
   // выдаем сообщение об остатке времени,
@@ -287,18 +289,15 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
   } = game.tasks[taskNum]
 
   if (gameType === 'photo') {
-    // if (!jsonCommand.isPhoto) {
-    //   return {
-    //     message: 'Неизвестная ошибка. Фото не получено. Попробуйте еще раз',
-    //   }
-    // }
     // Если получаем фото-ответ на задание
     if (!jsonCommand.isPhoto) {
       const existedPhotos = photos?.length > 0 ? [...photos] : []
       existedPhotos.push({ photo: jsonCommand.message, checks: {} })
+
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
         photos: existedPhotos,
       })
+
       return {
         message:
           'Фото-ответ получен!\nВремя на задание еще не завершилось, вы можете сделать еще снимок, удовлетворяющий максимальному числу доп. заданий\n\n' +
@@ -310,9 +309,10 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
             taskDuration,
           }),
         images: [jsonCommand.message],
-        nextCommand: {},
+        buttons: buttonRefresh,
       }
     }
+
     return {
       message: taskText({
         game,
@@ -321,6 +321,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         cluesDuration,
         taskDuration,
       }),
+      buttons: buttonRefresh,
     }
   }
 
