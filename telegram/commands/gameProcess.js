@@ -134,7 +134,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     },
   ]
 
-  if (gameType === 'photo' && !jsonCommand.isPhoto) {
+  if (gameType === 'photo' && !jsonCommand.isPhoto && jsonCommand.message) {
     return {
       message:
         `В качестве ответа на задание необходимо отправить фотографию!\n\n` +
@@ -290,7 +290,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
 
   if (gameType === 'photo') {
     // Если получаем фото-ответ на задание
-    if (!jsonCommand.isPhoto) {
+    if (jsonCommand.isPhoto) {
       const existedPhotos = photos?.length > 0 ? [...photos] : []
       existedPhotos.push({ photo: jsonCommand.message, checks: {} })
 
