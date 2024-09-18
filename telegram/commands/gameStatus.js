@@ -217,8 +217,11 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       if (isTeamOnBreak) {
         const nextTask = game.tasks[startedTasks]
         const taskNumber = numberToEmojis(startedTasks + 1)
-        return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${team.name}"</b> - ${
-          breakTimeLeft <= 0
+        const isBreakExperied = breakTimeLeft <= 0
+        return `${
+          isBreakExperied ? '\u{231B}' : '\u{1F6AC}\u{1F51C}'
+        }${taskNumber} <b>"${team.name}"</b> - ${
+          isBreakExperied
             ? `Перерыв окончен\nОжидаем получение командой след. задания`
             : `Перерыв\nДо окончания перерыва ${secondsToTime(
                 breakTimeLeft
