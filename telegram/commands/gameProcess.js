@@ -131,7 +131,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       message:
         `В качестве ответа на задание необходимо отправить фотографию!\n\n` +
         taskText({
-          tasks: game.tasks,
+          game,
           taskNum: taskNum,
           startTaskTime: startTime[taskNum],
           cluesDuration,
@@ -204,7 +204,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       })
 
       const message = taskText({
-        tasks: game.tasks,
+        game,
         taskNum: taskNum + 1,
         // findedCodes,
         // startTaskTime: startTime[activeNum + 1],
@@ -294,11 +294,16 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     // }
     // Если получаем фото-ответ на задание
     if (!jsonCommand.isPhoto) {
+      const existedPhotos = photos?.length > 0 ? [...photos] : []
+      existedPhotos.push({ photo: jsonCommand.message, checks: {} })
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+        photos: existedPhotos,
+      })
       return {
         message:
           'Фото-ответ получен!\nВремя на задание еще не завершилось, вы можете сделать еще снимок, удовлетворяющий максимальному числу доп. заданий\n\n' +
           taskText({
-            tasks: game.tasks,
+            game,
             taskNum: taskNum,
             startTaskTime: startTime[taskNum],
             cluesDuration,
@@ -310,7 +315,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     }
     return {
       message: taskText({
-        tasks: game.tasks,
+        game,
         taskNum: taskNum,
         startTaskTime: startTime[taskNum],
         cluesDuration,
@@ -326,7 +331,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
 
     if (!code) {
       const message = taskText({
-        tasks: game.tasks,
+        game,
         taskNum,
         findedCodes,
         wrongCodes,
@@ -393,7 +398,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       return {
         images: game.tasks[taskNum]?.images,
         message: `КОД "${code}" - БОНУСНЫЙ!\n\n${taskText({
-          tasks: game.tasks,
+          game,
           taskNum: taskNum,
           findedCodes: allFindedCodes,
           findedBonusCodes: newAllFindedBonusCodes,
@@ -429,7 +434,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         message: `КОД "${code}" - ШТРАФНОЙ!\nОписание штрафа: "${
           penaltyCode.description
         }"\n\n${taskText({
-          tasks: game.tasks,
+          game,
           taskNum: taskNum,
           findedCodes: allFindedCodes,
           findedBonusCodes: allFindedBonusCodes,
@@ -558,7 +563,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
               await sendMessage({
                 chat_id: telegramId,
                 text: taskText({
-                  tasks: game.tasks,
+                  game,
                   taskNum: newActiveNum,
                   startTaskTime: startTimeTemp[newActiveNum],
                   cluesDuration,
@@ -590,7 +595,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         message: `КОД "${code}" ПРИНЯТ${
           !isTaskComplite
             ? `\n\n${taskText({
-                tasks: game.tasks,
+                game,
                 taskNum: newActiveNum,
                 findedCodes: isTaskComplite ? [] : newAllFindedCodes,
                 findedBonusCodes: isTaskComplite ? [] : allFindedBonusCodes,
