@@ -9,13 +9,13 @@ const TeamsUsersSchema = new Schema(teamsUsersSchema)
 
 const gamesSchema = {
   name: {
-    type: { type: String, trim: true },
-    // required: [true, 'Введите название игры'],
+    type: String,
+    required: [true, 'Введите название игры'],
     default: '',
     trim: true,
   },
   description: {
-    type: { type: String, trim: true },
+    type: String,
     default: '',
     trim: true,
   },
@@ -39,14 +39,15 @@ const gamesSchema = {
     type: [
       {
         title: {
-          type: { type: String, trim: true },
-          // required: [true, 'Введите название задания'],
+          type: String,
+          required: [true, 'Введите название задания'],
           default: '',
           trim: true,
         },
         task: {
-          type: { type: String, trim: true },
+          type: String,
           default: '',
+          trim: true,
         },
         taskBonusForComplite: {
           type: Number,
@@ -55,8 +56,9 @@ const gamesSchema = {
         clues: [
           {
             clue: {
-              type: { type: String, trim: true },
+              type: String,
               default: '',
+              trim: true,
             },
             images: {
               type: [String],
@@ -112,7 +114,7 @@ const gamesSchema = {
           default: null,
         },
         postMessage: {
-          type: { type: String, trim: true },
+          type: String,
           default: '',
           trim: true,
         },
@@ -154,7 +156,7 @@ const gamesSchema = {
   },
   creatorTelegramId: {
     type: Number,
-    // required: [true, 'Введите telegramId'],
+    required: [true, 'Введите telegramId'],
     default: null,
   },
   individualStart: {
@@ -162,12 +164,14 @@ const gamesSchema = {
     default: false,
   },
   startingPlace: {
-    type: { type: String, trim: true },
+    type: String,
     default: '',
+    trim: true,
   },
   finishingPlace: {
-    type: { type: String, trim: true },
+    type: String,
     default: '',
+    trim: true,
   },
   result: {
     type: {
