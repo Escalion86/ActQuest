@@ -46,12 +46,12 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     // images: task.images ? task.images : undefined,
     message: `<b>Редактирование задания</b>\n"${
       task?.title
-    }"\n\n<b>Текст задания</b>:\n<blockquote>${
-      task?.task
-    }</blockquote>${cluesText}\n\n${
+    }"\n\n<b>Текст задания</b>:${
+      task?.task ? '{не задано]' : `\n<blockquote>${task?.task}</blockquote>`
+    }${cluesText}${
       game.type === 'photo'
         ? ''
-        : `<b>Коды (${codes.length ?? 0} шт)</b>:\n${
+        : `\n\n<b>Коды (${codes.length ?? 0} шт)</b>:\n${
             codes.length > 0 ? codes.join(', ') : '[не задыны]'
           }${
             bonusCodes.length > 0
