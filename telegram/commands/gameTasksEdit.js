@@ -127,9 +127,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
                             ? task.subTasks
                                 .map(
                                   ({ name, task, bonus }) =>
-                                    `"${name}" - ${getNounPoints(
-                                      bonus
-                                    )}\n<blockquote>${task}</blockquote>`
+                                    `"${name}" - ${getNounPoints(bonus)}`
                                 )
                                 .join('')
                             : ''
