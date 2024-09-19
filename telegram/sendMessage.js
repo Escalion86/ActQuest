@@ -43,8 +43,33 @@ const sendMessage = async ({
   var telegramToken = process.env.TELEGRAM_TOKEN
   if (domen === 'nrsk') telegramToken = process.env.TELEGRAM_NRSK_TOKEN
   if (images) {
-    for (let i = 0; i < images.length; i++) {
-      const photo = images[i]
+    if (images.length >= 2) {
+      await postData(
+        `https://api.telegram.org/bot${telegramToken}/sendMediaGroup`,
+        {
+          // message_id: callback_query?.message?.message_id,
+          chat_id,
+          media: images.map((image) => ({
+            type: 'photo',
+            media: image,
+          })),
+          // parse_mode,
+          // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
+          // ...props,
+        },
+        // null,
+        null,
+        // (data) => console.log('post success', data),
+        sendErrorToDev(chat_id, 'sendMediaGroup', telegramToken)
+        // (data) => console.log('post error', data),
+        // true,
+        // null,
+        // true
+      )
+    } else {
+      // for (let i = 0; i < images.length; i++) {
+      // const photo = images[i]
+      const photo = images[1]
       await postData(
         `https://api.telegram.org/bot${telegramToken}/sendPhoto`,
         {
@@ -58,13 +83,14 @@ const sendMessage = async ({
         // null,
         null,
         // (data) => console.log('post success', data),
-        sendErrorToDev(chat_id, 'sendPhoto', telegramToken),
+        sendErrorToDev(chat_id, 'sendPhoto', telegramToken)
         // (data) => console.log('post error', data),
-        true,
-        null,
-        true
+        // true,
+        // null,
+        // true
       )
     }
+
     if (callback_query) {
       await postData(
         `https://api.telegram.org/bot${telegramToken}/editMessageReplyMarkup`,
@@ -82,11 +108,11 @@ const sendMessage = async ({
         // null,
         null,
         // (data) => console.log('post success', data),
-        sendErrorToDev(chat_id, 'editMessageReplyMarkup', telegramToken),
+        sendErrorToDev(chat_id, 'editMessageReplyMarkup', telegramToken)
         // (data) => console.log('post error', data),
-        true,
-        null,
-        true
+        // true,
+        // null,
+        // true
       )
     }
     // if (images.length === 1) {
@@ -148,12 +174,12 @@ const sendMessage = async ({
             ...props,
           },
           null,
-          sendErrorToDev(chat_id, 'sendMessage', telegramToken),
+          sendErrorToDev(chat_id, 'sendMessage', telegramToken)
           // (data) => console.log('post success', data),
           // (data) => console.log('post error', data),
-          true,
-          null,
-          true
+          // true,
+          // null,
+          // true
         )
       }
     }
@@ -181,10 +207,10 @@ const sendMessage = async ({
         null,
         // (data) => console.log('post success', data),
         // null,
-        sendErrorToDev(chat_id, 'editMessageText', telegramToken),
-        true,
-        null,
-        true
+        sendErrorToDev(chat_id, 'editMessageText', telegramToken)
+        // true,
+        // null,
+        // true
       )
     }
 
@@ -208,12 +234,12 @@ const sendMessage = async ({
         ...props,
       },
       null,
-      sendErrorToDev(chat_id, 'sendMessage', telegramToken),
+      sendErrorToDev(chat_id, 'sendMessage', telegramToken)
       // (data) => console.log('post success', data),
       // (data) => console.log('post error', data),
-      true,
-      null,
-      true
+      // true,
+      // null,
+      // true
     )
   }
   return
