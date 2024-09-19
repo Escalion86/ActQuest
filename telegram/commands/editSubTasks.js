@@ -35,15 +35,19 @@ const editSubTasks = async ({ telegramId, jsonCommand }) => {
 
   return {
     success: true,
-    message: `Список доп. заданий\n\n${
-      subTasks.length > 0
-        ? subTasks
-            .map(
-              ({ name, task, bonus }) =>
-                `"${name}" - ${bonus} б.\n<blockquote>${task}</blockquote>`
-            )
-            .join(',\n')
-        : ''
+    message: `Список доп. заданий${
+      subTasks.length === 0
+        ? ' пуст'
+        : `:\n${
+            subTasks.length > 0
+              ? subTasks
+                  .map(
+                    ({ name, task, bonus }) =>
+                      `"${name}" - ${bonus} б.\n<blockquote>${task}</blockquote>`
+                  )
+                  .join(',\n')
+              : ''
+          }`
     }`,
     buttons: [
       ...buttons,
