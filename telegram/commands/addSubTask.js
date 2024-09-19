@@ -27,7 +27,7 @@ const array = [
   {
     prop: 'bonus',
     message:
-      'Введите бонусного в баллах за выполнение доп. задания (число большее нуля)',
+      'Введите бонус в баллах за выполнение доп. задания (число большее нуля)',
     checkAnswer: (answer) => {
       const answerNum = Number(answer)
       return answerNum == answer && answerNum > 0

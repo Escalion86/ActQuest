@@ -44,7 +44,7 @@ const editSubTask = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: `Доп. задание "${subTask.name}"\n<blockquote>${
       subTask.task
-    }<blockquote>\nБонус: ${secondsToTimeStr(subTask.bonus)}`,
+    }</blockquote>\nБонус: ${secondsToTimeStr(subTask.bonus)}`,
     buttons: [
       {
         text: '\u{270F} Название',
