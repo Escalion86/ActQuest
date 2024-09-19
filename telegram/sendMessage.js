@@ -44,7 +44,6 @@ const sendMessage = async ({
   if (domen === 'nrsk') telegramToken = process.env.TELEGRAM_NRSK_TOKEN
   if (images) {
     if (images.length >= 2) {
-      console.log('images :>> ', images)
       await postData(
         `https://api.telegram.org/bot${telegramToken}/sendMediaGroup`,
         {
@@ -65,14 +64,9 @@ const sendMessage = async ({
         // (data) => console.log('post success', data),
         sendErrorToDev(chat_id, 'sendMediaGroup', telegramToken)
         // (data) => console.log('post error', data),
-        // true,
-        // null,
-        // true
       )
     } else {
-      // for (let i = 0; i < images.length; i++) {
-      // const photo = images[i]
-      const photo = images[1]
+      const photo = images[0]
       await postData(
         `https://api.telegram.org/bot${telegramToken}/sendPhoto`,
         {
@@ -88,9 +82,6 @@ const sendMessage = async ({
         // (data) => console.log('post success', data),
         sendErrorToDev(chat_id, 'sendPhoto', telegramToken)
         // (data) => console.log('post error', data),
-        // true,
-        // null,
-        // true
       )
     }
 
@@ -113,9 +104,6 @@ const sendMessage = async ({
         // (data) => console.log('post success', data),
         sendErrorToDev(chat_id, 'editMessageReplyMarkup', telegramToken)
         // (data) => console.log('post error', data),
-        // true,
-        // null,
-        // true
       )
     }
     // if (images.length === 1) {
@@ -139,9 +127,6 @@ const sendMessage = async ({
     //     // (data) => console.log('post success', data),
     //     null,
     //     (data) => console.log('post error', data),
-    //     true,
-    //     null,
-    //     true
     //   )
     //   // }
     // }
@@ -180,9 +165,6 @@ const sendMessage = async ({
           sendErrorToDev(chat_id, 'sendMessage', telegramToken)
           // (data) => console.log('post success', data),
           // (data) => console.log('post error', data),
-          // true,
-          // null,
-          // true
         )
       }
     }
@@ -211,9 +193,6 @@ const sendMessage = async ({
         // (data) => console.log('post success', data),
         // null,
         sendErrorToDev(chat_id, 'editMessageText', telegramToken)
-        // true,
-        // null,
-        // true
       )
     }
 
@@ -240,9 +219,6 @@ const sendMessage = async ({
       sendErrorToDev(chat_id, 'sendMessage', telegramToken)
       // (data) => console.log('post success', data),
       // (data) => console.log('post error', data),
-      // true,
-      // null,
-      // true
     )
   }
   return
