@@ -10,7 +10,7 @@ const TeamsUsersSchema = new Schema(teamsUsersSchema)
 const gamesSchema = {
   name: {
     type: { type: String, trim: true },
-    required: [true, 'Введите название игры'],
+    // required: [true, 'Введите название игры'],
     default: '',
     trim: true,
   },
@@ -40,7 +40,7 @@ const gamesSchema = {
       {
         title: {
           type: { type: String, trim: true },
-          required: [true, 'Введите название уровня'],
+          // required: [true, 'Введите название задания'],
           default: '',
           trim: true,
         },
@@ -154,7 +154,7 @@ const gamesSchema = {
   },
   creatorTelegramId: {
     type: Number,
-    required: [true, 'Введите telegramId'],
+    // required: [true, 'Введите telegramId'],
     default: null,
   },
   individualStart: {
