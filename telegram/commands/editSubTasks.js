@@ -45,7 +45,7 @@ const editSubTasks = async ({ telegramId, jsonCommand }) => {
                     ({ name, task, bonus }) =>
                       `"${name}" - ${bonus} б.\n<blockquote>${task}</blockquote>`
                   )
-                  .join(',\n')
+                  .join('')
               : ''
           }`
     }`,
