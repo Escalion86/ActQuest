@@ -155,7 +155,6 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           i: jsonCommand.i,
         },
         text: '\u{270F} Подсказки',
-        hide: game.type === 'photo',
       },
       [
         {
