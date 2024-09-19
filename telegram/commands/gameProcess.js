@@ -336,7 +336,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         taskDuration,
       }),
       images: jsonCommand.seePhotoAnswers
-        ? photos[taskNum].map(({ photo }) => photo)
+        ? photos[taskNum].map(({ photo }) => photo).filter((photo) => photo)
         : undefined,
       buttons: [
         buttonRefresh,
