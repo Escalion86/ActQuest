@@ -50,7 +50,20 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       !task?.task ? ' {не задано]' : `\n<blockquote>${task?.task}</blockquote>`
     }${cluesText}${
       game.type === 'photo'
-        ? ''
+        ? `\n\n<b>Список доп. заданий</b>:${
+            task?.subTasks.length === 0
+              ? ' пуст'
+              : `\n${
+                  task?.subTasks.length > 0
+                    ? task?.subTasks
+                        .map(
+                          ({ name, task, bonus }) =>
+                            `"${name}" - ${bonus} б.\n<blockquote>${task}</blockquote>`
+                        )
+                        .join(',\n')
+                    : ''
+                }`
+          }`
         : `\n\n<b>Коды (${codes.length ?? 0} шт)</b>:\n${
             codes.length > 0 ? codes.join(', ') : '[не задыны]'
           }${
