@@ -325,6 +325,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         buttons: [buttonRefresh, buttonSeePhotoAnswers],
       }
     }
+    console.log('jsonCommand.seePhotoAnswers :>> ', jsonCommand.seePhotoAnswers)
 
     return {
       message: taskText({
