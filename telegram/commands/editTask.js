@@ -116,6 +116,24 @@ const editTask = async ({ telegramId, jsonCommand }) => {
         },
         text: '\u{270F} Задание',
       },
+      {
+        c: {
+          c: 'editSubTasks',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+        },
+        text: '\u{270F} Доп. задания',
+        hide: game.type !== 'photo',
+      },
+      {
+        c: {
+          c: 'setBonusForTaskComplite',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+        },
+        text: '\u{270F} Бонус за выполнение задания',
+        hide: game.type !== 'photo',
+      },
       // {
       //   c: {
       //     c: 'setTaskI',
@@ -131,25 +149,8 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           i: jsonCommand.i,
         },
         text: '\u{270F} Подсказки',
+        hide: game.type === 'photo',
       },
-      // [
-      //   {
-      //     c: {
-      //       c: 'setClue1',
-      //       gameId: jsonCommand.gameId,
-      //       i: jsonCommand.i,
-      //     },
-      //     text: '\u{270F} Подсказка №1',
-      //   },
-      //   {
-      //     c: {
-      //       c: 'setClue2',
-      //       gameId: jsonCommand.gameId,
-      //       i: jsonCommand.i,
-      //     },
-      //     text: '\u{270F} Подсказка №2',
-      //   },
-      // ],
       [
         {
           c: {

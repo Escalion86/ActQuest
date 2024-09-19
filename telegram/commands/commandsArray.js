@@ -117,6 +117,13 @@ import editGamePrice from './editGamePrice'
 import addGamePrice from './addGamePrice'
 import setGamePriceName from './setGamePriceName'
 import setGamePricePrice from './setGamePricePrice'
+import setBonusForTaskComplite from './setBonusForTaskComplite'
+import addSubTask from './addSubTask'
+import editSubTasks from './editSubTasks'
+import editSubTask from './editSubTask'
+import setSubTaskName from './setSubTaskName'
+import setSubTaskTask from './setSubTaskTask'
+import setSubTaskBonus from './setSubTaskBonus'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -241,6 +248,13 @@ const commandsArray = {
   addGamePrice,
   setGamePriceName,
   setGamePricePrice,
+  setBonusForTaskComplite,
+  addSubTask,
+  editSubTasks,
+  editSubTask,
+  setSubTaskName,
+  setSubTaskTask,
+  setSubTaskBonus,
 }
 
 var i = 0

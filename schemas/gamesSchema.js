@@ -9,13 +9,13 @@ const TeamsUsersSchema = new Schema(teamsUsersSchema)
 
 const gamesSchema = {
   name: {
-    type: String,
+    type: { type: String, trim: true },
     required: [true, 'Введите название игры'],
     default: '',
     trim: true,
   },
   description: {
-    type: String,
+    type: { type: String, trim: true },
     default: '',
     trim: true,
   },
@@ -39,19 +39,23 @@ const gamesSchema = {
     type: [
       {
         title: {
-          type: String,
+          type: { type: String, trim: true },
           required: [true, 'Введите название уровня'],
           default: '',
           trim: true,
         },
         task: {
-          type: String,
+          type: { type: String, trim: true },
           default: '',
+        },
+        taskBonusForComplite: {
+          type: Number,
+          default: 0,
         },
         clues: [
           {
             clue: {
-              type: String,
+              type: { type: String, trim: true },
               default: '',
             },
             images: {
@@ -60,6 +64,16 @@ const gamesSchema = {
             },
           },
         ],
+        subTasks: {
+          type: [
+            {
+              name: { type: String, trim: true },
+              task: { type: String, trim: true },
+              bonus: Number,
+            },
+          ],
+          default: [],
+        },
         images: {
           type: [String],
           default: [],
@@ -98,7 +112,7 @@ const gamesSchema = {
           default: null,
         },
         postMessage: {
-          type: String,
+          type: { type: String, trim: true },
           default: '',
           trim: true,
         },
@@ -148,11 +162,11 @@ const gamesSchema = {
     default: false,
   },
   startingPlace: {
-    type: String,
+    type: { type: String, trim: true },
     default: '',
   },
   finishingPlace: {
-    type: String,
+    type: { type: String, trim: true },
     default: '',
   },
   result: {
@@ -169,7 +183,7 @@ const gamesSchema = {
     default: false,
   },
   prices: {
-    type: [{ id: String, name: String, price: Number }],
+    type: [{ id: String, name: { type: String, trim: true }, price: Number }],
     default: [],
   },
 }
