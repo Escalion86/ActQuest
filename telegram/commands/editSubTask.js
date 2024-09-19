@@ -1,4 +1,4 @@
-import secondsToTimeStr from '@helpers/secondsToTimeStr'
+import { getNounPoints } from '@helpers/getNoun'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import updateGame from 'telegram/func/updateGame'
@@ -44,7 +44,7 @@ const editSubTask = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: `Доп. задание "${subTask.name}"\n<blockquote>${
       subTask.task
-    }</blockquote>\nБонус: ${secondsToTimeStr(subTask.bonus)}`,
+    }</blockquote>\nБонус: ${getNounPoints(subTask.bonus)}`,
     buttons: [
       {
         text: '\u{270F} Название',

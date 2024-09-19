@@ -1,3 +1,4 @@
+import { getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
@@ -43,7 +44,9 @@ const editSubTasks = async ({ telegramId, jsonCommand }) => {
               ? subTasks
                   .map(
                     ({ name, task, bonus }) =>
-                      `"${name}" - ${bonus} б.\n<blockquote>${task}</blockquote>`
+                      `"${name}" - ${getNounPoints(
+                        bonus
+                      )}\n<blockquote>${task}</blockquote>`
                   )
                   .join('')
               : ''
