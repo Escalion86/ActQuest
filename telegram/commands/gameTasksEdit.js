@@ -1,3 +1,4 @@
+import { getNounPoints } from '@helpers/getNoun'
 import Games from '@models/Games'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
@@ -118,7 +119,22 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
               game.type === 'photo' ? `\u{1F4F7}` : `\u{1F4CC}`
             } ${numberToEmojis(index + 1)} "${task.title}"\n${
               game.type === 'photo'
-                ? ''
+                ? `Список доп. заданий${
+                    !task?.subTasks?.length
+                      ? ' пуст'
+                      : `:\n${
+                          task.subTasks?.length > 0
+                            ? task.subTasks
+                                .map(
+                                  ({ name, task, bonus }) =>
+                                    `"${name}" - ${getNounPoints(
+                                      bonus
+                                    )}\n<blockquote>${task}</blockquote>`
+                                )
+                                .join('')
+                            : ''
+                        }`
+                  }`
                 : `Коды (${codes.length ?? 0} шт): ${
                     codes.length > 0 ? codes.join(', ') : '[не заданы]'
                   }${

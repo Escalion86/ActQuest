@@ -1,5 +1,5 @@
 import { getNounPoints } from '@helpers/getNoun'
-import secondsToTimeStr from '@helpers/secondsToTimeStr'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
@@ -19,28 +19,44 @@ const editSubTasks = async ({ telegramId, jsonCommand }) => {
   const task = game.tasks[jsonCommand.i]
 
   const { subTasks } = task
-  const buttons =
-    !subTasks || typeof subTasks !== 'object'
-      ? []
-      : subTasks.map(({ name, task, bonus }, index) => {
-          return {
-            text: `\u{270F} "${name}" - ${getNounPoints(bonus)}`,
-            c: {
-              c: 'editSubTask',
-              gameId: jsonCommand.gameId,
-              i: jsonCommand.i,
-              j: index,
-            },
-          }
-        })
+
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(
+    subTasks,
+    page,
+    ({ name, task, bonus }, number) => ({
+      text: `\u{270F} "${name}" - ${getNounPoints(bonus)}`,
+      c: {
+        c: 'editSubTask',
+        gameId: jsonCommand.gameId,
+        i: jsonCommand.i,
+        j: number - 1,
+      },
+    })
+  )
+
+  // const buttons =
+  //   !subTasks || typeof subTasks !== 'object'
+  //     ? []
+  //     : subTasks.map(({ name, task, bonus }, index) => {
+  //         return {
+  //           text: `\u{270F} "${name}" - ${getNounPoints(bonus)}`,
+  //           c: {
+  //             c: 'editSubTask',
+  //             gameId: jsonCommand.gameId,
+  //             i: jsonCommand.i,
+  //             j: index,
+  //           },
+  //         }
+  //       })
 
   return {
     success: true,
     message: `Список доп. заданий${
-      subTasks.length === 0
+      !subTasks?.length
         ? ' пуст'
         : `:\n${
-            subTasks.length > 0
+            subTasks?.length > 0
               ? subTasks
                   .map(
                     ({ name, task, bonus }) =>

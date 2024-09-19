@@ -52,7 +52,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     }${cluesText}${
       game.type === 'photo'
         ? `\n\n<b>Список доп. заданий</b>:${
-            task?.subTasks.length === 0
+            !task?.subTasks?.length
               ? ' пуст'
               : `\n${
                   task?.subTasks.length > 0
@@ -104,9 +104,9 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           }`
     }${
       game.type === 'photo'
-        ? `\n\n<b>Бонус за выполнение задания</b>: ${
-            task.taskBonusForComplite || '0'
-          } б.`
+        ? `\n\n<b>Бонус за выполнение задания</b>: ${getNounPoints(
+            task.taskBonusForComplite || 0
+          )}`
         : ''
     }${
       task.postMessage

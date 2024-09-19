@@ -1,6 +1,5 @@
 import check from 'telegram/func/check'
 import Games from '@models/Games'
-import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
 import { getNounPoints } from '@helpers/getNoun'
 
