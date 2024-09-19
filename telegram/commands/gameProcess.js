@@ -134,6 +134,13 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     },
   ]
 
+  const buttonSeePhotoAnswers = [
+    {
+      c: { seePhotoAnswers: true },
+      text: '\u{1F4F7} Посмотреть фото-ответы на задание',
+    },
+  ]
+
   if (gameType === 'photo' && !jsonCommand.isPhoto && jsonCommand.message) {
     return {
       message:
@@ -145,7 +152,10 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
           cluesDuration,
           taskDuration,
         }),
-      buttons: buttonRefresh,
+      buttons: [
+        buttonRefresh,
+        ...(photos[taskNum]?.length > 0 ? [buttonSeePhotoAnswers] : []),
+      ],
       // nextCommand: 'mainMenu',
     }
   }
@@ -311,8 +321,8 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
             cluesDuration,
             taskDuration,
           }),
-        images: [jsonCommand.message],
-        buttons: buttonRefresh,
+        // images: [jsonCommand.message],
+        buttons: [buttonRefresh, buttonSeePhotoAnswers],
       }
     }
 
@@ -324,7 +334,13 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         cluesDuration,
         taskDuration,
       }),
-      buttons: buttonRefresh,
+      images: jsonCommand.seePhotoAnswers
+        ? photos[taskNum].map(({ photo }) => photo)
+        : undefined,
+      buttons: [
+        buttonRefresh,
+        ...(photos[taskNum]?.length > 0 ? [buttonSeePhotoAnswers] : []),
+      ],
     }
   }
 
