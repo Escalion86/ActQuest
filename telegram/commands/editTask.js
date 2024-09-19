@@ -87,6 +87,12 @@ const editTask = async ({ telegramId, jsonCommand }) => {
             task.numCodesToCompliteTask ?? 'Все'
           }`
     }${
+      game.type === 'photo'
+        ? `\n\n<b>Бонус за выполнение задания</b>: ${
+            task.taskBonusForComplite || '0'
+          } б.`
+        : ''
+    }${
       task.postMessage
         ? `\n\n<b>Сообщение после задания</b>:\n"${task.postMessage}"`
         : ''
