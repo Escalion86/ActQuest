@@ -49,10 +49,12 @@ const sendMessage = async ({
         {
           // message_id: callback_query?.message?.message_id,
           chat_id,
-          media: images.map((image) => ({
-            type: 'photo',
-            media: image,
-          })),
+          media: JSON.stringify(
+            images.map((image) => ({
+              type: 'photo',
+              media: image,
+            }))
+          ),
           // parse_mode,
           // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
           // ...props,
