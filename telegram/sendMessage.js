@@ -44,6 +44,7 @@ const sendMessage = async ({
   if (domen === 'nrsk') telegramToken = process.env.TELEGRAM_NRSK_TOKEN
   if (images) {
     if (images.length >= 2) {
+      console.log('images :>> ', images)
       await postData(
         `https://api.telegram.org/bot${telegramToken}/sendMediaGroup`,
         {
