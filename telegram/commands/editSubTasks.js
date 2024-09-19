@@ -24,7 +24,7 @@ const editSubTasks = async ({ telegramId, jsonCommand }) => {
       ? []
       : subTasks.map(({ name, task, bonus }, index) => {
           return {
-            text: `\u{270F} "${name}" - ${bonus} б.`,
+            text: `\u{270F} "${name}" - ${getNounPoints(bonus)}`,
             c: {
               c: 'editSubTask',
               gameId: jsonCommand.gameId,

@@ -2,6 +2,7 @@ import check from 'telegram/func/check'
 import Games from '@models/Games'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
+import { getNounPoints } from '@helpers/getNoun'
 
 const cancelButton = (jsonCommand) => ({
   c: { c: 'editSubTasks', gameId: jsonCommand.gameId, i: jsonCommand.i },
@@ -33,7 +34,7 @@ const array = [
       return answerNum == answer && answerNum > 0
     },
     errorMessage: (answer) => `Бонус должен быть больше нуля!`,
-    answerMessage: (answer) => `Задан бонус "${answer} б."`,
+    answerMessage: (answer) => `Задан бонус "${getNounPoints(answer)}"`,
     buttons: (jsonCommand) => [cancelButton(jsonCommand)],
   },
 ]
