@@ -1,3 +1,4 @@
+import { getNounPoints } from '@helpers/getNoun'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
@@ -78,10 +79,35 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
         )
       : []
 
+  const sumResult = game.tasks.reduce(
+    (sum, { subTasks, taskBonusForComplite }, index) => {
+      const taskAccepted = checks.accepted
+      if (!taskAccepted) return sum
+
+      const checks = gameTeam.photos[index]?.checks || {}
+
+      return (
+        sum +
+        (taskBonusForComplite || 0) +
+        (subTasks.length > 0
+          ? subTasks.reduce(
+              (sum, { _id, bonus }) =>
+                sum + (checks[String(_id)] ? Number(bonus || 0) : 0),
+              0
+            )
+          : 0)
+      )
+    }
+  )
+
   return {
     message: `Проверка фотографий в игре <b>${formatGameName(
       game
-    )}</b> у команды "<b>${team.name}</b>"`,
+    )}</b> у команды "<b>${
+      team.name
+    }</b>"\n\n<b>Суммарный результат за задание</b>: ${getNounPoints(
+      sumResult
+    )}`,
     buttons: [
       ...buttons,
       {
