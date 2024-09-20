@@ -70,7 +70,28 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
   return {
     message: `Проверка фотографий в игре <b>${formatGameName(
       game
-    )}</b> у команды "<b>${team.name}</b>"`,
+    )}</b> у команды "<b>${team.name}</b>"\n\n<b>Список доп. заданий</b>:${
+      !task?.subTasks?.length
+        ? ' пуст'
+        : `\n${
+            task?.subTasks.length > 0
+              ? task?.subTasks
+                  .map(({ _id, name, task, bonus }, i) => {
+                    const accepted = gameTeam.photos[jsonCommand.i]?.checks
+                      ? gameTeam.photos[jsonCommand.i]?.checks[String(_id)]
+                      : undefined
+                    return `"${name}" - ${getNounPoints(bonus)}${
+                      typeof accepted === 'boolean'
+                        ? accepted
+                          ? '✅'
+                          : '❌'
+                        : '?'
+                    }\n<blockquote>${task}</blockquote>`
+                  })
+                  .join('')
+              : ''
+          }`
+    }`,
     buttons: [
       {
         text: `Основное задание - ${
