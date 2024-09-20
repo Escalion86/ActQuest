@@ -16,7 +16,10 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
   if (gameTeam.photos[jsonCommand.i]?.length === 0) {
     return {
       message: `Команда не отправила ни одного фото на это задание`,
-      nextCommand: {},
+      nextCommand: {
+        c: 'gameTeamCheckPhotos',
+        gameTeamId: jsonCommand?.gameTeamId,
+      },
     }
   }
 
@@ -38,10 +41,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
       return item
     })
     return {
-      nextCommand: {
-        c: 'gameTeamCheckPhotos',
-        gameTeamId: jsonCommand?.gameTeamId,
-      },
+      nextCommand: {},
     }
   }
 
