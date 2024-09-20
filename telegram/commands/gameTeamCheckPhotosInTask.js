@@ -33,29 +33,44 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
   const task = game.tasks[jsonCommand.i]
   const subTasks = task.subTasks
 
-  if (jsonCommand?.subTaskAcceptChange) {
-    const newPhotos = [...gameTeam.photos]
-    newPhotos.map((item, i) => {
-      if (i === jsonCommand?.i) {
-        item.checks[jsonCommand.subTaskAcceptChange] =
-          !item.checks[jsonCommand.subTaskAcceptChange]
-      }
-      return item
-    })
-    await GamesTeams.findByIdAndUpdate(gameTeam._id, {
-      photos: newPhotos,
-    })
-    gameTeam.photos = newPhotos
-    // return {
-    //   nextCommand: { subTaskAcceptChange: false },
-    // }
-  }
+  // if (jsonCommand?.subTaskAcceptChange) {
+  //   const newPhotos = [...gameTeam.photos]
+  //   newPhotos.map((item, i) => {
+  //     if (i === jsonCommand?.i) {
+  //       item.checks[jsonCommand.subTaskAcceptChange] =
+  //         !item.checks[jsonCommand.subTaskAcceptChange]
+  //     }
+  //     return item
+  //   })
+  //   await GamesTeams.findByIdAndUpdate(gameTeam._id, {
+  //     photos: newPhotos,
+  //   })
+  //   gameTeam.photos = newPhotos
+  //   // return {
+  //   //   nextCommand: { subTaskAcceptChange: false },
+  //   // }
+  // }
 
+  // if (jsonCommand?.taskAcceptChange) {
+  //   const newPhotos = [...gameTeam.photos]
+  //   newPhotos.map((item, i) => {
+  //     if (i === jsonCommand?.i) {
+  //       item.checks.accepted = !item.checks?.accepted
+  //     }
+  //     return item
+  //   })
+  //   await GamesTeams.findByIdAndUpdate(gameTeam._id, {
+  //     photos: newPhotos,
+  //   })
+  //   gameTeam.photos = newPhotos
+  //   // return { nextCommand: { taskAcceptChange: false } }
+  // }
   if (jsonCommand?.taskAcceptChange) {
     const newPhotos = [...gameTeam.photos]
     newPhotos.map((item, i) => {
       if (i === jsonCommand?.i) {
-        item.checks.accepted = !item.checks?.accepted
+        item.checks[jsonCommand.taskAcceptChange] =
+          !item.checks[jsonCommand.taskAcceptChange]
       }
       return item
     })
@@ -63,7 +78,6 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
       photos: newPhotos,
     })
     gameTeam.photos = newPhotos
-    // return { nextCommand: { taskAcceptChange: false } }
   }
 
   const checks = gameTeam.photos[jsonCommand.i]?.checks
@@ -84,8 +98,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
                 typeof accepted === 'boolean' ? (accepted ? '✅' : '❌') : '?'
               }`,
               c: {
-                subTaskAcceptChange: String(_id),
-                taskAcceptChange: false,
+                taskAcceptChange: String(_id),
               },
             }
           }
@@ -107,10 +120,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
 
   return {
     images:
-      typeof jsonCommand?.subTaskAcceptChange === 'boolean' ||
-      typeof jsonCommand?.taskAcceptChange === 'boolean'
-        ? undefined
-        : photos,
+      typeof jsonCommand?.taskAcceptChange === 'boolean' ? undefined : photos,
     message: `Проверка фотографий в игре <b>${formatGameName(
       game
     )}</b> у команды "<b>${
@@ -147,8 +157,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
           typeof taskAccepted === 'boolean' ? (taskAccepted ? '✅' : '❌') : '?'
         }`,
         c: {
-          taskAcceptChange: true,
-          subTaskAcceptChange: false,
+          taskAcceptChange: 'accepted',
         },
       },
       ...buttons,
