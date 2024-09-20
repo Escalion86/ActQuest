@@ -1,8 +1,5 @@
-import { getNounTeams } from '@helpers/getNoun'
-import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
@@ -29,11 +26,6 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
         }).lean()
       : []
 
-  const teamsUsers =
-    teamsIds.length > 0
-      ? await TeamsUsers.find({ teamId: { $in: teamsIds } }).lean()
-      : []
-
   const sortedTeams = gameTeams.map(({ _id, teamId, photos }) => {
     const team = teams.find(({ _id }) => String(_id) == teamId)
     return { ...team, photos, gameTeamId: _id }
@@ -50,12 +42,21 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
               text: `${number}. "${name}" - ${
                 photos?.length > 0
                   ? `${photos.reduce(
+                      (sum, item) =>
+                        sum +
+                        item?.reduce(
+                          (sum2, { checks }) =>
+                            sum2 + (checks?.accepted ? 1 : 0),
+                          0
+                        ),
+                      0
+                    )}/${photos.reduce(
                       (sum, item) => sum + (item?.length || 0),
                       0
                     )} фото`
                   : '0 фото'
               }`,
-              c: { c: 'gameTeamAdmin', gameTeamId },
+              c: { c: 'gameTeamCheckPhotos', gameTeamId },
             }
           }
         )
