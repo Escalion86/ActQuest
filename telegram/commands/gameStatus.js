@@ -258,6 +258,12 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
           ? 'время вышло. Ожижаем получение след. задания'
           : `осталось ${secondsToTime(taskDuration - taskSecondsLeft)}`
       }.${
+        game.type === 'photo'
+          ? `\nОтправленных фотографий - ${
+              gameTeam.photos[startedTasks - 1]?.length || 0
+            } шт.`
+          : ''
+      }${
         findedCodesCount > 0
           ? `\nНайденые коды (${findedCodesCount} шт.): "${gameTeam.findedCodes[
               startedTasks - 1
