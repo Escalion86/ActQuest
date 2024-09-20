@@ -42,16 +42,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
               text: `${number}. "${name}" - ${
                 photos?.length > 0
                   ? `${photos.reduce(
-                      (sum, item) =>
-                        sum +
-                        item?.reduce(
-                          (sum2, { checks }) =>
-                            sum2 + (checks?.accepted ? 1 : 0),
-                          0
-                        ),
-                      0
-                    )}/${photos.reduce(
-                      (sum, item) => sum + (item?.length || 0),
+                      (sum, { photos, checks }) => sum + (photos?.length || 0),
                       0
                     )} фото`
                   : '0 фото'
@@ -71,7 +62,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
           `\n${index + 1}. "${team.name}" - ${
             team.photos?.length > 0
               ? `${team.photos.reduce(
-                  (sum, item) => sum + (item?.length || 0),
+                  (sum, { photos, checks }) => sum + (photos?.length || 0),
                   0
                 )} фото`
               : '0 фото'
