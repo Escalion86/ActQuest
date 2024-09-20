@@ -45,9 +45,10 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
     await GamesTeams.findByIdAndUpdate(gameTeam._id, {
       photos: newPhotos,
     })
-    return {
-      c: { subTaskAcceptChange: false },
-    }
+    gameTeam.photos = newPhotos
+    // return {
+    //   nextCommand: { subTaskAcceptChange: false },
+    // }
   }
 
   if (jsonCommand?.taskAcceptChange) {
@@ -61,7 +62,8 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
     await GamesTeams.findByIdAndUpdate(gameTeam._id, {
       photos: newPhotos,
     })
-    return { c: { taskAcceptChange: false } }
+    gameTeam.photos = newPhotos
+    // return { nextCommand: { taskAcceptChange: false } }
   }
 
   const checks = gameTeam.photos[jsonCommand.i]?.checks
