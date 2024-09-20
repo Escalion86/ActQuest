@@ -141,6 +141,11 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
     },
   ]
 
+  const filteredPhotos =
+    gameType === 'photo'
+      ? photos[taskNum]?.photos.filter((photo) => photo) || []
+      : []
+
   if (gameType === 'photo' && !jsonCommand.isPhoto && jsonCommand.message) {
     return {
       message:
@@ -154,7 +159,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         }),
       buttons: [
         buttonRefresh,
-        ...(photos[taskNum]?.photos?.length > 0 ? [buttonSeePhotoAnswers] : []),
+        ...(filteredPhotos.length > 0 ? [buttonSeePhotoAnswers] : []),
       ],
       // nextCommand: 'mainMenu',
     }
@@ -325,9 +330,6 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         buttons: [buttonRefresh, buttonSeePhotoAnswers],
       }
     }
-
-    const filteredPhotos =
-      photos[taskNum]?.photos.filter((photo) => photo) || []
 
     return {
       message: taskText({
