@@ -44,10 +44,12 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       : ''
 
   const sumOfBonuses =
-    (taskBonusForComplite || 0) +
-    (subTasks?.length
-      ? subTasks.reduce((sum, { bonus }) => sum + (bonus || 0), 0)
-      : 0)
+    game.type === 'photo'
+      ? (taskBonusForComplite || 0) +
+        (subTasks?.length
+          ? subTasks.reduce((sum, { bonus }) => sum + (bonus || 0), 0)
+          : 0)
+      : 0
 
   return {
     // images: task.images ? task.images : undefined,

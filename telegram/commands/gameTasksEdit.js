@@ -100,18 +100,19 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   //       ]
   //     })
   //   : []
-  const sumOfBonuses = game.tasks.reduce(
-    (sum, { taskBonusForComplite, subTasks }) => {
-      return (
-        sum +
-        (taskBonusForComplite || 0) +
-        (subTasks?.length
-          ? subTasks.reduce((sum2, { bonus }) => sum2 + (bonus || 0), 0)
-          : 0)
-      )
-    },
-    0
-  )
+  const sumOfBonuses =
+    game.type === 'photo'
+      ? game.tasks.reduce((sum, { taskBonusForComplite, subTasks }) => {
+          return (
+            sum +
+            (taskBonusForComplite || 0) +
+            (subTasks?.length
+              ? subTasks.reduce((sum2, { bonus }) => sum2 + (bonus || 0), 0)
+              : 0)
+          )
+        }, 0)
+      : 0
+
   const message = `<b>Редактирование заданий игры ${formatGameName(
     game
   )}</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
