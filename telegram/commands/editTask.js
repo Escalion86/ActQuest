@@ -30,7 +30,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
   const bonusCodes = typeof task?.bonusCodes === 'object' ? task.bonusCodes : []
 
-  const { clues } = task
+  const { clues, taskBonusForComplite, subTasks } = task
   const cluesText =
     typeof clues === 'object'
       ? clues
@@ -42,6 +42,12 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           )
           .join('')
       : ''
+
+  const sumOfBonuses =
+    (taskBonusForComplite || 0) +
+    (subTasks?.length
+      ? subTasks.reduce((sum, { bonus }) => sum + (bonus || 0), 0)
+      : 0)
 
   return {
     // images: task.images ? task.images : undefined,
@@ -106,6 +112,8 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       game.type === 'photo'
         ? `\n\n<b>Бонус за выполнение задания</b>: ${getNounPoints(
             task.taskBonusForComplite || 0
+          )}\n\n<b>Суммарный максимум баллов за задание</b>: ${getNounPoints(
+            sumOfBonuses
           )}`
         : ''
     }${

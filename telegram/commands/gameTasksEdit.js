@@ -170,7 +170,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
       : '[нет заданий]'
   }${
     game.type === 'photo'
-      ? `Суммарный максимум баллов: ${getNounPoints(sumOfBonuses)}`
+      ? `\n\n<b>Суммарный максимум баллов</b>: ${getNounPoints(sumOfBonuses)}`
       : ''
   }`
 
