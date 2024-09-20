@@ -62,6 +62,7 @@ const gameStart = async ({ telegramId, jsonCommand, domen }) => {
 
     // let timerId = setTimeout(() => console.log('!'), 1000)
     // console.log('timerId :>> ', timerId)
+    console.log('game.tasks?.length :>> ', game.tasks?.length)
     const gameTasksCount = game.tasks.length
     const startTime = new Array(gameTasksCount).fill(null)
     startTime[0] = new Date()
@@ -70,6 +71,7 @@ const gameStart = async ({ telegramId, jsonCommand, domen }) => {
     const wrongCodes = new Array(gameTasksCount).fill([])
     const findedPenaltyCodes = new Array(gameTasksCount).fill([])
     const findedBonusCodes = new Array(gameTasksCount).fill([])
+    console.log('2 :>> ', 2)
     const photos = new Array(gameTasksCount).fill({ photos: [], checks: {} })
     await GamesTeams.updateMany(
       {
@@ -86,6 +88,7 @@ const gameStart = async ({ telegramId, jsonCommand, domen }) => {
         photos,
       }
     )
+    console.log('1 :>> ', 1)
 
     const cluesDuration = game.cluesDuration ?? 1200
 
