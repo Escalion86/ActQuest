@@ -304,8 +304,8 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       const existedPhotos =
         typeof photos?.length === 'number'
           ? [...photos]
-          : new Array(gameTasksCount).fill([])
-      existedPhotos[taskNum].push({ photo: jsonCommand.message, checks: {} })
+          : new Array(gameTasksCount).fill({ photos: [], checks: {} })
+      existedPhotos[taskNum].photos.push(jsonCommand.message)
 
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
         photos: existedPhotos,
