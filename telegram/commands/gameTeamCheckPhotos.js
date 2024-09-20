@@ -21,30 +21,37 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
   const page = jsonCommand?.page ?? 1
   const buttons =
     gameTeam?.photos?.length > 0
-      ? buttonListConstructor(gameTeam.photos, page, (item, number) => {
-          if (!item?.length === 0)
+      ? buttonListConstructor(
+          gameTeam.photos,
+          page,
+          ({ photos, checks }, number) => {
+            if (!photos?.length === 0)
+              return {
+                text: `${number}. "${game.tasks[number - 1].title}" - 0 фото`,
+                c: {
+                  c: 'gameTeamCheckPhotosInTask',
+                  gameTeamId: jsonCommand?.gameTeamId,
+                  i: number - 1,
+                },
+              }
             return {
-              text: `${number}. "${game.tasks[number - 1].title}" - 0 фото`,
+              text: `${number}. "${game.tasks[number - 1].title}" - ${
+                photos?.length
+              } фото ${Object.keys(checks).map((key) =>
+                typeof checks[key] === 'boolean'
+                  ? checks[key]
+                    ? '✅'
+                    : '❌'
+                  : '?'
+              )}`,
               c: {
                 c: 'gameTeamCheckPhotosInTask',
                 gameTeamId: jsonCommand?.gameTeamId,
                 i: number - 1,
               },
             }
-          return {
-            text: `${number}. "${
-              game.tasks[number - 1].title
-            }" - ${item?.reduce(
-              (sum, { checks }) => sum + (checks?.accepted ? 1 : 0),
-              0
-            )}/${item?.length} фото`,
-            c: {
-              c: 'gameTeamCheckPhotosInTask',
-              gameTeamId: jsonCommand?.gameTeamId,
-              i: number - 1,
-            },
           }
-        })
+        )
       : []
 
   return {
