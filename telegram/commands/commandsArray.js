@@ -124,6 +124,7 @@ import editSubTask from './editSubTask'
 import setSubTaskName from './setSubTaskName'
 import setSubTaskTask from './setSubTaskTask'
 import setSubTaskBonus from './setSubTaskBonus'
+import gameTeamsCheckPhotos from './gameTeamsCheckPhotos'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -255,6 +256,7 @@ const commandsArray = {
   setSubTaskName,
   setSubTaskTask,
   setSubTaskBonus,
+  gameTeamsCheckPhotos,
 }
 
 var i = 0
