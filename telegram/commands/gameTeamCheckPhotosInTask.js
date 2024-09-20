@@ -34,17 +34,11 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
   const subTasks = task.subTasks
 
   if (jsonCommand?.subTaskAcceptChange) {
-    console.log('! :>> ')
     const newPhotos = [...gameTeam.photos]
     newPhotos.map((item, i) => {
       if (i === jsonCommand?.i) {
-        console.log('item.checks :>> ', item.checks)
         item.checks[jsonCommand.subTaskAcceptChange] =
           !item.checks[jsonCommand.subTaskAcceptChange]
-        console.log(
-          'item.checks[jsonCommand.subTaskAcceptChange] :>> ',
-          item.checks[jsonCommand.subTaskAcceptChange]
-        )
       }
       return item
     })
@@ -57,7 +51,6 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
   }
 
   if (jsonCommand?.taskAcceptChange) {
-    console.log('!! :>> ')
     const newPhotos = [...gameTeam.photos]
     newPhotos.map((item, i) => {
       if (i === jsonCommand?.i) {
@@ -78,8 +71,8 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
           subTasks,
           page,
           ({ _id, name, task, bonus }, number) => {
-            const accepted = gameTeam.photos[number - 1]?.checks
-              ? gameTeam.photos[number - 1]?.checks[String(_id)]
+            const accepted = gameTeam.photos[jsonCommand.i]?.checks
+              ? gameTeam.photos[jsonCommand.i]?.checks[String(_id)]
               : undefined
             return {
               text: `"${name}" - ${
@@ -93,7 +86,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
         )
       : []
 
-  const taskAccepted = gameTeam.photos[jsonCommand.i]?.accepted
+  const taskAccepted = gameTeam.photos[jsonCommand.i]?.checks?.accepted
 
   return {
     images: gameTeam.photos[jsonCommand.i].photos,
