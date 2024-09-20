@@ -13,7 +13,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
   const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
   if (gameTeam.success === false) return gameTeam
 
-  if (!gameTeam.photos[jsonCommand.i]) {
+  if (gameTeam.photos[jsonCommand.i]?.length === 0) {
     return {
       message: `Команда не отправила ни одного фото на это задание`,
       nextCommand: {},
