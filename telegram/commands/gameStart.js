@@ -70,7 +70,7 @@ const gameStart = async ({ telegramId, jsonCommand, domen }) => {
     const wrongCodes = new Array(gameTasksCount).fill([])
     const findedPenaltyCodes = new Array(gameTasksCount).fill([])
     const findedBonusCodes = new Array(gameTasksCount).fill([])
-    const photos = new Array(gameTasksCount).fill([])
+    const photos = new Array(gameTasksCount).fill({ photos: [], checks: {} })
     await GamesTeams.updateMany(
       {
         gameId: jsonCommand.gameId,
