@@ -66,7 +66,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
                 filteredPhotos?.length
               } фото ${
                 notCheckedSubTasksCount > 0 ? '\u{2757}' : '✅'
-              } - ${sumResult} б.`,
+              } -!${notCheckedSubTasksCount}! ${sumResult} б.`,
               // text: `${number}. "${game.tasks[number - 1].title}" - ${
               //   filteredPhotos?.length
               // } фото - ${

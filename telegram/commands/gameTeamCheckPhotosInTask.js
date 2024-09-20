@@ -110,7 +110,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
       team.name
     }</b>"\n\n<b>Бонус за выполнение задания</b>: ${getNounPoints(
       task.taskBonusForComplite || 0
-    )}${
+    )} ${
       typeof taskAccepted === 'boolean' ? (taskAccepted ? '✅' : '❌') : '?'
     }\n<b>Список доп. заданий</b>:${
       !task?.subTasks?.length
