@@ -91,14 +91,15 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
 
   const taskAccepted = checks?.accepted
 
-  const sumResult =
-    (taskAccepted ? task.taskBonusForComplite || 0 : 0) +
-    (task?.subTasks.length > 0
-      ? task?.subTasks.reduce(
-          (sum, { _id, bonus }) =>
-            sum + (checks[String(_id)] ? Number(bonus || 0) : 0)
-        )
-      : 0)
+  const sumResult = taskAccepted
+    ? (task.taskBonusForComplite || 0) +
+      (task?.subTasks.length > 0
+        ? task?.subTasks.reduce(
+            (sum, { _id, bonus }) =>
+              sum + (checks[String(_id)] ? Number(bonus || 0) : 0)
+          )
+        : 0)
+    : 0
 
   return {
     images: photos || [],
