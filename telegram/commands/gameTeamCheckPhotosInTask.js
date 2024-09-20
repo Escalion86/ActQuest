@@ -38,8 +38,13 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
     const newPhotos = [...gameTeam.photos]
     newPhotos.map((item, i) => {
       if (i === jsonCommand?.i) {
+        console.log('item.checks :>> ', item.checks)
         item.checks[jsonCommand.subTaskAcceptChange] =
           !item.checks[jsonCommand.subTaskAcceptChange]
+        console.log(
+          'item.checks[jsonCommand.subTaskAcceptChange] :>> ',
+          item.checks[jsonCommand.subTaskAcceptChange]
+        )
       }
       return item
     })
