@@ -144,7 +144,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
                                   ({ name, task, bonus }) =>
                                     `"${name}" - ${getNounPoints(bonus)}`
                                 )
-                                .join('')
+                                .join('\n')
                             : ''
                         }`
                   }`
