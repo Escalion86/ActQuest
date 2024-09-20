@@ -14,7 +14,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
   const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
   if (gameTeam.success === false) return gameTeam
 
-  if (gameTeam.photos[jsonCommand.i]?.length === 0) {
+  if (!gameTeam.photos[jsonCommand.i]?.photos?.length) {
     return {
       message: `Команда не отправила ни одного фото на это задание`,
       nextCommand: {
@@ -92,7 +92,13 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
     images: gameTeam.photos[jsonCommand.i].photos,
     message: `Проверка фотографий в игре <b>${formatGameName(
       game
-    )}</b> у команды "<b>${team.name}</b>"\n\n<b>Список доп. заданий</b>:${
+    )}</b> у команды "<b>${
+      team.name
+    }</b>"\n\n<b>Бонус за выполнение задания</b>: ${getNounPoints(
+      task.taskBonusForComplite || 0
+    )}${
+      typeof taskAccepted === 'boolean' ? (taskAccepted ? '✅' : '❌') : '?'
+    }\n<b>Список доп. заданий</b>:${
       !task?.subTasks?.length
         ? ' пуст'
         : `\n${
