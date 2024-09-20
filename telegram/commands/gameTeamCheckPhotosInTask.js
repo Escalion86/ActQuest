@@ -1,3 +1,4 @@
+import { getNounPoints } from '@helpers/getNoun'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
