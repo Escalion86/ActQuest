@@ -25,6 +25,8 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
           gameTeam.photos,
           page,
           ({ photos, checks }, number) => {
+            const subTasks = game.tasks[number - 1].subTasks
+
             const filteredPhotos = photos?.filter((photo) => photo)
             if (filteredPhotos?.length === 0)
               return {
@@ -38,7 +40,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
                 },
               }
             // const checksKeys = Object.keys(checks)
-            const subTasks = game.tasks[number - 1].subTasks
+
             // const notCheckedSubTasksCount = subTasks.filter(
             //   ({ _id }) => !checksKeys.includes(String(_id))
             // ).length
