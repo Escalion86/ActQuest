@@ -5,8 +5,8 @@ import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
 
-const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
-  const checkData = check(jsonCommand, ['gameTeamId'])
+const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
+  const checkData = check(jsonCommand, ['gameTeamId', 'i'])
   if (checkData) return checkData
 
   const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
@@ -18,33 +18,37 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
   const team = await getTeam(gameTeam.teamId)
   if (team.success === false) return team
 
+  const task = game.tasks[jsonCommand.i]
+  const subTasks = task.subTasks
+
+  if (typeof jsonCommand?.subTaskAcceptChange === 'number') {
+    gameTeam.photos.map((item, i) => {
+      if (i === jsonCommand?.subTaskAcceptChange) {
+        item.accepted = !item.accepted
+      }
+      return item
+    })
+    return { nextCommand: {} }
+  }
+
   const page = jsonCommand?.page ?? 1
   const buttons =
-    gameTeam?.photos?.length > 0
-      ? buttonListConstructor(gameTeam.photos, page, (item, number) => {
-          if (!item?.length === 0)
+    subTasks?.length > 0
+      ? buttonListConstructor(
+          subTasks,
+          page,
+          ({ name, task, bonus }, number) => {
+            const accepted = gameTeam.photos[number - 1]?.accepted
             return {
-              text: `${number}. "${game.tasks[number - 1].title}" - 0 фото`,
+              text: `"${name}" - ${
+                typeof accepted === 'boolean' ? (accepted ? '✅' : '❌') : '?'
+              }`,
               c: {
-                c: 'gameTeamCheckPhotosInTask',
-                gameTeamId: jsonCommand?.gameTeamId,
-                i: number - 1,
+                subTaskAcceptChange: number - 1,
               },
             }
-          return {
-            text: `${number}. "${
-              game.tasks[number - 1].title
-            }" - ${item?.reduce(
-              (sum, { checks }) => sum + (checks?.accepted ? 1 : 0),
-              0
-            )}/${item?.length} фото`,
-            c: {
-              c: 'gameTeamCheckPhotosInTask',
-              gameTeamId: jsonCommand?.gameTeamId,
-              i: number - 1,
-            },
           }
-        })
+        )
       : []
 
   return {
@@ -54,11 +58,11 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
     buttons: [
       ...buttons,
       {
-        c: { c: 'gameTeamsCheckPhotos', gameId: gameTeam?.gameId },
+        c: { c: 'gameTeamCheckPhotos', gameTeamId: jsonCommand?.gameTeamId },
         text: '\u{2B05} Назад',
       },
     ],
   }
 }
 
-export default gameTeamsCheckPhotos
+export default gameTeamCheckPhotosInTask
