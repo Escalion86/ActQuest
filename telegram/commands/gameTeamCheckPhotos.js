@@ -49,17 +49,17 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
 
             // const checks = gameTeam.photos[index]?.checks || {}
             // const taskAccepted = checks.accepted
-            console.log('checks :>> ', checks)
-            const sumResult = taskAccepted
-              ? (taskBonusForComplite || 0) +
-                (subTasks.length > 0
-                  ? subTasks.reduce(
-                      (sum, { _id, bonus }) =>
-                        sum + (checks[String(_id)] ? Number(bonus || 0) : 0),
-                      0
-                    )
-                  : 0)
-              : 0
+            const sumResult = 0
+            // taskAccepted
+            //   ? (taskBonusForComplite || 0) +
+            //     (subTasks.length > 0
+            //       ? subTasks.reduce(
+            //           (sum, { _id, bonus }) =>
+            //             sum + (checks[String(_id)] ? Number(bonus || 0) : 0),
+            //           0
+            //         )
+            //       : 0)
+            //   : 0
 
             return {
               // text: `${number}. "${game.tasks[number - 1].title}" - ${
