@@ -62,27 +62,29 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
               : 0
 
             return {
-              // text: `${number}. "${game.tasks[number - 1].title}" - ${
-              //   filteredPhotos?.length
-              // } фото ${notCheckedSubTasksCount > 0 ? '\u{2757}' : '✅'}`,
               text: `${number}. "${game.tasks[number - 1].title}" - ${
                 filteredPhotos?.length
-              } фото - ${
-                typeof taskAccepted === 'boolean'
-                  ? taskAccepted
-                    ? '✅'
-                    : '❌'
-                  : '?'
-              }${subTasks
-                .map(({ _id }) => {
-                  const key = String(_id)
-                  return typeof checks[key] === 'boolean'
-                    ? checks[key]
-                      ? '✅'
-                      : '❌'
-                    : '?'
-                })
-                .join('')} - ${sumResult} б.`,
+              } фото ${
+                notCheckedSubTasksCount > 0 ? '\u{2757}' : '✅'
+              } - ${sumResult} б.`,
+              // text: `${number}. "${game.tasks[number - 1].title}" - ${
+              //   filteredPhotos?.length
+              // } фото - ${
+              //   typeof taskAccepted === 'boolean'
+              //     ? taskAccepted
+              //       ? '✅'
+              //       : '❌'
+              //     : '?'
+              // }${subTasks
+              //   .map(({ _id }) => {
+              //     const key = String(_id)
+              //     return typeof checks[key] === 'boolean'
+              //       ? checks[key]
+              //         ? '✅'
+              //         : '❌'
+              //       : '?'
+              //   })
+              //   .join('')} - ${sumResult} б.`,
               c: {
                 c: 'gameTeamCheckPhotosInTask',
                 gameTeamId: jsonCommand?.gameTeamId,
