@@ -1,4 +1,5 @@
 import { getNounPoints } from '@helpers/getNoun'
+import GamesTeams from '@models/GamesTeams'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
@@ -34,12 +35,16 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
 
   if (jsonCommand?.subTaskAcceptChange) {
     console.log('! :>> ')
-    gameTeam.photos.map((item, i) => {
+    const newPhotos = [...gameTeam.photos]
+    newPhotos.map((item, i) => {
       if (i === jsonCommand?.i) {
         item.checks[jsonCommand.subTaskAcceptChange] =
           !item.checks[jsonCommand.subTaskAcceptChange]
       }
       return item
+    })
+    await GamesTeams.findByIdAndUpdate(gameTeam._id, {
+      photos: newPhotos,
     })
     return {
       nextCommand: {},
@@ -48,11 +53,15 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
 
   if (jsonCommand?.taskAcceptChange) {
     console.log('!! :>> ')
-    gameTeam.photos.map((item, i) => {
+    const newPhotos = [...gameTeam.photos]
+    newPhotos.map((item, i) => {
       if (i === jsonCommand?.i) {
         item.checks.accepted = !item.checks?.accepted
       }
       return item
+    })
+    await GamesTeams.findByIdAndUpdate(gameTeam._id, {
+      photos: newPhotos,
     })
     return { nextCommand: {} }
   }
