@@ -326,6 +326,9 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       }
     }
 
+    const filteredPhotos =
+      photos[taskNum]?.photos.filter((photo) => photo) || []
+
     return {
       message: taskText({
         game,
@@ -334,12 +337,10 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         cluesDuration,
         taskDuration,
       }),
-      images: jsonCommand.seePhotoAnswers
-        ? photos[taskNum].photos.filter((photo) => photo)
-        : undefined,
+      images: jsonCommand.seePhotoAnswers ? filteredPhotos : undefined,
       buttons: [
         buttonRefresh,
-        ...(photos[taskNum]?.photos?.length > 0 ? [buttonSeePhotoAnswers] : []),
+        ...(filteredPhotos.length > 0 ? [buttonSeePhotoAnswers] : []),
       ],
     }
   }
