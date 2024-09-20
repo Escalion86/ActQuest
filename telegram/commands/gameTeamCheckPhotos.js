@@ -25,29 +25,32 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
           gameTeam.photos,
           page,
           ({ photos, checks }, number) => {
-            if (!photos?.length === 0)
+            const filteredPhotos = photos?.filter((photo) => photo)
+            if (filteredPhotos?.length === 0)
               return {
-                text: `${number}. "${game.tasks[number - 1].title}" - 0 фото`,
+                text: `${number}. "${
+                  game.tasks[number - 1].title
+                }" - 0 фото - ?${subTasks.map(() => '?').join('?')}`,
                 c: {
                   c: 'gameTeamCheckPhotosInTask',
                   gameTeamId: jsonCommand?.gameTeamId,
                   i: number - 1,
                 },
               }
-            const checksKeys = Object.keys(checks)
+            // const checksKeys = Object.keys(checks)
             const subTasks = game.tasks[number - 1].subTasks
-            const notCheckedSubTasksCount = subTasks.filter(
-              ({ _id }) => !checksKeys.includes(String(_id))
-            ).length
+            // const notCheckedSubTasksCount = subTasks.filter(
+            //   ({ _id }) => !checksKeys.includes(String(_id))
+            // ).length
             const taskAccepted = checks.accepted
 
             return {
               // text: `${number}. "${game.tasks[number - 1].title}" - ${
-              //   photos?.length
+              //   filteredPhotos?.length
               // } фото ${notCheckedSubTasksCount > 0 ? '\u{2757}' : '✅'}`,
               text: `${number}. "${game.tasks[number - 1].title}" - ${
-                photos?.length
-              } фото ${
+                filteredPhotos?.length
+              } фото - ${
                 typeof taskAccepted === 'boolean'
                   ? taskAccepted
                     ? '✅'
