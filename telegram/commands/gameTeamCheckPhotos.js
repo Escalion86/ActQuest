@@ -20,7 +20,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
 
   const page = jsonCommand?.page ?? 1
   const buttons =
-    sortedTeams.length > 0
+    gameTeam?.photos?.length > 0
       ? buttonListConstructor(gameTeam.photos, page, (item, number) => {
           if (!item?.length === 0)
             return {
