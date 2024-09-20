@@ -20,11 +20,13 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
 
   const task = game.tasks[jsonCommand.i]
   const subTasks = task.subTasks
+  console.log('subTasks :>> ', subTasks)
 
-  if (typeof jsonCommand?.subTaskAcceptChange === 'number') {
+  if (jsonCommand?.subTaskAcceptChange) {
     gameTeam.photos.map((item, i) => {
-      if (i === jsonCommand?.subTaskAcceptChange) {
-        item.accepted = !item.accepted
+      if (i === jsonCommand?.i) {
+        item.checks[jsonCommand.subTaskAcceptChange] =
+          !item.checks[jsonCommand.subTaskAcceptChange]
       }
       return item
     })
@@ -37,8 +39,10 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
       ? buttonListConstructor(
           subTasks,
           page,
-          ({ name, task, bonus }, number) => {
-            const accepted = gameTeam.photos[number - 1]?.accepted
+          ({ _id, name, task, bonus }, number) => {
+            const accepted = gameTeam.photos[number - 1]?.checks
+              ? gameTeam.photos[number - 1]?.checks[_id]
+              : undefined
             return {
               text: `"${name}" - ${
                 typeof accepted === 'boolean' ? (accepted ? '✅' : '❌') : '?'
@@ -51,11 +55,21 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
         )
       : []
 
+  const taskAccepted = gameTeam.photos[jsonCommand.i]?.accepted
+
   return {
     message: `Проверка фотографий в игре <b>${formatGameName(
       game
     )}</b> у команды "<b>${team.name}</b>"`,
     buttons: [
+      {
+        text: `Основное задание - ${
+          typeof taskAccepted === 'boolean' ? (taskAccepted ? '✅' : '❌') : '?'
+        }`,
+        c: {
+          taskAcceptChange: true,
+        },
+      },
       ...buttons,
       {
         c: { c: 'gameTeamCheckPhotos', gameTeamId: jsonCommand?.gameTeamId },
