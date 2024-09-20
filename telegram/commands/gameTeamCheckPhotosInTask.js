@@ -64,6 +64,11 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
     return { nextCommand: { taskAcceptChange: false } }
   }
 
+  const checks = gameTeam.photos[jsonCommand.i]?.checks
+  const photos = gameTeam.photos[jsonCommand.i]?.photos?.filter(
+    (photo) => photo
+  )
+
   const page = jsonCommand?.page ?? 1
   const buttons =
     subTasks?.length > 0
@@ -71,9 +76,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
           subTasks,
           page,
           ({ _id, name, task, bonus }, number) => {
-            const accepted = gameTeam.photos[jsonCommand.i]?.checks
-              ? gameTeam.photos[jsonCommand.i]?.checks[String(_id)]
-              : undefined
+            const accepted = checks ? checks[String(_id)] : undefined
             return {
               text: `"${name}" - ${
                 typeof accepted === 'boolean' ? (accepted ? '✅' : '❌') : '?'
@@ -86,11 +89,16 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
         )
       : []
 
-  const taskAccepted = gameTeam.photos[jsonCommand.i]?.checks?.accepted
+  const taskAccepted = checks?.accepted
 
-  const photos = gameTeam.photos[jsonCommand.i]?.photos?.filter(
-    (photo) => photo
-  )
+  const sumResult =
+    (taskAccepted ? task.taskBonusForComplite || 0 : 0) +
+    (task?.subTasks.length > 0
+      ? task?.subTasks.reduce(
+          (sum, { _id, bonus }) =>
+            sum + (checks[String(_id)] ? Number(bonus || 0) : 0)
+        )
+      : 0)
 
   return {
     images: photos || [],
@@ -123,7 +131,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
                   .join('')
               : ''
           }`
-    }`,
+    }\n\n<b>Суммарный результат за задание</b>: ${getNounPoints(sumResult)}`,
     buttons: [
       {
         text: `Основное задание - ${
