@@ -49,6 +49,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
 
             // const checks = gameTeam.photos[index]?.checks || {}
             // const taskAccepted = checks.accepted
+            console.log('checks :>> ', checks)
             const sumResult = taskAccepted
               ? (taskBonusForComplite || 0) +
                 (subTasks.length > 0
