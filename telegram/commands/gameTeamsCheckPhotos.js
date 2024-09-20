@@ -62,7 +62,8 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
           `\n${index + 1}. "${team.name}" - ${
             team.photos?.length > 0
               ? `${team.photos.reduce(
-                  (sum, { photos, checks }) => sum + (photos?.length || 0),
+                  (sum, { photos, checks }) =>
+                    sum + (photos?.filter((photo) => photo).length || 0),
                   0
                 )} фото`
               : '0 фото'
