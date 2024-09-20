@@ -33,6 +33,16 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
     return { nextCommand: {} }
   }
 
+  if (jsonCommand?.taskAcceptChange) {
+    gameTeam.photos.map((item, i) => {
+      if (i === jsonCommand?.i) {
+        item.checks.accepted = !item.checks?.accepted
+      }
+      return item
+    })
+    return { nextCommand: {} }
+  }
+
   const page = jsonCommand?.page ?? 1
   const buttons =
     subTasks?.length > 0
@@ -41,14 +51,14 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
           page,
           ({ _id, name, task, bonus }, number) => {
             const accepted = gameTeam.photos[number - 1]?.checks
-              ? gameTeam.photos[number - 1]?.checks[_id]
+              ? gameTeam.photos[number - 1]?.checks[String(_id)]
               : undefined
             return {
               text: `"${name}" - ${
                 typeof accepted === 'boolean' ? (accepted ? '✅' : '❌') : '?'
               }`,
               c: {
-                subTaskAcceptChange: number - 1,
+                subTaskAcceptChange: String(_id),
               },
             }
           }
