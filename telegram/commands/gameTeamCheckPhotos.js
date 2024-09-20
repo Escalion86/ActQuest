@@ -33,7 +33,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
               return {
                 text: `${number}. "${
                   game.tasks[number - 1].title
-                }" - 0 фото - ?${subTasks.map(() => '?').join('?')}`,
+                }" - 0 фото - ?${subTasks.map(() => '?').join('?')} - 0 б.`,
                 c: {
                   c: 'gameTeamCheckPhotosInTask',
                   gameTeamId: jsonCommand?.gameTeamId,
@@ -46,6 +46,19 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
             //   ({ _id }) => !checksKeys.includes(String(_id))
             // ).length
             const taskAccepted = checks.accepted
+
+            // const checks = gameTeam.photos[index]?.checks || {}
+            // const taskAccepted = checks.accepted
+            const sumResult = taskAccepted
+              ? (taskBonusForComplite || 0) +
+                (subTasks.length > 0
+                  ? subTasks.reduce(
+                      (sum, { _id, bonus }) =>
+                        sum + (checks[String(_id)] ? Number(bonus || 0) : 0),
+                      0
+                    )
+                  : 0)
+              : 0
 
             return {
               // text: `${number}. "${game.tasks[number - 1].title}" - ${
@@ -68,7 +81,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
                       : '❌'
                     : '?'
                 })
-                .join('')}`,
+                .join('')} - ${sumResult} б.`,
               c: {
                 c: 'gameTeamCheckPhotosInTask',
                 gameTeamId: jsonCommand?.gameTeamId,
