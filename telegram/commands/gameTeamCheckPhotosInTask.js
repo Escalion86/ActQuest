@@ -85,6 +85,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
               }`,
               c: {
                 subTaskAcceptChange: String(_id),
+                taskAcceptChange: false,
               },
             }
           }
@@ -147,6 +148,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
         }`,
         c: {
           taskAcceptChange: true,
+          subTaskAcceptChange: false,
         },
       },
       ...buttons,
