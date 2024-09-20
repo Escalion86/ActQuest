@@ -45,7 +45,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
             // const notCheckedSubTasksCount = subTasks.filter(
             //   ({ _id }) => !checksKeys.includes(String(_id))
             // ).length
-            const taskAccepted = checks.accepted
+            const taskAccepted = checks?.accepted
 
             // const checks = gameTeam.photos[index]?.checks || {}
             // const taskAccepted = checks.accepted
