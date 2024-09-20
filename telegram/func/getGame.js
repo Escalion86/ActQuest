@@ -13,7 +13,7 @@ const getGame = async (id) => {
       nextCommand: `mainMenu`,
     }
 
-  const game = await Games.findById(id)
+  const game = await Games.findById(id).lean()
   if (!game) {
     return {
       success: false,

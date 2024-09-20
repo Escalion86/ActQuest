@@ -11,7 +11,7 @@ const getUser = async (id) => {
       nextCommand: `mainMenu`,
     }
 
-  const user = await Users.findById(id)
+  const user = await Users.findById(id).lean()
   if (!user) {
     return {
       success: false,
