@@ -154,7 +154,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         }),
       buttons: [
         buttonRefresh,
-        ...(photos[taskNum]?.length > 0 ? [buttonSeePhotoAnswers] : []),
+        ...(photos[taskNum]?.photos?.length > 0 ? [buttonSeePhotoAnswers] : []),
       ],
       // nextCommand: 'mainMenu',
     }
@@ -335,11 +335,11 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         taskDuration,
       }),
       images: jsonCommand.seePhotoAnswers
-        ? photos[taskNum].map(({ photo }) => photo).filter((photo) => photo)
+        ? photos[taskNum].photos.filter((photo) => photo)
         : undefined,
       buttons: [
         buttonRefresh,
-        ...(photos[taskNum]?.length > 0 ? [buttonSeePhotoAnswers] : []),
+        ...(photos[taskNum]?.photos?.length > 0 ? [buttonSeePhotoAnswers] : []),
       ],
     }
   }
