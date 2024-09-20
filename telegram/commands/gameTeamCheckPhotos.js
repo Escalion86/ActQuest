@@ -37,11 +37,14 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
             const checksKeys = Object.keys(checks)
             const subTasks = game.tasks[number - 1].subTasks
             const notCheckedSubTasksCount = subTasks.filter(
-              (_id) => !checksKeys.includes(String(_id))
+              ({ _id }) => !checksKeys.includes(String(_id))
             ).length
             const taskAccepted = checks.accepted
 
             return {
+              // text: `${number}. "${game.tasks[number - 1].title}" - ${
+              //   photos?.length
+              // } фото ${notCheckedSubTasksCount > 0 ? '\u{2757}' : '✅'}`,
               text: `${number}. "${game.tasks[number - 1].title}" - ${
                 photos?.length
               } фото ${
@@ -59,7 +62,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
                       : '❌'
                     : '?'
                 })
-                .join('')}${notCheckedSubTasksCount}`,
+                .join('')}`,
               c: {
                 c: 'gameTeamCheckPhotosInTask',
                 gameTeamId: jsonCommand?.gameTeamId,
