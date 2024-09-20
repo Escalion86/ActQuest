@@ -26,14 +26,15 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
           gameTeam.photos,
           page,
           ({ photos, checks }, number) => {
-            const subTasks = game.tasks[number - 1].subTasks
+            const task = game.tasks[number - 1]
+            const subTasks = task.subTasks
 
             const filteredPhotos = photos?.filter((photo) => photo)
             if (filteredPhotos?.length === 0)
               return {
-                text: `${number}. "${
-                  game.tasks[number - 1].title
-                }" - 0 фото - ?${subTasks.map(() => '?').join('?')} - 0 б.`,
+                text: `${number}. "${task.title}" - 0 фото - ?${subTasks
+                  .map(() => '?')
+                  .join('?')} - 0 б.`,
                 c: {
                   c: 'gameTeamCheckPhotosInTask',
                   gameTeamId: jsonCommand?.gameTeamId,
@@ -49,17 +50,16 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
 
             // const checks = gameTeam.photos[index]?.checks || {}
             // const taskAccepted = checks.accepted
-            const sumResult = 0
-            // taskAccepted
-            //   ? (taskBonusForComplite || 0) +
-            //     (subTasks.length > 0
-            //       ? subTasks.reduce(
-            //           (sum, { _id, bonus }) =>
-            //             sum + (checks[String(_id)] ? Number(bonus || 0) : 0),
-            //           0
-            //         )
-            //       : 0)
-            //   : 0
+            const sumResult = taskAccepted
+              ? (task.taskBonusForComplite || 0) +
+                (subTasks.length > 0
+                  ? subTasks.reduce(
+                      (sum, { _id, bonus }) =>
+                        sum + (checks[String(_id)] ? Number(bonus || 0) : 0),
+                      0
+                    )
+                  : 0)
+              : 0
 
             return {
               // text: `${number}. "${game.tasks[number - 1].title}" - ${
