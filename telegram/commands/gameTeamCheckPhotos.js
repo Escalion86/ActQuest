@@ -96,7 +96,8 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
             )
           : 0)
       )
-    }
+    },
+    0
   )
 
   return {
