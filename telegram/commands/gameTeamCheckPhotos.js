@@ -81,10 +81,9 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
 
   const sumResult = game.tasks.reduce(
     (sum, { subTasks, taskBonusForComplite }, index) => {
+      const checks = gameTeam.photos[index]?.checks || {}
       const taskAccepted = checks.accepted
       if (!taskAccepted) return sum
-
-      const checks = gameTeam.photos[index]?.checks || {}
 
       return (
         sum +
