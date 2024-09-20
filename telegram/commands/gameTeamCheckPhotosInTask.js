@@ -103,7 +103,11 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
     : 0
 
   return {
-    images: photos || [],
+    images:
+      typeof jsonCommand?.subTaskAcceptChange === 'boolean' ||
+      typeof jsonCommand?.taskAcceptChangephotos === 'boolean'
+        ? undefined
+        : photos,
     message: `Проверка фотографий в игре <b>${formatGameName(
       game
     )}</b> у команды "<b>${
