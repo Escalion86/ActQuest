@@ -96,7 +96,8 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
       (task?.subTasks.length > 0
         ? task?.subTasks.reduce(
             (sum, { _id, bonus }) =>
-              sum + (checks[String(_id)] ? Number(bonus || 0) : 0)
+              sum + (checks[String(_id)] ? Number(bonus || 0) : 0),
+            0
           )
         : 0)
     : 0
