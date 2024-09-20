@@ -13,6 +13,13 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
   const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
   if (gameTeam.success === false) return gameTeam
 
+  if (!gameTeam.photos[jsonCommand.i]) {
+    return {
+      message: `Команда не отправила ни одного фото на это задание`,
+      nextCommand: {},
+    }
+  }
+
   const game = await getGame(gameTeam.gameId)
   if (game.success === false) return game
 
@@ -21,7 +28,6 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
 
   const task = game.tasks[jsonCommand.i]
   const subTasks = task.subTasks
-  console.log('subTasks :>> ', subTasks)
 
   if (jsonCommand?.subTaskAcceptChange) {
     gameTeam.photos.map((item, i) => {
@@ -31,7 +37,12 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
       }
       return item
     })
-    return { nextCommand: {} }
+    return {
+      nextCommand: {
+        c: 'gameTeamCheckPhotos',
+        gameTeamId: jsonCommand?.gameTeamId,
+      },
+    }
   }
 
   if (jsonCommand?.taskAcceptChange) {
