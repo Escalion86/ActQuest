@@ -34,16 +34,32 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
                   i: number - 1,
                 },
               }
+            const checksKeys = Object.keys(checks)
+            const subTasks = game.tasks[number - 1].subTasks
+            const notCheckedSubTasksCount = subTasks.filter(
+              (_id) => !checksKeys.includes(String(_id))
+            ).length
+            const taskAccepted = checks.accepted
+
             return {
               text: `${number}. "${game.tasks[number - 1].title}" - ${
                 photos?.length
-              } фото ${Object.keys(checks).map((key) =>
-                typeof checks[key] === 'boolean'
-                  ? checks[key]
+              } фото ${
+                typeof taskAccepted === 'boolean'
+                  ? taskAccepted
                     ? '✅'
                     : '❌'
                   : '?'
-              )}`,
+              }${subTasks
+                .map(({ _id }) => {
+                  const key = String(_id)
+                  return typeof checks[key] === 'boolean'
+                    ? checks[key]
+                      ? '✅'
+                      : '❌'
+                    : '?'
+                })
+                .join('')}${notCheckedSubTasksCount}`,
               c: {
                 c: 'gameTeamCheckPhotosInTask',
                 gameTeamId: jsonCommand?.gameTeamId,
