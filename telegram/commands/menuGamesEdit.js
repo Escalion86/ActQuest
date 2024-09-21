@@ -21,7 +21,9 @@ const menuGamesEdit = async ({ telegramId, jsonCommand, user }) => {
     notFinishedGames,
     page,
     (game, number) => ({
-      text: `\u{270F} ${formatGameName(game)}`,
+      text: `\u{270F} ${formatGameName(game)} ${
+        game.hidden ? ` (СКРЫТА)` : ''
+      }`,
       c: { c: 'editGameGeneral', gameId: game._id },
       //`editGame/gameId=${game._id}`,
     })
