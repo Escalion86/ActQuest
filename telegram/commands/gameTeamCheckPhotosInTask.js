@@ -80,10 +80,9 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
     gameTeam.photos = newPhotos
   }
 
-  const checks = gameTeam.photos[jsonCommand.i]?.checks
-  const photos = gameTeam.photos[jsonCommand.i]?.photos?.filter(
-    (photo) => photo
-  )
+  const checks = gameTeam.photos[jsonCommand.i]?.checks || {}
+  const photos =
+    gameTeam.photos[jsonCommand.i]?.photos?.filter((photo) => photo) || []
 
   const page = jsonCommand?.page ?? 1
   const buttons =
@@ -149,7 +148,11 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
                   .join('')
               : ''
           }`
-    }\n\n<b>Суммарный результат за задание</b>: ${getNounPoints(sumResult)}`,
+    }\n\n<b>Отправлено фото-ответов на задание</b>: ${
+      photos.length
+    } шт.\n\n<b>Суммарный результат за задание</b>: ${getNounPoints(
+      sumResult
+    )}`,
     buttons: [
       {
         text: `Основное задание - ${

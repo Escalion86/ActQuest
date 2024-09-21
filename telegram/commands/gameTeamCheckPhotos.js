@@ -29,7 +29,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
             const task = game.tasks[number - 1]
             const subTasks = task.subTasks
 
-            const filteredPhotos = photos?.filter((photo) => photo)
+            const filteredPhotos = photos?.filter((photo) => photo) || []
             if (filteredPhotos?.length === 0)
               return {
                 text: `${number}. "${task.title}" - 0 фото - ?${subTasks
