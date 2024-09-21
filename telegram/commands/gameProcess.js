@@ -156,6 +156,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
           startTaskTime: startTime[taskNum],
           cluesDuration,
           taskDuration,
+          photos,
         }),
       buttons: [
         buttonRefresh,
@@ -325,6 +326,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
             startTaskTime: startTime[taskNum],
             cluesDuration,
             taskDuration,
+            photos: existedPhotos,
           }),
         // images: [jsonCommand.message],
         buttons: [buttonRefresh, buttonSeePhotoAnswers],
@@ -338,6 +340,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         startTaskTime: startTime[taskNum],
         cluesDuration,
         taskDuration,
+        photos,
       }),
       images:
         jsonCommand.seePhotoAnswers &&

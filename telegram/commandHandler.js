@@ -73,9 +73,9 @@ const commandHandler = async ({
             domen,
           })
         }
-        console.log('photo :>> ', photo)
-        console.log('video :>> ', video)
-        console.log('document :>> ', document)
+        // console.log('photo :>> ', photo)
+        // console.log('video :>> ', video)
+        // console.log('document :>> ', document)
 
         const isPhoto = Boolean(
           typeof photo === 'object' && photo[photo.length - 1]?.file_id
