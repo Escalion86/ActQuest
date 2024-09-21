@@ -45,17 +45,23 @@ const executeCommand = async (
   const keyboard = keyboardFormer(result.buttons)
 
   if (result.images) {
-    console.log('executeCommand 1')
-    await sendMessage({
-      chat_id: userTelegramId,
-      // text: JSON.stringify({ body, headers: req.headers.origin }),
-      // text: result.message,
-      parse_mode: result.parse_mode,
-      // keyboard,
-      callback_query,
-      images: result.images,
-      domen,
-    })
+    const imagesArrays = []
+    for (let i = 0; i < result.images.length; i += 10) {
+      imagesArrays.push(result.images.slice(i, i + 10))
+    }
+
+    for (let i = 0; i < imagesArrays.length; i++) {
+      await sendMessage({
+        chat_id: userTelegramId,
+        // text: JSON.stringify({ body, headers: req.headers.origin }),
+        // text: result.message,
+        parse_mode: result.parse_mode,
+        // keyboard,
+        callback_query,
+        images: imagesArrays[i],
+        domen,
+      })
+    }
   }
 
   const sendResult = await sendMessage({
