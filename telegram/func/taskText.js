@@ -1,6 +1,6 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import secondsToTime from './secondsToTime'
-import { getNounCodes } from '@helpers/getNoun'
+import { getNounCodes, getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 
 const taskText = ({
@@ -22,6 +22,8 @@ const taskText = ({
     penaltyCodes,
     clues,
     numCodesToCompliteTask,
+    taskBonusForComplite,
+    subTasks,
   } = tasks[taskNum]
   const taskSecondsLeft = Math.floor(getSecondsBetween(startTaskTime))
 
@@ -72,7 +74,24 @@ const taskText = ({
         )}`
   }`}${
     game.type === 'photo'
-      ? ''
+      ? `\n\n<b>За выполнение основного задания</b>: ${getNounPoints(
+          taskBonusForComplite || 0
+        )}\n\n<b>Доп. задания</b>:${
+          !subTasks?.length
+            ? ' отсутствуют'
+            : `\n${
+                subTasks.length > 0
+                  ? subTasks
+                      .map(
+                        ({ name, task, bonus }) =>
+                          `"${name}" - ${getNounPoints(
+                            bonus
+                          )}\n<blockquote>${task}</blockquote>`
+                      )
+                      .join('')
+                  : ''
+              }`
+        }`
       : `\n\n<b>Количество кодов на локации:</b> ${codes?.length ?? 0}${
           numCodesToCompliteTask
             ? `\n<b>Количество кодов необходимое для выполнения задания:</b> ${numCodesToCompliteTask}`
