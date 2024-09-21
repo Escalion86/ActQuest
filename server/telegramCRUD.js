@@ -151,7 +151,6 @@ export default async function telegramCRUD(req, res, domen = 'krsk') {
     try {
       // console.log(body)
       await dbConnect(domen)
-      console.log('body :>> ', body)
       if (body?.callback_query) {
         // Принимаем команду
         // console.log('callback_body :>> ', body)

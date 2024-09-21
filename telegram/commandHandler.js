@@ -21,6 +21,8 @@ const commandHandler = async ({
   messageId,
   callback_query,
   photo,
+  video,
+  document,
   domen,
   location,
   date,
@@ -71,9 +73,16 @@ const commandHandler = async ({
             domen,
           })
         }
+        console.log('photo :>> ', photo)
 
         const isPhoto = Boolean(
           typeof photo === 'object' && photo[photo.length - 1]?.file_id
+        )
+        const isVideo = Boolean(
+          typeof video === 'object' && video[video.length - 1]?.file_id
+        )
+        const isDocument = Boolean(
+          typeof document === 'object' && document[document.length - 1]?.file_id
         )
         // Если отправлено сообщение
         if (!jsonCommand) {

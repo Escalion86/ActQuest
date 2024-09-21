@@ -63,6 +63,8 @@ const messageHandler = async (body, res, domen) => {
           // location,
           // date,
           user,
+          video,
+          document,
         }
         // from.id,
         // text,
