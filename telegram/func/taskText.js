@@ -74,7 +74,7 @@ const taskText = ({
         )}`
   }`}${
     game.type === 'photo'
-      ? `\n\n<b>Бонус за выполнение основного задания</b>: ${getNounPoints(
+      ? `\n\n<b>За выполнение основного задания</b>: ${getNounPoints(
           taskBonusForComplite || 0
         )}\n\n<b>Доп. задания</b>:${
           subTasks?.length
