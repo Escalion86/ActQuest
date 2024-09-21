@@ -77,7 +77,7 @@ const taskText = ({
       ? `\n\n<b>За выполнение основного задания</b>: ${getNounPoints(
           taskBonusForComplite || 0
         )}\n\n<b>Доп. задания</b>:${
-          subTasks?.length
+          !subTasks?.length
             ? ' отсутствуют'
             : `\n${
                 subTasks.length > 0
