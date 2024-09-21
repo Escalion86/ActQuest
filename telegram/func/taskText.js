@@ -64,15 +64,7 @@ const taskText = ({
             : ''
         }`
       : ''
-  }${`\n\n${
-    cluesDuration > 0 && showCluesNum < clues?.length
-      ? `<b>Время до подсказки</b>: ${secondsToTime(
-          cluesDuration - (taskSecondsLeft % cluesDuration)
-        )}`
-      : `<b>Время до завершения задания</b>: ${secondsToTime(
-          taskDuration - taskSecondsLeft
-        )}`
-  }`}${
+  }${
     game.type === 'photo'
       ? `\n\n<b>За выполнение основного задания</b>: ${getNounPoints(
           taskBonusForComplite || 0
@@ -131,6 +123,14 @@ const taskText = ({
     game.type === 'photo' && photos && photos[taskNum]?.photos?.length > 0
       ? `\n\n<b>Получено фото-ответов</b>: ${photos[taskNum]?.photos.length} шт.`
       : ''
+  }\n\n${
+    cluesDuration > 0 && showCluesNum < clues?.length
+      ? `<b>Время до подсказки</b>: ${secondsToTime(
+          cluesDuration - (taskSecondsLeft % cluesDuration)
+        )}`
+      : `<b>Время до завершения задания</b>: ${secondsToTime(
+          taskDuration - taskSecondsLeft
+        )}`
   }\n\n<b>${game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'}</b>`
 }
 
