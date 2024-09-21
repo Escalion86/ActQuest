@@ -23,6 +23,7 @@ const taskText = ({
     clues,
     numCodesToCompliteTask,
     taskBonusForComplite,
+    subTasks,
   } = tasks[taskNum]
   const taskSecondsLeft = Math.floor(getSecondsBetween(startTaskTime))
 
@@ -73,9 +74,24 @@ const taskText = ({
         )}`
   }`}${
     game.type === 'photo'
-      ? `\n<b>Бонус за выполнение задания</b>: ${getNounPoints(
+      ? `\n<b>Бонус за выполнение основного задания</b>: ${getNounPoints(
           taskBonusForComplite || 0
-        )}`
+        )}\n\n<b>Доп. задания</b>:${
+          subTasks?.length
+            ? ' отсутствуют'
+            : `\n${
+                subTasks.length > 0
+                  ? subTasks
+                      .map(
+                        ({ name, task, bonus }) =>
+                          `"${name}" - ${getNounPoints(
+                            bonus
+                          )}\n<blockquote>${task}</blockquote>`
+                      )
+                      .join('')
+                  : ''
+              }`
+        }`
       : `\n<b>Количество кодов на локации:</b> ${codes?.length ?? 0}${
           numCodesToCompliteTask
             ? `\n<b>Количество кодов необходимое для выполнения задания:</b> ${numCodesToCompliteTask}`
