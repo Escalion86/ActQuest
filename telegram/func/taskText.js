@@ -14,7 +14,6 @@ const taskText = ({
   taskDuration = 3600,
   photos,
 }) => {
-  console.log('photos :>> ', photos)
   const { tasks } = game
   const {
     task,
@@ -110,8 +109,8 @@ const taskText = ({
         )}"\n\nОсталось найти ${getNounCodes(numOfCodesToFindLeft)}`
       : ''
   }${
-    game.type === 'photo' && photos && photos[taskNum]?.length > 0
-      ? `\n\n<b>Получено фото-ответов</b>: ${photos[taskNum].length} шт.`
+    game.type === 'photo' && photos && photos[taskNum]?.photos?.length > 0
+      ? `\n\n<b>Получено фото-ответов</b>: ${photos[taskNum]?.photos.length} шт.`
       : ''
   }\n\n<b>${game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'}</b>`
 }
