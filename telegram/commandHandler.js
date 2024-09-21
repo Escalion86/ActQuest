@@ -88,10 +88,13 @@ const commandHandler = async ({
         if (!jsonCommand) {
           jsonCommand = {
             ...Object.fromEntries(last.command),
-            message:
-              typeof photo === 'object'
-                ? photo[photo.length - 1]?.file_id
-                : message,
+            message: isPhoto
+              ? photo[photo.length - 1]?.file_id
+              : isVideo
+              ? video?.file_id
+              : isDocument
+              ? document?.file_id
+              : message,
             isPhoto,
             isVideo,
             isDocument,
