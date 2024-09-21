@@ -74,7 +74,7 @@ const taskText = ({
         )}`
   }`}${
     game.type === 'photo'
-      ? `\n<b>Бонус за выполнение основного задания</b>: ${getNounPoints(
+      ? `\n\n<b>Бонус за выполнение основного задания</b>: ${getNounPoints(
           taskBonusForComplite || 0
         )}\n\n<b>Доп. задания</b>:${
           subTasks?.length
@@ -92,7 +92,7 @@ const taskText = ({
                   : ''
               }`
         }`
-      : `\n<b>Количество кодов на локации:</b> ${codes?.length ?? 0}${
+      : `\n\n<b>Количество кодов на локации:</b> ${codes?.length ?? 0}${
           numCodesToCompliteTask
             ? `\n<b>Количество кодов необходимое для выполнения задания:</b> ${numCodesToCompliteTask}`
             : ''
