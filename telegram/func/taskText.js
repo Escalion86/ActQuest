@@ -109,8 +109,8 @@ const taskText = ({
         )}"\n\nОсталось найти ${getNounCodes(numOfCodesToFindLeft)}`
       : ''
   }\n\n${
-    game.type === 'photo' && photos?.length > 0
-      ? `<b>Получено фото-ответов</b>: ${photos?.length} шт.`
+    game.type === 'photo' && photos && photos[taskNum]?.length > 0
+      ? `<b>Получено фото-ответов</b>: ${photos[taskNum].length} шт.`
       : ''
   }\n\n<b>${game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'}</b>`
 }
