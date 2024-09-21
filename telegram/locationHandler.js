@@ -40,15 +40,26 @@ const locationHandler = async (
   const user = await checkUserData(from.id, undefined, domen)
   if (user)
     return await commandHandler(
-      from.id,
-      undefined,
-      message_id,
-      undefined,
-      undefined,
-      domen,
-      location,
-      edit_date ? edit_date : date,
-      user
+      {
+        userTelegramId: from.id,
+        // message,
+        messageId: message_id,
+        // callback_query,
+        // photo,
+        domen,
+        location,
+        date: edit_date ? edit_date : date,
+        user,
+      }
+      // from.id,
+      // undefined,
+      // message_id,
+      // undefined,
+      // undefined,
+      // domen,
+      // location,
+      // edit_date ? edit_date : date,
+      // user
     )
 }
 

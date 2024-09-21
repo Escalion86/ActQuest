@@ -12,6 +12,7 @@ const taskText = ({
   startTaskTime,
   cluesDuration = 1200,
   taskDuration = 3600,
+  photos,
 }) => {
   const { tasks } = game
   const {
@@ -48,7 +49,7 @@ const taskText = ({
   return `<b>Задание №${
     taskNum + 1
   }:</b>\n<blockquote>${task}</blockquote>${cluesText}${
-    haveBonusCodes || havePenaltyCodes
+    game.type !== 'photo' && (haveBonusCodes || havePenaltyCodes)
       ? `\n\n<b>Внимание:</b> На месте есть ${
           haveBonusCodes && havePenaltyCodes
             ? `бонусные (${bonusCodes.length} шт.) и штрафные (${penaltyCodes.length} шт.)`
@@ -78,7 +79,9 @@ const taskText = ({
             : ''
         }`
   }${
-    findedBonusCodes && findedBonusCodes[taskNum]?.length > 0
+    game.type !== 'photo' &&
+    findedBonusCodes &&
+    findedBonusCodes[taskNum]?.length > 0
       ? `\n\n<b>Найденые бонусные коды:</b>\n${bonusCodes
           .filter(({ code }) => findedBonusCodes[taskNum].includes(code))
           .map(
@@ -88,7 +91,9 @@ const taskText = ({
           .join('\n')}`
       : ''
   }${
-    findedPenaltyCodes && findedPenaltyCodes[taskNum]?.length > 0
+    game.type !== 'photo' &&
+    findedPenaltyCodes &&
+    findedPenaltyCodes[taskNum]?.length > 0
       ? `\n\n<b>Найденые штрафные коды:</b>\n${penaltyCodes
           .filter(({ code }) => findedPenaltyCodes[taskNum].includes(code))
           .map(
@@ -98,10 +103,14 @@ const taskText = ({
           .join('\n')}`
       : ''
   }${
-    findedCodes && findedCodes[taskNum]?.length > 0
+    game.type !== 'photo' && findedCodes && findedCodes[taskNum]?.length > 0
       ? `\n\n<b>Найденые коды:</b>\n"${findedCodes[taskNum].join(
           '", "'
         )}"\n\nОсталось найти ${getNounCodes(numOfCodesToFindLeft)}`
+      : ''
+  }${
+    game.type === 'photo' && photos && photos[taskNum]?.photos?.length > 0
+      ? `\n\n<b>Получено фото-ответов</b>: ${photos[taskNum]?.photos.length} шт.`
       : ''
   }\n\n<b>${game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'}</b>`
 }

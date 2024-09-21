@@ -15,17 +15,19 @@ function jsonParser(str) {
   }
 }
 
-const commandHandler = async (
+const commandHandler = async ({
   userTelegramId,
   message,
   messageId,
   callback_query,
   photo,
+  video,
+  document,
   domen,
   location,
   date,
-  user
-) => {
+  user,
+}) => {
   try {
     // Если пользователь прислал геопозицию
     if (location) {
@@ -71,19 +73,31 @@ const commandHandler = async (
             domen,
           })
         }
+        // console.log('photo :>> ', photo)
+        // console.log('video :>> ', video)
+        // console.log('document :>> ', document)
 
         const isPhoto = Boolean(
           typeof photo === 'object' && photo[photo.length - 1]?.file_id
+        )
+        const isVideo = Boolean(typeof video === 'object' && video?.file_id)
+        const isDocument = Boolean(
+          typeof document === 'object' && document?.file_id
         )
         // Если отправлено сообщение
         if (!jsonCommand) {
           jsonCommand = {
             ...Object.fromEntries(last.command),
-            message:
-              typeof photo === 'object'
-                ? photo[photo.length - 1]?.file_id
-                : message,
+            message: isPhoto
+              ? photo[photo.length - 1]?.file_id
+              : isVideo
+              ? video?.file_id
+              : isDocument
+              ? document?.file_id
+              : message,
             isPhoto,
+            isVideo,
+            isDocument,
           }
         } else {
           if (jsonCommand?.prevC && last?.prevCommand) {
