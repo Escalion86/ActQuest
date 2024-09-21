@@ -339,7 +339,14 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         cluesDuration,
         taskDuration,
       }),
-      images: jsonCommand.seePhotoAnswers ? filteredPhotos : undefined,
+      images:
+        jsonCommand.seePhotoAnswers &&
+        !jsonCommand.isPhoto &&
+        !jsonCommand.isVideo &&
+        !jsonCommand.isDocument &&
+        !jsonCommand.message
+          ? filteredPhotos
+          : undefined,
       buttons: [
         buttonRefresh,
         ...(filteredPhotos.length > 0 ? [buttonSeePhotoAnswers] : []),

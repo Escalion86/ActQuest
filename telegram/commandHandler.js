@@ -93,6 +93,8 @@ const commandHandler = async ({
                 ? photo[photo.length - 1]?.file_id
                 : message,
             isPhoto,
+            isVideo,
+            isDocument,
           }
         } else {
           if (jsonCommand?.prevC && last?.prevCommand) {
