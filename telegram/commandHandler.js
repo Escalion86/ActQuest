@@ -15,7 +15,7 @@ function jsonParser(str) {
   }
 }
 
-const commandHandler = async (
+const commandHandler = async ({
   userTelegramId,
   message,
   messageId,
@@ -24,8 +24,8 @@ const commandHandler = async (
   domen,
   location,
   date,
-  user
-) => {
+  user,
+}) => {
   try {
     // Если пользователь прислал геопозицию
     if (location) {

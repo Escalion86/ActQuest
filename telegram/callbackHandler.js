@@ -79,15 +79,26 @@ const callbackHandler = async (body, res, domen) => {
     const user = await checkUserData(from.id, undefined, domen)
     if (user)
       return await commandHandler(
-        from.id,
-        data,
-        message.message_id,
-        callback_query,
-        undefined,
-        domen,
-        undefined,
-        undefined,
-        user
+        {
+          userTelegramId: from.id,
+          message: data,
+          messageId: message.message_id,
+          callback_query,
+          // photo,
+          domen,
+          // location,
+          // date,
+          user,
+        }
+        // from.id,
+        // data,
+        // message.message_id,
+        // callback_query,
+        // undefined,
+        // domen,
+        // undefined,
+        // undefined,
+        // user
       )
   }
 }

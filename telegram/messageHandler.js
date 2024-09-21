@@ -45,22 +45,34 @@ const messageHandler = async (body, res, domen) => {
     contact,
     reply_to_message,
     document,
-    photo,
+    photo, // Если было отправлено фото
+    video, // Если было отправлено видео
   } = message
 
   if (await checkContactRecive(body?.message, domen)) {
     const user = await checkUserData(from.id, undefined, domen)
     if (user)
       return await commandHandler(
-        from.id,
-        text,
-        message_id,
-        undefined,
-        photo,
-        domen,
-        undefined,
-        undefined,
-        user
+        {
+          userTelegramId: from.id,
+          message: text,
+          messageId: message_id,
+          // callback_query,
+          photo,
+          domen,
+          // location,
+          // date,
+          user,
+        }
+        // from.id,
+        // text,
+        // message_id,
+        // undefined,
+        // photo,
+        // domen,
+        // undefined,
+        // undefined,
+        // user
       )
   }
 }
