@@ -5,7 +5,7 @@ import Teams from '@models/Teams'
 const getGameTeamsRegistredInAGame = async (gameId) => {
   const gameTeams = await GamesTeams.find({
     gameId,
-  })
+  }).lean()
 
   const teamsIds = gameTeams.map(
     (gameTeam) =>
@@ -15,7 +15,7 @@ const getGameTeamsRegistredInAGame = async (gameId) => {
 
   const teams = await Teams.find({
     _id: { $in: teamsIds },
-  })
+  }).lean()
   if (!teams || teams.length === 0) return []
 
   return teams

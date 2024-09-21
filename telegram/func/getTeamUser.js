@@ -14,7 +14,7 @@ const getTeamUser = async (id) => {
       nextCommand: `mainMenu`,
     }
 
-  const teamsUsers = await TeamsUsers.findById(id)
+  const teamsUsers = await TeamsUsers.findById(id).lean()
   if (!teamsUsers) {
     return {
       success: false,

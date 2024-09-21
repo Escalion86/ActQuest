@@ -40,19 +40,25 @@ const gamesSchema = {
       {
         title: {
           type: String,
-          required: [true, 'Введите название уровня'],
+          required: [true, 'Введите название задания'],
           default: '',
           trim: true,
         },
         task: {
           type: String,
           default: '',
+          trim: true,
+        },
+        taskBonusForComplite: {
+          type: Number,
+          default: 0,
         },
         clues: [
           {
             clue: {
               type: String,
               default: '',
+              trim: true,
             },
             images: {
               type: [String],
@@ -60,6 +66,16 @@ const gamesSchema = {
             },
           },
         ],
+        subTasks: {
+          type: [
+            {
+              name: { type: String, trim: true },
+              task: { type: String, trim: true },
+              bonus: Number,
+            },
+          ],
+          default: [],
+        },
         images: {
           type: [String],
           default: [],
@@ -150,10 +166,12 @@ const gamesSchema = {
   startingPlace: {
     type: String,
     default: '',
+    trim: true,
   },
   finishingPlace: {
     type: String,
     default: '',
+    trim: true,
   },
   result: {
     type: {
@@ -169,7 +187,7 @@ const gamesSchema = {
     default: false,
   },
   prices: {
-    type: [{ id: String, name: String, price: Number }],
+    type: [{ id: String, name: { type: String, trim: true }, price: Number }],
     default: [],
   },
 }

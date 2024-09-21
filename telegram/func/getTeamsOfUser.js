@@ -3,7 +3,9 @@ import TeamsUsers from '@models/TeamsUsers'
 // import dbConnect from '@utils/dbConnect'
 
 const getTeamsOfUser = async (userTelegramId) => {
-  const teamsUser = await TeamsUsers.find({ userTelegramId: userTelegramId })
+  const teamsUser = await TeamsUsers.find({
+    userTelegramId: userTelegramId,
+  }).lean()
   if (!teamsUser || teamsUser.length === 0) return []
 
   const teamsIds = teamsUser.map(
@@ -14,7 +16,7 @@ const getTeamsOfUser = async (userTelegramId) => {
 
   const teams = await Teams.find({
     _id: { $in: teamsIds },
-  })
+  }).lean()
 
   return teams
 }

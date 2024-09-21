@@ -168,6 +168,11 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
         hide: game.status !== 'started',
       },
       {
+        c: { c: 'gameTeamsCheckPhotos', gameId: jsonCommand.gameId },
+        text: '\u{1F4F7} Проверить присланные фотографии',
+        hide: game.status === 'active',
+      },
+      {
         url:
           'https://actquest.ru/' +
           domen +

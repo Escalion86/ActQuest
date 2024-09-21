@@ -1,3 +1,4 @@
+import { getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
@@ -29,7 +30,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
   const bonusCodes = typeof task?.bonusCodes === 'object' ? task.bonusCodes : []
 
-  const { clues } = task
+  const { clues, taskBonusForComplite, subTasks } = task
   const cluesText =
     typeof clues === 'object'
       ? clues
@@ -42,16 +43,39 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           .join('')
       : ''
 
+  const sumOfBonuses =
+    game.type === 'photo'
+      ? (taskBonusForComplite || 0) +
+        (subTasks?.length
+          ? subTasks.reduce((sum, { bonus }) => sum + (bonus || 0), 0)
+          : 0)
+      : 0
+
   return {
     // images: task.images ? task.images : undefined,
     message: `<b>Редактирование задания</b>\n"${
       task?.title
-    }"\n\n<b>Текст задания</b>:\n<blockquote>${
-      task?.task
-    }</blockquote>${cluesText}\n\n${
+    }"\n\n<b>Текст задания</b>:${
+      !task?.task ? ' [не задано]' : `\n<blockquote>${task?.task}</blockquote>`
+    }${cluesText}${
       game.type === 'photo'
-        ? ''
-        : `<b>Коды (${codes.length ?? 0} шт)</b>:\n${
+        ? `\n\n<b>Список доп. заданий</b>:${
+            !task?.subTasks?.length
+              ? ' пуст'
+              : `\n${
+                  task?.subTasks.length > 0
+                    ? task?.subTasks
+                        .map(
+                          ({ name, task, bonus }) =>
+                            `"${name}" - ${getNounPoints(
+                              bonus
+                            )}\n<blockquote>${task}</blockquote>`
+                        )
+                        .join('')
+                    : ''
+                }`
+          }`
+        : `\n\n<b>Коды (${codes.length ?? 0} шт)</b>:\n${
             codes.length > 0 ? codes.join(', ') : '[не задыны]'
           }${
             bonusCodes.length > 0
@@ -87,6 +111,14 @@ const editTask = async ({ telegramId, jsonCommand }) => {
             task.numCodesToCompliteTask ?? 'Все'
           }`
     }${
+      game.type === 'photo'
+        ? `\n\n<b>Бонус за выполнение задания</b>: ${getNounPoints(
+            task.taskBonusForComplite || 0
+          )}\n\n<b>Суммарный максимум баллов за задание</b>: ${getNounPoints(
+            sumOfBonuses
+          )}`
+        : ''
+    }${
       task.postMessage
         ? `\n\n<b>Сообщение после задания</b>:\n"${task.postMessage}"`
         : ''
@@ -116,6 +148,24 @@ const editTask = async ({ telegramId, jsonCommand }) => {
         },
         text: '\u{270F} Задание',
       },
+      {
+        c: {
+          c: 'editSubTasks',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+        },
+        text: '\u{270F} Доп. задания',
+        hide: game.type !== 'photo',
+      },
+      {
+        c: {
+          c: 'setBonusForTaskComplite',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+        },
+        text: '\u{270F} Бонус за выполнение задания',
+        hide: game.type !== 'photo',
+      },
       // {
       //   c: {
       //     c: 'setTaskI',
@@ -132,24 +182,6 @@ const editTask = async ({ telegramId, jsonCommand }) => {
         },
         text: '\u{270F} Подсказки',
       },
-      // [
-      //   {
-      //     c: {
-      //       c: 'setClue1',
-      //       gameId: jsonCommand.gameId,
-      //       i: jsonCommand.i,
-      //     },
-      //     text: '\u{270F} Подсказка №1',
-      //   },
-      //   {
-      //     c: {
-      //       c: 'setClue2',
-      //       gameId: jsonCommand.gameId,
-      //       i: jsonCommand.i,
-      //     },
-      //     text: '\u{270F} Подсказка №2',
-      //   },
-      // ],
       [
         {
           c: {

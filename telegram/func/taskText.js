@@ -4,7 +4,7 @@ import { getNounCodes } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 
 const taskText = ({
-  tasks,
+  game,
   taskNum,
   findedCodes,
   findedBonusCodes,
@@ -13,6 +13,7 @@ const taskText = ({
   cluesDuration = 1200,
   taskDuration = 3600,
 }) => {
+  const { tasks } = game
   const {
     task,
     codes,
@@ -68,10 +69,14 @@ const taskText = ({
       : `<b>Время до завершения задания</b>: ${secondsToTime(
           taskDuration - taskSecondsLeft
         )}`
-  }`}\n\n<b>Количество кодов на локации:</b> ${codes?.length ?? 0}${
-    numCodesToCompliteTask
-      ? `\n<b>Количество кодов необходимое для выполнения задания:</b> ${numCodesToCompliteTask}`
-      : ''
+  }`}${
+    game.type === 'photo'
+      ? ''
+      : `\n\n<b>Количество кодов на локации:</b> ${codes?.length ?? 0}${
+          numCodesToCompliteTask
+            ? `\n<b>Количество кодов необходимое для выполнения задания:</b> ${numCodesToCompliteTask}`
+            : ''
+        }`
   }${
     findedBonusCodes && findedBonusCodes[taskNum]?.length > 0
       ? `\n\n<b>Найденые бонусные коды:</b>\n${bonusCodes
@@ -98,7 +103,7 @@ const taskText = ({
           '", "'
         )}"\n\nОсталось найти ${getNounCodes(numOfCodesToFindLeft)}`
       : ''
-  }\n\n<b>ВВЕДИТЕ КОД</b>`
+  }\n\n<b>${game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'}</b>`
 }
 
 export default taskText

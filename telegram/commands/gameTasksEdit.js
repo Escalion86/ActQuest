@@ -1,3 +1,4 @@
+import { getNounPoints } from '@helpers/getNoun'
 import Games from '@models/Games'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
@@ -99,6 +100,19 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
   //       ]
   //     })
   //   : []
+  const sumOfBonuses =
+    game.type === 'photo'
+      ? game.tasks.reduce((sum, { taskBonusForComplite, subTasks }) => {
+          return (
+            sum +
+            (taskBonusForComplite || 0) +
+            (subTasks?.length
+              ? subTasks.reduce((sum2, { bonus }) => sum2 + (bonus || 0), 0)
+              : 0)
+          )
+        }, 0)
+      : 0
+
   const message = `<b>Редактирование заданий игры ${formatGameName(
     game
   )}</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
@@ -116,10 +130,25 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
               typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
             return `${
               game.type === 'photo' ? `\u{1F4F7}` : `\u{1F4CC}`
-            } ${numberToEmojis(index + 1)} "${task.title}"\n${
+            } ${numberToEmojis(index + 1)} "${task.title}"${
               game.type === 'photo'
-                ? ''
-                : `Коды (${codes.length ?? 0} шт): ${
+                ? ` - ${getNounPoints(
+                    task.taskBonusForComplite || 0
+                  )}\nСписок доп. заданий${
+                    !task?.subTasks?.length
+                      ? ' пуст'
+                      : `:\n${
+                          task.subTasks?.length > 0
+                            ? task.subTasks
+                                .map(
+                                  ({ name, task, bonus }) =>
+                                    `"${name}" - ${getNounPoints(bonus)}`
+                                )
+                                .join('\n')
+                            : ''
+                        }`
+                  }`
+                : `\nКоды (${codes.length ?? 0} шт): ${
                     codes.length > 0 ? codes.join(', ') : '[не заданы]'
                   }${
                     bonusCodes.length > 0
@@ -140,6 +169,10 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
           })
           .join('\n\n')
       : '[нет заданий]'
+  }${
+    game.type === 'photo'
+      ? `\n\n<b>Суммарный максимум баллов</b>: ${getNounPoints(sumOfBonuses)}`
+      : ''
   }`
 
   return {

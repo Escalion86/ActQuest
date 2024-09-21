@@ -65,7 +65,7 @@ const teamGameStart = async (gameTeamId, game) => {
   const wrongCodes = new Array(gameTasksCount).fill([])
   const findedPenaltyCodes = new Array(gameTasksCount).fill([])
   const findedBonusCodes = new Array(gameTasksCount).fill([])
-  const photos = new Array(gameTasksCount).fill([])
+  const photos = new Array(gameTasksCount).fill({ photos: [], checks: {} })
   await GamesTeams.findByIdAndUpdate(gameTeamId, {
     startTime,
     endTime,
@@ -126,17 +126,41 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
   const taskNum = activeNum ?? 0
 
   const gameType = game?.type || 'classic'
-  if (gameType === 'photo' && !jsonCommand.isPhoto) {
+
+  const buttonRefresh = [
+    {
+      c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
+      text: '\u{1F504} Обновить',
+    },
+  ]
+
+  const buttonSeePhotoAnswers = [
+    {
+      c: { seePhotoAnswers: true },
+      text: '\u{1F4F7} Посмотреть фото-ответы на задание',
+    },
+  ]
+
+  const filteredPhotos =
+    gameType === 'photo'
+      ? photos[taskNum]?.photos.filter((photo) => photo) || []
+      : []
+
+  if (gameType === 'photo' && !jsonCommand.isPhoto && jsonCommand.message) {
     return {
       message:
         `В качестве ответа на задание необходимо отправить фотографию!\n\n` +
         taskText({
-          tasks: game.tasks,
+          game,
           taskNum: taskNum,
           startTaskTime: startTime[taskNum],
           cluesDuration,
           taskDuration,
         }),
+      buttons: [
+        buttonRefresh,
+        ...(filteredPhotos.length > 0 ? [buttonSeePhotoAnswers] : []),
+      ],
       // nextCommand: 'mainMenu',
     }
   }
@@ -164,13 +188,6 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       nextCommand: 'mainMenu',
     }
   }
-
-  const buttonRefresh = [
-    {
-      c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
-      text: '\u{1F504} Обновить',
-    },
-  ]
 
   // Если задание было закончено успешно и идет перерыв
   // выдаем сообщение об остатке времени,
@@ -204,7 +221,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       })
 
       const message = taskText({
-        tasks: game.tasks,
+        game,
         taskNum: taskNum + 1,
         // findedCodes,
         // startTaskTime: startTime[activeNum + 1],
@@ -287,35 +304,46 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
   } = game.tasks[taskNum]
 
   if (gameType === 'photo') {
-    // if (!jsonCommand.isPhoto) {
-    //   return {
-    //     message: 'Неизвестная ошибка. Фото не получено. Попробуйте еще раз',
-    //   }
-    // }
     // Если получаем фото-ответ на задание
-    if (!jsonCommand.isPhoto) {
+    if (jsonCommand.isPhoto) {
+      const existedPhotos =
+        typeof photos?.length === 'number'
+          ? [...photos]
+          : new Array(gameTasksCount).fill({ photos: [], checks: {} })
+      existedPhotos[taskNum].photos.push(jsonCommand.message)
+
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+        photos: existedPhotos,
+      })
+
       return {
         message:
           'Фото-ответ получен!\nВремя на задание еще не завершилось, вы можете сделать еще снимок, удовлетворяющий максимальному числу доп. заданий\n\n' +
           taskText({
-            tasks: game.tasks,
+            game,
             taskNum: taskNum,
             startTaskTime: startTime[taskNum],
             cluesDuration,
             taskDuration,
           }),
-        images: [jsonCommand.message],
-        nextCommand: {},
+        // images: [jsonCommand.message],
+        buttons: [buttonRefresh, buttonSeePhotoAnswers],
       }
     }
+
     return {
       message: taskText({
-        tasks: game.tasks,
+        game,
         taskNum: taskNum,
         startTaskTime: startTime[taskNum],
         cluesDuration,
         taskDuration,
       }),
+      images: jsonCommand.seePhotoAnswers ? filteredPhotos : undefined,
+      buttons: [
+        buttonRefresh,
+        ...(filteredPhotos.length > 0 ? [buttonSeePhotoAnswers] : []),
+      ],
     }
   }
 
@@ -326,7 +354,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
 
     if (!code) {
       const message = taskText({
-        tasks: game.tasks,
+        game,
         taskNum,
         findedCodes,
         wrongCodes,
@@ -393,7 +421,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       return {
         images: game.tasks[taskNum]?.images,
         message: `КОД "${code}" - БОНУСНЫЙ!\n\n${taskText({
-          tasks: game.tasks,
+          game,
           taskNum: taskNum,
           findedCodes: allFindedCodes,
           findedBonusCodes: newAllFindedBonusCodes,
@@ -429,7 +457,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         message: `КОД "${code}" - ШТРАФНОЙ!\nОписание штрафа: "${
           penaltyCode.description
         }"\n\n${taskText({
-          tasks: game.tasks,
+          game,
           taskNum: taskNum,
           findedCodes: allFindedCodes,
           findedBonusCodes: allFindedBonusCodes,
@@ -558,7 +586,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
               await sendMessage({
                 chat_id: telegramId,
                 text: taskText({
-                  tasks: game.tasks,
+                  game,
                   taskNum: newActiveNum,
                   startTaskTime: startTimeTemp[newActiveNum],
                   cluesDuration,
@@ -590,7 +618,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         message: `КОД "${code}" ПРИНЯТ${
           !isTaskComplite
             ? `\n\n${taskText({
-                tasks: game.tasks,
+                game,
                 taskNum: newActiveNum,
                 findedCodes: isTaskComplite ? [] : newAllFindedCodes,
                 findedBonusCodes: isTaskComplite ? [] : allFindedBonusCodes,

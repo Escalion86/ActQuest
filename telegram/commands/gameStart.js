@@ -70,7 +70,7 @@ const gameStart = async ({ telegramId, jsonCommand, domen }) => {
     const wrongCodes = new Array(gameTasksCount).fill([])
     const findedPenaltyCodes = new Array(gameTasksCount).fill([])
     const findedBonusCodes = new Array(gameTasksCount).fill([])
-    const photos = new Array(gameTasksCount).fill([])
+    const photos = new Array(gameTasksCount).fill({ photos: [], checks: {} })
     await GamesTeams.updateMany(
       {
         gameId: jsonCommand.gameId,
@@ -127,7 +127,7 @@ const gameStart = async ({ telegramId, jsonCommand, domen }) => {
             await sendMessage({
               chat_id: telegramId,
               text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\u{26A0}\n\n\n${taskText(
-                { tasks: game.tasks, taskNum, findedCodes, cluesDuration }
+                { game, taskNum, findedCodes, cluesDuration }
               )}`,
               keyboard,
               images: game.tasks[taskNum].images,

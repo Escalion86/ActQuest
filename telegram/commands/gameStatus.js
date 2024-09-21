@@ -201,7 +201,7 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       sumTimeByAllTasks,
     }) => {
       if (isTeamFinished)
-        return `\u{2705} <b>"${
+        return `\u{1F3C1} <b>"${
           team.name
         }"</b> - завершили все задания ${dateToDateTimeStr(
           gameFinishTime,
@@ -217,8 +217,11 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       if (isTeamOnBreak) {
         const nextTask = game.tasks[startedTasks]
         const taskNumber = numberToEmojis(startedTasks + 1)
-        return `\u{1F6AC}\u{1F51C}${taskNumber} <b>"${team.name}"</b> - ${
-          breakTimeLeft <= 0
+        const isBreakExperied = breakTimeLeft <= 0
+        return `${
+          isBreakExperied ? '\u{231B}' : '\u{1F6AC}\u{1F51C}'
+        }${taskNumber} <b>"${team.name}"</b> - ${
+          isBreakExperied
             ? `Перерыв окончен\nОжидаем получение командой след. задания`
             : `Перерыв\nДо окончания перерыва ${secondsToTime(
                 breakTimeLeft
@@ -243,11 +246,24 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
       const showCluesNum =
         cluesDuration > 0 ? Math.floor(taskSecondsLeft / cluesDuration) : 0
 
-      return `\u{1F3C3}${taskNumber} <b>"${
+      const isTaskExperied = taskDuration - taskSecondsLeft < 0
+      return `${isTaskExperied ? `\u{231B}` : `\u{1F3C3}`}${taskNumber} <b>"${
         team.name
       }"</b> - задание №${startedTasks} "${task.title}"${
-        showCluesNum > 0 ? `, получена подсказка №${showCluesNum}` : ''
-      } (осталось ${secondsToTime(taskDuration - taskSecondsLeft)}).${
+        !isTaskExperied && showCluesNum > 0
+          ? `, получена подсказка №${showCluesNum}`
+          : ''
+      } - ${
+        isTaskExperied
+          ? 'время вышло. Ожижаем получение след. задания'
+          : `осталось ${secondsToTime(taskDuration - taskSecondsLeft)}`
+      }.${
+        game.type === 'photo'
+          ? `\nОтправленных фотографий - ${
+              gameTeam.photos[startedTasks - 1]?.length || 0
+            } шт.`
+          : ''
+      }${
         findedCodesCount > 0
           ? `\nНайденые коды (${findedCodesCount} шт.): "${gameTeam.findedCodes[
               startedTasks - 1

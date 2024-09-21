@@ -86,6 +86,7 @@ const executeCommand = async (
       ? nextCommand
       : { ...jsonCommand, ...nextCommand }
     delete actualCommand.message
+    delete actualCommand.isPhoto
 
     return await executeCommand(
       userTelegramId,
@@ -98,6 +99,7 @@ const executeCommand = async (
   } else {
     const actualCommand = { ...jsonCommand }
     delete actualCommand.message
+    delete actualCommand.isPhoto
     const prevCommand = await LastCommands.findOne({
       userTelegramId,
     })
