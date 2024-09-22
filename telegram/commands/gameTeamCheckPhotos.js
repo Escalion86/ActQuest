@@ -5,6 +5,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
+import numberToEmojis from 'telegram/func/numberToEmojis'
 
 const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
@@ -19,6 +20,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
   const team = await getTeam(gameTeam.teamId)
   if (team.success === false) return team
 
+  const activeNum = gameTeam?.activeNum
   const page = jsonCommand?.page ?? 1
   const buttons =
     gameTeam?.photos?.length > 0
@@ -29,12 +31,21 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
             const task = game.tasks[number - 1]
             const subTasks = task.subTasks
 
+            const isTaskFinished = activeNum > number - 1
+            const isTaskInProcessed = activeNum === number - 1
+
             const filteredPhotos = photos?.filter((photo) => photo) || []
             if (filteredPhotos?.length === 0)
               return {
-                text: `${number}. "${task.title}" - 0 фото - ?${subTasks
-                  .map(() => '?')
-                  .join('?')} - 0 б.`,
+                text: `${
+                  isTaskFinished
+                    ? `✅`
+                    : isTaskInProcessed
+                    ? `\u{1F3C3}`
+                    : '\u{23F3}'
+                }${numberToEmojis(number)} "${
+                  task.title
+                }" - 0 фото - ?${subTasks.map(() => '?').join('?')} - 0 б.`,
                 c: {
                   c: 'gameTeamCheckPhotosInTask',
                   gameTeamId: jsonCommand?.gameTeamId,
@@ -63,7 +74,13 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
               : 0
 
             return {
-              text: `${number}. "${task.title}" - ${
+              text: `${
+                isTaskFinished
+                  ? `✅`
+                  : isTaskInProcessed
+                  ? `\u{1F3C3}`
+                  : '\u{23F3}'
+              }${numberToEmojis(number)} "${task.title}" - ${
                 filteredPhotos?.length
               } фото ${
                 typeof taskAccepted !== 'boolean'

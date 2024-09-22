@@ -4,6 +4,7 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
+import numberToEmojis from 'telegram/func/numberToEmojis'
 
 const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -26,9 +27,9 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
         }).lean()
       : []
 
-  const sortedTeams = gameTeams.map(({ _id, teamId, photos }) => {
+  const sortedTeams = gameTeams.map(({ _id, teamId, photos, activeNum }) => {
     const team = teams.find(({ _id }) => String(_id) == teamId)
-    return { ...team, photos, gameTeamId: _id }
+    return { ...team, photos, gameTeamId: _id, activeNum }
   })
 
   const page = jsonCommand?.page ?? 1
@@ -37,15 +38,31 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
       ? buttonListConstructor(
           sortedTeams,
           page,
-          ({ photos, gameTeamId, name }, number) => {
+          ({ photos, gameTeamId, name, activeNum }, number) => {
+            const notAllTasksFullyChecked = game.tasks.some(
+              ({ subTasks }, i) => {
+                if (!photos[i]?.photos?.length) return false
+                const checks = photos[i]?.checks
+                return (
+                  i <= activeNum &&
+                  (!checks ||
+                    (Object.keys(checks).length || 0) !==
+                      (subTasks?.length || 0) + 1)
+                )
+              }
+            )
             return {
               text: `${number}. "${name}" - ${
                 photos?.length > 0
                   ? `${photos.reduce((sum, { photos, checks }) => {
                       const filteredPhotos = photos?.filter((photo) => photo)
                       return sum + (filteredPhotos?.length || 0)
-                    }, 0)} фото`
+                    }, 0)} фото ${notAllTasksFullyChecked ? '\u{2757}' : '✅'}`
                   : '0 фото'
+              } - ${
+                activeNum >= game.tasks.length
+                  ? `\u{1F3C1}`
+                  : `\u{1F3C3}${numberToEmojis(activeNum + 1)}`
               }`,
               c: { c: 'gameTeamCheckPhotos', gameTeamId },
             }
