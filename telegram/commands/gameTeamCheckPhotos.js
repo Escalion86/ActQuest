@@ -5,6 +5,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
+import numberToEmojis from 'telegram/func/numberToEmojis'
 
 const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
@@ -63,7 +64,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
               : 0
 
             return {
-              text: `${number}. "${task.title}" - ${
+              text: `${numberToEmojis(number)}. "${task.title}" - ${
                 filteredPhotos?.length
               } фото ${
                 typeof taskAccepted !== 'boolean'
