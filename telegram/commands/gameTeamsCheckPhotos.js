@@ -4,6 +4,7 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
+import numberToEmojis from 'telegram/func/numberToEmojis'
 
 const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -58,6 +59,10 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
                       return sum + (filteredPhotos?.length || 0)
                     }, 0)} фото ${notAllTasksFullyChecked ? '\u{2757}' : '✅'}`
                   : '0 фото'
+              } - ${
+                activeNum >= game.tasks.length
+                  ? `\u{1F3C1}`
+                  : `\u{1F3C3}${numberToEmojis(activeNum + 1)}`
               }`,
               c: { c: 'gameTeamCheckPhotos', gameTeamId },
             }
