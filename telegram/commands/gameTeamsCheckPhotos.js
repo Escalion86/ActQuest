@@ -38,13 +38,21 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
           sortedTeams,
           page,
           ({ photos, gameTeamId, name }, number) => {
+            const notAllTasksFullyChecked = game.tasks.some(({ subTasks }, i) =>
+              photos[i].some(
+                ({ checks }) =>
+                  // typeof checks?.accepted !== 'boolean' ||
+                  (Object.keys(checks).length || 0) !==
+                  (subTasks?.length || 0) + 1
+              )
+            )
             return {
               text: `${number}. "${name}" - ${
                 photos?.length > 0
                   ? `${photos.reduce((sum, { photos, checks }) => {
                       const filteredPhotos = photos?.filter((photo) => photo)
                       return sum + (filteredPhotos?.length || 0)
-                    }, 0)} фото`
+                    }, 0)} фото ${notAllTasksFullyChecked ? '\u{2757}' : '✅'}`
                   : '0 фото'
               }`,
               c: { c: 'gameTeamCheckPhotos', gameTeamId },
