@@ -26,9 +26,9 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
         }).lean()
       : []
 
-  const sortedTeams = gameTeams.map(({ _id, teamId, photos }) => {
+  const sortedTeams = gameTeams.map(({ _id, teamId, photos, activeNum }) => {
     const team = teams.find(({ _id }) => String(_id) == teamId)
-    return { ...team, photos, gameTeamId: _id }
+    return { ...team, photos, gameTeamId: _id, activeNum }
   })
 
   const page = jsonCommand?.page ?? 1
