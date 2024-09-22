@@ -40,6 +40,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
           ({ photos, gameTeamId, name, activeNum }, number) => {
             const notAllTasksFullyChecked = game.tasks.some(
               ({ subTasks }, i) => {
+                if (!photos[i]?.photos?.length) return false
                 const checks = photos[i]?.checks
                 return (
                   i <= activeNum &&
