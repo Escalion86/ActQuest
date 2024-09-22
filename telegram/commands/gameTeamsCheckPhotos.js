@@ -39,13 +39,15 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
           page,
           ({ photos, gameTeamId, name }, number) => {
             console.log('photos :>> ', photos)
-            const notAllTasksFullyChecked = game.tasks.some(({ subTasks }, i) =>
-              photos[i].some(
-                ({ checks }) =>
-                  // typeof checks?.accepted !== 'boolean' ||
-                  (Object.keys(checks).length || 0) !==
-                  (subTasks?.length || 0) + 1
-              )
+            const notAllTasksFullyChecked = game.tasks.some(
+              ({ subTasks }, i) =>
+                !photos[i] ||
+                photos[i].some(
+                  ({ checks }) =>
+                    // typeof checks?.accepted !== 'boolean' ||
+                    (Object.keys(checks).length || 0) !==
+                    (subTasks?.length || 0) + 1
+                )
             )
             return {
               text: `${number}. "${name}" - ${
