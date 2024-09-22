@@ -42,7 +42,8 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
               ({ subTasks }, i) => {
                 console.log('activeNum :>> ', activeNum)
                 console.log('i :>> ', i)
-                console.log('!photos[i] :>> ', !photos[i])
+                // console.log('!photos[i] :>> ', !photos[i])
+                if (photos[i]) console.log('photos[i] :>> ', photos[i])
                 return (
                   i <= activeNum &&
                   (!photos[i] ||
