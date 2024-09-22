@@ -34,9 +34,15 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
             const filteredPhotos = photos?.filter((photo) => photo) || []
             if (filteredPhotos?.length === 0)
               return {
-                text: `${number}. "${task.title}" - 0 фото - ?${subTasks
-                  .map(() => '?')
-                  .join('?')} - 0 б.`,
+                text: `${
+                  isTaskFinished
+                    ? `✅`
+                    : isTaskInProcessed
+                    ? `\u{1F3C3}`
+                    : '\u{23F3}'
+                }${numberToEmojis(number)} "${
+                  task.title
+                }" - 0 фото - ?${subTasks.map(() => '?').join('?')} - 0 б.`,
                 c: {
                   c: 'gameTeamCheckPhotosInTask',
                   gameTeamId: jsonCommand?.gameTeamId,
