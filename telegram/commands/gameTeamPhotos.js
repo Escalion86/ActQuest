@@ -29,7 +29,7 @@ const gameTeamPhotos = async ({ telegramId, jsonCommand }) => {
     images: allPhotos,
     buttons: [
       {
-        c: { c: 'gameTeamsPhotos', gameId: String(game._id) },
+        c: { c: 'gamePhotos', gameId: String(game._id) },
         text: '\u{2B05} Назад',
       },
     ],
