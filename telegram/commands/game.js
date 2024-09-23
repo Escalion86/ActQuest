@@ -1,4 +1,5 @@
 import { getNounPoints } from '@helpers/getNoun'
+import isUserAdmin from '@helpers/isUserAdmin'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import GamesTeams from '@models/GamesTeams'
 import Users from '@models/Users'
@@ -9,12 +10,14 @@ import getGameTeamsRegistredInAGame from 'telegram/func/getGameTeamsRegistredInA
 import getTeamOfUserRegistredInAGame from 'telegram/func/getTeamOfUserRegistredInAGame'
 import getTeamsUserOfUser from 'telegram/func/getTeamsUserOfUser'
 
-const game = async ({ telegramId, jsonCommand, domen }) => {
+const game = async ({ telegramId, user, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
+
+  const isAdmin = isUserAdmin(user)
 
   const teamsOfUserInAGame = await getTeamOfUserRegistredInAGame(
     telegramId,
@@ -182,6 +185,14 @@ const game = async ({ telegramId, jsonCommand, domen }) => {
         c: { c: 'gameTeams', gameId: jsonCommand.gameId },
         text: '\u{1F465} Зарегистрированные команды',
         hide: game.status === 'finished',
+      },
+      {
+        c: { c: 'gamePhotos', gameId: jsonCommand.gameId },
+        text: '\u{1F4F7} Посмотреть фото-ответы на игре',
+        hide:
+          game.type !== 'photo' ||
+          game.status !== 'finished' ||
+          !(isAdmin || teamsOfUserInAGame.length > 0),
       },
       { c: 'menuGames', text: '\u{2B05} Назад' },
     ],

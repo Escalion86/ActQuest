@@ -22,13 +22,13 @@ const gameTeam = async ({ telegramId, jsonCommand }) => {
   const teamUsers = await TeamsUsers.find({
     // userTelegramId: telegramId,
     teamId: String(team._id),
-  })
+  }).lean()
 
   const usersTelegramIds = teamUsers.map((teamUser) => teamUser.userTelegramId)
 
   const users = await Users.find({
     telegramId: { $in: usersTelegramIds },
-  })
+  }).lean()
 
   const capitanTelegramId = teamUsers.find(
     (teamUser) => teamUser.role === 'capitan'

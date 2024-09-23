@@ -8,7 +8,7 @@ import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 
-const gameTeams = async ({ telegramId, jsonCommand }) => {
+const gamePhotos = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -38,18 +38,18 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
     const gameTeam = gameTeams.find(
       (gameTeam) => gameTeam.teamId === String(team._id)
     )
+    const sumPhotos = gameTeam.photos.reduce(
+      (sum, { photos }) => sum + (photos?.length || 0),
+      0
+    )
     return {
-      text: `${number}. "${team.name}"`,
-      c: { c: 'gameTeam', gameTeamId: gameTeam._id },
+      text: `"${team.name}" - ${sumPhotos} фото`,
+      c: { c: 'gameTeamPhotos', gameTeamId: gameTeam._id },
     }
   })
 
   return {
-    message: `На игру <b>${formatGameName(
-      game
-    )}</b> зарегистрировано ${getNounTeams(teams.length)} (${
-      teamsUsers.length
-    } чел.)\n${teams
+    message: `Выберите команду, фотографии которой хотите посмотреть\n${teams
       .map(
         (team, index) =>
           `\n${index + 1}. "${team.name}" (${
@@ -65,4 +65,4 @@ const gameTeams = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default gameTeams
+export default gamePhotos
