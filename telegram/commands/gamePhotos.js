@@ -33,8 +33,7 @@ const gamePhotos = async ({ telegramId, jsonCommand }) => {
 
   const teamsUsers = await TeamsUsers.find({ teamId: { $in: teamsIds } }).lean()
 
-  const page = jsonCommand?.page ?? 1
-  const buttons = buttonListConstructor(teams, page, (team, number) => {
+  const teamsWithSumPhotos = teams.map((team) => {
     const gameTeam = gameTeams.find(
       (gameTeam) => gameTeam.teamId === String(team._id)
     )
@@ -43,19 +42,27 @@ const gamePhotos = async ({ telegramId, jsonCommand }) => {
       0
     )
     return {
-      text: `"${team.name}" - ${sumPhotos} фото`,
-      c: { c: 'gameTeamPhotos', gameTeamId: gameTeam._id },
+      ...team,
+      sumPhotos,
+      gameTeamId: gameTeam?._id,
     }
   })
 
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(
+    teamsWithSumPhotos,
+    page,
+    ({ name, sumPhotos, gameTeamId }, number) => ({
+      text: `"${name}" - ${sumPhotos} фото`,
+      c: { c: 'gameTeamPhotos', gameTeamId },
+    })
+  )
+
   return {
-    message: `Выберите команду, фотографии которой хотите посмотреть\n${teams
+    message: `Выберите команду, фотографии которой хотите посмотреть\n${teamsWithSumPhotos
       .map(
-        (team, index) =>
-          `\n${index + 1}. "${team.name}" (${
-            teamsUsers.filter(({ teamId }) => teamId === String(team._id))
-              .length
-          } чел.)`
+        ({ name, sumPhotos, gameTeamId }, index) =>
+          `\n"${name}" - ${sumPhotos} фото`
       )
       .join('')}`,
     buttons: [
