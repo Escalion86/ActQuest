@@ -59,12 +59,7 @@ const gamePhotos = async ({ telegramId, jsonCommand }) => {
   )
 
   return {
-    message: `Выберите команду, фотографии которой хотите посмотреть\n${teamsWithSumPhotos
-      .map(
-        ({ name, sumPhotos, gameTeamId }, index) =>
-          `\n"${name}" - ${sumPhotos} фото`
-      )
-      .join('')}`,
+    message: `Выберите команду, фотографии которой хотите посмотреть`,
     buttons: [
       ...buttons,
       { c: { c: 'game', gameId: jsonCommand?.gameId }, text: '\u{2B05} Назад' },
