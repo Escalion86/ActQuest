@@ -145,7 +145,7 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
       game
     )}</b> у команды "<b>${
       team.name
-    }</b>"\n\n<b>Суммарный результат за задание</b>: ${getNounPoints(
+    }</b>"\n\n<b>Суммарный максимум за задание</b>: ${getNounPoints(
       sumResult
     )}`,
     buttons: [
