@@ -121,9 +121,9 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
     images: jsonCommand?.taskAcceptChange ? undefined : photos,
     message: `Проверка фотографий в игре <b>${formatGameName(
       game
-    )}</b> у команды "<b>${
-      team.name
-    }</b>"\n\n<b>Бонус за выполнение задания</b>: ${getNounPoints(
+    )}</b> у команды "<b>${team.name}</b>"\n\n<b>Текст задания</b>:${
+      !task?.task ? ' [не задано]' : `\n<blockquote>${task?.task}</blockquote>`
+    }\n\n<b>Бонус за выполнение задания</b>: ${getNounPoints(
       task.taskBonusForComplite || 0
     )} ${
       typeof taskAccepted === 'boolean' ? (taskAccepted ? '✅' : '❌') : '?'
@@ -150,9 +150,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
           }`
     }\n\n<b>Отправлено фото-ответов на задание</b>: ${
       photos.length
-    } шт.\n\n<b>Суммарный результат за задание</b>: ${getNounPoints(
-      sumResult
-    )}`,
+    } шт.\n\n<b>Суммарный максимум за задание</b>: ${getNounPoints(sumResult)}`,
     buttons: [
       {
         text: `Основное задание - ${
