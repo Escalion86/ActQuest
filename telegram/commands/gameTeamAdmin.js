@@ -65,7 +65,7 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user }) => {
             } ${secondsToTimeStr(Math.abs(time), true)} - ${name}`
           })
         : ' отсутвуют'
-    }`,
+    }\n\nID команды: <code>${team?._id}</code>`,
     buttons: [
       ...buttons,
       {
