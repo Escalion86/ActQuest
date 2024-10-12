@@ -1,6 +1,7 @@
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 import UsersGamesPayments from '@models/UsersGamesPayments'
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
@@ -50,7 +51,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
   }
 
   const usersOfTeamWithRole = await getUsersOfTeamWithRole(gameTeam.teamId)
-  console.log('usersOfTeamWithRole :>> ', usersOfTeamWithRole)
+
   const usersTelegramIds = usersOfTeamWithRole.map(
     (user) => user.userTelegramId
   )
