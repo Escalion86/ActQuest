@@ -138,7 +138,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
             payments.length > 1 ? '' : ` (${payments.length})`
           }`
       )
-      .join('\n')}\nСуммарно оплачено: ${usersWithPayments.reduce(
+      .join('\n')}\n\n<b>Суммарно оплачено</b>: ${usersWithPayments.reduce(
       (acc, { paymentsSum }) => acc + paymentsSum,
       0
     )} руб.`,
