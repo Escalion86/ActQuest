@@ -103,6 +103,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
     const payments = paymentsOfUsers.filter(
       (payment) => payment.userTelegramId === user.telegramId
     )
+    console.log('user.telegramId :>> ', user.telegramId)
     if (user.telegramId === '568705885') {
       console.log('payments :>> ', payments)
     }
