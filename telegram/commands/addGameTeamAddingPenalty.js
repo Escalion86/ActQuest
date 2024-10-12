@@ -1,9 +1,7 @@
 import GamesTeams from '@models/GamesTeams'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
-// import dbConnect from '@utils/dbConnect'
 import check from 'telegram/func/check'
 import getGameTeam from 'telegram/func/getGameTeam'
-// import { v4 as uuidv4 } from 'uuid'
 
 const cancelButton = (jsonCommand) => ({
   c: { c: 'gameTeamAddings', gameTeamId: jsonCommand.gameTeamId },

@@ -1,10 +1,7 @@
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
-// import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
-// import dbConnect from '@utils/dbConnect'
 import formatGameName from 'telegram/func/formatGameName'
-// import mainMenuButton from './menuItems/mainMenuButton'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import isUserAdmin from '@helpers/isUserAdmin'
 
@@ -42,7 +39,7 @@ const archiveGames = async ({ telegramId, jsonCommand, user }) => {
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(filteredGames, page, (game, number) => {
-    // TODO поправить вывод зарегистрированных команд пользователя на угру
+    // TODO поправить вывод зарегистрированных команд пользователя на игру
     // const gameTeam = gamesTeams.find((gameTeam) => {
     //   return gameTeam.gameId === String(game._id)
     // })
