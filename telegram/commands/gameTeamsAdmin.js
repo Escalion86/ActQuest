@@ -62,7 +62,6 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
     userTelegramId: { $in: usersTelegramIds },
     gameId: jsonCommand.gameId,
   }).lean()
-  console.log('paymentsOfUsers :>> ', paymentsOfUsers)
 
   const sortedTeams = gameTeams.map(({ _id, teamId, timeAddings }) => {
     const team = teams.find(({ _id }) => String(_id) == teamId)
@@ -73,7 +72,6 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
     const paymentsOfTeam = paymentsOfUsers.filter(({ userTelegramId }) =>
       teamUsersIds.includes(userTelegramId)
     )
-    console.log('paymentsOfTeam :>> ', paymentsOfTeam)
     const sumOfPayments = paymentsOfTeam.reduce((acc, { sum }) => acc + sum, 0)
     const timeAdding =
       timeAddings?.length > 0
