@@ -6,6 +6,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
+import getUser from 'telegram/func/getUser'
 import getUsersOfTeamWithRole from 'telegram/func/getUsersOfTeam'
 
 const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
@@ -21,6 +22,34 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
   const team = await getTeam(gameTeam.teamId)
   if (team.success === false) return team
 
+  // Если смотрим оплату участника команды
+  if (jsonCommand.userTelegramId) {
+    const user = await Users.findOne({
+      telegramId: jsonCommand.userTelegramId,
+    }).lean()
+    const paymentsOfUser = await UsersGamesPayments.find({
+      userId: jsonCommand.userTelegramId,
+      gameId: gameTeam.gameId,
+    }).lean()
+
+    return {
+      message: `<b>Игра ${formatGameName(game)}\n\nКоманда "${
+        team?.name
+      }"</b>\n\n<b>Участник</b>: ${
+        user.name
+      }\n\nОплачено: ${paymentsOfUser.reduce(
+        (acc, payment) => acc + payment.sum,
+        0
+      )} руб.`,
+      buttons: [
+        {
+          c: { userTelegramId: null },
+          text: '\u{2B05} Назад',
+        },
+      ],
+    }
+  }
+
   const usersOfTeamWithRole = getUsersOfTeamWithRole(gameTeam.teamId)
 
   const usersTelegramIds = usersOfTeamWithRole.map(
@@ -34,7 +63,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
 
   const usersWithPayments = usersOfTeamWithRole.map((user) => {
     const payment = paymentsOfUsers.find(
-      (payment) => payment.userTelegramId === user.userTelegramId
+      (payment) => payment.userTelegramId === user.telegramId
     )
     return {
       ...user,
@@ -42,18 +71,31 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
     }
   })
 
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(
+    usersWithPayments,
+    page,
+    ({ name, role, payment, telegramId }, number) => ({
+      text: ` - ${name}${role === 'captain' ? ' (капитан)' : ''} - ${
+        payment || 0
+      } руб.`,
+      c: { userTelegramId: telegramId },
+    })
+  )
+
   return {
     message: `<b>Игра ${formatGameName(game)}\n\nКоманда "${
       team?.name
     }"</b>\n\n<b>Состав команды</b>:\n${usersWithPayments
       .map(
-        (user) =>
-          ` - ${user.name}${
-            user.role === 'captain' ? ' (капитан)' : ''
-          } - оплачено: ${user.payment || 0} руб.`
+        ({ name, role, payment }) =>
+          ` - ${name}${role === 'captain' ? ' (капитан)' : ''} - ${
+            payment || 0
+          } руб.`
       )
       .join('\n')}`,
     buttons: [
+      ...buttons,
       {
         c: { c: 'gameTeamAdmin', gameTeamId: jsonCommand.gameTeamId },
         text: '\u{2B05} Назад',
