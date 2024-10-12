@@ -49,8 +49,8 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const usersOfTeamWithRole = getUsersOfTeamWithRole(gameTeam.teamId)
-
+  const usersOfTeamWithRole = await getUsersOfTeamWithRole(gameTeam.teamId)
+  console.log('usersOfTeamWithRole :>> ', usersOfTeamWithRole)
   const usersTelegramIds = usersOfTeamWithRole.map(
     (user) => user.userTelegramId
   )
