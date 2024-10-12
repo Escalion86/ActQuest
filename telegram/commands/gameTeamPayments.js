@@ -23,7 +23,6 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
   if (team.success === false) return team
 
   // Если смотрим оплату участника команды
-  console.log('jsonCommand :>> ', jsonCommand)
   if (jsonCommand.userTelegramId) {
     if (jsonCommand.delPaymentId) {
       await UsersGamesPayments.deleteOne({ _id: jsonCommand.delPaymentId })
