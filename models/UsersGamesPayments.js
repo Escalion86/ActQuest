@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import usersGamesPaymentsSchema from '@schemas/usersGamesPaymentSchema'
+import usersGamesPaymentsSchema from '@schemas/usersGamesPaymentsSchema'
 import mongooseLeanDefaults from 'mongoose-lean-defaults'
 
 const UsersGamesPaymentsSchema = new mongoose.Schema(usersGamesPaymentsSchema, {
