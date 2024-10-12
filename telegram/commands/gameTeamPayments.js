@@ -24,14 +24,14 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
 
   // Если смотрим оплату участника команды
   if (jsonCommand.userTelegramId) {
-    if (delPaymentId) {
+    if (jsonCommand.delPaymentId) {
       await UsersGamesPayments.deleteOne({ _id: delPaymentId })
       return {
         message: `Оплата удалена`,
         nextCommand: { delPaymentId: null },
       }
     }
-    if (addPayments) {
+    if (jsonCommand.addPayments) {
       return {
         message: `Введите сумму оплаты`,
       }
