@@ -116,7 +116,9 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
             teamUsers.length
           } чел.) - ${sumOfPayments} руб.`
       )
-      .join('')}\n\n<b>Суммарно оплачено</b>: ${sortedTeams.reduce(
+      .join(
+        ''
+      )}\n\n<b>Суммарно оплачено всеми командами</b>: ${sortedTeams.reduce(
       (acc, { sumOfPayments }) => acc + sumOfPayments,
       0
     )} руб.`,

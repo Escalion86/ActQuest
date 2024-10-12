@@ -71,7 +71,7 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user }) => {
             } ${secondsToTimeStr(Math.abs(time), true)} - ${name}`
           })
         : ' отсутвуют'
-    }\n\n<b>Суммарно оплачено</b>: ${paymentsOfUsers.reduce(
+    }\n\n<b>Суммарно оплачено командой</b>: ${paymentsOfUsers.reduce(
       (acc, { sum }) => acc + sum,
       0
     )} руб.\n\nID команды: <code>${team?._id}</code>`,
