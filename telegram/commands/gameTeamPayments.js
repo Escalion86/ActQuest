@@ -101,9 +101,10 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
   }).lean()
 
   const usersWithPayments = usersOfTeamWithRole.map((user) => {
-    const payments = paymentsOfUsers.find(
-      (payment) => payment.userTelegramId === user.telegramId
-    )
+    const payments =
+      paymentsOfUsers.find(
+        (payment) => payment.userTelegramId === user.telegramId
+      ) || []
     return {
       ...user,
       payments,
@@ -115,7 +116,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
     usersWithPayments,
     page,
     ({ name, role, payments, telegramId }, number) => {
-      const payment = payments.reduce((acc, payment) => acc + payment.sum, 0)
+      const payment = payments.reduce((acc, { sum }) => acc + sum, 0)
       return {
         text: `${name}${role === 'captain' ? ' (капитан)' : ''} - ${
           payment || 0
