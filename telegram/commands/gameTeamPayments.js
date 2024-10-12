@@ -101,12 +101,12 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
   }).lean()
 
   const usersWithPayments = usersOfTeamWithRole.map((user) => {
-    const payment = paymentsOfUsers.find(
+    const payments = paymentsOfUsers.find(
       (payment) => payment.userTelegramId === user.telegramId
     )
     return {
       ...user,
-      payment,
+      payments,
     }
   })
 
@@ -114,12 +114,15 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
   const buttons = buttonListConstructor(
     usersWithPayments,
     page,
-    ({ name, role, payment, telegramId }, number) => ({
-      text: `${name}${role === 'captain' ? ' (капитан)' : ''} - ${
-        payment || 0
-      } руб.`,
-      c: { userTelegramId: telegramId },
-    })
+    ({ name, role, payments, telegramId }, number) => {
+      const payment = payments.reduce((acc, payment) => acc + payment.sum, 0)
+      return {
+        text: `${name}${role === 'captain' ? ' (капитан)' : ''} - ${
+          payment || 0
+        } руб.${payments.langth > 1 ? '' : ` (${payments.length})`}`,
+        c: { userTelegramId: telegramId },
+      }
+    }
   )
 
   return {
