@@ -29,10 +29,21 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
       await UsersGamesPayments.deleteOne({ _id: jsonCommand.delPaymentId })
       return {
         message: `Оплата удалена`,
-        nextCommand: { delPaymentId: null },
+        nextCommand: { delPaymentId: null, page2: null },
       }
     }
     if (jsonCommand.addPayment) {
+      if (jsonCommand.message) {
+        const payment = await UsersGamesPayments.create({
+          userTelegramId: jsonCommand.userTelegramId,
+          gameId: gameTeam.gameId,
+          sum: parseInt(jsonCommand.message),
+        })
+        return {
+          message: `Оплата добавлена`,
+          nextCommand: { addPayment: null, page2: null },
+        }
+      }
       return {
         message: `Введите сумму оплаты`,
       }
