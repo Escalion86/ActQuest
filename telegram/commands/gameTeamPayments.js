@@ -6,8 +6,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
-import getUser from 'telegram/func/getUser'
-import getUsersOfTeamWithRole from 'telegram/func/getUsersOfTeam'
+import getUsersOfTeamWithRole from 'telegram/func/getUsersOfTeamWithRole'
 
 const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
