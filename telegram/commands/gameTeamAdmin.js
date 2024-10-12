@@ -2,6 +2,7 @@ import isUserAdmin from '@helpers/isUserAdmin'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
+import UsersGamesPayments from '@models/UsersGamesPayments'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
@@ -39,6 +40,11 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user }) => {
     (teamUser) => teamUser.role === 'capitan'
   )?.userTelegramId
 
+  const paymentsOfUsers = await UsersGamesPayments.find({
+    userTelegramId: { $in: usersTelegramIds },
+    gameId: gameTeam.gameId,
+  }).lean()
+
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(users, page, (user, number) => ({
     text: `\u{1F4AC} ${user.name}${
@@ -65,12 +71,19 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user }) => {
             } ${secondsToTimeStr(Math.abs(time), true)} - ${name}`
           })
         : ' отсутвуют'
-    }\n\nID команды: <code>${team?._id}</code>`,
+    }\n\n<b>Суммарно оплачено</b>: ${paymentsOfUsers.reduce(
+      (acc, { sum }) => acc + sum,
+      0
+    )} руб.\n\nID команды: <code>${team?._id}</code>`,
     buttons: [
       ...buttons,
       {
         c: { c: 'gameTeamAddings', gameTeamId: gameTeam._id },
         text: '\u{1F48A} Редактировать бонусы/штрафы команды',
+      },
+      {
+        c: { c: 'gameTeamPayments', gameTeamId: gameTeam._id },
+        text: '\u{1F4B2} Редактировать оплату участников команды',
       },
       {
         c: {

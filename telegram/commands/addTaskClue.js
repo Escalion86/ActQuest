@@ -15,24 +15,6 @@ const array = [
       `Подсказка <blockquote>${answer}</blockquote> введена`,
     buttons: (jsonCommand) => [cancelButton(jsonCommand)],
   },
-  // {
-  //   prop: 'penalty',
-  //   message: 'Введите штраф в секундах. Число должно быть больше нуля',
-  //   checkAnswer: (answer) => {
-  //     const answerNum = Number(answer)
-  //     return answerNum == answer && answerNum > 0
-  //   },
-  //   errorMessage: (answer) => `Штраф должен быть в секундах и больше нуля!`,
-  //   answerMessage: (answer) =>
-  //     `Задан штраф по времени "${secondsToTimeStr(answer)}"`,
-  //   buttons: (jsonCommand) => [cancelButton(jsonCommand)],
-  // },
-  // {
-  //   prop: 'description',
-  //   message: 'Введите описание штрафного кода (за что выдан код?)',
-  //   answerMessage: (answer) => `Задано описание штрафного кода "${answer}"`,
-  //   buttons: (jsonCommand) => [cancelButton(jsonCommand)],
-  // },
 ]
 
 const addTaskClue = async ({ telegramId, jsonCommand }) => {

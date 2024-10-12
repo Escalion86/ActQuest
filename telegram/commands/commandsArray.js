@@ -129,6 +129,7 @@ import gameTeamCheckPhotos from './gameTeamCheckPhotos'
 import gameTeamCheckPhotosInTask from './gameTeamCheckPhotosInTask'
 import gamePhotos from './gamePhotos'
 import gameTeamPhotos from './gameTeamPhotos'
+import gameTeamPayments from './gameTeamPayments'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -265,6 +266,7 @@ const commandsArray = {
   gameTeamCheckPhotosInTask,
   gamePhotos,
   gameTeamPhotos,
+  gameTeamPayments,
 }
 
 var i = 0
