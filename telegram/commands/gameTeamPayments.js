@@ -96,7 +96,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
   )
 
   const paymentsOfUsers = await UsersGamesPayments.find({
-    userId: { $in: usersTelegramIds },
+    userTelegramId: { $in: usersTelegramIds },
     gameId: gameTeam.gameId,
   }).lean()
 
