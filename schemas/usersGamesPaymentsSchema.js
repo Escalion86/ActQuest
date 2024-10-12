@@ -1,6 +1,6 @@
 const usersGamesPaymentsSchema = {
   userTelegramId: {
-    type: String,
+    type: Number,
     required: [true, 'Необходимо выбрать пользователя'],
   },
   gameId: {

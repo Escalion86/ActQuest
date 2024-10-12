@@ -4,6 +4,7 @@ import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
+import UsersGamesPayments from '@models/UsersGamesPayments'
 // import dbConnect from '@utils/dbConnect'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
@@ -53,15 +54,33 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
       ? await TeamsUsers.find({ teamId: { $in: teamsIds } }).lean()
       : []
 
+  const usersTelegramIds = teamsUsers.map(
+    (teamsUser) => teamsUser.userTelegramId
+  )
+
+  const paymentsOfUsers = await UsersGamesPayments.find({
+    userTelegramId: { $in: usersTelegramIds },
+    gameId: jsonCommand.gameId,
+  }).lean()
+
   const sortedTeams = gameTeams.map(({ _id, teamId, timeAddings }) => {
     const team = teams.find(({ _id }) => String(_id) == teamId)
+    const teamUsers = teamsUsers.filter(
+      (teamUser) => teamUser.teamId === teamId
+    )
+    const teamUsersIds = teamUsers.map(({ userTelegramId }) => userTelegramId)
+    const paymentsOfTeam = paymentsOfUsers.filter(({ userTelegramId }) =>
+      teamUsersIds.includes(userTelegramId)
+    )
+    const sumOfPayments = paymentsOfTeam.reduce((acc, { sum }) => acc + sum, 0)
     const timeAdding =
       timeAddings?.length > 0
         ? timeAddings.reduce((acc, { time }) => {
             return acc + time
           }, 0)
         : undefined
-    return { ...team, timeAdding, gameTeamId: _id }
+
+    return { ...team, timeAdding, gameTeamId: _id, sumOfPayments, teamUsers }
   })
 
   const page = jsonCommand?.page ?? 1
@@ -70,7 +89,7 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
       ? buttonListConstructor(
           sortedTeams,
           page,
-          ({ timeAdding, gameTeamId, name }, number) => {
+          ({ timeAdding, gameTeamId, name, sumOfPayments }, number) => {
             return {
               text: `${number}. "${name}"${
                 typeof timeAdding === 'number'
@@ -92,11 +111,10 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
       teamsUsers.length
     } чел.)\n${sortedTeams
       .map(
-        (team, index) =>
-          `\n${index + 1}. "${team.name}" (${
-            teamsUsers.filter(({ teamId }) => teamId === String(team._id))
-              .length
-          } чел.)`
+        ({ name, teamUsers, sumOfPayments }, index) =>
+          `\n${index + 1}. "${name}" (${
+            teamUsers.length
+          } чел.) - ${sumOfPayments} руб.`
       )
       .join('')}`,
     buttons: [
