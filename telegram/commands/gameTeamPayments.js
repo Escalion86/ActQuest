@@ -24,6 +24,18 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
 
   // Если смотрим оплату участника команды
   if (jsonCommand.userTelegramId) {
+    if (delPaymentId) {
+      await UsersGamesPayments.deleteOne({ _id: delPaymentId })
+      return {
+        message: `Оплата удалена`,
+        nextCommand: { delPaymentId: null },
+      }
+    }
+    if (addPayments) {
+      return {
+        message: `Введите сумму оплаты`,
+      }
+    }
     const user = await Users.findOne({
       telegramId: jsonCommand.userTelegramId,
     }).lean()
@@ -31,6 +43,16 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
       userId: jsonCommand.userTelegramId,
       gameId: gameTeam.gameId,
     }).lean()
+
+    const page2 = jsonCommand?.page2 ?? 1
+    const buttons = buttonListConstructor(
+      paymentsOfUser,
+      page2,
+      ({ sum, _id }, number) => ({
+        text: `\u{1F5D1} ${sum || 0} руб.`,
+        c: { delPaymentId: _id },
+      })
+    )
 
     return {
       message: `<b>Игра ${formatGameName(game)}\n\nКоманда "${
@@ -42,8 +64,13 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
         0
       )} руб.`,
       buttons: [
+        ...buttons,
         {
-          c: { userTelegramId: null },
+          text: '\u{2795} Добавить оплату',
+          c: { addPayment: true },
+        },
+        {
+          c: { userTelegramId: null, page2: null },
           text: '\u{2B05} Назад',
         },
       ],
@@ -76,7 +103,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
     usersWithPayments,
     page,
     ({ name, role, payment, telegramId }, number) => ({
-      text: ` - ${name}${role === 'captain' ? ' (капитан)' : ''} - ${
+      text: `${name}${role === 'captain' ? ' (капитан)' : ''} - ${
         payment || 0
       } руб.`,
       c: { userTelegramId: telegramId },
