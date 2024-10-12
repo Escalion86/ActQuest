@@ -62,17 +62,17 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
     userTelegramId: { $in: usersTelegramIds },
     gameId: jsonCommand.gameId,
   }).lean()
-  console.log('paymentsOfUsers :>> ', paymentsOfUsers)
 
   const sortedTeams = gameTeams.map(({ _id, teamId, timeAddings }) => {
     const team = teams.find(({ _id }) => String(_id) == teamId)
     const teamUsers = teamsUsers.filter(
-      ({ teamId }) => teamId === String(team._id)
+      (teamUser) => teamUser.teamId === teamId
     )
-    const teamsUserIds = teamUsers.map(({ userTelegramId }) => userTelegramId)
+    const teamUsersIds = teamUsers.map(({ userTelegramId }) => userTelegramId)
     const paymentsOfTeam = paymentsOfUsers.filter(({ userTelegramId }) =>
-      teamsUserIds.includes(userTelegramId)
+      teamUsersIds.includes(userTelegramId)
     )
+    console.log('paymentsOfTeam :>> ', paymentsOfTeam)
     const sumOfPayments = paymentsOfTeam.reduce((acc, { sum }) => acc + sum, 0)
     const timeAdding =
       timeAddings?.length > 0
@@ -98,7 +98,7 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
                       timeAdding < 0 ? `\u{1F7E2}` : `\u{1F534}`
                     } ${secondsToTimeStr(Math.abs(timeAdding), true)}`
                   : ''
-              } - ${sumOfPayments} руб.`,
+              }`,
               c: { c: 'gameTeamAdmin', gameTeamId },
             }
           }
@@ -112,8 +112,10 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
       teamsUsers.length
     } чел.)\n${sortedTeams
       .map(
-        ({ name, teamUsers }, index) =>
-          `\n${index + 1}. "${name}" (${teamUsers.length} чел.)`
+        ({ name, teamUsers, sumOfPayments }, index) =>
+          `\n${index + 1}. "${name}" (${
+            teamUsers.length
+          } чел.) - ${sumOfPayments} руб.`
       )
       .join('')}`,
     buttons: [
