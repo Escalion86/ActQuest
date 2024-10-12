@@ -119,7 +119,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
       return {
         text: `${name}${role === 'captain' ? ' (капитан)' : ''} - ${
           payment || 0
-        } руб.${payments.langth > 1 ? '' : ` (${payments.length})`}`,
+        } руб.${payments.length > 1 ? '' : ` (${payments.length})`}`,
         c: { userTelegramId: telegramId },
       }
     }
