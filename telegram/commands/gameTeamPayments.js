@@ -97,6 +97,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
     userTelegramId: { $in: usersTelegramIds },
     gameId: gameTeam.gameId,
   }).lean()
+  console.log('paymentsOfUsers :>> ', paymentsOfUsers)
 
   const usersWithPayments = usersOfTeamWithRole.map((user) => {
     const payments = paymentsOfUsers.filter(
