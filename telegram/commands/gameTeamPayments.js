@@ -70,7 +70,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
         team?.name
       }"</b>\n\n<b>Участник</b>: ${
         user.name
-      }\n\nОплачено: ${paymentsOfUser.reduce(
+      }\n\n<b>Суммарно оплачено участником</b>: ${paymentsOfUser.reduce(
         (acc, payment) => acc + payment.sum,
         0
       )} руб.`,
