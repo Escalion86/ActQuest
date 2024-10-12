@@ -101,10 +101,9 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
   }).lean()
 
   const usersWithPayments = usersOfTeamWithRole.map((user) => {
-    const payments =
-      paymentsOfUsers.find(
-        (payment) => payment.userTelegramId === user.telegramId
-      ) || []
+    const payments = paymentsOfUsers.filter(
+      (payment) => payment.userTelegramId === user.telegramId
+    )
     return {
       ...user,
       payments,
