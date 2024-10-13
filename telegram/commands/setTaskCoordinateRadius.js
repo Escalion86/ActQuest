@@ -33,7 +33,7 @@ const setTaskCoordinateRadius = async ({ telegramId, jsonCommand }) => {
   }
 
   const { tasks } = game
-  const coordinates = tasks[jsonCommand.i].coordinates
+  const coordinates = tasks[jsonCommand.i]?.coordinates || {}
   coordinates.radius = jsonCommand.message
   tasks[jsonCommand.i].coordinates = coordinates
 
