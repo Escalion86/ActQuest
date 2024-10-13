@@ -1,5 +1,5 @@
 import Games from '@models/Games'
-// import dbConnect from '@utils/dbConnect'
+
 import check from 'telegram/func/check'
 
 const setTaskI = async ({ telegramId, jsonCommand }) => {

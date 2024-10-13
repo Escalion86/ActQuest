@@ -1,5 +1,5 @@
 import LastCommands from '@models/LastCommands'
-// import dbConnect from '@utils/dbConnect'
+
 import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
 import Users from '@models/Users'

@@ -1,5 +1,5 @@
 import GamesTeams from '@models/GamesTeams'
-// import dbConnect from '@utils/dbConnect'
+
 import check from 'telegram/func/check'
 import getGameTeam from 'telegram/func/getGameTeam'
 

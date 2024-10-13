@@ -1,6 +1,6 @@
 // import getNoun from '@helpers/getNoun'
 // import TeamsUsers from '@models/TeamsUsers'
-// import dbConnect from '@utils/dbConnect'
+
 import mongoose from 'mongoose'
 // import { MAX_TEAMS } from 'telegram/constants'
 import getGame from 'telegram/func/getGame'

@@ -1,6 +1,5 @@
 // import getNoun from '@helpers/getNoun'
 import Games from '@models/Games'
-// import dbConnect from '@utils/dbConnect'
 
 const array = [
   {

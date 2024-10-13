@@ -1,5 +1,5 @@
 import Games from '@models/Games'
-// import dbConnect from '@utils/dbConnect'
+
 import mongoose from 'mongoose'
 
 const updateGame = async (id, props) => {

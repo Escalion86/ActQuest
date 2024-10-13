@@ -1,5 +1,4 @@
 import Users from '@models/Users'
-// import dbConnect from '@utils/dbConnect'
 
 const setUserName = async ({ telegramId, jsonCommand }) => {
   if (!jsonCommand.message)

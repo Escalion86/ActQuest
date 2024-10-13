@@ -1,5 +1,4 @@
 import Users from '@models/Users'
-// import dbConnect from '@utils/dbConnect'
 import sendMessage from './sendMessage'
 
 const checkUserData = async (telegramId, text, domen) => {

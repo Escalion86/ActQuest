@@ -5,7 +5,7 @@ import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import UsersGamesPayments from '@models/UsersGamesPayments'
-// import dbConnect from '@utils/dbConnect'
+
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
