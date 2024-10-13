@@ -51,7 +51,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           : 0)
       : 0
 
-  const coordinates = task.coordinates
+  const coordinates = task.coordinates || {}
   const latitude = coordinates?.latitude
   const longitude = coordinates?.longitude
   // const radius = coordinates?.radius
@@ -60,7 +60,7 @@ const editTask = async ({ telegramId, jsonCommand }) => {
     // images: task.images ? task.images : undefined,
     message: `<b>Редактирование задания</b>\n"${task?.title}"\n\nКоординаты: ${
       !latitude || !longitude
-        ? 'не заданы'
+        ? '[не заданы]'
         : `<code>${latitude} ${longitude}</code>`
     }\n\n<b>Текст задания</b>:${
       !task?.task ? ' [не задано]' : `\n<blockquote>${task?.task}</blockquote>`
