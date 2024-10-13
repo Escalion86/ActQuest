@@ -23,7 +23,7 @@ const setTaskCoordinateLongitude = async ({ telegramId, jsonCommand }) => {
         {
           text: '\u{2B05} Назад',
           c: {
-            c: 'setTaskCoordinates',
+            c: 'editTaskCoordinates',
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
