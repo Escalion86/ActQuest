@@ -6,6 +6,7 @@ import {
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
+import UsersGamesPayments from '@models/UsersGamesPayments'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
@@ -28,6 +29,14 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
           _id: { $in: teamsIds },
         })
       : []
+
+  const paymentsOfGame = await UsersGamesPayments.find({
+    gameId: jsonCommand.gameId,
+  }).lean()
+
+  const paymentsSum = paymentsOfGame.reduce((acc, { sum }) => {
+    return acc + sum
+  }, 0)
 
   return {
     images: game.image ? [game.image] : undefined,
@@ -95,7 +104,9 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
         : ''
     }\n\n<b>Код для присоединения к игре</b>:\n<b><code>${
       jsonCommand.gameId
-    }</code></b>\n\nНа игру зарегистрировано ${getNounTeams(teams.length)}`,
+    }</code></b>\n\nНа игру зарегистрировано ${getNounTeams(
+      teams.length
+    )}\n\n<b>Суммарно оплачено командами</b>: ${paymentsSum} руб.`,
     buttons: [
       {
         c: { c: 'gameStart', gameId: jsonCommand.gameId },
