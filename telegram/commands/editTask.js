@@ -52,9 +52,9 @@ const editTask = async ({ telegramId, jsonCommand }) => {
       : 0
 
   const coordinates = task.coordinates
-  const latitude = coordinates?.latitude || '[не задана]'
-  const longitude = coordinates?.longitude || '[не задана]'
-  const radius = coordinates?.radius || '[не задан]'
+  const latitude = coordinates?.latitude
+  const longitude = coordinates?.longitude
+  // const radius = coordinates?.radius
 
   return {
     // images: task.images ? task.images : undefined,
