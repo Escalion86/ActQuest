@@ -1,6 +1,6 @@
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import Games from '@models/Games'
-// import dbConnect from '@utils/dbConnect'
+
 import check from 'telegram/func/check'
 
 const setCluesDuration = async ({ telegramId, jsonCommand }) => {

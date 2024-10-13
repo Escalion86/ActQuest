@@ -1,5 +1,5 @@
 import Users from '@models/Users'
-// import dbConnect from '@utils/dbConnect'
+
 import mongoose from 'mongoose'
 
 const getUser = async (id) => {

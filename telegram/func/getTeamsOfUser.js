@@ -1,6 +1,5 @@
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
-// import dbConnect from '@utils/dbConnect'
 
 const getTeamsOfUser = async (userTelegramId) => {
   const teamsUser = await TeamsUsers.find({

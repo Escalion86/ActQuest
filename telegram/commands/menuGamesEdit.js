@@ -1,5 +1,5 @@
 import Games from '@models/Games'
-// import dbConnect from '@utils/dbConnect'
+
 import formatGameName from 'telegram/func/formatGameName'
 import mainMenuButton from './menuItems/mainMenuButton'
 import getNoun from '@helpers/getNoun'

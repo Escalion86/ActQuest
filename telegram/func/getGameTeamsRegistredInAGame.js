@@ -1,6 +1,5 @@
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
-// import dbConnect from '@utils/dbConnect'
 
 const getGameTeamsRegistredInAGame = async (gameId) => {
   const gameTeams = await GamesTeams.find({

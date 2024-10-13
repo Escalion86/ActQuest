@@ -2,7 +2,7 @@ import getNoun from '@helpers/getNoun'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
-// import dbConnect from '@utils/dbConnect'
+
 import check from 'telegram/func/check'
 
 const userAdmin = async ({ telegramId, jsonCommand }) => {

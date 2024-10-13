@@ -2,7 +2,7 @@ import { getNounCodes } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import Games from '@models/Games'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
-// import dbConnect from '@utils/dbConnect'
+
 import check from 'telegram/func/check'
 
 const cancelButton = (jsonCommand) => ({

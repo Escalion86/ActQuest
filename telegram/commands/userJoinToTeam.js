@@ -2,7 +2,7 @@ import getNoun from '@helpers/getNoun'
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
-// import dbConnect from '@utils/dbConnect'
+
 import { MAX_TEAMS } from 'telegram/constants'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'

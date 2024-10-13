@@ -1,5 +1,5 @@
 import Users from '@models/Users'
-// import dbConnect from '@utils/dbConnect'
+
 import mainMenuButton from './menuItems/mainMenuButton'
 
 const menuUser = async ({ telegramId, jsonCommand }) => {

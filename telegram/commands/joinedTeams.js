@@ -1,6 +1,6 @@
 import Teams from '@models/Teams'
 import TeamsUsers from '@models/TeamsUsers'
-// import dbConnect from '@utils/dbConnect'
+
 import { MAX_TEAMS } from 'telegram/constants'
 
 const joinedTeams = async ({ telegramId, jsonCommand }) => {
