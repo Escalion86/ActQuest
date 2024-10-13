@@ -47,6 +47,7 @@ const GameMap = ({
   teamsColors,
   game,
   showTasks,
+  showTeams,
 }) => {
   const [index, setIndex] = useState(0)
   const [info, setInfo] = useState(null)
@@ -122,34 +123,36 @@ const GameMap = ({
                 </>
               )
             })}
-          {usersWithLocation.map(({ name, team, location }, num) => {
-            const dataActualitySeconds = getSecondsBetween(location.date)
-            return (
-              <Placemark
-                geometry={[location.latitude, location.longitude]}
-                properties={{
-                  // balloonContent: () => (
-                  //   <span onClick={() => console.log(location)}>{name}</span>
-                  // ),
-                  iconCaption: team.name,
-                }}
-                options={{
-                  // islands#violetStretchyIcon islands#violetIcon
-                  preset:
-                    dataActualitySeconds < 60
-                      ? islands[index]
-                      : 'islands#blueAttentionIcon', //'islands#greenDotIconWithCaption',
-                  iconColor:
-                    dataActualitySeconds < 60
-                      ? teamsColors[num]
-                      : dataActualitySeconds < 300
-                      ? 'yellow'
-                      : 'red',
-                  controls: [],
-                }}
-              />
-            )
-          })}
+          {showTeams
+            ? usersWithLocation.map(({ name, team, location }, num) => {
+                const dataActualitySeconds = getSecondsBetween(location.date)
+                return (
+                  <Placemark
+                    geometry={[location.latitude, location.longitude]}
+                    properties={{
+                      // balloonContent: () => (
+                      //   <span onClick={() => console.log(location)}>{name}</span>
+                      // ),
+                      iconCaption: team.name,
+                    }}
+                    options={{
+                      // islands#violetStretchyIcon islands#violetIcon
+                      preset:
+                        dataActualitySeconds < 60
+                          ? islands[index]
+                          : 'islands#blueAttentionIcon', //'islands#greenDotIconWithCaption',
+                      iconColor:
+                        dataActualitySeconds < 60
+                          ? teamsColors[num]
+                          : dataActualitySeconds < 300
+                          ? 'yellow'
+                          : 'red',
+                      controls: [],
+                    }}
+                  />
+                )
+              })
+            : null}
           <FullscreenControl />
           <ZoomControl options={{ size: 'large' }} />
         </Map>
@@ -187,6 +190,7 @@ function EventPage(props) {
   const domen = props.domen
 
   const [showTasks, setShowTasks] = useState(true)
+  const [showTeams, setShowTeams] = useState(true)
   const [result, setResult] = useState()
   const [teamsColors, setTeamsColors] = useState()
   const [game, setGame] = useState()
@@ -261,15 +265,27 @@ function EventPage(props) {
       {/* <StateLoader {...props}>
         <Header /> */}
       <div className="flex flex-col items-stretch w-screen h-screen">
-        <div className="px-2 flex justify-center py-0.5 items-center">
-          <label>
-            <input
-              type="checkbox"
-              checked={showTasks}
-              onChange={(e) => setShowTasks(e.target.checked)}
-            />
-            Показывать места заданий
-          </label>
+        <div>
+          <div className="px-2 flex justify-center py-0.5 items-center">
+            <label>
+              <input
+                type="checkbox"
+                checked={showTasks}
+                onChange={(e) => setShowTasks(e.target.checked)}
+              />
+              Локации
+            </label>
+            <div className="px-2 flex justify-center py-0.5 items-center">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={showTeams}
+                  onChange={(e) => setShowTeams(e.target.checked)}
+                />
+                Команды
+              </label>
+            </div>
+          </div>
         </div>
         <div className="relative flex-1 w-full overflow-hidden">
           {result && (
@@ -280,6 +296,7 @@ function EventPage(props) {
               defaultMapState={defaultMapState}
               game={game}
               showTasks={showTasks}
+              showTeams={showTeams}
             />
           )}
         </div>
