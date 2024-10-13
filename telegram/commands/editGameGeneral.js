@@ -189,7 +189,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
           domen +
           '/game/location/' +
           jsonCommand.gameId,
-        text: '\u{1F30F} Команды на карте',
+        text: '\u{1F30F} Задания и команды на карте',
         hide: game.status === 'finished',
       },
       {
