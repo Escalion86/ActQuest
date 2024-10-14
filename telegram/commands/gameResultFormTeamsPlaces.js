@@ -174,17 +174,17 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
     //   )
     //   .join('\n')
 
-    // const seconds = duration.reduce((partialSum, a) => {
-    //   const res =
-    //     typeof a === 'number' && typeof partialSum === 'number'
-    //       ? partialSum + a
-    //       : '[стоп игра]'
-    //   if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
-    //     penalty += game.taskFailurePenalty ?? 0
-    //     result += game.taskDuration ?? 3600
-    //   } else result += a
-    //   return res
-    // }, 0)
+    duration.forEach((partialSum, a) => {
+      const res =
+        typeof a === 'number' && typeof partialSum === 'number'
+          ? partialSum + a
+          : '[стоп игра]'
+      if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
+        penalty += game.taskFailurePenalty ?? 0
+        result += game.taskDuration ?? 3600
+      } else result += a
+      return res
+    }, 0)
 
     game.tasks.forEach(({ title, penaltyCodes, bonusCodes }, index) => {
       if (
@@ -248,7 +248,7 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
     result += totalPenalty - codeBonus + addings
 
     return {
-      // team,
+      team,
       // seconds,
       // totalPenalty,
       // penalty,
