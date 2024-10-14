@@ -159,9 +159,11 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
     let codePenalty = 0
     let codeBonus = 0
     let codePenaltyBonusText = ''
-    const addings = timeAddings.reduce((acc, { time }) => {
-      return acc + time
-    }, 0)
+    const addings = timeAddings
+      ? timeAddings.reduce((acc, { time }) => {
+          return acc + time
+        }, 0)
+      : 0
     // var addingsText = timeAddings
     //   .map(
     //     ({ name, time }) =>
@@ -186,8 +188,8 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
 
     game.tasks.forEach(({ title, penaltyCodes, bonusCodes }, index) => {
       if (
-        findedPenaltyCodes[index]?.length > 0 ||
-        findedBonusCodes[index]?.length > 0
+        (findedPenaltyCodes && findedPenaltyCodes[index]?.length > 0) ||
+        (findedBonusCodes && findedBonusCodes[index]?.length > 0)
       )
         codePenaltyBonusText += `\n\u{1F4CC} "${title}":`
 
@@ -207,7 +209,7 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
             Math.floor(wrongCodes[index].length / maxCodes) * penaltyForMaxCodes
         }
       }
-      if (findedPenaltyCodes[index]?.length > 0) {
+      if (findedPenaltyCodes && findedPenaltyCodes[index]?.length > 0) {
         const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) =>
           findedPenaltyCodes[index].includes(code)
         )
@@ -220,7 +222,7 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
           0
         )
       }
-      if (findedBonusCodes[index]?.length > 0) {
+      if (findedBonusCodes && findedBonusCodes[index]?.length > 0) {
         const findedBonusCodesFull = bonusCodes.filter(({ code }) =>
           findedBonusCodes[index].includes(code)
         )
