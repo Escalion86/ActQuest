@@ -23,7 +23,7 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(finishedGames, page, (game, number) => {
     const gameId = String(game._id)
-    const isChecked = jsonCommand.includes(gameId)
+    const isChecked = jsonCommand[gameId]
     return {
       text: `${isChecked ? `\u{2705}` : ''}${formatGameName(game)}`,
       c: {
