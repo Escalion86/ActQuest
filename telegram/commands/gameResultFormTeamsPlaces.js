@@ -378,12 +378,9 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
 
   // console.log('sortedTotalTeamsResult :>> ', sortedTotalTeamsResult)
 
-  const teamsPlaces = sortedTotalTeamsResult.reduce(
-    (acc, { team, result }, index) => {
-      console.log('result :>> ', result)
-      return { ...acc, [String(team._id)]: index + 1 }
-    },
-    {}
+  const teamsPlaces = {}
+  sortedTotalTeamsResult.forEach(
+    ({ team }, index) => (teamsPlaces[String(team._id)] = index + 1)
   )
 
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
