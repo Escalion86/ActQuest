@@ -377,7 +377,7 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     .join('\n\n')
 
   const teamsPlaces = sortedTotalTeamsResult.reduce(
-    (acc, { team, result }, index) => (acc[String(team._id)] = index + 1),
+    (acc, { team }, index) => (acc[String(team._id)] = index + 1),
     {}
   )
 
