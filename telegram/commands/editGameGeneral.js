@@ -159,6 +159,13 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
       ],
       [
         {
+          c: { c: 'gameResultFormTeamsPlaces', gameId: jsonCommand.gameId },
+          text: '\u{26A1} Сформировать teamsPlaces',
+          hide: !game.result || game.result?.teamsPlaces,
+        },
+      ],
+      [
+        {
           c: { c: 'gameResultAdminBack', gameId: jsonCommand.gameId },
           text: '\u{1F4CB} Посмотреть результаты',
           hide: game.status !== 'finished' || !game.result,

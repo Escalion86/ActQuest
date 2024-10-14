@@ -1,4 +1,5 @@
 import Games from '@models/Games'
+import GamesTeams from '@models/GamesTeams'
 import TeamsUsers from '@models/TeamsUsers'
 import Users from '@models/Users'
 
@@ -19,6 +20,30 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
   //     ]
   //   }
   // })
+
+  if (jsonCommand.showStatistic) {
+    const jsonKeys = Object.keys(jsonCommand)
+    const checkedGames = finishedGames.filter(({ _id }) =>
+      jsonKeys.includes(String(_id))
+    )
+    var allTeamsUsersInCheckedGames = []
+    var usersStatistics = {}
+    checkedGames.forEach(({ result }) => {
+      if (result) {
+        allTeamsUsersInCheckedGames = [
+          ...allTeamsUsersInCheckedGames,
+          ...result.teamsUsers,
+        ]
+      }
+    })
+
+    // const gamesIds = checkedGames.map(({ _id }) => String(_id))
+    // const gamesTeams = await GamesTeams.find({
+    //   gameId: { $in: gamesIds },
+    // })
+    // const teamsIds = gamesTeams.map(({ teamId }) => teamId)
+    // const teamsUsers = await TeamsUsers.find({})
+  }
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(finishedGames, page, (game, number) => {
