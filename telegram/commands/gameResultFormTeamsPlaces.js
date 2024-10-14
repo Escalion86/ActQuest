@@ -1,10 +1,10 @@
-import formatGameDateTimeFact from '@helpers/formatGameDateTimeFact'
+// import formatGameDateTimeFact from '@helpers/formatGameDateTimeFact'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 // import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import Games from '@models/Games'
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
+// import GamesTeams from '@models/GamesTeams'
+// import Teams from '@models/Teams'
+// import TeamsUsers from '@models/TeamsUsers'
 
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
@@ -30,8 +30,8 @@ const sortFunc = (a, b, key = 'seconds', direction = 'ASC') => {
   return 0
 }
 
-const getAverage = (numbers) =>
-  Math.round(numbers.reduce((acc, number) => acc + number, 0) / numbers.length)
+// const getAverage = (numbers) =>
+//   Math.round(numbers.reduce((acc, number) => acc + number, 0) / numbers.length)
 
 const durationCalc = ({ startTime, endTime, activeNum }, game) => {
   if (!startTime || !endTime) return null
@@ -52,7 +52,7 @@ const durationCalc = ({ startTime, endTime, activeNum }, game) => {
   return tempArray
 }
 
-const gameResultForm = async ({ telegramId, jsonCommand }) => {
+const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -86,19 +86,17 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   }
 
   // Получаем список команд участвующих в игре
-  const gameTeams = await GamesTeams.find({
-    gameId: jsonCommand.gameId,
-  })
+  const { teams, teamsUsers, gameTeams } = game.result
 
-  const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
+  // const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
 
-  const teams = await Teams.find({
-    _id: { $in: teamsIds },
-  })
+  // const teams = await Teams.find({
+  //   _id: { $in: teamsIds },
+  // })
 
-  const teamsUsers = await TeamsUsers.find({
-    teamId: { $in: teamsIds },
-  })
+  // const teamsUsers = await TeamsUsers.find({
+  //   teamId: { $in: teamsIds },
+  // })
 
   const tasksDuration = gameTeams.map((gameTeam) => ({
     teamId: gameTeam.teamId,
@@ -109,42 +107,42 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     wrongCodes: gameTeam.wrongCodes,
   }))
 
-  const taskAverageTimes = Array(game.tasks.length)
-  const fastestTask = {}
+  // const taskAverageTimes = Array(game.tasks.length)
+  // const fastestTask = {}
 
-  const text = game.tasks
-    .map((task, index) => {
-      const teamsSeconds = teams.map((team) => {
-        const dur = tasksDuration.find(
-          (item) => item.teamId === String(team._id)
-        )
-        const seconds = dur?.duration[index] ?? '[не начато]'
-        if (!fastestTask.seconds || fastestTask.seconds > seconds) {
-          fastestTask.seconds = seconds
-          fastestTask.teamName = team.name
-          fastestTask.taskTitle = task?.title
-        }
-        return { team, seconds }
-      })
+  // const text = game.tasks
+  //   .map((task, index) => {
+  //     const teamsSeconds = teams.map((team) => {
+  //       const dur = tasksDuration.find(
+  //         (item) => item.teamId === String(team._id)
+  //       )
+  //       const seconds = dur?.duration[index] ?? '[не начато]'
+  //       if (!fastestTask.seconds || fastestTask.seconds > seconds) {
+  //         fastestTask.seconds = seconds
+  //         fastestTask.teamName = team.name
+  //         fastestTask.taskTitle = task?.title
+  //       }
+  //       return { team, seconds }
+  //     })
 
-      taskAverageTimes[index] = getAverage(
-        teamsSeconds
-          .filter(({ seconds }) => typeof seconds === 'number')
-          .map(({ seconds }) => seconds)
-      )
+  //     taskAverageTimes[index] = getAverage(
+  //       teamsSeconds
+  //         .filter(({ seconds }) => typeof seconds === 'number')
+  //         .map(({ seconds }) => seconds)
+  //     )
 
-      const sortedTeamsSeconds = [...teamsSeconds].sort(sortFunc)
+  //     const sortedTeamsSeconds = [...teamsSeconds].sort(sortFunc)
 
-      return `\n<b>\u{1F4CC} "${task?.title}"</b>\n${sortedTeamsSeconds
-        .map(
-          ({ team, seconds }) =>
-            `${
-              typeof seconds === 'number' ? secondsToTime(seconds) : seconds
-            } - ${team.name}`
-        )
-        .join('\n')}`
-    })
-    .join('\n')
+  //     return `\n<b>\u{1F4CC} "${task?.title}"</b>\n${sortedTeamsSeconds
+  //       .map(
+  //         ({ team, seconds }) =>
+  //           `${
+  //             typeof seconds === 'number' ? secondsToTime(seconds) : seconds
+  //           } - ${team.name}`
+  //       )
+  //       .join('\n')}`
+  //   })
+  //   .join('\n')
 
   const totalTeamsSeconds = teams.map((team, index) => {
     const {
@@ -164,27 +162,27 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     const addings = timeAddings.reduce((acc, { time }) => {
       return acc + time
     }, 0)
-    var addingsText = timeAddings
-      .map(
-        ({ name, time }) =>
-          `${time < 0 ? '\u{1F7E2}' : '\u{1F534}'} ${secondsToTime(
-            Math.abs(time),
-            true
-          )} - ${name}`
-      )
-      .join('\n')
+    // var addingsText = timeAddings
+    //   .map(
+    //     ({ name, time }) =>
+    //       `${time < 0 ? '\u{1F7E2}' : '\u{1F534}'} ${secondsToTime(
+    //         Math.abs(time),
+    //         true
+    //       )} - ${name}`
+    //   )
+    //   .join('\n')
 
-    const seconds = duration.reduce((partialSum, a) => {
-      const res =
-        typeof a === 'number' && typeof partialSum === 'number'
-          ? partialSum + a
-          : '[стоп игра]'
-      if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
-        penalty += game.taskFailurePenalty ?? 0
-        result += game.taskDuration ?? 3600
-      } else result += a
-      return res
-    }, 0)
+    // const seconds = duration.reduce((partialSum, a) => {
+    //   const res =
+    //     typeof a === 'number' && typeof partialSum === 'number'
+    //       ? partialSum + a
+    //       : '[стоп игра]'
+    //   if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
+    //     penalty += game.taskFailurePenalty ?? 0
+    //     result += game.taskDuration ?? 3600
+    //   } else result += a
+    //   return res
+    // }, 0)
 
     game.tasks.forEach(({ title, penaltyCodes, bonusCodes }, index) => {
       if (
@@ -239,39 +237,39 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
 
     const totalPenalty = penalty + codePenalty + manyWrongCodePenalty
 
-    if (manyWrongCodePenalty > 0) {
-      addingsText += `${addingsText ? '\n' : ''}\u{1F534} ${secondsToTime(
-        manyWrongCodePenalty
-      )} - подбор кода`
-    }
+    // if (manyWrongCodePenalty > 0) {
+    //   addingsText += `${addingsText ? '\n' : ''}\u{1F534} ${secondsToTime(
+    //     manyWrongCodePenalty
+    //   )} - подбор кода`
+    // }
 
     result += totalPenalty - codeBonus + addings
 
     return {
-      team,
-      seconds,
-      totalPenalty,
-      penalty,
-      manyWrongCodePenalty,
-      codePenalty,
-      codeBonus,
-      codePenaltyBonusText,
-      addings,
-      addingsText,
+      // team,
+      // seconds,
+      // totalPenalty,
+      // penalty,
+      // manyWrongCodePenalty,
+      // codePenalty,
+      // codeBonus,
+      // codePenaltyBonusText,
+      // addings,
+      // addingsText,
       result,
     }
   })
 
-  const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort(sortFunc)
-  const sortedTotalTeamsPenalty = [...totalTeamsSeconds].sort((a, b) =>
-    sortFunc(a, b, 'penalty', 'DESC')
-  )
+  // const sortedTotalTeamsSeconds = [...totalTeamsSeconds].sort(sortFunc)
+  // const sortedTotalTeamsPenalty = [...totalTeamsSeconds].sort((a, b) =>
+  //   sortFunc(a, b, 'penalty', 'DESC')
+  // )
   const sortedTotalTeamsResult = [...totalTeamsSeconds].sort((a, b) =>
     sortFunc(a, b, 'result')
   )
-  const sortedTotalTeamsAddings = [...totalTeamsSeconds].sort((a, b) =>
-    sortFunc(a, b, 'addings')
-  )
+  // const sortedTotalTeamsAddings = [...totalTeamsSeconds].sort((a, b) =>
+  //   sortFunc(a, b, 'addings')
+  // )
 
   // const totalTeamsWithAddings = sortedTotalTeamsAddings.filter(
   //   ({ addings }) => addings !== 0
@@ -285,105 +283,106 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   //       .join('\n')
   //   : undefined
 
-  const totalAddingsText = sortedTotalTeamsAddings
-    .filter(({ addingsText }) => addingsText)
-    .map(({ team, addingsText }) => {
-      return `Команда "${team.name}":\n${addingsText}`
-    })
-    .join('\n')
+  // const totalAddingsText = sortedTotalTeamsAddings
+  //   .filter(({ addingsText }) => addingsText)
+  //   .map(({ team, addingsText }) => {
+  //     return `Команда "${team.name}":\n${addingsText}`
+  //   })
+  //   .join('\n')
 
-  const totalTeamsWithPenalty = sortedTotalTeamsPenalty.filter(
-    ({ penalty }) => penalty > 0
-  )
-  const totalCodePenaltyBonus = totalTeamsSeconds
-    .filter(({ codePenaltyBonusText }) => codePenaltyBonusText)
-    .map(({ team, codePenaltyBonusText }) => {
-      return `Команда "${team.name}":${codePenaltyBonusText}`
-    })
-    .join('\n\n')
+  // const totalTeamsWithPenalty = sortedTotalTeamsPenalty.filter(
+  //   ({ penalty }) => penalty > 0
+  // )
+  // const totalCodePenaltyBonus = totalTeamsSeconds
+  //   .filter(({ codePenaltyBonusText }) => codePenaltyBonusText)
+  //   .map(({ team, codePenaltyBonusText }) => {
+  //     return `Команда "${team.name}":${codePenaltyBonusText}`
+  //   })
+  //   .join('\n\n')
 
-  const totalPenalty =
-    totalTeamsWithPenalty.length > 0
-      ? totalTeamsWithPenalty
-          .map(({ team, penalty }) => {
-            return `${secondsToTime(penalty)} - ${team.name}`
-          })
-          .join('\n')
-      : undefined
+  // const totalPenalty =
+  //   totalTeamsWithPenalty.length > 0
+  //     ? totalTeamsWithPenalty
+  //         .map(({ team, penalty }) => {
+  //           return `${secondsToTime(penalty)} - ${team.name}`
+  //         })
+  //         .join('\n')
+  //     : undefined
 
-  const totalSeconds = sortedTotalTeamsSeconds
-    .map(({ team, seconds }) => {
-      return `${
-        typeof seconds === 'number' ? secondsToTime(seconds) : seconds
-      } - ${team.name}`
-    })
-    .join('\n')
+  // const totalSeconds = sortedTotalTeamsSeconds
+  //   .map(({ team, seconds }) => {
+  //     return `${
+  //       typeof seconds === 'number' ? secondsToTime(seconds) : seconds
+  //     } - ${team.name}`
+  //   })
+  //   .join('\n')
 
-  const totalResult = sortedTotalTeamsResult
-    .map(({ team, result }) => {
-      return `${secondsToTime(result)} - ${team.name}`
-    })
-    .join('\n')
+  // const totalResult = sortedTotalTeamsResult
+  //   .map(({ team, result }) => {
+  //     return `${secondsToTime(result)} - ${team.name}`
+  //   })
+  //   .join('\n')
 
-  const mostEasyTaskIndex = taskAverageTimes.indexOf(
-    Math.min.apply(null, taskAverageTimes)
-  )
-  const mostHardTaskIndex = taskAverageTimes.indexOf(
-    Math.max.apply(null, taskAverageTimes)
-  )
+  // const mostEasyTaskIndex = taskAverageTimes.indexOf(
+  //   Math.min.apply(null, taskAverageTimes)
+  // )
+  // const mostHardTaskIndex = taskAverageTimes.indexOf(
+  //   Math.max.apply(null, taskAverageTimes)
+  // )
 
-  const gameDateTimeFact = formatGameDateTimeFact(game, {
-    dontShowDayOfWeek: false,
-    fullWeek: false,
-    // showYear,
-    // fullMonth,
-    // weekInBrackets,
-    showDuration: true,
-    durationOnNextLine: true,
-    showSeconds: true,
-  })
+  // const gameDateTimeFact = formatGameDateTimeFact(game, {
+  //   dontShowDayOfWeek: false,
+  //   fullWeek: false,
+  //   // showYear,
+  //   // fullMonth,
+  //   // weekInBrackets,
+  //   showDuration: true,
+  //   durationOnNextLine: true,
+  //   showSeconds: true,
+  // })
 
   // const game = await Games.findById(jsonCommand.gameId)
 
-  const messageText = [
-    `<b>Результаты игры:\n${formatGameName(game)}</b>`,
-    `<b>Фактический период игры</b>:\n${gameDateTimeFact}\n${text}\n`,
-    `<b>\u{2B50}РЕЗУЛЬТАТЫ:</b>\n<b>\u{231A}Без учета бонусов и штрафов:</b>\n${totalSeconds}`,
-    game.taskFailurePenalty &&
-      `<b>\u{1F534} Штрафы за невыполненные задания:</b>\n${
-        totalPenalty ?? 'отсутствуют'
-      }`,
-    totalCodePenaltyBonus
-      ? `<b>\u{1F534} Штрафы и \u{1F7E2} бонусы за коды:</b>\n${totalCodePenaltyBonus}`
-      : '',
-    totalAddingsText
-      ? `<b>Прочие \u{1F534} штрафы и \u{1F7E2} бонусы:</b>\n${totalAddingsText}`
-      : '',
-    `<b>\u{1F3C6} ИТОГО:</b>\n${totalResult}\n`,
+  // const messageText = [
+  //   `<b>Результаты игры:\n${formatGameName(game)}</b>`,
+  //   `<b>Фактический период игры</b>:\n${gameDateTimeFact}\n${text}\n`,
+  //   `<b>\u{2B50}РЕЗУЛЬТАТЫ:</b>\n<b>\u{231A}Без учета бонусов и штрафов:</b>\n${totalSeconds}`,
+  //   game.taskFailurePenalty &&
+  //     `<b>\u{1F534} Штрафы за невыполненные задания:</b>\n${
+  //       totalPenalty ?? 'отсутствуют'
+  //     }`,
+  //   totalCodePenaltyBonus
+  //     ? `<b>\u{1F534} Штрафы и \u{1F7E2} бонусы за коды:</b>\n${totalCodePenaltyBonus}`
+  //     : '',
+  //   totalAddingsText
+  //     ? `<b>Прочие \u{1F534} штрафы и \u{1F7E2} бонусы:</b>\n${totalAddingsText}`
+  //     : '',
+  //   `<b>\u{1F3C6} ИТОГО:</b>\n${totalResult}\n`,
 
-    `<b>\u{1F607} Самое легкое задание:</b>\n"${
-      game.tasks[mostEasyTaskIndex]?.title
-    }" - среднее время ${secondsToTime(taskAverageTimes[mostEasyTaskIndex])}`,
-    `<b>\u{1F608} Самое сложное задание:</b>\n"${
-      game.tasks[mostHardTaskIndex]?.title
-    }" - среднее время ${secondsToTime(taskAverageTimes[mostHardTaskIndex])}`,
-    `<b>\u{1F680} Самое быстрое выполнение задания:</b>\n"${
-      fastestTask.taskTitle
-    }" команда "${fastestTask.teamName}" - ${secondsToTime(
-      fastestTask.seconds
-    )}`,
-  ]
-    .filter((text) => text)
-    .join('\n\n')
+  //   `<b>\u{1F607} Самое легкое задание:</b>\n"${
+  //     game.tasks[mostEasyTaskIndex]?.title
+  //   }" - среднее время ${secondsToTime(taskAverageTimes[mostEasyTaskIndex])}`,
+  //   `<b>\u{1F608} Самое сложное задание:</b>\n"${
+  //     game.tasks[mostHardTaskIndex]?.title
+  //   }" - среднее время ${secondsToTime(taskAverageTimes[mostHardTaskIndex])}`,
+  //   `<b>\u{1F680} Самое быстрое выполнение задания:</b>\n"${
+  //     fastestTask.taskTitle
+  //   }" команда "${fastestTask.teamName}" - ${secondsToTime(
+  //     fastestTask.seconds
+  //   )}`,
+  // ]
+  //   .filter((text) => text)
+  //   .join('\n\n')
 
   const teamsPlaces = sortedTotalTeamsResult.reduce(
-    (acc, { team, result }, index) => (acc[String(team._id)] = index + 1),
+    (acc, { team }, index) => (acc[String(team._id)] = index + 1),
     {}
   )
 
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
     result: {
-      text: messageText,
+      ...game.result,
+      // text: messageText,
       // `<b>Результаты игры:\n${formatGameName(
       //   game
       // )}</b>\n\n<b>Фактический период игры</b>:\n${gameDateTimeFact}\n${text}\n\n\n<b>\u{2B50}РЕЗУЛЬТАТЫ:</b>\n<b>\u{231A}Без учета бонусов и штрафов:</b>\n${totalSeconds}${
@@ -405,16 +404,18 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       // }" команда "${fastestTask.teamName}" - ${secondsToTime(
       //   fastestTask.seconds
       // )}`,
-      teams,
-      gameTeams,
-      teamsUsers,
+      // teams,
+      // gameTeams,
+      // teamsUsers,
       teamsPlaces,
     },
-    hideResult: game.result ? game.hideResult : true,
+    // hideResult: game.result ? game.hideResult : true,
   })
 
   return {
-    message: `Результаты игры ${formatGameName(game)} сформированы!`,
+    message: `Сформированы места команд в результатах игры ${formatGameName(
+      game
+    )}!`,
     nextCommand: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
     // buttons: [
     //   {
@@ -435,4 +436,4 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
   }
 }
 
-export default gameResultForm
+export default gameResultFormTeamsPlaces

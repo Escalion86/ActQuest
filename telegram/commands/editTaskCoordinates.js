@@ -19,9 +19,9 @@ const editTaskCoordinates = async ({ telegramId, jsonCommand }) => {
   const task = tasks[jsonCommand.i]
 
   const coordinates = task.coordinates
-  const latitude = coordinates?.latitude
-  const longitude = coordinates?.longitude
-  const radius = coordinates?.radius
+  const latitude = coordinates?.latitude || '[не задана]'
+  const longitude = coordinates?.longitude || '[не задана]'
+  const radius = coordinates?.radius || '[не задан]'
 
   if (jsonCommand.delete) {
     tasks[jsonCommand.i].coordinates = null

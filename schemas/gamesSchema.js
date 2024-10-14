@@ -179,6 +179,7 @@ const gamesSchema = {
       teams: [TeamsSchema],
       gameTeams: [GamesTeamsSchema],
       teamsUsers: [TeamsUsersSchema],
+      teamsPlaces: {},
     },
     default: null,
   },

@@ -23,6 +23,11 @@ const adminMenu = async ({ telegramId, user }) => {
         hide: !isAdmin,
       },
       {
+        c: 'usersStatistics',
+        text: '\u{1F4CA} Статистика пользователей',
+        hide: !isAdmin,
+      },
+      {
         c: 'sendMessageToAll',
         text: '\u{1F4E2} Отправить сообщение всем пользователям',
         hide: !isAdmin,
