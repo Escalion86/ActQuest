@@ -174,7 +174,7 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
     //   )
     //   .join('\n')
 
-    duration.forEach((partialSum, a) => {
+    duration.reduce((partialSum, a) => {
       const res =
         typeof a === 'number' && typeof partialSum === 'number'
           ? partialSum + a
