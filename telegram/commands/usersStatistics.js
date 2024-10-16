@@ -30,9 +30,10 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
 
   if (jsonCommand.showStatistic) {
     const jsonKeys = Object.keys(jsonCommand)
-    const checkedGames = finishedGames.filter(({ _id }) =>
-      jsonKeys.includes(String(_id))
-    )
+    const checkedGames = finishedGames.filter(({ _id }) => {
+      const gameId = String(_id)
+      return jsonCommand[gameId]
+    })
 
     console.log('checkedGames :>> ', checkedGames)
 
