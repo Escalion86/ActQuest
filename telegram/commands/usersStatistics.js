@@ -29,13 +29,16 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
   // })
 
   if (jsonCommand.showStatistic) {
-    const jsonKeys = Object.keys(jsonCommand)
+    // const jsonKeys = Object.keys(jsonCommand)
     const checkedGames = finishedGames.filter(({ _id }) => {
       const gameId = String(_id)
       return jsonCommand[gameId]
     })
 
-    console.log('checkedGames :>> ', checkedGames)
+    console.log(
+      'checkedGames :>> ',
+      checkedGames.map(({ _id }) => String(_id))
+    )
 
     var usersStatistics = {}
     checkedGames.forEach(({ result }) => {
@@ -60,7 +63,7 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
       })
     })
     const users = await Users.find({
-      telegramId: { $in: Object.keys(usersStatistics) },
+      telegramId: { $in: Object.keys(usersStatistics).map((id) => Number(id)) },
     })
 
     console.log('usersStatistics :>> ', usersStatistics)
