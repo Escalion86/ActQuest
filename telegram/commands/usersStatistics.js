@@ -6,6 +6,13 @@ import Users from '@models/Users'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import formatGameName from 'telegram/func/formatGameName'
 
+const placePoints = (place = 0) => {
+  if (!place) return 0
+  const points = 11 - place
+  if (points < 0) return 0
+  return points
+}
+
 const usersStatistics = async ({ telegramId, jsonCommand }) => {
   const finishedGames = await Games.find({ status: 'finished' })
   // const users = await Users.find({})
@@ -26,23 +33,70 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
     const checkedGames = finishedGames.filter(({ _id }) =>
       jsonKeys.includes(String(_id))
     )
-    var allTeamsUsersInCheckedGames = []
+
     var usersStatistics = {}
     checkedGames.forEach(({ result }) => {
-      if (result) {
-        allTeamsUsersInCheckedGames = [
-          ...allTeamsUsersInCheckedGames,
-          ...result.teamsUsers,
-        ]
-      }
+      const { teams, teamsUsers, gameTeams, teamsPlaces } = result
+      if (!teamsPlaces || !teams) return
+      teams.forEach(({ _id }) => {
+        const id = String(_id)
+        const usersTelegramIdsInTeam = teamsUsers
+          .filter(({ teamId }) => teamId === id)
+          .map(({ userTelegramId }) => userTelegramId)
+        const teamPlace = teamsPlaces[id]
+        const teamPoints = teamPlace ? placePoints(teamPlace) : 0
+        if (teamPoints > 0) {
+          usersTelegramIdsInTeam.forEach((userTelegramId) => {
+            if (!usersStatistics[userTelegramId]) {
+              usersStatistics[userTelegramId] = teamPoints
+            } else {
+              usersStatistics[userTelegramId] += teamPoints
+            }
+          })
+        }
+      })
+    })
+    const users = await Users.find({
+      telegramId: { $in: Object.keys(usersStatistics) },
     })
 
-    // const gamesIds = checkedGames.map(({ _id }) => String(_id))
-    // const gamesTeams = await GamesTeams.find({
-    //   gameId: { $in: gamesIds },
+    const usersWithPoints = users.map((user) => {
+      const userPoints = usersStatistics[user.telegramId]
+      return { ...user, points: userPoints }
+    })
+
+    const sortedUsersWithPoints = usersWithPoints
+      // .filter((user) => user.points > 0)
+      .sort((a, b) => b.points - a.points)
+
+    // const page2 = jsonCommand?.page ?? 1
+    // const buttons = buttonListConstructor(sortedUsersWithPoints, page2, ({name, points}, number) => {
+    //   return {
+    //     text: `${number}. ${name} - ${points} очков`,
+    //     c: {
+    //       userTId: user,
+    //     },
+    //   }
     // })
-    // const teamsIds = gamesTeams.map(({ teamId }) => teamId)
-    // const teamsUsers = await TeamsUsers.find({})
+
+    return {
+      message: `Рейтинг игроков по выбранным играм:\n${sortedUsersWithPoints
+        .map(({ name, points }, index) => {
+          return `${index + 1}. ${name} - ${points} очков`
+        })
+        .join('\n')}`,
+      buttons: [
+        ...buttons,
+        {
+          c: { showStatistic: false },
+          text: '\u{21A9} Выбрать другие игры',
+        },
+        {
+          c: 'adminMenu',
+          text: '\u{2B05} Назад',
+        },
+      ],
+    }
   }
 
   const page = jsonCommand?.page ?? 1
