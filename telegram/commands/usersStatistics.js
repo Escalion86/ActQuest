@@ -34,6 +34,8 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
       jsonKeys.includes(String(_id))
     )
 
+    console.log('checkedGames :>> ', checkedGames)
+
     var usersStatistics = {}
     checkedGames.forEach(({ result }) => {
       const { teams, teamsUsers, gameTeams, teamsPlaces } = result
