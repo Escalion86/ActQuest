@@ -60,9 +60,10 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
       telegramId: { $in: Object.keys(usersStatistics) },
     })
 
+    console.log('usersStatistics :>> ', usersStatistics)
     const usersWithPoints = users.map((user) => {
-      const userPoints = usersStatistics[user.telegramId]
-      return { ...user, points: userPoints }
+      const points = usersStatistics[user.telegramId] || 0
+      return { ...user, points }
     })
 
     const sortedUsersWithPoints = usersWithPoints
