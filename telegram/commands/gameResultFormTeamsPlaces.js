@@ -66,24 +66,24 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  if (game.result && !jsonCommand.confirm) {
-    return {
-      success: true,
-      message: `Подтвердите обновление результатов игры ${formatGameName(
-        game
-      )}`,
-      buttons: [
-        {
-          text: '\u{1F504} Обновить результаты',
-          c: { confirm: true },
-        },
-        {
-          text: '\u{1F6AB} Отмена',
-          c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
-        },
-      ],
-    }
-  }
+  // if (game.result && !jsonCommand.confirm) {
+  //   return {
+  //     success: true,
+  //     message: `Подтвердите обновление результатов игры ${formatGameName(
+  //       game
+  //     )}`,
+  //     buttons: [
+  //       {
+  //         text: '\u{1F504} Обновить результаты',
+  //         c: { confirm: true },
+  //       },
+  //       {
+  //         text: '\u{1F6AB} Отмена',
+  //         c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
+  //       },
+  //     ],
+  //   }
+  // }
 
   // Получаем список команд участвующих в игре
   const { teams, teamsUsers, gameTeams } = game.result
@@ -159,9 +159,11 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
     let codePenalty = 0
     let codeBonus = 0
     let codePenaltyBonusText = ''
-    const addings = timeAddings.reduce((acc, { time }) => {
-      return acc + time
-    }, 0)
+    const addings = timeAddings
+      ? timeAddings.reduce((acc, { time }) => {
+          return acc + time
+        }, 0)
+      : 0
     // var addingsText = timeAddings
     //   .map(
     //     ({ name, time }) =>
@@ -172,22 +174,22 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
     //   )
     //   .join('\n')
 
-    // const seconds = duration.reduce((partialSum, a) => {
-    //   const res =
-    //     typeof a === 'number' && typeof partialSum === 'number'
-    //       ? partialSum + a
-    //       : '[стоп игра]'
-    //   if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
-    //     penalty += game.taskFailurePenalty ?? 0
-    //     result += game.taskDuration ?? 3600
-    //   } else result += a
-    //   return res
-    // }, 0)
+    duration.reduce((partialSum, a) => {
+      const res =
+        typeof a === 'number' && typeof partialSum === 'number'
+          ? partialSum + a
+          : '[стоп игра]'
+      if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
+        penalty += game.taskFailurePenalty ?? 0
+        result += game.taskDuration ?? 3600
+      } else result += a
+      return res
+    }, 0)
 
     game.tasks.forEach(({ title, penaltyCodes, bonusCodes }, index) => {
       if (
-        findedPenaltyCodes[index]?.length > 0 ||
-        findedBonusCodes[index]?.length > 0
+        (findedPenaltyCodes && findedPenaltyCodes[index]?.length > 0) ||
+        (findedBonusCodes && findedBonusCodes[index]?.length > 0)
       )
         codePenaltyBonusText += `\n\u{1F4CC} "${title}":`
 
@@ -207,7 +209,7 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
             Math.floor(wrongCodes[index].length / maxCodes) * penaltyForMaxCodes
         }
       }
-      if (findedPenaltyCodes[index]?.length > 0) {
+      if (findedPenaltyCodes && findedPenaltyCodes[index]?.length > 0) {
         const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) =>
           findedPenaltyCodes[index].includes(code)
         )
@@ -220,7 +222,7 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
           0
         )
       }
-      if (findedBonusCodes[index]?.length > 0) {
+      if (findedBonusCodes && findedBonusCodes[index]?.length > 0) {
         const findedBonusCodesFull = bonusCodes.filter(({ code }) =>
           findedBonusCodes[index].includes(code)
         )
@@ -246,7 +248,7 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
     result += totalPenalty - codeBonus + addings
 
     return {
-      // team,
+      team,
       // seconds,
       // totalPenalty,
       // penalty,
@@ -374,9 +376,11 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
   //   .filter((text) => text)
   //   .join('\n\n')
 
-  const teamsPlaces = sortedTotalTeamsResult.reduce(
-    (acc, { team }, index) => (acc[String(team._id)] = index + 1),
-    {}
+  // console.log('sortedTotalTeamsResult :>> ', sortedTotalTeamsResult)
+
+  const teamsPlaces = {}
+  sortedTotalTeamsResult.forEach(
+    ({ team }, index) => (teamsPlaces[String(team._id)] = index + 1)
   )
 
   await Games.findByIdAndUpdate(jsonCommand.gameId, {
