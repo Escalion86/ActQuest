@@ -51,7 +51,7 @@ const editTeamAdmin = async ({ telegramId, jsonCommand }) => {
       team?.name
     }"</b>.${
       team?.description ? `\n\n<b>Описание</b>: "${team?.description}"` : ''
-    }Дата и время создания команды: ${formatDateTime(
+    }\n\n<b>Дата и время создания команды</b>: ${formatDateTime(
       team?.createdAt,
       false,
       false,
