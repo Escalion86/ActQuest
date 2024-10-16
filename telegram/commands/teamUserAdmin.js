@@ -23,6 +23,7 @@ const teamUserAdmin = async ({ telegramId, jsonCommand }) => {
     return {
       message: 'Ошибка. Не найден пользователь привязанный к команде',
       nextCommand: `teamUsersAdmin`,
+      page: jsonCommand.page,
     }
   }
 
@@ -35,12 +36,17 @@ const teamUserAdmin = async ({ telegramId, jsonCommand }) => {
       c: {
         c: 'delTeamUserAdmin',
         teamUserId: jsonCommand.teamUserId,
+        page: jsonCommand.page,
       },
       hide: isCapitan,
       text: '\u{1F4A3} Удалить из команды',
     },
     {
-      c: { c: 'teamUsersAdmin', teamId: teamUser.teamId },
+      c: {
+        c: 'teamUsersAdmin',
+        teamId: teamUser.teamId,
+        page: jsonCommand.page,
+      },
       text: '\u{2B05} Назад',
     },
   ]

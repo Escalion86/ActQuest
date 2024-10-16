@@ -26,7 +26,11 @@ const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
       message: `Вы зарегистрировали команду "${
         team?.name
       }" на игру ${formatGameName(game)}`,
-      nextCommand: { c: `teamGamesAdmin`, teamId: jsonCommand.teamId },
+      nextCommand: {
+        c: `teamGamesAdmin`,
+        teamId: jsonCommand.teamId,
+        page: jsonCommand.page,
+      },
     }
   }
 
@@ -42,7 +46,11 @@ const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
         }
       }),
       {
-        c: { c: `teamGamesAdmin`, teamId: jsonCommand.teamId },
+        c: {
+          c: `teamGamesAdmin`,
+          teamId: jsonCommand.teamId,
+          page: jsonCommand.page,
+        },
         text: '\u{2B05} Назад',
       },
     ],

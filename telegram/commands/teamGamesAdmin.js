@@ -51,11 +51,19 @@ const teamGamesAdmin = async ({ telegramId, jsonCommand }) => {
     buttons: [
       // ...buttons,
       {
-        c: { c: 'joinGameAdmin', teamId: jsonCommand.teamId },
+        c: {
+          c: 'joinGameAdmin',
+          teamId: jsonCommand.teamId,
+          page: jsonCommand.page,
+        },
         text: '\u{270F} Зарегистрировать команду на игру',
       },
       {
-        c: { c: 'editTeamAdmin', teamId: jsonCommand.teamId },
+        c: {
+          c: 'editTeamAdmin',
+          teamId: jsonCommand.teamId,
+          page: jsonCommand.page,
+        },
         text: '\u{2B05} Назад',
       },
     ],

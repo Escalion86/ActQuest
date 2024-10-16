@@ -20,7 +20,11 @@ const delTeamUserAdmin = async ({ telegramId, jsonCommand }) => {
         },
         {
           text: '\u{1F6AB} Отмена',
-          c: { c: 'teamUsersAdmin', teamUserId: jsonCommand.teamUserId },
+          c: {
+            c: 'teamUsersAdmin',
+            teamUserId: jsonCommand.teamUserId,
+            page: jsonCommand.page,
+          },
         },
       ],
     }
@@ -30,7 +34,11 @@ const delTeamUserAdmin = async ({ telegramId, jsonCommand }) => {
   return {
     success: true,
     message: 'Пользователь удален из команды',
-    nextCommand: { c: 'teamUsersAdmin', teamId: teamUser.teamId },
+    nextCommand: {
+      c: 'teamUsersAdmin',
+      teamId: teamUser.teamId,
+      page: jsonCommand.page,
+    },
   }
 }
 

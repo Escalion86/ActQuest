@@ -23,11 +23,19 @@ const editTeamAdmin = async ({ telegramId, jsonCommand }) => {
     //   text: '\u{270F} Изменить описание',
     // },
     {
-      c: { c: 'teamGamesAdmin', teamId: jsonCommand.teamId },
+      c: {
+        c: 'teamGamesAdmin',
+        teamId: jsonCommand.teamId,
+        page: jsonCommand.page,
+      },
       text: '\u{1F3AE} Игры команды',
     },
     {
-      c: { c: 'teamUsersAdmin', teamId: jsonCommand.teamId },
+      c: {
+        c: 'teamUsersAdmin',
+        teamId: jsonCommand.teamId,
+        page: jsonCommand.page,
+      },
       text: '\u{1F465} Состав команды',
     },
     // {
@@ -40,10 +48,14 @@ const editTeamAdmin = async ({ telegramId, jsonCommand }) => {
     //   text: '\u{1F517} Пригласить в команду',
     // },
     {
-      c: { c: 'delTeamAdmin', teamId: jsonCommand.teamId },
+      c: {
+        c: 'delTeamAdmin',
+        teamId: jsonCommand.teamId,
+        page: jsonCommand.page,
+      },
       text: '\u{1F4A3} Удалить команду',
     },
-    { c: 'teams', text: '\u{2B05} Назад' },
+    { c: { c: 'teams', page: jsonCommand.page }, text: '\u{2B05} Назад' },
   ]
 
   return {
