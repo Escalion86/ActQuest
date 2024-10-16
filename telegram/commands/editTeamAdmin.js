@@ -1,3 +1,4 @@
+import formatDateTime from '@helpers/formatDateTime'
 import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 
@@ -50,7 +51,12 @@ const editTeamAdmin = async ({ telegramId, jsonCommand }) => {
       team?.name
     }"</b>.${
       team?.description ? `\n\n<b>Описание</b>: "${team?.description}"` : ''
-    }\n\nID команды: <code>${team?._id}</code>`,
+    }Дата и время создания команды: ${formatDateTime(
+      team?.createdAt,
+      false,
+      false,
+      false
+    )}\n\nID команды: <code>${team?._id}</code>`,
     buttons,
   }
 }
