@@ -86,7 +86,7 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
         })
         .join('\n')}`,
       buttons: [
-        ...buttons,
+        // ...buttons,
         {
           c: { showStatistic: false },
           text: '\u{21A9} Выбрать другие игры',
