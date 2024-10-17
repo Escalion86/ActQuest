@@ -41,8 +41,9 @@ const uncancelTask = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: `Задание активировано`,
     nextCommand: {
-      c: 'gameTasksEdit',
+      c: 'editTask',
       gameId: jsonCommand.gameId,
+      i: jsonCommand.i,
     },
   }
 }
