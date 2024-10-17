@@ -16,7 +16,11 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
   if (!teamsUsers || teamsUsers.length === 0) {
     return {
       message: 'Никто не состоит в команде',
-      nextCommand: { c: 'teams', teamId: jsonCommand.teamId },
+      nextCommand: {
+        c: 'teams',
+        teamId: jsonCommand.teamId,
+        page: jsonCommand.page,
+      },
     }
   }
 
@@ -38,13 +42,13 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
   })
   usersWithRoleInTeam.sort((user) => (user?.role === 'capitan' ? -1 : 1))
 
-  const page = jsonCommand?.page ?? 1
+  const page2 = jsonCommand?.page2 ?? 1
   const buttons = buttonListConstructor(
     usersWithRoleInTeam,
-    page,
+    page2,
     ({ name, role, teamUserId }, number) => ({
       text: `${number}. ${name}${role === 'capitan' ? ' (капитан)' : ''}`,
-      c: { c: 'teamUserAdmin', teamUserId: teamUserId },
+      c: { c: 'teamUserAdmin', teamUserId: teamUserId, page: jsonCommand.page },
     })
   )
 
@@ -56,6 +60,7 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand }) => {
         c: {
           c: 'editTeamAdmin',
           teamId: jsonCommand.teamId,
+          page: jsonCommand.page,
         },
         text: '\u{2B05} Назад',
       },

@@ -1,3 +1,4 @@
+import { getNounPoints } from '@helpers/getNoun'
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
 import TeamsUsers from '@models/TeamsUsers'
@@ -6,7 +7,7 @@ import Users from '@models/Users'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import formatGameName from 'telegram/func/formatGameName'
 
-const placePoints = (place = 0) => {
+const placePoints = (place) => {
   if (!place) return 0
   const points = 11 - place
   if (points < 0) return 0
@@ -14,7 +15,7 @@ const placePoints = (place = 0) => {
 }
 
 const usersStatistics = async ({ telegramId, jsonCommand }) => {
-  const finishedGames = await Games.find({ status: 'finished' })
+  const finishedGames = await Games.find({ status: 'finished' }).lean()
   // const users = await Users.find({})
   // const teamsUsers = await TeamsUsers.find({})
 
@@ -29,15 +30,21 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
   // })
 
   if (jsonCommand.showStatistic) {
-    const jsonKeys = Object.keys(jsonCommand)
-    const checkedGames = finishedGames.filter(({ _id }) =>
-      jsonKeys.includes(String(_id))
-    )
+    // const jsonKeys = Object.keys(jsonCommand)
+    const checkedGames = finishedGames.filter(({ _id }) => {
+      const gameId = String(_id)
+      return jsonCommand[gameId]
+    })
 
     var usersStatistics = {}
     checkedGames.forEach(({ result }) => {
+      if (!result) return
+
       const { teams, teamsUsers, gameTeams, teamsPlaces } = result
+      // console.log('teams.length :>> ', teams.length)
+      // console.log('teamsPlaces :>> ', teamsPlaces)
       if (!teamsPlaces || !teams) return
+
       teams.forEach(({ _id }) => {
         const id = String(_id)
         const usersTelegramIdsInTeam = teamsUsers
@@ -57,12 +64,12 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
       })
     })
     const users = await Users.find({
-      telegramId: { $in: Object.keys(usersStatistics) },
-    })
+      telegramId: { $in: Object.keys(usersStatistics).map((id) => Number(id)) },
+    }).lean()
 
     const usersWithPoints = users.map((user) => {
-      const userPoints = usersStatistics[user.telegramId]
-      return { ...user, points: userPoints }
+      const points = usersStatistics[user.telegramId] || 0
+      return { ...user, points }
     })
 
     const sortedUsersWithPoints = usersWithPoints
@@ -79,14 +86,21 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
     //   }
     // })
 
+    let place = 0
+    let prevPoints = null
+
     return {
       message: `Рейтинг игроков по выбранным играм:\n${sortedUsersWithPoints
         .map(({ name, points }, index) => {
-          return `${index + 1}. ${name} - ${points} очков`
+          if (prevPoints === null || prevPoints > points) {
+            prevPoints = points
+            place += 1
+          }
+          return `${place}. ${name} - ${getNounPoints(points)}`
         })
         .join('\n')}`,
       buttons: [
-        ...buttons,
+        // ...buttons,
         {
           c: { showStatistic: false },
           text: '\u{21A9} Выбрать другие игры',
