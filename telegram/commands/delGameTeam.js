@@ -5,8 +5,9 @@ import formatGameName from 'telegram/func/formatGameName'
 import getAdmins from 'telegram/func/getAdmins'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
+import sendMessage from 'telegram/sendMessage'
 
-const delGameTeam = async ({ telegramId, jsonCommand }) => {
+const delGameTeam = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 

@@ -7,6 +7,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getAdmins from 'telegram/func/getAdmins'
 import getGame from 'telegram/func/getGame'
 import getTeam from 'telegram/func/getTeam'
+import sendMessage from 'telegram/sendMessage'
 
 const joinGame = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
