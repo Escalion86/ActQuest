@@ -6,6 +6,7 @@ import Users from '@models/Users'
 
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import formatGameName from 'telegram/func/formatGameName'
+import numberToEmojis from 'telegram/func/numberToEmojis'
 
 const placePoints = (place) => {
   if (!place) return 0
@@ -118,7 +119,9 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
             prevPointsSum = pointsSum
             place += 1
           }
-          return `${place}. ${name} - ${getNounPoints(pointsSum)}${
+          return `${numberToEmojis(place)} ${name} - ${getNounPoints(
+            pointsSum
+          )}${
             place <= 3
               ? `\n${statistics
                   .map(
@@ -127,7 +130,7 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
                         teamPoints
                       )}`
                   )
-                  .join('\n')}`
+                  .join('\n')}\n`
               : ''
           }`
         })
