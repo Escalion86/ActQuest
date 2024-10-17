@@ -55,10 +55,12 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
           .filter(({ teamId }) => teamId === id)
           .map(({ userTelegramId }) => userTelegramId)
         // console.log('usersTelegramIdsInTeam :>> ', usersTelegramIdsInTeam)
+        console.log('teamsPlaces :>> ', teamsPlaces)
+        console.log('id :>> ', id)
         const teamPlace = teamsPlaces[id]
         console.log('teamPlace :>> ', teamPlace)
         const teamPoints = teamPlace ? placePoints(teamPlace) : 0
-        console.log('teamPoints :>> ', teamPoints)
+        // console.log('teamPoints :>> ', teamPoints)
         if (teamPoints > 0) {
           usersTelegramIdsInTeam.forEach((userTelegramId) => {
             if (!usersStatistics[userTelegramId]) {
@@ -74,7 +76,7 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
       telegramId: { $in: Object.keys(usersStatistics).map((id) => Number(id)) },
     })
 
-    console.log('usersStatistics :>> ', usersStatistics)
+    // console.log('usersStatistics :>> ', usersStatistics)
     const usersWithPoints = users.map((user) => {
       const points = usersStatistics[user.telegramId] || 0
       return { ...user, points }
