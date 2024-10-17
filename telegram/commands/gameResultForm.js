@@ -119,7 +119,10 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
           (item) => item.teamId === String(team._id)
         )
         const seconds = dur?.duration[index] ?? '[не начато]'
-        if (!fastestTask.seconds || fastestTask.seconds > seconds) {
+        if (
+          !task.canceled &&
+          (!fastestTask.seconds || fastestTask.seconds > seconds)
+        ) {
           fastestTask.seconds = seconds
           fastestTask.teamName = team.name
           fastestTask.taskTitle = task?.title
@@ -135,7 +138,9 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
 
       const sortedTeamsSeconds = [...teamsSeconds].sort(sortFunc)
 
-      return `\n<b>\u{1F4CC} "${task?.title}"</b>\n${sortedTeamsSeconds
+      return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}"${
+        task?.title
+      }"</b>\n${sortedTeamsSeconds
         .map(
           ({ team, seconds }) =>
             `${
@@ -174,11 +179,13 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       )
       .join('\n')
 
-    const seconds = duration.reduce((partialSum, a) => {
+    const seconds = duration.reduce((partialSum, a, index) => {
       const res =
         typeof a === 'number' && typeof partialSum === 'number'
           ? partialSum + a
           : '[стоп игра]'
+      if (game.tasks[index]?.canceled) return res
+
       if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
         penalty += game.taskFailurePenalty ?? 0
         result += game.taskDuration ?? 3600
@@ -186,56 +193,61 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
       return res
     }, 0)
 
-    game.tasks.forEach(({ title, penaltyCodes, bonusCodes }, index) => {
-      if (
-        findedPenaltyCodes[index]?.length > 0 ||
-        findedBonusCodes[index]?.length > 0
-      )
-        codePenaltyBonusText += `\n\u{1F4CC} "${title}":`
+    game.tasks.forEach(
+      ({ title, penaltyCodes, bonusCodes, canceled }, index) => {
+        if (canceled) return
 
-      if (
-        typeof game.manyCodesPenalty === 'object' &&
-        game.manyCodesPenalty[0] > 0 &&
-        typeof wrongCodes === 'object' &&
-        wrongCodes !== null
-      ) {
-        const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
         if (
-          typeof wrongCodes[index] === 'object' &&
-          wrongCodes[index] !== null &&
-          wrongCodes[index].length >= maxCodes
+          findedPenaltyCodes[index]?.length > 0 ||
+          findedBonusCodes[index]?.length > 0
+        )
+          codePenaltyBonusText += `\n\u{1F4CC} "${title}":`
+
+        if (
+          typeof game.manyCodesPenalty === 'object' &&
+          game.manyCodesPenalty[0] > 0 &&
+          typeof wrongCodes === 'object' &&
+          wrongCodes !== null
         ) {
-          manyWrongCodePenalty +=
-            Math.floor(wrongCodes[index].length / maxCodes) * penaltyForMaxCodes
+          const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
+          if (
+            typeof wrongCodes[index] === 'object' &&
+            wrongCodes[index] !== null &&
+            wrongCodes[index].length >= maxCodes
+          ) {
+            manyWrongCodePenalty +=
+              Math.floor(wrongCodes[index].length / maxCodes) *
+              penaltyForMaxCodes
+          }
+        }
+        if (findedPenaltyCodes[index]?.length > 0) {
+          const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) =>
+            findedPenaltyCodes[index].includes(code)
+          )
+          codePenaltyBonusText += findedPenaltyCodesFull.map(
+            ({ penalty, description }) =>
+              `\n\u{1F534} ${secondsToTime(penalty)} - ${description}`
+          )
+          codePenalty += findedPenaltyCodesFull.reduce(
+            (sum, { penalty }) => sum + penalty,
+            0
+          )
+        }
+        if (findedBonusCodes[index]?.length > 0) {
+          const findedBonusCodesFull = bonusCodes.filter(({ code }) =>
+            findedBonusCodes[index].includes(code)
+          )
+          codePenaltyBonusText += findedBonusCodesFull.map(
+            ({ bonus, description }) =>
+              `\n\u{1F7E2} ${secondsToTime(bonus)} - ${description}`
+          )
+          codeBonus += findedBonusCodesFull.reduce(
+            (sum, { bonus }) => sum + bonus,
+            0
+          )
         }
       }
-      if (findedPenaltyCodes[index]?.length > 0) {
-        const findedPenaltyCodesFull = penaltyCodes.filter(({ code }) =>
-          findedPenaltyCodes[index].includes(code)
-        )
-        codePenaltyBonusText += findedPenaltyCodesFull.map(
-          ({ penalty, description }) =>
-            `\n\u{1F534} ${secondsToTime(penalty)} - ${description}`
-        )
-        codePenalty += findedPenaltyCodesFull.reduce(
-          (sum, { penalty }) => sum + penalty,
-          0
-        )
-      }
-      if (findedBonusCodes[index]?.length > 0) {
-        const findedBonusCodesFull = bonusCodes.filter(({ code }) =>
-          findedBonusCodes[index].includes(code)
-        )
-        codePenaltyBonusText += findedBonusCodesFull.map(
-          ({ bonus, description }) =>
-            `\n\u{1F7E2} ${secondsToTime(bonus)} - ${description}`
-        )
-        codeBonus += findedBonusCodesFull.reduce(
-          (sum, { bonus }) => sum + bonus,
-          0
-        )
-      }
-    })
+    )
 
     const totalPenalty = penalty + codePenalty + manyWrongCodePenalty
 
@@ -326,10 +338,20 @@ const gameResultForm = async ({ telegramId, jsonCommand }) => {
     .join('\n')
 
   const mostEasyTaskIndex = taskAverageTimes.indexOf(
-    Math.min.apply(null, taskAverageTimes)
+    Math.min.apply(
+      null,
+      taskAverageTimes.map((time, index) =>
+        game.tasks[index]?.canceled ? (game.taskDuration ?? 3600) + 1 : time
+      )
+    )
   )
   const mostHardTaskIndex = taskAverageTimes.indexOf(
-    Math.max.apply(null, taskAverageTimes)
+    Math.max.apply(
+      null,
+      taskAverageTimes.map((time, index) =>
+        game.tasks[index]?.canceled ? -1 : time
+      )
+    )
   )
 
   const gameDateTimeFact = formatGameDateTimeFact(game, {

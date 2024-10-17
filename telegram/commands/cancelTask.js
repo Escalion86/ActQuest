@@ -41,8 +41,9 @@ const cancelTask = async ({ telegramId, jsonCommand }) => {
     success: true,
     message: `Задание отменено`,
     nextCommand: {
-      c: 'gameTasksEdit',
+      c: 'editTask',
       gameId: jsonCommand.gameId,
+      i: jsonCommand.i,
     },
   }
 }
