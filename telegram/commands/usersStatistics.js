@@ -45,8 +45,8 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
       if (!result) return
 
       const { teams, teamsUsers, gameTeams, teamsPlaces } = result
-      console.log('teams.length :>> ', teams.length)
-      console.log('teamsPlaces :>> ', teamsPlaces)
+      // console.log('teams.length :>> ', teams.length)
+      // console.log('teamsPlaces :>> ', teamsPlaces)
       if (!teamsPlaces || !teams) return
 
       teams.forEach(({ _id }) => {
@@ -54,8 +54,10 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
         const usersTelegramIdsInTeam = teamsUsers
           .filter(({ teamId }) => teamId === id)
           .map(({ userTelegramId }) => userTelegramId)
+        console.log('usersTelegramIdsInTeam :>> ', usersTelegramIdsInTeam)
         const teamPlace = teamsPlaces[id]
         const teamPoints = teamPlace ? placePoints(teamPlace) : 0
+        console.log('teamPoints :>> ', teamPoints)
         if (teamPoints > 0) {
           usersTelegramIdsInTeam.forEach((userTelegramId) => {
             if (!usersStatistics[userTelegramId]) {
