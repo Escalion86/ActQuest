@@ -57,7 +57,7 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
             if (!usersStatistics[userTelegramId]) {
               usersStatistics[userTelegramId] = [
                 {
-                  gameTitle: game.title,
+                  gameName: game.name,
                   teamName: name,
                   teamPlace,
                   teamPoints,
@@ -65,7 +65,7 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
               ]
             } else {
               usersStatistics[userTelegramId].push({
-                gameTitle: game.title,
+                gameName: game.name,
                 teamName: name,
                 teamPlace,
                 teamPoints,
@@ -122,8 +122,8 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
             place <= 3
               ? `\n${statistics
                   .map(
-                    ({ gameTitle, teamName, teamPlace, teamPoints }) =>
-                      `${gameTitle} - ${teamName} - ${teamPlace} место - ${getNounPoints(
+                    ({ gameName, teamName, teamPlace, teamPoints }) =>
+                      `${gameName} - ${teamName} - ${teamPlace} место - ${getNounPoints(
                         teamPoints
                       )}`
                   )
