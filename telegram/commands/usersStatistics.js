@@ -86,12 +86,18 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
     //   }
     // })
 
+    let place = 0
+    let prevPoints = null
+
     return {
       message: `Рейтинг игроков по выбранным играм:\n${sortedUsersWithPoints
-        .map(
-          ({ name, points }, index) =>
-            `${index + 1}. ${name} - ${getNounPoints(points)}`
-        )
+        .map(({ name, points }, index) => {
+          if (prevPoints === null || prevPoints > points) {
+            prevPoints = points
+            place += 1
+          }
+          return `${place}. ${name} - ${getNounPoints(points)}`
+        })
         .join('\n')}`,
       buttons: [
         // ...buttons,
