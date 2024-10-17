@@ -6,7 +6,7 @@ import Users from '@models/Users'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import formatGameName from 'telegram/func/formatGameName'
 
-const placePoints = (place = 0) => {
+const placePoints = (place) => {
   if (!place) return 0
   const points = 11 - place
   if (points < 0) return 0
@@ -54,8 +54,9 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
         const usersTelegramIdsInTeam = teamsUsers
           .filter(({ teamId }) => teamId === id)
           .map(({ userTelegramId }) => userTelegramId)
-        console.log('usersTelegramIdsInTeam :>> ', usersTelegramIdsInTeam)
+        // console.log('usersTelegramIdsInTeam :>> ', usersTelegramIdsInTeam)
         const teamPlace = teamsPlaces[id]
+        console.log('teamPlace :>> ', teamPlace)
         const teamPoints = teamPlace ? placePoints(teamPlace) : 0
         console.log('teamPoints :>> ', teamPoints)
         if (teamPoints > 0) {
