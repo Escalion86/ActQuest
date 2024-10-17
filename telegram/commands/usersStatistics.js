@@ -1,3 +1,4 @@
+import { getNounPoints } from '@helpers/getNoun'
 import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
 import TeamsUsers from '@models/TeamsUsers'
@@ -35,11 +36,6 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
       return jsonCommand[gameId]
     })
 
-    console.log(
-      'checkedGames :>> ',
-      checkedGames.map(({ _id }) => String(_id))
-    )
-
     var usersStatistics = {}
     checkedGames.forEach(({ result }) => {
       if (!result) return
@@ -54,13 +50,8 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
         const usersTelegramIdsInTeam = teamsUsers
           .filter(({ teamId }) => teamId === id)
           .map(({ userTelegramId }) => userTelegramId)
-        // console.log('usersTelegramIdsInTeam :>> ', usersTelegramIdsInTeam)
-        console.log('teamsPlaces :>> ', teamsPlaces)
-        console.log('id :>> ', id)
         const teamPlace = teamsPlaces[id]
-        console.log('teamPlace :>> ', teamPlace)
         const teamPoints = teamPlace ? placePoints(teamPlace) : 0
-        // console.log('teamPoints :>> ', teamPoints)
         if (teamPoints > 0) {
           usersTelegramIdsInTeam.forEach((userTelegramId) => {
             if (!usersStatistics[userTelegramId]) {
@@ -76,7 +67,6 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
       telegramId: { $in: Object.keys(usersStatistics).map((id) => Number(id)) },
     })
 
-    // console.log('usersStatistics :>> ', usersStatistics)
     const usersWithPoints = users.map((user) => {
       const points = usersStatistics[user.telegramId] || 0
       return { ...user, points }
@@ -98,8 +88,8 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
 
     return {
       message: `Рейтинг игроков по выбранным играм:\n${sortedUsersWithPoints
-        .map(({ name, points }, index) => {
-          return `${index + 1}. ${name} - ${points} очков`
+        .map(({ user, points }, index) => {
+          return `${index + 1}. ${user.name} - ${getNounPoints(points)}`
         })
         .join('\n')}`,
       buttons: [
