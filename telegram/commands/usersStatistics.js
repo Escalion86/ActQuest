@@ -65,7 +65,7 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
     })
     const users = await Users.find({
       telegramId: { $in: Object.keys(usersStatistics).map((id) => Number(id)) },
-    })
+    }).lean()
 
     const usersWithPoints = users.map((user) => {
       const points = usersStatistics[user.telegramId] || 0
@@ -88,8 +88,9 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
 
     return {
       message: `Рейтинг игроков по выбранным играм:\n${sortedUsersWithPoints
-        .map(({ name, points }, index) => {
-          return `${index + 1}. ${name} - ${getNounPoints(points)}`
+        .map((user, index) => {
+          console.log('user :>> ', user)
+          return `${index + 1}. ${user.name} - ${getNounPoints(user.points)}`
         })
         .join('\n')}`,
       buttons: [
