@@ -4,10 +4,12 @@ import TeamsUsers from '@models/TeamsUsers'
 
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
+import getAdmins from 'telegram/func/getAdmins'
 import getGame from 'telegram/func/getGame'
 import getTeam from 'telegram/func/getTeam'
+import sendMessage from 'telegram/sendMessage'
 
-const joinGame = async ({ telegramId, jsonCommand }) => {
+const joinGame = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -61,6 +63,24 @@ const joinGame = async ({ telegramId, jsonCommand }) => {
       teamId: jsonCommand.teamId,
       gameId: jsonCommand.gameId,
     })
+
+    // Оповещаем администраторов
+    const admins = await getAdmins()
+    const adminTelegramIds = admins.map(({ telegramId }) => telegramId)
+
+    await Promise.all(
+      adminTelegramIds.map(async (telegramId) => {
+        await sendMessage({
+          chat_id: telegramId,
+          text: `На игру ${formatGameName(game)} зарегистрировалась команда "${
+            team.name
+          }"`,
+          // keyboard,
+          domen,
+        })
+      })
+    )
+
     return {
       message: `Вы зарегистрировались на игру ${formatGameName(
         game

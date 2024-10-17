@@ -6,6 +6,7 @@ import Users from '@models/Users'
 
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import formatGameName from 'telegram/func/formatGameName'
+import numberToEmojis from 'telegram/func/numberToEmojis'
 
 const placePoints = (place) => {
   if (!place) return 0
@@ -37,15 +38,15 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
     })
 
     var usersStatistics = {}
-    checkedGames.forEach(({ result }) => {
-      if (!result) return
+    checkedGames.forEach((game) => {
+      if (!game?.result) return
 
-      const { teams, teamsUsers, gameTeams, teamsPlaces } = result
+      const { teams, teamsUsers, gameTeams, teamsPlaces } = game.result
       // console.log('teams.length :>> ', teams.length)
       // console.log('teamsPlaces :>> ', teamsPlaces)
       if (!teamsPlaces || !teams) return
 
-      teams.forEach(({ _id }) => {
+      teams.forEach(({ _id, name }) => {
         const id = String(_id)
         const usersTelegramIdsInTeam = teamsUsers
           .filter(({ teamId }) => teamId === id)
@@ -55,9 +56,21 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
         if (teamPoints > 0) {
           usersTelegramIdsInTeam.forEach((userTelegramId) => {
             if (!usersStatistics[userTelegramId]) {
-              usersStatistics[userTelegramId] = teamPoints
+              usersStatistics[userTelegramId] = [
+                {
+                  gameName: game.name,
+                  teamName: name,
+                  teamPlace,
+                  teamPoints,
+                },
+              ]
             } else {
-              usersStatistics[userTelegramId] += teamPoints
+              usersStatistics[userTelegramId].push({
+                gameName: game.name,
+                teamName: name,
+                teamPlace,
+                teamPoints,
+              })
             }
           })
         }
@@ -68,13 +81,23 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
     }).lean()
 
     const usersWithPoints = users.map((user) => {
-      const points = usersStatistics[user.telegramId] || 0
-      return { ...user, points }
+      const pointsSum =
+        usersStatistics[user.telegramId]?.length > 0
+          ? usersStatistics[user.telegramId].reduce(
+              (acc, { teamPoints }) => acc + teamPoints,
+              0
+            )
+          : 0
+      return {
+        ...user,
+        pointsSum,
+        statistics: usersStatistics[user.telegramId],
+      }
     })
 
     const sortedUsersWithPoints = usersWithPoints
       // .filter((user) => user.points > 0)
-      .sort((a, b) => b.points - a.points)
+      .sort((a, b) => b.pointsSum - a.pointsSum)
 
     // const page2 = jsonCommand?.page ?? 1
     // const buttons = buttonListConstructor(sortedUsersWithPoints, page2, ({name, points}, number) => {
@@ -87,16 +110,29 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
     // })
 
     let place = 0
-    let prevPoints = null
+    let prevPointsSum = null
 
     return {
       message: `Рейтинг игроков по выбранным играм:\n${sortedUsersWithPoints
-        .map(({ name, points }, index) => {
-          if (prevPoints === null || prevPoints > points) {
-            prevPoints = points
+        .map(({ name, pointsSum, statistics }, index) => {
+          if (prevPointsSum === null || prevPointsSum > pointsSum) {
+            prevPointsSum = pointsSum
             place += 1
           }
-          return `${place}. ${name} - ${getNounPoints(points)}`
+          return `${numberToEmojis(place)} ${name} - ${getNounPoints(
+            pointsSum
+          )}${
+            place <= 3
+              ? `\n${statistics
+                  .map(
+                    ({ gameName, teamName, teamPlace, teamPoints }) =>
+                      `${gameName} - ${teamName} - ${teamPlace} место - ${getNounPoints(
+                        teamPoints
+                      )}`
+                  )
+                  .join('\n')}\n`
+              : ''
+          }`
         })
         .join('\n')}`,
       buttons: [
