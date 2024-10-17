@@ -42,8 +42,13 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
 
     var usersStatistics = {}
     checkedGames.forEach(({ result }) => {
+      if (!result) return
+
       const { teams, teamsUsers, gameTeams, teamsPlaces } = result
+      console.log('teams.length :>> ', teams.length)
+      console.log('teamsPlaces :>> ', teamsPlaces)
       if (!teamsPlaces || !teams) return
+
       teams.forEach(({ _id }) => {
         const id = String(_id)
         const usersTelegramIdsInTeam = teamsUsers
