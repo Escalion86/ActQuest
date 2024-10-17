@@ -14,7 +14,7 @@ const placePoints = (place) => {
 }
 
 const usersStatistics = async ({ telegramId, jsonCommand }) => {
-  const finishedGames = await Games.find({ status: 'finished' })
+  const finishedGames = await Games.find({ status: 'finished' }).lean()
   // const users = await Users.find({})
   // const teamsUsers = await TeamsUsers.find({})
 
