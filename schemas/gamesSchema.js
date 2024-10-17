@@ -118,6 +118,10 @@ const gamesSchema = {
           default: '',
           trim: true,
         },
+        canceled: {
+          type: Boolean,
+          default: false,
+        },
       },
     ],
     default: [],

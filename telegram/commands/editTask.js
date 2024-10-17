@@ -58,7 +58,9 @@ const editTask = async ({ telegramId, jsonCommand }) => {
 
   return {
     // images: task.images ? task.images : undefined,
-    message: `<b>Редактирование задания</b>\n"${task?.title}"\n\nКоординаты: ${
+    message: `<b>Редактирование задания</b>\n"${task?.title}"${
+      task.canceled ? `\n\n\u{26D4} <b>ЗАДАНИЕ ОТМЕНЕНО!</b>` : ''
+    }\n\n<b>Координаты</b>: ${
       !latitude || !longitude
         ? '[не заданы]'
         : `<code>${latitude} ${longitude}</code>`
@@ -236,6 +238,24 @@ const editTask = async ({ telegramId, jsonCommand }) => {
           i: jsonCommand.i,
         },
         text: '\u{270F} Сообщение после задания',
+      },
+      {
+        c: {
+          c: 'cancelTask',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+        },
+        text: '\u{26D4} Отменить задание',
+        hide: task.canceled,
+      },
+      {
+        c: {
+          c: 'uncancelTask',
+          gameId: jsonCommand.gameId,
+          i: jsonCommand.i,
+        },
+        text: '\u{2705} Активировать задание',
+        hide: !task.canceled,
       },
       {
         c: {

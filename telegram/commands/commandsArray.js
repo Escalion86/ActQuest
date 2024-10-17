@@ -132,6 +132,8 @@ import gameTeamPhotos from './gameTeamPhotos'
 import gameTeamPayments from './gameTeamPayments'
 import usersStatistics from './usersStatistics'
 import gameResultFormTeamsPlaces from './gameResultFormTeamsPlaces'
+import cancelTask from './cancelTask'
+import uncancelTask from './uncancelTask'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -271,6 +273,8 @@ const commandsArray = {
   gameTeamPayments,
   usersStatistics,
   gameResultFormTeamsPlaces,
+  cancelTask,
+  uncancelTask,
 }
 
 var i = 0
