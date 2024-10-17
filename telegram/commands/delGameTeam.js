@@ -5,6 +5,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getAdmins from 'telegram/func/getAdmins'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
+import getTeam from 'telegram/func/getTeam'
 import sendMessage from 'telegram/sendMessage'
 
 const delGameTeam = async ({ telegramId, jsonCommand, domen }) => {
@@ -40,6 +41,9 @@ const delGameTeam = async ({ telegramId, jsonCommand, domen }) => {
   // Оповещаем администраторов
   const admins = await getAdmins()
   const adminTelegramIds = admins.map(({ telegramId }) => telegramId)
+
+  const team = await getTeam(gameTeam.teamId)
+  if (team.success === false) return team
 
   await Promise.all(
     adminTelegramIds.map(async (telegramId) => {
