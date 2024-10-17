@@ -88,8 +88,8 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
 
     return {
       message: `Рейтинг игроков по выбранным играм:\n${sortedUsersWithPoints
-        .map(({ user, points }, index) => {
-          return `${index + 1}. ${user.name} - ${getNounPoints(points)}`
+        .map(({ name, points }, index) => {
+          return `${index + 1}. ${name} - ${getNounPoints(points)}`
         })
         .join('\n')}`,
       buttons: [
