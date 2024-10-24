@@ -1,3 +1,4 @@
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
