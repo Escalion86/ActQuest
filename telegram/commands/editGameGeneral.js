@@ -171,8 +171,8 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
             gameId: jsonCommand.gameId,
           },
           text: game.showTasks
-            ? '\u{1F441} Показать задания'
-            : '\u{1F648} Скрыть задания',
+            ? '\u{1F648} Скрыть задания'
+            : '\u{1F441} Показать задания',
           hide: !game.result,
         },
       ],
