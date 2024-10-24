@@ -16,7 +16,7 @@ const gameTasksView = async ({ telegramId, jsonCommand }) => {
   const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
     return [
       {
-        c: { c: 'taskView', gameId: jsonCommand.gameId, i: number - 1 },
+        c: { c: 'gameTaskView', gameId: jsonCommand.gameId, i: number - 1 },
         text: `\u{1F3AF} ${number}. "${task.title}"`,
       },
     ]
