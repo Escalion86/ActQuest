@@ -136,6 +136,8 @@ import cancelTask from './cancelTask'
 import uncancelTask from './uncancelTask'
 import gameTeamResult from './gameTeamResult'
 import gameTeamsResult from './gameTeamsResult'
+import gameTasksView from './gameTasksView'
+import gameTaskView from './gameTaskView'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -279,6 +281,8 @@ const commandsArray = {
   uncancelTask,
   gameTeamResult,
   gameTeamsResult,
+  gameTasksView,
+  gameTaskView,
 }
 
 var i = 0
