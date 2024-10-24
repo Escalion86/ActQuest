@@ -203,14 +203,11 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
     )
     .join('\n')
 
-  const totalResult =
-    sumTasksTime +
-    sumCodePenalty -
-    sumCodeBonus +
-    sumManyWrongCodePenalty +
-    sumPenalty +
-    addingsPenalty -
-    addingsBonuses
+  const sumTasksBonuses = sumCodeBonus + addingsBonuses
+  const sumTasksPenalty =
+    sumCodePenalty + sumManyWrongCodePenalty + sumPenalty + addingsPenalty
+
+  const totalResult = sumTasksTime - sumTasksBonuses + sumTasksPenalty
 
   const place = game.result.teamsPlaces
     ? game.result.teamsPlaces[gameTeam.teamId]
@@ -224,9 +221,9 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
     }\n\n\u{1F3C6} <b>ИТОГИ</b>:\nСуммарное время на задания: ${secondsToTime(
       sumTasksTime
     )}\nСуммарно бонусов: \u{1F7E2}${secondsToTime(
-      sumCodeBonus + addingsBonuses
-    )}\nСуммарно штрафов: \u{1F7E2}${secondsToTime(
-      sumCodePenalty + sumManyWrongCodePenalty + sumPenalty + addingsPenalty
+      sumTasksBonuses
+    )}\nСуммарно штрафов: \u{1F534}${secondsToTime(
+      sumTasksPenalty
     )}\nИтоговый результат команды с учетом бонусов и штрафов: ${secondsToTime(
       totalResult
     )}${place ? `(${place} место в рейтинге)` : ''}`,
