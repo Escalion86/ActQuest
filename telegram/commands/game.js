@@ -173,6 +173,11 @@ const game = async ({ telegramId, user, jsonCommand, domen }) => {
         hide: game.status !== 'finished' || !game.result || game.hideResult,
       },
       {
+        c: { c: 'gameTeamsResult', gameId: jsonCommand.gameId },
+        text: '\u{1F4CB} Посмотреть результаты по командам',
+        hide: game.status !== 'finished' || !game.result || game.hideResult,
+      },
+      {
         c: { c: 'joinGame', gameId: jsonCommand.gameId },
         text: '\u{270F} Зарегистрироваться на игру',
         hide:
