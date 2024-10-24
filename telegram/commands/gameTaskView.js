@@ -61,10 +61,10 @@ const gameTaskView = async ({ telegramId, jsonCommand }) => {
     // images: task.images ? task.images : undefined,
     message: `<b>Просмотр задания</b>\n"${task?.title}"${
       task.canceled ? `\n\n\u{26D4} <b>ЗАДАНИЕ ОТМЕНЕНО!</b>` : ''
-    }\n\n<b>Координаты</b>: ${
+    }${
       !latitude || !longitude
-        ? '[не заданы]'
-        : `<code>${latitude} ${longitude}</code>`
+        ? ''
+        : `\n\n<b>Координаты</b>: <code>${latitude} ${longitude}</code>`
     }\n\n<b>Текст задания</b>:${
       !task?.task ? ' [не задано]' : `\n<blockquote>${task?.task}</blockquote>`
     }${cluesText}${
