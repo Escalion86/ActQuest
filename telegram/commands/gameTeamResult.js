@@ -61,19 +61,87 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
     ({ _id }) => String(_id) === gameTeam.teamId
   )
 
-  const tasksDuration = {
-    duration: durationCalc(gameTeam, game),
-    findedPenaltyCodes: gameTeam.findedPenaltyCodes,
-    findedBonusCodes: gameTeam.findedBonusCodes,
-    timeAddings: gameTeam.timeAddings,
-    wrongCodes: gameTeam.wrongCodes,
-  }
+  const { findedPenaltyCodes, findedBonusCodes, timeAddings, wrongCodes } =
+    gameTeam
+
+  const tasksDuration = durationCalc(gameTeam, game)
   // new Date(finish || undefined).getTime()
+
   const text = game.tasks
     .map((task, index) => {
-      const seconds = tasksDuration?.duration[index] ?? '[не начато]'
+      let codePenalty = 0
+      let codeBonus = 0
+      let manyWrongCodePenalty = 0
+      let penalty = 0
+
+      const seconds = tasksDuration[index] ?? '[не начато]'
       const startTime = gameTeam.startTime[index]
       const endTime = gameTeam.endTime[index]
+      let codePenaltyBonusText = ''
+
+      if (game.taskFailurePenalty && (!startTime || !endTime)) {
+        codePenaltyBonusText += `\n\u{1F534} ${secondsToTime(
+          game.taskFailurePenalty
+        )} - Задание не выполнено`
+        penalty += game.taskFailurePenalty
+      }
+
+      if (
+        typeof game.manyCodesPenalty === 'object' &&
+        game.manyCodesPenalty[0] > 0 &&
+        typeof wrongCodes === 'object' &&
+        wrongCodes !== null
+      ) {
+        const [maxCodes, penaltyForMaxCodes] = game.manyCodesPenalty
+        if (
+          typeof wrongCodes[index] === 'object' &&
+          wrongCodes[index] !== null &&
+          wrongCodes[index].length >= maxCodes
+        ) {
+          manyWrongCodePenalty +=
+            Math.floor(wrongCodes[index].length / maxCodes) * penaltyForMaxCodes
+          codePenaltyBonusText += `\n\u{1F534} ${secondsToTime(
+            penaltyForMaxCodes
+          )} - Введен неверный код ${wrongCodes[index].length} раз(а)`
+        }
+      }
+
+      if (findedPenaltyCodes[index]?.length > 0) {
+        const findedPenaltyCodesFull =
+          task.penaltyCodes?.filter(({ code }) =>
+            findedPenaltyCodes[index].includes(code)
+          ) || []
+        codePenaltyBonusText += findedPenaltyCodesFull.map(
+          ({ penalty, description }) =>
+            `\n\u{1F534} ${secondsToTime(penalty)} - ${description}`
+        )
+        codePenalty += findedPenaltyCodesFull.reduce(
+          (sum, { penalty }) => sum + penalty,
+          0
+        )
+      }
+      if (findedBonusCodes[index]?.length > 0) {
+        const findedBonusCodesFull =
+          task.bonusCodes?.filter(({ code }) =>
+            findedBonusCodes[index].includes(code)
+          ) || []
+        codePenaltyBonusText += findedBonusCodesFull.map(
+          ({ bonus, description }) =>
+            `\n\u{1F7E2} ${secondsToTime(bonus)} - ${description}`
+        )
+        codeBonus += findedBonusCodesFull.reduce(
+          (sum, { bonus }) => sum + bonus,
+          0
+        )
+      }
+
+      const totalPenalty =
+        timeOnTask + penalty + codePenalty + manyWrongCodePenalty
+      const result = totalPenalty - codeBonus
+
+      const timeOnTask = secondsToTime(
+        typeof seconds === 'number' ? seconds : game.taskDuration ?? 3600
+      )
 
       return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}"${
         task?.title
@@ -91,8 +159,24 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
           ? '[не завершено]'
           : '[не начато]'
       }\n
-      Итого: ${secondsToTime(seconds)}`
+      Время на задании: ${timeOnTask}\n
+      Бонусы и штрафы: ${codePenaltyBonusText}\n
+      Итоговый результат в задании: ${result}`
     })
+    .join('\n\n')
+
+  const addings = timeAddings.reduce((acc, { time }) => {
+    return acc + time
+  }, 0)
+
+  var addingsText = timeAddings
+    .map(
+      ({ name, time }) =>
+        `${time < 0 ? '\u{1F7E2}' : '\u{1F534}'} ${secondsToTime(
+          Math.abs(time),
+          true
+        )} - ${name}`
+    )
     .join('\n')
 
   return {
