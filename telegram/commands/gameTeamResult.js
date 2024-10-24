@@ -4,6 +4,7 @@ import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import secondsToTime from 'telegram/func/secondsToTime'
+import dateToDateTimeStr from '@helpers/dateToDateTimeStr'
 
 // const sortFunc = (a, b, key = 'seconds', direction = 'ASC') => {
 //   const isNumericA = typeof a[key] === 'number'
@@ -78,12 +79,14 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
         task?.title
       }"</b>\n  Старт:\n${
         startTime
-          ? secondsToTime(new Date(startTime || undefined).getTime())
+          ? // ? secondsToTime(new Date(startTime || undefined).getTime())
+            dateToDateTimeStr(startTime, false, false, false, false).join(' ')
           : '[не начато]'
       }
       Финиш:\n${
         endTime
-          ? secondsToTime(new Date(endTime || undefined).getTime())
+          ? // ? secondsToTime(new Date(endTime || undefined).getTime())
+            dateToDateTimeStr(endTime, false, false, false, false).join(' ')
           : startTime
           ? '[не завершено]'
           : '[не начато]'
