@@ -136,17 +136,10 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
       }
 
       const totalPenalty = penalty + codePenalty + manyWrongCodePenalty
-      const timeOnTask = secondsToTime(
+      const timeOnTask =
         typeof seconds === 'number' ? seconds : game.taskDuration ?? 3600
-      )
 
       const result = timeOnTask + totalPenalty - codeBonus
-      console.log('timeOnTask :>> ', timeOnTask)
-      // console.log('totalPenalty :>> ', totalPenalty);
-      console.log('codeBonus :>> ', codeBonus)
-      console.log('penalty :>> ', penalty)
-      console.log('codePenalty :>> ', codePenalty)
-      console.log('manyWrongCodePenalty :>> ', manyWrongCodePenalty)
 
       return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}"${
         task?.title
@@ -164,7 +157,9 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
           : '[не начато]'
       }\n${
         codePenaltyBonusText
-          ? `Время на задании: ${timeOnTask}\nБонусы и штрафы: ${codePenaltyBonusText}\n`
+          ? `Время на задании: ${secondsToTime(
+              timeOnTask
+            )}\nБонусы и штрафы: ${codePenaltyBonusText}\n`
           : ''
       }Итоговый результат в задании: ${result}`
     })
