@@ -32,8 +32,9 @@ const gameTaskView = async ({ telegramId, jsonCommand }) => {
 
   const { clues, taskBonusForComplite, subTasks } = task
   const cluesText =
-    typeof clues === 'object'
+    typeof clues === 'object' && jsonCommand.showClue
       ? clues
+          .filter(({ clue }, index) => jsonCommand.showClue <= index + 1)
           .map(
             ({ clue, images }, index) =>
               `\n\n<b>Подсказка №${
@@ -133,6 +134,16 @@ const gameTaskView = async ({ telegramId, jsonCommand }) => {
         : ''
     }`,
     buttons: [
+      {
+        c: { showClue: (jsonCommand.showClue ?? 0) + 1 },
+        text: '\u{2B05} Показать подсказку',
+        hide: typeof clues !== 'object' || jsonCommand.showClue >= clues.length,
+      },
+      // {
+      //   c: { showAnswer: true },
+      //   text: '\u{2B05} Показать Ответ',
+      //   hide: typeof clues === 'object' && jsonCommand.showClue < clues.length
+      // },
       {
         c: { c: 'gameTasksView', gameId: jsonCommand.gameId },
         text: '\u{2B05} Назад',
