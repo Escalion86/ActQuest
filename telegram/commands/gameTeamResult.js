@@ -227,7 +227,7 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
       sumCodeBonus + addingsBonuses
     )}\nСуммарно штрафов: \u{1F7E2}${secondsToTime(
       sumCodePenalty + sumManyWrongCodePenalty + sumPenalty + addingsPenalty
-    )} Итоговый результат команды с учетом бонусов и штрафов: ${secondsToTime(
+    )}\nИтоговый результат команды с учетом бонусов и штрафов: ${secondsToTime(
       totalResult
     )}${place ? `(${place} место в рейтинге)` : ''}`,
     buttons: [
