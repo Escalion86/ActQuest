@@ -179,7 +179,7 @@ const game = async ({ telegramId, user, jsonCommand, domen }) => {
       },
       {
         c: { c: 'gameTasksView', gameId: jsonCommand.gameId },
-        text: '\u{1F4CC} Посмотреть задания на игре',
+        text: '\u{1F3AF} Посмотреть задания на игре',
         hide: game.status !== 'finished' || !game.showTasks,
       },
       {

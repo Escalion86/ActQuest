@@ -17,7 +17,7 @@ const gameTasksView = async ({ telegramId, jsonCommand }) => {
     return [
       {
         c: { c: 'taskView', gameId: jsonCommand.gameId, i: number - 1 },
-        text: `\u{270F} ${number}. "${task.title}"`,
+        text: `\u{1F3AF} ${number}. "${task.title}"`,
       },
     ]
   })
@@ -55,7 +55,7 @@ const gameTasksView = async ({ telegramId, jsonCommand }) => {
                 ? `\u{26D4}`
                 : game.type === 'photo'
                 ? `\u{1F4F7}`
-                : `\u{1F4CC}`
+                : `\u{1F3AF}`
             } ${numberToEmojis(index + 1)} "${task.title}"${
               game.type === 'photo'
                 ? ` - ${getNounPoints(
