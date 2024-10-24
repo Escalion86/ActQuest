@@ -67,14 +67,18 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
     timeAddings: gameTeam.timeAddings,
     wrongCodes: gameTeam.wrongCodes,
   }
-
+  // new Date(finish || undefined).getTime()
   const text = game.tasks
     .map((task, index) => {
       const seconds = tasksDuration?.duration[index] ?? '[не начато]'
+      const startTime = gameTeam.startTime[index]
+      const endTime = gameTeam.endTime[index]
 
       return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}"${
         task?.title
-      }"</b> - ${secondsToTime(seconds)}`
+      }"</b>\n  Старт:\n${startTime ?? '[не начато]'}
+      Финиш:\n${endTime ?? (startTime ? '[не завершено]' : '[не начато]')}
+      Итого: ${secondsToTime(seconds)}`
     })
     .join('\n')
 
