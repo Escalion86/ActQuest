@@ -67,6 +67,12 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
   const tasksDuration = durationCalc(gameTeam, game)
   // new Date(finish || undefined).getTime()
 
+  let sumTasksTime = 0
+  let sumCodePenalty = 0
+  let sumCodeBonus = 0
+  let sumManyWrongCodePenalty = 0
+  let sumPenalty = 0
+
   const text = game.tasks
     .map((task, index) => {
       let codePenalty = 0
@@ -84,6 +90,7 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
           game.taskFailurePenalty
         )} - Задание не выполнено`
         penalty += game.taskFailurePenalty
+        sumPenalty += game.taskFailurePenalty
       }
 
       if (
@@ -98,8 +105,11 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
           wrongCodes[index] !== null &&
           wrongCodes[index].length >= maxCodes
         ) {
-          manyWrongCodePenalty +=
+          const manyWrongCodePenaltyForTask =
             Math.floor(wrongCodes[index].length / maxCodes) * penaltyForMaxCodes
+          manyWrongCodePenalty += manyWrongCodePenaltyForTask
+          sumManyWrongCodePenalty += manyWrongCodePenaltyForTask
+
           codePenaltyBonusText += `\n\u{1F534} ${secondsToTime(
             penaltyForMaxCodes
           )} - Введен неверный код ${wrongCodes[index].length} раз(а)`
@@ -115,11 +125,13 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
           ({ penalty, description }) =>
             `\n\u{1F534} ${secondsToTime(penalty)} - ${description}`
         )
-        codePenalty += findedPenaltyCodesFull.reduce(
-          (sum, { penalty }) => sum + penalty,
-          0
+        const codePenaltyForTask = findedPenaltyCodesFull.reduce(
+          (sum, { penalty }) => sum + penalty
         )
+        codePenalty += codePenaltyForTask
+        sumCodePenalty += codePenaltyForTask
       }
+
       if (findedBonusCodes[index]?.length > 0) {
         const findedBonusCodesFull =
           task.bonusCodes?.filter(({ code }) =>
@@ -129,15 +141,18 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
           ({ bonus, description }) =>
             `\n\u{1F7E2} ${secondsToTime(bonus)} - ${description}`
         )
-        codeBonus += findedBonusCodesFull.reduce(
+        const codeBonusForTask = findedBonusCodesFull.reduce(
           (sum, { bonus }) => sum + bonus,
           0
         )
+        codeBonus += codeBonusForTask
+        sumCodeBonus += codeBonusForTask
       }
 
       const totalPenalty = penalty + codePenalty + manyWrongCodePenalty
       const timeOnTask =
         typeof seconds === 'number' ? seconds : game.taskDuration ?? 3600
+      sumTasksTime += timeOnTask
 
       const result = timeOnTask + totalPenalty - codeBonus
 
@@ -179,10 +194,20 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
     )
     .join('\n')
 
+  const totalResult =
+    sumTasksTime +
+    sumCodePenalty -
+    sumCodeBonus +
+    sumManyWrongCodePenalty +
+    sumPenalty +
+    addings
+
   return {
     message: `<b>Результаты команды "${team?.name}" на игре ${formatGameName(
       game
-    )}</b>\n${text}`,
+    )}</b>\n${text}${
+      addingsText ? `\n\nДополнительные бонусы/штрафы:\n${addingsText}` : ''
+    }\n\n\u{1F3C6} Итоговый результат команды: ${secondsToTime(totalResult)}`,
     buttons: [
       // {
       //   c: {
