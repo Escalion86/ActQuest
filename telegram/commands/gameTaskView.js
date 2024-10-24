@@ -34,7 +34,7 @@ const gameTaskView = async ({ telegramId, jsonCommand }) => {
   const cluesText =
     typeof clues === 'object' && jsonCommand.showClue
       ? clues
-          .filter(({ clue }, index) => jsonCommand.showClue <= index + 1)
+          .filter(({ clue }, index) => jsonCommand.showClue >= index + 1)
           .map(
             ({ clue, images }, index) =>
               `\n\n<b>Подсказка №${
@@ -136,7 +136,7 @@ const gameTaskView = async ({ telegramId, jsonCommand }) => {
     buttons: [
       {
         c: { showClue: (jsonCommand.showClue ?? 0) + 1 },
-        text: '\u{2B05} Показать подсказку',
+        text: '\u{2B50} Показать подсказку',
         hide: typeof clues !== 'object' || jsonCommand.showClue >= clues.length,
       },
       // {
