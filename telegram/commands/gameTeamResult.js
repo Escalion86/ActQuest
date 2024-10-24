@@ -161,7 +161,7 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
               timeOnTask
             )}\nБонусы и штрафы: ${codePenaltyBonusText}\n`
           : ''
-      }Итоговый результат в задании: ${result}`
+      }Итоговый результат в задании: ${secondsToTime(result)}`
     })
     .join('\n')
 
