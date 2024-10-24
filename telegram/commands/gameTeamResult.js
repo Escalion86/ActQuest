@@ -135,13 +135,12 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
         )
       }
 
-      const totalPenalty =
-        timeOnTask + penalty + codePenalty + manyWrongCodePenalty
-      const result = totalPenalty - codeBonus
-
+      const totalPenalty = penalty + codePenalty + manyWrongCodePenalty
       const timeOnTask = secondsToTime(
         typeof seconds === 'number' ? seconds : game.taskDuration ?? 3600
       )
+
+      const result = timeOnTask + totalPenalty - codeBonus
 
       return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}"${
         task?.title
