@@ -122,10 +122,6 @@ const gamesSchema = {
           type: Boolean,
           default: false,
         },
-        showTasks: {
-          type: Boolean,
-          default: false,
-        },
       },
     ],
     default: [],
@@ -198,6 +194,10 @@ const gamesSchema = {
   prices: {
     type: [{ id: String, name: { type: String, trim: true }, price: Number }],
     default: [],
+  },
+  showTasks: {
+    type: Boolean,
+    default: false,
   },
 }
 
