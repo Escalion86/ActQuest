@@ -2,6 +2,59 @@ import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
+import formatGameDateTimeFact from '@helpers/formatGameDateTimeFact'
+import getSecondsBetween from '@helpers/getSecondsBetween'
+// import secondsToTimeStr from '@helpers/secondsToTimeStr'
+import Games from '@models/Games'
+import GamesTeams from '@models/GamesTeams'
+import Teams from '@models/Teams'
+import TeamsUsers from '@models/TeamsUsers'
+
+import check from 'telegram/func/check'
+import formatGameName from 'telegram/func/formatGameName'
+import getGame from 'telegram/func/getGame'
+import secondsToTime from 'telegram/func/secondsToTime'
+
+const sortFunc = (a, b, key = 'seconds', direction = 'ASC') => {
+  const isNumericA = typeof a[key] === 'number'
+  const isNumericB = typeof b[key] === 'number'
+
+  if (isNumericA && isNumericB) {
+    if (direction === 'ASC') return a[key] - b[key]
+    return b[key] - a[key]
+  }
+
+  if (isNumericA && !isNumericB) {
+    return direction === 'ASC' ? -1 : 1
+  }
+
+  if (!isNumericA && isNumericB) {
+    return direction === 'ASC' ? 1 : -1
+  }
+  return 0
+}
+
+const getAverage = (numbers) =>
+  Math.round(numbers.reduce((acc, number) => acc + number, 0) / numbers.length)
+
+const durationCalc = ({ startTime, endTime, activeNum }, game) => {
+  if (!startTime || !endTime) return null
+  const tempArray = []
+  const tasksCount = game.tasks.length
+  const taskDuration = game.taskDuration ?? 3600
+
+  for (let i = 0; i < tasksCount; i++) {
+    if (activeNum > i) {
+      if (!endTime[i]) tempArray.push(taskDuration)
+      else tempArray.push(getSecondsBetween(startTime[i], endTime[i]))
+    } else if (activeNum === i) {
+      tempArray.push('[не завершено]')
+    } else {
+      tempArray.push('[не начато]')
+    }
+  }
+  return tempArray
+}
 
 const gameTeamResult = async ({ telegramId, jsonCommand }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
@@ -15,8 +68,28 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
 
   const team = game.result.teams.find((team) => team._id === gameTeam.teamId)
 
+  const tasksDuration = {
+    duration: durationCalc(gameTeam, game),
+    findedPenaltyCodes: gameTeam.findedPenaltyCodes,
+    findedBonusCodes: gameTeam.findedBonusCodes,
+    timeAddings: gameTeam.timeAddings,
+    wrongCodes: gameTeam.wrongCodes,
+  }
+
+  const text = game.tasks
+    .map((task, index) => {
+      const seconds = tasksDuration?.duration[index] ?? '[не начато]'
+
+      return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}"${
+        task?.title
+      }"</b> - ${secondsToTime(seconds)}`
+    })
+    .join('\n')
+
   return {
-    message: `<b>Игра ${formatGameName(game)}\n\nКоманда "${team?.name}"</b>`,
+    message: `<b>Результаты команды "${team?.name}" на игре ${formatGameName(
+      game
+    )}</b>\n${text}`,
     buttons: [
       // {
       //   c: {
