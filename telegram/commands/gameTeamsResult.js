@@ -24,10 +24,16 @@ const gameTeamsResult = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const { teams, gameTeams } = game.result
+  const { teams, gameTeams, teamsPlaces } = game.result
+
+  const sortedTeams = teamsPlaces
+    ? teams.sort(
+        (a, b) => teamsPlaces[String(b._id)] - teamsPlaces[String(a._id)]
+      )
+    : teams
 
   const page = jsonCommand?.page ?? 1
-  const buttons = buttonListConstructor(teams, page, (team, number) => {
+  const buttons = buttonListConstructor(sortedTeams, page, (team, number) => {
     const gameTeam = gameTeams.find(
       (gameTeam) => gameTeam.teamId === String(team._id)
     )
