@@ -212,16 +212,24 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
     addingsPenalty -
     addingsBonuses
 
+  const place = game.result.teamsPlaces
+    ? game.result.teamsPlaces[gameTeam.teamId]
+    : null
+
   return {
     message: `<b>Результаты команды "${team?.name}" на игре ${formatGameName(
       game
     )}</b>\n${text}${
       addingsText ? `\n\nДополнительные бонусы/штрафы:\n${addingsText}` : ''
-    }\n\n\u{1F3C6} <b>ИТОГИ</b>:\nСуммарное время на задания: ${sumTasksTime}\nСуммарно бонусов: \u{1F7E2}${secondsToTime(
+    }\n\n\u{1F3C6} <b>ИТОГИ</b>:\nСуммарное время на задания: ${secondsToTime(
+      sumTasksTime
+    )}\nСуммарно бонусов: \u{1F7E2}${secondsToTime(
       sumCodeBonus + addingsBonuses
     )}\nСуммарно штрафов: \u{1F7E2}${secondsToTime(
       sumCodePenalty + sumManyWrongCodePenalty + sumPenalty + addingsPenalty
-    )}  ${secondsToTime(totalResult)}`,
+    )} Итоговый результат команды с учетом бонусов и штрафов: ${secondsToTime(
+      totalResult
+    )}${place ? `(${place} место в рейтинге)` : ''}`,
     buttons: [
       // {
       //   c: {
