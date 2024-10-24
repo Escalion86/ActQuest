@@ -56,7 +56,9 @@ const gameTeamResult = async ({ telegramId, jsonCommand }) => {
   const game = await getGame(gameTeam.gameId)
   if (game.success === false) return game
 
-  const team = game.result.teams.find((team) => team._id === gameTeam.teamId)
+  const team = game.result.teams.find(
+    ({ _id }) => String(_id) === gameTeam.teamId
+  )
 
   const tasksDuration = {
     duration: durationCalc(gameTeam, game),
