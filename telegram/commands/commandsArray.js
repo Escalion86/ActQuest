@@ -134,6 +134,12 @@ import usersStatistics from './usersStatistics'
 import gameResultFormTeamsPlaces from './gameResultFormTeamsPlaces'
 import cancelTask from './cancelTask'
 import uncancelTask from './uncancelTask'
+import gameTeamResult from './gameTeamResult'
+import gameTeamsResult from './gameTeamsResult'
+import gameTasksView from './gameTasksView'
+import gameTaskView from './gameTaskView'
+import gameTasksHide from './gameTasksHide'
+import gameTasksShow from './gameTasksShow'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -275,6 +281,12 @@ const commandsArray = {
   gameResultFormTeamsPlaces,
   cancelTask,
   uncancelTask,
+  gameTeamResult,
+  gameTeamsResult,
+  gameTasksView,
+  gameTaskView,
+  gameTasksHide,
+  gameTasksShow,
 }
 
 var i = 0

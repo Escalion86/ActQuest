@@ -37,8 +37,19 @@ const archiveGames = async ({ telegramId, jsonCommand, user }) => {
       )
     : undefined
 
+  if (!filteredGames || filteredGames.length === 0) {
+    return {
+      message: '<b>Прошедших игр небыло</b>',
+      buttons: [...buttons, { c: 'menuGames', text: '\u{2B05} Назад' }],
+    }
+  }
+
+  const sortedGames = filteredGames.sort((a, b) => {
+    return b.dateStart - a.dateStart
+  })
+
   const page = jsonCommand?.page ?? 1
-  const buttons = buttonListConstructor(filteredGames, page, (game, number) => {
+  const buttons = buttonListConstructor(sortedGames, page, (game, number) => {
     // TODO поправить вывод зарегистрированных команд пользователя на игру
     // const gameTeam = gamesTeams.find((gameTeam) => {
     //   return gameTeam.gameId === String(game._id)
@@ -58,10 +69,7 @@ const archiveGames = async ({ telegramId, jsonCommand, user }) => {
   })
 
   return {
-    message:
-      !filteredGames || filteredGames.length === 0
-        ? '<b>Прошедших игр небыло</b>'
-        : '<b>Прошедшие игры</b>',
+    message: '<b>Прошедшие игры</b>',
     buttons: [...buttons, { c: 'menuGames', text: '\u{2B05} Назад' }],
   }
 }

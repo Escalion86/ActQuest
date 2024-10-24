@@ -195,6 +195,10 @@ const gamesSchema = {
     type: [{ id: String, name: { type: String, trim: true }, price: Number }],
     default: [],
   },
+  showTasks: {
+    type: Boolean,
+    default: false,
+  },
 }
 
 export default gamesSchema
