@@ -46,7 +46,7 @@ const gameTeamsResult = async ({ telegramId, jsonCommand }) => {
   return {
     message: `Выберите команду для получения подробного результата на игре ${formatGameName(
       game
-    )}\nКомманды отсорторованы по рейтингу на игре`,
+    )}\n\nКомманды отсорторованы по рейтингу на игре`,
     buttons: [
       ...buttons,
       {
