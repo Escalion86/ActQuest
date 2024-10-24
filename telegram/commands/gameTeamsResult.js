@@ -28,7 +28,7 @@ const gameTeamsResult = async ({ telegramId, jsonCommand }) => {
 
   const sortedTeams = teamsPlaces
     ? teams.sort(
-        (a, b) => teamsPlaces[String(b._id)] - teamsPlaces[String(a._id)]
+        (a, b) => teamsPlaces[String(a._id)] - teamsPlaces[String(b._id)]
       )
     : teams
 
@@ -46,7 +46,7 @@ const gameTeamsResult = async ({ telegramId, jsonCommand }) => {
   return {
     message: `Выберите команду для получения подробного результата на игре ${formatGameName(
       game
-    )}`,
+    )}\nКомманды отсорторованы по рейтингу на игре`,
     buttons: [
       ...buttons,
       {
