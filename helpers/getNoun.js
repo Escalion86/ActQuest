@@ -1,6 +1,7 @@
 const getNoun = (number, one, two, five, withNumber = true) => {
-  if (typeof number !== 'number') return ''
-  let n = Math.abs(number)
+  const nmbr = Number(number)
+  if (typeof nmbr !== 'number' || Number.isNaN(nmbr)) return ''
+  let n = Math.abs(nmbr)
   let res
   n %= 100
   if (n >= 5 && n <= 20) {
@@ -13,7 +14,7 @@ const getNoun = (number, one, two, five, withNumber = true) => {
       res = two
     } else res = five
   }
-  return (withNumber ? number + ' ' : '') + res
+  return (withNumber ? nmbr + ' ' : '') + res
 }
 
 export default getNoun
