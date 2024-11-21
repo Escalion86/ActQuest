@@ -4,6 +4,7 @@ import {
   getNounWrongCodes,
 } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
+import Games from '@models/Games'
 import GamesTeams from '@models/GamesTeams'
 import Teams from '@models/Teams'
 import UsersGamesPayments from '@models/UsersGamesPayments'
@@ -17,6 +18,14 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
 
   const game = await getGame(jsonCommand.gameId)
   if (game.success === false) return game
+
+  if (jsonCommand.toggleShowCreator) {
+    await Games.findByIdAndUpdate(jsonCommand.gameId, {
+      showCreator: !game.showCreator,
+    })
+    game.showCreator = !game.showCreator
+    jsonCommand.toggleShowCreator = !jsonCommand.toggleShowCreator
+  }
 
   const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })
 
@@ -229,21 +238,35 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
       //     // hide: game.status !== 'finished',
       //   },
       // ],
-      {
-        c: {
-          c: 'hideGame',
-          gameId: jsonCommand.gameId,
-        },
-        text: '\u{1F648} Скрыть',
-        hide: game.hidden,
-      },
+      // {
+      //   c: {
+      //     c: 'hideGame',
+      //     gameId: jsonCommand.gameId,
+      //   },
+      //   text: '\u{1F648} Скрыть игру из списка игр',
+      //   hide: game.hidden,
+      // },
+      // {
+      //   c: {
+      //     c: 'unhideGame',
+      //     gameId: jsonCommand.gameId,
+      //   },
+      //   text: '\u{1F441} Отобразить игру в списке игр',
+      //   hide: !game.hidden,
+      // },
       {
         c: {
           c: 'unhideGame',
           gameId: jsonCommand.gameId,
         },
-        text: '\u{1F441} Отобразить',
-        hide: !game.hidden,
+        text: (game.hidden ? '❌' : '✅') + ' Отобразить игру в списке игр',
+      },
+      {
+        c: {
+          toggleShowCreator: true,
+        },
+        text:
+          (game.showCreator ? '✅' : '❌') + ' Показать контакты организатора',
       },
       {
         c: { c: 'delGame', gameId: jsonCommand.gameId },

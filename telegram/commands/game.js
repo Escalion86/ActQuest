@@ -1,3 +1,4 @@
+import gameDescription from '@helpers/gameDescription'
 import { getNounPoints } from '@helpers/getNoun'
 import isUserAdmin from '@helpers/isUserAdmin'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
@@ -35,11 +36,12 @@ const game = async ({ telegramId, user, jsonCommand, domen }) => {
     gameId: jsonCommand.gameId,
   })
 
-  const creator = game?.creatorTelegramId
-    ? await Users.findOne({
-        telegramId: game?.creatorTelegramId,
-      })
-    : undefined
+  const creator =
+    game.showCreator && game?.creatorTelegramId
+      ? await Users.findOne({
+          telegramId: game?.creatorTelegramId,
+        })
+      : undefined
   // const teamsUserOfUserIds = teamsUserOfUser.map(
   //   (teamUser) =>
   //     teamUser.teamId
@@ -91,72 +93,29 @@ const game = async ({ telegramId, user, jsonCommand, domen }) => {
         })
         .filter((data) => data !== undefined)
 
-  const message = `<b>Игра "${game?.name}"</b>\n\n<b>Дата и время</b>: ${
-    game.dateStart
-      ? moment(game.dateStart).tz('Asia/Krasnoyarsk').format('DD.MM.yyyy H:mm')
-      : '[не заданы]'
-  }\n\n<b>Тип игры</b>: ${
-    game.type === 'photo' ? `\u{1F4F7} Фотоквест` : `\u{1F697} Классика`
-  }* (см. подробнее внизу)${
+  const message = `${gameDescription(game, creator)}${
     teamsOfUserInAGame && teamsOfUserInAGame.length > 0
-      ? `\n\n${
+      ? `\n\n\n${
           teamsOfUserInAGame.length === 1
-            ? '<b>Записана ваша команда</b>'
-            : '<b>Записаны ваши команды:</b>'
+            ? '<b>На игру записана ваша команда</b>'
+            : '<b>На игру записаны ваши команды:</b>'
         } ${teamsOfUserInAGame.map((team) => `"${team.name}"`).join(', ')}`
       : ''
-  }${game?.description ? `\n\n<b>Описание</b>:\n"${game?.description}"` : ''}${
-    game?.startingPlace
-      ? `\n\n<b>Время и место сбора</b>: ${game?.startingPlace}`
-      : ''
-  }\n\n<b>Количество заданий</b>: ${
-    game?.tasks?.length ?? 0
-  }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
-    game?.taskDuration ?? 3600
-  )}\n${
-    game?.cluesDuration === 0
-      ? '<b>Подсказки</b>: отключены'
-      : `<b>Время до подсказки</b>: ${secondsToTimeStr(
-          game?.cluesDuration ?? 1200
-        )}`
-  }\n<b>Перерыв между заданиями</b>: ${
-    !game?.breakDuration ? 'отсутствует' : secondsToTimeStr(game?.breakDuration)
-  }\n<b>Штраф за невыполнение задания</b>: ${
-    !game?.taskFailurePenalty
-      ? 'отсутствует'
-      : game.type === 'photo'
-      ? getNounPoints(game?.taskFailurePenalty)
-      : secondsToTimeStr(game?.taskFailurePenalty)
-  }\n\n<b>Стоимость участия</b>: ${
-    !game.prices || game.prices?.length === 0
-      ? 'не указано'
-      : game.prices.length === 1
-      ? game.prices[0].price === 0
-        ? 'бесплатно'
-        : `${game.prices[0].price} руб.`
-      : game.prices.map(({ name, price }) => `\n- ${name}: ${price} руб.`)
-  }${
-    creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''
-  }\n\n* - тип игры ${
-    game.type === 'photo'
-      ? '"Фотоквест" - в качестве ответа на задание должно быть изображение. За каждое выполненное, а также дополнительные задания начисляются баллы. Побеждает команда набравшая больше всех баллов'
-      : '"Классика" - в качестве ответа на задание должен быть какой-либо текст или набор цифр. Побеждает та команда, которая выполнит задания быстрее всех с учетом бонусов и штрафов по времени'
   }`
-  // ${
-  //   creator
-  //     ? `\n\n<b>Организатор игры</b>: <a href="t.me/+${creator.phone}">${creator.name}</a> (кликните, чтобы написать организатору)`
-  //     : ''
-  // }
 
   return {
     message,
     images: game.image ? [game.image] : undefined,
     buttons: [
-      {
-        url: `t.me/+${creator?.phone}`,
-        text: '\u{1F4AC} Написать орагнизатору',
-        hide: !creator,
-      },
+      ...(game.showCreator
+        ? [
+            {
+              url: `t.me/+${creator?.phone}`,
+              text: '\u{1F4AC} Написать орагнизатору',
+              hide: !creator,
+            },
+          ]
+        : []),
       {
         url:
           'https://actquest.ru/' + domen + '/game/result/' + jsonCommand.gameId,
