@@ -256,7 +256,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
       },
       {
         c: {
-          toggleShowOrganizer: true,
+          toggleShowCreator: true,
         },
         text: game.showCreator
           ? '\u{1F648} Скрыть контакты организатора'
