@@ -238,29 +238,35 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
       //     // hide: game.status !== 'finished',
       //   },
       // ],
-      {
-        c: {
-          c: 'hideGame',
-          gameId: jsonCommand.gameId,
-        },
-        text: '\u{1F648} Скрыть',
-        hide: game.hidden,
-      },
+      // {
+      //   c: {
+      //     c: 'hideGame',
+      //     gameId: jsonCommand.gameId,
+      //   },
+      //   text: '\u{1F648} Скрыть игру из списка игр',
+      //   hide: game.hidden,
+      // },
+      // {
+      //   c: {
+      //     c: 'unhideGame',
+      //     gameId: jsonCommand.gameId,
+      //   },
+      //   text: '\u{1F441} Отобразить игру в списке игр',
+      //   hide: !game.hidden,
+      // },
       {
         c: {
           c: 'unhideGame',
           gameId: jsonCommand.gameId,
         },
-        text: '\u{1F441} Отобразить',
-        hide: !game.hidden,
+        text: (game.hidden ? '❌' : '✅') + 'Отобразить игру в списке игр',
       },
       {
         c: {
           toggleShowCreator: true,
         },
-        text: game.showCreator
-          ? '\u{1F648} Скрыть контакты организатора'
-          : '\u{1F441} Показать контакты организатора',
+        text:
+          (game.showCreator ? '✅' : '❌') + 'Показать контакты организатора',
       },
       {
         c: { c: 'delGame', gameId: jsonCommand.gameId },
