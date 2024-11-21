@@ -259,14 +259,14 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
           c: 'unhideGame',
           gameId: jsonCommand.gameId,
         },
-        text: (game.hidden ? '❌' : '✅') + 'Отобразить игру в списке игр',
+        text: (game.hidden ? '❌' : '✅') + ' Отобразить игру в списке игр',
       },
       {
         c: {
           toggleShowCreator: true,
         },
         text:
-          (game.showCreator ? '✅' : '❌') + 'Показать контакты организатора',
+          (game.showCreator ? '✅' : '❌') + ' Показать контакты организатора',
       },
       {
         c: { c: 'delGame', gameId: jsonCommand.gameId },
