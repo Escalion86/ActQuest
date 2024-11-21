@@ -8,6 +8,7 @@ import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
 import keyboardFormer from 'telegram/func/keyboardFormer'
 import { getNounPoints } from '@helpers/getNoun'
+import gameDescription from '@helpers/gameDescription'
 
 const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -45,11 +46,15 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
   const allUsersTelegramIds = users.map((user) => user.telegramId)
 
   const keyboard = keyboardFormer([
-    {
-      url: `t.me/+${creator?.phone}`,
-      text: '\u{1F4AC} Написать орагнизатору',
-      hide: !creator,
-    },
+    ...(game.showCreator
+      ? [
+          {
+            url: `t.me/+${creator?.phone}`,
+            text: '\u{1F4AC} Написать орагнизатору',
+            hide: !creator,
+          },
+        ]
+      : []),
     {
       c: { c: 'joinGame', gameId: jsonCommand.gameId },
       text: '\u{270F} Зарегистрироваться на игру',
@@ -57,52 +62,15 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
     mainMenuButton,
   ])
 
+  const text = `<b>АНОНС ИГРЫ</b>\n${gameDescription(game, creator)}`
+  const images = game.image ? [game.image] : undefined
+
   await Promise.all(
     allUsersTelegramIds.map(async (telegramId) => {
       await sendMessage({
-        images: game.image ? [game.image] : undefined,
+        images,
         chat_id: telegramId,
-        text: `<b>АНОНС ИГРЫ\n"${game?.name}"</b>\n\n<b>Дата и время</b>: ${
-          game.dateStart
-            ? moment(game.dateStart)
-                .tz('Asia/Krasnoyarsk')
-                .format('DD.MM.yyyy H:mm')
-            : '[не заданы]'
-        }\n\n<b>Тип игры</b>: ${
-          game.type === 'photo' ? `\u{1F4F7} Фотоквест` : `\u{1F697} Классика`
-        }* (см. подробнее внизу)\n\n<b>Описание</b>:\n${
-          game?.description ? `"${game?.description}"` : '[без описания]'
-        }\n\n<b>Количество заданий</b>: ${
-          game?.tasks?.length ?? 0
-        }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
-          game?.taskDuration ?? 3600
-        )}\n<b>Время до подсказки</b>: ${secondsToTimeStr(
-          game?.cluesDuration ?? 1200
-        )}\n<b>Перерыв между заданиями</b>: ${
-          !game?.breakDuration
-            ? 'отсутствует'
-            : secondsToTimeStr(game?.breakDuration)
-        }\n<b>Штраф за невыполнение задания</b>: ${
-          !game?.taskFailurePenalty
-            ? 'отсутствует'
-            : game.type === 'photo'
-            ? getNounPoints(game?.taskFailurePenalty)
-            : secondsToTimeStr(game?.taskFailurePenalty)
-        }\n\n<b>Стоимость участия</b>: ${
-          !game.prices || game.prices?.length === 0
-            ? 'не указано'
-            : game.prices.length === 1
-            ? game.prices[0].price === 0
-              ? 'бесплатно'
-              : `${game.prices[0].price} руб.`
-            : game.prices.map(({ name, price }) => `\n- ${name}: ${price} руб.`)
-        }${
-          creator ? `\n\n<b>Организатор игры</b>: ${creator.name}` : ''
-        }\n\n* - тип игры ${
-          game.type === 'photo'
-            ? '"Фотоквест" - в качестве ответа на задание должно быть изображение. За каждое выполненное, а также дополнительные задания начисляются баллы. Побеждает команда набравшая больше всех баллов'
-            : '"Классика" - в качестве ответа на задание должен быть какой-либо текст или набор цифр. Побеждает та команда, которая выполнит задания быстрее всех с учетом бонусов и штрафов по времени'
-        }`,
+        text,
         keyboard,
         domen,
       })

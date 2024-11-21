@@ -199,6 +199,10 @@ const gamesSchema = {
     type: Boolean,
     default: false,
   },
+  showCreator: {
+    type: Boolean,
+    default: true,
+  },
 }
 
 export default gamesSchema
