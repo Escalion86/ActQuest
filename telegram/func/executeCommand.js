@@ -3,13 +3,20 @@ import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
 
-const lastCommandHandler = async (telegramId, jsonCommand, location, user) => {
+const lastCommandHandler = async (
+  telegramId,
+  jsonCommand,
+  location,
+  user,
+  db
+) => {
   if (typeof jsonCommand.c === 'number') {
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
       jsonCommand,
       location,
       user,
+      db,
     })
   }
   if (commandsArray[jsonCommand.c])
@@ -18,6 +25,7 @@ const lastCommandHandler = async (telegramId, jsonCommand, location, user) => {
       jsonCommand,
       location,
       user,
+      db,
     })
   return {
     success: false,
@@ -39,7 +47,8 @@ const executeCommand = async (
     userTelegramId,
     jsonCommand,
     location,
-    user
+    user,
+    db
   )
   const keyboard = keyboardFormer(result.buttons)
 
