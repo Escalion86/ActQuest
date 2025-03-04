@@ -2,7 +2,7 @@ import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import updateGame from 'telegram/func/updateGame'
 
-const uncancelTask = async ({ telegramId, jsonCommand }) => {
+const uncancelTask = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
@@ -28,14 +28,18 @@ const uncancelTask = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
   const tasks = [...game.tasks]
   tasks[jsonCommand.i].canceled = false
 
-  await updateGame(jsonCommand.gameId, {
-    tasks,
-  })
+  await updateGame(
+    jsonCommand.gameId,
+    {
+      tasks,
+    },
+    db
+  )
 
   return {
     success: true,

@@ -1,17 +1,15 @@
 import dateToDateTimeStr from '@helpers/dateToDateTimeStr'
 import getSecondsBetween from '@helpers/getSecondsBetween'
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import numberToEmojis from 'telegram/func/numberToEmojis'
 import secondsToTime from 'telegram/func/secondsToTime'
 
-const gameStatus = async ({ telegramId, jsonCommand }) => {
+const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (game.status !== 'started') {
@@ -22,13 +20,13 @@ const gameStatus = async ({ telegramId, jsonCommand }) => {
   }
 
   // Получаем список команд участвующих в игре
-  const gameTeams = await GamesTeams.find({
+  const gameTeams = await db.model('GamesTeams').find({
     gameId: jsonCommand.gameId,
   })
 
   const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
 
-  const teams = await Teams.find({
+  const teams = await db.model('Teams').find({
     _id: { $in: teamsIds },
   })
 

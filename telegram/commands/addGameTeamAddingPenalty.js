@@ -1,4 +1,3 @@
-import GamesTeams from '@models/GamesTeams'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
 import check from 'telegram/func/check'
 import getGameTeam from 'telegram/func/getGameTeam'
@@ -29,11 +28,16 @@ const array = [
   },
 ]
 
-const addGameTeamAddingPenalty = async ({ telegramId, jsonCommand }) => {
+const addGameTeamAddingPenalty = async ({
+  telegramId,
+  jsonCommand,
+  location,
+  db,
+}) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
-  const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
+  const gameTeam = await getGameTeam(jsonCommand.gameTeamId, db)
   if (gameTeam.success === false) return gameTeam
 
   return await arrayOfCommands({
@@ -46,7 +50,7 @@ const addGameTeamAddingPenalty = async ({ telegramId, jsonCommand }) => {
         time: result.time,
       }
 
-      await GamesTeams.findByIdAndUpdate(jsonCommand.gameTeamId, {
+      await db.model('GamesTeams').findByIdAndUpdate(jsonCommand.gameTeamId, {
         timeAddings: [...(gameTeam.timeAddings ?? []), newAdding],
       })
 

@@ -1,5 +1,4 @@
 import check from 'telegram/func/check'
-import Games from '@models/Games'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -26,7 +25,7 @@ const array = [
   },
 ]
 
-const addGamePrice = async ({ telegramId, jsonCommand }) => {
+const addGamePrice = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -41,10 +40,10 @@ const addGamePrice = async ({ telegramId, jsonCommand }) => {
       }
 
       // Если все переменные на месте, то создаем команду
-      const game = await Games.findById(jsonCommand.gameId)
+      const game = await db.model('Games').findById(jsonCommand.gameId)
       game.prices.push(newPrice)
 
-      await Games.findByIdAndUpdate(jsonCommand.gameId, {
+      await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
         prices: game.prices,
       })
 

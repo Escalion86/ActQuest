@@ -3,20 +3,24 @@ import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import updateGame from 'telegram/func/updateGame'
 
-const editGamePrice = async ({ telegramId, jsonCommand }) => {
+const editGamePrice = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (jsonCommand.delete) {
     game.prices.splice(jsonCommand.i, 1)
 
-    await updateGame(jsonCommand.gameId, {
-      prices: game.prices,
-    })
+    await updateGame(
+      jsonCommand.gameId,
+      {
+        prices: game.prices,
+      },
+      db
+    )
 
     return {
       success: true,

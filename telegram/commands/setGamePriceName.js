@@ -1,7 +1,6 @@
-import Games from '@models/Games'
 import check from 'telegram/func/check'
 
-const setGamePriceName = async ({ telegramId, jsonCommand }) => {
+const setGamePriceName = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
@@ -22,11 +21,11 @@ const setGamePriceName = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  const game = await Games.findById(jsonCommand.gameId)
+  const game = await db.model('Games').findById(jsonCommand.gameId)
   const prices = [...game.prices]
   prices[jsonCommand.i].name = jsonCommand.message.trim()
 
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     prices,
   })
 

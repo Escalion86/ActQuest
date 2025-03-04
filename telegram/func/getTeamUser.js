@@ -1,8 +1,4 @@
-import TeamsUsers from '@models/TeamsUsers'
-
-// import mongoose from 'mongoose'
-
-const getTeamUser = async (id) => {
+const getTeamUser = async (id, db) => {
   // const preparedId = mongoose.Types.ObjectId(id)
   if (
     id === undefined
@@ -14,7 +10,7 @@ const getTeamUser = async (id) => {
       nextCommand: `mainMenu`,
     }
 
-  const teamsUsers = await TeamsUsers.findById(id).lean()
+  const teamsUsers = await db.model('TeamsUsers').findById(id).lean()
   if (!teamsUsers) {
     return {
       success: false,

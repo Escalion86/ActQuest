@@ -1,19 +1,23 @@
-import TeamsUsers from '@models/TeamsUsers'
-import Users from '@models/Users'
-
 import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 
-const transferCaptainRights = async ({ telegramId, jsonCommand }) => {
+const transferCaptainRights = async ({
+  telegramId,
+  jsonCommand,
+  location,
+  db,
+}) => {
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
 
-  const team = await getTeam(jsonCommand?.teamId)
+  const team = await getTeam(jsonCommand?.teamId, db)
   if (team.success === false) return team
 
   const { p } = jsonCommand
 
-  const teamsUsers = await TeamsUsers.find({ teamId: jsonCommand?.teamId })
+  const teamsUsers = await db
+    .model('TeamsUsers')
+    .find({ teamId: jsonCommand?.teamId })
   if (!teamsUsers || teamsUsers.length === 0) {
     return {
       message: 'Никто не состоит в команде',
@@ -29,7 +33,7 @@ const transferCaptainRights = async ({ telegramId, jsonCommand }) => {
       teamUser.userTelegramId
   )
 
-  const users = await Users.find({
+  const users = await db.model('Users').find({
     telegramId: { $in: usersTelegramIds },
   })
 
@@ -45,10 +49,10 @@ const transferCaptainRights = async ({ telegramId, jsonCommand }) => {
     )
 
     if (jsonCommand.confirm) {
-      await TeamsUsers.findByIdAndUpdate(teamUser._id, {
+      await db.model('TeamsUsers').findByIdAndUpdate(teamUser._id, {
         role: 'capitan',
       })
-      await TeamsUsers.findByIdAndUpdate(teamUserCapitan._id, {
+      await db.model('TeamsUsers').findByIdAndUpdate(teamUserCapitan._id, {
         role: 'participant',
       })
       return {

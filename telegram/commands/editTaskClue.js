@@ -1,14 +1,13 @@
-import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import updateGame from 'telegram/func/updateGame'
 
-const editTaskClue = async ({ telegramId, jsonCommand }) => {
+const editTaskClue = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i', 'j'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
   if (!game.tasks)
     return {
@@ -25,9 +24,13 @@ const editTaskClue = async ({ telegramId, jsonCommand }) => {
     clues.splice(jsonCommand.j, 1)
     tasks[jsonCommand.i].clues = clues
 
-    await updateGame(jsonCommand.gameId, {
-      tasks: game.tasks,
-    })
+    await updateGame(
+      jsonCommand.gameId,
+      {
+        tasks: game.tasks,
+      },
+      db
+    )
 
     return {
       success: true,
@@ -44,9 +47,13 @@ const editTaskClue = async ({ telegramId, jsonCommand }) => {
     clues[jsonCommand.j].clue = jsonCommand.message
     tasks[jsonCommand.i].clues = clues
 
-    await updateGame(jsonCommand.gameId, {
-      tasks: game.tasks,
-    })
+    await updateGame(
+      jsonCommand.gameId,
+      {
+        tasks: game.tasks,
+      },
+      db
+    )
 
     return {
       success: true,

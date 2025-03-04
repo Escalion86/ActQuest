@@ -47,14 +47,14 @@ const durationCalc = ({ startTime, endTime, activeNum }, game) => {
   return tempArray
 }
 
-const gameTeamResult = async ({ telegramId, jsonCommand }) => {
+const gameTeamResult = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
-  const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
+  const gameTeam = await getGameTeam(jsonCommand.gameTeamId, db)
   if (gameTeam.success === false) return gameTeam
 
-  const game = await getGame(gameTeam.gameId)
+  const game = await getGame(gameTeam.gameId, db)
   if (game.success === false) return game
 
   const team = game.result.teams.find(

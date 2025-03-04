@@ -1,19 +1,18 @@
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
-
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const gameAddings = async ({ telegramId, jsonCommand }) => {
+const gameAddings = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand?.gameId)
+  const game = await getGame(jsonCommand?.gameId, db)
   if (game.success === false) return game
 
-  const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })
+  const gameTeams = await db
+    .model('GamesTeams')
+    .find({ gameId: jsonCommand?.gameId })
   if (!gameTeams || gameTeams.length === 0) {
     return {
       message: 'Никто не записался на игру',
@@ -27,7 +26,7 @@ const gameAddings = async ({ telegramId, jsonCommand }) => {
       gameTeam.teamId
   )
 
-  const teams = await Teams.find({
+  const teams = await db.model('Teams').find({
     _id: { $in: teamsIds },
   })
 

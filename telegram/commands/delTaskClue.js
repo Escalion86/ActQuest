@@ -2,7 +2,7 @@ import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import updateGame from 'telegram/func/updateGame'
 
-const delTaskClue = async ({ telegramId, jsonCommand }) => {
+const delTaskClue = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i', 'j'])
   if (checkData) return checkData
@@ -28,7 +28,7 @@ const delTaskClue = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   const { tasks } = game
@@ -38,9 +38,13 @@ const delTaskClue = async ({ telegramId, jsonCommand }) => {
   clues.splice(jsonCommand.j, 1)
   tasks[jsonCommand.i].clues = clues
 
-  await updateGame(jsonCommand.gameId, {
-    tasks: game.tasks,
-  })
+  await updateGame(
+    jsonCommand.gameId,
+    {
+      tasks: game.tasks,
+    },
+    db
+  )
 
   return {
     success: true,

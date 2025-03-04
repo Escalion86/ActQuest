@@ -1,20 +1,16 @@
-import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import Users from '@models/Users'
-import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
 import keyboardFormer from 'telegram/func/keyboardFormer'
-import { getNounPoints } from '@helpers/getNoun'
 import gameDescription from '@helpers/gameDescription'
 
-const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
+const gameAnonsMsg = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (!jsonCommand.confirm) {
@@ -36,7 +32,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
   }
 
   // Получаем список всех пользователей
-  const users = await Users.find({})
+  const users = await db.model('Users').find({})
 
   const creator = game?.creatorTelegramId
     ? users.find((user) => user.telegramId == game?.creatorTelegramId)
@@ -72,7 +68,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, domen }) => {
         chat_id: telegramId,
         text,
         keyboard,
-        domen,
+        location,
       })
     })
   )

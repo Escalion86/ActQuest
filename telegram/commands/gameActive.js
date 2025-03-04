@@ -1,13 +1,12 @@
-import Games from '@models/Games'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 
-const gameActive = async ({ telegramId, jsonCommand }) => {
+const gameActive = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (!jsonCommand.confirm) {
@@ -29,7 +28,7 @@ const gameActive = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     status: 'active',
     result: null,
   })

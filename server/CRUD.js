@@ -2,19 +2,24 @@ import birthDateToAge from '@helpers/birthDateToAge'
 import { postData } from '@helpers/CRUD'
 import getUserFullName from '@helpers/getUserFullName'
 import isUserAdmin from '@helpers/isUserAdmin'
-import isUserQuestionnaireFilled from '@helpers/isUserQuestionnaireFilled'
+// import isUserQuestionnaireFilled from '@helpers/isUserQuestionnaireFilled'
 // import Histories from '@models/Histories'
-import Users from '@models/Users'
+// import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 
 export default async function handler(Schema, req, res, params = null) {
   const { query, method, body } = req
 
   const id = query?.id
-  const domen = query?.domen
-  console.log('domen :>> ', domen)
+  const location = query?.location
 
-  await dbConnect(domen)
+  if (!location) {
+    return res
+      ?.status(400)
+      .json({ success: false, error: 'No location in query' })
+  }
+
+  await dbConnect(location)
 
   let data
   console.log('Schema', Schema)
@@ -84,10 +89,10 @@ export default async function handler(Schema, req, res, params = null) {
             return res?.status(400).json({ success: false })
           }
 
-          // Если это пользователь обновляет анкету, то после обновления оповестим о результате через телеграм
-          const afterUpdateNeedToNotificate =
-            // body.userId === id &&
-            Schema === Users && !isUserQuestionnaireFilled(data)
+          // // Если это пользователь обновляет анкету, то после обновления оповестим о результате через телеграм
+          // const afterUpdateNeedToNotificate =
+          //   // body.userId === id &&
+          //   Schema === Users && !isUserQuestionnaireFilled(data)
 
           data = await Schema.findByIdAndUpdate(id, body.data, {
             new: true,
@@ -106,7 +111,7 @@ export default async function handler(Schema, req, res, params = null) {
           // })
 
           if (afterUpdateNeedToNotificate) {
-            const users = await Users.find({})
+            const users = await db.model('Users').find({})
             const usersTelegramIds = users
               .filter(
                 (user) =>

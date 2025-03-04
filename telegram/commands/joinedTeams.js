@@ -1,10 +1,9 @@
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
-
 import { MAX_TEAMS } from 'telegram/constants'
 
-const joinedTeams = async ({ telegramId, jsonCommand }) => {
-  const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
+const joinedTeams = async ({ telegramId, jsonCommand, location, db }) => {
+  const teamsUser = await db
+    .model('TeamsUsers')
+    .find({ userTelegramId: telegramId })
   if (!teamsUser || teamsUser.length === 0) {
     return {
       message: 'Вы не состоите ни в какой команде',
@@ -17,7 +16,7 @@ const joinedTeams = async ({ telegramId, jsonCommand }) => {
       teamUser.teamId
   )
 
-  const teams = await Teams.find({
+  const teams = await db.model('Teams').find({
     _id: { $in: teamsIds },
   })
 

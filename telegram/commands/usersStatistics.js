@@ -1,9 +1,4 @@
 import { getNounPoints } from '@helpers/getNoun'
-import Games from '@models/Games'
-import GamesTeams from '@models/GamesTeams'
-import TeamsUsers from '@models/TeamsUsers'
-import Users from '@models/Users'
-
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import formatGameName from 'telegram/func/formatGameName'
 import numberToEmojis from 'telegram/func/numberToEmojis'
@@ -15,10 +10,13 @@ const placePoints = (place) => {
   return points
 }
 
-const usersStatistics = async ({ telegramId, jsonCommand }) => {
-  const finishedGames = await Games.find({ status: 'finished' }).lean()
-  // const users = await Users.find({})
-  // const teamsUsers = await TeamsUsers.find({})
+const usersStatistics = async ({ telegramId, jsonCommand, location, db }) => {
+  const finishedGames = await db
+    .model('Games')
+    .find({ status: 'finished' })
+    .lean()
+  // const users = await db.model('Users').find({})
+  // const teamsUsers = await db.model('TeamsUsers').find({})
 
   // var allTeamsUsersInFinishedGames = []
   // games.forEach(({ result }) => {
@@ -76,9 +74,14 @@ const usersStatistics = async ({ telegramId, jsonCommand }) => {
         }
       })
     })
-    const users = await Users.find({
-      telegramId: { $in: Object.keys(usersStatistics).map((id) => Number(id)) },
-    }).lean()
+    const users = await db
+      .model('Users')
+      .find({
+        telegramId: {
+          $in: Object.keys(usersStatistics).map((id) => Number(id)),
+        },
+      })
+      .lean()
 
     const usersWithPoints = users.map((user) => {
       const pointsSum =

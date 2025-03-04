@@ -1,27 +1,22 @@
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
-
-// import moment from 'moment-timezone'
-// import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getTeam from 'telegram/func/getTeam'
 
-const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
+const joinGameAdmin = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return
 
   // Проверяем выбрана ли команда
   if (jsonCommand.teamId) {
-    const team = await getTeam(jsonCommand.teamId)
+    const team = await getTeam(jsonCommand.teamId, db)
     if (team.success === false) return team
 
-    await GamesTeams.create({
+    await db.model('GamesTeams').create({
       teamId: jsonCommand.teamId,
       gameId: jsonCommand.gameId,
     })
@@ -33,9 +28,11 @@ const joinGameAdmin = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const gameTeams = await GamesTeams.find({ gameId: jsonCommand.gameId })
+  const gameTeams = await db
+    .model('GamesTeams')
+    .find({ gameId: jsonCommand.gameId })
   const alreadyJoinedTeamsIDs = gameTeams.map((gameTeam) => gameTeam.teamId)
-  const teams = await Teams.find({})
+  const teams = await db.model('Teams').find({})
   const filteredTeams = teams.filter(
     (team) => !alreadyJoinedTeamsIDs.includes(String(team._id))
   )

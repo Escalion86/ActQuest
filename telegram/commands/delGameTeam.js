@@ -1,5 +1,3 @@
-import GamesTeams from '@models/GamesTeams'
-
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getAdmins from 'telegram/func/getAdmins'
@@ -8,14 +6,14 @@ import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
 import sendMessage from 'telegram/sendMessage'
 
-const delGameTeam = async ({ telegramId, jsonCommand, domen }) => {
+const delGameTeam = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
-  const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
+  const gameTeam = await getGameTeam(jsonCommand.gameTeamId, db)
   if (gameTeam.success === false) return gameTeam
 
-  const game = await getGame(gameTeam.gameId)
+  const game = await getGame(gameTeam.gameId, db)
   if (game.success === false) return game
 
   if (!jsonCommand.confirm) {
@@ -36,13 +34,13 @@ const delGameTeam = async ({ telegramId, jsonCommand, domen }) => {
       ],
     }
   }
-  await GamesTeams.findByIdAndDelete(jsonCommand.gameTeamId)
+  await db.model('GamesTeams').findByIdAndDelete(jsonCommand.gameTeamId)
 
   // Оповещаем администраторов
-  const admins = await getAdmins()
+  const admins = await getAdmins(db)
   const adminTelegramIds = admins.map(({ telegramId }) => telegramId)
 
-  const team = await getTeam(gameTeam.teamId)
+  const team = await getTeam(gameTeam.teamId, db)
   if (team.success === false) return team
 
   await Promise.all(
@@ -53,7 +51,7 @@ const delGameTeam = async ({ telegramId, jsonCommand, domen }) => {
           game
         )}`,
         // keyboard,
-        domen,
+        location,
       })
     })
   )

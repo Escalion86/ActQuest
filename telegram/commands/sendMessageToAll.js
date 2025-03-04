@@ -1,11 +1,10 @@
-import Users from '@models/Users'
 import sendMessage from 'telegram/sendMessage'
 
-const sendMessageToAll = async ({ telegramId, jsonCommand, domen }) => {
+const sendMessageToAll = async ({ telegramId, jsonCommand, location, db }) => {
   // const checkData = check(jsonCommand, ['gameId'])
   // if (checkData) return checkData
 
-  // const game = await getGame(jsonCommand.gameId)
+  // const game = await getGame(jsonCommand.gameId,db)
   // if (game.success === false) return game
 
   if (!jsonCommand.message) {
@@ -21,7 +20,7 @@ const sendMessageToAll = async ({ telegramId, jsonCommand, domen }) => {
   }
 
   // Получаем список всех пользователей
-  const users = await Users.find({})
+  const users = await db.model('Users').find({})
 
   // Получаем telegramId всех пользователей
   const allUsersTelegramIds = users.map((user) => user.telegramId)
@@ -41,7 +40,7 @@ const sendMessageToAll = async ({ telegramId, jsonCommand, domen }) => {
         chat_id: telegramId,
         text: jsonCommand.message,
         // keyboard,
-        domen,
+        location,
       })
     })
   )

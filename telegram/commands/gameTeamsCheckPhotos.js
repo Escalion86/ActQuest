@@ -1,19 +1,19 @@
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import numberToEmojis from 'telegram/func/numberToEmojis'
 
-const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
+const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand?.gameId)
+  const game = await getGame(jsonCommand?.gameId, db)
   if (game.success === false) return game
 
-  const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })
+  const gameTeams = await db
+    .model('GamesTeams')
+    .find({ gameId: jsonCommand?.gameId })
     .lean()
     .sort({ createdAt: 1 })
 
@@ -22,9 +22,12 @@ const gameTeamsCheckPhotos = async ({ telegramId, jsonCommand, user }) => {
 
   const teams =
     teamsIds.length > 0
-      ? await Teams.find({
-          _id: { $in: teamsIds },
-        }).lean()
+      ? await db
+          .model('Teams')
+          .find({
+            _id: { $in: teamsIds },
+          })
+          .lean()
       : []
 
   const sortedTeams = gameTeams.map(({ _id, teamId, photos, activeNum }) => {

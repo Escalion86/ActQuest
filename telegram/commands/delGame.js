@@ -1,16 +1,13 @@
-import Games from '@models/Games'
-import GamesTeams from '@models/GamesTeams'
-
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 
-const delGame = async ({ telegramId, jsonCommand }) => {
+const delGame = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (!jsonCommand.confirm) {
@@ -30,8 +27,8 @@ const delGame = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  await Games.findByIdAndRemove(jsonCommand.gameId)
-  await GamesTeams.deleteMany({ gameId: jsonCommand.gameId })
+  await db.model('Games').findByIdAndRemove(jsonCommand.gameId)
+  await db.model('GamesTeams').deleteMany({ gameId: jsonCommand.gameId })
   return {
     success: true,
     message: 'Игра удалена',

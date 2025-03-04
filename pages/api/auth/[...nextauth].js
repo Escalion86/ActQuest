@@ -28,8 +28,10 @@ export default async function auth(req, res) {
             //   process.env.NEXTAUTH_SITE
             // )
 
-            const fetchedUser = await Users.findOne({ phone, password })
-            // await Users.findOneAndUpdate(
+            const fetchedUser = await db
+              .model('Users')
+              .findOne({ phone, password })
+            // await db.model('Users').findOneAndUpdate(
             //   { phone, password },
             //   {
             //     lastActivityAt: Date.now(),
@@ -86,8 +88,8 @@ export default async function auth(req, res) {
 
         console.log('dbConnect')
 
-        const result = await Users.findOne({ phone: userPhone })
-        // const result = await Users.findOneAndUpdate(
+        const result = await db.model('Users').findOne({ phone: userPhone })
+        // const result = await db.model('Users').findOneAndUpdate(
         //   { phone: userPhone },
         //   {
         //     lastActivityAt: Date.now(),

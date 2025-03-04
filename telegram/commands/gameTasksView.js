@@ -5,11 +5,11 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import numberToEmojis from 'telegram/func/numberToEmojis'
 
-const gameTasksView = async ({ telegramId, jsonCommand }) => {
+const gameTasksView = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  var game = await getGame(jsonCommand.gameId)
+  var game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   const page = jsonCommand?.page ?? 1

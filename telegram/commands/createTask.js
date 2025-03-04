@@ -1,6 +1,3 @@
-// import getNoun from '@helpers/getNoun'
-import Games from '@models/Games'
-
 const array = [
   {
     prop: 'title',
@@ -117,7 +114,7 @@ const array = [
   // },
 ]
 
-const createTask = async ({ telegramId, jsonCommand }) => {
+const createTask = async ({ telegramId, jsonCommand, location, db }) => {
   // Если это запрос (команда), то отправляем текст пользователю
   if (!jsonCommand.message) {
     for (let i = 0; i < array.length; i++) {
@@ -173,8 +170,8 @@ const createTask = async ({ telegramId, jsonCommand }) => {
   }
 
   // Если все переменные на месте, то создаем команду
-  const game = await Games.findById(jsonCommand.gameId)
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  const game = await db.model('Games').findById(jsonCommand.gameId)
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     tasks: game.tasks ? [...game.tasks, newTask] : [newTask],
   })
 

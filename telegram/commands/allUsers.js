@@ -1,14 +1,10 @@
-import Games from '@models/Games'
-import TeamsUsers from '@models/TeamsUsers'
-import Users from '@models/Users'
-
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
-const allUsers = async ({ telegramId, jsonCommand }) => {
-  const users = await Users.find({})
-  const teamsUsers = await TeamsUsers.find({})
+const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
+  const users = await db.model('Users').find({})
+  const teamsUsers = await db.model('TeamsUsers').find({})
 
-  const games = await Games.find({})
+  const games = await db.model('Games').find({})
   var allTeamsUsersInFinishedGames = []
   games.forEach(({ result }) => {
     if (result) {

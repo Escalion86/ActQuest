@@ -1,8 +1,3 @@
-import Games from '@models/Games'
-import GamesTeams from '@models/GamesTeams'
-import LastCommands from '@models/LastCommands'
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
@@ -11,11 +6,11 @@ import mainMenu from './mainMenu'
 import keyboardFormer from 'telegram/func/keyboardFormer'
 import mainMenuButton from './menuItems/mainMenuButton'
 
-const gameStop = async ({ telegramId, jsonCommand, domen }) => {
+const gameStop = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (!jsonCommand.confirm) {
@@ -35,22 +30,22 @@ const gameStop = async ({ telegramId, jsonCommand, domen }) => {
     }
   }
 
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     status: 'finished',
     dateEndFact: new Date(),
   })
   // Получаем список команд участвующих в игре
-  const gameTeams = await GamesTeams.find({
+  const gameTeams = await db.model('GamesTeams').find({
     gameId: jsonCommand.gameId,
   })
 
   const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
 
-  // const teams = await Teams.find({
+  // const teams = await db.model('Teams').find({
   //   _id: { $in: teamsIds },
   // })
 
-  const teamsUsers = await TeamsUsers.find({
+  const teamsUsers = await db.model('TeamsUsers').find({
     teamId: { $in: teamsIds },
   })
   // Получаем telegramId всчех участников игры
@@ -58,7 +53,7 @@ const gameStop = async ({ telegramId, jsonCommand, domen }) => {
     (teamUser) => teamUser.userTelegramId
   )
 
-  await LastCommands.updateMany(
+  await db.model('LastCommands').updateMany(
     {
       userTelegramId: { $in: allUsersTelegramIds },
     },
@@ -83,7 +78,7 @@ const gameStop = async ({ telegramId, jsonCommand, domen }) => {
             : ''
         }`,
         keyboard,
-        domen,
+        location,
       })
     })
   )

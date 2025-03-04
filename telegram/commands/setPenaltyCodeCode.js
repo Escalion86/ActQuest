@@ -1,8 +1,11 @@
-import Games from '@models/Games'
-
 import check from 'telegram/func/check'
 
-const setPenaltyCodeCode = async ({ telegramId, jsonCommand }) => {
+const setPenaltyCodeCode = async ({
+  telegramId,
+  jsonCommand,
+  location,
+  db,
+}) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i', 'j'])
   if (checkData) return checkData
@@ -24,13 +27,13 @@ const setPenaltyCodeCode = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  const game = await Games.findById(jsonCommand.gameId)
+  const game = await db.model('Games').findById(jsonCommand.gameId)
   const tasks = game.tasks
   const penaltyCodes = [...tasks[jsonCommand.i].penaltyCodes]
   penaltyCodes[jsonCommand.j].code = jsonCommand.message.trim().toLowerCase()
   tasks[jsonCommand.i].penaltyCodes = penaltyCodes
 
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     tasks,
   })
 

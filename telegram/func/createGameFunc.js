@@ -1,8 +1,5 @@
-import Games from '@models/Games'
-
-const createGameFunc = async (userTelegramId, props) => {
-  console.log('createGameFunc props :>> ', props)
-  const game = await Games.create({
+const createGameFunc = async (userTelegramId, props, db) => {
+  const game = await db.model('Games').create({
     ...props,
     creatorTelegramId: userTelegramId,
   })

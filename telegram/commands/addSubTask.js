@@ -1,5 +1,4 @@
 import check from 'telegram/func/check'
-import Games from '@models/Games'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
 import { getNounPoints } from '@helpers/getNoun'
 
@@ -38,7 +37,7 @@ const array = [
   },
 ]
 
-const addSubTask = async ({ telegramId, jsonCommand }) => {
+const addSubTask = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId', 'i', 'j'])
   if (checkData) return checkData
 
@@ -53,10 +52,10 @@ const addSubTask = async ({ telegramId, jsonCommand }) => {
       }
 
       // Если все переменные на месте, то создаем команду
-      const game = await Games.findById(jsonCommand.gameId)
+      const game = await db.model('Games').findById(jsonCommand.gameId)
       game.tasks[jsonCommand.i].subTasks.push(newSubTask)
 
-      await Games.findByIdAndUpdate(jsonCommand.gameId, {
+      await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
         tasks: game.tasks,
       })
 

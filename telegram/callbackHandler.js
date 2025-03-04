@@ -2,33 +2,33 @@ import checkContactRecive from './checkContactRecive'
 import checkUserData from './checkUserData'
 import commandHandler from './commandHandler'
 
-const test_callback = {
-  update_id: 173172137,
-  callback_query: {
-    id: '1121425242543370968',
-    from: {
-      id: 261102161,
-      is_bot: false,
-      first_name: 'Алексей',
-      last_name: 'Белинский Иллюзионист',
-      username: 'Escalion',
-      language_code: 'ru',
-      is_premium: true,
-    },
-    message: {
-      message_id: 91,
-      from: '[Object]',
-      chat: ' [Object]',
-      date: 1683689196,
-      text: 'Неизвестная команда',
-      reply_markup: '[Object]',
-    },
-    chat_instance: '3955131192076482535',
-    data: '/createTeam',
-  },
-}
+// const test_callback = {
+//   update_id: 173172137,
+//   callback_query: {
+//     id: '1121425242543370968',
+//     from: {
+//       id: 261102161,
+//       is_bot: false,
+//       first_name: 'Алексей',
+//       last_name: 'Белинский Иллюзионист',
+//       username: 'Escalion',
+//       language_code: 'ru',
+//       is_premium: true,
+//     },
+//     message: {
+//       message_id: 91,
+//       from: '[Object]',
+//       chat: ' [Object]',
+//       date: 1683689196,
+//       text: 'Неизвестная команда',
+//       reply_markup: '[Object]',
+//     },
+//     chat_instance: '3955131192076482535',
+//     data: '/createTeam',
+//   },
+// }
 
-const callbackHandler = async (body, res, domen) => {
+const callbackHandler = async (body, res, location, db) => {
   const { callback_query } = body
   const { id, from, message, data, chat_instance } = callback_query
   // console.log('callback_query :>> ', callback_query)
@@ -75,8 +75,8 @@ const callbackHandler = async (body, res, domen) => {
   //   null,
   //   true
   // )
-  if (await checkContactRecive(body?.message, domen)) {
-    const user = await checkUserData(from.id, undefined, domen)
+  if (await checkContactRecive(body?.message, location, db)) {
+    const user = await checkUserData(from.id, undefined, location, db)
     if (user)
       return await commandHandler(
         {
@@ -85,17 +85,18 @@ const callbackHandler = async (body, res, domen) => {
           messageId: message.message_id,
           callback_query,
           // photo,
-          domen,
+          location,
           // location,
           // date,
           user,
+          db,
         }
         // from.id,
         // data,
         // message.message_id,
         // callback_query,
         // undefined,
-        // domen,
+        // location,
         // undefined,
         // undefined,
         // user

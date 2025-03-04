@@ -1082,16 +1082,16 @@ const GameBlock = ({ game }) => {
 
 function ResultPage(props) {
   const gameId = props.id
-  const domen = props.domen
+  const location = props.location
 
   const [game, setGame] = useState()
 
   useEffect(() => {
-    const getGame = async (gameId) => {
-      const game = await getData('/api/games/' + domen + '/' + gameId)
+    const getGameEffect = async (gameId) => {
+      const game = await getData('/api/games/' + location + '/' + gameId)
       setGame(game.data)
     }
-    if (gameId) getGame(gameId)
+    if (gameId) getGameEffect(gameId)
   }, [])
 
   return (
@@ -1142,7 +1142,7 @@ export const getServerSideProps = async (context) => {
   // const session = await getSession({ req: context.req })
 
   const { params } = context
-  const { id, domen } = params
+  const { id, location } = params
 
   // const fetchedProps = await fetchProps(session?.user)
 
@@ -1150,7 +1150,7 @@ export const getServerSideProps = async (context) => {
     props: {
       // ...fetchedProps,
       id,
-      domen,
+      location,
       // loggedUser: session?.user ?? null,
     },
   }

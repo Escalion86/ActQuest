@@ -1,5 +1,3 @@
-import Games from '@models/Games'
-
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 
@@ -9,7 +7,7 @@ const checkAnswer = (answer) =>
     answer
   )
 
-const setGameDate = async ({ telegramId, jsonCommand }) => {
+const setGameDate = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
@@ -50,7 +48,7 @@ const setGameDate = async ({ telegramId, jsonCommand }) => {
     'Asia/Krasnoyarsk'
   )
 
-  const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  const game = await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     dateStart,
   })
 

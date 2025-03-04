@@ -1,11 +1,11 @@
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const gameResult = async ({ telegramId, jsonCommand }) => {
+const gameResult = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (game.status !== 'finished') {

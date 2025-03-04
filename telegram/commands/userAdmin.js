@@ -1,16 +1,14 @@
 import getNoun from '@helpers/getNoun'
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
-import Users from '@models/Users'
-
 import check from 'telegram/func/check'
 
-const userAdmin = async ({ telegramId, jsonCommand }) => {
+const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['userTId'])
   if (checkData) return checkData
 
-  const user = await Users.findOne({ telegramId: jsonCommand.userTId })
-  const teamsUser = await TeamsUsers.find({
+  const user = await db
+    .model('Users')
+    .findOne({ telegramId: jsonCommand.userTId })
+  const teamsUser = await db.model('TeamsUsers').find({
     userTelegramId: jsonCommand.userTId,
   })
   const teamsIds = teamsUser.map(
@@ -19,9 +17,12 @@ const userAdmin = async ({ telegramId, jsonCommand }) => {
       teamUser.teamId
   )
 
-  const teams = await Teams.find({
-    _id: { $in: teamsIds },
-  }).lean()
+  const teams = await db
+    .model('Teams')
+    .find({
+      _id: { $in: teamsIds },
+    })
+    .lean()
 
   return {
     message: `<b>"${user.name}"</b>\nСостоит в ${getNoun(

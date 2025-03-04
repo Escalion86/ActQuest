@@ -1,17 +1,13 @@
 import getNoun from '@helpers/getNoun'
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
-import Users from '@models/Users'
-
 import { MAX_TEAMS } from 'telegram/constants'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 
-const userJoinToTeam = async ({ telegramId, jsonCommand }) => {
+const userJoinToTeam = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['userTId'])
   if (checkData) return checkData
 
-  const teamsUser = await TeamsUsers.find({
+  const teamsUser = await db.model('TeamsUsers').find({
     userTelegramId: jsonCommand.userTId,
   })
 
@@ -32,11 +28,13 @@ const userJoinToTeam = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const user = await Users.findOne({ telegramId: jsonCommand.userTId })
+  const user = await db
+    .model('Users')
+    .findOne({ telegramId: jsonCommand.userTId })
 
   if (jsonCommand.teamId) {
-    const team = await Teams.findById(jsonCommand.teamId)
-    await TeamsUsers.create({
+    const team = await db.model('Teams').findById(jsonCommand.teamId)
+    await db.model('TeamsUsers').create({
       teamId: String(jsonCommand.teamId),
       userTelegramId: jsonCommand.userTId,
     })
@@ -46,8 +44,8 @@ const userJoinToTeam = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const teams = await Teams.find({})
-  const teamsUsers = await TeamsUsers.find({})
+  const teams = await db.model('Teams').find({})
+  const teamsUsers = await db.model('TeamsUsers').find({})
 
   const teamsOfUser = teamsUsers.filter(
     (teamsUser) => teamsUser.userTelegramId === jsonCommand.userTId

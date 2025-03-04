@@ -1,18 +1,17 @@
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
-import Users from '@models/Users'
 import check from 'telegram/func/check'
 import getTeamUser from 'telegram/func/getTeamUser'
 
-const delTeamUserAdmin2 = async ({ telegramId, jsonCommand }) => {
+const delTeamUserAdmin2 = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['teamUserId'])
   if (checkData) return checkData
 
-  const teamUser = await getTeamUser(jsonCommand.teamUserId)
+  const teamUser = await getTeamUser(jsonCommand.teamUserId, db)
   if (teamUser.success === false) return teamUser
 
-  const user = await Users.findOne({ telegramId: teamUser.userTelegramId })
-  const team = await Teams.findById(teamUser.teamId)
+  const user = await db
+    .model('Users')
+    .findOne({ telegramId: teamUser.userTelegramId })
+  const team = await db.model('Teams').findById(teamUser.teamId)
 
   if (!jsonCommand.confirm) {
     return {
@@ -31,7 +30,7 @@ const delTeamUserAdmin2 = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  await TeamsUsers.findByIdAndDelete(jsonCommand.teamUserId)
+  await db.model('TeamsUsers').findByIdAndDelete(jsonCommand.teamUserId)
   return {
     success: true,
     message: `Пользователь "${user.name}" удален из команды "${team.name}"`,

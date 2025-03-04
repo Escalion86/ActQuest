@@ -1,10 +1,6 @@
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
-
 import check from 'telegram/func/check'
 
-const delTeamAdmin = async ({ telegramId, jsonCommand }) => {
+const delTeamAdmin = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
@@ -32,9 +28,13 @@ const delTeamAdmin = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  const team = await Teams.findByIdAndRemove(jsonCommand.teamId)
-  const teamUsers = await TeamsUsers.deleteMany({ teamId: jsonCommand.teamId })
-  const gameTeams = await GamesTeams.deleteMany({ teamId: jsonCommand.teamId })
+  const team = await db.model('Teams').findByIdAndRemove(jsonCommand.teamId)
+  const teamUsers = await db
+    .model('TeamsUsers')
+    .deleteMany({ teamId: jsonCommand.teamId })
+  const gameTeams = await db
+    .model('GamesTeams')
+    .deleteMany({ teamId: jsonCommand.teamId })
   return {
     success: true,
     message: 'Команда удалена',

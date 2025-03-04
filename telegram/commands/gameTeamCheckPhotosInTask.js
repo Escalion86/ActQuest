@@ -1,5 +1,4 @@
 import { getNounPoints } from '@helpers/getNoun'
-import GamesTeams from '@models/GamesTeams'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
@@ -7,11 +6,16 @@ import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
 
-const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
+const gameTeamCheckPhotosInTask = async ({
+  telegramId,
+  jsonCommand,
+  user,
+  db,
+}) => {
   const checkData = check(jsonCommand, ['gameTeamId', 'i'])
   if (checkData) return checkData
 
-  const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
+  const gameTeam = await getGameTeam(jsonCommand?.gameTeamId, db)
   if (gameTeam.success === false) return gameTeam
 
   if (!gameTeam.photos[jsonCommand.i]?.photos?.length) {
@@ -24,10 +28,10 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
     }
   }
 
-  const game = await getGame(gameTeam.gameId)
+  const game = await getGame(gameTeam.gameId, db)
   if (game.success === false) return game
 
-  const team = await getTeam(gameTeam.teamId)
+  const team = await getTeam(gameTeam.teamId, db)
   if (team.success === false) return team
 
   const task = game.tasks[jsonCommand.i]
@@ -42,7 +46,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
   //     }
   //     return item
   //   })
-  //   await GamesTeams.findByIdAndUpdate(gameTeam._id, {
+  //   await db.model('GamesTeams').findByIdAndUpdate(gameTeam._id, {
   //     photos: newPhotos,
   //   })
   //   gameTeam.photos = newPhotos
@@ -59,7 +63,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
   //     }
   //     return item
   //   })
-  //   await GamesTeams.findByIdAndUpdate(gameTeam._id, {
+  //   await db.model('GamesTeams').findByIdAndUpdate(gameTeam._id, {
   //     photos: newPhotos,
   //   })
   //   gameTeam.photos = newPhotos
@@ -74,7 +78,7 @@ const gameTeamCheckPhotosInTask = async ({ telegramId, jsonCommand, user }) => {
       }
       return item
     })
-    await GamesTeams.findByIdAndUpdate(gameTeam._id, {
+    await db.model('GamesTeams').findByIdAndUpdate(gameTeam._id, {
       photos: newPhotos,
     })
     gameTeam.photos = newPhotos

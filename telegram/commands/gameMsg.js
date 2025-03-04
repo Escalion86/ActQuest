@@ -1,18 +1,13 @@
-import Games from '@models/Games'
-import GamesTeams from '@models/GamesTeams'
-import LastCommands from '@models/LastCommands'
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 
-const gameMsg = async ({ telegramId, jsonCommand, domen }) => {
+const gameMsg = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (!jsonCommand.message) {
@@ -31,17 +26,17 @@ const gameMsg = async ({ telegramId, jsonCommand, domen }) => {
   }
 
   // Получаем список команд участвующих в игре
-  const gameTeams = await GamesTeams.find({
+  const gameTeams = await db.model('GamesTeams').find({
     gameId: jsonCommand.gameId,
   })
 
   const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
 
-  // const teams = await Teams.find({
+  // const teams = await db.model('Teams').find({
   //   _id: { $in: teamsIds },
   // })
 
-  const teamsUsers = await TeamsUsers.find({
+  const teamsUsers = await db.model('TeamsUsers').find({
     teamId: { $in: teamsIds },
   })
   // Получаем telegramId всчех участников игры
@@ -54,7 +49,7 @@ const gameMsg = async ({ telegramId, jsonCommand, domen }) => {
       await sendMessage({
         chat_id: telegramId,
         text: jsonCommand.message,
-        domen,
+        location,
       })
     })
   )

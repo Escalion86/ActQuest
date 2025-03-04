@@ -1,8 +1,7 @@
-import Users from '@models/Users'
 import sendMessage from './sendMessage'
 
-const checkUserData = async (telegramId, text, domen) => {
-  const user = await Users.findOne({
+const checkUserData = async (telegramId, text, location, db) => {
+  const user = await db.model('Users').findOne({
     telegramId,
   })
 
@@ -11,7 +10,7 @@ const checkUserData = async (telegramId, text, domen) => {
       await sendMessage({
         chat_id: telegramId,
         text: 'Добро пожаловать в Act Quest!\nAct Quest - это телеграм бот, с помощью которого можно участвовать и проводить различные активные квесты',
-        domen,
+        location,
       })
     }
     await sendMessage({
@@ -31,7 +30,7 @@ const checkUserData = async (telegramId, text, domen) => {
         // resize_keyboard: true,
         one_time_keyboard: true,
       },
-      domen,
+      location,
     })
     return false
   }

@@ -1,17 +1,15 @@
 import { getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import Games from '@models/Games'
-
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const setTaskPenalty = async ({ telegramId, jsonCommand }) => {
+const setTaskPenalty = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
   if (!jsonCommand.message) {
-    const game = await getGame(jsonCommand.gameId)
+    const game = await getGame(jsonCommand.gameId, db)
     if (game.success === false) return game
 
     return {
@@ -32,7 +30,7 @@ const setTaskPenalty = async ({ telegramId, jsonCommand }) => {
     }
   }
   const value = parseInt(jsonCommand.message)
-  const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  const game = await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     taskFailurePenalty: value,
   })
 

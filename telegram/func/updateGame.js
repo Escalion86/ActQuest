@@ -1,8 +1,6 @@
-import Games from '@models/Games'
-
 import mongoose from 'mongoose'
 
-const updateGame = async (id, props) => {
+const updateGame = async (id, props, db) => {
   if (id === undefined || !mongoose.Types.ObjectId.isValid(id))
     return {
       success: false,
@@ -10,7 +8,7 @@ const updateGame = async (id, props) => {
       nextCommand: `mainMenu`,
     }
 
-  const game = await Games.findByIdAndUpdate(id, props)
+  const game = await db.model('Games').findByIdAndUpdate(id, props)
   if (!game) {
     return {
       success: false,

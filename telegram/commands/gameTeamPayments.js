@@ -1,6 +1,3 @@
-import TeamsUsers from '@models/TeamsUsers'
-import Users from '@models/Users'
-import UsersGamesPayments from '@models/UsersGamesPayments'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
@@ -9,23 +6,25 @@ import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
 import getUsersOfTeamWithRole from 'telegram/func/getUsersOfTeamWithRole'
 
-const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
+const gameTeamPayments = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
-  const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
+  const gameTeam = await getGameTeam(jsonCommand.gameTeamId, db)
   if (gameTeam.success === false) return gameTeam
 
-  const game = await getGame(gameTeam.gameId)
+  const game = await getGame(gameTeam.gameId, db)
   if (game.success === false) return game
 
-  const team = await getTeam(gameTeam.teamId)
+  const team = await getTeam(gameTeam.teamId, db)
   if (team.success === false) return team
 
   // Если смотрим оплату участника команды
   if (jsonCommand.userTelegramId) {
     if (jsonCommand.delPaymentId) {
-      await UsersGamesPayments.deleteOne({ _id: jsonCommand.delPaymentId })
+      await db
+        .model('UsersGamesPayments')
+        .deleteOne({ _id: jsonCommand.delPaymentId })
       return {
         message: `Оплата удалена`,
         nextCommand: { delPaymentId: null, page2: null },
@@ -33,7 +32,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
     }
     if (jsonCommand.addPayment) {
       if (jsonCommand.message) {
-        const payment = await UsersGamesPayments.create({
+        const payment = await db.model('UsersGamesPayments').create({
           userTelegramId: jsonCommand.userTelegramId,
           gameId: gameTeam.gameId,
           sum: parseInt(jsonCommand.message),
@@ -47,13 +46,19 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
         message: `Введите сумму оплаты`,
       }
     }
-    const user = await Users.findOne({
-      telegramId: jsonCommand.userTelegramId,
-    }).lean()
-    const paymentsOfUser = await UsersGamesPayments.find({
-      userTelegramId: jsonCommand.userTelegramId,
-      gameId: gameTeam.gameId,
-    }).lean()
+    const user = await db
+      .model('Users')
+      .findOne({
+        telegramId: jsonCommand.userTelegramId,
+      })
+      .lean()
+    const paymentsOfUser = await db
+      .model('UsersGamesPayments')
+      .find({
+        userTelegramId: jsonCommand.userTelegramId,
+        gameId: gameTeam.gameId,
+      })
+      .lean()
 
     const page2 = jsonCommand?.page2 ?? 1
     const buttons = buttonListConstructor(
@@ -88,14 +93,17 @@ const gameTeamPayments = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const usersOfTeamWithRole = await getUsersOfTeamWithRole(gameTeam.teamId)
+  const usersOfTeamWithRole = await getUsersOfTeamWithRole(gameTeam.teamId, db)
 
   const usersTelegramIds = usersOfTeamWithRole.map((user) => user.telegramId)
 
-  const paymentsOfUsers = await UsersGamesPayments.find({
-    userTelegramId: { $in: usersTelegramIds },
-    gameId: gameTeam.gameId,
-  }).lean()
+  const paymentsOfUsers = await db
+    .model('UsersGamesPayments')
+    .find({
+      userTelegramId: { $in: usersTelegramIds },
+      gameId: gameTeam.gameId,
+    })
+    .lean()
 
   const usersWithPayments = usersOfTeamWithRole.map((user) => {
     const payments = paymentsOfUsers.filter(

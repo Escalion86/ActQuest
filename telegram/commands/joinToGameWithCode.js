@@ -1,13 +1,13 @@
-// import getNoun from '@helpers/getNoun'
-// import TeamsUsers from '@models/TeamsUsers'
-
 import mongoose from 'mongoose'
-// import { MAX_TEAMS } from 'telegram/constants'
 import getGame from 'telegram/func/getGame'
-// import getTeam from 'telegram/func/getTeam'
 
-const joinToGameWithCode = async ({ telegramId, jsonCommand }) => {
-  // const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
+const joinToGameWithCode = async ({
+  telegramId,
+  jsonCommand,
+  location,
+  db,
+}) => {
+  // const teamsUser = await db.model('TeamsUsers').find({ userTelegramId: telegramId })
 
   // if (teamsUser.length >= MAX_TEAMS) {
   //   return {
@@ -35,7 +35,7 @@ const joinToGameWithCode = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const game = await getGame(jsonCommand.message.trim())
+  const game = await getGame(jsonCommand.message.trim(), db)
   if (game.success === false)
     return {
       message: 'Игра не найдена.\nПроверьте код и повторите попытку',
@@ -47,7 +47,7 @@ const joinToGameWithCode = async ({ telegramId, jsonCommand }) => {
     nextCommand: { c: `joinGame`, gameId: jsonCommand.message },
   }
 
-  // const teamUser = await TeamsUsers.findOne({
+  // const teamUser = await db.model('TeamsUsers').findOne({
   //   teamId: String(team._id),
   //   userTelegramId: telegramId,
   // })
@@ -57,7 +57,7 @@ const joinToGameWithCode = async ({ telegramId, jsonCommand }) => {
   //     nextCommand: `menuTeams`,
   //   }
 
-  // await TeamsUsers.create({
+  // await db.model('TeamsUsers').create({
   //   teamId: String(team._id),
   //   userTelegramId: telegramId,
   // })

@@ -1,18 +1,17 @@
-import Games from '@models/Games'
-import GamesTeams from '@models/GamesTeams'
-
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getTeam from 'telegram/func/getTeam'
 
-const teamGamesAdmin = async ({ telegramId, jsonCommand }) => {
+const teamGamesAdmin = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
 
-  const team = await getTeam(jsonCommand.teamId)
+  const team = await getTeam(jsonCommand.teamId, db)
   if (team.success === false) return team
 
-  const gameTeams = await GamesTeams.find({ teamId: jsonCommand?.teamId })
+  const gameTeams = await db
+    .model('GamesTeams')
+    .find({ teamId: jsonCommand?.teamId })
   // if (!gameTeams || gameTeams.length === 0) {
   //   return {
   //     message: 'Команда не записана ни на какую игру',
@@ -26,7 +25,7 @@ const teamGamesAdmin = async ({ telegramId, jsonCommand }) => {
       gameTeam.gameId
   )
 
-  const games = await Games.find({
+  const games = await db.model('Games').find({
     _id: { $in: gamesIds },
   })
 

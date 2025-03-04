@@ -1,8 +1,5 @@
-import LastCommands from '@models/LastCommands'
-
 import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
-import Users from '@models/Users'
 
 function jsonParser(str) {
   try {
@@ -23,15 +20,16 @@ const commandHandler = async ({
   photo,
   video,
   document,
-  domen,
+  location,
   location,
   date,
   user,
+  db,
 }) => {
   try {
     // Если пользователь прислал геопозицию
     if (location) {
-      await Users.findOneAndUpdate(
+      await db.model('Users').findOneAndUpdate(
         {
           telegramId: userTelegramId,
         },
@@ -48,8 +46,9 @@ const commandHandler = async ({
         { c: 'mainMenu' },
         messageId,
         callback_query,
-        domen,
-        user
+        location,
+        user,
+        db
       )
     }
 
@@ -61,7 +60,7 @@ const commandHandler = async ({
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
       if (!jsonCommand || !jsonCommand?.c || jsonCommand?.prevC) {
         // console.log('Полученная команда не полная или это не команда')
-        const last = await LastCommands.findOne({
+        const last = await db.model('LastCommands').findOne({
           userTelegramId,
         })
 
@@ -70,7 +69,7 @@ const commandHandler = async ({
             chat_id: userTelegramId,
             // text: JSON.stringify({ body, headers: req.headers.origin }),
             text: 'Ответ получен, но команда на которую дан ответ не найден',
-            domen,
+            location,
           })
         }
         // console.log('photo :>> ', photo)
@@ -120,18 +119,18 @@ const commandHandler = async ({
 
     // Если это был JSON
     if (jsonCommand) {
-      console.log('jsonCommand :>> ', jsonCommand)
       await executeCommand(
         userTelegramId,
         jsonCommand,
         messageId,
         callback_query,
-        domen,
-        user
+        location,
+        user,
+        db
       )
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
-      const last = await LastCommands.findOne({
+      const last = await db.model('LastCommands').findOne({
         userTelegramId,
       })
 
@@ -140,7 +139,7 @@ const commandHandler = async ({
           chat_id: userTelegramId,
           // text: JSON.stringify({ body, headers: req.headers.origin }),
           text: 'Ответ получен, но команда на которую дан ответ не найдена',
-          domen,
+          location,
         })
       }
 
@@ -154,8 +153,9 @@ const commandHandler = async ({
         lastCommand,
         messageId,
         callback_query,
-        domen,
-        user
+        location,
+        user,
+        db
       )
     }
   } catch (e) {

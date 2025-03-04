@@ -1,13 +1,11 @@
-import GamesTeams from '@models/GamesTeams'
-
 import check from 'telegram/func/check'
 import getGameTeam from 'telegram/func/getGameTeam'
 
-const delGameTeamAdmin = async ({ telegramId, jsonCommand }) => {
+const delGameTeamAdmin = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
-  const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
+  const gameTeam = await getGameTeam(jsonCommand.gameTeamId, db)
   if (gameTeam.success === false) return gameTeam
 
   if (!jsonCommand.confirm) {
@@ -26,7 +24,7 @@ const delGameTeamAdmin = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  await GamesTeams.findByIdAndDelete(jsonCommand.gameTeamId)
+  await db.model('GamesTeams').findByIdAndDelete(jsonCommand.gameTeamId)
   return {
     success: true,
     message: 'Регистрация команды на игре отменена',
