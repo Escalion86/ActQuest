@@ -20,7 +20,7 @@ const commandHandler = async ({
   photo,
   video,
   document,
-  location,
+  userLocation,
   location,
   date,
   user,
@@ -28,13 +28,13 @@ const commandHandler = async ({
 }) => {
   try {
     // Если пользователь прислал геопозицию
-    if (location) {
+    if (userLocation) {
       await db.model('Users').findOneAndUpdate(
         {
           telegramId: userTelegramId,
         },
         {
-          location: { ...location, date: date ? Date(date) : Date() },
+          location: { ...userLocation, date: date ? Date(date) : Date() },
         }
       )
       return
