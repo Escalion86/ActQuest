@@ -148,8 +148,8 @@ export default async function telegramCRUD(req, res, location) {
   // }
   if (method === 'POST') {
     try {
+      const db = await dbConnect(location)
       if (body?.callback_query) {
-        const db = await dbConnect(location)
         // Принимаем команду
         // console.log('callback_body :>> ', body)
         const result = await callbackHandler(body, res, location, db)
