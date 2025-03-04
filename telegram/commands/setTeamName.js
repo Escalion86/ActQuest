@@ -1,8 +1,6 @@
-import Teams from '@models/Teams'
-
 import check from 'telegram/func/check'
 
-const setTeamName = async ({ telegramId, jsonCommand }) => {
+const setTeamName = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
@@ -19,7 +17,7 @@ const setTeamName = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
+  const team = await db.model('Teams').findByIdAndUpdate(jsonCommand.teamId, {
     name: jsonCommand.message,
     name_lowered: jsonCommand.message.toLowerCase(),
   })

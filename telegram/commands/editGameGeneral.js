@@ -4,44 +4,45 @@ import {
   getNounWrongCodes,
 } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import Games from '@models/Games'
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
-import UsersGamesPayments from '@models/UsersGamesPayments'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
+const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (jsonCommand.toggleShowCreator) {
-    await Games.findByIdAndUpdate(jsonCommand.gameId, {
+    await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
       showCreator: !game.showCreator,
     })
     game.showCreator = !game.showCreator
     jsonCommand.toggleShowCreator = !jsonCommand.toggleShowCreator
   }
 
-  const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })
+  const gameTeams = await db
+    .model('GamesTeams')
+    .find({ gameId: jsonCommand?.gameId })
 
   const teamsIds =
     gameTeams?.length > 0 ? gameTeams.map((gameTeam) => gameTeam.teamId) : []
 
   const teams =
     teamsIds.length > 0
-      ? await Teams.find({
+      ? await db.model('Teams').find({
           _id: { $in: teamsIds },
         })
       : []
 
-  const paymentsOfGame = await UsersGamesPayments.find({
-    gameId: jsonCommand.gameId,
-  }).lean()
+  const paymentsOfGame = await db
+    .model('UsersGamesPayment')
+    .finds({
+      gameId: jsonCommand.gameId,
+    })
+    .lean()
 
   const paymentsSum = paymentsOfGame.reduce((acc, { sum }) => {
     return acc + sum
@@ -194,7 +195,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
         {
           url:
             'https://actquest.ru/' +
-            domen +
+            location +
             '/game/result/' +
             jsonCommand.gameId,
           text: '\u{1F30F} на сайте',
@@ -214,7 +215,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, domen }) => {
       {
         url:
           'https://actquest.ru/' +
-          domen +
+          location +
           '/game/location/' +
           jsonCommand.gameId,
         text: '\u{1F30F} Задания и команды на карте',

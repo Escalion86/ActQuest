@@ -187,7 +187,7 @@ const calcMapCenter = (usersWithLocation) => {
 
 function EventPage(props) {
   const gameId = props.id
-  const domen = props.domen
+  const location = props.location
 
   const [showTasks, setShowTasks] = useState(true)
   const [showTeams, setShowTeams] = useState(true)
@@ -205,13 +205,15 @@ function EventPage(props) {
     () =>
       usersWithLocation.length > 0
         ? calcMapCenter(usersWithLocation)
-        : townsCenter[domen] || townsCenter['krsk'],
+        : townsCenter[location] || townsCenter['krsk'],
     [!result?.users]
   )
 
   useEffect(() => {
     const getGameData = async (gameId) => {
-      const result = await getData('/api/usersingame/' + domen + '/' + gameId)
+      const result = await getData(
+        '/api/usersingame/' + location + '/' + gameId
+      )
       if (!result) return
       const teamsIds = result.data.teams.map(({ _id }) => _id)
       const teamsColorsToSet = {}
@@ -221,7 +223,9 @@ function EventPage(props) {
       setResult(result.data)
       setTeamsColors(teamsColorsToSet)
       setInterval(async () => {
-        const result = await getData('/api/usersingame/' + domen + '/' + gameId)
+        const result = await getData(
+          '/api/usersingame/' + location + '/' + gameId
+        )
         if (result) setResult(result.data)
       }, 10000)
     }
@@ -231,11 +235,11 @@ function EventPage(props) {
   }, [])
 
   useEffect(() => {
-    const getGame = async (gameId) => {
-      const result = await getData('/api/games/' + domen + '/' + gameId)
+    const getGameEffect = async (gameId) => {
+      const result = await getData('/api/games/' + location + '/' + gameId)
       setGame(result.data)
     }
-    if (gameId) getGame(gameId)
+    if (gameId) getGameEffect(gameId)
   }, [])
 
   useEffect(() => {
@@ -312,7 +316,7 @@ export const getServerSideProps = async (context) => {
   // const session = await getSession({ req: context.req })
 
   const { params } = context
-  const { id, domen } = params
+  const { id, location } = params
 
   // const fetchedProps = await fetchProps(session?.user)
 
@@ -320,7 +324,7 @@ export const getServerSideProps = async (context) => {
     props: {
       // ...fetchedProps,
       id,
-      domen,
+      location,
       // loggedUser: session?.user ?? null,
     },
   }

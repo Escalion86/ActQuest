@@ -1,17 +1,15 @@
-import Games from '@models/Games'
-
 import formatGameName from 'telegram/func/formatGameName'
 import getNoun from '@helpers/getNoun'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import isUserAdmin from '@helpers/isUserAdmin'
 
-const archiveGamesEdit = async ({ telegramId, jsonCommand, user }) => {
+const archiveGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
   const isAdmin = isUserAdmin(user)
 
   // Получаем список игр
   var games = []
-  if (isAdmin) games = await Games.find({})
-  else games = await Games.find({ creatorTelegramId: telegramId })
+  if (isAdmin) games = await db.model('Games').find({})
+  else games = await db.model('Games').find({ creatorTelegramId: telegramId })
   const finishedGames = games.filter((game) => game.status === 'finished')
 
   const sortedGames = finishedGames.sort((a, b) => {

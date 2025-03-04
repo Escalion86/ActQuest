@@ -1,11 +1,4 @@
-// import formatGameDateTimeFact from '@helpers/formatGameDateTimeFact'
 import getSecondsBetween from '@helpers/getSecondsBetween'
-// import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import Games from '@models/Games'
-// import GamesTeams from '@models/GamesTeams'
-// import Teams from '@models/Teams'
-// import TeamsUsers from '@models/TeamsUsers'
-
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
@@ -52,11 +45,16 @@ const durationCalc = ({ startTime, endTime, activeNum }, game) => {
   return tempArray
 }
 
-const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
+const gameResultFormTeamsPlaces = async ({
+  telegramId,
+  jsonCommand,
+  location,
+  db,
+}) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (game.status !== 'finished') {
@@ -90,11 +88,11 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
 
   // const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
 
-  // const teams = await Teams.find({
+  // const teams = await db.model('Teams').find({
   //   _id: { $in: teamsIds },
   // })
 
-  // const teamsUsers = await TeamsUsers.find({
+  // const teamsUsers = await db.model('TeamsUsers').find({
   //   teamId: { $in: teamsIds },
   // })
 
@@ -343,7 +341,7 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
   //   showSeconds: true,
   // })
 
-  // const game = await Games.findById(jsonCommand.gameId)
+  // const game = await db.model('Games').findById(jsonCommand.gameId)
 
   // const messageText = [
   //   `<b>Результаты игры:\n${formatGameName(game)}</b>`,
@@ -383,7 +381,7 @@ const gameResultFormTeamsPlaces = async ({ telegramId, jsonCommand }) => {
     ({ team }, index) => (teamsPlaces[String(team._id)] = index + 1)
   )
 
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     result: {
       ...game.result,
       // text: messageText,

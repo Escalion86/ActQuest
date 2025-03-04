@@ -1,22 +1,20 @@
-import Users from '@models/Users'
-
 import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 import getTeamUser from 'telegram/func/getTeamUser'
 
-const teamUser = async ({ telegramId, jsonCommand }) => {
+const teamUser = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['teamUserId'])
   if (checkData) return checkData
 
-  const teamUser = await getTeamUser(jsonCommand.teamUserId)
+  const teamUser = await getTeamUser(jsonCommand.teamUserId, db)
   if (teamUser.success === false) return teamUser
 
   const isCapitan = teamUser.role === 'capitan'
 
-  const team = await getTeam(teamUser.teamId)
+  const team = await getTeam(teamUser.teamId, db)
   if (team.success === false) return team
 
-  const user = await Users.findOne({
+  const user = await db.model('Users').findOne({
     telegramId: teamUser.userTelegramId,
   })
   if (!user || user.length === 0) {

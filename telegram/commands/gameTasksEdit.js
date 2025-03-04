@@ -1,5 +1,4 @@
 import { getNounPoints } from '@helpers/getNoun'
-import Games from '@models/Games'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
@@ -9,11 +8,11 @@ import numberToEmojis from 'telegram/func/numberToEmojis'
 const swapElements = (array, index1, index2) =>
   ([array[index1], array[index2]] = [array[index2], array[index1]])
 
-const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
+const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  var game = await getGame(jsonCommand.gameId)
+  var game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   if (jsonCommand.taskUp !== undefined) {
@@ -25,7 +24,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
     } else {
       const tasks = [...game.tasks]
       swapElements(tasks, jsonCommand.taskUp, jsonCommand.taskUp - 1)
-      await Games.findByIdAndUpdate(jsonCommand.gameId, {
+      await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
         tasks,
       })
       game.tasks = tasks
@@ -46,7 +45,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand }) => {
     } else {
       const tasks = [...game.tasks]
       swapElements(tasks, jsonCommand.taskDown, jsonCommand.taskDown + 1)
-      await Games.findByIdAndUpdate(jsonCommand.gameId, {
+      await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
         tasks,
       })
       // return {

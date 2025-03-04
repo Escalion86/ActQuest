@@ -1,10 +1,10 @@
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
-
-const getTeamsOfUser = async (userTelegramId) => {
-  const teamsUser = await TeamsUsers.find({
-    userTelegramId: userTelegramId,
-  }).lean()
+const getTeamsOfUser = async (userTelegramId, db) => {
+  const teamsUser = await db
+    .model('TeamsUsers')
+    .find({
+      userTelegramId: userTelegramId,
+    })
+    .lean()
   if (!teamsUser || teamsUser.length === 0) return []
 
   const teamsIds = teamsUser.map(
@@ -13,9 +13,12 @@ const getTeamsOfUser = async (userTelegramId) => {
       teamUser.teamId
   )
 
-  const teams = await Teams.find({
-    _id: { $in: teamsIds },
-  }).lean()
+  const teams = await db
+    .model('Teams')
+    .find({
+      _id: { $in: teamsIds },
+    })
+    .lean()
 
   return teams
 }

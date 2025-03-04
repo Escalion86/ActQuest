@@ -1,11 +1,9 @@
-import Users from '@models/Users'
-
 import mainMenuButton from './menuItems/mainMenuButton'
 
-const menuUser = async ({ telegramId, jsonCommand }) => {
+const menuUser = async ({ telegramId, jsonCommand, location, db }) => {
   var user
   if (telegramId) {
-    user = await Users.findOne({ telegramId })
+    user = await db.model('Users').findOne({ telegramId })
   }
 
   return {

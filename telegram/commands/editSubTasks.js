@@ -3,12 +3,12 @@ import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const editSubTasks = async ({ telegramId, jsonCommand }) => {
+const editSubTasks = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
   if (!game.tasks)
     return {

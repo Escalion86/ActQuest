@@ -1,13 +1,11 @@
-import Users from '@models/Users'
-
-const setUserName = async ({ telegramId, jsonCommand }) => {
+const setUserName = async ({ telegramId, jsonCommand, location, db }) => {
   if (!jsonCommand.message)
     return {
       success: true,
       message: 'Введите имя',
       buttons: [{ text: '\u{1F6AB} Отмена', c: 'menuUser' }],
     }
-  const user = await Users.findOneAndUpdate(
+  const user = await db.model('Users').findOneAndUpdate(
     { telegramId },
     {
       name: jsonCommand.message,

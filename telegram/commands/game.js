@@ -1,44 +1,39 @@
 import gameDescription from '@helpers/gameDescription'
-import { getNounPoints } from '@helpers/getNoun'
 import isUserAdmin from '@helpers/isUserAdmin'
-import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import GamesTeams from '@models/GamesTeams'
-import Users from '@models/Users'
-import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
-import getGameTeamsRegistredInAGame from 'telegram/func/getGameTeamsRegistredInAGame'
 import getTeamOfUserRegistredInAGame from 'telegram/func/getTeamOfUserRegistredInAGame'
 import getTeamsUserOfUser from 'telegram/func/getTeamsUserOfUser'
 
-const game = async ({ telegramId, user, jsonCommand, domen }) => {
+const game = async ({ telegramId, user, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   const isAdmin = isUserAdmin(user)
 
   const teamsOfUserInAGame = await getTeamOfUserRegistredInAGame(
     telegramId,
-    jsonCommand.gameId
+    jsonCommand.gameId,
+    db
   )
 
-  // const teamsOfUser = getTeamsOfUser(    telegramId,
+  // const teamsOfUser = getTeamsOfUser(    telegramId,db)
   //   jsonCommand.gameId)
 
-  // const teamsOfGame = getGameTeamsRegistredInAGame(jsonCommand.gameId)
+  // const teamsOfGame = getGameTeamsRegistredInAGame(jsonCommand.gameId, db)
 
-  const teamsUserOfUser = await getTeamsUserOfUser(telegramId)
+  const teamsUserOfUser = await getTeamsUserOfUser(telegramId, db)
 
-  const gameTeams = await GamesTeams.find({
+  const gameTeams = await db.model('GamesTeams').find({
     gameId: jsonCommand.gameId,
   })
 
   const creator =
     game.showCreator && game?.creatorTelegramId
-      ? await Users.findOne({
+      ? await db.model('Users').findOne({
           telegramId: game?.creatorTelegramId,
         })
       : undefined
@@ -53,7 +48,7 @@ const game = async ({ telegramId, user, jsonCommand, domen }) => {
   //     String(team._id)
   // )
 
-  // const teams = await Teams.find({
+  // const teams = await db.model('Teams').find({
   //   _id: { $in: teamsIds },
   // })
 
@@ -118,7 +113,10 @@ const game = async ({ telegramId, user, jsonCommand, domen }) => {
         : []),
       {
         url:
-          'https://actquest.ru/' + domen + '/game/result/' + jsonCommand.gameId,
+          'https://actquest.ru/' +
+          location +
+          '/game/result/' +
+          jsonCommand.gameId,
         text: '\u{1F30F} Посмотреть результаты игры на сайте',
         hide:
           game.type === 'photo' ||

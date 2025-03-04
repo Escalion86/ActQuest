@@ -1,8 +1,4 @@
-// import getNoun from '@helpers/getNoun'
 import getSecondsBetween from '@helpers/getSecondsBetween'
-import GamesTeams from '@models/GamesTeams'
-import TeamsUsers from '@models/TeamsUsers'
-
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
@@ -66,7 +62,7 @@ const teamGameStart = async (gameTeamId, game) => {
   const findedPenaltyCodes = new Array(gameTasksCount).fill([])
   const findedBonusCodes = new Array(gameTasksCount).fill([])
   const photos = new Array(gameTasksCount).fill({ photos: [], checks: {} })
-  await GamesTeams.findByIdAndUpdate(gameTeamId, {
+  await db.model('GamesTeams').findByIdAndUpdate(gameTeamId, {
     startTime,
     endTime,
     activeNum: 0,
@@ -78,14 +74,14 @@ const teamGameStart = async (gameTeamId, game) => {
   })
 }
 
-const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
+const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
-  const gameTeam = await getGameTeam(jsonCommand?.gameTeamId)
+  const gameTeam = await getGameTeam(jsonCommand?.gameTeamId, db)
   if (gameTeam.success === false) return gameTeam
 
-  const game = await getGame(gameTeam.gameId)
+  const game = await getGame(gameTeam.gameId, db)
   if (game.success === false) return game
 
   // Если игра не стартовала или уже закончена
@@ -214,7 +210,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         game.tasks.length
       )
 
-      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      await db.model('GamesTeams').findByIdAndUpdate(jsonCommand?.gameTeamId, {
         // findedCodes: newAllFindedCodes,
         startTime: startTimeTemp,
         // endTime: endTimeTemp,
@@ -252,7 +248,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       // ПЕРЕРЫВ
       // const endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
       // await dbConnect()
-      // await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      // await db.model('GamesTeams').findByIdAndUpdate(jsonCommand?.gameTeamId, {
       //   // findedCodes: newAllFindedCodes,
       //   // startTime: startTimeTemp,
       //   endTime: endTimeTemp,
@@ -276,7 +272,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       game.tasks.length
     )
 
-    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+    await db.model('GamesTeams').findByIdAndUpdate(jsonCommand?.gameTeamId, {
       // findedCodes: newAllFindedCodes,
       startTime: startTimeTemp,
       // endTime: endTimeTemp,
@@ -313,7 +309,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
           : new Array(gameTasksCount).fill({ photos: [], checks: {} })
       existedPhotos[taskNum].photos.push(jsonCommand.message)
 
-      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      await db.model('GamesTeams').findByIdAndUpdate(jsonCommand?.gameTeamId, {
         photos: existedPhotos,
       })
 
@@ -421,12 +417,11 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       newAllFindedBonusCodes[taskNum] = newFindedBonusCodesInTask
       console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
       console.log('newAllFindedBonusCodes :>> ', newAllFindedBonusCodes)
-      const result = await GamesTeams.findByIdAndUpdate(
-        jsonCommand?.gameTeamId,
-        {
+      const result = await db
+        .model('GamesTeams')
+        .findByIdAndUpdate(jsonCommand?.gameTeamId, {
           findedBonusCodes: newAllFindedBonusCodes,
-        }
-      )
+        })
 
       return {
         images: game.tasks[taskNum]?.images,
@@ -455,12 +450,11 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       newAllFindedPenaltyCodes[taskNum] = newFindedPenaltyCodesInTask
       console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
       console.log('newAllFindedPenaltyCodes :>> ', newAllFindedPenaltyCodes)
-      const result = await GamesTeams.findByIdAndUpdate(
-        jsonCommand?.gameTeamId,
-        {
+      const result = await db
+        .model('GamesTeams')
+        .findByIdAndUpdate(jsonCommand?.gameTeamId, {
           findedPenaltyCodes: newAllFindedPenaltyCodes,
-        }
-      )
+        })
 
       return {
         images: game.tasks[taskNum]?.images,
@@ -503,7 +497,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
         startTimeTemp = startTimeNextSet(startTime, taskNum, game.tasks.length)
 
         const teamId = gameTeam.teamId
-        const teamsUsers = await TeamsUsers.find({
+        const teamsUsers = await db.model('TeamsUsers').find({
           teamId,
         })
 
@@ -513,12 +507,14 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
 
         // Если игра завершена
         if (newActiveNum > game.tasks.length - 1) {
-          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-            findedCodes: newAllFindedCodes,
-            startTime: startTimeTemp,
-            endTime: endTimeTemp,
-            activeNum: newActiveNum,
-          })
+          await db
+            .model('GamesTeams')
+            .findByIdAndUpdate(jsonCommand?.gameTeamId, {
+              findedCodes: newAllFindedCodes,
+              startTime: startTimeTemp,
+              endTime: endTimeTemp,
+              activeNum: newActiveNum,
+            })
 
           const keyboard = keyboardFormer([mainMenuButton])
 
@@ -538,7 +534,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
                     : ''
                 }`,
                 keyboard,
-                domen,
+                location,
               })
             })
           )
@@ -553,12 +549,14 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
           if (breakDuration > 0) {
             // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВ ЕСТЬ :>> ')
             // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
-            await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-              findedCodes: newAllFindedCodes,
-              // startTime: startTimeTemp,
-              endTime: endTimeTemp,
-              // activeNum: newActiveNum,
-            })
+            await db
+              .model('GamesTeams')
+              .findByIdAndUpdate(jsonCommand?.gameTeamId, {
+                findedCodes: newAllFindedCodes,
+                // startTime: startTimeTemp,
+                endTime: endTimeTemp,
+                // activeNum: newActiveNum,
+              })
 
             const keyboard = keyboardFormer(buttonRefresh)
 
@@ -575,19 +573,21 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
                   )}`}`,
                   keyboard,
                   // images: game.tasks[taskNum].images,
-                  domen,
+                  location,
                 })
               })
             )
           }
           // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВА НЕТ :>> ')
           // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
-          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-            findedCodes: newAllFindedCodes,
-            startTime: startTimeTemp,
-            endTime: endTimeTemp,
-            activeNum: newActiveNum,
-          })
+          await db
+            .model('GamesTeams')
+            .findByIdAndUpdate(jsonCommand?.gameTeamId, {
+              findedCodes: newAllFindedCodes,
+              startTime: startTimeTemp,
+              endTime: endTimeTemp,
+              activeNum: newActiveNum,
+            })
 
           const keyboard = keyboardFormer(buttonRefresh)
 
@@ -604,7 +604,7 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
                 }),
                 keyboard,
                 images: game.tasks[taskNum].images,
-                domen,
+                location,
               })
             })
           )
@@ -613,15 +613,14 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
 
       // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
       // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
-      const result = await GamesTeams.findByIdAndUpdate(
-        jsonCommand?.gameTeamId,
-        {
+      const result = await db
+        .model('GamesTeams')
+        .findByIdAndUpdate(jsonCommand?.gameTeamId, {
           findedCodes: newAllFindedCodes,
           // startTime: startTimeTemp,
           // endTime: endTimeTemp,
           // activeNum: newActiveNum,
-        }
-      )
+        })
 
       return {
         images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
@@ -653,15 +652,14 @@ const gameProcess = async ({ telegramId, jsonCommand, domen }) => {
       const newWrongCodesInTask = [...wrongCodesInTask, code]
       newAllWrongCodes[taskNum] = newWrongCodesInTask
 
-      const result = await GamesTeams.findByIdAndUpdate(
-        jsonCommand?.gameTeamId,
-        {
+      const result = await db
+        .model('GamesTeams')
+        .findByIdAndUpdate(jsonCommand?.gameTeamId, {
           wrongCodes: newAllWrongCodes,
           // startTime: startTimeTemp,
           // endTime: endTimeTemp,
           // activeNum: newActiveNum,
-        }
-      )
+        })
       return {
         message: 'Код не верен. Введите код',
       }

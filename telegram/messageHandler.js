@@ -33,7 +33,7 @@ import commandHandler from './commandHandler'
 //   },
 // }
 
-const messageHandler = async (body, res, domen) => {
+const messageHandler = async (body, res, location, db) => {
   const { update_id, message } = body
   const {
     message_id,
@@ -49,8 +49,8 @@ const messageHandler = async (body, res, domen) => {
     video, // Если было отправлено видео
   } = message
 
-  if (await checkContactRecive(body?.message, domen)) {
-    const user = await checkUserData(from.id, undefined, domen)
+  if (await checkContactRecive(body?.message, location, db)) {
+    const user = await checkUserData(from.id, undefined, location, db)
     if (user)
       return await commandHandler(
         {
@@ -59,19 +59,20 @@ const messageHandler = async (body, res, domen) => {
           messageId: message_id,
           // callback_query,
           photo,
-          domen,
+          location,
           // location,
           // date,
           user,
           video,
           document,
+          db,
         }
         // from.id,
         // text,
         // message_id,
         // undefined,
         // photo,
-        // domen,
+        // location,
         // undefined,
         // undefined,
         // user

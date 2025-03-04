@@ -1,8 +1,5 @@
 import isUserAdmin from '@helpers/isUserAdmin'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import TeamsUsers from '@models/TeamsUsers'
-import Users from '@models/Users'
-import UsersGamesPayments from '@models/UsersGamesPayments'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
@@ -10,29 +7,29 @@ import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
 import getTeam from 'telegram/func/getTeam'
 
-const gameTeamAdmin = async ({ telegramId, jsonCommand, user }) => {
+const gameTeamAdmin = async ({ telegramId, jsonCommand, user, db }) => {
   const isAdmin = isUserAdmin(user)
 
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
-  const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
+  const gameTeam = await getGameTeam(jsonCommand.gameTeamId, db)
   if (gameTeam.success === false) return gameTeam
 
-  const game = await getGame(gameTeam.gameId)
+  const game = await getGame(gameTeam.gameId, db)
   if (game.success === false) return game
 
-  const team = await getTeam(gameTeam.teamId)
+  const team = await getTeam(gameTeam.teamId, db)
   if (team.success === false) return team
 
-  const teamUsers = await TeamsUsers.find({
+  const teamUsers = await db.model('TeamsUsers').find({
     // userTelegramId: telegramId,
     teamId: String(team._id),
   })
 
   const usersTelegramIds = teamUsers.map((teamUser) => teamUser.userTelegramId)
 
-  const users = await Users.find({
+  const users = await db.model('Users').find({
     telegramId: { $in: usersTelegramIds },
   })
 
@@ -40,10 +37,13 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user }) => {
     (teamUser) => teamUser.role === 'capitan'
   )?.userTelegramId
 
-  const paymentsOfUsers = await UsersGamesPayments.find({
-    userTelegramId: { $in: usersTelegramIds },
-    gameId: gameTeam.gameId,
-  }).lean()
+  const paymentsOfUsers = await db
+    .model('UsersGamesPayments')
+    .find({
+      userTelegramId: { $in: usersTelegramIds },
+      gameId: gameTeam.gameId,
+    })
+    .lean()
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(users, page, (user, number) => ({

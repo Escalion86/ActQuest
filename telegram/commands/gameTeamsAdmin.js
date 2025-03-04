@@ -1,29 +1,26 @@
 import { getNounTeams } from '@helpers/getNoun'
 import isUserAdmin from '@helpers/isUserAdmin'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
-import UsersGamesPayments from '@models/UsersGamesPayments'
-
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 
-const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
+const gameTeamsAdmin = async ({ telegramId, jsonCommand, user, db }) => {
   const isAdmin = isUserAdmin(user)
 
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand?.gameId)
+  const game = await getGame(jsonCommand?.gameId, db)
   if (game.success === false) return game
 
   const isGameStarted = game.status === 'started'
   const isGameFinished = game.status === 'finished'
 
-  const gameTeams = await GamesTeams.find({ gameId: jsonCommand?.gameId })
+  const gameTeams = await db
+    .model('GamesTeams')
+    .find({ gameId: jsonCommand?.gameId })
     .lean()
     .sort({ createdAt: 1 })
   // if (!gameTeams || gameTeams.length === 0) {
@@ -44,24 +41,33 @@ const gameTeamsAdmin = async ({ telegramId, jsonCommand, user }) => {
 
   const teams =
     teamsIds.length > 0
-      ? await Teams.find({
-          _id: { $in: teamsIds },
-        }).lean()
+      ? await db
+          .model('Teams')
+          .find({
+            _id: { $in: teamsIds },
+          })
+          .lean()
       : []
 
   const teamsUsers =
     teamsIds.length > 0
-      ? await TeamsUsers.find({ teamId: { $in: teamsIds } }).lean()
+      ? await db
+          .model('TeamsUsers')
+          .find({ teamId: { $in: teamsIds } })
+          .lean()
       : []
 
   const usersTelegramIds = teamsUsers.map(
     (teamsUser) => teamsUser.userTelegramId
   )
 
-  const paymentsOfUsers = await UsersGamesPayments.find({
-    userTelegramId: { $in: usersTelegramIds },
-    gameId: jsonCommand.gameId,
-  }).lean()
+  const paymentsOfUsers = await db
+    .model('UsersGamesPayments')
+    .find({
+      userTelegramId: { $in: usersTelegramIds },
+      gameId: jsonCommand.gameId,
+    })
+    .lean()
 
   const sortedTeams = gameTeams.map(({ _id, teamId, timeAddings }) => {
     const team = teams.find(({ _id }) => String(_id) == teamId)

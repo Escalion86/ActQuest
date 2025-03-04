@@ -1,27 +1,28 @@
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
-import Users from '@models/Users'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
+const checkGameTeamsDoubles = async ({
+  telegramId,
+  jsonCommand,
+  location,
+  db,
+}) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
   // Получаем список команд участвующих в игре
-  const gameTeams = await GamesTeams.find({
+  const gameTeams = await db.model('GamesTeams').find({
     gameId: jsonCommand.gameId,
   })
 
   const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
-  const teams = await Teams.find({
+  const teams = await db.model('Teams').find({
     _id: { $in: teamsIds },
   })
-  const teamsUsers = await TeamsUsers.find({
+  const teamsUsers = await db.model('TeamsUsers').find({
     teamId: { $in: teamsIds },
   })
   const usersIds = teamsUsers.map(({ userTelegramId }) => userTelegramId)
@@ -33,7 +34,7 @@ const checkGameTeamsDoubles = async ({ telegramId, jsonCommand }) => {
     return numbers.indexOf(number) !== index
   })
 
-  const duplicateUsers = await Users.find({
+  const duplicateUsers = await db.model('Users').find({
     telegramId: { $in: duplicatesUsersIds },
   })
 

@@ -1,12 +1,12 @@
 import getNoun from '@helpers/getNoun'
-import TeamsUsers from '@models/TeamsUsers'
 import mongoose from 'mongoose'
-
 import { MAX_TEAMS } from 'telegram/constants'
 import getTeam from 'telegram/func/getTeam'
 
-const joinTeam = async ({ telegramId, jsonCommand }) => {
-  const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
+const joinTeam = async ({ telegramId, jsonCommand, location, db }) => {
+  const teamsUser = await db
+    .model('TeamsUsers')
+    .find({ userTelegramId: telegramId })
 
   if (teamsUser.length >= MAX_TEAMS) {
     return {
@@ -35,10 +35,10 @@ const joinTeam = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const team = await getTeam(jsonCommand.message.trim())
+  const team = await getTeam(jsonCommand.message.trim(), db)
   if (team.success === false) return team
 
-  const teamUser = await TeamsUsers.findOne({
+  const teamUser = await db.model('TeamsUsers').findOne({
     teamId: String(team._id),
     userTelegramId: telegramId,
   })
@@ -48,7 +48,7 @@ const joinTeam = async ({ telegramId, jsonCommand }) => {
       nextCommand: `menuTeams`,
     }
 
-  await TeamsUsers.create({
+  await db.model('TeamsUsers').create({
     teamId: String(team._id),
     userTelegramId: telegramId,
   })

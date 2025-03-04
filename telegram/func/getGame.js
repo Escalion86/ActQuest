@@ -1,8 +1,4 @@
-import Games from '@models/Games'
-
-// import mongoose from 'mongoose'
-
-const getGame = async (id) => {
+const getGame = async (id, db) => {
   if (
     id === undefined
     //  || !mongoose.Types.ObjectId.isValid(id)
@@ -13,7 +9,7 @@ const getGame = async (id) => {
       nextCommand: `mainMenu`,
     }
 
-  const game = await Games.findById(id).lean()
+  const game = await db.model('Games').findById(id).lean()
   if (!game) {
     return {
       success: false,

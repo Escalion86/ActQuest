@@ -1,16 +1,14 @@
-import LastCommands from '@models/LastCommands'
-
 import commandsArray, { numToCommand } from 'telegram/commands/commandsArray'
 import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
 
-const lastCommandHandler = async (telegramId, jsonCommand, domen, user) => {
+const lastCommandHandler = async (telegramId, jsonCommand, location, user) => {
   if (typeof jsonCommand.c === 'number') {
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
       jsonCommand,
-      domen,
+      location,
       user,
     })
   }
@@ -18,7 +16,7 @@ const lastCommandHandler = async (telegramId, jsonCommand, domen, user) => {
     return await commandsArray[jsonCommand.c]({
       telegramId,
       jsonCommand,
-      domen,
+      location,
       user,
     })
   return {
@@ -33,13 +31,14 @@ const executeCommand = async (
   jsonCommand,
   messageId,
   callback_query,
-  domen,
-  user
+  location,
+  user,
+  db
 ) => {
   const result = await lastCommandHandler(
     userTelegramId,
     jsonCommand,
-    domen,
+    location,
     user
   )
   const keyboard = keyboardFormer(result.buttons)
@@ -59,7 +58,7 @@ const executeCommand = async (
         // keyboard,
         callback_query,
         images: imagesArrays[i],
-        domen,
+        location,
       })
     }
   }
@@ -71,7 +70,7 @@ const executeCommand = async (
     parse_mode: result.parse_mode,
     keyboard,
     callback_query: result.images ? undefined : callback_query,
-    domen,
+    location,
   })
 
   const nextCommand = result.nextCommand
@@ -82,8 +81,9 @@ const executeCommand = async (
         { c: nextCommand },
         messageId,
         undefined, // callback_query,
-        domen,
-        user
+        location,
+        user,
+        db
       )
     }
     // Если команда содержит в себе command, то значт это готовая команда,
@@ -101,8 +101,9 @@ const executeCommand = async (
       actualCommand,
       messageId,
       undefined, // callback_query
-      domen,
-      user
+      location,
+      user,
+      db
     )
   } else {
     const actualCommand = { ...jsonCommand }
@@ -110,10 +111,10 @@ const executeCommand = async (
     delete actualCommand.isPhoto
     delete actualCommand.isVideo
     delete actualCommand.isDocument
-    const prevCommand = await LastCommands.findOne({
+    const prevCommand = await db.model('LastCommands').findOne({
       userTelegramId,
     })
-    return await LastCommands.findOneAndUpdate(
+    return await db.model('LastCommands').findOneAndUpdate(
       {
         userTelegramId,
       },

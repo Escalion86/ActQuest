@@ -1,11 +1,10 @@
-import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 
-const unjoinTeam = async ({ telegramId, jsonCommand }) => {
+const unjoinTeam = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
 
-  const teamUser = await TeamsUsers.findOne({
+  const teamUser = await db.model('TeamsUsers').findOne({
     userTelegramId: telegramId,
     teamId: jsonCommand.teamId,
   })
@@ -28,7 +27,7 @@ const unjoinTeam = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  await TeamsUsers.findOneAndDelete({
+  await db.model('TeamsUsers').findOneAndDelete({
     userTelegramId: telegramId,
     teamId: jsonCommand.teamId,
   })

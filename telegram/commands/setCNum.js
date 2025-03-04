@@ -1,8 +1,6 @@
-import Games from '@models/Games'
-
 import check from 'telegram/func/check'
 
-const setCNum = async ({ telegramId, jsonCommand }) => {
+const setCNum = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
@@ -31,7 +29,7 @@ const setCNum = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const game = await Games.findById(jsonCommand.gameId)
+  const game = await db.model('Games').findById(jsonCommand.gameId)
   const tasks = [...game.tasks]
 
   tasks[jsonCommand.i].numCodesToCompliteTask = jsonCommand.noCNum
@@ -40,7 +38,7 @@ const setCNum = async ({ telegramId, jsonCommand }) => {
     ? Number(jsonCommand.message.split(','))
     : null
 
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     tasks,
   })
 

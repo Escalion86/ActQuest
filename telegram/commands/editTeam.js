@@ -1,11 +1,9 @@
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
 import getTeam from 'telegram/func/getTeam'
 
-const editTeam = async ({ telegramId, jsonCommand }) => {
+const editTeam = async ({ telegramId, jsonCommand, location, db }) => {
   const { b } = jsonCommand
   if (!jsonCommand?.teamId) {
-    const teamsUser = await TeamsUsers.find({
+    const teamsUser = await db.model('TeamsUsers').find({
       userTelegramId: telegramId,
       // role: 'capitan',
     })
@@ -21,7 +19,7 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
         teamUser.teamId
     )
 
-    const teams = await Teams.find({
+    const teams = await db.model('Teams').find({
       _id: { $in: teamsIds },
     })
 
@@ -39,7 +37,7 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  const teamsUser = await TeamsUsers.findOne({
+  const teamsUser = await db.model('TeamsUsers').findOne({
     userTelegramId: telegramId,
     teamId: jsonCommand.teamId,
   })
@@ -53,7 +51,7 @@ const editTeam = async ({ telegramId, jsonCommand }) => {
 
   const isCapitan = teamsUser.role === 'capitan'
 
-  const team = await getTeam(jsonCommand.teamId)
+  const team = await getTeam(jsonCommand.teamId, db)
   if (team.success === false) return team
 
   const buttons = [

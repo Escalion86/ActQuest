@@ -1,6 +1,5 @@
 import { getNounCodes } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import Games from '@models/Games'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
 
 import check from 'telegram/func/check'
@@ -47,13 +46,18 @@ const array = [
   },
 ]
 
-const setManyCodesPenalty = async ({ telegramId, jsonCommand }) => {
+const setManyCodesPenalty = async ({
+  telegramId,
+  jsonCommand,
+  location,
+  db,
+}) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
   if (jsonCommand.delPenalty) {
-    const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
+    const game = await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
       manyCodesPenalty: [0, 0],
     })
     return {
@@ -68,9 +72,11 @@ const setManyCodesPenalty = async ({ telegramId, jsonCommand }) => {
     jsonCommand,
     onFinish: async ({ count, penalty }) => {
       const manyCodesPenalty = [count, penalty]
-      const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
-        manyCodesPenalty,
-      })
+      const game = await db
+        .model('Games')
+        .findByIdAndUpdate(jsonCommand.gameId, {
+          manyCodesPenalty,
+        })
       return {
         success: true,
         message: `Штраф за введение большого кол-ва неверных кодов обновлен на "за ${getNounCodes(
@@ -86,7 +92,7 @@ const setManyCodesPenalty = async ({ telegramId, jsonCommand }) => {
   //   jsonCommand.penalty,
   // ]
 
-  // const game = await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  // const game = await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
   //   manyCodesPenalty,
   // })
 

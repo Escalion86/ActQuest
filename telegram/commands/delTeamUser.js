@@ -1,12 +1,11 @@
-import TeamsUsers from '@models/TeamsUsers'
 import check from 'telegram/func/check'
 import getTeamUser from 'telegram/func/getTeamUser'
 
-const delTeamUser = async ({ telegramId, jsonCommand }) => {
+const delTeamUser = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['teamUserId'])
   if (checkData) return checkData
 
-  const teamUser = await getTeamUser(jsonCommand.teamUserId)
+  const teamUser = await getTeamUser(jsonCommand.teamUserId, db)
   if (teamUser.success === false) return teamUser
 
   if (!jsonCommand.confirm) {
@@ -26,7 +25,7 @@ const delTeamUser = async ({ telegramId, jsonCommand }) => {
     }
   }
 
-  await TeamsUsers.findByIdAndDelete(jsonCommand.teamUserId)
+  await db.model('TeamsUsers').findByIdAndDelete(jsonCommand.teamUserId)
   return {
     success: true,
     message: 'Пользователь удален из команды',

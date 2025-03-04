@@ -1,10 +1,9 @@
-// import { postData } from '@helpers/CRUD'
 import dbConnect from '@utils/dbConnect'
 import callbackHandler from 'telegram/callbackHandler'
 import locationHandler from 'telegram/locationHandler'
 import messageHandler from 'telegram/messageHandler'
 
-export default async function telegramCRUD(req, res, domen = 'krsk') {
+export default async function telegramCRUD(req, res, location) {
   const { query, method, body } = req
 
   // if (method === 'GET') {
@@ -149,12 +148,11 @@ export default async function telegramCRUD(req, res, domen = 'krsk') {
   // }
   if (method === 'POST') {
     try {
-      // console.log(body)
-      await dbConnect(domen)
       if (body?.callback_query) {
+        const db = await dbConnect(location)
         // Принимаем команду
         // console.log('callback_body :>> ', body)
-        const result = await callbackHandler(body, res, domen)
+        const result = await callbackHandler(body, res, location, db)
         // console.log('callbackHandler result :>> ', result)
         // await sendMessage({
         //   chat_id: '261102161',
@@ -180,7 +178,7 @@ export default async function telegramCRUD(req, res, domen = 'krsk') {
         //   file_size: 88244                                                                                                x
         // }
         // const {id, from, message, chat_instanse, data}
-        const result = await messageHandler(body, res, domen)
+        const result = await messageHandler(body, res, location, db)
         // console.log('messageHandler result :>> ', result)
         // await sendMessage({
         //   chat_id: '261102161',
@@ -190,15 +188,20 @@ export default async function telegramCRUD(req, res, domen = 'krsk') {
         // })
       } else if (body?.edited_message) {
         if (body.edited_message?.location) {
-          const result = await locationHandler(body.edited_message, res, domen)
+          const result = await locationHandler(
+            body.edited_message,
+            res,
+            location,
+            db
+          )
         }
       }
       // console.log('telegram body', body)
       // if (message.text === '/activate' || message.text === '/deactivate') {
       //   console.log('message.text', message.text)
-      //   // const users = await Users.find({})
+      //   // const users = await db.model('Users').find({})
       //   console.log('message.from.id', message.from.id)
-      //   const userFromReq = await Users.findOneAndUpdate(
+      //   const userFromReq = await db.model('Users').findOneAndUpdate(
       //     {
       //       'notifications.telegram.userName':
       //         message.from.username.toLowerCase(),
@@ -238,7 +241,7 @@ export default async function telegramCRUD(req, res, domen = 'krsk') {
       //   //       message.from.username.toLowerCase()
       //   // )
       //   if (userFromReq) {
-      //     // const data = await Users.findByIdAndUpdate(userFromReq[0]._id, {
+      //     // const data = await db.model('Users').findByIdAndUpdate(userFromReq[0]._id, {
       //     //   notifications: {
       //     //     ...userFromReq[0].notifications,
       //     //     telegram: {

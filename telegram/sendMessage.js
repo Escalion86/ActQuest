@@ -38,10 +38,12 @@ const sendMessage = async ({
   callback_query,
   images,
   remove_keyboard,
-  domen,
+  location,
 }) => {
-  var telegramToken = process.env.TELEGRAM_TOKEN
-  if (domen === 'nrsk') telegramToken = process.env.TELEGRAM_NRSK_TOKEN
+  var telegramToken = process.env.TELEGRAM_KRSK_TOKEN
+  if (location === 'nrsk') telegramToken = process.env.TELEGRAM_NRSK_TOKEN
+  if (location === 'ekb') telegramToken = process.env.TELEGRAM_EKB_TOKEN
+
   if (images) {
     if (images.length >= 2) {
       await postData(

@@ -1,13 +1,17 @@
-import Games from '@models/Games'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const setTaskCoordinateRadius = async ({ telegramId, jsonCommand }) => {
+const setTaskCoordinateRadius = async ({
+  telegramId,
+  jsonCommand,
+  location,
+  db,
+}) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
   if (!game.tasks)
     return {
@@ -37,7 +41,7 @@ const setTaskCoordinateRadius = async ({ telegramId, jsonCommand }) => {
   coordinates.radius = jsonCommand.message
   tasks[jsonCommand.i].coordinates = coordinates
 
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     tasks,
   })
 

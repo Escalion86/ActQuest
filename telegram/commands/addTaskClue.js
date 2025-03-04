@@ -1,5 +1,4 @@
 import check from 'telegram/func/check'
-import Games from '@models/Games'
 import arrayOfCommands from 'telegram/func/arrayOfCommands'
 
 const cancelButton = (jsonCommand) => ({
@@ -17,7 +16,7 @@ const array = [
   },
 ]
 
-const addTaskClue = async ({ telegramId, jsonCommand }) => {
+const addTaskClue = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
 
@@ -30,10 +29,10 @@ const addTaskClue = async ({ telegramId, jsonCommand }) => {
         images: [],
       }
 
-      const game = await Games.findById(jsonCommand.gameId)
+      const game = await db.model('Games').findById(jsonCommand.gameId)
       game.tasks[jsonCommand.i].clues.push(newClue)
 
-      await Games.findByIdAndUpdate(jsonCommand.gameId, {
+      await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
         tasks: game.tasks,
       })
 

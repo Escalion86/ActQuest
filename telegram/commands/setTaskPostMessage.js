@@ -1,18 +1,21 @@
-import Games from '@models/Games'
-
 import check from 'telegram/func/check'
 
-const setTaskPostMessage = async ({ telegramId, jsonCommand }) => {
+const setTaskPostMessage = async ({
+  telegramId,
+  jsonCommand,
+  location,
+  db,
+}) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
 
   if (jsonCommand.noPostMessage) {
-    const game = await Games.findById(jsonCommand.gameId)
+    const game = await db.model('Games').findById(jsonCommand.gameId)
     const tasks = [...game.tasks]
     tasks[jsonCommand.i].postMessage = ''
 
-    await Games.findByIdAndUpdate(jsonCommand.gameId, {
+    await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
       tasks,
     })
 
@@ -48,7 +51,7 @@ const setTaskPostMessage = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  const game = await Games.findById(jsonCommand.gameId)
+  const game = await db.model('Games').findById(jsonCommand.gameId)
   const tasks = [...game.tasks]
   // const task = tasks[jsonCommand.i]
   tasks[jsonCommand.i].postMessage = jsonCommand.message
@@ -57,7 +60,7 @@ const setTaskPostMessage = async ({ telegramId, jsonCommand }) => {
   // console.log('newTask :>> ', newTask)
   // tasks[jsonCommand.i] = newTask
 
-  await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     tasks,
   })
 

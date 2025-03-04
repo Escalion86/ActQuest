@@ -1,23 +1,20 @@
-import { getNounTeams } from '@helpers/getNoun'
-import GamesTeams from '@models/GamesTeams'
-import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
-
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
-import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 
-const gamePhotos = async ({ telegramId, jsonCommand }) => {
+const gamePhotos = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand?.gameId)
+  const game = await getGame(jsonCommand?.gameId, db)
   if (game.success === false) return game
 
-  const gameTeams = await GamesTeams.find({
-    gameId: jsonCommand?.gameId,
-  }).lean()
+  const gameTeams = await db
+    .model('GamesTeams')
+    .find({
+      gameId: jsonCommand?.gameId,
+    })
+    .lean()
   if (!gameTeams || gameTeams.length === 0) {
     return {
       message: 'Никто не записался на игру',
@@ -27,11 +24,17 @@ const gamePhotos = async ({ telegramId, jsonCommand }) => {
 
   const teamsIds = gameTeams.map(({ teamId }) => teamId)
 
-  const teams = await Teams.find({
-    _id: { $in: teamsIds },
-  }).lean()
+  const teams = await db
+    .model('Teams')
+    .find({
+      _id: { $in: teamsIds },
+    })
+    .lean()
 
-  const teamsUsers = await TeamsUsers.find({ teamId: { $in: teamsIds } }).lean()
+  const teamsUsers = await db
+    .model('TeamsUsers')
+    .find({ teamId: { $in: teamsIds } })
+    .lean()
 
   const teamsWithSumPhotos = teams.map((team) => {
     const gameTeam = gameTeams.find(

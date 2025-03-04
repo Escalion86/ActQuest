@@ -1,14 +1,12 @@
-import Teams from '@models/Teams'
-
 import check from 'telegram/func/check'
 
-const setTeamDesc = async ({ telegramId, jsonCommand }) => {
+const setTeamDesc = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
 
   if (jsonCommand.noDescription) {
-    const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
+    const team = await db.model('Teams').findByIdAndUpdate(jsonCommand.teamId, {
       description: '',
     })
     return {
@@ -34,7 +32,7 @@ const setTeamDesc = async ({ telegramId, jsonCommand }) => {
       ],
     }
   }
-  const team = await Teams.findByIdAndUpdate(jsonCommand.teamId, {
+  const team = await db.model('Teams').findByIdAndUpdate(jsonCommand.teamId, {
     description: jsonCommand.message,
   })
 

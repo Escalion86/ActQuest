@@ -2,11 +2,11 @@ import formatDateTime from '@helpers/formatDateTime'
 import check from 'telegram/func/check'
 import getTeam from 'telegram/func/getTeam'
 
-const editTeamAdmin = async ({ telegramId, jsonCommand }) => {
+const editTeamAdmin = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
 
-  const team = await getTeam(jsonCommand.teamId)
+  const team = await getTeam(jsonCommand.teamId, db)
   if (team.success === false) return team
 
   const buttons = [

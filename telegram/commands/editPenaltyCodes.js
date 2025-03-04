@@ -2,12 +2,12 @@ import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const editPenaltyCodes = async ({ telegramId, jsonCommand }) => {
+const editPenaltyCodes = async ({ telegramId, jsonCommand, location, db }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
 
-  const game = await getGame(jsonCommand.gameId)
+  const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
   if (!game.tasks)
     return {
@@ -69,7 +69,7 @@ const editPenaltyCodes = async ({ telegramId, jsonCommand }) => {
   // }
 
   // await dbConnect()
-  // const game = await Games.findById(jsonCommand.gameId)
+  // const game = await db.model('Games').findById(jsonCommand.gameId)
   // const tasks = [...game.tasks]
   // // const task = tasks[jsonCommand.i]
   // tasks[jsonCommand.i].penaltyCodes = jsonCommand.noCodes
@@ -82,7 +82,7 @@ const editPenaltyCodes = async ({ telegramId, jsonCommand }) => {
   // // console.log('newTask :>> ', newTask)
   // // tasks[jsonCommand.i] = newTask
 
-  // await Games.findByIdAndUpdate(jsonCommand.gameId, {
+  // await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
   //   tasks,
   // })
 

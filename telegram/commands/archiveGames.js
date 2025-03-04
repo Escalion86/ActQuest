@@ -1,13 +1,10 @@
-import Games from '@models/Games'
-import GamesTeams from '@models/GamesTeams'
-import TeamsUsers from '@models/TeamsUsers'
 import formatGameName from 'telegram/func/formatGameName'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import isUserAdmin from '@helpers/isUserAdmin'
 
-const archiveGames = async ({ telegramId, jsonCommand, user }) => {
+const archiveGames = async ({ telegramId, jsonCommand, user, db }) => {
   // Получаем список игр
-  const games = (await Games.find({}).lean()).filter(
+  const games = (await db.model('Games').find({}).lean()).filter(
     (game) => game.status === 'finished'
   )
   if (games.length === 0) {
@@ -20,13 +17,19 @@ const archiveGames = async ({ telegramId, jsonCommand, user }) => {
   const isAdmin = isUserAdmin(user)
 
   // Получаем список команд в которых присутствует пользователь
-  const userTeams = await TeamsUsers.find({ userTelegramId: telegramId }).lean()
+  const userTeams = await db
+    .model('TeamsUsers')
+    .find({ userTelegramId: telegramId })
+    .lean()
   // Получаем IDs команд
   const userTeamsIds = userTeams.map(({ teamId }) => teamId)
   // Получаем список игр в которых присутствует пользователь
-  const gamesTeamsWithUser = await GamesTeams.find({
-    teamId: { $in: userTeamsIds },
-  }).lean()
+  const gamesTeamsWithUser = await db
+    .model('GamesTeams')
+    .find({
+      teamId: { $in: userTeamsIds },
+    })
+    .lean()
   // Получаем IDs игр
   const gamesWithUserIds = gamesTeamsWithUser.map(({ gameId }) => gameId)
   // Фильтруем список игр

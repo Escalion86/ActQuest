@@ -1,5 +1,3 @@
-import TeamsUsers from '@models/TeamsUsers'
-
 import { MAX_TEAMS } from 'telegram/constants'
 import createTeamFunc from 'telegram/func/createTeamFunc'
 import getAdmins from 'telegram/func/getAdmins'
@@ -26,8 +24,8 @@ const array = [
   // },
 ]
 
-const createTeam = async ({ telegramId, jsonCommand, domen }) => {
-  const teamsUser = await TeamsUsers.find({
+const createTeam = async ({ telegramId, jsonCommand, location, db }) => {
+  const teamsUser = await db.model('TeamsUsers').find({
     userTelegramId: telegramId,
   })
   if (teamsUser.length >= MAX_TEAMS) {
@@ -71,10 +69,10 @@ const createTeam = async ({ telegramId, jsonCommand, domen }) => {
   }
 
   // Если все переменные на месте, то создаем команду
-  const team = await createTeamFunc(telegramId, jsonCommand)
+  const team = await createTeamFunc(telegramId, jsonCommand, db)
 
   // Оповещаем администраторов
-  const admins = await getAdmins()
+  const admins = await getAdmins(db)
   const adminTelegramIds = admins.map(({ telegramId }) => telegramId)
 
   await Promise.all(
@@ -83,7 +81,7 @@ const createTeam = async ({ telegramId, jsonCommand, domen }) => {
         chat_id: telegramId,
         text: `На движке создана новая команда "${jsonCommand.name}"`,
         // keyboard,
-        domen,
+        location,
       })
     })
   )

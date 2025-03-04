@@ -1,14 +1,13 @@
-import Users from '@models/Users'
 import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
 
-const checkContactRecive = async (message, domen) => {
+const checkContactRecive = async (message, location, db) => {
   if (!message?.contact) return true
   const { contact, from } = message
   if (contact) {
     const { phone_number, first_name, last_name, user_id } = contact
     const name = (first_name + (last_name ? ' ' + last_name : '')).trim()
-    const user = await Users.findOneAndUpdate(
+    const user = await db.model('Users').findOneAndUpdate(
       {
         telegramId: from.id,
       },
@@ -30,7 +29,7 @@ const checkContactRecive = async (message, domen) => {
       //   ],
       // },
       remove_keyboard: true,
-      domen,
+      location,
     })
 
     await executeCommand(
@@ -38,7 +37,9 @@ const checkContactRecive = async (message, domen) => {
       { c: 'mainMenu' },
       undefined,
       undefined,
-      domen
+      location,
+      user,
+      db
     )
 
     return false

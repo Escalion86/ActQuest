@@ -35,9 +35,10 @@ import commandHandler from './commandHandler'
 const locationHandler = async (
   { message_id, from, chat, date, edit_date, location },
   res,
-  domen
+  location,
+  db
 ) => {
-  const user = await checkUserData(from.id, undefined, domen)
+  const user = await checkUserData(from.id, undefined, location, db)
   if (user)
     return await commandHandler(
       {
@@ -46,17 +47,17 @@ const locationHandler = async (
         messageId: message_id,
         // callback_query,
         // photo,
-        domen,
         location,
         date: edit_date ? edit_date : date,
         user,
+        db,
       }
       // from.id,
       // undefined,
       // message_id,
       // undefined,
       // undefined,
-      // domen,
+      // location,
       // location,
       // edit_date ? edit_date : date,
       // user

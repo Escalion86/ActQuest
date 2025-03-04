@@ -127,12 +127,12 @@ const array = [
   // },
 ]
 
-const createGame = async ({ telegramId, jsonCommand }) => {
+const createGame = async ({ telegramId, jsonCommand, location, db }) => {
   return await arrayOfCommands({
     array,
     jsonCommand,
     onFinish: async (result) => {
-      const game = await createGameFunc(telegramId, result)
+      const game = await createGameFunc(telegramId, result, db)
 
       return {
         success: true,

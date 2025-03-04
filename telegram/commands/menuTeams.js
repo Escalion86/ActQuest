@@ -1,11 +1,11 @@
-import TeamsUsers from '@models/TeamsUsers'
-
 import { MAX_TEAMS } from 'telegram/constants'
 import joinedTeams from './joinedTeams'
 import mainMenuButton from './menuItems/mainMenuButton'
 
-const menuTeams = async ({ telegramId, jsonCommand }) => {
-  const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
+const menuTeams = async ({ telegramId, jsonCommand, location, db }) => {
+  const teamsUser = await db
+    .model('TeamsUsers')
+    .find({ userTelegramId: telegramId })
 
   if (teamsUser.length >= MAX_TEAMS)
     return await joinedTeams({ telegramId, jsonCommand })

@@ -1,16 +1,11 @@
-import Games from '@models/Games'
-import GamesTeams from '@models/GamesTeams'
-// import Teams from '@models/Teams'
-import TeamsUsers from '@models/TeamsUsers'
-
 import formatGameName from 'telegram/func/formatGameName'
 import mainMenuButton from './menuItems/mainMenuButton'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import isUserAdmin from '@helpers/isUserAdmin'
 
-const menuGames = async ({ telegramId, jsonCommand, user }) => {
+const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
   // Получаем список игр
-  const games = await Games.find({}).lean()
+  const games = await db.model('Games').find({}).lean()
   const finishedGames = games.filter((game) => game.status === 'finished')
   const notFinishedGames = games.filter((game) => game.status !== 'finished')
   if (!notFinishedGames || notFinishedGames.length === 0) {
@@ -32,13 +27,19 @@ const menuGames = async ({ telegramId, jsonCommand, user }) => {
   const isAdmin = isUserAdmin(user)
 
   // Получаем список команд в которых присутствует пользователь
-  const userTeams = await TeamsUsers.find({ userTelegramId: telegramId }).lean()
+  const userTeams = await db
+    .model('TeamsUsers')
+    .find({ userTelegramId: telegramId })
+    .lean()
   // Получаем IDs команд
   const userTeamsIds = userTeams.map(({ teamId }) => teamId)
   // Получаем список игр в которых присутствует пользователь
-  const gamesTeamsWithUser = await GamesTeams.find({
-    teamId: { $in: userTeamsIds },
-  }).lean()
+  const gamesTeamsWithUser = await db
+    .model('GamesTeams')
+    .find({
+      teamId: { $in: userTeamsIds },
+    })
+    .lean()
   // Получаем IDs игр
   const gamesWithUserIds = gamesTeamsWithUser.map(({ gameId }) => gameId)
   // Фильтруем список игр
@@ -55,7 +56,7 @@ const menuGames = async ({ telegramId, jsonCommand, user }) => {
   //   }
   // }
   // Получаем список команд в которых присутствует пользователь
-  // const teamsUser = await TeamsUsers.find({ userTelegramId: telegramId })
+  // const teamsUser = await db.model('TeamsUsers').find({ userTelegramId: telegramId })
   // if (!teamsUser || teamsUser.length === 0) {
   //   return {
   //     message: 'Вы не состоите ни в какой команде',
@@ -68,13 +69,13 @@ const menuGames = async ({ telegramId, jsonCommand, user }) => {
   //  Получаем сами команды где пользователь есть
   // const teams =
   //   teamsIds.length > 0
-  //     ? await Teams.find({
+  //     ? await db.model('Teams').find({
   //         _id: { $in: teamsIds },
   //       })
   //     : []
 
   // Получаем список игр где команды пользователей зарегистрированы
-  // const gamesTeams = await GamesTeams.find({
+  // const gamesTeams = await db.model('GamesTeams').find({
   //   teamId: { $in: teamsIds },
   // })
 
