@@ -62,6 +62,6 @@ export const LOCATIONS = {
   },
 }
 
-export const LOCATIONS_KEYS_VISIBLE = Object.keys(LOCATIONS).filter(
+export const LOCATIONS_KEYS = Object.keys(LOCATIONS).filter(
   (location) => !LOCATIONS[location].hidden
 )
