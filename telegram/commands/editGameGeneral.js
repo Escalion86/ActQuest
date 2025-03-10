@@ -50,7 +50,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
 
   return {
     images: game.image ? [game.image] : undefined,
-    message: `${
+    message: `${game.status === 'canceled' ? '<b>(ИГРА ОТМЕНЕНА!)</b>\n' : ''}${
       game.hidden ? '<b>(ИГРА СКРЫТА!)</b>\n' : ''
     }<b>Управление игрой "${game?.name}"</b>\n\n<b>Дата и время</b>: ${
       game.dateStart

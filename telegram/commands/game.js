@@ -88,7 +88,9 @@ const game = async ({ telegramId, user, jsonCommand, location, db }) => {
         })
         .filter((data) => data !== undefined)
 
-  const message = `${gameDescription(game, creator)}${
+  const message = `${
+    game.status === 'canceled' ? '<b>(ИГРА ОТМЕНЕНА!)</b>\n' : ''
+  }${gameDescription(game, creator)}${
     teamsOfUserInAGame && teamsOfUserInAGame.length > 0
       ? `\n\n\n${
           teamsOfUserInAGame.length === 1
