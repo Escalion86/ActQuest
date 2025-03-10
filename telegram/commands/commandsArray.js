@@ -25,6 +25,7 @@ import gameTeam from './gameTeam'
 import delGameTeam from './delGameTeam'
 import game from './game'
 import joinGame from './joinGame'
+import cancelGame from './cancelGame'
 import gameTasksEdit from './gameTasksEdit'
 import hideGame from './hideGame'
 import unhideGame from './unhideGame'
@@ -287,6 +288,7 @@ const commandsArray = {
   gameTaskView,
   gameTasksHide,
   gameTasksShow,
+  cancelGame,
 }
 
 var i = 0
