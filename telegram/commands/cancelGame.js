@@ -16,11 +16,11 @@ const cancelGame = async ({ telegramId, jsonCommand, location, db }) => {
       message: `Подтвердите отмену игры ${formatGameName(game)}`,
       buttons: [
         {
-          text: '\u{1F4A3} Отменить',
+          text: '\u{26D4} Отменить игру',
           c: { confirm: true },
         },
         {
-          text: '\u{1F6AB} Отмена',
+          text: '\u{1F6AB} Я передумал',
           c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
         },
       ],
@@ -30,6 +30,12 @@ const cancelGame = async ({ telegramId, jsonCommand, location, db }) => {
   await db
     .model('Games')
     .findByIdAndUpdate(jsonCommand.gameId, { status: 'canceled' })
+
+  return {
+    success: true,
+    message: 'Игра отменена',
+    nextCommand: `menuGamesEdit`,
+  }
 }
 
 export default cancelGame
