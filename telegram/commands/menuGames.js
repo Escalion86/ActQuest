@@ -6,13 +6,17 @@ import isUserAdmin from '@helpers/isUserAdmin'
 const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
   // Получаем список игр
   const games = await db.model('Games').find({}).lean()
-  const finishedGames = games.filter((game) => game.status === 'finished')
-  const notFinishedGames = games.filter((game) => game.status !== 'finished')
+  const finishedOrCanceledGames = games.filter(
+    (game) => game.status === 'finished' || game.status === 'canceled'
+  )
+  const notFinishedGames = games.filter(
+    (game) => game.status !== 'finished' && game.status !== 'canceled'
+  )
   if (!notFinishedGames || notFinishedGames.length === 0) {
     return {
       message: '<b>Предстоящих игр не запланировано</b>',
       buttons: [
-        ...(finishedGames?.length > 0
+        ...(finishedOrCanceledGames?.length > 0
           ? [{ c: 'archiveGames', text: '\u{1F4DA} Архив игр' }]
           : []),
         {
@@ -86,7 +90,7 @@ const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
     return {
       text: `${formatGameName(game)}${isTeamRegistred ? ` (записан)` : ''}${
         game.hidden ? ` (СКРЫТА)` : ''
-      }`,
+      }${game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''}`,
       c: { c: 'game', gameId: game._id },
     }
   })
@@ -98,7 +102,7 @@ const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
         : '<b>Предстоящие игры</b>',
     buttons: [
       ...buttons,
-      ...(finishedGames?.length > 0
+      ...(finishedOrCanceledGames?.length > 0
         ? [{ c: 'archiveGames', text: '\u{1F4DA} Архив игр' }]
         : []),
       {

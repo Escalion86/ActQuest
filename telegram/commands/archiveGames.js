@@ -5,7 +5,7 @@ import isUserAdmin from '@helpers/isUserAdmin'
 const archiveGames = async ({ telegramId, jsonCommand, user, db }) => {
   // Получаем список игр
   const games = (await db.model('Games').find({}).lean()).filter(
-    (game) => game.status === 'finished'
+    (game) => game.status === 'finished' || game.status === 'canceled'
   )
   if (games.length === 0) {
     return {
@@ -66,7 +66,7 @@ const archiveGames = async ({ telegramId, jsonCommand, user, db }) => {
     return {
       text: `${formatGameName(game)}${isTeamRegistred ? ` (записан)` : ''}${
         game.hidden ? ` (СКРЫТА)` : ''
-      }`,
+      }${game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''}`,
       c: { c: 'game', gameId: game._id },
     }
   })

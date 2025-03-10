@@ -11,16 +11,20 @@ const menuGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
   var games = []
   if (isAdmin) games = await db.model('Games').find({})
   else games = await db.model('Games').find({ creatorTelegramId: telegramId })
-  const finishedGames = games.filter((game) => game.status === 'finished')
-  const notFinishedGames = games.filter((game) => game.status !== 'finished')
+  const finishedOrCanceledGames = games.filter(
+    (game) => game.status === 'finished' || game.status === 'canceled'
+  )
+  const notFinishedGames = games.filter(
+    (game) => game.status !== 'finished' && game.status !== 'canceled'
+  )
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(
     notFinishedGames,
     page,
     (game, number) => ({
-      text: `\u{270F} ${formatGameName(game)} ${
-        game.hidden ? ` (СКРЫТА)` : ''
+      text: `\u{270F} ${formatGameName(game)}${game.hidden ? ` (СКРЫТА)` : ''}${
+        game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''
       }`,
       c: { c: 'editGameGeneral', gameId: game._id },
       //`editGame/gameId=${game._id}`,
@@ -34,13 +38,18 @@ const menuGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
       'игры',
       'игр'
     )}${
-      finishedGames?.length > 0
-        ? ` (в архиве ${getNoun(finishedGames.length, 'игра', 'игры', 'игр')})`
+      finishedOrCanceledGames?.length > 0
+        ? ` (в архиве ${getNoun(
+            finishedOrCanceledGames.length,
+            'игра',
+            'игры',
+            'игр'
+          )})`
         : ''
     }`,
     buttons: [
       ...buttons,
-      ...(finishedGames?.length > 0
+      ...(finishedOrCanceledGames?.length > 0
         ? [{ c: 'archiveGamesEdit', text: '\u{1F4DA} Архив игр' }]
         : []),
       { c: 'createGame', text: '\u{2795} Создать игру' },

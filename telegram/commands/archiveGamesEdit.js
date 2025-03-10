@@ -10,15 +10,19 @@ const archiveGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
   var games = []
   if (isAdmin) games = await db.model('Games').find({})
   else games = await db.model('Games').find({ creatorTelegramId: telegramId })
-  const finishedGames = games.filter((game) => game.status === 'finished')
+  const finishedOrCanceledGames = games.filter(
+    (game) => game.status === 'finished' || game.status === 'canceled'
+  )
 
-  const sortedGames = finishedGames.sort((a, b) => {
+  const sortedGames = finishedOrCanceledGames.sort((a, b) => {
     return b.dateStart - a.dateStart
   })
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(sortedGames, page, (game, number) => ({
-    text: `\u{270F} ${formatGameName(game)}`,
+    text: `\u{270F} ${formatGameName(game)}${game.hidden ? ` (СКРЫТА)` : ''}${
+      game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''
+    }`,
     c: { c: 'editGameGeneral', gameId: game._id },
     //`editGame/gameId=${game._id}`,
   }))
