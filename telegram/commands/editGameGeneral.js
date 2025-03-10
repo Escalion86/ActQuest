@@ -39,7 +39,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
 
   const paymentsOfGame = await db
     .model('UsersGamesPayments')
-    .finds({
+    .find({
       gameId: jsonCommand.gameId,
     })
     .lean()
