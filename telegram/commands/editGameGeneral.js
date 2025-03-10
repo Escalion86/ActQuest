@@ -38,7 +38,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
       : []
 
   const paymentsOfGame = await db
-    .model('UsersGamesPayment')
+    .model('UsersGamesPayments')
     .finds({
       gameId: jsonCommand.gameId,
     })
@@ -269,10 +269,16 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
         text:
           (game.showCreator ? '✅' : '❌') + ' Показать контакты организатора',
       },
-      {
-        c: { c: 'delGame', gameId: jsonCommand.gameId },
-        text: '\u{1F5D1} Удалить игру',
-      },
+      [
+        {
+          c: { c: 'cancelGame', gameId: jsonCommand.gameId },
+          text: '\u{26D4} Отменить игру',
+        },
+        {
+          c: { c: 'delGame', gameId: jsonCommand.gameId },
+          text: '\u{1F5D1} Удалить игру',
+        },
+      ],
       { c: 'menuGamesEdit', text: '\u{2B05} Назад' },
     ],
   }
