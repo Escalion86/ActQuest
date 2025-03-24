@@ -12,6 +12,19 @@ const joinGame = async ({ telegramId, jsonCommand, location, db }) => {
   const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
+  if (game.status !== 'active') {
+    if (game.status === 'finished') {
+      return {
+        message: `Запись на игру закрыта, так как игра завершена`,
+        nextCommand: `menuGames`,
+      }
+    }
+    return {
+      message: `Запись на игру закрыта`,
+      nextCommand: `menuGames`,
+    }
+  }
+
   const teamsUser = await db.model('TeamsUsers').find({
     userTelegramId: telegramId,
     role: 'capitan',
