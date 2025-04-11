@@ -3,6 +3,10 @@ import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 
 const gameDescription = (game, creator) => {
+  const tasksCount = game?.tasks
+    ? game.tasks.filter(({ canceled }) => !canceled).length
+    : 0
+
   const description = `<b>Игра "${game?.name}"</b>
   \n\n<b>Дата и время</b>: ${
     game.dateStart
@@ -17,9 +21,7 @@ const gameDescription = (game, creator) => {
       ? `\n\n<b>Время и место сбора</b>: ${game?.startingPlace}`
       : ''
   }${
-    game?.tasks?.length > 0
-      ? `\n\n<b>Количество заданий</b>: ${game?.tasks?.length}`
-      : ''
+    tasksCount > 0 ? `\n\n<b>Количество заданий</b>: ${tasksCount}` : ''
   }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
     game?.taskDuration ?? 3600
   )}\n${
