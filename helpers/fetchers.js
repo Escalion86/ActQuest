@@ -12,19 +12,16 @@ export async function fetchingAll(setState = () => {}) {
   return result[0]
 }
 
-export async function fetchingUsers(location = process.env.NEXTAUTH_SITE) {
-  const resp = await fetch(`${location}/api/users`)
+export async function fetchingUsers(domen = process.env.NEXTAUTH_SITE) {
+  const resp = await fetch(`${domen}/api/users`)
     .then((res) => res.json())
     .then((json) => json.data)
     .catch((error) => console.log('fetchingUsers ERROR:', error))
   return resp
 }
 
-export async function fetchingUsersById(
-  id,
-  location = process.env.NEXTAUTH_SITE
-) {
-  const resp = await fetch(`${location}/api/users/byId/${id}`)
+export async function fetchingUsersById(id, domen = process.env.NEXTAUTH_SITE) {
+  const resp = await fetch(`${domen}/api/users/byId/${id}`)
     .then((res) => res.json())
     .then((json) => json.data)
     .catch((error) => console.log('fetchingUsersById ERROR:', error))
@@ -33,18 +30,18 @@ export async function fetchingUsersById(
 
 export async function fetchingUserByPhone(
   phone,
-  location = process.env.NEXTAUTH_SITE
+  domen = process.env.NEXTAUTH_SITE
 ) {
-  const resp = await fetch(`${location}/api/users/byPhone/${phone}`)
+  const resp = await fetch(`${domen}/api/users/byPhone/${phone}`)
     .then((res) => res.json())
     .then((json) => json.data)
     .catch((error) => console.log('fetchingUserByPhone ERROR:', error))
   return resp
 }
 
-export async function fetchingLog(data, location = process.env.NEXTAUTH_SITE) {
+export async function fetchingLog(data, domen = process.env.NEXTAUTH_SITE) {
   // console.log('Запущен fetchingLog')
-  const resp = await fetch(`${location}/api/log`, {
+  const resp = await fetch(`${domen}/api/log`, {
     method: 'POST', // *GET, POST, PUT, DELETE, etc.
     // mode: 'cors', // no-cors, *cors, same-origin
     // cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
@@ -63,12 +60,12 @@ export async function fetchingLog(data, location = process.env.NEXTAUTH_SITE) {
   return resp
 }
 
-export async function fetchingSiteSettings(
-  location = process.env.NEXTAUTH_SITE
-) {
-  const resp = await fetch(`${location}/api/site`)
-    .then((res) => res.json())
-    .then((json) => json.data)
-    .catch((error) => console.log('fetchingSiteSettings ERROR:', error))
-  return resp
-}
+// export async function fetchingSiteSettings(
+//   domen = process.env.NEXTAUTH_SITE
+// ) {
+//   const resp = await fetch(`${domen}/api/site`)
+//     .then((res) => res.json())
+//     .then((json) => json.data)
+//     .catch((error) => console.log('fetchingSiteSettings ERROR:', error))
+//   return resp
+// }

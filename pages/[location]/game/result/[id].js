@@ -1088,7 +1088,7 @@ function ResultPage(props) {
 
   useEffect(() => {
     const getGameEffect = async (gameId) => {
-      const game = await getData('/api/games/' + location + '/' + gameId)
+      const game = await getData('/api/' + location + '/games/' + gameId)
       setGame(game.data)
     }
     if (gameId) getGameEffect(gameId)
