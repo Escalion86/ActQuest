@@ -75,7 +75,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
     }\n\n<b>Место сбора после игры</b>: ${
       game?.finishingPlace ?? '[не задано]'
     }\n\n<b>Количество заданий</b>: ${tasksCount}${
-      canceledTasksCount > 0 ? `(отмененных ${canceledTasksCount})` : ''
+      canceledTasksCount > 0 ? ` (отмененных ${canceledTasksCount})` : ''
     }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
       game?.taskDuration ?? 3600
     )}\n${
