@@ -52,7 +52,7 @@ const startTimeNextSet = (startTime, taskNum, gameTasksLength) => {
   return startTimeTemp
 }
 
-const teamGameStart = async (gameTeamId, game) => {
+const teamGameStart = async (gameTeamId, game, db) => {
   const gameTasksCount = game.tasks.length
   const startTime = new Array(gameTasksCount).fill(null)
   startTime[0] = new Date()
@@ -101,7 +101,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
   // Если начало игры индивидуальное, то нужно создать запись в БД для старта
   if (!gameTeam.startTime || gameTeam.startTime.length === 0) {
-    await teamGameStart(gameTeam._id, game)
+    await teamGameStart(gameTeam._id, game, db)
   }
 
   const {

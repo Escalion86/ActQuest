@@ -19,7 +19,7 @@ export default async function handler(Schema, req, res, params = null) {
       .json({ success: false, error: 'No location in query' })
   }
 
-  await dbConnect(location)
+  const db = await dbConnect(location)
 
   let data
   console.log('Schema', Schema)
@@ -32,19 +32,19 @@ export default async function handler(Schema, req, res, params = null) {
     case 'GET':
       try {
         if (params) {
-          data = await Schema.find(params).select({ password: 0 })
+          data = await db.model(Schema).find(params).select({ password: 0 })
           if (!data) {
             return res?.status(400).json({ success: false })
           }
           return res?.status(200).json({ success: true, data })
         } else if (id) {
-          data = await Schema.findById(id).select({ password: 0 })
+          data = await db.model(Schema).findById(id).select({ password: 0 })
           if (!data) {
             return res?.status(400).json({ success: false })
           }
           return res?.status(200).json({ success: true, data })
         } else {
-          data = await Schema.find().select({ password: 0 })
+          data = await db.model(Schema).find().select({ password: 0 })
           return res?.status(200).json({ success: true, data })
         }
       } catch (error) {
@@ -61,7 +61,7 @@ export default async function handler(Schema, req, res, params = null) {
         } else {
           const clearedBody = { ...body.data }
           delete clearedBody._id
-          data = await Schema.create(clearedBody)
+          data = await db.model(Schema).create(clearedBody)
           if (!data) {
             return res?.status(400).json({ success: false })
           }
@@ -82,9 +82,9 @@ export default async function handler(Schema, req, res, params = null) {
     case 'PUT':
       try {
         if (id) {
-          data = await Schema.findById(id)
-          console.log('Schema', Schema.collection.collectionName)
-          console.log('typeof', typeof Schema.collection.collectionName)
+          data = await db.model(Schema).findById(id)
+          // console.log('Schema', Schema.collection.collectionName)
+          // console.log('typeof', typeof Schema.collection.collectionName)
           if (!data) {
             return res?.status(400).json({ success: false })
           }
@@ -94,7 +94,7 @@ export default async function handler(Schema, req, res, params = null) {
           //   // body.userId === id &&
           //   Schema === Users && !isUserQuestionnaireFilled(data)
 
-          data = await Schema.findByIdAndUpdate(id, body.data, {
+          data = await db.model(Schema).findByIdAndUpdate(id, body.data, {
             new: true,
             runValidators: true,
           })
@@ -221,7 +221,7 @@ export default async function handler(Schema, req, res, params = null) {
     case 'DELETE':
       try {
         if (params) {
-          data = await Schema.deleteMany(params)
+          data = await db.model(Schema).deleteMany(params)
           if (!data) {
             return res?.status(400).json({ success: false })
           }
@@ -233,11 +233,11 @@ export default async function handler(Schema, req, res, params = null) {
           // })
           return res?.status(200).json({ success: true, data })
         } else if (id) {
-          data = await Schema.findById(id)
+          data = await db.model(Schema).findById(id)
           if (!data) {
             return res?.status(400).json({ success: false })
           }
-          data = await Schema.deleteOne({
+          data = await db.model(Schema).deleteOne({
             _id: id,
           })
           if (!data) {
@@ -251,7 +251,7 @@ export default async function handler(Schema, req, res, params = null) {
           // })
           return res?.status(200).json({ success: true, data })
         } else if (body?.params) {
-          data = await Schema.deleteMany({
+          data = await db.model(Schema).deleteMany({
             _id: { $in: body.params },
           })
           if (!data) {
