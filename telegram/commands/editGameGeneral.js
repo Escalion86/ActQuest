@@ -48,6 +48,14 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
     return acc + sum
   }, 0)
 
+  const tasksCount = game?.tasks
+    ? game.tasks.filter(({ canceled }) => !canceled).length
+    : 0
+
+  const canceledTasksCount = game?.tasks
+    ? game.tasks.filter(({ canceled }) => canceled).length
+    : 0
+
   return {
     images: game.image ? [game.image] : undefined,
     message: `${game.status === 'canceled' ? '<b>(ИГРА ОТМЕНЕНА!)</b>\n' : ''}${
@@ -66,8 +74,8 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
       game?.startingPlace ?? '[не заданы]'
     }\n\n<b>Место сбора после игры</b>: ${
       game?.finishingPlace ?? '[не задано]'
-    }\n\n<b>Количество заданий</b>: ${
-      game?.tasks?.length ?? 0
+    }\n\n<b>Количество заданий</b>: ${tasksCount}${
+      canceledTasksCount > 0 ? `(отмененных ${canceledTasksCount})` : ''
     }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
       game?.taskDuration ?? 3600
     )}\n${
