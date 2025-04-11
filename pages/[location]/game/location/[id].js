@@ -212,7 +212,7 @@ function EventPage(props) {
   useEffect(() => {
     const getGameData = async (gameId) => {
       const result = await getData(
-        '/api/usersingame/' + location + '/' + gameId
+        '/api/' + location + '/usersingame/' + gameId
       )
       if (!result) return
       const teamsIds = result.data.teams.map(({ _id }) => _id)
@@ -224,7 +224,7 @@ function EventPage(props) {
       setTeamsColors(teamsColorsToSet)
       setInterval(async () => {
         const result = await getData(
-          '/api/usersingame/' + location + '/' + gameId
+          '/api/' + location + '/usersingame/' + gameId
         )
         if (result) setResult(result.data)
       }, 10000)
@@ -236,7 +236,7 @@ function EventPage(props) {
 
   useEffect(() => {
     const getGameEffect = async (gameId) => {
-      const result = await getData('/api/games/' + location + '/' + gameId)
+      const result = await getData('/api/' + location + '/games/' + gameId)
       setGame(result.data)
     }
     if (gameId) getGameEffect(gameId)
