@@ -44,8 +44,8 @@ const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
   // Получаем IDs игр
   const gamesWithUserIds = gamesTeamsWithUser.map(({ gameId }) => gameId)
   // Фильтруем список игр
-  const filteredGames = notFinishedGames
-    ? notFinishedGames.filter(
+  const filteredGames = notArchiveGames
+    ? notArchiveGames.filter(
         (game) =>
           gamesWithUserIds.includes(String(game._id)) || !game.hidden || isAdmin
       )
@@ -99,7 +99,7 @@ const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
         : '<b>Предстоящие игры</b>',
     buttons: [
       ...buttons,
-      ...(finishedOrCanceledGames?.length > 0
+      ...(archiveGames?.length > 0
         ? [{ c: 'archiveGames', text: '\u{1F4DA} Архив игр' }]
         : []),
       {

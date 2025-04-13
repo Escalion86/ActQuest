@@ -36,12 +36,7 @@ const menuGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
       'игр'
     )}${
       archiveGames?.length > 0
-        ? ` (в архиве ${getNoun(
-            finishedOrCanceledGames.length,
-            'игра',
-            'игры',
-            'игр'
-          )})`
+        ? ` (в архиве ${getNoun(archiveGames.length, 'игра', 'игры', 'игр')})`
         : ''
     }`,
     buttons: [

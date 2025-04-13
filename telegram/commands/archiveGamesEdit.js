@@ -11,24 +11,28 @@ const archiveGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
   var games = []
   if (isAdmin) games = await db.model('Games').find({})
   else games = await db.model('Games').find({ creatorTelegramId: telegramId })
-  const finishedOrCanceledGames = games.filter((game) => isArchiveGame(game))
+  const archiveGames = games.filter((game) => isArchiveGame(game))
 
-  const sortedGames = finishedOrCanceledGames.sort((a, b) => {
+  const sortedArchiveGames = archiveGames.sort((a, b) => {
     return b.dateStart - a.dateStart
   })
 
   const page = jsonCommand?.page ?? 1
-  const buttons = buttonListConstructor(sortedGames, page, (game, number) => ({
-    text: `\u{270F} ${formatGameName(game)}${game.hidden ? ` (СКРЫТА)` : ''}${
-      game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''
-    }`,
-    c: { c: 'editGameGeneral', gameId: game._id },
-    //`editGame/gameId=${game._id}`,
-  }))
+  const buttons = buttonListConstructor(
+    sortedArchiveGames,
+    page,
+    (game, number) => ({
+      text: `\u{270F} ${formatGameName(game)}${game.hidden ? ` (СКРЫТА)` : ''}${
+        game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''
+      }`,
+      c: { c: 'editGameGeneral', gameId: game._id },
+      //`editGame/gameId=${game._id}`,
+    })
+  )
 
   return {
     message: `<b>Конструктор архива игр</b>\nВ списке отображены только ЗАВЕРШЕННЫЕ и только игры которые создали именно Вы\n\n<b>Количество игр в архиве</b>: ${getNoun(
-      sortedGames.length,
+      sortedArchiveGames.length,
       'игра',
       'игры',
       'игр'
