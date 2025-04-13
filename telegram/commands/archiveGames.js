@@ -1,11 +1,12 @@
 import formatGameName from 'telegram/func/formatGameName'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import isUserAdmin from '@helpers/isUserAdmin'
+import isArchiveGame from '@helpers/isArchiveGame'
 
 const archiveGames = async ({ telegramId, jsonCommand, user, db }) => {
   // Получаем список игр
-  const games = (await db.model('Games').find({}).lean()).filter(
-    (game) => game.status === 'finished' || game.status === 'canceled'
+  const games = (await db.model('Games').find({}).lean()).filter((game) =>
+    isArchiveGame(game)
   )
   if (games.length === 0) {
     return {

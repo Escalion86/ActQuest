@@ -1,4 +1,5 @@
 import gameDescription from '@helpers/gameDescription'
+import isArchiveGame from '@helpers/isArchiveGame'
 import isUserAdmin from '@helpers/isUserAdmin'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
@@ -163,7 +164,10 @@ const game = async ({ telegramId, user, jsonCommand, location, db }) => {
           game.status !== 'finished' ||
           !(isAdmin || teamsOfUserInAGame.length > 0),
       },
-      { c: 'menuGames', text: '\u{2B05} Назад' },
+      {
+        c: isArchiveGame(game) ? 'archiveGames' : 'menuGames',
+        text: '\u{2B05} Назад',
+      },
     ],
   }
 }

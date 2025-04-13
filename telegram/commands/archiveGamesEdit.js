@@ -2,6 +2,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getNoun from '@helpers/getNoun'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import isUserAdmin from '@helpers/isUserAdmin'
+import isArchiveGame from '@helpers/isArchiveGame'
 
 const archiveGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
   const isAdmin = isUserAdmin(user)
@@ -10,9 +11,7 @@ const archiveGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
   var games = []
   if (isAdmin) games = await db.model('Games').find({})
   else games = await db.model('Games').find({ creatorTelegramId: telegramId })
-  const finishedOrCanceledGames = games.filter(
-    (game) => game.status === 'finished' || game.status === 'canceled'
-  )
+  const finishedOrCanceledGames = games.filter((game) => isArchiveGame(game))
 
   const sortedGames = finishedOrCanceledGames.sort((a, b) => {
     return b.dateStart - a.dateStart

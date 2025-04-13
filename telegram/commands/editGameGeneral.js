@@ -3,6 +3,7 @@ import {
   getNounTeams,
   getNounWrongCodes,
 } from '@helpers/getNoun'
+import isArchiveGame from '@helpers/isArchiveGame'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
@@ -287,7 +288,10 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
           text: '\u{1F5D1} Удалить игру',
         },
       ],
-      { c: 'menuGamesEdit', text: '\u{2B05} Назад' },
+      {
+        c: isArchiveGame(game) ? 'archiveGamesEdit' : 'menuGamesEdit',
+        text: '\u{2B05} Назад',
+      },
     ],
   }
 }
