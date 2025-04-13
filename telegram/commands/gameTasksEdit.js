@@ -61,14 +61,14 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
   const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
     return [
       {
+        c: { c: 'editTask', gameId: jsonCommand.gameId, i: number - 1 },
+        //`setTeamName/teamId=${jsonCommand.teamId}`,
+        text: `${task.canceled ? `\u{26D4} ` : ''}${task.title}`,
+      },
+      {
         c: { taskUp: number > 1 ? number - 1 : undefined },
         text: `${number > 1 ? `\u{2B06}` : `\u{1F6AB}`}`,
         // hide: index === 0,
-      },
-      {
-        c: { c: 'editTask', gameId: jsonCommand.gameId, i: number - 1 },
-        //`setTeamName/teamId=${jsonCommand.teamId}`,
-        text: `\u{270F} ${number}. "${task.title}"`,
       },
       {
         c: { taskDown: number < game.tasks.length ? number - 1 : undefined },
@@ -112,10 +112,20 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
         }, 0)
       : 0
 
+  const tasksCount = game?.tasks
+    ? game.tasks.filter(({ canceled }) => !canceled).length
+    : 0
+
+  const canceledTasksCount = game?.tasks
+    ? game.tasks.filter(({ canceled }) => canceled).length
+    : 0
+
   const message = `<b>Редактирование заданий игры ${formatGameName(
     game
-  )}</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
-    game?.tasks?.length
+  )}</b>\n\n<b>Задания ${tasksCount} шт.${
+    canceledTasksCount > 0 ? ` (${canceledTasksCount} отменено)` : ''
+  }</b>\n\n<b>Список заданий</b>:\n${
+    tasksCount > 0
       ? game?.tasks
           .filter((task) => task)
           .map((task, index) => {
