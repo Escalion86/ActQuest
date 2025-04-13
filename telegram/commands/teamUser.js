@@ -46,7 +46,7 @@ const teamUser = async ({ telegramId, jsonCommand, location, db }) => {
   return {
     message: `<b>"${user.name}" ${
       isCapitan ? 'капитан' : 'участник'
-    } команды "${team.name}"</b>`,
+    } команды "${team.name}"</b>\n\nТелефон: <code>+${user.phone}</code>`,
     buttons,
     // parse_mode: 'Markdown',
   }
