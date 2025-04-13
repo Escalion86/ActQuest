@@ -1,9 +1,12 @@
 import isUserAdmin from '@helpers/isUserAdmin'
 import isUserModer from '@helpers/isUserModer'
+import getSettings from 'telegram/func/getSettings'
 
-const mainMenu = async ({ telegramId, user }) => {
+const mainMenu = async ({ telegramId, user, db }) => {
   const isAdmin = isUserAdmin(user)
   const isModer = isUserModer(user)
+  const settings = await getSettings(db)
+  const chatUrl = settings?.chatUrl
 
   return {
     success: true,
@@ -21,6 +24,11 @@ const mainMenu = async ({ telegramId, user }) => {
         c: 'adminMenu',
         text: '\u{26A1} Меню АДМИНИСТРАТОРА',
         hide: !isAdmin,
+      },
+      {
+        url: chatUrl,
+        text: '\u{1F4AC} Общий чат ActQuest',
+        hide: !chatUrl,
       },
     ],
   }
