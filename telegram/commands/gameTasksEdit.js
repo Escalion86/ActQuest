@@ -36,26 +36,26 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
     }
   }
 
-  // if (jsonCommand.taskDown !== undefined) {
-  //   if (jsonCommand.taskDown >= game.tasks.length - 1) {
-  //     return {
-  //       message: `Нельзя переместить ниже задание, которое и так является последним`,
-  //       nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
-  //     }
-  //   } else {
-  //     const tasks = [...game.tasks]
-  //     swapElements(tasks, jsonCommand.taskDown, jsonCommand.taskDown + 1)
-  //     await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
-  //       tasks,
-  //     })
-  //     // return {
-  //     //   message: ` Задание перемещено`,
-  //     //   nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
-  //     // }
-  //     game.tasks = tasks
-  //     delete jsonCommand.taskDown
-  //   }
-  // }
+  if (jsonCommand.taskDown !== undefined) {
+    if (jsonCommand.taskDown >= game.tasks.length - 1) {
+      return {
+        message: `Нельзя переместить ниже задание, которое и так является последним`,
+        nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
+      }
+    } else {
+      const tasks = [...game.tasks]
+      swapElements(tasks, jsonCommand.taskDown, jsonCommand.taskDown + 1)
+      await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
+        tasks,
+      })
+      // return {
+      //   message: ` Задание перемещено`,
+      //   nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
+      // }
+      game.tasks = tasks
+      delete jsonCommand.taskDown
+    }
+  }
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
@@ -66,11 +66,8 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
         text: `${task.canceled ? `\u{26D4}` : ''}${number}. ${task.title}`,
       },
       {
-        c: {
-          taskUp: number > 1 ? number - 1 : undefined,
-          taskDown: number === 1 ? number - 1 : undefined,
-        },
-        text: `${number > 1 ? `\u{2B06}` : `\u{2B07}`}`,
+        c: number > 1 ? { taskUp: number - 1 } : { taskDown: number - 1 },
+        text: number > 1 ? `\u{2B06}` : `\u{2B07}`,
         // hide: index === 0,
       },
       // {
