@@ -8,7 +8,7 @@ const menuTeams = async ({ telegramId, jsonCommand, location, db }) => {
     .find({ userTelegramId: telegramId })
 
   if (teamsUser.length >= MAX_TEAMS)
-    return await joinedTeams({ telegramId, jsonCommand })
+    return await joinedTeams({ telegramId, jsonCommand, location, db })
 
   return {
     success: true,

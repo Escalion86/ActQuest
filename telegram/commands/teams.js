@@ -1,8 +1,8 @@
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const teams = async ({ telegramId, jsonCommand, location, db }) => {
-  const teams = await db.model('Teams').find({})
-  const teamsUsers = await db.model('TeamsUsers').find({})
+  const teams = await db.model('Teams').find({}).lean()
+  const teamsUsers = await db.model('TeamsUsers').find({}).lean()
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(teams, page, (team, number) => {
