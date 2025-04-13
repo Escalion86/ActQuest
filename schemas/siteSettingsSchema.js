@@ -1,5 +1,5 @@
 const siteSettingsSchema = {
-  chatUrl: String,
+  chatUrl: { type: String, default: null },
 }
 
 export default siteSettingsSchema
