@@ -35,27 +35,27 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
       // }
     }
   }
-  // console.log('jsonCommand.taskUp :>> ', jsonCommand.taskUp)
-  if (jsonCommand.taskDown !== undefined) {
-    if (jsonCommand.taskDown >= game.tasks.length - 1) {
-      return {
-        message: `Нельзя переместить ниже задание, которое и так является последним`,
-        nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
-      }
-    } else {
-      const tasks = [...game.tasks]
-      swapElements(tasks, jsonCommand.taskDown, jsonCommand.taskDown + 1)
-      await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
-        tasks,
-      })
-      // return {
-      //   message: ` Задание перемещено`,
-      //   nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
-      // }
-      game.tasks = tasks
-      delete jsonCommand.taskDown
-    }
-  }
+
+  // if (jsonCommand.taskDown !== undefined) {
+  //   if (jsonCommand.taskDown >= game.tasks.length - 1) {
+  //     return {
+  //       message: `Нельзя переместить ниже задание, которое и так является последним`,
+  //       nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
+  //     }
+  //   } else {
+  //     const tasks = [...game.tasks]
+  //     swapElements(tasks, jsonCommand.taskDown, jsonCommand.taskDown + 1)
+  //     await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
+  //       tasks,
+  //     })
+  //     // return {
+  //     //   message: ` Задание перемещено`,
+  //     //   nextCommand: { c: `gameTasksEdit`, gameId: jsonCommand.gameId },
+  //     // }
+  //     game.tasks = tasks
+  //     delete jsonCommand.taskDown
+  //   }
+  // }
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
@@ -63,18 +63,18 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
       {
         c: { c: 'editTask', gameId: jsonCommand.gameId, i: number - 1 },
         //`setTeamName/teamId=${jsonCommand.teamId}`,
-        text: `${task.canceled ? `\u{26D4} ` : ''}${task.title}`,
+        text: `${task.canceled ? `\u{26D4}` : ''}${number}. ${task.title}`,
       },
       {
         c: { taskUp: number > 1 ? number - 1 : undefined },
         text: `${number > 1 ? `\u{2B06}` : `\u{1F6AB}`}`,
         // hide: index === 0,
       },
-      {
-        c: { taskDown: number < game.tasks.length ? number - 1 : undefined },
-        text: `${number < game.tasks.length ? `\u{2B07}` : `\u{1F6AB}`}`,
-        // hide: index >= game.tasks.length - 1,
-      },
+      // {
+      //   c: { taskDown: number < game.tasks.length ? number - 1 : undefined },
+      //   text: `${number < game.tasks.length ? `\u{2B07}` : `\u{1F6AB}`}`,
+      //   // hide: index >= game.tasks.length - 1,
+      // },
     ]
   })
 
