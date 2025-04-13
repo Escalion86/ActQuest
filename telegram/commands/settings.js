@@ -11,7 +11,7 @@ const settings = async ({ telegramId, jsonCommand, user, db }) => {
     buttons: [
       {
         c: 'settingsSetChatUrl',
-        text: '\u{1F4E2} Изменить ссылку на чат в главном меню',
+        text: '\u{1F4AC} Изменить ссылку на чат в главном меню',
         hide: !isAdmin,
       },
       { c: 'adminMenu', text: '\u{2B05} Назад' },
