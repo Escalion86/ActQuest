@@ -266,7 +266,11 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
         text: '\u{1F5D1} Удалить задание',
       },
       {
-        c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
+        c: {
+          c: 'gameTasksEdit',
+          gameId: jsonCommand.gameId,
+          page: Math.ceil((jsonCommand.i + 1) / 10),
+        },
         text: '\u{2B05} Назад',
       },
     ],
