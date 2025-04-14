@@ -4,6 +4,7 @@ import {
   getNounWrongCodes,
 } from '@helpers/getNoun'
 import isArchiveGame from '@helpers/isArchiveGame'
+import isGameHaveErrors from '@helpers/isGameHaveErrors'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
