@@ -1,5 +1,6 @@
 import { postData } from '@helpers/CRUD'
 import { DEV_TELEGRAM_ID } from './constants'
+import splitText from '@helpers/splitText'
 
 const sendErrorToDev = (chat_id, type, telegramToken) => async (error) => {
   return
@@ -19,15 +20,15 @@ const sendErrorToDev = (chat_id, type, telegramToken) => async (error) => {
   )
 }
 
-function splitText(text) {
-  const chunks = []
-  let i = 0
-  while (i < text.length) {
-    chunks.push(text.slice(i, Math.min(i + 4096, text.length)))
-    i += 4096
-  }
-  return chunks
-}
+// function splitText(text) {
+//   const chunks = []
+//   let i = 0
+//   while (i < text.length) {
+//     chunks.push(text.slice(i, Math.min(i + 4080, text.length)))
+//     i += 4080
+//   }
+//   return chunks
+// }
 
 const sendMessage = async ({
   chat_id,
