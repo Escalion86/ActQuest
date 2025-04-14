@@ -8,7 +8,7 @@ const isGameHaveErrors = (game) =>
             : !task.title ||
               !task.task ||
               !(
-                typeof task?.codes === 'object'
+                typeof task?.codes === 'object' && task.codes !== null
                   ? task.codes.filter((code) => code !== '')
                   : []
               ).length)
