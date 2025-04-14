@@ -114,6 +114,7 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
           (item) => item.teamId === String(team._id)
         )
         const seconds = dur?.duration[index] ?? '[не начато]'
+        console.log('seconds :>> ', seconds)
         if (
           !task.canceled &&
           seconds !== '[не начато]' &&
