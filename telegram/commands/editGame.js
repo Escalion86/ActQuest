@@ -19,6 +19,22 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
     ? game.tasks.filter(({ canceled }) => canceled).length
     : 0
 
+  const haveErrorsInTasks = game?.tasks
+    ? !!game.tasks.find(
+        (task) =>
+          !task.canceled &&
+          (game.type === 'photo'
+            ? !task.title || !task.task
+            : !task.title ||
+              !task.task ||
+              !(
+                typeof task?.codes === 'object'
+                  ? task.codes.filter((code) => code !== '')
+                  : []
+              ).length)
+      )
+    : true
+
   return {
     images: game.image ? [game.image] : undefined,
     message: `${game.status === 'canceled' ? '<b>(ИГРА ОТМЕНЕНА!)</b>\n' : ''}${
@@ -115,7 +131,7 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
             c: 'gameTasksEdit',
             gameId: jsonCommand.gameId,
           },
-          text: '\u{270F} Задания',
+          text: `${haveErrorsInTasks ? '\u{2757} ' : ''}\u{270F} Задания`,
         },
       ],
       [
@@ -175,14 +191,18 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
       [
         {
           c: { c: 'setGameStartingPlace', gameId: jsonCommand.gameId },
-          text: '\u{1F4CC} Место сбора',
+          text: `${
+            game?.startingPlace ? '\u{2757} ' : ''
+          }\u{1F4CC} Место сбора`,
         },
         {
           c: {
             c: 'setGameFinishingPlace',
             gameId: jsonCommand.gameId,
           },
-          text: '\u{1F4CC} Место сбора после игры',
+          text: `${
+            game?.finishingPlace ? '\u{2757} ' : ''
+          }\u{1F4CC} Место сбора после игры`,
         },
       ],
       {
