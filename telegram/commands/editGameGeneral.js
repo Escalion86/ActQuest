@@ -58,6 +58,8 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
     ? game.tasks.filter(({ canceled }) => canceled).length
     : 0
 
+  console.log('canceledTasksCount :>> ', canceledTasksCount)
+  console.log('game :>> ', game)
   const haveErrorsInTasks = isGameHaveErrors(game)
 
   return {
