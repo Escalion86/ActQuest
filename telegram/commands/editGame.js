@@ -1,4 +1,5 @@
 import { getNounPoints, getNounWrongCodes } from '@helpers/getNoun'
+import isGameHaveErrors from '@helpers/isGameHaveErrors'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
@@ -19,21 +20,7 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
     ? game.tasks.filter(({ canceled }) => canceled).length
     : 0
 
-  const haveErrorsInTasks = game?.tasks
-    ? !!game.tasks.find(
-        (task) =>
-          !task.canceled &&
-          (game.type === 'photo'
-            ? !task.title || !task.task
-            : !task.title ||
-              !task.task ||
-              !(
-                typeof task?.codes === 'object'
-                  ? task.codes.filter((code) => code !== '')
-                  : []
-              ).length)
-      )
-    : true
+  const haveErrorsInTasks = isGameHaveErrors(game)
 
   return {
     images: game.image ? [game.image] : undefined,

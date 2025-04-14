@@ -57,6 +57,8 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
     ? game.tasks.filter(({ canceled }) => canceled).length
     : 0
 
+  const haveErrorsInTasks = isGameHaveErrors(game)
+
   return {
     images: game.image ? [game.image] : undefined,
     message: `${game.status === 'canceled' ? '<b>(ИГРА ОТМЕНЕНА!)</b>\n' : ''}${
@@ -125,13 +127,19 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
       jsonCommand.gameId
     }</code></b>\n\nНа игру зарегистрировано ${getNounTeams(
       teams.length
-    )}\n\n<b>Суммарно оплачено командами</b>: ${paymentsSum} руб.`,
+    )}\n\n<b>Суммарно оплачено командами</b>: ${paymentsSum} руб.${
+      haveErrorsInTasks
+        ? `\n\n\u{2757}\u{2757}\u{2757} <b>В игре есть ошибки!!! Запустить игру нельзя!!!!</b>`
+        : ''
+    }`,
     buttons: [
-      {
-        c: { c: 'gameStart', gameId: jsonCommand.gameId },
-        text: '\u{26A1} ЗАПУСТИТЬ ИГРУ',
-        hide: game.status !== 'active',
-      },
+      ...(haveErrorsInTasks
+        ? {}
+        : {
+            c: { c: 'gameStart', gameId: jsonCommand.gameId },
+            text: '\u{26A1} ЗАПУСТИТЬ ИГРУ',
+            hide: game.status !== 'active',
+          }),
       {
         c: { c: 'gameStop', gameId: jsonCommand.gameId },
         text: '\u{26D4} СТОП ИГРА!',
