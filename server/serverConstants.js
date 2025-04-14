@@ -14,7 +14,7 @@ export const LOCATIONS = {
       // 'Дрокино',
       // 'Емельяново',
     ],
-    hidden: true,
+    hidden: false,
   },
   krsk: {
     townRu: 'красноярск',
