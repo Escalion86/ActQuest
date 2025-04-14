@@ -1,5 +1,6 @@
 import { postData } from '@helpers/CRUD'
 import { DEV_TELEGRAM_ID } from './constants'
+import splitText from '@helpers/splitText'
 
 const sendErrorToDev = (chat_id, type, telegramToken) => async (error) => {
   return
@@ -19,15 +20,15 @@ const sendErrorToDev = (chat_id, type, telegramToken) => async (error) => {
   )
 }
 
-function splitText(text) {
-  const chunks = []
-  let i = 0
-  while (i < text.length) {
-    chunks.push(text.slice(i, Math.min(i + 4096, text.length)))
-    i += 4096
-  }
-  return chunks
-}
+// function splitText(text) {
+//   const chunks = []
+//   let i = 0
+//   while (i < text.length) {
+//     chunks.push(text.slice(i, Math.min(i + 4080, text.length)))
+//     i += 4080
+//   }
+//   return chunks
+// }
 
 const sendMessage = async ({
   chat_id,
@@ -40,7 +41,9 @@ const sendMessage = async ({
   remove_keyboard,
   location,
 }) => {
-  var telegramToken = process.env.TELEGRAM_KRSK_TOKEN
+  var telegramToken
+  if (location === 'dev') telegramToken = process.env.TELEGRAM_DEV_TOKEN
+  if (location === 'krsk') telegramToken = process.env.TELEGRAM_KRSK_TOKEN
   if (location === 'nrsk') telegramToken = process.env.TELEGRAM_NRSK_TOKEN
   if (location === 'ekb') telegramToken = process.env.TELEGRAM_EKB_TOKEN
 

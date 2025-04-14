@@ -1,21 +1,21 @@
 export const LOCATIONS = {
-  // dev: {
-  //   townRu: 'тестовый город',
-  //   roditPadeg: 'тестового города',
-  //   // location: 'https://половинкауспеха.рф',
-  //   // short: 'krsk',
-  //   imageFolder: 'polovinka_uspeha_dev',
-  //   telegramBotName: 'polovinka_uspeha_bot',
-  //   towns: [
-  //     'Тест',
-  //     // 'Сосновоборск',
-  //     // 'Дивногорск',
-  //     // 'Железногорск',
-  //     // 'Дрокино',
-  //     // 'Емельяново',
-  //   ],
-  //   hidden: true,
-  // },
+  dev: {
+    townRu: 'тестовый город',
+    roditPadeg: 'тестового города',
+    // location: 'https://половинкауспеха.рф',
+    // short: 'krsk',
+    // imageFolder: 'polovinka_uspeha_dev',
+    // telegramBotName: 'polovinka_uspeha_bot',
+    towns: [
+      'Тест',
+      // 'Сосновоборск',
+      // 'Дивногорск',
+      // 'Железногорск',
+      // 'Дрокино',
+      // 'Емельяново',
+    ],
+    hidden: false,
+  },
   krsk: {
     townRu: 'красноярск',
     roditPadeg: 'красноярского',
