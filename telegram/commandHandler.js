@@ -79,11 +79,7 @@ const commandHandler = async ({
         // text: JSON.stringify({ body, headers: req.headers.origin }),
         text: 'Test',
         location,
-        keyboard: {
-          keyboard: [],
-          // resize_keyboard: true,
-          one_time_keyboard: true,
-        },
+        remove_keyboard: true,
       })
     }
 
