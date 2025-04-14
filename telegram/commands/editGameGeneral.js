@@ -58,10 +58,8 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
     ? game.tasks.filter(({ canceled }) => canceled).length
     : 0
 
-  console.log('canceledTasksCount :>> ', canceledTasksCount)
-  console.log('game :>> ', game)
   const haveErrorsInTasks = isGameHaveErrors(game)
-  console.log('haveErrorsInTasks :>> ', haveErrorsInTasks)
+
   return {
     images: game.image ? [game.image] : undefined,
     message: `${game.status === 'canceled' ? '<b>(ИГРА ОТМЕНЕНА!)</b>\n' : ''}${
@@ -137,12 +135,14 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
     }`,
     buttons: [
       ...(haveErrorsInTasks
-        ? {}
-        : {
-            c: { c: 'gameStart', gameId: jsonCommand.gameId },
-            text: '\u{26A1} ЗАПУСТИТЬ ИГРУ',
-            hide: game.status !== 'active',
-          }),
+        ? []
+        : [
+            {
+              c: { c: 'gameStart', gameId: jsonCommand.gameId },
+              text: '\u{26A1} ЗАПУСТИТЬ ИГРУ',
+              hide: game.status !== 'active',
+            },
+          ]),
       {
         c: { c: 'gameStop', gameId: jsonCommand.gameId },
         text: '\u{26D4} СТОП ИГРА!',
