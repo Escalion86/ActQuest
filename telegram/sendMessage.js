@@ -40,7 +40,9 @@ const sendMessage = async ({
   remove_keyboard,
   location,
 }) => {
-  var telegramToken = process.env.TELEGRAM_KRSK_TOKEN
+  var telegramToken
+  if (location === 'dev') telegramToken = process.env.TELEGRAM_DEV_TOKEN
+  if (location === 'krsk') telegramToken = process.env.TELEGRAM_KRSK_TOKEN
   if (location === 'nrsk') telegramToken = process.env.TELEGRAM_NRSK_TOKEN
   if (location === 'ekb') telegramToken = process.env.TELEGRAM_EKB_TOKEN
 
