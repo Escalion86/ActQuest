@@ -141,6 +141,8 @@ import gameTasksView from './gameTasksView'
 import gameTaskView from './gameTaskView'
 import gameTasksHide from './gameTasksHide'
 import gameTasksShow from './gameTasksShow'
+import settings from './settings'
+import settingsSetChatUrl from './settingsSetChatUrl'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -289,6 +291,8 @@ const commandsArray = {
   gameTasksHide,
   gameTasksShow,
   cancelGame,
+  settings,
+  settingsSetChatUrl,
 }
 
 var i = 0

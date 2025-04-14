@@ -4,10 +4,13 @@ const unjoinTeam = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['teamId'])
   if (checkData) return checkData
 
-  const teamUser = await db.model('TeamsUsers').findOne({
-    userTelegramId: telegramId,
-    teamId: jsonCommand.teamId,
-  })
+  const teamUser = await db
+    .model('TeamsUsers')
+    .findOne({
+      userTelegramId: telegramId,
+      teamId: jsonCommand.teamId,
+    })
+    .lean()
   if (teamUser.success === false) return teamUser
 
   if (!jsonCommand.confirm) {

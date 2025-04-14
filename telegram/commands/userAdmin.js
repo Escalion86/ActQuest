@@ -43,7 +43,7 @@ const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
             })
             .join('\n')}`
         : ''
-    }`,
+    }\n\nТелефон: <code>+${user.phone}</code>`,
     buttons: [
       ...teamsUser.map(({ _id, role, teamId }) => {
         const team = teams.find(({ _id }) => String(_id) === teamId)

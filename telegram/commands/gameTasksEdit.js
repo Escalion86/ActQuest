@@ -35,7 +35,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
       // }
     }
   }
-  // console.log('jsonCommand.taskUp :>> ', jsonCommand.taskUp)
+
   if (jsonCommand.taskDown !== undefined) {
     if (jsonCommand.taskDown >= game.tasks.length - 1) {
       return {
@@ -59,22 +59,43 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
+    const codes =
+      typeof task?.codes === 'object'
+        ? task.codes.filter((code) => code !== '')
+        : []
     return [
-      {
-        c: { taskUp: number > 1 ? number - 1 : undefined },
-        text: `${number > 1 ? `\u{2B06}` : `\u{1F6AB}`}`,
-        // hide: index === 0,
-      },
       {
         c: { c: 'editTask', gameId: jsonCommand.gameId, i: number - 1 },
         //`setTeamName/teamId=${jsonCommand.teamId}`,
-        text: `\u{270F} ${number}. "${task.title}"`,
+        text: `${
+          task.canceled
+            ? `\u{26D4}`
+            : `${
+                game.type === 'photo'
+                  ? !task.title || !task.task
+                    ? '\u{2757}'
+                    : ''
+                  : !task.title || !task.task || !codes.length
+                  ? '\u{2757}'
+                  : ''
+              }`
+        }${number}. ${task.title}`,
       },
       {
-        c: { taskDown: number < game.tasks.length ? number - 1 : undefined },
-        text: `${number < game.tasks.length ? `\u{2B07}` : `\u{1F6AB}`}`,
-        // hide: index >= game.tasks.length - 1,
+        c: number > 1 ? { taskUp: number - 1 } : { taskDown: number - 1 },
+        text: number > 1 ? `\u{2B06}` : `\u{2B07}`,
+        // hide: index === 0,
       },
+      // {
+      //   c: { taskUp: number > 1 ? number - 1 : undefined },
+      //   text: `${number > 1 ? `\u{2B06}` : `\u{1F6AB}`}`,
+      //   // hide: index === 0,
+      // },
+      // {
+      //   c: { taskDown: number < game.tasks.length ? number - 1 : undefined },
+      //   text: `${number < game.tasks.length ? `\u{2B07}` : `\u{1F6AB}`}`,
+      //   // hide: index >= game.tasks.length - 1,
+      // },
     ]
   })
 
@@ -112,10 +133,20 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
         }, 0)
       : 0
 
+  const tasksCount = game?.tasks
+    ? game.tasks.filter(({ canceled }) => !canceled).length
+    : 0
+
+  const canceledTasksCount = game?.tasks
+    ? game.tasks.filter(({ canceled }) => canceled).length
+    : 0
+
   const message = `<b>Редактирование заданий игры ${formatGameName(
     game
-  )}</b>\n\n<b>Задания (${game?.tasks?.length ?? 0} шт)</b>:\n${
-    game?.tasks?.length
+  )}</b>\n\n<b>Задания ${tasksCount} шт.${
+    canceledTasksCount > 0 ? ` (${canceledTasksCount} отменено)` : ''
+  }</b>\n\n<b>Список заданий</b>:\n${
+    tasksCount > 0
       ? game?.tasks
           .filter((task) => task)
           .map((task, index) => {
@@ -131,8 +162,12 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
               task.canceled
                 ? `\u{26D4}`
                 : game.type === 'photo'
-                ? `\u{1F4F7}`
-                : `\u{1F4CC}`
+                ? !task.title || !task.task
+                  ? '\u{2757}'
+                  : '✅'
+                : !task.title || !task.task || codes.length === 0
+                ? '\u{2757}'
+                : '✅'
             } ${numberToEmojis(index + 1)} "${task.title}"${
               game.type === 'photo'
                 ? ` - ${getNounPoints(

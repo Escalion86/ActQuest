@@ -1,4 +1,5 @@
 import { getNounPoints, getNounWrongCodes } from '@helpers/getNoun'
+import isGameHaveErrors from '@helpers/isGameHaveErrors'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 import check from 'telegram/func/check'
@@ -19,6 +20,8 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
     ? game.tasks.filter(({ canceled }) => canceled).length
     : 0
 
+  const haveErrorsInTasks = isGameHaveErrors(game)
+
   return {
     images: game.image ? [game.image] : undefined,
     message: `${game.status === 'canceled' ? '<b>(ИГРА ОТМЕНЕНА!)</b>\n' : ''}${
@@ -38,7 +41,7 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
     }\n\n<b>Место сбора после игры</b>: ${
       game?.finishingPlace ?? '[не задано]'
     }\n\n<b>Количество заданий</b>: ${tasksCount}${
-      canceledTasksCount > 0 ? `(отмененных ${canceledTasksCount})` : ''
+      canceledTasksCount > 0 ? ` (отмененных ${canceledTasksCount})` : ''
     }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
       game?.taskDuration ?? 3600
     )}\n${
@@ -115,7 +118,7 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
             c: 'gameTasksEdit',
             gameId: jsonCommand.gameId,
           },
-          text: '\u{270F} Задания',
+          text: `${haveErrorsInTasks ? '\u{2757} ' : ''}\u{270F} Задания`,
         },
       ],
       [
@@ -175,14 +178,18 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
       [
         {
           c: { c: 'setGameStartingPlace', gameId: jsonCommand.gameId },
-          text: '\u{1F4CC} Место сбора',
+          text: `${
+            game?.startingPlace ? '' : '\u{2757} '
+          }\u{1F4CC} Место сбора`,
         },
         {
           c: {
             c: 'setGameFinishingPlace',
             gameId: jsonCommand.gameId,
           },
-          text: '\u{1F4CC} Место сбора после игры',
+          text: `${
+            game?.finishingPlace ? '' : '\u{2757} '
+          }\u{1F4CC} Место сбора после игры`,
         },
       ],
       {

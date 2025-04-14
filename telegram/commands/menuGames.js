@@ -2,21 +2,18 @@ import formatGameName from 'telegram/func/formatGameName'
 import mainMenuButton from './menuItems/mainMenuButton'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import isUserAdmin from '@helpers/isUserAdmin'
+import isArchiveGame from '@helpers/isArchiveGame'
 
 const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
   // Получаем список игр
   const games = await db.model('Games').find({}).lean()
-  const finishedOrCanceledGames = games.filter(
-    (game) => game.status === 'finished' || game.status === 'canceled'
-  )
-  const notFinishedGames = games.filter(
-    (game) => game.status !== 'finished' && game.status !== 'canceled'
-  )
-  if (!notFinishedGames || notFinishedGames.length === 0) {
+  const archiveGames = games.filter((game) => isArchiveGame(game))
+  const notArchiveGames = games.filter((game) => !isArchiveGame(game))
+  if (!notArchiveGames || notArchiveGames.length === 0) {
     return {
       message: '<b>Предстоящих игр не запланировано</b>',
       buttons: [
-        ...(finishedOrCanceledGames?.length > 0
+        ...(archiveGames?.length > 0
           ? [{ c: 'archiveGames', text: '\u{1F4DA} Архив игр' }]
           : []),
         {
@@ -47,8 +44,8 @@ const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
   // Получаем IDs игр
   const gamesWithUserIds = gamesTeamsWithUser.map(({ gameId }) => gameId)
   // Фильтруем список игр
-  const filteredGames = notFinishedGames
-    ? notFinishedGames.filter(
+  const filteredGames = notArchiveGames
+    ? notArchiveGames.filter(
         (game) =>
           gamesWithUserIds.includes(String(game._id)) || !game.hidden || isAdmin
       )
@@ -102,7 +99,7 @@ const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
         : '<b>Предстоящие игры</b>',
     buttons: [
       ...buttons,
-      ...(finishedOrCanceledGames?.length > 0
+      ...(archiveGames?.length > 0
         ? [{ c: 'archiveGames', text: '\u{1F4DA} Архив игр' }]
         : []),
       {

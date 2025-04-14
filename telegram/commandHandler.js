@@ -52,6 +52,37 @@ const commandHandler = async ({
       )
     }
 
+    // if (message === '/test') {
+    //   return await sendMessage({
+    //     chat_id: userTelegramId,
+    //     // text: JSON.stringify({ body, headers: req.headers.origin }),
+    //     text: 'Test',
+    //     location,
+    //     keyboard: {
+    //       keyboard: [
+    //         [
+    //           {
+    //             text: 'Я КНОПКА - НАЖМИ МЕНЯ!, чтобы отправить данные о местоположении',
+    //             request_location: true,
+    //           },
+    //         ],
+    //       ],
+    //       // resize_keyboard: true,
+    //       one_time_keyboard: true,
+    //     },
+    //   })
+    // }
+
+    if (message === '/testoff') {
+      return await sendMessage({
+        chat_id: userTelegramId,
+        // text: JSON.stringify({ body, headers: req.headers.origin }),
+        text: 'Test',
+        location,
+        remove_keyboard: true,
+      })
+    }
+
     var jsonCommand
     if (message && message[0] === '/') {
       jsonCommand = { c: message.substr(1) }
