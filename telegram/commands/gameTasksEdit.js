@@ -59,11 +59,27 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
+    const codes =
+      typeof task?.codes === 'object'
+        ? task.codes.filter((code) => code !== '')
+        : []
     return [
       {
         c: { c: 'editTask', gameId: jsonCommand.gameId, i: number - 1 },
         //`setTeamName/teamId=${jsonCommand.teamId}`,
-        text: `${task.canceled ? `\u{26D4}` : ''}${number}. ${task.title}`,
+        text: `${
+          task.canceled
+            ? `\u{26D4}`
+            : `${
+                game.type === 'photo'
+                  ? !task.title || !task.task
+                    ? '\u{2757}'
+                    : ''
+                  : !task.title || !task.task || !codes.length
+                  ? '\u{2757}'
+                  : ''
+              }`
+        }${number}. ${task.title}`,
       },
       {
         c: number > 1 ? { taskUp: number - 1 } : { taskDown: number - 1 },
@@ -146,8 +162,12 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
               task.canceled
                 ? `\u{26D4}`
                 : game.type === 'photo'
-                ? `\u{1F4F7}`
-                : `\u{1F4CC}`
+                ? !task.title || !task.task
+                  ? '\u{2757}'
+                  : '✅'
+                : !task.title || !task.task || codes.length === 0
+                ? '\u{2757}'
+                : '✅'
             } ${numberToEmojis(index + 1)} "${task.title}"${
               game.type === 'photo'
                 ? ` - ${getNounPoints(

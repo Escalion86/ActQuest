@@ -58,14 +58,16 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
 
   return {
     // images: task.images ? task.images : undefined,
-    message: `<b>Редактирование задания</b>\n"${task?.title}"${
+    message: `<b>Редактирование задания</b>\n${
+      !task?.title ? `\u{2757}` : ''
+    }"${task?.title}"${
       task.canceled ? `\n\n\u{26D4} <b>ЗАДАНИЕ ОТМЕНЕНО!</b>` : ''
     }\n\n<b>Координаты</b>: ${
       !latitude || !longitude
         ? '[не заданы]'
         : `<code>${latitude} ${longitude}</code>`
-    }\n\n<b>Текст задания</b>:${
-      !task?.task ? ' [не задано]' : `\n<blockquote>${task?.task}</blockquote>`
+    }\n\n${!task?.task ? `\u{2757}` : ''}<b>Текст задания</b>:${
+      !task?.task ? ' [не задано]' : `\n<blockquote>${task.task}</blockquote>`
     }${cluesText}${
       game.type === 'photo'
         ? `\n\n<b>Список доп. заданий</b>:${
@@ -84,9 +86,9 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
                     : ''
                 }`
           }`
-        : `\n\n<b>Коды (${codes.length ?? 0} шт)</b>:\n${
-            codes.length > 0 ? codes.join(', ') : '[не задыны]'
-          }${
+        : `\n\n${!codes.length ? '\u{2757}' : ''}<b>Коды (${
+            codes.length ?? 0
+          } шт)</b>:\n${codes.length > 0 ? codes.join(', ') : '[не задыны]'}${
             bonusCodes.length > 0
               ? `\n\n<b>Бонусные коды (${bonusCodes.length} шт)</b>:\n${
                   bonusCodes.length > 0
@@ -139,7 +141,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Заголовок',
+        text: `${!task?.title ? `\u{2757}` : ''}\u{270F} Заголовок`,
       },
       {
         c: {
@@ -155,7 +157,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Задание',
+        text: `${!task?.task ? `\u{2757}` : ''}\u{270F} Задание`,
       },
       {
         c: {
@@ -198,7 +200,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
-          text: '\u{270F} Коды',
+          text: `${codes.length === 0 ? `\u{2757}` : ''}\u{270F} Коды`,
           hide: game.type === 'photo',
         },
         {
