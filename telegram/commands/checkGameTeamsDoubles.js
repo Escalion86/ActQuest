@@ -34,9 +34,14 @@ const checkGameTeamsDoubles = async ({
     return numbers.indexOf(number) !== index
   })
 
-  const duplicateUsers = await db.model('Users').find({
-    telegramId: { $in: duplicatesUsersIds },
-  })
+  console.log('duplicatesUsersIds :>> ', duplicatesUsersIds)
+
+  const duplicateUsers = await db
+    .model('Users')
+    .find({
+      telegramId: { $in: duplicatesUsersIds },
+    })
+    .lean()
 
   return {
     message: `<b>Проверка игры "${game.name}" на задвоение</b>\n\n${
