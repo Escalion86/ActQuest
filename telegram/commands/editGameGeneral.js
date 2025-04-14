@@ -61,7 +61,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
   console.log('canceledTasksCount :>> ', canceledTasksCount)
   console.log('game :>> ', game)
   const haveErrorsInTasks = isGameHaveErrors(game)
-
+  console.log('haveErrorsInTasks :>> ', haveErrorsInTasks)
   return {
     images: game.image ? [game.image] : undefined,
     message: `${game.status === 'canceled' ? '<b>(ИГРА ОТМЕНЕНА!)</b>\n' : ''}${
