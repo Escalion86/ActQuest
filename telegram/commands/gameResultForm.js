@@ -117,7 +117,7 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
         // console.log('seconds :>> ', seconds)
         if (
           !task.canceled &&
-          seconds !== '[не начато]' &&
+          typeof seconds === 'number' &&
           (!fastestTask.seconds || fastestTask.seconds > seconds)
         ) {
           console.log('seconds :>> ', seconds)
