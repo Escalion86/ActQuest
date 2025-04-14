@@ -1,5 +1,5 @@
 const isGameHaveErrors = (game) =>
-  game?.tasks
+  game?.tasks && game?.startingPlace && game?.finishingPlace
     ? !!game.tasks.find(
         (task) =>
           !task.canceled &&

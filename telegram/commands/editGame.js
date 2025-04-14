@@ -179,7 +179,7 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
         {
           c: { c: 'setGameStartingPlace', gameId: jsonCommand.gameId },
           text: `${
-            game?.startingPlace ? '\u{2757} ' : ''
+            game?.startingPlace ? '' : '\u{2757} '
           }\u{1F4CC} Место сбора`,
         },
         {
@@ -188,7 +188,7 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
             gameId: jsonCommand.gameId,
           },
           text: `${
-            game?.finishingPlace ? '\u{2757} ' : ''
+            game?.finishingPlace ? '' : '\u{2757} '
           }\u{1F4CC} Место сбора после игры`,
         },
       ],

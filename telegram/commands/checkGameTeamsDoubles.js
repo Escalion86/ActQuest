@@ -14,17 +14,26 @@ const checkGameTeamsDoubles = async ({
   if (game.success === false) return game
 
   // Получаем список команд участвующих в игре
-  const gameTeams = await db.model('GamesTeams').find({
-    gameId: jsonCommand.gameId,
-  })
+  const gameTeams = await db
+    .model('GamesTeams')
+    .find({
+      gameId: jsonCommand.gameId,
+    })
+    .lean()
 
   const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
-  const teams = await db.model('Teams').find({
-    _id: { $in: teamsIds },
-  })
-  const teamsUsers = await db.model('TeamsUsers').find({
-    teamId: { $in: teamsIds },
-  })
+  const teams = await db
+    .model('Teams')
+    .find({
+      _id: { $in: teamsIds },
+    })
+    .lean()
+  const teamsUsers = await db
+    .model('TeamsUsers')
+    .find({
+      teamId: { $in: teamsIds },
+    })
+    .lean()
   const usersIds = teamsUsers.map(({ userTelegramId }) => userTelegramId)
 
   const duplicatesUsersIds = usersIds.filter((number, index, numbers) => {
