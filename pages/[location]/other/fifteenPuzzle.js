@@ -149,7 +149,7 @@ const PuzzleGame = () => {
                   hover:bg-[#9c8a7a] transition-colors shadow-md"
         onClick={() => setTiles(generateSolvablePuzzle(gridSize))}
       >
-        New Game
+        Заново
       </button>
     </div>
   )
