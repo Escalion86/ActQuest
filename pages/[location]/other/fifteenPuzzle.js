@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 
-const FifteenPuzzle = () => {
+function FifteenPuzzle(props) {
   const [tiles, setTiles] = useState([])
   const [isSolved, setIsSolved] = useState(false)
 
@@ -91,3 +91,21 @@ const FifteenPuzzle = () => {
 }
 
 export default FifteenPuzzle
+
+export const getServerSideProps = async (context) => {
+  // const session = await getSession({ req: context.req })
+
+  const { params } = context
+  const { id, location } = params
+
+  // const fetchedProps = await fetchProps(session?.user)
+
+  return {
+    props: {
+      // ...fetchedProps,
+      id,
+      location,
+      // loggedUser: session?.user ?? null,
+    },
+  }
+}
