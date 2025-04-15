@@ -64,6 +64,11 @@ const PuzzleGame = () => {
     5: 'w-16 h-16 text-xl', // 64px
     6: 'w-14 h-14 text-lg', // 56px
   }[gridSize]
+  const code = {
+    4: '9A678Q', // 80px
+    5: '9A592Q', // 64px
+    6: '9A391Q', // 56px
+  }[gridSize]
 
   return (
     <div className="flex flex-col items-center min-h-screen gap-5 p-5 bg-gray-100">
@@ -125,6 +130,7 @@ const PuzzleGame = () => {
       {isSolved && (
         <div className="text-2xl text-[#776e65] font-bold animate-bounce">
           You Win! 🎉
+          {code}
         </div>
       )}
 
