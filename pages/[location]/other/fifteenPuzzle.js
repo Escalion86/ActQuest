@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 
 const PuzzleGame = () => {
-  const [gridSize, setGridSize] = useState(5) // 5 или 6
+  const [gridSize, setGridSize] = useState(4) // 4 или 5 или 6
   const [tiles, setTiles] = useState([])
   const [isSolved, setIsSolved] = useState(false)
 
@@ -60,6 +60,7 @@ const PuzzleGame = () => {
 
   // Динамические стили для разных размеров
   const tileSize = {
+    4: 'w-20 h-20 text-2xl', // 80px
     5: 'w-16 h-16 text-xl', // 64px
     6: 'w-14 h-14 text-lg', // 56px
   }[gridSize]
