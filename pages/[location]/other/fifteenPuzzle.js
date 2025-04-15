@@ -68,6 +68,14 @@ const PuzzleGame = () => {
     <div className="flex flex-col items-center min-h-screen gap-5 p-5 bg-gray-100">
       <div className="flex gap-4">
         <button
+          onClick={() => setGridSize(4)}
+          className={`px-4 py-2 rounded ${
+            gridSize === 4 ? 'bg-blue-600 text-white' : 'bg-gray-300'
+          }`}
+        >
+          4x4
+        </button>
+        <button
           onClick={() => setGridSize(5)}
           className={`px-4 py-2 rounded ${
             gridSize === 5 ? 'bg-blue-600 text-white' : 'bg-gray-300'
