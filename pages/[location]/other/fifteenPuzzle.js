@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react'
 
-import React, { useState, useEffect } from 'react'
-
 const PuzzleGame = () => {
   const [gridSize, setGridSize] = useState(5) // 5 или 6
   const [tiles, setTiles] = useState([])
