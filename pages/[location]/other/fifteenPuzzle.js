@@ -137,7 +137,7 @@ const PuzzleGame = () => {
       </div>
 
       {isSolved && (
-        <div className="text-2xl text-[#776e65] font-bold animate-bounce">
+        <div className="flex flex-col items-center justify-center gap-0.5 text-2xl text-[#776e65] font-bold animate-bounce">
           <div>Победа! 🎉</div>
           <div className="text-3xl">{code}</div>
           <div>Попробуй другие варианты!</div>
