@@ -532,6 +532,9 @@ const GameBlock = ({ game }) => {
     const tempResult = []
     for (let i = 0; i < tasksCount; i++) {
       const prevSum = i === 0 ? 0 : tempResult[i - 1]
+      const task = tasks[i]
+      if (task.canceled || task.isBonusTask) tempResult.push(prevSum)
+
       if (!endTime[i] || !startTime[i]) tempResult.push(prevSum + taskDuration)
       else
         tempResult.push(prevSum + getSecondsBetween(startTime[i], endTime[i]))

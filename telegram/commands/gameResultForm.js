@@ -115,6 +115,7 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
         )
         const seconds = dur?.duration[index] ?? '[не начато]'
         if (
+          !task.isBonusTask &&
           !task.canceled &&
           typeof seconds === 'number' &&
           (!fastestTask.seconds || fastestTask.seconds > seconds)
@@ -134,9 +135,9 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
 
       const sortedTeamsSeconds = [...teamsSeconds].sort(sortFunc)
 
-      return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}"${
-        task?.title
-      }"</b>\n${sortedTeamsSeconds
+      return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}${
+        task.isBonusTask ? '(БОНУСНОЕ) ' : ''
+      }"${task?.title}"</b>\n${sortedTeamsSeconds
         .map(
           ({ team, seconds }) =>
             `${
@@ -180,7 +181,8 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
         typeof a === 'number' && typeof partialSum === 'number'
           ? partialSum + a
           : '[стоп игра]'
-      if (game.tasks[index]?.canceled) return res
+      if (game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask)
+        return res
 
       if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
         penalty += game.taskFailurePenalty ?? 0
