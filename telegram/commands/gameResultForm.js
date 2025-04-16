@@ -117,7 +117,6 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
         )
         const seconds = dur?.duration[index] ?? '[не начато]'
         if (
-          !task.isBonusTask &&
           !task.canceled &&
           typeof seconds === 'number' &&
           (!fastestTask.seconds || fastestTask.seconds > seconds)
@@ -137,9 +136,9 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
 
       const sortedTeamsSeconds = [...teamsSeconds].sort(sortFunc)
 
-      return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}${
-        task.isBonusTask ? '(БОНУСНОЕ) ' : ''
-      }"${task?.title}"</b>\n${sortedTeamsSeconds
+      return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}"${
+        task?.title
+      }"</b>\n${sortedTeamsSeconds
         .map(
           ({ team, seconds }) =>
             `${
@@ -342,7 +341,9 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
     Math.min.apply(
       null,
       taskAverageTimes.map((time, index) =>
-        game.tasks[index]?.canceled ? (game.taskDuration ?? 3600) + 1 : time
+        game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
+          ? (game.taskDuration ?? 3600) + 1
+          : time
       )
     )
   )
@@ -350,7 +351,9 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
     Math.max.apply(
       null,
       taskAverageTimes.map((time, index) =>
-        game.tasks[index]?.canceled ? -1 : time
+        game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
+          ? -1
+          : time
       )
     )
   )
