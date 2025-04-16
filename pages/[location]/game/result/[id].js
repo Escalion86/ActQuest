@@ -793,7 +793,14 @@ const GameBlock = ({ game }) => {
                   }}
                 >
                   {title}
-                  {isBonusTask ? ' (БОНУСНОЕ)' : ''}
+                  {isBonusTask ? (
+                    <>
+                      <br />
+                      {' (БОНУСНОЕ)'}
+                    </>
+                  ) : (
+                    ''
+                  )}
                 </div>
                 {teamsAnimateSteps.map((timeResults, i) => {
                   const time = timeResults[index]
