@@ -225,7 +225,9 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
-          text: `${codes.length === 0 ? `\u{2757}` : ''}\u{270F} Коды`,
+          text: `${codes.length === 0 ? `\u{2757}` : ''}\u{270F} Коды (${
+            codes.length ?? 0
+          } шт)`,
           hide: game.type === 'photo',
         },
         {
@@ -245,7 +247,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
-          text: '\u{270F} Бонусные коды',
+          text: `\u{270F} Бонусные коды (${bonusCodes.length ?? 0} шт)`,
           hide: game.type === 'photo',
         },
         {
@@ -254,7 +256,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
             gameId: jsonCommand.gameId,
             i: jsonCommand.i,
           },
-          text: '\u{270F} Штрафные коды',
+          text: `\u{270F} Штрафные коды (${penaltyCodes.length ?? 0} шт)`,
           hide: game.type === 'photo',
         },
       ],
