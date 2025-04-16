@@ -15,12 +15,28 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
     }
 
-  const task = game.tasks[jsonCommand.i]
+  var task = game.tasks[jsonCommand.i]
   if (!task)
     return {
       text: 'Задание не найдено',
       c: { c: 'gameTasksEdit', gameId: jsonCommand.gameId },
     }
+
+  if (jsonCommand.setAsBonus || jsonCommand.unsetAsBonus) {
+    const newTask = {
+      ...game.tasks[jsonCommand.i],
+      isBonusTask: jsonCommand.setAsBonus ? true : false,
+    }
+    const tempTasks = game.tasks.map((task, index) =>
+      index === jsonCommand.i ? newTask : task
+    )
+    await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
+      tasks: tempTasks,
+    })
+    if (jsonCommand.setAsBonus) jsonCommand.setAsBonus = false
+    if (jsonCommand.unsetAsBonus) jsonCommand.unsetAsBonus = false
+    task = newTask
+  }
 
   const codes =
     typeof task?.codes === 'object'
@@ -58,8 +74,8 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
 
   return {
     // images: task.images ? task.images : undefined,
-    message: `<b>Редактирование задания</b>\n${
-      !task?.title ? `\u{2757}` : ''
+    message: `<b>Редактирование задания</b>\n${!task?.title ? `\u{2757}` : ''}${
+      task.isBonusTask ? '(БОНУСНОЕ) ' : ''
     }"${task?.title}"${
       task.canceled ? `\n\n\u{26D4} <b>ЗАДАНИЕ ОТМЕНЕНО!</b>` : ''
     }\n\n<b>Координаты</b>: ${
@@ -240,6 +256,16 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
           i: jsonCommand.i,
         },
         text: '\u{270F} Сообщение после задания',
+      },
+      {
+        c: task.isBonusTask
+          ? {
+              unsetAsBonus: true,
+            }
+          : {
+              setAsBonus: true,
+            },
+        text: `${task.isBonusTask ? '✅' : '❌'} Задание бонусное`,
       },
       {
         c: {

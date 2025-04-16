@@ -109,6 +109,8 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
 
   const text = game.tasks
     .map((task, index) => {
+      if (task.isBonusTask) return null
+
       const teamsSeconds = teams.map((team) => {
         const dur = tasksDuration.find(
           (item) => item.teamId === String(team._id)
@@ -145,6 +147,7 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
         )
         .join('\n')}`
     })
+    .filter((text) => text) // Если есть текст
     .join('\n')
 
   const totalTeamsSeconds = teams.map((team, index) => {
@@ -180,7 +183,8 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
         typeof a === 'number' && typeof partialSum === 'number'
           ? partialSum + a
           : '[стоп игра]'
-      if (game.tasks[index]?.canceled) return res
+      if (game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask)
+        return partialSum
 
       if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
         penalty += game.taskFailurePenalty ?? 0
@@ -337,7 +341,9 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
     Math.min.apply(
       null,
       taskAverageTimes.map((time, index) =>
-        game.tasks[index]?.canceled ? (game.taskDuration ?? 3600) + 1 : time
+        game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
+          ? (game.taskDuration ?? 3600) + 1
+          : time
       )
     )
   )
@@ -345,7 +351,9 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
     Math.max.apply(
       null,
       taskAverageTimes.map((time, index) =>
-        game.tasks[index]?.canceled ? -1 : time
+        game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
+          ? -1
+          : time
       )
     )
   )

@@ -168,7 +168,9 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                 : !task.title || !task.task || codes.length === 0
                 ? '\u{2757}'
                 : '✅'
-            } ${numberToEmojis(index + 1)} "${task.title}"${
+            } ${numberToEmojis(index + 1)} ${
+              task.isBonusTask ? '(БОНУСНОЕ) ' : ''
+            }"${task.title}"${
               game.type === 'photo'
                 ? ` - ${getNounPoints(
                     task.taskBonusForComplite || 0

@@ -69,5 +69,8 @@ export const getNounTeams = (number) =>
 export const getNounTasks = (number) =>
   getNoun(number, 'задание', 'задания', 'заданий')
 
+export const getNounBonusTasks = (number) =>
+  getNoun(number, 'бонусное', 'бонусных', 'бонусных')
+
 export const getNounPoints = (number) =>
   getNoun(number, 'балл', 'балла', 'баллов')

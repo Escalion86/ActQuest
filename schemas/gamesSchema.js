@@ -122,6 +122,10 @@ const gamesSchema = {
           type: Boolean,
           default: false,
         },
+        isBonusTask: {
+          type: Boolean,
+          default: false,
+        },
       },
     ],
     default: [],

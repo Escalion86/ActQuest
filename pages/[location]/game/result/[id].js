@@ -399,8 +399,9 @@ l-15 -73 3006 7 c1653 4 3007 8 3009 9 1 1 -8 37 -20 81 -19 67 -22 105 -22
   </div>
 )
 
-const toHHMMSS = (seconds, noHours = false) => {
-  var sec_num = parseInt(seconds, 10) // don't forget the second param
+const toHHMMSS = (sec, noHours = false) => {
+  const tempSec = Math.abs(sec)
+  var sec_num = parseInt(tempSec, 10) // don't forget the second param
   var hours = Math.floor(sec_num / 3600)
   var minutes = Math.floor((sec_num - hours * 3600) / 60)
   var seconds = sec_num - hours * 3600 - minutes * 60
@@ -415,7 +416,11 @@ const toHHMMSS = (seconds, noHours = false) => {
     seconds = '0' + seconds
   }
   return (
-    (noHours && hours === '00' ? '' : hours + ':') + minutes + ':' + seconds
+    (sec < 0 ? '-' : '') +
+    (noHours && hours === '00' ? '' : hours + ':') +
+    minutes +
+    ':' +
+    seconds
   )
 }
 
@@ -457,6 +462,7 @@ const TimeResult = ({
   bonus,
   addings, // Не используется
   rowHeight,
+  isBonusTask,
   ...props
 }) => (
   <motion.div
@@ -474,7 +480,9 @@ const TimeResult = ({
     }}
     className={cn(
       'flex flex-col font-bold w-[120px] items-center justify-center',
-      color === 'red'
+      isBonusTask
+        ? 'text-gray-800'
+        : color === 'red'
         ? 'text-red-600'
         : color === 'blue'
         ? 'text-blue-700'
@@ -488,7 +496,7 @@ const TimeResult = ({
     }}
     {...props}
   >
-    {toHHMMSS(timeResult)}
+    {isBonusTask ? '---' : toHHMMSS(timeResult)}
     {(penalty > 0 || bonus > 0) && (
       <div className="flex gap-x-2 -mt-1.5 -mb-[9px] text-xs font-normal ">
         {penalty > 0 && (
@@ -532,7 +540,10 @@ const GameBlock = ({ game }) => {
     const tempResult = []
     for (let i = 0; i < tasksCount; i++) {
       const prevSum = i === 0 ? 0 : tempResult[i - 1]
-      if (!endTime[i] || !startTime[i]) tempResult.push(prevSum + taskDuration)
+      const task = tasks[i]
+      if (task.canceled || task.isBonusTask) tempResult.push(prevSum)
+      else if (!endTime[i] || !startTime[i])
+        tempResult.push(prevSum + taskDuration)
       else
         tempResult.push(prevSum + getSecondsBetween(startTime[i], endTime[i]))
       // if (breakDuration > 0 && i < tasksCount - 1)
@@ -750,7 +761,7 @@ const GameBlock = ({ game }) => {
               })}
             </div>
           </div>
-          {tasks.map(({ title }, index) => (
+          {tasks.map(({ title, isBonusTask }, index) => (
             <div
               key={'task' + index}
               style={{
@@ -782,6 +793,14 @@ const GameBlock = ({ game }) => {
                   }}
                 >
                   {title}
+                  {isBonusTask ? (
+                    <>
+                      <br />
+                      {' (БОНУСНОЕ)'}
+                    </>
+                  ) : (
+                    ''
+                  )}
                 </div>
                 {teamsAnimateSteps.map((timeResults, i) => {
                   const time = timeResults[index]
@@ -802,6 +821,7 @@ const GameBlock = ({ game }) => {
                       start={start}
                       delay={delay}
                       timeResult={timeResult}
+                      isBonusTask={isBonusTask}
                       color={
                         timeResult >= taskDuration
                           ? 'red'

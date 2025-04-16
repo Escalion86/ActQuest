@@ -4,7 +4,14 @@ import moment from 'moment-timezone'
 
 const gameDescription = (game, creator) => {
   const tasksCount = game?.tasks
-    ? game.tasks.filter(({ canceled }) => !canceled).length
+    ? game.tasks.filter(
+        ({ canceled, isBonusTask }) => !canceled && !isBonusTask
+      ).length
+    : 0
+
+  const bonusTasksCount = game?.tasks
+    ? game.tasks.filter(({ canceled, isBonusTask }) => !canceled && isBonusTask)
+        .length
     : 0
 
   const description = `<b>Игра "${game?.name}"</b>
@@ -21,7 +28,11 @@ const gameDescription = (game, creator) => {
       ? `\n\n<b>Время и место сбора</b>: ${game?.startingPlace}`
       : ''
   }${
-    tasksCount > 0 ? `\n\n<b>Количество заданий</b>: ${tasksCount}` : ''
+    tasksCount > 0
+      ? `\n\n<b>Количество заданий</b>: ${tasksCount}${
+          bonusTasksCount ? ` + ${getNounBonusTasks(bonusTasksCount)}` : ''
+        }`
+      : ''
   }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
     game?.taskDuration ?? 3600
   )}\n${
