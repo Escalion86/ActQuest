@@ -457,12 +457,12 @@ const TimeResult = ({
   start,
   delay,
   timeResult,
-  isBonusTask,
   color,
   penalty,
   bonus,
   addings, // Не используется
   rowHeight,
+  isBonusTask,
   ...props
 }) => (
   <motion.div
@@ -814,6 +814,7 @@ const GameBlock = ({ game }) => {
                       start={start}
                       delay={delay}
                       timeResult={timeResult}
+                      isBonusTask={isBonusTask}
                       color={
                         timeResult >= taskDuration
                           ? 'red'
@@ -903,7 +904,6 @@ const GameBlock = ({ game }) => {
                     start={start}
                     delay={delay}
                     timeResult={timeResult}
-                    isBonusTask={tasks[index]?.isBonusTask}
                     penalty={
                       totalPenalty[index] +
                       (totalAddings[index] > 0 ? totalAddings[index] : 0)
