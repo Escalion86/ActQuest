@@ -182,7 +182,7 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
           ? partialSum + a
           : '[стоп игра]'
       if (game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask)
-        return res
+        return partialSum
 
       if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
         penalty += game.taskFailurePenalty ?? 0
