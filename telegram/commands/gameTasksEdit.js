@@ -218,6 +218,10 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                           .join(', ')}`
                       : ''
                   }`
+            }${
+              isCluesError
+                ? `\n\n\u{2757} Количество подсказок не достаточно`
+                : ''
             }`
           })
           .join('\n\n')
@@ -226,7 +230,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
     game.type === 'photo'
       ? `\n\n<b>Суммарный максимум баллов</b>: ${getNounPoints(sumOfBonuses)}`
       : ''
-  }${isCluesError ? `\n\n\u{2757} Количество подсказок не достаточно` : ''}`
+  }`
 
   return {
     message,
