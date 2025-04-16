@@ -57,6 +57,10 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
     }
   }
 
+  const taskDuration = game.taskDuration ?? 3600
+  const cluesDuration = game.cluesDuration ?? 1200
+  const cluesNeeded = Math.ceil((taskDuration - cluesDuration) / cluesDuration)
+
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(game.tasks, page, (task, number) => {
     const codes =
@@ -75,7 +79,12 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                   ? !task.title || !task.task
                     ? '\u{2757}'
                     : ''
-                  : !task.title || !task.task || !codes.length
+                  : !task.title ||
+                    !task.task ||
+                    !codes.length ||
+                    (cluesDuration > 0
+                      ? (task.clues?.length || 0) < cluesNeeded
+                      : false)
                   ? '\u{2757}'
                   : ''
               }`
@@ -165,7 +174,12 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                 ? !task.title || !task.task
                   ? '\u{2757}'
                   : '✅'
-                : !task.title || !task.task || codes.length === 0
+                : !task.title ||
+                  !task.task ||
+                  !codes.length ||
+                  (cluesDuration > 0
+                    ? (task.clues?.length || 0) < cluesNeeded
+                    : false)
                 ? '\u{2757}'
                 : '✅'
             } ${numberToEmojis(index + 1)} ${
