@@ -534,8 +534,8 @@ const GameBlock = ({ game }) => {
       const prevSum = i === 0 ? 0 : tempResult[i - 1]
       const task = tasks[i]
       if (task.canceled || task.isBonusTask) tempResult.push(prevSum)
-
-      if (!endTime[i] || !startTime[i]) tempResult.push(prevSum + taskDuration)
+      else if (!endTime[i] || !startTime[i])
+        tempResult.push(prevSum + taskDuration)
       else
         tempResult.push(prevSum + getSecondsBetween(startTime[i], endTime[i]))
       // if (breakDuration > 0 && i < tasksCount - 1)
@@ -753,7 +753,7 @@ const GameBlock = ({ game }) => {
               })}
             </div>
           </div>
-          {tasks.map(({ title }, index) => (
+          {tasks.map(({ title, isBonusTask }, index) => (
             <div
               key={'task' + index}
               style={{
@@ -785,6 +785,7 @@ const GameBlock = ({ game }) => {
                   }}
                 >
                   {title}
+                  {isBonusTask ? ' (БОНУСНОЕ)' : ''}
                 </div>
                 {teamsAnimateSteps.map((timeResults, i) => {
                   const time = timeResults[index]
