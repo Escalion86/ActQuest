@@ -92,6 +92,8 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
     }\n\n${!task?.task ? `\u{2757}` : ''}<b>Текст задания</b>:${
       !task?.task ? ' [не задано]' : `\n<blockquote>${task.task}</blockquote>`
     }${cluesText}${
+      isCluesError ? `\n\u{2757} Количество подсказок не достаточно` : ''
+    }${
       game.type === 'photo'
         ? `\n\n<b>Список доп. заданий</b>:${
             !task?.subTasks?.length

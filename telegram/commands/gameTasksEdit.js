@@ -220,7 +220,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                   }`
             }${
               isCluesError
-                ? `\n\n\u{2757} Количество подсказок не достаточно`
+                ? `\n\u{2757} Количество подсказок не достаточно`
                 : ''
             }`
           })
