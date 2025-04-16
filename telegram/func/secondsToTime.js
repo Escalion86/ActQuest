@@ -7,7 +7,7 @@ const secondsToTime = (sec) => {
   const hours = Math.floor(tempSec / 3600)
   const minutes = Math.floor((tempSec % 3600) / 60)
   const seconds = tempSec % 60
-  return `${tempSec < 0 ? '-' : ''}${padNum(hours, 2)}:${padNum(
+  return `${sec < 0 ? '-' : ''}${padNum(hours, 2)}:${padNum(
     minutes,
     2
   )}:${padNum(seconds, 2)}`
