@@ -399,8 +399,9 @@ l-15 -73 3006 7 c1653 4 3007 8 3009 9 1 1 -8 37 -20 81 -19 67 -22 105 -22
   </div>
 )
 
-const toHHMMSS = (seconds, noHours = false) => {
-  var sec_num = parseInt(seconds, 10) // don't forget the second param
+const toHHMMSS = (sec, noHours = false) => {
+  const tempSec = Math.abs(sec)
+  var sec_num = parseInt(tempSec, 10) // don't forget the second param
   var hours = Math.floor(sec_num / 3600)
   var minutes = Math.floor((sec_num - hours * 3600) / 60)
   var seconds = sec_num - hours * 3600 - minutes * 60
@@ -415,7 +416,11 @@ const toHHMMSS = (seconds, noHours = false) => {
     seconds = '0' + seconds
   }
   return (
-    (noHours && hours === '00' ? '' : hours + ':') + minutes + ':' + seconds
+    (sec < 0 ? '-' : '') +
+    (noHours && hours === '00' ? '' : hours + ':') +
+    minutes +
+    ':' +
+    seconds
   )
 }
 
