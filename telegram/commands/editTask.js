@@ -72,6 +72,13 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
   const longitude = coordinates?.longitude
   // const radius = coordinates?.radius
 
+  const taskDuration = game.taskDuration ?? 3600
+  const cluesDuration = game.cluesDuration ?? 1200
+  const cluesNeeded = Math.ceil((taskDuration - cluesDuration) / cluesDuration)
+
+  const isCluesError =
+    cluesDuration > 0 ? (task.clues?.length || 0) < cluesNeeded : false
+
   return {
     // images: task.images ? task.images : undefined,
     message: `<b>Редактирование задания</b>\n${!task?.title ? `\u{2757}` : ''}${
@@ -207,7 +214,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
           gameId: jsonCommand.gameId,
           i: jsonCommand.i,
         },
-        text: '\u{270F} Подсказки',
+        text: `${isCluesError ? `\u{2757}` : ''}\u{270F} Подсказки`,
       },
       [
         {

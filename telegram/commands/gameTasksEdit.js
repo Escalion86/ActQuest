@@ -167,6 +167,10 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
               typeof task?.bonusCodes === 'object' ? task.bonusCodes : []
             const penaltyCodes =
               typeof task?.penaltyCodes === 'object' ? task.penaltyCodes : []
+            const isCluesError =
+              cluesDuration > 0
+                ? (task.clues?.length || 0) < cluesNeeded
+                : false
             return `${
               task.canceled
                 ? `\u{26D4}`
@@ -174,12 +178,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                 ? !task.title || !task.task
                   ? '\u{2757}'
                   : '✅'
-                : !task.title ||
-                  !task.task ||
-                  !codes.length ||
-                  (cluesDuration > 0
-                    ? (task.clues?.length || 0) < cluesNeeded
-                    : false)
+                : !task.title || !task.task || !codes.length || isCluesError
                 ? '\u{2757}'
                 : '✅'
             } ${numberToEmojis(index + 1)} ${
@@ -227,7 +226,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
     game.type === 'photo'
       ? `\n\n<b>Суммарный максимум баллов</b>: ${getNounPoints(sumOfBonuses)}`
       : ''
-  }`
+  }${isCluesError ? `\n\n\u{2757} Количество подсказок не достаточно` : ''}`
 
   return {
     message,
