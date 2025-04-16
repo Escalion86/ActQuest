@@ -74,8 +74,8 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
 
   return {
     // images: task.images ? task.images : undefined,
-    message: `<b>Редактирование задания</b>\n${
-      !task?.title ? `\u{2757}` : ''
+    message: `<b>Редактирование задания</b>\n${!task?.title ? `\u{2757}` : ''}${
+      task.isBonusTask ? '(БОНУСНОЕ) ' : ''
     }"${task?.title}"${
       task.canceled ? `\n\n\u{26D4} <b>ЗАДАНИЕ ОТМЕНЕНО!</b>` : ''
     }\n\n<b>Координаты</b>: ${
@@ -265,10 +265,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
           : {
               setAsBonus: true,
             },
-        text: task.isBonusTask
-          ? '\u{26D4} Сделать задание обычным'
-          : '\u{2705} Сделать задание бонусным',
-        hide: task.canceled,
+        text: `${task.isBonusTask ? '✅' : '❌'} Задание бонусное`,
       },
       {
         c: {

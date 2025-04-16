@@ -1,4 +1,8 @@
-import { getNounPoints, getNounWrongCodes } from '@helpers/getNoun'
+import {
+  getNounBonusTasks,
+  getNounPoints,
+  getNounWrongCodes,
+} from '@helpers/getNoun'
 import isGameHaveErrors from '@helpers/isGameHaveErrors'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
@@ -13,7 +17,14 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
   if (game.success === false) return game
 
   const tasksCount = game?.tasks
-    ? game.tasks.filter(({ canceled }) => !canceled).length
+    ? game.tasks.filter(
+        ({ canceled, isBonusTask }) => !canceled && !isBonusTask
+      ).length
+    : 0
+
+  const bonusTasksCount = game?.tasks
+    ? game.tasks.filter(({ canceled, isBonusTask }) => !canceled && isBonusTask)
+        .length
     : 0
 
   const canceledTasksCount = game?.tasks
@@ -41,6 +52,8 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
     }\n\n<b>Место сбора после игры</b>: ${
       game?.finishingPlace ?? '[не задано]'
     }\n\n<b>Количество заданий</b>: ${tasksCount}${
+      bonusTasksCount ? ` + ${getNounBonusTasks(bonusTasksCount)}` : ''
+    }${
       canceledTasksCount > 0 ? ` (отмененных ${canceledTasksCount})` : ''
     }\n<b>Максимальная продолжительность одного задания</b>: ${secondsToTimeStr(
       game?.taskDuration ?? 3600
