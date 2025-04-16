@@ -457,6 +457,7 @@ const TimeResult = ({
   start,
   delay,
   timeResult,
+  isBonusTask,
   color,
   penalty,
   bonus,
@@ -479,7 +480,9 @@ const TimeResult = ({
     }}
     className={cn(
       'flex flex-col font-bold w-[120px] items-center justify-center',
-      color === 'red'
+      isBonusTask
+        ? 'text-gray-800'
+        : color === 'red'
         ? 'text-red-600'
         : color === 'blue'
         ? 'text-blue-700'
@@ -493,7 +496,7 @@ const TimeResult = ({
     }}
     {...props}
   >
-    {toHHMMSS(timeResult)}
+    {isBonusTask ? '---' : toHHMMSS(timeResult)}
     {(penalty > 0 || bonus > 0) && (
       <div className="flex gap-x-2 -mt-1.5 -mb-[9px] text-xs font-normal ">
         {penalty > 0 && (
@@ -900,6 +903,7 @@ const GameBlock = ({ game }) => {
                     start={start}
                     delay={delay}
                     timeResult={timeResult}
+                    isBonusTask={tasks[index]?.isBonusTask}
                     penalty={
                       totalPenalty[index] +
                       (totalAddings[index] > 0 ? totalAddings[index] : 0)
