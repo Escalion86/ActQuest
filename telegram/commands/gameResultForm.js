@@ -108,6 +108,7 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
   const fastestTask = {}
 
   const text = game.tasks
+    .filter((task) => !task.isBonusTask)
     .map((task, index) => {
       const teamsSeconds = teams.map((team) => {
         const dur = tasksDuration.find(
