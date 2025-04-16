@@ -87,9 +87,9 @@ const PuzzleGame = () => {
   }[gridSize]
 
   const code = {
-    4: '9A678Q', // 80px
+    4: 'Вас ждут в BlackHuka!', // 80px
     5: '9A592Q', // 64px
-    6: '9A391Q', // 56px
+    6: '9A381Q', // 56px
   }[gridSize]
 
   return (
@@ -137,10 +137,9 @@ const PuzzleGame = () => {
       </div>
 
       {isSolved && (
-        <div className="flex flex-col items-center justify-center gap-0.5 text-2xl text-[#776e65] font-bold animate-bounce">
+        <div className="mt-1 flex flex-col items-center justify-center gap-0.5 text-2xl text-[#776e65] font-bold animate-bounce">
           <div>Победа! 🎉</div>
           <div className="text-3xl">{code}</div>
-          <div>Попробуй другие варианты!</div>
         </div>
       )}
 
