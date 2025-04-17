@@ -1,4 +1,4 @@
-import { getNounPoints } from '@helpers/getNoun'
+import { getNounBonusTasks, getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import moment from 'moment-timezone'
 
