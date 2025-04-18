@@ -448,8 +448,8 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       const newAllFindedPenaltyCodes = [...allFindedPenaltyCodes]
       const newFindedPenaltyCodesInTask = [...findedPenaltyCodesInTask, code]
       newAllFindedPenaltyCodes[taskNum] = newFindedPenaltyCodesInTask
-      console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
-      console.log('newAllFindedPenaltyCodes :>> ', newAllFindedPenaltyCodes)
+      // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
+      // console.log('newAllFindedPenaltyCodes :>> ', newAllFindedPenaltyCodes)
       const result = await db
         .model('GamesTeams')
         .findByIdAndUpdate(jsonCommand?.gameTeamId, {
