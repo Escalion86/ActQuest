@@ -48,8 +48,8 @@ const taskText = ({
         }</blockquote>`
     }
 
-  return `<b>Задание №${
-    taskNum + 1
+  return `<b>Задание №${taskNum + 1}${
+    task.isBonusTask ? ' (БОНУСНОЕ)' : ''
   }:</b>\n<blockquote>${task}</blockquote>${cluesText}${
     game.type !== 'photo' && (haveBonusCodes || havePenaltyCodes)
       ? `\n\n<b>Внимание:</b> На месте есть ${
