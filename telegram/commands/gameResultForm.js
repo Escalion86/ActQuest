@@ -133,7 +133,7 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
 
       taskAverageTimes[index] = getAverage(
         teamsSeconds
-          // .filter(({ seconds }) => typeof seconds === 'number')
+          .filter(({ seconds }) => typeof seconds === 'number')
           .map(({ seconds }) => seconds)
       )
 
