@@ -345,7 +345,7 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
       taskAverageTimes.map((time, index) =>
         game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
           ? (game.taskDuration ?? 3600) + 1
-          : time
+          : time || (game.taskDuration ?? 3600)
       )
     )
   )
@@ -356,7 +356,7 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
       taskAverageTimes.map((time, index) =>
         game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
           ? -1
-          : time
+          : time || 0
       )
     )
   )
