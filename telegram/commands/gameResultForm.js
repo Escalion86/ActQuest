@@ -338,13 +338,20 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
     .join('\n')
 
   // console.log('taskAverageTimes :>> ', taskAverageTimes)
-  const test = taskAverageTimes.map((time, index) =>
-    game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
-      ? (game.taskDuration ?? 3600) + 1
-      : typeof time === 'number'
-      ? time
-      : game.taskDuration ?? 3600
-  )
+  const test = taskAverageTimes.map((time, index) => {
+    if (game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask) {
+      console.log('object 1:>> ', (game.taskDuration ?? 3600) + 1)
+      return (game.taskDuration ?? 3600) + 1
+    }
+
+    if (typeof time === 'number') {
+      console.log('object 2:>> ', time)
+      return time
+    }
+
+    console.log('object 3:>> ', game.taskDuration ?? 3600)
+    return game.taskDuration ?? 3600
+  })
   console.log('test :>> ', test)
 
   const mostEasyTaskIndex = taskAverageTimes.indexOf(Math.min.apply(null, test))
