@@ -352,10 +352,10 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
     console.log('object 3:>> ', game.taskDuration ?? 3600)
     return game.taskDuration ?? 3600
   })
-  console.log('test :>> ', test)
+  // console.log('test :>> ', test)
 
   const mostEasyTaskIndex = taskAverageTimes.indexOf(Math.min.apply(null, test))
-  console.log('mostEasyTaskIndex :>> ', mostEasyTaskIndex)
+  // console.log('mostEasyTaskIndex :>> ', mostEasyTaskIndex)
   const mostHardTaskIndex = taskAverageTimes.indexOf(
     Math.max.apply(
       null,
