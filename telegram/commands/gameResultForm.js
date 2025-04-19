@@ -353,6 +353,8 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
     return game.taskDuration ?? 3600
   })
 
+  console.log('taskAverageTimes :>> ', taskAverageTimes)
+
   const timesForHardTask = taskAverageTimes.map((time, index) => {
     if (game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask) {
       return -1
