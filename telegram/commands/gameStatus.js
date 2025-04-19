@@ -247,7 +247,9 @@ const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
       const isTaskExperied = taskDuration - taskSecondsLeft < 0
       return `${isTaskExperied ? `\u{231B}` : `\u{1F3C3}`}${taskNumber} <b>"${
         team.name
-      }"</b> - задание №${startedTasks} "${task.title}"${
+      }"</b> - задание №${startedTasks} ${
+        task.isBonustask ? '(БОНУСНОЕ) ' : ''
+      }"${task.title}"${
         !isTaskExperied && showCluesNum > 0
           ? `, получена подсказка №${showCluesNum}`
           : ''

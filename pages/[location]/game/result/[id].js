@@ -581,7 +581,7 @@ const GameBlock = ({ game }) => {
       }
       if (taskFailurePenalty) {
         for (let i = 0; i < tasksCount; i++) {
-          if (!endTime[i] || !startTime[i]) {
+          if (!tasks[i].isBonusTask && (!endTime[i] || !startTime[i])) {
             tempResult[i] += taskFailurePenalty
           }
         }

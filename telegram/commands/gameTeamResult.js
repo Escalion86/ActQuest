@@ -85,7 +85,11 @@ const gameTeamResult = async ({ telegramId, jsonCommand, location, db }) => {
       const endTime = gameTeam.endTime[index]
       let codePenaltyBonusText = ''
 
-      if (game.taskFailurePenalty && (!startTime || !endTime)) {
+      if (
+        !task.isBonusTask &&
+        game.taskFailurePenalty &&
+        (!startTime || !endTime)
+      ) {
         codePenaltyBonusText += `\n\u{1F534} ${secondsToTime(
           game.taskFailurePenalty
         )} - Задание не выполнено`
@@ -150,15 +154,18 @@ const gameTeamResult = async ({ telegramId, jsonCommand, location, db }) => {
       }
 
       const totalPenalty = penalty + codePenalty + manyWrongCodePenalty
-      const timeOnTask =
-        typeof seconds === 'number' ? seconds : game.taskDuration ?? 3600
+      const timeOnTask = task.isBonusTask
+        ? 0
+        : typeof seconds === 'number'
+        ? seconds
+        : game.taskDuration ?? 3600
       sumTasksTime += timeOnTask
 
       const result = timeOnTask + totalPenalty - codeBonus
 
-      return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}"${
-        task?.title
-      }"</b>\nСтарт: ${
+      return `\n<b>\u{1F4CC} ${task.canceled ? '(\u{274C} ОТМЕНЕНО) ' : ''}${
+        task.isBonusTask ? '(БОНУСНОЕ) ' : ''
+      }"${task?.title}"</b>\nСтарт: ${
         startTime
           ? // ? secondsToTime(new Date(startTime || undefined).getTime())
             dateToDateTimeStr(startTime, false, false, false, false).join(' ')
