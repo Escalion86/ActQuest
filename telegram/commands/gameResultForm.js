@@ -109,7 +109,10 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
 
   const text = game.tasks
     .map((task, index) => {
-      if (task.isBonusTask) return null
+      if (task.isBonusTask) {
+        taskAverageTimes[index] = 0
+        return null
+      }
 
       const teamsSeconds = teams.map((team) => {
         const dur = tasksDuration.find(
