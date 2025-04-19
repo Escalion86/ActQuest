@@ -172,11 +172,14 @@ const gameResultFormTeamsPlaces = async ({
     //   )
     //   .join('\n')
 
-    duration.reduce((partialSum, a) => {
+    duration.reduce((partialSum, a, index) => {
       const res =
         typeof a === 'number' && typeof partialSum === 'number'
           ? partialSum + a
           : '[стоп игра]'
+      if (game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask)
+        return partialSum
+
       if (typeof res === 'string' || a >= (game.taskDuration ?? 3600)) {
         penalty += game.taskFailurePenalty ?? 0
         result += game.taskDuration ?? 3600
