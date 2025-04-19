@@ -341,7 +341,9 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
   const test = taskAverageTimes.map((time, index) =>
     game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
       ? (game.taskDuration ?? 3600) + 1
-      : time || (game.taskDuration ?? 3600)
+      : typeof time === 'number'
+      ? time
+      : game.taskDuration ?? 3600
   )
   console.log('test :>> ', test)
 
@@ -353,7 +355,9 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
       taskAverageTimes.map((time, index) =>
         game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
           ? -1
-          : time || 0
+          : typeof time === 'number'
+          ? time
+          : 0
       )
     )
   )
