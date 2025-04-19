@@ -109,7 +109,10 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
 
   const text = game.tasks
     .map((task, index) => {
-      if (task.isBonusTask) return null
+      if (task.isBonusTask) {
+        taskAverageTimes[index] = 0
+        return null
+      }
 
       const teamsSeconds = teams.map((team) => {
         const dur = tasksDuration.find(
@@ -337,25 +340,40 @@ const gameResultForm = async ({ telegramId, jsonCommand, location, db }) => {
     })
     .join('\n')
 
+  // console.log('taskAverageTimes :>> ', taskAverageTimes)
+  const timesForEasyTask = taskAverageTimes.map((time, index) => {
+    if (game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask) {
+      return (game.taskDuration ?? 3600) + 1
+    }
+
+    if (typeof time === 'number') {
+      return time
+    }
+
+    return game.taskDuration ?? 3600
+  })
+
+  console.log('taskAverageTimes :>> ', taskAverageTimes)
+
+  const timesForHardTask = taskAverageTimes.map((time, index) => {
+    if (game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask) {
+      return -1
+    }
+
+    if (typeof time === 'number') {
+      return time
+    }
+
+    return 0
+  })
+  // console.log('test :>> ', test)
+
   const mostEasyTaskIndex = taskAverageTimes.indexOf(
-    Math.min.apply(
-      null,
-      taskAverageTimes.map((time, index) =>
-        game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
-          ? (game.taskDuration ?? 3600) + 1
-          : time
-      )
-    )
+    Math.min.apply(null, timesForEasyTask)
   )
+  // console.log('mostEasyTaskIndex :>> ', mostEasyTaskIndex)
   const mostHardTaskIndex = taskAverageTimes.indexOf(
-    Math.max.apply(
-      null,
-      taskAverageTimes.map((time, index) =>
-        game.tasks[index]?.canceled || game.tasks[index]?.isBonusTask
-          ? -1
-          : time
-      )
-    )
+    Math.max.apply(null, timesForHardTask)
   )
 
   const gameDateTimeFact = formatGameDateTimeFact(game, {
