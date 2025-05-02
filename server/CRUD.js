@@ -100,6 +100,7 @@ export default async function handler(Schema, req, res, params = null) {
   const querySelect = query?.select // array
   const querySort = query?.sort
   const queryLimit = query?.limit
+  const isCountReturn = !!query?.countReturn
 
   if (!location) {
     return res
@@ -111,6 +112,7 @@ export default async function handler(Schema, req, res, params = null) {
   delete query.select
   delete query.sort
   delete query.limit
+  delete query.countReturn
 
   console.log('querySelect :>> ', querySelect)
 
@@ -137,34 +139,45 @@ export default async function handler(Schema, req, res, params = null) {
             // if (value === 'false') preparedQuery[key] = false
           }
           // console.log('querySort :>> ', querySort)
-          data = await db
-            .model(Schema)
-            .find(preparedQuery)
-            .select(selectOpts)
-            .limit(queryLimit)
-            .sort(querySort)
+          data = isCountReturn
+            ? await db
+                .model(Schema)
+                .find(preparedQuery)
+                .limit(queryLimit)
+                .count()
+            : await db
+                .model(Schema)
+                .find(preparedQuery)
+                .select(selectOpts)
+                .limit(queryLimit)
+                .sort(querySort)
+
           if (!data) {
             return res?.status(400).json({ success: false })
           }
           return res?.status(200).json({ success: true, data })
         } else if (params) {
-          data = await db
-            .model(Schema)
-            .find(params)
-            .select(selectOpts)
-            .limit(queryLimit)
-            .sort(querySort)
+          data = isCountReturn
+            ? await db.model(Schema).find(params).limit(queryLimit).count()
+            : await db
+                .model(Schema)
+                .find(params)
+                .select(selectOpts)
+                .limit(queryLimit)
+                .sort(querySort)
           if (!data) {
             return res?.status(400).json({ success: false })
           }
           return res?.status(200).json({ success: true, data })
         } else {
-          data = await db
-            .model(Schema)
-            .find()
-            .select(selectOpts)
-            .limit(queryLimit)
-            .sort(querySort)
+          data = isCountReturn
+            ? await db.model(Schema).find().limit(queryLimit).count()
+            : await db
+                .model(Schema)
+                .find()
+                .select(selectOpts)
+                .limit(queryLimit)
+                .sort(querySort)
           return res?.status(200).json({ success: true, data })
         }
       } catch (error) {
