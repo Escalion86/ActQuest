@@ -112,6 +112,8 @@ export default async function handler(Schema, req, res, params = null) {
   delete query.sort
   delete query.limit
 
+  console.log('querySelect :>> ', querySelect)
+
   const db = await dbConnect(location)
 
   let data
@@ -157,7 +159,12 @@ export default async function handler(Schema, req, res, params = null) {
           }
           return res?.status(200).json({ success: true, data })
         } else {
-          data = await db.model(Schema).find().select({ password: 0 })
+          data = await db
+            .model(Schema)
+            .find()
+            .select(selectOpts)
+            .limit(queryLimit)
+            .sort(querySort)
           return res?.status(200).json({ success: true, data })
         }
       } catch (error) {
