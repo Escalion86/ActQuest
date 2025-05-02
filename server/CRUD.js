@@ -7,11 +7,99 @@ import isUserAdmin from '@helpers/isUserAdmin'
 // import Users from '@models/Users'
 import dbConnect from '@utils/dbConnect'
 
+function transformQuery(query) {
+  const processSingleValue = (key, value) => {
+    // Добавляем проверку на отсутствие ключа (на случай корневого уровня)
+    if (!key) return value
+
+    const lowercasedKey = key.toLowerCase()
+
+    // Обработка ObjectId
+    if (lowercasedKey === '_id') {
+      try {
+        return new mongoose.Types.ObjectId(value)
+      } catch (e) {
+        throw new Error(`Invalid ObjectId: ${value}`)
+      }
+    }
+
+    // Обработка дат
+    if (
+      lowercasedKey === 'createdat' ||
+      lowercasedKey === 'updatedat' ||
+      lowercasedKey.includes('date')
+    ) {
+      const date = new Date(value)
+      if (isNaN(date.getTime())) throw new Error(`Invalid Date: ${value}`)
+      return date
+    }
+
+    // Обработка boolean
+    if (value === 'true') return true
+    if (value === 'false') return false
+
+    return value
+  }
+
+  const buildNestedStructure = (keys, value, ctx) => {
+    const [currentKey, ...restKeys] = keys
+
+    if (restKeys.length === 0) {
+      // Изменения здесь: добавляем проверку на оператор $in
+      if (currentKey === '$in' && !Array.isArray(ctx[currentKey])) {
+        ctx[currentKey] = []
+      }
+
+      if (Array.isArray(ctx[currentKey])) {
+        ctx[currentKey].push(processSingleValue(currentKey, value))
+      } else {
+        ctx[currentKey] = processSingleValue(currentKey, value)
+      }
+      return
+    }
+
+    if (!ctx[currentKey]) {
+      ctx[currentKey] = !isNaN(restKeys[0]) ? [] : {}
+    }
+
+    buildNestedStructure(restKeys, value, ctx[currentKey])
+  }
+
+  const result = {}
+
+  for (const [rawKey, rawValue] of Object.entries(query)) {
+    const keys = rawKey.split(/\[|\]/g).filter((k) => k !== '')
+    const values = Array.isArray(rawValue) ? rawValue : [rawValue]
+
+    for (const val of values) {
+      buildNestedStructure(keys, val, result)
+    }
+  }
+
+  // Специальная обработка для массивов $in
+  const processInOperator = (obj, parentKey) => {
+    for (const key in obj) {
+      if (key === '$in' && Array.isArray(obj[key])) {
+        obj[key] = obj[key].map((item) => processSingleValue(parentKey, item))
+      } else if (typeof obj[key] === 'object') {
+        processInOperator(obj[key], key)
+      }
+    }
+  }
+
+  processInOperator(result, '')
+
+  return result
+}
+
 export default async function handler(Schema, req, res, params = null) {
   const { query, method, body } = req
 
   const id = query?.id
   const location = query?.location
+  const querySelect = query?.select // array
+  const querySort = query?.sort
+  const queryLimit = query?.limit
 
   if (!location) {
     return res
@@ -19,26 +107,51 @@ export default async function handler(Schema, req, res, params = null) {
       .json({ success: false, error: 'No location in query' })
   }
 
+  delete query.location
+  delete query.select
+  delete query.sort
+  delete query.limit
+
   const db = await dbConnect(location)
 
   let data
-  console.log('Schema', Schema)
-  console.log(`method`, method)
-  console.log(`params`, params)
-  console.log(`id`, id)
-  console.log(`body`, body)
+
+  const selectOpts = querySelect ? querySelect.split(',') : { password: 0 }
 
   switch (method) {
     case 'GET':
       try {
-        if (params) {
-          data = await db.model(Schema).find(params).select({ password: 0 })
+        if (id) {
+          data = await db.model(Schema).findById(id).select(selectOpts)
           if (!data) {
             return res?.status(400).json({ success: false })
           }
           return res?.status(200).json({ success: true, data })
-        } else if (id) {
-          data = await db.model(Schema).findById(id).select({ password: 0 })
+        } else if (Object.keys(query).length > 0) {
+          const preparedQuery = transformQuery(query)
+          for (const [key, value] of Object.entries(preparedQuery)) {
+            if (isJson(value)) preparedQuery[key] = JSON.parse(value)
+            // if (value === 'true') preparedQuery[key] = true
+            // if (value === 'false') preparedQuery[key] = false
+          }
+          // console.log('querySort :>> ', querySort)
+          data = await db
+            .model(Schema)
+            .find(preparedQuery)
+            .select(selectOpts)
+            .limit(queryLimit)
+            .sort(querySort)
+          if (!data) {
+            return res?.status(400).json({ success: false })
+          }
+          return res?.status(200).json({ success: true, data })
+        } else if (params) {
+          data = await db
+            .model(Schema)
+            .find(params)
+            .select(selectOpts)
+            .limit(queryLimit)
+            .sort(querySort)
           if (!data) {
             return res?.status(400).json({ success: false })
           }
