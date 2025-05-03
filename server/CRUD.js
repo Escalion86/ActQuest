@@ -114,8 +114,6 @@ export default async function handler(Schema, req, res, params = null) {
   delete query.limit
   delete query.countReturn
 
-  console.log('querySelect :>> ', querySelect)
-
   const db = await dbConnect(location)
 
   let data
@@ -140,11 +138,13 @@ export default async function handler(Schema, req, res, params = null) {
           }
           // console.log('querySort :>> ', querySort)
           data = isCountReturn
-            ? await db
-                .model(Schema)
-                .find(preparedQuery)
-                .limit(queryLimit)
-                .count()
+            ? (
+                await db
+                  .model(Schema)
+                  .find(preparedQuery)
+                  .select({ _id: 1 })
+                  .limit(queryLimit)
+              ).length
             : await db
                 .model(Schema)
                 .find(preparedQuery)
@@ -158,7 +158,13 @@ export default async function handler(Schema, req, res, params = null) {
           return res?.status(200).json({ success: true, data })
         } else if (params) {
           data = isCountReturn
-            ? await db.model(Schema).find(params).limit(queryLimit).count()
+            ? (
+                await db
+                  .model(Schema)
+                  .find(params)
+                  .select({ _id: 1 })
+                  .limit(queryLimit)
+              ).length
             : await db
                 .model(Schema)
                 .find(params)
@@ -171,7 +177,13 @@ export default async function handler(Schema, req, res, params = null) {
           return res?.status(200).json({ success: true, data })
         } else {
           data = isCountReturn
-            ? await db.model(Schema).find().limit(queryLimit).count()
+            ? (
+                await db
+                  .model(Schema)
+                  .find()
+                  .select({ _id: 1 })
+                  .limit(queryLimit)
+              ).length
             : await db
                 .model(Schema)
                 .find()
