@@ -89,6 +89,10 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
           ? 'бесплатно'
           : `${game.prices[0].price} руб.`
         : game.prices.map(({ name, price }) => `\n- ${name}: ${price} руб.`)
+    }${
+      haveErrorsInTasks
+        ? `\n\n\u{2757}\u{2757}\u{2757} <b>В игре есть ошибки!!! Запустить игру нельзя!!!!</b>`
+        : ''
     }`,
     buttons: [
       {
