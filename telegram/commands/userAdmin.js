@@ -68,6 +68,7 @@ const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
       },
       {
         c: 'allUsers',
+        page: jsonCommand.page,
         text: '\u{2B05} Назад',
       },
     ],

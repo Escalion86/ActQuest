@@ -172,7 +172,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                 ? (task.clues?.length || 0) < cluesNeeded
                 : false
             return `${
-              task.canceled ? `\u{26D4}` : !task.title ? '\u{2757}' : '✅'
+              task.canceled ? `\u{26D4}` : !task.title ? '\u{2757}' : ''
             } ${numberToEmojis(index + 1)} ${
               task.isBonusTask ? '(БОНУСНОЕ) ' : ''
             }"${task.title}"${!task.task ? '\n\u{2757}Нет задания' : ''}${

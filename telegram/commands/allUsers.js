@@ -28,6 +28,7 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
       c: {
         c: 'userAdmin',
         userTId: user.telegramId,
+        page: jsonCommand.page,
         // p: 1,
       },
     }
