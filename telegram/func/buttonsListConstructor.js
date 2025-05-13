@@ -26,6 +26,25 @@ const buttonListConstructor = (array, page = 1, itemFunc) => {
           hide: array.length <= page * 10,
         },
       ],
+      [
+        {
+          c: { page: page - 10 },
+          text: `\u{25C0} ${page - 11 || ''}1-${page - 10}0`,
+          hide: page <= 10,
+        },
+        {
+          c: { page: page + 10 },
+          text:
+            array.length === page * 10 + 10
+              ? `${page * 10 + 10} \u{25B6}`
+              : `${page}1-${
+                  (page + 10) * 10 > array.length
+                    ? array.length
+                    : (page + 10) * 10
+                } \u{25B6}`,
+          hide: array.length <= page * 100,
+        },
+      ],
     ]
   } else return []
 }
