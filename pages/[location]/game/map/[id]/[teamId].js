@@ -49,7 +49,7 @@ export const getServerSideProps = async (context) => {
       if (bonusCodes !== null && typeof bonusCodes === 'object') {
         if (
           bonusCodes.find((code) =>
-            ['101', '177', '814', '001', '318', '228', '119'].includes(code)
+            ['101', '177', '814', '001', '318', '228', '078'].includes(code)
           )
         ) {
           findedBonusCodes++
