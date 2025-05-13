@@ -4,6 +4,7 @@ const setBonusCodeDescription = async ({
   telegramId,
   jsonCommand,
   location,
+  db,
 }) => {
   // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
   const checkData = check(jsonCommand, ['gameId', 'i', 'j'])
