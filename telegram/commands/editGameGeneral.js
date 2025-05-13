@@ -253,7 +253,9 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
       },
       {
         c: { c: 'editGame', gameId: jsonCommand.gameId },
-        text: '\u{270F} Редактировать игру',
+        text: `${
+          haveErrorsInTasks ? `\u{2757}` : ''
+        }\u{270F} Редактировать игру`,
       },
       [
         {

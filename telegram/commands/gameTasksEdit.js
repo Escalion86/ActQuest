@@ -172,18 +172,10 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                 ? (task.clues?.length || 0) < cluesNeeded
                 : false
             return `${
-              task.canceled
-                ? `\u{26D4}`
-                : game.type === 'photo'
-                ? !task.title || !task.task
-                  ? '\u{2757}'
-                  : '✅'
-                : !task.title || !task.task || !codes.length || isCluesError
-                ? '\u{2757}'
-                : '✅'
+              task.canceled ? `\u{26D4}` : !task.title ? '\u{2757}' : '✅'
             } ${numberToEmojis(index + 1)} ${
               task.isBonusTask ? '(БОНУСНОЕ) ' : ''
-            }"${task.title}"${
+            }"${task.title}"${!task.task ? '\n\u{2757}Нет задания' : ''}${
               game.type === 'photo'
                 ? ` - ${getNounPoints(
                     task.taskBonusForComplite || 0
@@ -201,7 +193,9 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                             : ''
                         }`
                   }`
-                : `\nКоды (${codes.length ?? 0} шт): ${
+                : `\n${!codes.length ? '\u{2757}' : ''}Коды (${
+                    codes.length ?? 0
+                  } шт): ${
                     codes.length > 0 ? codes.join(', ') : '[не заданы]'
                   }${
                     bonusCodes.length > 0
