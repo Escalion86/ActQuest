@@ -1,7 +1,6 @@
-import { getData } from '@helpers/CRUD'
 import fetchGameTeamByGameIdAndTeamId from '@server/fetchGameTeamByGameIdAndTeamId'
+import fetchTeam from '@server/fetchTeam'
 import Head from 'next/head'
-import { useEffect, useState } from 'react'
 
 function MapPage(props) {
   // const gameId = props.id
@@ -9,6 +8,7 @@ function MapPage(props) {
   // const location = props.location
   const imageUrl = props.imageUrl
   const error = props.error
+  const teamName = props.teamName
 
   return (
     <>
@@ -17,6 +17,7 @@ function MapPage(props) {
       </Head>
       {/* <StateLoader {...props}>
         <Header /> */}
+      {teamName && <div className="flex justify-center w-full">{teamName}</div>}
       {imageUrl ? (
         <img src={imageUrl} alt="map" />
       ) : error ? (
@@ -38,12 +39,13 @@ export const getServerSideProps = async (context) => {
   const { params } = context
   const { id, location, teamId } = params
 
+  const team = await fetchTeam(location, teamId)
+  console.log('team :>> ', team)
   const gameTeam = await fetchGameTeamByGameIdAndTeamId(location, id, teamId)
   // console.log('gameTeam :>> ', gameTeam)
   let findedBonusCodes = 0
-  if (gameTeam && gameTeam[0]?.findedBonusCodes?.length > 0) {
+  if (team && gameTeam && gameTeam[0]?.findedBonusCodes?.length > 0) {
     for (const bonusCodes of gameTeam[0].findedBonusCodes) {
-      console.log('bonusCodes :>> ', bonusCodes)
       if (bonusCodes !== null && typeof bonusCodes === 'object') {
         if (
           bonusCodes.find((code) =>
@@ -55,8 +57,7 @@ export const getServerSideProps = async (context) => {
       }
     }
   }
-  console.log('gameTeam :>> ', gameTeam)
-  if (!gameTeam || !gameTeam[0]) {
+  if (!team || !gameTeam || !gameTeam[0]) {
     return {
       props: {
         // ...fetchedProps,
@@ -65,10 +66,12 @@ export const getServerSideProps = async (context) => {
         teamId,
         imageUrl: '',
         error: 'error',
+        teamName: team?.name || '',
         // loggedUser: session?.user ?? null,
       },
     }
   }
+
   const imageFileName =
     findedBonusCodes === 0 || !findedBonusCodes
       ? null
@@ -97,6 +100,7 @@ export const getServerSideProps = async (context) => {
       imageUrl: imageFileName
         ? 'https://actquest.ru/img/map/' + imageFileName + '.png'
         : '',
+      teamName: team?.name || '',
       // loggedUser: session?.user ?? null,
     },
   }
