@@ -55,7 +55,8 @@ export const getServerSideProps = async (context) => {
       }
     }
   }
-  if (!gameTeam) {
+  console.log('gameTeam :>> ', gameTeam)
+  if (!gameTeam || !gameTeam[0]) {
     return {
       props: {
         // ...fetchedProps,
