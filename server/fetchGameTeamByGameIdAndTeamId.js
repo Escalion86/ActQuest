@@ -2,7 +2,6 @@ import dbConnect from '@utils/dbConnect'
 
 const fetchGameTeamByGameIdAndTeamId = async (location, gameId, teamId) => {
   if (!gameId || !teamId || !location) return {}
-  console.log('test :>> ')
   try {
     // const isAdmin = isUserAdmin(user)
     const db = await dbConnect(location)
