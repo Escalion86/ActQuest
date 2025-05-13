@@ -8,6 +8,7 @@ function MapPage(props) {
   // const teamId = props.teamId
   // const location = props.location
   const imageUrl = props.imageUrl
+  const error = props.error
 
   return (
     <>
@@ -18,6 +19,8 @@ function MapPage(props) {
         <Header /> */}
       {imageUrl ? (
         <img src={imageUrl} alt="map" />
+      ) : error ? (
+        'Ошибка!!!'
       ) : (
         'Вы не нашли ни одного кусочка карты'
       )}
@@ -50,6 +53,18 @@ export const getServerSideProps = async (context) => {
           findedBonusCodes++
         }
       }
+    }
+  } else {
+    return {
+      props: {
+        // ...fetchedProps,
+        id,
+        location,
+        teamId,
+        imageUrl: '',
+        error: 'error',
+        // loggedUser: session?.user ?? null,
+      },
     }
   }
   const imageFileName =
