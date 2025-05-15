@@ -41,6 +41,7 @@ const commandHandler = async ({
     }
 
     if (message === '/main_menu' || message === '/start') {
+      console.log('message :>> ', message)
       return await executeCommand(
         userTelegramId,
         { c: 'mainMenu' },
