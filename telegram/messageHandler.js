@@ -33,7 +33,7 @@ import commandHandler from './commandHandler'
 //   },
 // }
 
-const messageHandler = async (body, res, location, db) => {
+const messageHandler = async (body, location, db) => {
   const { update_id, message } = body
   const {
     message_id,

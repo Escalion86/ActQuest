@@ -11,7 +11,6 @@ const fetchGameTeamByGameIdAndTeamId = async (location, gameId, teamId) => {
       .model('GamesTeams')
       .find({ gameId, teamId })
       .lean()
-    console.log('fetchResult :>> ', fetchResult)
 
     return fetchResult
   } catch (error) {

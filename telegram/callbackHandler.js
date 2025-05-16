@@ -28,7 +28,7 @@ import commandHandler from './commandHandler'
 //   },
 // }
 
-const callbackHandler = async (body, res, location, db) => {
+const callbackHandler = async (body, location, db) => {
   const { callback_query } = body
   const { id, from, message, data, chat_instance } = callback_query
   // console.log('callback_query :>> ', callback_query)

@@ -34,7 +34,6 @@ import commandHandler from './commandHandler'
 
 const locationHandler = async (
   { message_id, from, chat, date, edit_date, location },
-  res,
   locationDb,
   db
 ) => {
