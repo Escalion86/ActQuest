@@ -123,6 +123,7 @@ const executeCommand = async (
     const prevCommand = await db.model('LastCommands').findOne({
       userTelegramId,
     })
+    console.log('actualCommand :>> ', actualCommand)
     return await db.model('LastCommands').findOneAndUpdate(
       {
         userTelegramId,
