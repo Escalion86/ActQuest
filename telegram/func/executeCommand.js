@@ -131,6 +131,10 @@ const executeCommand = async (
         command: actualCommand,
         prevCommand: prevCommand?.command,
         messageId,
+        pages:
+          actualCommand?.c && actualCommand?.page
+            ? { ...prevCommand?.pages, [actualCommand.c]: actualCommand.page }
+            : prevCommand?.pages,
       },
       { upsert: true }
     )

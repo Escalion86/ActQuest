@@ -13,6 +13,10 @@ const lastCommandsSchema = {
   messageId: {
     type: Number,
   },
+  pages: {
+    type: Map,
+    default: {},
+  },
 }
 
 export default lastCommandsSchema
