@@ -6,6 +6,11 @@ import messageHandler from 'telegram/messageHandler'
 export default async function telegramCRUD(req, res, location) {
   const { query, method, body } = req
 
+  if (req) {
+    let host = req.headers.host // will give you localhost:3000
+    console.log('host :>> ', host)
+  }
+
   // if (method === 'GET') {
   //   try {
   //     // const { update_id, message } = body
@@ -152,7 +157,7 @@ export default async function telegramCRUD(req, res, location) {
       if (body?.callback_query) {
         // Принимаем команду
         // console.log('callback_body :>> ', body)
-        const result = await callbackHandler(body, res, location, db)
+        const result = await callbackHandler(body, location, db)
         // console.log('callbackHandler result :>> ', result)
         // await sendMessage({
         //   chat_id: '261102161',
@@ -178,7 +183,7 @@ export default async function telegramCRUD(req, res, location) {
         //   file_size: 88244                                                                                                x
         // }
         // const {id, from, message, chat_instanse, data}
-        const result = await messageHandler(body, res, location, db)
+        const result = await messageHandler(body, location, db)
         // console.log('messageHandler result :>> ', result)
         // await sendMessage({
         //   chat_id: '261102161',
@@ -190,7 +195,6 @@ export default async function telegramCRUD(req, res, location) {
         if (body.edited_message?.location) {
           const result = await locationHandler(
             body.edited_message,
-            res,
             location,
             db
           )

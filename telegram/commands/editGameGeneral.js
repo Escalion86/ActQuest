@@ -240,7 +240,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
       {
         c: { c: 'gameTeamsCheckPhotos', gameId: jsonCommand.gameId },
         text: '\u{1F4F7} Проверить присланные фотографии',
-        hide: !game.type === 'photo' || game.status === 'active',
+        hide: game.type !== 'photo' || game.status === 'active',
       },
       {
         url:
