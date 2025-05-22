@@ -165,12 +165,12 @@ const game = async ({ telegramId, user, jsonCommand, location, db }) => {
           game.status !== 'finished' ||
           !(isAdmin || teamsOfUserInAGame.length > 0),
       },
-      ...(addButtonEditGame
+      addButtonEditGame
         ? {
             c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
             text: '\u{2699} Редактировать игру',
           }
-        : {}),
+        : {},
       ,
       {
         c: isArchiveGame(game) ? 'archiveGames' : 'menuGames',
