@@ -15,8 +15,11 @@ const lastCommandHandler = async (
   lastCommand
 ) => {
   let actualJsonCommand = { ...jsonCommand }
+  console.log('jsonCommand :>> ', jsonCommand)
+  console.log('lastCommand :>> ', lastCommand)
 
   if (typeof jsonCommand.c === 'number') {
+    console.log('1 :>> ', 1)
     if (
       !jsonCommand.page &&
       lastCommand?.pages &&
@@ -36,6 +39,7 @@ const lastCommandHandler = async (
   }
 
   if (commandsArray[jsonCommand.c]) {
+    console.log('2 :>> ', 2)
     if (!jsonCommand.page && lastCommand?.pages) {
       const commandNum = commandToNum(jsonCommand.c)
       if (lastCommand.pages[commandNum])
