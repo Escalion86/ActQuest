@@ -8,25 +8,47 @@ const lastCommandHandler = async (
   jsonCommand,
   location,
   user,
-  db
+  db,
+  lastCommand
 ) => {
+  let actualJsonCommand = { ...jsonCommand }
+  console.log('jsonCommand :>> ', jsonCommand)
+  console.log('lastCommand :>> ', lastCommand)
+
   if (typeof jsonCommand.c === 'number') {
+    if (lastCommand?.pages && lastCommand.pages[jsonCommand.c]) {
+      actualJsonCommand.page = lastCommand.pages[jsonCommand.c]
+    }
+    console.log('actualJsonCommand :>> ', actualJsonCommand)
+
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
-      jsonCommand,
+      jsonCommand: actualJsonCommand,
       location,
       user,
       db,
+      lastCommand,
     })
   }
-  if (commandsArray[jsonCommand.c])
+
+  if (commandsArray[jsonCommand.c]) {
+    if (lastCommand?.pages) {
+      const commandNum = commandToNum(jsonCommand.c)
+      if (lastCommand.pages[commandNum])
+        actualJsonCommand.page = lastCommand.pages[commandNum]
+    }
+    console.log('actualJsonCommand :>> ', actualJsonCommand)
+
     return await commandsArray[jsonCommand.c]({
       telegramId,
-      jsonCommand,
+      jsonCommand: actualJsonCommand,
       location,
       user,
       db,
+      lastCommand,
     })
+  }
+
   return {
     success: false,
     message: 'Неизвестная команда',
@@ -49,7 +71,8 @@ const executeCommand = async ({
     jsonCommand,
     location,
     user,
-    db
+    db,
+    lastCommand
   )
   const keyboard = keyboardFormer(result.buttons)
 
