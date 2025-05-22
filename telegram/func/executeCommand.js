@@ -116,7 +116,7 @@ const executeCommand = async ({
         userTelegramId,
         jsonCommand: { c: nextCommand },
         messageId,
-        undefined, // callback_query,
+        // undefined, // callback_query,
         location,
         user,
         db,

@@ -157,6 +157,7 @@ const commandHandler = async ({
       await executeCommand({
         userTelegramId,
         jsonCommand,
+        messageId,
         location,
         user,
         db,
@@ -181,6 +182,7 @@ const commandHandler = async ({
       await executeCommand({
         userTelegramId,
         jsonCommand: commandSumWithMessage,
+        messageId,
         location,
         user,
         db,
