@@ -168,7 +168,7 @@ const game = async ({ telegramId, user, jsonCommand, location, db }) => {
       addButtonEditGame
         ? {
             c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
-            text: '\u{2699} Редактировать игру',
+            text: '\u{26A1} \u{270F} Редактировать игру',
           }
         : {},
       ,
