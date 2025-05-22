@@ -1,4 +1,7 @@
-import commandsArray, { numToCommand } from 'telegram/commands/commandsArray'
+import commandsArray, {
+  commandToNum,
+  numToCommand,
+} from 'telegram/commands/commandsArray'
 import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
@@ -12,14 +15,15 @@ const lastCommandHandler = async (
   lastCommand
 ) => {
   let actualJsonCommand = { ...jsonCommand }
-  console.log('jsonCommand :>> ', jsonCommand)
-  console.log('lastCommand.pages :>> ', lastCommand?.pages)
 
   if (typeof jsonCommand.c === 'number') {
-    if (lastCommand?.pages && lastCommand.pages[jsonCommand.c]) {
+    if (
+      !jsonCommand.page &&
+      lastCommand?.pages &&
+      lastCommand.pages[jsonCommand.c]
+    ) {
       actualJsonCommand.page = lastCommand.pages[jsonCommand.c]
     }
-    console.log('actualJsonCommand :>> ', actualJsonCommand)
 
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
@@ -32,12 +36,11 @@ const lastCommandHandler = async (
   }
 
   if (commandsArray[jsonCommand.c]) {
-    if (lastCommand?.pages) {
+    if (!jsonCommand.page && lastCommand?.pages) {
       const commandNum = commandToNum(jsonCommand.c)
       if (lastCommand.pages[commandNum])
         actualJsonCommand.page = lastCommand.pages[commandNum]
     }
-    console.log('actualJsonCommand :>> ', actualJsonCommand)
 
     return await commandsArray[jsonCommand.c]({
       telegramId,
