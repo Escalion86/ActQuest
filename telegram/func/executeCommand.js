@@ -69,7 +69,6 @@ const executeCommand = async ({
   db,
   lastCommand,
 }) => {
-  console.log('messageId :>> ', messageId)
   const result = await lastCommandHandler(
     userTelegramId,
     jsonCommand,
@@ -117,6 +116,7 @@ const executeCommand = async ({
         userTelegramId,
         jsonCommand: { c: nextCommand },
         messageId,
+        callback_query,
         // undefined, // callback_query,
         location,
         user,
@@ -138,6 +138,7 @@ const executeCommand = async ({
       userTelegramId,
       jsonCommand: actualCommand,
       messageId,
+      callback_query,
       location,
       user,
       db,
