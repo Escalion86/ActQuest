@@ -13,7 +13,7 @@ const lastCommandHandler = async (
 ) => {
   let actualJsonCommand = { ...jsonCommand }
   console.log('jsonCommand :>> ', jsonCommand)
-  console.log('lastCommand :>> ', lastCommand)
+  console.log('lastCommand.pages :>> ', lastCommand?.pages)
 
   if (typeof jsonCommand.c === 'number') {
     if (lastCommand?.pages && lastCommand.pages[jsonCommand.c]) {
