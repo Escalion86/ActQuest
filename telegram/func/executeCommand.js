@@ -16,7 +16,7 @@ const lastCommandHandler = async (
 ) => {
   let actualJsonCommand = { ...jsonCommand }
   console.log('jsonCommand :>> ', jsonCommand)
-  console.log('lastCommand :>> ', lastCommand)
+  console.log('lastCommand.pages :>> ', lastCommand?.pages)
 
   if (typeof jsonCommand.c === 'number') {
     console.log('1 :>> ', 1)
@@ -27,6 +27,7 @@ const lastCommandHandler = async (
     ) {
       actualJsonCommand.page = lastCommand.pages[jsonCommand.c]
     }
+    console.log('actualJsonCommand :>> ', actualJsonCommand)
 
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
