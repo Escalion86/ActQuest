@@ -1,4 +1,7 @@
-import commandsArray, { numToCommand } from 'telegram/commands/commandsArray'
+import commandsArray, {
+  commandToNum,
+  numToCommand,
+} from 'telegram/commands/commandsArray'
 import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 // import sendMessage from 'telegram/sendMessage'
 import dbConnect from '@utils/dbConnect'
@@ -11,23 +14,37 @@ const lastCommandHandler = async (
   user,
   db
 ) => {
+  let actualJsonCommand = { ...jsonCommand }
+
   if (typeof jsonCommand.c === 'number') {
+    if (lastCommand?.pages && lastCommand.pages[jsonCommand.c]) {
+      actualJsonCommand.page = lastCommand.pages[jsonCommand.c]
+    }
+
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
-      jsonCommand,
+      jsonCommand: actualJsonCommand,
       location,
       user,
       db,
+      lastCommand,
     })
   }
   if (commandsArray[jsonCommand.c])
-    return await commandsArray[jsonCommand.c]({
-      telegramId,
-      jsonCommand,
-      location,
-      user,
-      db,
-    })
+    if (lastCommand?.pages) {
+      const commandNum = commandToNum(jsonCommand.c)
+      if (lastCommand.pages[commandNum])
+        actualJsonCommand.page = lastCommand.pages[commandNum]
+    }
+
+  return await commandsArray[jsonCommand.c]({
+    telegramId,
+    jsonCommand: actualJsonCommand,
+    location,
+    user,
+    db,
+    lastCommand,
+  })
   return {
     success: false,
     message: 'Неизвестная команда',
@@ -53,7 +70,8 @@ const executeCommand = async ({
     jsonCommand,
     location,
     user,
-    actualDb
+    actualDb,
+    lastCommand
   )
   const keyboard = keyboardFormer(result.buttons)
 
