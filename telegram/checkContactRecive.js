@@ -32,15 +32,13 @@ const checkContactRecive = async (message, location, db) => {
       location,
     })
 
-    await executeCommand(
-      user_id,
-      { c: 'mainMenu' },
-      undefined,
-      undefined,
+    await executeCommand({
+      userTelegramId: user_id,
+      jsonCommand: { c: 'mainMenu' },
       location,
       user,
-      db
-    )
+      db,
+    })
 
     return false
   }

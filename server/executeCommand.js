@@ -35,15 +35,16 @@ const lastCommandHandler = async (
   }
 }
 
-const executeCommand = async (
+const executeCommand = async ({
   userTelegramId,
   jsonCommand,
   // messageId,
   // callback_query,
   location,
   user,
-  db
-) => {
+  db,
+  lastCommand,
+}) => {
   let actualDb = db
   if (!db) actualDb = await dbConnect(location)
 
@@ -95,13 +96,16 @@ const executeCommand = async (
   console.log('nextCommand :>> ', nextCommand)
   if (nextCommand) {
     if (typeof nextCommand === 'string') {
-      return await executeCommand(
+      return await executeCommand({
         userTelegramId,
-        { c: nextCommand },
+        jsonCommand: { c: nextCommand },
+        // messageId,
+        // callback_query,
         location,
         user,
-        actualDb
-      )
+        db: actualDb,
+        lastCommand,
+      })
     }
     // Если команда содержит в себе command, то значт это готовая команда,
     // если же нет, то значт это дополнение к предыдущей команде
@@ -112,13 +116,14 @@ const executeCommand = async (
     delete actualCommand.isPhoto
     delete actualCommand.isVideo
     delete actualCommand.isDocument
-    return await executeCommand(
+    return await executeCommand({
       userTelegramId,
-      actualCommand,
+      jsonCommand: actualCommand,
       location,
       user,
-      actualDb
-    )
+      db: actualDb,
+      lastCommand,
+    })
   } else {
     const actualCommand = { ...jsonCommand }
     // console.log('actualCommand :>> ', actualCommand)
