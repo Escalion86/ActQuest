@@ -121,7 +121,7 @@ const commandHandler = async ({
         // Если отправлено сообщение
         if (!jsonCommand) {
           jsonCommand = {
-            ...Object.fromEntries(lastCommand.command),
+            ...lastCommand.command,
             message: isPhoto
               ? photo[photo.length - 1]?.file_id
               : isVideo
@@ -138,12 +138,12 @@ const commandHandler = async ({
             // console.log('lastCommand?.prevCommand :>> ', lastCommand?.prevCommand)
             delete jsonCommand.prevC
             jsonCommand = {
-              ...Object.fromEntries(lastCommand.prevCommand),
+              ...lastCommand.prevCommand,
               ...jsonCommand,
             }
           } else {
             jsonCommand = {
-              ...Object.fromEntries(lastCommand.command),
+              ...lastCommand.command,
               ...jsonCommand,
             }
           }
@@ -174,7 +174,7 @@ const commandHandler = async ({
       }
 
       const commandSumWithMessage = {
-        ...Object.fromEntries(lastCommand.command),
+        ...lastCommand.command,
         message,
       }
 
