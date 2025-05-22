@@ -12,7 +12,8 @@ const lastCommandHandler = async (
   jsonCommand,
   location,
   user,
-  db
+  db,
+  lastCommand
 ) => {
   let actualJsonCommand = { ...jsonCommand }
 
