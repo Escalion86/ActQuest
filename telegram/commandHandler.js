@@ -173,14 +173,14 @@ const commandHandler = async ({
         })
       }
 
-      const lastCommand = {
-        ...Object.fromEntries(last.command),
+      const commandSumWithMessage = {
+        ...Object.fromEntries(lastCommand.command),
         message,
       }
 
       await executeCommand({
         userTelegramId,
-        jsonCommand: lastCommand,
+        jsonCommand: commandSumWithMessage,
         location,
         user,
         db,
