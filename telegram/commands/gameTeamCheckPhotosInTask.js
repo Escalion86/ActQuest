@@ -97,7 +97,7 @@ const gameTeamCheckPhotosInTask = async ({
           ({ _id, name, task, bonus }, number) => {
             const accepted = checks ? checks[String(_id)] : undefined
             return {
-              text: `"${name}" - ${
+              text: `${number}. "${name}" - ${
                 typeof accepted === 'boolean' ? (accepted ? '✅' : '❌') : '?'
               }`,
               c: {

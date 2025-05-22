@@ -157,7 +157,7 @@ const usersStatistics = async ({ telegramId, jsonCommand, location, db }) => {
     const gameId = String(game._id)
     const isChecked = jsonCommand[gameId]
     return {
-      text: `${isChecked ? `\u{2705}` : ''}${formatGameName(game)}`,
+      text: `${number}. ${isChecked ? `\u{2705}` : ''}${formatGameName(game)}`,
       c: {
         [gameId]: !isChecked,
       },

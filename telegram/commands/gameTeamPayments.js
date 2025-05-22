@@ -65,7 +65,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand, location, db }) => {
       paymentsOfUser,
       page2,
       ({ sum, _id }, number) => ({
-        text: `\u{1F5D1} ${sum || 0} руб.`,
+        text: `${number}. \u{1F5D1} ${sum || 0} руб.`,
         c: { delPaymentId: _id },
       })
     )
@@ -123,7 +123,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand, location, db }) => {
     page,
     ({ name, role, payments, paymentsSum, telegramId }, number) => {
       return {
-        text: `${name}${
+        text: `${number}. ${name}${
           role === 'captain' ? ' (капитан)' : ''
         } - ${paymentsSum} руб.${
           payments.length > 1 ? ` (${payments.length})` : ''

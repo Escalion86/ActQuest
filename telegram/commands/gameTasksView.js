@@ -17,7 +17,7 @@ const gameTasksView = async ({ telegramId, jsonCommand, location, db }) => {
     return [
       {
         c: { c: 'gameTaskView', gameId: jsonCommand.gameId, i: number - 1 },
-        text: `\u{1F3AF} ${number}. "${task.title}"`,
+        text: `${number}. "${task.title}"`,
       },
     ]
   })

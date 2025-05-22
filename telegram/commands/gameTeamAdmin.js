@@ -47,7 +47,7 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user, db }) => {
 
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(users, page, (user, number) => ({
-    text: `\u{1F4AC} ${user.name}${
+    text: `${number}. ${user.name}${
       capitanTelegramId === user.telegramId ? ' (капитан)' : ''
     }`,
     url: `t.me/+${user.phone}`,

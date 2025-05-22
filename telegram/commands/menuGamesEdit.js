@@ -20,9 +20,9 @@ const menuGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
     notArchiveGames,
     page,
     (game, number) => ({
-      text: `\u{270F} ${formatGameName(game)}${game.hidden ? ` (СКРЫТА)` : ''}${
-        game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''
-      }`,
+      text: `${number}. ${formatGameName(game)}${
+        game.hidden ? ` (СКРЫТА)` : ''
+      }${game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''}`,
       c: { c: 'editGameGeneral', gameId: game._id },
       //`editGame/gameId=${game._id}`,
     })

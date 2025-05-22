@@ -56,7 +56,7 @@ const gamePhotos = async ({ telegramId, jsonCommand, location, db }) => {
     teamsWithSumPhotos,
     page,
     ({ name, sumPhotos, gameTeamId }, number) => ({
-      text: `"${name}" - ${sumPhotos} фото`,
+      text: `${number}. "${name}" - ${sumPhotos} фото`,
       c: { c: 'gameTeamPhotos', gameTeamId },
     })
   )

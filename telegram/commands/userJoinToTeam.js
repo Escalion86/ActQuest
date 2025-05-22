@@ -63,7 +63,7 @@ const userJoinToTeam = async ({ telegramId, jsonCommand, location, db }) => {
       0
     )
     return {
-      text: `"${team.name}" (${participansCount} чел)`,
+      text: `${number}. "${team.name}" (${participansCount} чел)`,
       c: {
         // c: 'editTeamAdmin',
         teamId: team._id,
