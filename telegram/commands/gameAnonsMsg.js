@@ -46,7 +46,7 @@ const gameAnonsMsg = async ({ telegramId, jsonCommand, location, db }) => {
       ? [
           {
             url: `t.me/+${creator?.phone}`,
-            text: '\u{1F4AC} Написать орагнизатору',
+            text: '\u{1F4AC} Написать организатору',
             hide: !creator,
           },
         ]
