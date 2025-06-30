@@ -113,7 +113,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
           }`
         : `\n\n${!codes.length ? '\u{2757}' : ''}<b>Коды (${
             codes.length ?? 0
-          } шт)</b>:\n${codes.length > 0 ? codes.join(', ') : '[не задыны]'}${
+          } шт)</b>:\n${codes.length > 0 ? codes.join(', ') : '[не заданы]'}${
             bonusCodes.length > 0
               ? `\n\n<b>Бонусные коды (${bonusCodes.length} шт)</b>:\n${
                   bonusCodes.length > 0
@@ -125,7 +125,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
                             )} - ${description}`
                         )
                         .join(',\n')
-                    : '[не задыны]'
+                    : '[не заданы]'
                 }`
               : ''
           }${
@@ -140,7 +140,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
                             )} - ${description}`
                         )
                         .join(',\n')
-                    : '[не задыны]'
+                    : '[не заданы]'
                 }`
               : ''
           }\n\n<b>Количество кодов для выполнения</b>: ${

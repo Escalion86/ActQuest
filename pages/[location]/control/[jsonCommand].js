@@ -267,18 +267,20 @@ export const getServerSideProps = async (context) => {
       userTelegramId: 261102161,
     })
     .lean()
+
   if (lastCmd) cmd = { ...lastCmd.command, ...cmd }
   console.log('cmd :>> ', cmd)
   // console.log('jsonCommand :>> ', jsonCommand)
-  const result = await executeCommand(
-    user.telegramId,
-    cmd,
+  const result = await executeCommand({
+    userTelegramId: user.telegramId,
+    jsonCommand: cmd,
     // messageId,
     // callback_query,
     location,
     user,
-    db
-  )
+    db,
+    lastCommand: last,
+  })
   // const result = await fetch(
   //   `http://localhost:3000/api/${location}/gamesteams/process/${gameTeam._id}`
   // )

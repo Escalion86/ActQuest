@@ -85,9 +85,11 @@ const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
     // TODO поправить вывод зарегистрированных команд пользователя на игру
     const isTeamRegistred = gamesWithUserIds.includes(String(game._id))
     return {
-      text: `${formatGameName(game)}${isTeamRegistred ? ` (записан)` : ''}${
-        game.hidden ? ` (СКРЫТА)` : ''
-      }${game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''}`,
+      text: `${number}. ${formatGameName(game)}${
+        isTeamRegistred ? ` (записан)` : ''
+      }${game.hidden ? ` (СКРЫТА)` : ''}${
+        game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''
+      }`,
       c: { c: 'game', gameId: game._id },
     }
   })

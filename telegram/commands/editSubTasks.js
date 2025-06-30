@@ -25,7 +25,7 @@ const editSubTasks = async ({ telegramId, jsonCommand, location, db }) => {
     subTasks,
     page,
     ({ name, task, bonus }, number) => ({
-      text: `\u{270F} "${name}" - ${getNounPoints(bonus)}`,
+      text: `${number}. "${name}" - ${getNounPoints(bonus)}`,
       c: {
         c: 'editSubTask',
         gameId: jsonCommand.gameId,

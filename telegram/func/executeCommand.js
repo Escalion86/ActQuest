@@ -1,4 +1,7 @@
-import commandsArray, { numToCommand } from 'telegram/commands/commandsArray'
+import commandsArray, {
+  commandToNum,
+  numToCommand,
+} from 'telegram/commands/commandsArray'
 import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 import sendMessage from 'telegram/sendMessage'
 import keyboardFormer from './keyboardFormer'
@@ -8,25 +11,47 @@ const lastCommandHandler = async (
   jsonCommand,
   location,
   user,
-  db
+  db,
+  lastCommand
 ) => {
+  let actualJsonCommand = { ...jsonCommand }
+
   if (typeof jsonCommand.c === 'number') {
+    if (
+      !jsonCommand.page &&
+      lastCommand?.pages &&
+      lastCommand.pages[jsonCommand.c]
+    ) {
+      actualJsonCommand.page = lastCommand.pages[jsonCommand.c]
+    }
+
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
-      jsonCommand,
+      jsonCommand: actualJsonCommand,
       location,
       user,
       db,
+      lastCommand,
     })
   }
-  if (commandsArray[jsonCommand.c])
+
+  if (commandsArray[jsonCommand.c]) {
+    if (!jsonCommand.page && lastCommand?.pages) {
+      const commandNum = commandToNum(jsonCommand.c)
+      if (lastCommand.pages[commandNum])
+        actualJsonCommand.page = lastCommand.pages[commandNum]
+    }
+
     return await commandsArray[jsonCommand.c]({
       telegramId,
-      jsonCommand,
+      jsonCommand: actualJsonCommand,
       location,
       user,
       db,
+      lastCommand,
     })
+  }
+
   return {
     success: false,
     message: 'Неизвестная команда',
@@ -34,21 +59,23 @@ const lastCommandHandler = async (
   }
 }
 
-const executeCommand = async (
+const executeCommand = async ({
   userTelegramId,
   jsonCommand,
   messageId,
   callback_query,
   location,
   user,
-  db
-) => {
+  db,
+  lastCommand,
+}) => {
   const result = await lastCommandHandler(
     userTelegramId,
     jsonCommand,
     location,
     user,
-    db
+    db,
+    lastCommand
   )
   const keyboard = keyboardFormer(result.buttons)
 
@@ -85,15 +112,17 @@ const executeCommand = async (
   const nextCommand = result.nextCommand
   if (nextCommand) {
     if (typeof nextCommand === 'string') {
-      return await executeCommand(
+      return await executeCommand({
         userTelegramId,
-        { c: nextCommand },
+        jsonCommand: { c: nextCommand },
         messageId,
-        undefined, // callback_query,
+        callback_query,
+        // undefined, // callback_query,
         location,
         user,
-        db
-      )
+        db,
+        lastCommand,
+      })
     }
     // Если команда содержит в себе command, то значт это готовая команда,
     // если же нет, то значт это дополнение к предыдущей команде
@@ -105,36 +134,35 @@ const executeCommand = async (
     delete actualCommand.isVideo
     delete actualCommand.isDocument
 
-    return await executeCommand(
+    return await executeCommand({
       userTelegramId,
-      actualCommand,
+      jsonCommand: actualCommand,
       messageId,
-      undefined, // callback_query
+      callback_query,
       location,
       user,
-      db
-    )
+      db,
+      lastCommand,
+    })
   } else {
     const actualCommand = { ...jsonCommand }
     delete actualCommand.message
     delete actualCommand.isPhoto
     delete actualCommand.isVideo
     delete actualCommand.isDocument
-    const prevCommand = await db.model('LastCommands').findOne({
-      userTelegramId,
-    })
+
     return await db.model('LastCommands').findOneAndUpdate(
       {
         userTelegramId,
       },
       {
         command: actualCommand,
-        prevCommand: prevCommand?.command,
+        prevCommand: lastCommand?.command,
         messageId,
         pages:
           actualCommand?.c && actualCommand?.page
-            ? { ...prevCommand?.pages, [actualCommand.c]: actualCommand.page }
-            : prevCommand?.pages,
+            ? { ...lastCommand?.pages, [actualCommand.c]: actualCommand.page }
+            : lastCommand?.pages,
       },
       { upsert: true }
     )

@@ -41,16 +41,15 @@ const commandHandler = async ({
     }
 
     if (message === '/main_menu' || message === '/start') {
-      console.log('message :>> ', message)
-      return await executeCommand(
+      return await executeCommand({
         userTelegramId,
-        { c: 'mainMenu' },
+        jsonCommand: { c: 'mainMenu' },
         messageId,
         callback_query,
         location,
         user,
-        db
-      )
+        db,
+      })
     }
 
     // if (message === '/test') {
@@ -85,6 +84,13 @@ const commandHandler = async ({
     }
 
     var jsonCommand
+    var lastCommand = await db
+      .model('LastCommands')
+      .findOne({
+        userTelegramId,
+      })
+      .lean()
+
     if (message && message[0] === '/') {
       jsonCommand = { c: message.substr(1) }
     } else {
@@ -92,11 +98,8 @@ const commandHandler = async ({
       // Проверяем есть ли команда, или это дополнение к предыдущей команде
       if (!jsonCommand || !jsonCommand?.c || jsonCommand?.prevC) {
         // console.log('Полученная команда не полная или это не команда')
-        const last = await db.model('LastCommands').findOne({
-          userTelegramId,
-        })
 
-        if (!last) {
+        if (!lastCommand) {
           return await sendMessage({
             chat_id: userTelegramId,
             // text: JSON.stringify({ body, headers: req.headers.origin }),
@@ -118,7 +121,7 @@ const commandHandler = async ({
         // Если отправлено сообщение
         if (!jsonCommand) {
           jsonCommand = {
-            ...Object.fromEntries(last.command),
+            ...lastCommand.command,
             message: isPhoto
               ? photo[photo.length - 1]?.file_id
               : isVideo
@@ -131,16 +134,16 @@ const commandHandler = async ({
             isDocument,
           }
         } else {
-          if (jsonCommand?.prevC && last?.prevCommand) {
-            // console.log('last?.prevCommand :>> ', last?.prevCommand)
+          if (jsonCommand?.prevC && lastCommand?.prevCommand) {
+            // console.log('lastCommand?.prevCommand :>> ', lastCommand?.prevCommand)
             delete jsonCommand.prevC
             jsonCommand = {
-              ...Object.fromEntries(last.prevCommand),
+              ...lastCommand.prevCommand,
               ...jsonCommand,
             }
           } else {
             jsonCommand = {
-              ...Object.fromEntries(last.command),
+              ...lastCommand.command,
               ...jsonCommand,
             }
           }
@@ -151,22 +154,19 @@ const commandHandler = async ({
 
     // Если это был JSON
     if (jsonCommand) {
-      await executeCommand(
+      await executeCommand({
         userTelegramId,
         jsonCommand,
         messageId,
         callback_query,
         location,
         user,
-        db
-      )
+        db,
+        lastCommand,
+      })
     } else {
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
-      const last = await db.model('LastCommands').findOne({
-        userTelegramId,
-      })
-
-      if (!last) {
+      if (!lastCommand) {
         return await sendMessage({
           chat_id: userTelegramId,
           // text: JSON.stringify({ body, headers: req.headers.origin }),
@@ -175,20 +175,21 @@ const commandHandler = async ({
         })
       }
 
-      const lastCommand = {
-        ...Object.fromEntries(last.command),
+      const commandSumWithMessage = {
+        ...lastCommand.command,
         message,
       }
 
-      await executeCommand(
+      await executeCommand({
         userTelegramId,
-        lastCommand,
+        jsonCommand: commandSumWithMessage,
         messageId,
         callback_query,
         location,
         user,
-        db
-      )
+        db,
+        lastCommand,
+      })
     }
   } catch (e) {
     console.log('e :>> ', e)

@@ -86,7 +86,7 @@ const gameTaskView = async ({ telegramId, jsonCommand, location, db }) => {
                 }`
           }`
         : `\n\n<b>Коды (${codes.length ?? 0} шт)</b>:\n${
-            codes.length > 0 ? codes.join(', ') : '[не задыны]'
+            codes.length > 0 ? codes.join(', ') : '[не заданы]'
           }${
             bonusCodes.length > 0
               ? `\n\n<b>Бонусные коды (${bonusCodes.length} шт)</b>:\n${
@@ -99,7 +99,7 @@ const gameTaskView = async ({ telegramId, jsonCommand, location, db }) => {
                             )} - ${description}`
                         )
                         .join(',\n')
-                    : '[не задыны]'
+                    : '[не заданы]'
                 }`
               : ''
           }${
@@ -114,7 +114,7 @@ const gameTaskView = async ({ telegramId, jsonCommand, location, db }) => {
                             )} - ${description}`
                         )
                         .join(',\n')
-                    : '[не задыны]'
+                    : '[не заданы]'
                 }`
               : ''
           }\n\n<b>Количество кодов для выполнения</b>: ${

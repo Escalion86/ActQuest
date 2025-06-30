@@ -14,7 +14,7 @@ const lastCommandsSchema = {
     type: Number,
   },
   pages: {
-    type: Map,
+    type: {},
     default: {},
   },
 }

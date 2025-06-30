@@ -14,6 +14,7 @@ const game = async ({ telegramId, user, jsonCommand, location, db }) => {
   if (game.success === false) return game
 
   const isAdmin = isUserAdmin(user)
+  const addButtonEditGame = isAdmin || game.creatorTelegramId === telegramId
 
   const teamsOfUserInAGame = await getTeamOfUserRegistredInAGame(
     telegramId,
@@ -109,7 +110,7 @@ const game = async ({ telegramId, user, jsonCommand, location, db }) => {
         ? [
             {
               url: `t.me/+${creator?.phone}`,
-              text: '\u{1F4AC} Написать орагнизатору',
+              text: '\u{1F4AC} Написать организатору',
               hide: !creator,
             },
           ]
@@ -164,6 +165,13 @@ const game = async ({ telegramId, user, jsonCommand, location, db }) => {
           game.status !== 'finished' ||
           !(isAdmin || teamsOfUserInAGame.length > 0),
       },
+      addButtonEditGame
+        ? {
+            c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
+            text: '\u{26A1} \u{270F} Редактировать игру',
+          }
+        : {},
+      ,
       {
         c: isArchiveGame(game) ? 'archiveGames' : 'menuGames',
         text: '\u{2B05} Назад',

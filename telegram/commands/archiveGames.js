@@ -65,9 +65,11 @@ const archiveGames = async ({ telegramId, jsonCommand, user, db }) => {
     //   : null
     // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
     return {
-      text: `${formatGameName(game)}${isTeamRegistred ? ` (записан)` : ''}${
-        game.hidden ? ` (СКРЫТА)` : ''
-      }${game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''}`,
+      text: `${number}. ${formatGameName(game)}${
+        isTeamRegistred ? ` (записан)` : ''
+      }${game.hidden ? ` (СКРЫТА)` : ''}${
+        game.status === 'canceled' ? ` (ОТМЕНЕНА)` : ''
+      }`,
       c: { c: 'game', gameId: game._id },
     }
   })

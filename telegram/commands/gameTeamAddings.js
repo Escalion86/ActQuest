@@ -26,7 +26,9 @@ const gameTeamAddings = async ({ telegramId, jsonCommand, location, db }) => {
         page,
         ({ id, name, time }, number) => {
           return {
-            text: `\u{1F5D1} ${time < 0 ? `\u{1F7E2}` : `\u{1F534}`} ${name}`,
+            text: `${number}. \u{1F5D1} ${
+              time < 0 ? `\u{1F7E2}` : `\u{1F534}`
+            } ${name}`,
             c: {
               c: `delGameTeamAdding${time < 0 ? 'Bonus' : 'Penalty'}`,
               gameTeamId: jsonCommand.gameTeamId,
