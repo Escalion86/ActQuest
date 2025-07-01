@@ -176,7 +176,15 @@ const sendMessage = async ({
       }
     }
     if (callback_query?.message?.message_id) {
-      console.log('1 :>> ', 1)
+      const reply_markup =
+        keyboard || remove_keyboard
+          ? JSON.stringify({
+              ...(keyboard ?? {}),
+              resize_keyboard: true,
+              ...(remove_keyboard ? { remove_keyboard: true } : {}),
+            })
+          : undefined
+      console.log('reply_markup :>> ', reply_markup)
       return await postData(
         `https://api.telegram.org/bot${telegramToken}/editMessageText`,
         {
@@ -184,14 +192,7 @@ const sendMessage = async ({
           chat_id,
           text,
           parse_mode,
-          reply_markup:
-            keyboard || remove_keyboard
-              ? JSON.stringify({
-                  ...(keyboard ?? {}),
-                  resize_keyboard: true,
-                  ...(remove_keyboard ? { remove_keyboard: true } : {}),
-                })
-              : undefined,
+          reply_markup,
           link_preview_options: {
             is_disabled: true,
           },
@@ -203,21 +204,24 @@ const sendMessage = async ({
         sendErrorToDev(chat_id, 'editMessageText', telegramToken)
       )
     }
-    console.log('2 :>> ', 2)
+
+    const reply_markup =
+      keyboard || remove_keyboard
+        ? JSON.stringify({
+            ...(keyboard ?? {}),
+            resize_keyboard: true,
+            ...(remove_keyboard ? { remove_keyboard: true } : {}),
+          })
+        : undefined
+    console.log('reply_markup :>> ', reply_markup)
+
     return await postData(
       `https://api.telegram.org/bot${telegramToken}/sendMessage`,
       {
         chat_id,
         text,
         parse_mode,
-        reply_markup:
-          keyboard || remove_keyboard
-            ? JSON.stringify({
-                ...(keyboard ?? {}),
-                // resize_keyboard: true,
-                ...(remove_keyboard ? { remove_keyboard: true } : {}),
-              })
-            : undefined,
+        reply_markup,
         link_preview_options: {
           is_disabled: true,
         },
