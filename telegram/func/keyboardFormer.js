@@ -31,7 +31,9 @@ const keyboardFormer = (buttons) => {
         .filter((button) => !button.hide && button.text)
         .map((button) => {
           if (Array.isArray(button)) {
-            const buttonsArray = button.filter((button) => !button.hide)
+            const buttonsArray = button.filter(
+              (button) => !button.hide && button.text
+            )
             return buttonsArray.map(buttonConstructor)
           }
           return [buttonConstructor(button)]
