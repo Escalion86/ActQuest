@@ -141,6 +141,7 @@ const sendMessage = async ({
     if (text.length > 4096) {
       const preparedText = splitText(text)
       for (let i = 0; i < preparedText.length; i++) {
+        console.log('preparedText :>> ', preparedText)
         await postData(
           `https://api.telegram.org/bot${telegramToken}/sendMessage`,
           {
