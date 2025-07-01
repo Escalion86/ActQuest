@@ -137,6 +137,8 @@ const executeCommand = async ({
     delete actualCommand.isVideo
     delete actualCommand.isDocument
 
+    console.log('actualCommand :>> ', actualCommand)
+
     return await executeCommand({
       userTelegramId,
       jsonCommand: actualCommand,
