@@ -138,6 +138,7 @@ const sendMessage = async ({
   }
 
   if (text) {
+    console.log('text.length :>> ', text.length)
     if (text.length > 4096) {
       const preparedText = splitText(text)
       for (let i = 0; i < preparedText.length; i++) {
@@ -175,6 +176,7 @@ const sendMessage = async ({
       }
     }
     if (callback_query?.message?.message_id) {
+      console.log('1 :>> ', 1)
       return await postData(
         `https://api.telegram.org/bot${telegramToken}/editMessageText`,
         {
@@ -201,7 +203,8 @@ const sendMessage = async ({
         sendErrorToDev(chat_id, 'editMessageText', telegramToken)
       )
     }
-
+    console.log('2 :>> ', 2)
+    console.log('text :>> ', text)
     return await postData(
       `https://api.telegram.org/bot${telegramToken}/sendMessage`,
       {
