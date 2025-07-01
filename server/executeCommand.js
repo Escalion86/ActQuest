@@ -16,8 +16,6 @@ const lastCommandHandler = async (
   lastCommand
 ) => {
   let actualJsonCommand = { ...jsonCommand }
-  console.log('jsonCommand :>> ', jsonCommand)
-  console.log('lastCommand :>> ', lastCommand)
 
   if (typeof jsonCommand.c === 'number') {
     if (
@@ -27,7 +25,6 @@ const lastCommandHandler = async (
     ) {
       actualJsonCommand.page = lastCommand.pages[jsonCommand.c]
     }
-    console.log('actualJsonCommand :>> ', actualJsonCommand)
 
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
@@ -41,11 +38,10 @@ const lastCommandHandler = async (
 
   if (commandsArray[jsonCommand.c]) {
     if (!jsonCommand.page && lastCommand?.pages) {
-      const commandNum = commandToNum(jsonCommand.c)
+      const commandNum = commandToNum[jsonCommand.c]
       if (lastCommand.pages[commandNum])
         actualJsonCommand.page = lastCommand.pages[commandNum]
     }
-    console.log('actualJsonCommand :>> ', actualJsonCommand)
 
     return await commandsArray[jsonCommand.c]({
       telegramId,
@@ -123,7 +119,6 @@ const executeCommand = async ({
   }
 
   const nextCommand = result.nextCommand
-  console.log('nextCommand :>> ', nextCommand)
   if (nextCommand) {
     if (typeof nextCommand === 'string') {
       return await executeCommand({
