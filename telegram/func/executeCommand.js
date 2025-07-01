@@ -25,6 +25,11 @@ const lastCommandHandler = async (
       actualJsonCommand.page = lastCommand.pages[jsonCommand.c]
     }
 
+    console.log(
+      'commandsArray[numToCommand[jsonCommand.c]] :>> ',
+      commandsArray[numToCommand[jsonCommand.c]]
+    )
+
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
       jsonCommand: actualJsonCommand,
