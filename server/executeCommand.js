@@ -16,8 +16,6 @@ const lastCommandHandler = async (
   lastCommand
 ) => {
   let actualJsonCommand = { ...jsonCommand }
-  console.log('jsonCommand :>> ', jsonCommand)
-  console.log('lastCommand :>> ', lastCommand)
 
   if (typeof jsonCommand.c === 'number') {
     if (
@@ -27,7 +25,6 @@ const lastCommandHandler = async (
     ) {
       actualJsonCommand.page = lastCommand.pages[jsonCommand.c]
     }
-    console.log('actualJsonCommand :>> ', actualJsonCommand)
 
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
@@ -45,7 +42,6 @@ const lastCommandHandler = async (
       if (lastCommand.pages[commandNum])
         actualJsonCommand.page = lastCommand.pages[commandNum]
     }
-    console.log('actualJsonCommand :>> ', actualJsonCommand)
 
     return await commandsArray[jsonCommand.c]({
       telegramId,
@@ -77,8 +73,6 @@ const executeCommand = async ({
   let actualDb = db
   if (!db) actualDb = await dbConnect(location)
 
-  console.log('lastCommand :>> ', lastCommand)
-
   const result = await lastCommandHandler(
     userTelegramId,
     jsonCommand,
@@ -87,7 +81,6 @@ const executeCommand = async ({
     actualDb,
     lastCommand
   )
-  console.log('result :>> ', result)
   const keyboard = keyboardFormer(result.buttons)
 
   // if (result.images) {
@@ -126,7 +119,6 @@ const executeCommand = async ({
   }
 
   const nextCommand = result.nextCommand
-  console.log('nextCommand :>> ', nextCommand)
   if (nextCommand) {
     if (typeof nextCommand === 'string') {
       return await executeCommand({

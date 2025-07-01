@@ -17,7 +17,6 @@ const lastCommandHandler = async (
   let actualJsonCommand = { ...jsonCommand }
 
   if (typeof jsonCommand.c === 'number') {
-    console.log('1 :>> ', 1)
     if (
       !jsonCommand.page &&
       lastCommand?.pages &&
@@ -25,11 +24,6 @@ const lastCommandHandler = async (
     ) {
       actualJsonCommand.page = lastCommand.pages[jsonCommand.c]
     }
-
-    console.log(
-      'commandsArray[numToCommand[jsonCommand.c]] :>> ',
-      commandsArray[numToCommand[jsonCommand.c]]
-    )
 
     return await commandsArray[numToCommand[jsonCommand.c]]({
       telegramId,
@@ -40,14 +34,10 @@ const lastCommandHandler = async (
       lastCommand,
     })
   }
-  console.log('2 :>> ', 2)
-  console.log('commandsArray[jsonCommand.c] :>> ', commandsArray[jsonCommand.c])
 
   if (commandsArray[jsonCommand.c]) {
     if (!jsonCommand.page && lastCommand?.pages) {
-      console.log('jsonCommand.c :>> ', jsonCommand.c)
       const commandNum = commandToNum[jsonCommand.c]
-      console.log('commandNum :>> ', commandNum)
       if (lastCommand.pages[commandNum])
         actualJsonCommand.page = lastCommand.pages[commandNum]
     }
@@ -79,7 +69,6 @@ const executeCommand = async ({
   db,
   lastCommand,
 }) => {
-  console.log('lastCommand :>> ', lastCommand)
   const result = await lastCommandHandler(
     userTelegramId,
     jsonCommand,
@@ -88,7 +77,6 @@ const executeCommand = async ({
     db,
     lastCommand
   )
-  console.log('result :>> ', result)
   const keyboard = keyboardFormer(result.buttons)
 
   if (result.images) {
@@ -124,7 +112,6 @@ const executeCommand = async ({
   const nextCommand = result.nextCommand
   if (nextCommand) {
     if (typeof nextCommand === 'string') {
-      console.log('nextCommand :>> ', nextCommand)
       return await executeCommand({
         userTelegramId,
         jsonCommand: { c: nextCommand },
@@ -146,8 +133,6 @@ const executeCommand = async ({
     delete actualCommand.isPhoto
     delete actualCommand.isVideo
     delete actualCommand.isDocument
-
-    console.log('actualCommand :>> ', actualCommand)
 
     return await executeCommand({
       userTelegramId,
