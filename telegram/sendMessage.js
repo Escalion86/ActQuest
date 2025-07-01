@@ -204,7 +204,6 @@ const sendMessage = async ({
       )
     }
     console.log('2 :>> ', 2)
-    console.log('text :>> ', text)
     return await postData(
       `https://api.telegram.org/bot${telegramToken}/sendMessage`,
       {
