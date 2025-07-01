@@ -69,6 +69,7 @@ const executeCommand = async ({
   db,
   lastCommand,
 }) => {
+  console.log('lastCommand :>> ', lastCommand)
   const result = await lastCommandHandler(
     userTelegramId,
     jsonCommand,
@@ -77,6 +78,7 @@ const executeCommand = async ({
     db,
     lastCommand
   )
+  console.log('result :>> ', result)
   const keyboard = keyboardFormer(result.buttons)
 
   if (result.images) {
@@ -112,6 +114,7 @@ const executeCommand = async ({
   const nextCommand = result.nextCommand
   if (nextCommand) {
     if (typeof nextCommand === 'string') {
+      console.log('nextCommand :>> ', nextCommand)
       return await executeCommand({
         userTelegramId,
         jsonCommand: { c: nextCommand },
