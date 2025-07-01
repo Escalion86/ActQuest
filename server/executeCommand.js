@@ -77,6 +77,8 @@ const executeCommand = async ({
   let actualDb = db
   if (!db) actualDb = await dbConnect(location)
 
+  console.log('lastCommand :>> ', lastCommand)
+
   const result = await lastCommandHandler(
     userTelegramId,
     jsonCommand,
@@ -85,6 +87,7 @@ const executeCommand = async ({
     actualDb,
     lastCommand
   )
+  console.log('result :>> ', result)
   const keyboard = keyboardFormer(result.buttons)
 
   // if (result.images) {
