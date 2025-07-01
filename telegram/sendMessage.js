@@ -138,11 +138,9 @@ const sendMessage = async ({
   }
 
   if (text) {
-    console.log('text.length :>> ', text.length)
     if (text.length > 4096) {
       const preparedText = splitText(text)
       for (let i = 0; i < preparedText.length; i++) {
-        console.log('preparedText :>> ', preparedText)
         await postData(
           `https://api.telegram.org/bot${telegramToken}/sendMessage`,
           {
@@ -184,7 +182,7 @@ const sendMessage = async ({
               ...(remove_keyboard ? { remove_keyboard: true } : {}),
             })
           : undefined
-      console.log('reply_markup :>> ', reply_markup)
+
       return await postData(
         `https://api.telegram.org/bot${telegramToken}/editMessageText`,
         {
@@ -213,11 +211,6 @@ const sendMessage = async ({
             ...(remove_keyboard ? { remove_keyboard: true } : {}),
           })
         : undefined
-
-    for (let j = 0; j < Object.keys(keyboard ?? {}).length; j++) {
-      const e = keyboard[Object.keys(keyboard ?? {})[j]]
-      console.log('e :>> ', e)
-    }
 
     return await postData(
       `https://api.telegram.org/bot${telegramToken}/sendMessage`,
