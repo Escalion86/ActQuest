@@ -28,10 +28,14 @@ const keyboardFormer = (buttons) => {
   if (buttons && typeof buttons === 'object') {
     return inlineKeyboard(
       buttons
-        .filter((button) => !button.hide)
+        .filter(
+          (button) => !button.hide && (button.text || Array.isArray(button))
+        )
         .map((button) => {
           if (Array.isArray(button)) {
-            const buttonsArray = button.filter((button) => !button.hide)
+            const buttonsArray = button.filter(
+              (button) => !button.hide && button.text
+            )
             return buttonsArray.map(buttonConstructor)
           }
           return [buttonConstructor(button)]

@@ -141,7 +141,6 @@ const sendMessage = async ({
     if (text.length > 4096) {
       const preparedText = splitText(text)
       for (let i = 0; i < preparedText.length; i++) {
-        console.log('preparedText :>> ', preparedText)
         await postData(
           `https://api.telegram.org/bot${telegramToken}/sendMessage`,
           {
@@ -175,6 +174,15 @@ const sendMessage = async ({
       }
     }
     if (callback_query?.message?.message_id) {
+      const reply_markup =
+        keyboard || remove_keyboard
+          ? JSON.stringify({
+              ...(keyboard ?? {}),
+              resize_keyboard: true,
+              ...(remove_keyboard ? { remove_keyboard: true } : {}),
+            })
+          : undefined
+
       return await postData(
         `https://api.telegram.org/bot${telegramToken}/editMessageText`,
         {
@@ -182,14 +190,7 @@ const sendMessage = async ({
           chat_id,
           text,
           parse_mode,
-          reply_markup:
-            keyboard || remove_keyboard
-              ? JSON.stringify({
-                  ...(keyboard ?? {}),
-                  resize_keyboard: true,
-                  ...(remove_keyboard ? { remove_keyboard: true } : {}),
-                })
-              : undefined,
+          reply_markup,
           link_preview_options: {
             is_disabled: true,
           },
@@ -202,20 +203,22 @@ const sendMessage = async ({
       )
     }
 
+    const reply_markup =
+      keyboard || remove_keyboard
+        ? JSON.stringify({
+            ...(keyboard ?? {}),
+            resize_keyboard: true,
+            ...(remove_keyboard ? { remove_keyboard: true } : {}),
+          })
+        : undefined
+
     return await postData(
       `https://api.telegram.org/bot${telegramToken}/sendMessage`,
       {
         chat_id,
         text,
         parse_mode,
-        reply_markup:
-          keyboard || remove_keyboard
-            ? JSON.stringify({
-                ...(keyboard ?? {}),
-                // resize_keyboard: true,
-                ...(remove_keyboard ? { remove_keyboard: true } : {}),
-              })
-            : undefined,
+        reply_markup,
         link_preview_options: {
           is_disabled: true,
         },
