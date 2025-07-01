@@ -214,8 +214,8 @@ const sendMessage = async ({
           })
         : undefined
 
-    for (let j = 0; j < keyboard.length; j++) {
-      const e = keyboard[j]
+    for (let j = 0; j < Object.keys(keyboard ?? {}).length; j++) {
+      const e = keyboard[Object.keys(keyboard ?? {})[j]]
       console.log('e :>> ', e)
     }
 
