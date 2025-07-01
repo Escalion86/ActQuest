@@ -213,7 +213,11 @@ const sendMessage = async ({
             ...(remove_keyboard ? { remove_keyboard: true } : {}),
           })
         : undefined
-    console.log('reply_markup :>> ', reply_markup)
+
+    for (let j = 0; j < keyboard.length; j++) {
+      const e = keyboard[j]
+      console.log('e :>> ', e)
+    }
 
     return await postData(
       `https://api.telegram.org/bot${telegramToken}/sendMessage`,
