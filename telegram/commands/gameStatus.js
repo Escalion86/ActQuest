@@ -198,6 +198,9 @@ const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
       breakTimeLeft,
       sumTimeByAllTasks,
     }) => {
+      const timeSumText = `Суммарное время на задания ${secondsToTime(
+        sumTimeByAllTasks
+      )}`
       if (isTeamFinished)
         return `\u{1F3C1} <b>"${
           team.name
@@ -207,9 +210,7 @@ const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
           false,
           false,
           false
-        ).join(' ')}. Суммарное время на задания ${secondsToTime(
-          sumTimeByAllTasks
-        )}`
+        ).join(' ')}. ${timeSumText}`
 
       // Проверяем, может задание выполнено или провалено и команда на перерыве
       if (isTeamOnBreak) {
@@ -232,7 +233,7 @@ const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
                   gameTeam.startTime[activeTaskIndex],
                   gameTeam.endTime[activeTaskIndex]
                 )
-              )}`
+              )}. ${timeSumText}`
         }`
       }
 
@@ -255,9 +256,9 @@ const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
           : ''
       } - ${
         isTaskExperied
-          ? 'время вышло. Ожижаем получение след. задания'
+          ? 'время вышло. Ожидаем получение след. задания'
           : `осталось ${secondsToTime(taskDuration - taskSecondsLeft)}`
-      }.${
+      }. ${timeSumText}.${
         game.type === 'photo'
           ? `\nОтправленных фотографий - ${
               gameTeam.photos[startedTasks - 1]?.length || 0
