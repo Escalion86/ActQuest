@@ -94,16 +94,15 @@ const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
         ? endTime[activeTaskIndex] || startTime[activeTaskIndex] + taskDuration
         : null
 
-      const sumTimeByAllTasks = isTeamFinished
-        ? startTime.reduce((sum, timeStart, index) => {
-            const timeEnd = endTime[index]
-            // const sum = startTimes.reduce((sum, timeStart, i) => {
-            // const timeEnd = endTimes[i]
-            if (!timeStart || !timeEnd) return sum + taskDuration
-            return sum + getSecondsBetween(timeStart, timeEnd)
-            // },0)
-          }, 0)
-        : 0
+      const sumTimeByAllTasks = startTime.reduce((sum, timeStart, index) => {
+        if (index === activeTaskIndex) return sum
+        const timeEnd = endTime[index]
+        // const sum = startTimes.reduce((sum, timeStart, i) => {
+        // const timeEnd = endTimes[i]
+        if (!timeStart || !timeEnd) return sum + taskDuration
+        return sum + getSecondsBetween(timeStart, timeEnd)
+        // },0)
+      }, 0)
 
       const timeAfterEndTask = isTeamOnBreak
         ? getSecondsBetween(activeTaskFinishTime)
