@@ -1,5 +1,6 @@
 import dateToDateTimeStr from '@helpers/dateToDateTimeStr'
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import { get } from 'mongoose'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import numberToEmojis from 'telegram/func/numberToEmojis'
@@ -95,7 +96,8 @@ const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
         : null
 
       const sumTimeByAllTasks = startTime.reduce((sum, timeStart, index) => {
-        if (index === activeTaskIndex) return sum
+        if (index > activeTaskIndex) return sum
+        if (index === activeTaskIndex) return sum + getSecondsBetween(timeStart)
         const timeEnd = endTime[index]
         // const sum = startTimes.reduce((sum, timeStart, i) => {
         // const timeEnd = endTimes[i]
