@@ -272,19 +272,19 @@ const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
           : ''
       }${
         findedCodesCount > 0
-          ? `\nНайденые коды (${findedCodesCount} шт.): "${gameTeam.findedCodes[
+          ? `\nНайденные коды (${findedCodesCount} шт.): "${gameTeam.findedCodes[
               startedTasks - 1
             ].join(`", "`)}"`
           : ''
       }${
         findedBonusCodesCount > 0
-          ? `\nНайденые бонусные коды (${findedBonusCodesCount} шт.): "${gameTeam.findedBonusCodes[
+          ? `\nНайденные бонусные коды (${findedBonusCodesCount} шт.): "${gameTeam.findedBonusCodes[
               startedTasks - 1
             ].join(`", "`)}"`
           : ''
       }${
         findedPenaltyCodesCount > 0
-          ? `\nНайденые штрафные коды (${findedPenaltyCodesCount} шт.): "${gameTeam.findedPenaltyCodes[
+          ? `\nНайденные штрафные коды (${findedPenaltyCodesCount} шт.): "${gameTeam.findedPenaltyCodes[
               startedTasks - 1
             ].join(`", "`)}"`
           : ''

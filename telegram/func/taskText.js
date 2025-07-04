@@ -93,7 +93,7 @@ const taskText = ({
     game.type !== 'photo' &&
     findedBonusCodes &&
     findedBonusCodes[taskNum]?.length > 0
-      ? `\n\n<b>Найденые бонусные коды:</b>\n${bonusCodes
+      ? `\n\n<b>Найденные бонусные коды:</b>\n${bonusCodes
           .filter(({ code }) => findedBonusCodes[taskNum].includes(code))
           .map(
             ({ code, bonus, description }) =>
@@ -105,7 +105,7 @@ const taskText = ({
     game.type !== 'photo' &&
     findedPenaltyCodes &&
     findedPenaltyCodes[taskNum]?.length > 0
-      ? `\n\n<b>Найденые штрафные коды:</b>\n${penaltyCodes
+      ? `\n\n<b>Найденные штрафные коды:</b>\n${penaltyCodes
           .filter(({ code }) => findedPenaltyCodes[taskNum].includes(code))
           .map(
             ({ code, penalty, description }) =>
@@ -115,7 +115,7 @@ const taskText = ({
       : ''
   }${
     game.type !== 'photo' && findedCodes && findedCodes[taskNum]?.length > 0
-      ? `\n\n<b>Найденые коды:</b>\n"${findedCodes[taskNum].join(
+      ? `\n\n<b>Найденные коды:</b>\n"${findedCodes[taskNum].join(
           '", "'
         )}"\n\nОсталось найти ${getNounCodes(numOfCodesToFindLeft)}`
       : ''
