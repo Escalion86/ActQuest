@@ -1,5 +1,6 @@
 import dateToDateTimeStr from '@helpers/dateToDateTimeStr'
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import { get } from 'mongoose'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import numberToEmojis from 'telegram/func/numberToEmojis'
@@ -94,16 +95,21 @@ const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
         ? endTime[activeTaskIndex] || startTime[activeTaskIndex] + taskDuration
         : null
 
-      const sumTimeByAllTasks = isTeamFinished
-        ? startTime.reduce((sum, timeStart, index) => {
-            const timeEnd = endTime[index]
-            // const sum = startTimes.reduce((sum, timeStart, i) => {
-            // const timeEnd = endTimes[i]
-            if (!timeStart || !timeEnd) return sum + taskDuration
+      const sumTimeByAllTasks = startTime.reduce((sum, timeStart, index) => {
+        if (index > activeTaskIndex) return sum
+        const timeEnd = endTime[index]
+        if (index === activeTaskIndex) {
+          if (isActiveTaskFinished)
             return sum + getSecondsBetween(timeStart, timeEnd)
-            // },0)
-          }, 0)
-        : 0
+          return sum + getSecondsBetween(timeStart)
+        }
+
+        // const sum = startTimes.reduce((sum, timeStart, i) => {
+        // const timeEnd = endTimes[i]
+        if (!timeStart || !timeEnd) return sum + taskDuration
+        return sum + getSecondsBetween(timeStart, timeEnd)
+        // },0)
+      }, 0)
 
       const timeAfterEndTask = isTeamOnBreak
         ? getSecondsBetween(activeTaskFinishTime)
