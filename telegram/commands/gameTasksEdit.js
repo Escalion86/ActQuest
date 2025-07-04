@@ -71,7 +71,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
       {
         c: { c: 'editTask', gameId: jsonCommand.gameId, i: number - 1 },
         //`setTeamName/teamId=${jsonCommand.teamId}`,
-        text: `${number}. ${
+        text: `${
           task.canceled
             ? `\u{26D4}`
             : `${
