@@ -38,7 +38,7 @@ const addGameTeamAddingBonus = async ({
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
-  const gameTeam = await getGameTeam(jsonCommand.gameTeamId)
+  const gameTeam = await getGameTeam(jsonCommand.gameTeamId, db)
   if (gameTeam.success === false) return gameTeam
 
   return await arrayOfCommands({
