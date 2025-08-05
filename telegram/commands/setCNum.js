@@ -5,7 +5,7 @@ const setCNum = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId', 'i'])
   if (checkData) return checkData
 
-  if (!jsonCommand.message) {
+  if (!jsonCommand.message && !jsonCommand.noCNum) {
     return {
       success: true,
       message:
