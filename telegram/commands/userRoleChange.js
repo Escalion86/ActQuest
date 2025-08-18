@@ -10,7 +10,11 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
     .findOne({ telegramId: jsonCommand.userTId })
     .lean()
 
+  console.log('user :>> ', user)
+  console.log('jsonCommand :>> ', jsonCommand)
+
   const roleName = userRoleName(user.role)
+  console.log('roleName :>> ', roleName)
 
   if (!jsonCommand.role) {
     return {
