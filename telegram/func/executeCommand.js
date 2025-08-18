@@ -115,7 +115,7 @@ const executeCommand = async ({
       return await executeCommand({
         userTelegramId,
         jsonCommand: { c: nextCommand },
-        messageId,
+        // messageId,
         callback_query,
         // undefined, // callback_query,
         location,
@@ -137,7 +137,7 @@ const executeCommand = async ({
     return await executeCommand({
       userTelegramId,
       jsonCommand: actualCommand,
-      messageId,
+      // messageId,
       callback_query,
       location,
       user,
