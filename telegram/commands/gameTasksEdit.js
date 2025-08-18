@@ -160,7 +160,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
           .filter((task) => task)
           .map((task, index) => {
             const codes =
-              typeof task?.codes === 'object'
+              typeof task?.codes === 'object' && task.codes !== null
                 ? task.codes.filter((code) => code !== '')
                 : []
             const bonusCodes =
@@ -171,6 +171,10 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
               cluesDuration > 0
                 ? (task.clues?.length || 0) < cluesNeeded
                 : false
+            const taskCodesLength = codes.length || 0
+            const neededCodesLength = task.numCodesToCompliteTask || 0
+            const isCodesNeededError = taskCodesLength < neededCodesLength
+
             return `${
               task.canceled ? `\u{26D4}` : !task.title ? '\u{2757}' : ''
             } ${numberToEmojis(index + 1)} ${
@@ -193,10 +197,18 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                             : ''
                         }`
                   }`
-                : `\n${!codes.length ? '\u{2757}' : ''}Коды (${
-                    codes.length ?? 0
-                  } шт): ${
-                    codes.length > 0 ? codes.join(', ') : '[не заданы]'
+                : `\n${
+                    !taskCodesLength ? '\u{2757}' : ''
+                  }Коды (${taskCodesLength} шт): ${
+                    taskCodesLength > 0 ? codes.join(', ') : '[не заданы]'
+                  }${
+                    neededCodesLength > 0
+                      ? ` (необходимо ввести ${neededCodesLength} шт)`
+                      : ''
+                  }${
+                    isCodesNeededError
+                      ? `\n\u{2757}Количество основных кодов не достаточно`
+                      : ''
                   }${
                     bonusCodes.length > 0
                       ? `\nБонусные коды (${bonusCodes.length} шт): ${bonusCodes
@@ -213,9 +225,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
                       : ''
                   }`
             }${
-              isCluesError
-                ? `\n\u{2757} Количество подсказок не достаточно`
-                : ''
+              isCluesError ? `\n\u{2757}Количество подсказок не достаточно` : ''
             }`
           })
           .join('\n\n')

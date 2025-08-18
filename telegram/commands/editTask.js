@@ -79,6 +79,11 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
   const isCluesError =
     cluesDuration > 0 ? (task.clues?.length || 0) < cluesNeeded : false
 
+  const taskCodesLength =
+    typeof task?.codes === 'object' ? task.codes.length || 0 : 0
+  const neededCodesLength = task.numCodesToCompliteTask || 0
+  const isCodesNeededError = taskCodesLength < neededCodesLength
+
   return {
     // images: task.images ? task.images : undefined,
     message: `<b>Редактирование задания</b>\n${!task?.title ? `\u{2757}` : ''}${
@@ -92,7 +97,7 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
     }\n\n${!task?.task ? `\u{2757}` : ''}<b>Текст задания</b>:${
       !task?.task ? ' [не задано]' : `\n<blockquote>${task.task}</blockquote>`
     }${cluesText}${
-      isCluesError ? `\n\u{2757} Количество подсказок не достаточно` : ''
+      isCluesError ? `\n\u{2757}Количество подсказок не достаточно` : ''
     }${
       game.type === 'photo'
         ? `\n\n<b>Список доп. заданий</b>:${
@@ -143,8 +148,14 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
                     : '[не заданы]'
                 }`
               : ''
-          }\n\n<b>Количество кодов для выполнения</b>: ${
+          }\n\n${
+            isCodesNeededError ? `\u{2757}` : ''
+          }<b>Количество кодов для выполнения</b>: ${
             task.numCodesToCompliteTask ?? 'Все'
+          }${
+            isCodesNeededError
+              ? ` (необходимое количество кодов для выполнения задания меньше чем количество основных кодов)`
+              : ''
           }`
     }${
       game.type === 'photo'
