@@ -76,7 +76,7 @@ const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
         text: '\u{1F4AC} Написать в личку',
       },
       {
-        c: { c: 'userChangeRole', userTId: jsonCommand.userTId },
+        c: { c: 'userRoleChange', userTId: jsonCommand.userTId },
         text: '\u{26A1} Изменить роль',
         hide: roleName === 'Разработчик',
       },
