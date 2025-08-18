@@ -1,4 +1,5 @@
 import getNoun from '@helpers/getNoun'
+import userRoleName from '@helpers/userRoleName'
 import check from 'telegram/func/check'
 
 const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
@@ -8,9 +9,13 @@ const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
   const user = await db
     .model('Users')
     .findOne({ telegramId: jsonCommand.userTId })
-  const teamsUser = await db.model('TeamsUsers').find({
-    userTelegramId: jsonCommand.userTId,
-  })
+    .lean()
+  const teamsUser = await db
+    .model('TeamsUsers')
+    .find({
+      userTelegramId: jsonCommand.userTId,
+    })
+    .lean()
   const teamsIds = teamsUser.map(
     (teamUser) =>
       // mongoose.Types.ObjectId(teamUser.teamId)
@@ -24,8 +29,12 @@ const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
     })
     .lean()
 
+  const roleName = userRoleName(user.role)
+
   return {
-    message: `<b>"${user.name}"</b>\nСостоит в ${getNoun(
+    message: `<b>"${
+      user.name
+    }"</b>\n\n<b>Роль: </b>${roleName}\n\nСостоит в ${getNoun(
       teams?.length,
       'команде',
       'командах',
@@ -65,6 +74,11 @@ const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
       {
         url: `t.me/+${user.phone}`,
         text: '\u{1F4AC} Написать в личку',
+      },
+      {
+        c: { c: 'userChangeRole', userTId: jsonCommand.userTId },
+        text: '\u{26A1} Изменить роль',
+        hide: roleName === 'Разработчик',
       },
       {
         c: { c: 'allUsers', page: jsonCommand.page },
