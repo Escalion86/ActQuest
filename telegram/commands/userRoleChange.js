@@ -10,11 +10,7 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
     .findOne({ telegramId: jsonCommand.userTId })
     .lean()
 
-  console.log('user :>> ', user)
-  console.log('jsonCommand :>> ', jsonCommand)
-
   const roleName = userRoleName(user.role)
-  console.log('roleName :>> ', roleName)
 
   if (!jsonCommand.role) {
     return {
@@ -38,7 +34,7 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
         },
         {
           text: '\u{1F6AB} Отмена',
-          c: { c: 'userAdmin', userTId: teamUser.userTelegramId },
+          c: { c: 'userAdmin', userTId: jsonCommand.userTId },
         },
       ],
     }
@@ -53,7 +49,7 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
     message: `Роль пользователя "${user.name}" изменена на "${userRoleName(
       jsonCommand.role
     )}"`,
-    nextCommand: { c: 'userAdmin', userTId: teamUser.userTelegramId },
+    nextCommand: { c: 'userAdmin', userTId: jsonCommand.userTId },
   }
 }
 
