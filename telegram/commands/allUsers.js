@@ -17,15 +17,26 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
     }
   })
 
+  const countUsers = {
+    client: 0,
+    admin: 0,
+    ban: 0,
+    moder: 0,
+  }
+
   const filteredUsers = users.filter((user) => {
     switch (userRole(user)) {
       case 'client':
+        countUsers.client++
         return !jsonCommand.hideClients
       case 'admin':
+        countUsers.admin++
         return !jsonCommand.hideAdmin
       case 'ban':
+        countUsers.ban++
         return !jsonCommand.hideBan
       case 'moder':
+        countUsers.moder++
         return !jsonCommand.hideModer
       default:
         return false
@@ -64,7 +75,9 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
             hideClients: !jsonCommand.hideClients,
             page: 1,
           },
-          text: (jsonCommand.hideClients ? '❌' : '✅') + ' Пользователи',
+          text:
+            (jsonCommand.hideClients ? '❌' : '✅') +
+            ` Пользователи (${countUsers.client})`,
         },
 
         {
@@ -72,7 +85,8 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
             hideBan: !jsonCommand.hideBan,
             page: 1,
           },
-          text: (jsonCommand.hideBan ? '❌' : '✅') + ' Бан',
+          text:
+            (jsonCommand.hideBan ? '❌' : '✅') + ` Бан (${countUsers.ban})`,
         },
       ],
       [
@@ -81,14 +95,18 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
             hideModer: !jsonCommand.hideModer,
             page: 1,
           },
-          text: (jsonCommand.hideModer ? '❌' : '✅') + ' Модераторы',
+          text:
+            (jsonCommand.hideModer ? '❌' : '✅') +
+            ` Модераторы (${countUsers.moder})`,
         },
         {
           c: {
             hideAdmin: !jsonCommand.hideAdmin,
             page: 1,
           },
-          text: (jsonCommand.hideAdmin ? '❌' : '✅') + ' Админы',
+          text:
+            (jsonCommand.hideAdmin ? '❌' : '✅') +
+            ` Админы (${countUsers.admin})`,
         },
       ],
       ...buttons,
