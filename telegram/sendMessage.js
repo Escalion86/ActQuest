@@ -56,6 +56,8 @@ const sendMessage = async ({
       }
     )
 
+    var checkResult
+
     if (images.length >= 2) {
       await postData(
         `https://api.telegram.org/bot${telegramToken}/sendMediaGroup`,
@@ -80,7 +82,7 @@ const sendMessage = async ({
       )
     } else {
       const photo = images[0]
-      await postData(
+      checkResult = await postData(
         `https://api.telegram.org/bot${telegramToken}/sendPhoto`,
         {
           // message_id: callback_query?.message?.message_id,
@@ -97,6 +99,7 @@ const sendMessage = async ({
         // (data) => console.log('post error', data),
       )
     }
+    console.log('checkResult :>> ', checkResult)
 
     // Очищает меню предыдущего сообщения
     // if (callback_query) {
