@@ -105,7 +105,8 @@ const executeCommand = async ({
     text: result.message,
     parse_mode: result.parse_mode,
     keyboard,
-    callback_query: result.images ? undefined : callback_query,
+    callback_query:
+      result.images || result.nextCommand ? undefined : callback_query,
     location,
   })
 
@@ -116,7 +117,7 @@ const executeCommand = async ({
         userTelegramId,
         jsonCommand: { c: nextCommand },
         messageId,
-        callback_query,
+        // callback_query,
         // undefined, // callback_query,
         location,
         user,
@@ -138,7 +139,7 @@ const executeCommand = async ({
       userTelegramId,
       jsonCommand: actualCommand,
       messageId,
-      callback_query,
+      // callback_query,
       location,
       user,
       db,

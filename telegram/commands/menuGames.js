@@ -3,12 +3,16 @@ import mainMenuButton from './menuItems/mainMenuButton'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import isUserAdmin from '@helpers/isUserAdmin'
 import isArchiveGame from '@helpers/isArchiveGame'
+import isUserBan from '@helpers/isUserBan'
 
 const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
   // Получаем список игр
   const games = await db.model('Games').find({}).lean()
   const archiveGames = games.filter((game) => isArchiveGame(game))
   const notArchiveGames = games.filter((game) => !isArchiveGame(game))
+
+  const isBan = isUserBan(user)
+
   if (!notArchiveGames || notArchiveGames.length === 0) {
     return {
       message: '<b>Предстоящих игр не запланировано</b>',
@@ -19,6 +23,7 @@ const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
         {
           c: 'joinToGameWithCode',
           text: '\u{1F517} Присоединиться с помощью кода',
+          hide: isBan,
         },
         mainMenuButton,
       ],
@@ -107,6 +112,7 @@ const menuGames = async ({ telegramId, jsonCommand, user, db }) => {
       {
         c: 'joinToGameWithCode',
         text: '\u{1F517} Присоединиться с помощью кода',
+        hide: isBan,
       },
       mainMenuButton,
     ],

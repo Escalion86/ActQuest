@@ -48,6 +48,8 @@ const sendMessage = async ({
   if (location === 'ekb') telegramToken = process.env.TELEGRAM_EKB_TOKEN
 
   if (images) {
+    var checkErrorSendPhoto = false
+
     if (images.length >= 2) {
       await postData(
         `https://api.telegram.org/bot${telegramToken}/sendMediaGroup`,
@@ -67,7 +69,10 @@ const sendMessage = async ({
         // null,
         null,
         // (data) => console.log('post success', data),
-        sendErrorToDev(chat_id, 'sendMediaGroup', telegramToken)
+        () => {
+          sendErrorToDev(chat_id, 'sendMediaGroup', telegramToken)
+          checkErrorSendPhoto = true
+        }
         // (data) => console.log('post error', data),
       )
     } else {
@@ -85,32 +90,47 @@ const sendMessage = async ({
         // null,
         null,
         // (data) => console.log('post success', data),
-        sendErrorToDev(chat_id, 'sendPhoto', telegramToken)
+        () => {
+          sendErrorToDev(chat_id, 'sendPhoto', telegramToken)
+          checkErrorSendPhoto = true
+        }
         // (data) => console.log('post error', data),
       )
     }
 
-    if (callback_query) {
+    if (!checkErrorSendPhoto) {
       await postData(
-        `https://api.telegram.org/bot${telegramToken}/editMessageReplyMarkup`,
+        `https://api.telegram.org/bot${telegramToken}/deleteMessage`,
         {
-          message_id: callback_query?.message?.message_id,
           chat_id,
-          // photo,
-          // parse_mode,
-          // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
-          // ...props,
-          link_preview_options: {
-            is_disabled: true,
-          },
-        },
-        // null,
-        null,
-        // (data) => console.log('post success', data),
-        sendErrorToDev(chat_id, 'editMessageReplyMarkup', telegramToken)
-        // (data) => console.log('post error', data),
+          message_id: callback_query?.message?.message_id,
+        }
       )
     }
+
+    // Очищает меню предыдущего сообщения
+    // if (callback_query) {
+    //   await postData(
+    //     `https://api.telegram.org/bot${telegramToken}/editMessageReplyMarkup`,
+    //     {
+    //       // message_id: callback_query?.message?.message_id,
+    //       chat_id,
+    //       // photo,
+    //       // parse_mode,
+    //       // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
+    //       // ...props,
+    //       link_preview_options: {
+    //         is_disabled: true,
+    //       },
+    //     },
+    //     // null,
+    //     null,
+    //     // (data) => console.log('post success', data),
+    //     sendErrorToDev(chat_id, 'editMessageReplyMarkup', telegramToken)
+    //     // (data) => console.log('post error', data),
+    //   )
+    // }
+
     // if (images.length === 1) {
     //   const photo = images[0]
     //   // for (let i = 0; i < images.length; i++) {
@@ -142,12 +162,15 @@ const sendMessage = async ({
       const preparedText = splitText(text)
       for (let i = 0; i < preparedText.length; i++) {
         await postData(
-          `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+          `https://api.telegram.org/bot${telegramToken}/${
+            i === 0 ? 'editMessageText' : 'sendMessage'
+          }`,
           {
             message_id:
-              i < preparedText.length - 1
-                ? undefined
-                : callback_query?.message?.message_id,
+              i === 0 ? callback_query?.message?.message_id : undefined,
+            //i < preparedText.length - 1
+            //? undefined
+            //: callback_query?.message?.message_id,
             chat_id,
             text: preparedText[i],
             parse_mode,
@@ -172,7 +195,9 @@ const sendMessage = async ({
           // (data) => console.log('post error', data),
         )
       }
+      return
     }
+
     if (callback_query?.message?.message_id) {
       const reply_markup =
         keyboard || remove_keyboard

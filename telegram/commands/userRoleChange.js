@@ -10,7 +10,7 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
     .findOne({ telegramId: jsonCommand.userTId })
     .lean()
 
-  const roleName = userRoleName(user.role)
+  const roleName = userRoleName(user)
 
   if (!jsonCommand.role) {
     return {
@@ -34,9 +34,65 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
         },
         {
           text: '\u{1F6AB} Отмена',
-          c: { c: 'userAdmin', userTId: teamUser.userTelegramId },
+          c: { c: 'userAdmin', userTId: jsonCommand.userTId },
         },
       ],
+    }
+  }
+
+  if (jsonCommand.role === 'ban') {
+    if (!jsonCommand.confirm) {
+      return {
+        success: true,
+        message: `Вы действительно хотите забанить пользователя "${user.name}"?\n\nТакже это удалит его со всех команд в которых он состоит (сами команды останутся нетронутыми, если в них есть еще пользователи)!`,
+        buttons: [
+          {
+            text: '\u{26D4} Забанить',
+            c: { role: 'ban', confirm: true },
+          },
+          {
+            text: '\u{1F6AB} Отмена',
+            c: { c: 'userAdmin', userTId: jsonCommand.userTId },
+          },
+        ],
+      }
+    } else {
+      await db.model('Users').findByIdAndUpdate(user._id, { role: 'ban' })
+      // Получаем список команд в которых присутствует пользователь
+      const userTeams = await db
+        .model('TeamsUsers')
+        .find({ userTelegramId: jsonCommand.userTId })
+        .lean()
+      // Удаляем команды где забаненый пользователь является единственным в команде
+      const deletedTeams = []
+      for (const userTeam of userTeams) {
+        const teamUsers = await db
+          .model('TeamsUsers')
+          .find({ teamId: userTeam.teamId })
+          .lean()
+        if (teamUsers.length === 1) {
+          const team = await db.model('Teams').findById(userTeam.teamId).lean()
+          deletedTeams.push(team.name)
+          await db.model('Teams').deleteOne({ _id: userTeam.teamId })
+        }
+      }
+      await db
+        .model('TeamsUsers')
+        .deleteMany({ userTelegramId: jsonCommand.userTId })
+
+      return {
+        success: true,
+        message: `Пользователь "${user.name}" забанен!${
+          deletedTeams.length > 0
+            ? `\n\n${
+                deletedTeams.length === 1
+                  ? `Команда "${deletedTeams[0]}" удалена`
+                  : `Команды "${deletedTeams.join('", "')}" удалены`
+              }`
+            : ''
+        }`,
+        nextCommand: { c: 'userAdmin', userTId: jsonCommand.userTId },
+      }
     }
   }
 
@@ -46,10 +102,10 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
 
   return {
     success: true,
-    message: `Роль пользователя "${user.name}" изменена на "${userRoleName(
-      jsonCommand.role
-    )}"`,
-    nextCommand: { c: 'userAdmin', userTId: teamUser.userTelegramId },
+    message: `Роль пользователя "${user.name}" изменена на "${userRoleName({
+      role: jsonCommand.role,
+    })}"`,
+    nextCommand: { c: 'userAdmin', userTId: jsonCommand.userTId },
   }
 }
 

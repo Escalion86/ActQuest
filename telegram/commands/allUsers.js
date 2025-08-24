@@ -1,10 +1,12 @@
+import userRole from '@helpers/userRole'
+import userRoleName from '@helpers/userRoleName'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
-  const users = await db.model('Users').find({})
-  const teamsUsers = await db.model('TeamsUsers').find({})
+  const users = await db.model('Users').find({}).lean()
+  const teamsUsers = await db.model('TeamsUsers').find({}).lean()
+  const games = await db.model('Games').find({}).lean()
 
-  const games = await db.model('Games').find({})
   var allTeamsUsersInFinishedGames = []
   games.forEach(({ result }) => {
     if (result) {
@@ -15,8 +17,21 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
     }
   })
 
+  const filteredUsers = users.filter((user) => {
+    switch (userRole(user)) {
+      case 'client':
+        return !jsonCommand.hideClients
+      case 'admin':
+        return !jsonCommand.hideAdmin
+      case 'ban':
+        return !jsonCommand.hideBan
+      default:
+        return false
+    }
+  })
+
   const page = jsonCommand?.page ?? 1
-  const buttons = buttonListConstructor(users, page, (user, number) => {
+  const buttons = buttonListConstructor(filteredUsers, page, (user, number) => {
     const teamsOfUserCount = teamsUsers.filter(
       (teamsUser) => teamsUser.userTelegramId === user.telegramId
     ).length
@@ -24,7 +39,11 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
       ({ userTelegramId }) => userTelegramId === user.telegramId
     ).length
     return {
-      text: `${number}. ${user.name} (${teamsOfUserCount}/${finishedGamesCount})`,
+      text: `${number}. ${
+        user.name
+      } (${teamsOfUserCount}/${finishedGamesCount})${
+        userRole(user) !== 'client' ? ` (${userRoleName(user)})` : ''
+      }`,
       c: {
         c: 'userAdmin',
         userTId: user.telegramId,
@@ -35,8 +54,31 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
   })
 
   return {
-    message: `<b>Обзор всех пользователей (${users.length} чел.)\nВ скобках указано количество команд / сыграных игр</b>`,
+    message: `<b>Все пользователи согласно фильтру (${filteredUsers.length} чел.)\nВ скобках указано количество команд / сыграных игр</b>`,
     buttons: [
+      [
+        {
+          c: {
+            hideClients: !jsonCommand.hideClients,
+            page: 1,
+          },
+          text: (jsonCommand.hideClients ? '❌' : '✅') + ' Пользователи',
+        },
+        {
+          c: {
+            hideAdmin: !jsonCommand.hideAdmin,
+            page: 1,
+          },
+          text: (jsonCommand.hideAdmin ? '❌' : '✅') + ' Админы',
+        },
+        {
+          c: {
+            hideBan: !jsonCommand.hideBan,
+            page: 1,
+          },
+          text: (jsonCommand.hideBan ? '❌' : '✅') + ' Бан',
+        },
+      ],
       ...buttons,
       {
         c: 'adminMenu',

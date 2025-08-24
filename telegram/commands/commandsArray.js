@@ -143,6 +143,7 @@ import gameTasksHide from './gameTasksHide'
 import gameTasksShow from './gameTasksShow'
 import settings from './settings'
 import settingsSetChatUrl from './settingsSetChatUrl'
+import userRoleChange from './userRoleChange'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -293,6 +294,7 @@ const commandsArray = {
   cancelGame,
   settings,
   settingsSetChatUrl,
+  userRoleChange,
 }
 
 var i = 0
