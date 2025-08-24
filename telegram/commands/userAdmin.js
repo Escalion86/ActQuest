@@ -1,4 +1,5 @@
 import getNoun from '@helpers/getNoun'
+import isUserBan from '@helpers/isUserBan'
 import isUserDev from '@helpers/isUserDev'
 import userRoleName from '@helpers/userRoleName'
 import check from 'telegram/func/check'
@@ -31,6 +32,7 @@ const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
     .lean()
 
   const isDev = isUserDev(user)
+  const isBan = isUserBan(user)
   const roleName = userRoleName(user)
 
   return {
@@ -72,6 +74,7 @@ const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
           c: 'userJoinToTeam',
           userTId: jsonCommand.userTId,
         },
+        hide: isBan,
       },
       {
         url: `t.me/+${user.phone}`,
