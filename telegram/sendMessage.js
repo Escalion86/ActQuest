@@ -48,15 +48,7 @@ const sendMessage = async ({
   if (location === 'ekb') telegramToken = process.env.TELEGRAM_EKB_TOKEN
 
   if (images) {
-    await postData(
-      `https://api.telegram.org/bot${telegramToken}/deleteMessage`,
-      {
-        chat_id,
-        message_id: callback_query?.message?.message_id,
-      }
-    )
-
-    var checkResult
+    var checkErrorSendPhoto = false
 
     if (images.length >= 2) {
       await postData(
@@ -77,12 +69,15 @@ const sendMessage = async ({
         // null,
         null,
         // (data) => console.log('post success', data),
-        sendErrorToDev(chat_id, 'sendMediaGroup', telegramToken)
+        () => {
+          sendErrorToDev(chat_id, 'sendMediaGroup', telegramToken)
+          checkErrorSendPhoto = true
+        }
         // (data) => console.log('post error', data),
       )
     } else {
       const photo = images[0]
-      checkResult = await postData(
+      await postData(
         `https://api.telegram.org/bot${telegramToken}/sendPhoto`,
         {
           // message_id: callback_query?.message?.message_id,
@@ -95,11 +90,23 @@ const sendMessage = async ({
         // null,
         null,
         // (data) => console.log('post success', data),
-        sendErrorToDev(chat_id, 'sendPhoto', telegramToken)
+        () => {
+          sendErrorToDev(chat_id, 'sendPhoto', telegramToken)
+          checkErrorSendPhoto = true
+        }
         // (data) => console.log('post error', data),
       )
     }
-    console.log('checkResult :>> ', checkResult)
+
+    if (!checkErrorSendPhoto) {
+      await postData(
+        `https://api.telegram.org/bot${telegramToken}/deleteMessage`,
+        {
+          chat_id,
+          message_id: callback_query?.message?.message_id,
+        }
+      )
+    }
 
     // Очищает меню предыдущего сообщения
     // if (callback_query) {
@@ -155,12 +162,15 @@ const sendMessage = async ({
       const preparedText = splitText(text)
       for (let i = 0; i < preparedText.length; i++) {
         await postData(
-          `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+          `https://api.telegram.org/bot${telegramToken}/${
+            i === 0 ? 'editMessageText' : 'sendMessage'
+          }`,
           {
             message_id:
-              i < preparedText.length - 1
-                ? undefined
-                : callback_query?.message?.message_id,
+              i === 0 ? callback_query?.message?.message_id : undefined,
+            //i < preparedText.length - 1
+            //? undefined
+            //: callback_query?.message?.message_id,
             chat_id,
             text: preparedText[i],
             parse_mode,
@@ -185,7 +195,9 @@ const sendMessage = async ({
           // (data) => console.log('post error', data),
         )
       }
+      return
     }
+
     if (callback_query?.message?.message_id) {
       const reply_markup =
         keyboard || remove_keyboard
