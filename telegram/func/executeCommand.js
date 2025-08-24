@@ -105,8 +105,7 @@ const executeCommand = async ({
     text: result.message,
     parse_mode: result.parse_mode,
     keyboard,
-    callback_query:
-      result.images || result.nextCommand ? undefined : callback_query,
+    callback_query: result.images ? undefined : callback_query,
     location,
   })
 
