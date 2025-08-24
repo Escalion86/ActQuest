@@ -25,6 +25,8 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
         return !jsonCommand.hideAdmin
       case 'ban':
         return !jsonCommand.hideBan
+      case 'moder':
+        return !jsonCommand.hideModer
       default:
         return false
     }
@@ -64,19 +66,29 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
           },
           text: (jsonCommand.hideClients ? '❌' : '✅') + ' Пользователи',
         },
-        {
-          c: {
-            hideAdmin: !jsonCommand.hideAdmin,
-            page: 1,
-          },
-          text: (jsonCommand.hideAdmin ? '❌' : '✅') + ' Админы',
-        },
+
         {
           c: {
             hideBan: !jsonCommand.hideBan,
             page: 1,
           },
           text: (jsonCommand.hideBan ? '❌' : '✅') + ' Бан',
+        },
+      ],
+      [
+        {
+          c: {
+            hideModer: !jsonCommand.hideModer,
+            page: 1,
+          },
+          text: (jsonCommand.hideModer ? '❌' : '✅') + ' Модераторы',
+        },
+        {
+          c: {
+            hideAdmin: !jsonCommand.hideAdmin,
+            page: 1,
+          },
+          text: (jsonCommand.hideAdmin ? '❌' : '✅') + ' Админы',
         },
       ],
       ...buttons,
