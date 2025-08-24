@@ -31,7 +31,11 @@ const archiveGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
   )
 
   return {
-    message: `<b>Конструктор архива игр</b>\nВ списке отображены только ЗАВЕРШЕННЫЕ и только игры которые создали именно Вы\n\n<b>Количество игр в архиве</b>: ${getNoun(
+    message: `<b>Конструктор архива игр</b>\n\n${
+      isAdmin
+        ? ''
+        : 'В списке отображены только игры которые создали именно Вы\n\n'
+    }<b>Количество игр в архиве</b>: ${getNoun(
       sortedArchiveGames.length,
       'игра',
       'игры',

@@ -1,3 +1,4 @@
+import userRole from '@helpers/userRole'
 import userRoleName from '@helpers/userRoleName'
 import check from 'telegram/func/check'
 
@@ -10,27 +11,33 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
     .findOne({ telegramId: jsonCommand.userTId })
     .lean()
 
+  const role = userRole(user)
   const roleName = userRoleName(user)
 
   if (!jsonCommand.role) {
     return {
       success: true,
-      message: `Выберите роль пользователя "${user.name}"\n\nТекущая роль: ${roleName}`,
+      message: `Выберите роль пользователя "${user.name}"\n\nТекущая роль: ${roleName}\n\n<b>Виды ролей:</b>\n- Пользователь - обычный полозователь\n- Модератор - возможность создавать игры (редактировать только свои), отсутствует доступ к панели администратора\n- Администратор - полный контроль, а также доступ к панели администратора\n- Бан - пользователь забанен и не может участвовать в играх, создавать или присоединяться к командам. Доступ остается только на просмотр игр и их статистики`,
       buttons: [
         {
           text: '\u{26A1} Администратор',
           c: { role: 'admin' },
-          hide: roleName === 'Администратор',
+          hide: role === 'admin',
+        },
+        {
+          text: '\u{26A1} Модератор',
+          c: { role: 'moder' },
+          hide: role === 'moder',
         },
         {
           text: '\u{26A1} Пользователь',
           c: { role: 'client' },
-          hide: roleName === 'Пользователь',
+          hide: role === 'client',
         },
         {
           text: '\u{26A1} Бан',
           c: { role: 'ban' },
-          hide: roleName === 'Бан',
+          hide: role === 'ban',
         },
         {
           text: '\u{1F6AB} Отмена',
