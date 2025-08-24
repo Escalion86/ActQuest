@@ -61,7 +61,7 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
       // Получаем список команд в которых присутствует пользователь
       const userTeams = await db
         .model('TeamsUsers')
-        .find({ userTelegramId: telegramId })
+        .find({ userTelegramId: jsonCommand.userTId })
         .lean()
       // Удаляем команды где забаненый пользователь является единственным в команде
       const deletedTeams = []
@@ -71,9 +71,7 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
           .find({ teamId: userTeam.teamId })
           .lean()
         if (teamUsers.length === 1) {
-          console.log('userTeam.teamId :>> ', userTeam.teamId)
           const team = await db.model('Teams').findById(userTeam.teamId).lean()
-          console.log('team :>> ', team)
           deletedTeams.push(team.name)
           await db.model('Teams').deleteOne({ _id: userTeam.teamId })
         }
