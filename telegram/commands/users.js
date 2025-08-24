@@ -1,3 +1,5 @@
+import userRole from '@helpers/userRole'
+import userRoleName from '@helpers/userRoleName'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const users = async ({ telegramId, jsonCommand, location, db }) => {
@@ -6,6 +8,7 @@ const users = async ({ telegramId, jsonCommand, location, db }) => {
 
   const usersWithNoTeam = users.filter(
     (user) =>
+      userRole(user) !== 'ban' &&
       !teamsUsers.find(
         (teamUser) => teamUser.userTelegramId === user.telegramId
       )
@@ -23,7 +26,9 @@ const users = async ({ telegramId, jsonCommand, location, db }) => {
     usersWithNoTeam,
     page,
     (user, number) => ({
-      text: `${number}. ${user.name}`,
+      text: `${number}. ${user.name}${
+        userRole(user) !== 'client' ? ` (${userRoleName(user)})` : ''
+      }`,
       c: {
         c: 'userAdmin',
         userTId: user.telegramId,
@@ -33,7 +38,7 @@ const users = async ({ telegramId, jsonCommand, location, db }) => {
   )
 
   return {
-    message: `<b>Пользователи без команды</b>: ${usersWithNoTeam.length} чел.`,
+    message: `<b>Пользователи без команды</b>: ${usersWithNoTeam.length} чел. (в списке нет забаненых пользователей)`,
     buttons: [
       ...buttons,
       {
