@@ -1,4 +1,5 @@
 import userRole from '@helpers/userRole'
+import userRoleName from '@helpers/userRoleName'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
@@ -19,11 +20,11 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
   const filteredUsers = users.filter((user) => {
     switch (userRole(user)) {
       case 'client':
-        return jsonCommand.showClients
+        return !jsonCommand.hideClients
       case 'admin':
-        return jsonCommand.showAdmin
+        return !jsonCommand.hideAdmin
       case 'ban':
-        return jsonCommand.showBan
+        return !jsonCommand.hideBan
       default:
         return false
     }
@@ -38,7 +39,11 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
       ({ userTelegramId }) => userTelegramId === user.telegramId
     ).length
     return {
-      text: `${number}. ${user.name} (${teamsOfUserCount}/${finishedGamesCount})`,
+      text: `${number}. ${
+        user.name
+      } (${teamsOfUserCount}/${finishedGamesCount})${
+        userRole(user) !== 'client' ? ` (${userRoleName(user)})` : ''
+      }`,
       c: {
         c: 'userAdmin',
         userTId: user.telegramId,
@@ -54,24 +59,24 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
       [
         {
           c: {
-            showClients: !jsonCommand.showClients,
+            hideClients: !jsonCommand.hideClients,
             page: 1,
           },
-          text: (jsonCommand.showClients ? '✅' : '❌') + ' Пользователи',
+          text: (jsonCommand.hideClients ? '❌' : '✅') + ' Пользователи',
         },
         {
           c: {
-            showAdmin: !jsonCommand.showAdmin,
+            hideAdmin: !jsonCommand.hideAdmin,
             page: 1,
           },
-          text: (jsonCommand.showAdmin ? '✅' : '❌') + ' Админы',
+          text: (jsonCommand.hideAdmin ? '❌' : '✅') + ' Админы',
         },
         {
           c: {
-            showBan: !jsonCommand.showBan,
+            hideBan: !jsonCommand.hideBan,
             page: 1,
           },
-          text: (jsonCommand.showBan ? '✅' : '❌') + ' Бан',
+          text: (jsonCommand.hideBan ? '❌' : '✅') + ' Бан',
         },
       ],
       ...buttons,
