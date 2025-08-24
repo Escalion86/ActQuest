@@ -76,6 +76,9 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
           await db.model('Teams').deleteOne({ _id: userTeam.teamId })
         }
       }
+      await db
+        .model('TeamsUsers')
+        .deleteMany({ userTelegramId: jsonCommand.userTId })
 
       return {
         success: true,
