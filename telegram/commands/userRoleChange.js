@@ -47,12 +47,12 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
         message: `Вы действительно хотите забанить пользователя "${user.name}"?\n\nТакже это удалит его со всех команд в которых он состоит (сами команды останутся нетронутыми, если в них есть еще пользователи)!`,
         buttons: [
           {
-            text: '\u{1F6AB} Отмена',
-            c: { c: 'userAdmin', userTId: jsonCommand.userTId },
+            text: '\u{26D4} Забанить',
+            c: { role: 'ban', confirm: true },
           },
           {
-            text: '\u{1F6AB} Забанить',
-            c: { role: 'ban', confirm: true },
+            text: '\u{1F6AB} Отмена',
+            c: { c: 'userAdmin', userTId: jsonCommand.userTId },
           },
         ],
       }
