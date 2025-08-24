@@ -29,7 +29,11 @@ const menuGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
   )
 
   return {
-    message: `<b>Конструктор игр</b>\nВ списке отображены только игры которые создали именно Вы\n\n<b>Количество игр</b>: ${getNoun(
+    message: `<b>Конструктор игр</b>\n\n${
+      isAdmin
+        ? ''
+        : 'В списке отображены только игры которые создали именно Вы\n\n'
+    }<b>Количество игр</b>: ${getNoun(
       notArchiveGames.length,
       'игра',
       'игры',
