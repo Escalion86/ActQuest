@@ -48,6 +48,14 @@ const sendMessage = async ({
   if (location === 'ekb') telegramToken = process.env.TELEGRAM_EKB_TOKEN
 
   if (images) {
+    await postData(
+      `https://api.telegram.org/bot${telegramToken}/deleteMessage`,
+      {
+        chat_id,
+        message_id: callback_query?.message?.message_id,
+      }
+    )
+
     if (images.length >= 2) {
       await postData(
         `https://api.telegram.org/bot${telegramToken}/sendMediaGroup`,
@@ -94,7 +102,7 @@ const sendMessage = async ({
       await postData(
         `https://api.telegram.org/bot${telegramToken}/editMessageReplyMarkup`,
         {
-          message_id: callback_query?.message?.message_id,
+          // message_id: callback_query?.message?.message_id,
           chat_id,
           // photo,
           // parse_mode,
