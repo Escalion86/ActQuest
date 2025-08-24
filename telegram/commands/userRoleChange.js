@@ -72,10 +72,7 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
           .lean()
         if (teamUsers.length === 1) {
           console.log('userTeam.teamId :>> ', userTeam.teamId)
-          const team = await db
-            .model('Teams')
-            .findOne({ _id: userTeam.teamId })
-            .lean()
+          const team = await db.model('Teams').findById(userTeam.teamId).lean()
           console.log('team :>> ', team)
           deletedTeams.push(team.name)
           await db.model('Teams').deleteOne({ _id: userTeam.teamId })
