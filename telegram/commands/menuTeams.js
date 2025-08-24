@@ -1,6 +1,7 @@
 import { MAX_TEAMS } from 'telegram/constants'
 import joinedTeams from './joinedTeams'
 import mainMenuButton from './menuItems/mainMenuButton'
+import isUserBan from '@helpers/isUserBan'
 
 const menuTeams = async ({ telegramId, jsonCommand, location, db }) => {
   const teamsUser = await db
