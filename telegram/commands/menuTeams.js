@@ -10,6 +10,8 @@ const menuTeams = async ({ telegramId, jsonCommand, location, db }) => {
   if (teamsUser.length >= MAX_TEAMS)
     return await joinedTeams({ telegramId, jsonCommand, location, db })
 
+  const isBan = isUserBan(user)
+
   return {
     success: true,
     message: '<b>Меню работы с командами</b>',
@@ -18,17 +20,17 @@ const menuTeams = async ({ telegramId, jsonCommand, location, db }) => {
       {
         c: 'joinedTeams',
         text: '\u{1F465} Мои команды',
-        hide: !teamsUser || teamsUser.length === 0,
+        hide: !teamsUser || teamsUser.length === 0 || isBan,
       },
       {
         c: 'joinTeam',
         text: '\u{1F517} Присоединиться к команде',
-        hide: teamsUser.length >= MAX_TEAMS,
+        hide: teamsUser.length >= MAX_TEAMS || isBan,
       },
       {
         c: 'createTeam',
         text: '\u{2795} Создать команду',
-        hide: teamsUser.length >= MAX_TEAMS,
+        hide: teamsUser.length >= MAX_TEAMS || isBan,
       },
       mainMenuButton,
     ],
