@@ -3,7 +3,7 @@ import joinedTeams from './joinedTeams'
 import mainMenuButton from './menuItems/mainMenuButton'
 import isUserBan from '@helpers/isUserBan'
 
-const menuTeams = async ({ telegramId, jsonCommand, location, db }) => {
+const menuTeams = async ({ telegramId, user, jsonCommand, location, db }) => {
   const teamsUser = await db
     .model('TeamsUsers')
     .find({ userTelegramId: telegramId })
