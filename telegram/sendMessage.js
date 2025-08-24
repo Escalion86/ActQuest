@@ -98,27 +98,29 @@ const sendMessage = async ({
       )
     }
 
-    if (callback_query) {
-      await postData(
-        `https://api.telegram.org/bot${telegramToken}/editMessageReplyMarkup`,
-        {
-          // message_id: callback_query?.message?.message_id,
-          chat_id,
-          // photo,
-          // parse_mode,
-          // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
-          // ...props,
-          link_preview_options: {
-            is_disabled: true,
-          },
-        },
-        // null,
-        null,
-        // (data) => console.log('post success', data),
-        sendErrorToDev(chat_id, 'editMessageReplyMarkup', telegramToken)
-        // (data) => console.log('post error', data),
-      )
-    }
+    // Очищает меню предыдущего сообщения
+    // if (callback_query) {
+    //   await postData(
+    //     `https://api.telegram.org/bot${telegramToken}/editMessageReplyMarkup`,
+    //     {
+    //       // message_id: callback_query?.message?.message_id,
+    //       chat_id,
+    //       // photo,
+    //       // parse_mode,
+    //       // reply_markup: keyboard ? JSON.stringify(keyboard) : undefined,
+    //       // ...props,
+    //       link_preview_options: {
+    //         is_disabled: true,
+    //       },
+    //     },
+    //     // null,
+    //     null,
+    //     // (data) => console.log('post success', data),
+    //     sendErrorToDev(chat_id, 'editMessageReplyMarkup', telegramToken)
+    //     // (data) => console.log('post error', data),
+    //   )
+    // }
+
     // if (images.length === 1) {
     //   const photo = images[0]
     //   // for (let i = 0; i < images.length; i++) {
