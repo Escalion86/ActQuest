@@ -17,15 +17,26 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
     }
   })
 
+  const countUsers = {
+    client: 0,
+    admin: 0,
+    ban: 0,
+    moder: 0,
+  }
+
   const filteredUsers = users.filter((user) => {
     switch (userRole(user)) {
       case 'client':
+        countUsers.client++
         return !jsonCommand.hideClients
       case 'admin':
+        countUsers.admin++
         return !jsonCommand.hideAdmin
       case 'ban':
+        countUsers.ban++
         return !jsonCommand.hideBan
       case 'moder':
+        countUsers.moder++
         return !jsonCommand.hideModer
       default:
         return false
