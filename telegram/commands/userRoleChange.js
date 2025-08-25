@@ -77,12 +77,41 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
           .model('TeamsUsers')
           .find({ teamId: userTeam.teamId })
           .lean()
+
+        // Если пользователь является единственным в команде
         if (teamUsers.length === 1) {
+          // Удаляем команду предварительно узнав название команды которую удаляем (для отображения списка)
           const team = await db.model('Teams').findById(userTeam.teamId).lean()
           deletedTeams.push(team.name)
           await db.model('Teams').deleteOne({ _id: userTeam.teamId })
+        } else {
+          // Если пользователей в команде более чем один, то поменяем роль капитана
+          // Сначала находим капитана
+          const teamUserOfUser = teamUsers.find(
+            (u) => u.userTelegramId === jsonCommand.userTId
+          )
+
+          // Если пользователь является капитаном
+          if (teamUserOfUser.role === 'captain') {
+            // Поиск другого пользователя для передачи прав капитана
+            const teamUserOfAnotherUser = teamUsers.find(
+              (u) => u.userTelegramId !== jsonCommand.userTId
+            )
+
+            // Если пользователь найден
+            if (teamUserOfAnotherUser) {
+              // Передаем ему права капитана
+              await db
+                .model('TeamsUsers')
+                .findByIdAndUpdate(teamUserOfAnotherUser._id, {
+                  role: 'captain',
+                })
+            }
+          }
         }
       }
+
+      // Удаляем забаненного пользователя из всех команд
       await db
         .model('TeamsUsers')
         .deleteMany({ userTelegramId: jsonCommand.userTId })
