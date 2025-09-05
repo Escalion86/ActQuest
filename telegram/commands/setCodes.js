@@ -10,7 +10,8 @@ const setCodes = async ({ telegramId, jsonCommand, location, db }) => {
   if (!jsonCommand.message && !jsonCommand.noCodes && !jsonCommand.time) {
     return {
       success: true,
-      message: 'Введите коды через запятую',
+      message:
+        'Введите коды через запятую\n\nВНИМАНИЕ: Код не может быть больше 20 символов, все лишние символы будут обрезаны!',
       buttons: [
         {
           text: `\u{274C} Без кодов`,
@@ -48,7 +49,7 @@ const setCodes = async ({ telegramId, jsonCommand, location, db }) => {
     ? jsonCommand.message
         .toLowerCase()
         .split(',')
-        .map((code) => code.trim())
+        .map((code) => code.trim().slice(0, 20))
     : []
   // console.log('task :>> ', task)
   // const newTask = { ...task, title: jsonCommand.message }
