@@ -99,8 +99,8 @@ const executeCommand = async ({
     }
   }
 
-  console.log(11)
-  console.log('object :>> ', result.images ? undefined : callback_query)
+  console.log('11 result.images :>> ', result.images)
+  console.log('11 callback_query :>> ', callback_query)
 
   const sendResult = await sendMessage({
     chat_id: userTelegramId,
