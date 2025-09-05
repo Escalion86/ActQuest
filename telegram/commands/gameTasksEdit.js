@@ -93,7 +93,7 @@ const gameTasksEdit = async ({ telegramId, jsonCommand, location, db }) => {
       {
         c: number > 1 ? { taskUp: number - 1 } : { taskDown: number - 1 },
         text: number > 1 ? `\u{2B06}` : `\u{2B07}`,
-        // hide: index === 0,
+        hide: game.status !== 'active',
       },
       // {
       //   c: { taskUp: number > 1 ? number - 1 : undefined },
