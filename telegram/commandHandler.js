@@ -26,6 +26,8 @@ const commandHandler = async ({
   user,
   db,
 }) => {
+  console.log('message :>> ', message)
+  console.log('callback_query :>> ', callback_query)
   try {
     // Если пользователь прислал геопозицию
     if (userLocation) {
