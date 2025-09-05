@@ -28,7 +28,7 @@ const commandHandler = async ({
 }) => {
   console.log('message :>> ', message)
   console.log('messageId :>> ', messageId)
-  console.log('callback_query :>> ', callback_query)
+  // console.log('callback_query :>> ', callback_query)
   try {
     // Если пользователь прислал геопозицию
     if (userLocation) {
@@ -155,8 +155,11 @@ const commandHandler = async ({
       }
     }
 
+    console.log(1)
+
     // Если это был JSON
     if (jsonCommand) {
+      console.log(2)
       await executeCommand({
         userTelegramId,
         jsonCommand,
@@ -168,6 +171,7 @@ const commandHandler = async ({
         lastCommand,
       })
     } else {
+      console.log(3)
       // Если было отправлено сообщение, то смотрим какая до этого была команда (на что ответ)
       if (!lastCommand) {
         return await sendMessage({
@@ -182,7 +186,7 @@ const commandHandler = async ({
         ...lastCommand.command,
         message,
       }
-      console.log('! :>> ')
+      console.log(4)
 
       await executeCommand({
         userTelegramId,
