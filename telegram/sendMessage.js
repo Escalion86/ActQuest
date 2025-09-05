@@ -41,7 +41,6 @@ const sendMessage = async ({
   remove_keyboard,
   location,
 }) => {
-  console.log('callback_query :>> ', callback_query)
   var telegramToken
   if (location === 'dev') telegramToken = process.env.TELEGRAM_DEV_TOKEN
   if (location === 'krsk') telegramToken = process.env.TELEGRAM_KRSK_TOKEN
@@ -198,10 +197,6 @@ const sendMessage = async ({
       }
       return
     }
-    console.log(
-      'callback_query?.message?.message_id :>> ',
-      callback_query?.message?.message_id
-    )
 
     if (callback_query?.message?.message_id) {
       const reply_markup =
