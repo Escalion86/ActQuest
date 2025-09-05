@@ -8,6 +8,7 @@ import lastCommandsSchema from '@schemas/lastCommandsSchema'
 import usersSchema from '@schemas/usersSchema'
 import siteSettingsSchema from '@schemas/siteSettingsSchema'
 import gamesSchema from '@schemas/gamesSchema'
+import gamesPaymentsSchema from '@schemas/gamesPaymentsSchema'
 
 import checkLocationValid from '@server/checkLocationValid'
 
@@ -69,6 +70,10 @@ async function dbConnect(location) {
     connections[location].model(
       'Users',
       mongoose.Schema(usersSchema, { timestamps: true })
+    )
+    connections[location].model(
+      'GamesPayments',
+      mongoose.Schema(gamesPaymentsSchema, { timestamps: true })
     )
   }
 
