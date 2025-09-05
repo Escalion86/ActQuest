@@ -79,7 +79,7 @@ const executeCommand = async ({
   )
   const keyboard = keyboardFormer(result.buttons)
 
-  if (result.images) {
+  if (result.images && result.images.length > 0) {
     const imagesArrays = []
     for (let i = 0; i < result.images.length; i += 10) {
       imagesArrays.push(result.images.slice(i, i + 10))
