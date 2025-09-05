@@ -376,6 +376,11 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         buttons: buttonRefresh,
       }
     }
+    if (code.length > 20) {
+      return {
+        message: 'Код слишком длинный. Коды не могут быть такой длинны',
+      }
+    }
 
     // Проверяем бонусный ли код
     const allFindedBonusCodes =

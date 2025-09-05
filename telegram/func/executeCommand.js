@@ -79,7 +79,7 @@ const executeCommand = async ({
   )
   const keyboard = keyboardFormer(result.buttons)
 
-  if (result.images) {
+  if (result.images?.length > 0) {
     const imagesArrays = []
     for (let i = 0; i < result.images.length; i += 10) {
       imagesArrays.push(result.images.slice(i, i + 10))
@@ -105,7 +105,7 @@ const executeCommand = async ({
     text: result.message,
     parse_mode: result.parse_mode,
     keyboard,
-    callback_query: result.images ? undefined : callback_query,
+    callback_query: result.images?.length > 0 ? undefined : callback_query,
     location,
   })
 
