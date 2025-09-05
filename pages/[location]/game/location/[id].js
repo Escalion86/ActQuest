@@ -18,6 +18,7 @@ import cn from 'classnames'
 const townsCenter = {
   krsk: [56.012083, 92.871295],
   nrsk: [69.408366, 88.080232],
+  ekb: [56.839425, 60.611462],
 }
 
 const islands = [
