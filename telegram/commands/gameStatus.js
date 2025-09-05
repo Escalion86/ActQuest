@@ -216,7 +216,7 @@ const gameStatus = async ({ telegramId, jsonCommand, location, db }) => {
           false,
           false,
           false
-        ).join(' ')}. ${timeSumText}`
+        ).join(' ')}.\n${timeSumText}`
 
       // Проверяем, может задание выполнено или провалено и команда на перерыве
       if (isTeamOnBreak) {
