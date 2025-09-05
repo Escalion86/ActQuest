@@ -197,6 +197,10 @@ const sendMessage = async ({
       }
       return
     }
+    console.log(
+      'callback_query?.message?.message_id :>> ',
+      callback_query?.message?.message_id
+    )
 
     if (callback_query?.message?.message_id) {
       const reply_markup =

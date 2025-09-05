@@ -182,6 +182,7 @@ const commandHandler = async ({
         ...lastCommand.command,
         message,
       }
+      console.log('! :>> ')
 
       await executeCommand({
         userTelegramId,
