@@ -1,3 +1,4 @@
+import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import getTeam from 'telegram/func/getTeam'
