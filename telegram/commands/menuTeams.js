@@ -8,12 +8,12 @@ const menuTeams = async ({ telegramId, user, jsonCommand, location, db }) => {
     .model('TeamsUsers')
     .find({ userTelegramId: telegramId })
 
+  console.log('teamsUser.length :>> ', teamsUser.length)
+
   if (teamsUser.length >= MAX_TEAMS)
     return await joinedTeams({ telegramId, jsonCommand, location, db })
 
   const isBan = isUserBan(user)
-
-  console.log('teamsUser.length :>> ', teamsUser.length)
 
   return {
     success: true,
