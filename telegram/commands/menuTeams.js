@@ -10,6 +10,7 @@ const menuTeams = async ({ telegramId, user, jsonCommand, location, db }) => {
 
   console.log('teamsUser.length :>> ', teamsUser.length)
 
+  // Если пользователь уже в максимальном количестве команд, то переходим в команды
   if (teamsUser.length >= MAX_TEAMS)
     return await joinedTeams({ telegramId, jsonCommand, location, db })
 
