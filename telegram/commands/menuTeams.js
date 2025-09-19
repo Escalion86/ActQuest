@@ -13,6 +13,8 @@ const menuTeams = async ({ telegramId, user, jsonCommand, location, db }) => {
 
   const isBan = isUserBan(user)
 
+  console.log('teamsUser.length :>> ', teamsUser.length)
+
   return {
     success: true,
     message: '<b>Меню работы с командами</b>',
