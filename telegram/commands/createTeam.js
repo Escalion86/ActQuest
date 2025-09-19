@@ -1,6 +1,7 @@
 import { MAX_TEAMS } from 'telegram/constants'
 import createTeamFunc from 'telegram/func/createTeamFunc'
 import getAdmins from 'telegram/func/getAdmins'
+import keyboardFormer from 'telegram/func/keyboardFormer'
 import sendMessage from 'telegram/sendMessage'
 
 const array = [
@@ -75,12 +76,19 @@ const createTeam = async ({ telegramId, jsonCommand, location, db }) => {
   const admins = await getAdmins(db)
   const adminTelegramIds = admins.map(({ telegramId }) => telegramId)
 
+  const keyboard = keyboardFormer([
+    {
+      c: { c: 'editTeamAdmin', teamId: team._id },
+      text: '\u{2699} Управление командой',
+    },
+  ])
+
   await Promise.all(
     adminTelegramIds.map(async (telegramId) => {
       await sendMessage({
         chat_id: telegramId,
         text: `На движке создана новая команда "${jsonCommand.name}"`,
-        // keyboard,
+        keyboard,
         location,
       })
     })
