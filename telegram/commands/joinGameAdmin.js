@@ -1,3 +1,4 @@
+import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
@@ -32,15 +33,18 @@ const joinGameAdmin = async ({ telegramId, jsonCommand, location, db }) => {
 
   const games = await db.model('Games').find({})
 
+  const page = jsonCommand?.page ?? 1
+  const buttons = buttonListConstructor(games, page, (game, number) => {
+    return {
+      text: formatGameName(game),
+      c: { gameId: game._id },
+    }
+  })
+
   return {
     message: `<b>АДМИНИСТРИРОВАНИЕ</b>\n\nВыберите игру на которую вы хотите зарегистрировать команду "${team.name}"`,
     buttons: [
-      ...games.map((game) => {
-        return {
-          text: formatGameName(game),
-          c: { gameId: game._id },
-        }
-      }),
+      ...buttons,
       {
         c: {
           c: `teamGamesAdmin`,
