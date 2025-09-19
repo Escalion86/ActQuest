@@ -67,7 +67,7 @@ const allUsers = async ({ telegramId, jsonCommand, location, db }) => {
   })
 
   return {
-    message: `<b>Все пользователи согласно фильтру (${filteredUsers.length} чел.)\nВ скобках указано количество команд / сыграных игр</b>`,
+    message: `<b>Все пользователи согласно фильтру</b> (${filteredUsers.length} чел.)\n\n<i>Примечание: в скобках указано количество команд / сыграных игр</i>`,
     buttons: [
       [
         {
