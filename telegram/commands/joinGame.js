@@ -3,6 +3,7 @@ import formatGameName from 'telegram/func/formatGameName'
 import getAdmins from 'telegram/func/getAdmins'
 import getGame from 'telegram/func/getGame'
 import getTeam from 'telegram/func/getTeam'
+import keyboardFormer from 'telegram/func/keyboardFormer'
 import sendMessage from 'telegram/sendMessage'
 
 const joinGame = async ({ telegramId, jsonCommand, location, db }) => {
@@ -77,6 +78,13 @@ const joinGame = async ({ telegramId, jsonCommand, location, db }) => {
     const admins = await getAdmins(db)
     const adminTelegramIds = admins.map(({ telegramId }) => telegramId)
 
+    const keyboard = keyboardFormer([
+      {
+        c: { c: 'editTeamAdmin', teamId: team._id },
+        text: '\u{2699} Управление командой',
+      },
+    ])
+
     await Promise.all(
       adminTelegramIds.map(async (telegramId) => {
         await sendMessage({
@@ -84,7 +92,7 @@ const joinGame = async ({ telegramId, jsonCommand, location, db }) => {
           text: `На игру ${formatGameName(game)} зарегистрировалась команда "${
             team.name
           }"`,
-          // keyboard,
+          keyboard,
           location,
         })
       })
