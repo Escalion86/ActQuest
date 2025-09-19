@@ -57,11 +57,13 @@ const GameMap = ({
     center: defaultMapState,
     zoom: 12,
   }
-  const { tasks } = game
+  const tasks = game?.tasks
 
   // var dateNow = new Date()
 
   useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
+
+  if (!game) return null
   // {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
 
   return (
@@ -293,7 +295,7 @@ function EventPage(props) {
           </div>
         </div>
         <div className="relative flex-1 w-full overflow-hidden">
-          {result && (
+          {result && game && (
             <GameMap
               {...result}
               usersWithLocation={usersWithLocation}
