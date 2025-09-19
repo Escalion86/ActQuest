@@ -15,7 +15,7 @@ const teams = async ({ telegramId, jsonCommand, location, db }) => {
       c: {
         c: 'editTeamAdmin',
         teamId: team._id,
-        page,
+        // page,
       },
     }
   })
