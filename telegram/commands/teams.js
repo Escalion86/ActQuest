@@ -1,3 +1,4 @@
+import { getNounTeams } from '@helpers/getNoun'
 import buttonListConstructor from 'telegram/func/buttonsListConstructor'
 
 const teams = async ({ telegramId, jsonCommand, location, db }) => {
@@ -21,7 +22,7 @@ const teams = async ({ telegramId, jsonCommand, location, db }) => {
   })
 
   return {
-    message: '<b>Все команды</b>',
+    message: `<b>Все команды</b> (${getNounTeams(teams.length)})`,
     buttons: [
       ...buttons,
       {
