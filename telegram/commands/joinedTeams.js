@@ -21,7 +21,8 @@ const joinedTeams = async ({ telegramId, jsonCommand, location, db }) => {
   })
 
   return {
-    message: '<b>Мои команды</b>',
+    message:
+      '<b>Мои команды</b>\n\n<i>* Примечание: нельзя состоять более чем в ТРЕХ командах</i>',
     buttons: [
       ...teams.map((team) => {
         const teamUser = teamsUser.find((teamUser) => {
