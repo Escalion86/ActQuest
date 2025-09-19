@@ -48,7 +48,7 @@ const buttonListConstructor = (array, page = 1, itemFunc) => {
                     ? array.length
                     : (realPage + 10) * 10
                 } \u{23E9}`,
-          hide: array.length <= realPage * 100,
+          hide: array.length <= realPage * 10 + 100,
         },
       ],
     ]
