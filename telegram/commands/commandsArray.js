@@ -131,6 +131,8 @@ import gameTeamCheckPhotosInTask from './gameTeamCheckPhotosInTask'
 import gamePhotos from './gamePhotos'
 import gameTeamPhotos from './gameTeamPhotos'
 import gameTeamPayments from './gameTeamPayments'
+import editGameFinances from './editGameFinances'
+import addGameFinance from './addGameFinance'
 import usersStatistics from './usersStatistics'
 import gameResultFormTeamsPlaces from './gameResultFormTeamsPlaces'
 import cancelTask from './cancelTask'
@@ -264,8 +266,10 @@ const commandsArray = {
   setTaskCoordinateRadius,
   archiveGamesEdit,
   editGamePrices,
+  editGameFinances,
   editGamePrice,
   addGamePrice,
+  addGameFinance,
   setGamePriceName,
   setGamePricePrice,
   setBonusForTaskComplite,
