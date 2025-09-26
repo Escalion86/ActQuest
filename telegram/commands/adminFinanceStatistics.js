@@ -18,7 +18,6 @@ const MONTHS = [
   'Декабрь',
 ]
 const INDENT = '&nbsp;&nbsp;'
-
 const formatAmount = (value) => {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return '0'
