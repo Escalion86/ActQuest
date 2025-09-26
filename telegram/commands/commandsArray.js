@@ -85,6 +85,7 @@ import setGameFinishingPlace from './setGameFinishingPlace'
 import setGameStartingPlace from './setGameStartingPlace'
 import allUsers from './allUsers'
 import adminMenu from './adminMenu'
+import adminFinanceStatistics from './adminFinanceStatistics'
 import gameResultShow from './gameResultShow'
 import gameResultHide from './gameResultHide'
 import checkGameTeamsDoubles from './checkGameTeamsDoubles'
@@ -238,6 +239,7 @@ const commandsArray = {
   setGameStartingPlace,
   allUsers,
   adminMenu,
+  adminFinanceStatistics,
   delTeamUserAdmin2,
   gameResultShow,
   gameResultHide,
