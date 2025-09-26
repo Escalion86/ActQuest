@@ -192,6 +192,13 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
         },
         text: '\u{1F4B2} Варианты и цены участия',
       },
+      {
+        c: {
+          c: 'editGameFinances',
+          gameId: jsonCommand.gameId,
+        },
+        text: '\u{1F4B0} Финансы',
+      },
       [
         {
           c: { c: 'setGameStartingPlace', gameId: jsonCommand.gameId },

@@ -28,21 +28,27 @@ const menuGamesEdit = async ({ telegramId, jsonCommand, user, db }) => {
     })
   )
 
+  const messageSections = ['<b>Конструктор игр</b>']
+
+  if (!isAdmin) {
+    messageSections.push('В списке отображены только игры которые создали именно Вы')
+  }
+
+  const statisticsLine = `<b>Количество игр</b>: ${getNoun(
+    notArchiveGames.length,
+    'игра',
+    'игры',
+    'игр'
+  )}${
+    archiveGames?.length > 0
+      ? ` (в архиве ${getNoun(archiveGames.length, 'игра', 'игры', 'игр')})`
+      : ''
+  }`
+
+  messageSections.push(statisticsLine)
+
   return {
-    message: `<b>Конструктор игр</b>\n\n${
-      isAdmin
-        ? ''
-        : 'В списке отображены только игры которые создали именно Вы\n\n'
-    }<b>Количество игр</b>: ${getNoun(
-      notArchiveGames.length,
-      'игра',
-      'игры',
-      'игр'
-    )}${
-      archiveGames?.length > 0
-        ? ` (в архиве ${getNoun(archiveGames.length, 'игра', 'игры', 'игр')})`
-        : ''
-    }`,
+    message: messageSections.filter(Boolean).join('\n\n'),
     buttons: [
       ...buttons,
       ...(archiveGames?.length > 0
