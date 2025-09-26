@@ -1,9 +1,7 @@
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import moment from 'moment-timezone'
-
 import { joinLines, joinSections, newline } from 'telegram/func/messageFormatting'
-
 
 const formatAmount = (value) => {
   if (typeof value !== 'number' || Number.isNaN(value)) {

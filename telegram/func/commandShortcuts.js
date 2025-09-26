@@ -2,6 +2,10 @@ const keyShortcuts = {
   gameId: 'g',
   page: 'p',
   financeType: 'f',
+  startYear: 'sy',
+  startMonth: 'sm',
+  endYear: 'ey',
+  endMonth: 'em',
 }
 
 export const encodeCommandKeys = (command) => {
