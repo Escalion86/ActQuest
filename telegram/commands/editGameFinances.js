@@ -2,6 +2,9 @@ import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import moment from 'moment-timezone'
 
+import { joinLines, joinSections, newline } from 'telegram/func/messageFormatting'
+
+
 const formatAmount = (value) => {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return '0'
@@ -61,11 +64,11 @@ const editGameFinances = async ({ telegramId, jsonCommand, location, db }) => {
               Number(sum) || 0
             )} руб.${descriptionText}`
           })
-          .join('\\n')
+          .join(newline)
       : 'Транзакций пока нет.'
 
-  const pageInfo =
-    totalPages > 1 ? `\\n\\nСтраница ${currentPage} из ${totalPages}` : ''
+  const paginationLines =
+    totalPages > 1 ? [`Страница ${currentPage} из ${totalPages}`] : []
 
   const buttons = []
   const navigationRow = []
@@ -88,22 +91,31 @@ const editGameFinances = async ({ telegramId, jsonCommand, location, db }) => {
   buttons.push([
     {
       c: { c: 'addGameFinance', gameId: jsonCommand.gameId, financeType: 'income' },
-      text: '\u2795 Добавить доход',
+      text: '➕ Добавить доход',
     },
     {
       c: { c: 'addGameFinance', gameId: jsonCommand.gameId, financeType: 'expense' },
-      text: '\u2796 Добавить расход',
+      text: '➖ Добавить расход',
     },
   ])
 
-  buttons.push({ c: { c: 'editGame', gameId: jsonCommand.gameId }, text: '\u2B05 Назад' })
+  buttons.push({ c: { c: 'editGame', gameId: jsonCommand.gameId }, text: '⬅ Назад' })
+
+  const headerLines = [
+    `<b>Финансы игры "${game?.name}"</b>`,
+    `<b>Доходы</b>: ${formatAmount(totalIncome)} руб.`,
+    `<b>Расходы</b>: ${formatAmount(totalExpense)} руб.`,
+    `<b>Баланс</b>: ${formatAmount(balance)} руб.`,
+  ]
+
+  const messageSections = [
+    joinLines(headerLines),
+    joinLines([transactionsText]),
+    joinLines(paginationLines),
+  ]
 
   return {
-    message: `<b>Финансы игры "${game?.name}"</b>\\n\\n<b>Доходы</b>: ${formatAmount(
-      totalIncome
-    )} руб.\\n<b>Расходы</b>: ${formatAmount(totalExpense)} руб.\\n<b>Баланс</b>: ${formatAmount(
-      balance
-    )} руб.\\n\\n${transactionsText}${pageInfo}`,
+    message: joinSections(messageSections),
     buttons,
   }
 }
