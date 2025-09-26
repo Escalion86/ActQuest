@@ -1,11 +1,12 @@
 import executeCommand from './func/executeCommand'
+import { decodeCommandKeys } from './func/commandShortcuts'
 import sendMessage from './sendMessage'
 
 function jsonParser(str) {
   try {
     if (!str) return
     const json = JSON.parse(str)
-    if (typeof json === 'object') return json
+    if (typeof json === 'object') return decodeCommandKeys(json)
     return
   } catch (e) {
     return
