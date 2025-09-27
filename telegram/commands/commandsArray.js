@@ -62,6 +62,7 @@ import gameMsg from './gameMsg'
 import setTaskDuration from './setTaskDuration'
 import setBreakDuration from './setBreakDuration'
 import setCluesDuration from './setCluesDuration'
+import setCluesPenalty from './setCluesPenalty'
 import setTaskPenalty from './setTaskPenalty'
 import transferCaptainRights from './transferCaptainRights'
 import archiveGames from './archiveGames'
@@ -147,6 +148,7 @@ import gameTasksShow from './gameTasksShow'
 import settings from './settings'
 import settingsSetChatUrl from './settingsSetChatUrl'
 import userRoleChange from './userRoleChange'
+import cluesSettings from './cluesSettings'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -215,7 +217,9 @@ const commandsArray = {
   gameMsg,
   setTaskDuration,
   setBreakDuration,
+  cluesSettings,
   setCluesDuration,
+  setCluesPenalty,
   setTaskPenalty,
   transferCaptainRights,
   archiveGames,
