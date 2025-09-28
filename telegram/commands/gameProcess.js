@@ -107,7 +107,8 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     )
 
   const currentTeamUser = getTeamUserByTelegramId(telegramId)
-  const isCaptain = currentTeamUser?.role === 'captain'
+  const isCaptainRole = (role) => role === 'capitan'
+  const isCaptain = isCaptainRole(currentTeamUser?.role)
   const telegramIdStr = String(telegramId ?? '')
 
   const {
@@ -158,7 +159,26 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         gameTeamId: String(gameTeam._id),
         finishBreak: true,
       },
-      text: 'Завершить перерыв и получить следующее задание',
+      text: 'Завершить перерыв',
+    },
+  ]
+
+  const buttonConfirmFinishBreak = [
+    {
+      c: {
+        c: 'gameProcess',
+        gameTeamId: String(gameTeam._id),
+        finishBreak: true,
+        confirmFinishBreak: true,
+      },
+      text: 'Да, завершить перерыв',
+    },
+  ]
+
+  const buttonCancelFinishBreak = [
+    {
+      c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
+      text: 'Нет, продолжить перерыв',
     },
   ]
 
@@ -208,6 +228,14 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     secondsLeftAfterStartTask < taskDuration + breakDuration
 
   if (jsonCommand.finishBreak) {
+    if (!jsonCommand.confirmFinishBreak) {
+      return {
+        message:
+          'Вы уверены, что хотите завершить перерыв и получить следующее задание?',
+        buttons: [buttonConfirmFinishBreak, buttonCancelFinishBreak],
+      }
+    }
+
     if (breakDuration <= 0)
       return {
         message: 'Перерыв для этой игры не предусмотрен.',
@@ -438,7 +466,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       recipients.map((teamUser) => {
         const buttonsForMember = [
           ...buildTaskButtons(visibleCluesCount, {
-            includeCaptainActions: teamUser.role === 'captain',
+            includeCaptainActions: isCaptainRole(teamUser.role),
           }),
           ...(includePhotoButtons && filteredPhotos.length > 0
             ? [buttonSeePhotoAnswers]

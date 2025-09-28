@@ -124,7 +124,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand, location, db }) => {
     ({ name, role, payments, paymentsSum, telegramId }, number) => {
       return {
         text: `${number}. ${name}${
-          role === 'captain' ? ' (капитан)' : ''
+          role === 'capitan' ? ' (капитан)' : ''
         } - ${paymentsSum} руб.${
           payments.length > 1 ? ` (${payments.length})` : ''
         }`,
@@ -140,7 +140,7 @@ const gameTeamPayments = async ({ telegramId, jsonCommand, location, db }) => {
       .map(
         ({ name, role, payments, paymentsSum, telegramId }) =>
           ` - ${name}${
-            role === 'captain' ? ' (капитан)' : ''
+            role === 'capitan' ? ' (капитан)' : ''
           } - ${paymentsSum} руб.${
             payments.length > 1 ? ` (${payments.length})` : ''
           }`
