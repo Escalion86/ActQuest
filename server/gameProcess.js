@@ -775,6 +775,12 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         imagesForTask: images,
         visibleCluesCount: showCluesNum,
       })
+
+      await sendTaskToOtherMembers({
+        message,
+        imagesForTask: images,
+        visibleCluesCount: showCluesNum,
+      })
       return {
         images,
         message,
