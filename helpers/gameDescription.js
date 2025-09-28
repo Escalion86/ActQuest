@@ -49,6 +49,10 @@ const gameDescription = (game, creator) => {
       : game.type === 'photo'
       ? getNounPoints(game?.taskFailurePenalty)
       : secondsToTimeStr(game?.taskFailurePenalty)
+  }\n<b>Штраф за досрочную подсказку</b>: ${
+    !game?.clueEarlyPenalty
+      ? 'отсутствует'
+      : secondsToTimeStr(game?.clueEarlyPenalty)
   }\n\n<b>Стоимость участия</b>: ${
     !game.prices || game.prices?.length === 0
       ? 'не указано'

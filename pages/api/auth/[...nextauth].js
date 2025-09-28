@@ -1,181 +1,155 @@
 import NextAuth from 'next-auth'
-import Users from '@models/Users'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import dbConnect from '@utils/dbConnect'
+import getTelegramTokenByLocation from '@utils/telegram/getTelegramTokenByLocation'
+import verifyTelegramAuthPayload from '@helpers/verifyTelegramAuthPayload'
 
-export default async function auth(req, res) {
-  return await NextAuth(req, res, {
-    secret: process.env.SECRET,
-    providers: [
-      // Providers.Email({
-      //   server: process.env.EMAIL_SERVER,
-      //   from: process.env.EMAIL_FROM,
-      // }),
-      CredentialsProvider({
-        id: 'credentials',
-        name: 'credentials',
-        credentials: {
-          phone: { label: 'Phone', type: 'text', placeholder: '' },
-          password: { label: 'Password', type: 'password' },
-        },
-        authorize: async (credentials, req) => {
-          const { phone, password } = credentials
-          if (phone && password) {
-            await dbConnect()
+const buildUserName = (payload) => {
+  const parts = [payload?.first_name, payload?.last_name]
+    .filter(Boolean)
+    .map((value) => value.trim())
+    .filter(Boolean)
 
-            // await fetchingLog(
-            //   { from: 'update User activity time in nextauth authorize' },
-            //   process.env.NEXTAUTH_SITE
-            // )
+  if (parts.length > 0) return parts.join(' ')
+  if (payload?.username) return payload.username
+  return 'Пользователь Telegram'
+}
 
-            const fetchedUser = await db
-              .model('Users')
-              .findOne({ phone, password })
-            // await db.model('Users').findOneAndUpdate(
-            //   { phone, password },
-            //   {
-            //     lastActivityAt: Date.now(),
-            //     // prevActivityAt: session.user.lastActivityAt,
-            //   }
-            // )
+const normalizeUserForSession = (user, fallback) => ({
+  ...fallback,
+  _id: user?._id,
+  telegramId: user?.telegramId ?? fallback.telegramId,
+  name: user?.name ?? fallback.name,
+  username: user?.username ?? fallback.username ?? null,
+  photoUrl: user?.photoUrl ?? fallback.photoUrl ?? null,
+  languageCode: user?.languageCode ?? fallback.languageCode ?? null,
+  isPremium: user?.isPremium ?? fallback.isPremium ?? false,
+  role: user?.role ?? fallback.role ?? 'client',
+})
 
-            if (fetchedUser) {
-              return {
-                name: phone,
-              }
-            } else {
-              return null
-            }
-          } else {
-            return null
+export const authOptions = {
+  session: {
+    strategy: 'jwt',
+  },
+  secret: process.env.SECRET,
+  providers: [
+    CredentialsProvider({
+      id: 'telegram',
+      name: 'Telegram',
+      credentials: {
+        data: { label: 'Telegram auth data', type: 'text' },
+        location: { label: 'Location', type: 'text' },
+      },
+      authorize: async (credentials) => {
+        try {
+          const location = credentials?.location
+          const rawData = credentials?.data
+
+          if (!location || !rawData) return null
+
+          const payload = JSON.parse(rawData)
+          const token = getTelegramTokenByLocation(location)
+
+          if (!verifyTelegramAuthPayload(payload, token)) return null
+
+          const db = await dbConnect(location)
+          if (!db) return null
+
+          const name = buildUserName(payload)
+          const updates = {
+            name,
+            username: payload?.username ?? null,
+            photoUrl: payload?.photo_url ?? null,
+            languageCode: payload?.language_code ?? null,
+            isPremium: Boolean(payload?.is_premium),
           }
-        },
-      }),
-      // GoogleProvider({
-      //   clientId: process.env.GOOGLE_CLIENT_ID,
-      //   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      //   // authorizationUrl:
-      //   //   'https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&response_type=code',
-      // }),
-      // VkProvider({
-      //   clientId: process.env.VK_CLIENT_ID,
-      //   clientSecret: process.env.VK_CLIENT_SECRET,
-      // }),
-      // ...add more providers here
-    ],
-    callbacks: {
-      // async jwt({ token, user }) {
-      //   return { ...token, ...user }
-      // },
-      async session({ session, user, token }) {
-        // await fetchingLog(
-        //   { from: 'nextauth callback session', user: session?.user },
-        //   process.env.NEXTAUTH_SITE
-        // )
 
-        const userPhone = session.user.name
+          const user = await db
+            .model('Users')
+            .findOneAndUpdate(
+              { telegramId: payload.id },
+              { $set: updates },
+              {
+                upsert: true,
+                new: true,
+                setDefaultsOnInsert: true,
+              }
+            )
+            .lean()
 
-        // Находим данные пользователя и обновляем время активности
-        // await fetchingLog(
-        //   { from: 'start dbConnect in nextauth' },
-        //   process.env.NEXTAUTH_SITE
-        // )
-        await dbConnect()
-        // await fetchingLog(
-        //   { from: 'finish dbConnect in nextauth' },
-        //   process.env.NEXTAUTH_SITE
-        // )
+          return {
+            id: user._id.toString(),
+            telegramId: user.telegramId,
+            location,
+            name: user.name,
+            username: user.username,
+            photoUrl: user.photoUrl,
+            languageCode: user.languageCode,
+            isPremium: user.isPremium,
+          }
+        } catch (error) {
+          console.error('Telegram authorize error', error)
+          return null
+        }
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.userId = user.id
+        token.telegramId = user.telegramId
+        token.location = user.location
+        token.name = user.name
+        token.username = user.username
+        token.photoUrl = user.photoUrl
+        token.languageCode = user.languageCode
+        token.isPremium = user.isPremium
+      }
 
-        console.log('dbConnect')
+      return token
+    },
+    async session({ session, token }) {
+      if (!session?.user) session.user = {}
 
-        const result = await db.model('Users').findOne({ phone: userPhone })
-        // const result = await db.model('Users').findOneAndUpdate(
-        //   { phone: userPhone },
-        //   {
-        //     lastActivityAt: Date.now(),
-        //     // prevActivityAt: session.user.lastActivityAt,
-        //   }
-        // )
-        // console.log('!!!!!!!!!!!result', result)
-
-        // const result = await fetchingUserByPhone(
-        //   userPhone,
-        //   process.env.NEXTAUTH_SITE
-        // )
-        // await fetchingLog(
-        //   { from: 'result in nextauth', result },
-        //   process.env.NEXTAUTH_SITE
-        // )
-
-        // Если пользователь есть в базе (а он должен быть)
-        if (result) {
-          // await fetchingLog(
-          //   {
-          //     from: 'user finded. update User activity time in nextauth authorize',
-          //   },
-          //   process.env.NEXTAUTH_SITE
-          // )
-          result.prevActivityAt = result.lastActivityAt
-          result.lastActivityAt = Date.now()
-          result.save()
-
-          // await fetchingLog(
-          //   { from: 'user activity time saved' },
-          //   process.env.NEXTAUTH_SITE
-          // )
-
-          session.user._id = result._id
-          session.user.role = result.role
-          session.user.firstName = result.firstName
-          session.user.secondName = result.secondName
-          session.user.thirdName = result.thirdName
-          session.user.phone = result.phone
-          session.user.email = result.email
-          session.user.whatsapp = result.whatsapp
-          session.user.viber = result.viber
-          session.user.telegram = result.telegram
-          session.user.instagram = result.instagram
-          session.user.vk = result.vk
-          session.user.gender = result.gender
-          session.user.birthday = result.birthday
-          session.user.lastActivityAt = result.lastActivityAt
-          session.user.prevActivityAt = result.prevActivityAt
-          session.user.orientation = result.orientation
-          session.user.profession = result.profession
-          session.user.interests = result.interests
-          session.user.about = result.about
-          session.user.status = result.status
-          session.user.images = result.images
-          session.user.haveKids = result.haveKids
-          session.user.security = result.security
-          session.user.notifications = result.notifications
+      if (token?.telegramId && token?.location) {
+        const fallbackUser = {
+          telegramId: token.telegramId,
+          name: token.name,
+          username: token.username,
+          photoUrl: token.photoUrl,
+          languageCode: token.languageCode,
+          isPremium: token.isPremium,
+          location: token.location,
         }
 
-        //  else {
-        //   // если пользователь не зарегистрирован
-        //   await CRUD(Users, {
-        //     method: 'POST',
-        //     body: {
-        //       phone: userPhone,
-        //       role: 'client',
-        //     },
-        //   })
-        // }
-        return Promise.resolve(session)
-      },
+        try {
+          const db = await dbConnect(token.location)
+          if (db) {
+            const user = await db
+              .model('Users')
+              .findOne({ telegramId: token.telegramId })
+              .lean()
+
+            session.user = normalizeUserForSession(user, fallbackUser)
+            session.user.location = token.location
+          } else {
+            session.user = normalizeUserForSession(null, fallbackUser)
+          }
+        } catch (error) {
+          console.error('Session callback error', error)
+          session.user = normalizeUserForSession(null, fallbackUser)
+        }
+      }
+
+      return session
     },
-    jwt: {
-      secret: 'test',
-      encryption: true,
-    },
-    pages: {
-      signIn: '/login',
-    },
-    // A database is optional, but required to persist accounts in a database
-    // database: process.env.MONGODB_URI,
-    // adapter: TypeORMLegacyAdapter(process.env.MONGODB_URI)
-    // adapter: MongoDBAdapter({
-    //   db: (await clientPromise).db(),
-    // }),
-  })
+  },
+  pages: {
+    signIn: '/cabinet',
+  },
+}
+
+export default function auth(req, res) {
+  return NextAuth(req, res, authOptions)
 }

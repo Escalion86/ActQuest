@@ -98,6 +98,10 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
         : `<b>Время до подсказки</b>: ${secondsToTimeStr(
             game?.cluesDuration ?? 1200
           )}`
+    }\n<b>Штраф за досрочную подсказку</b>: ${
+      !game?.clueEarlyPenalty
+        ? 'отсутствует'
+        : secondsToTimeStr(game?.clueEarlyPenalty)
     }\n<b>Перерыв между заданиями</b>: ${
       !game?.breakDuration
         ? 'отсутствует'

@@ -9,6 +9,23 @@ const usersSchema = {
     default: '',
     trim: true,
   },
+  username: {
+    type: String,
+    default: null,
+    trim: true,
+  },
+  photoUrl: {
+    type: String,
+    default: null,
+  },
+  languageCode: {
+    type: String,
+    default: null,
+  },
+  isPremium: {
+    type: Boolean,
+    default: false,
+  },
   gender: {
     type: String,
     default: null,
