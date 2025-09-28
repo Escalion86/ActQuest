@@ -1,4 +1,5 @@
 import { commandToNum } from 'telegram/commands/commandsArray'
+import { encodeCommandKeys } from './commandShortcuts'
 import inlineKeyboard from './inlineKeyboard'
 
 const buttonConstructor = ({ text, c, url }) => {
@@ -11,7 +12,10 @@ const buttonConstructor = ({ text, c, url }) => {
 
   // Значит команда в JSON формате
   if (c) {
-    const convertedCommand = { ...c, c: commandToNum[c.c] }
+    const convertedCommand = {
+      ...encodeCommandKeys(c),
+      c: commandToNum[c.c],
+    }
     return {
       text,
       callback_data: JSON.stringify(convertedCommand),

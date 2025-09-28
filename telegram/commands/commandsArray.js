@@ -62,6 +62,7 @@ import gameMsg from './gameMsg'
 import setTaskDuration from './setTaskDuration'
 import setBreakDuration from './setBreakDuration'
 import setCluesDuration from './setCluesDuration'
+import setCluesPenalty from './setCluesPenalty'
 import setTaskPenalty from './setTaskPenalty'
 import transferCaptainRights from './transferCaptainRights'
 import archiveGames from './archiveGames'
@@ -85,6 +86,7 @@ import setGameFinishingPlace from './setGameFinishingPlace'
 import setGameStartingPlace from './setGameStartingPlace'
 import allUsers from './allUsers'
 import adminMenu from './adminMenu'
+import adminFinanceStatistics from './adminFinanceStatistics'
 import gameResultShow from './gameResultShow'
 import gameResultHide from './gameResultHide'
 import checkGameTeamsDoubles from './checkGameTeamsDoubles'
@@ -131,6 +133,8 @@ import gameTeamCheckPhotosInTask from './gameTeamCheckPhotosInTask'
 import gamePhotos from './gamePhotos'
 import gameTeamPhotos from './gameTeamPhotos'
 import gameTeamPayments from './gameTeamPayments'
+import editGameFinances from './editGameFinances'
+import addGameFinance from './addGameFinance'
 import usersStatistics from './usersStatistics'
 import gameResultFormTeamsPlaces from './gameResultFormTeamsPlaces'
 import cancelTask from './cancelTask'
@@ -144,6 +148,7 @@ import gameTasksShow from './gameTasksShow'
 import settings from './settings'
 import settingsSetChatUrl from './settingsSetChatUrl'
 import userRoleChange from './userRoleChange'
+import cluesSettings from './cluesSettings'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -212,7 +217,9 @@ const commandsArray = {
   gameMsg,
   setTaskDuration,
   setBreakDuration,
+  cluesSettings,
   setCluesDuration,
+  setCluesPenalty,
   setTaskPenalty,
   transferCaptainRights,
   archiveGames,
@@ -236,6 +243,7 @@ const commandsArray = {
   setGameStartingPlace,
   allUsers,
   adminMenu,
+  adminFinanceStatistics,
   delTeamUserAdmin2,
   gameResultShow,
   gameResultHide,
@@ -264,8 +272,10 @@ const commandsArray = {
   setTaskCoordinateRadius,
   archiveGamesEdit,
   editGamePrices,
+  editGameFinances,
   editGamePrice,
   addGamePrice,
+  addGameFinance,
   setGamePriceName,
   setGamePricePrice,
   setBonusForTaskComplite,

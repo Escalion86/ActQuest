@@ -63,6 +63,10 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
         : `<b>Время до подсказки</b>: ${secondsToTimeStr(
             game?.cluesDuration ?? 1200
           )}`
+    }\n<b>Штраф за досрочную подсказку</b>: ${
+      !game?.clueEarlyPenalty
+        ? 'отсутствует'
+        : secondsToTimeStr(game?.clueEarlyPenalty)
     }\n<b>Перерыв между заданиями</b>: ${
       !game?.breakDuration
         ? 'отсутствует'
@@ -148,10 +152,10 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
         },
         {
           c: {
-            c: 'setCluesDuration',
+            c: 'cluesSettings',
             gameId: jsonCommand.gameId,
           },
-          text: '\u{270F} До подсказки',
+          text: '\u{270F} Подсказки',
         },
         {
           c: {
@@ -191,6 +195,13 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
           gameId: jsonCommand.gameId,
         },
         text: '\u{1F4B2} Варианты и цены участия',
+      },
+      {
+        c: {
+          c: 'editGameFinances',
+          gameId: jsonCommand.gameId,
+        },
+        text: '\u{1F4B0} Финансы',
       },
       [
         {
