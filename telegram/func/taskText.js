@@ -13,6 +13,7 @@ const taskText = ({
   cluesDuration = 1200,
   taskDuration = 3600,
   photos,
+  timeAddings,
 }) => {
   const { tasks } = game
   const {
@@ -47,6 +48,18 @@ const taskText = ({
           clues[i].clue
         }</blockquote>`
     }
+
+  const addingsSummary =
+    Array.isArray(timeAddings) && timeAddings.length > 0
+      ? `\n\n<b>Текущие бонусы/штрафы команды:</b>\n${timeAddings
+          .map(({ name, time }) => {
+            const isBonus = time < 0
+            const timeText = secondsToTimeStr(Math.abs(time), true)
+            const icon = isBonus ? '\u{1F7E2}' : '\u{1F534}'
+            return `${icon} ${timeText} - ${name}`
+          })
+          .join('\n')}`
+      : ''
 
   return `<b>Задание №${taskNum + 1}${
     task.isBonusTask ? ' (БОНУСНОЕ)' : ''
@@ -123,7 +136,7 @@ const taskText = ({
     game.type === 'photo' && photos && photos[taskNum]?.photos?.length > 0
       ? `\n\n<b>Получено фото-ответов</b>: ${photos[taskNum]?.photos.length} шт.`
       : ''
-  }\n\n${
+  }${addingsSummary}\n\n${
     cluesDuration > 0 && showCluesNum < clues?.length
       ? `<b>Время до подсказки</b>: ${secondsToTime(
           cluesDuration - (taskSecondsLeft % cluesDuration)
