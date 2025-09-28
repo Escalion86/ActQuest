@@ -11,6 +11,10 @@ const keyShortcuts = {
   endPickerYear: 'epy',
   forceClue: 'fc',
   failTask: 'ft',
+  finishBreak: 'fb',
+  confirmFinishBreak: 'cfb',
+  confirmForceClue: 'cfc',
+  confirmFailTask: 'cft',
 }
 
 const yearKeys = new Set([
