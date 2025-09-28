@@ -1,6 +1,6 @@
-import moment from 'moment-timezone'
-import isUserAdmin from '@helpers/isUserAdmin'
-import { joinLines, joinSections } from 'telegram/func/messageFormatting'
+const moment = require('moment-timezone')
+const isUserAdmin = require('../../helpers/isUserAdmin').default
+const { joinLines, joinSections } = require('../func/messageFormatting')
 
 const TIMEZONE = 'Asia/Krasnoyarsk'
 const MONTHS_LOWER = [
@@ -147,6 +147,7 @@ const formatGameDate = (game) => {
     return 'Без даты'
   }
   return dateMoment.format('DD.MM.YYYY')
+}
 
 const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
   if (!isUserAdmin(user)) {
@@ -457,4 +458,4 @@ const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
   }
 }
 
-export default adminFinanceStatistics
+module.exports = adminFinanceStatistics
