@@ -1,18 +1,17 @@
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 
-const setCluesDuration = async ({ telegramId, jsonCommand, location, db }) => {
-  // --- НЕ САМОСТОЯТЕЛЬНАЯ КОМАНДА
+const setCluesPenalty = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
   if (!jsonCommand.message) {
     return {
       success: true,
-      message: 'Введите время между подсказками в секундах',
+      message: 'Введите штраф за досрочную подсказку в секундах',
       buttons: [
         {
-          text: 'Без подсказок',
+          text: 'Без штрафа',
           c: { message: '0' },
         },
         {
@@ -22,27 +21,28 @@ const setCluesDuration = async ({ telegramId, jsonCommand, location, db }) => {
       ],
     }
   }
+
   const value = Number(jsonCommand.message)
   if (!Number.isFinite(value) || value < 0) {
     return {
       success: false,
-      message: 'Время между подсказками должно быть неотрицательным числом в секундах',
+      message: 'Штраф должен быть неотрицательным числом (в секундах)',
     }
   }
 
-  const duration = Math.floor(value)
+  const penalty = Math.floor(value)
 
   await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
-    cluesDuration: duration,
+    clueEarlyPenalty: penalty,
   })
 
   return {
     success: true,
-    message: `Время между подсказками обновлено на "${
-      duration > 0 ? secondsToTimeStr(duration) : 'подсказки отключены'
+    message: `Штраф за досрочную подсказку обновлен на "${
+      penalty > 0 ? secondsToTimeStr(penalty) : 'без штрафа'
     }"`,
     nextCommand: { c: 'cluesSettings', gameId: jsonCommand.gameId },
   }
 }
 
-export default setCluesDuration
+export default setCluesPenalty

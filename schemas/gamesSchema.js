@@ -142,6 +142,10 @@ const gamesSchema = {
     type: Number,
     default: 1200,
   },
+  clueEarlyPenalty: {
+    type: Number,
+    default: 0,
+  },
   breakDuration: {
     type: Number,
     default: 0,

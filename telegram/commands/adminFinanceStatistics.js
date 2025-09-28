@@ -181,7 +181,7 @@ const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
 
     return {
       message: joinSections(messageSections),
-      buttons: [{ c: 'adminMenu', text: '⬅️ Назад' }],
+      buttons: [{ c: 'adminMenu', text: '\u{2B05} Назад' }],
     }
   }
 
@@ -192,7 +192,6 @@ const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
     .find({ gameId: { $in: gameIds } })
     .lean()
 
-  
   const allDates = []
 
   payments.forEach((payment) => {
@@ -420,7 +419,7 @@ const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
 
   const buttons = [
     { text: '\u{1F4C5} Выбрать другой период', c: { c: 'adminFinanceStatistics' } },
-    { c: 'adminMenu', text: '⬅️ Назад' },
+    { c: 'adminMenu', text: '\u{2B05} Назад' },
   ]
 
   return {

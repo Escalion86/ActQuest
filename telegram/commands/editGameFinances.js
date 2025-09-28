@@ -55,7 +55,7 @@ const editGameFinances = async ({ telegramId, jsonCommand, location, db }) => {
     visibleFinances.length > 0
       ? visibleFinances
           .map(({ date, type, sum, description }) => {
-            const sign = type === 'income' ? '➕' : '➖'
+            const sign = type === 'income' ? '\u2795' : '\u2796'
             const typeName = type === 'income' ? 'Доход' : 'Расход'
             const descriptionText = description ? ` — ${description}` : ''
             return `${sign} ${formatDate(date)} · ${typeName}: ${formatAmount(
@@ -73,13 +73,13 @@ const editGameFinances = async ({ telegramId, jsonCommand, location, db }) => {
   if (currentPage > 1) {
     navigationRow.push({
       c: { c: 'editGameFinances', gameId: jsonCommand.gameId, page: currentPage - 1 },
-      text: '⬅️ Назад',
+      text: '\u2B05\uFE0F Назад',
     })
   }
   if (currentPage < totalPages) {
     navigationRow.push({
       c: { c: 'editGameFinances', gameId: jsonCommand.gameId, page: currentPage + 1 },
-      text: 'Вперед ➡️',
+      text: 'Вперед \u27A1\uFE0F',
     })
   }
   if (navigationRow.length > 0) {
