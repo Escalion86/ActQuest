@@ -133,13 +133,20 @@ const buildMonthYearSelection = ({
   }
 }
 
-const formatGameDate = (game) => {
+const getGameDateMoment = (game) => {
   const date = game?.dateStart || game?.dateStartFact || game?.dateEndFact
   if (!date) {
+    return null
+  }
+  return moment(date).tz(TIMEZONE)
+}
+
+const formatGameDate = (game) => {
+  const dateMoment = getGameDateMoment(game)
+  if (!dateMoment) {
     return 'Без даты'
   }
-  return moment(date).tz(TIMEZONE).format('DD.MM.YYYY')
-}
+  return dateMoment.format('DD.MM.YYYY')
 
 const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
   if (!isUserAdmin(user)) {
@@ -334,46 +341,67 @@ const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
     return acc
   }, {})
 
-  const statistics = games
-    .map((game) => {
-      const finances = Array.isArray(game.finances) ? game.finances : []
+  const rawStatistics = games.map((game) => {
+    const finances = Array.isArray(game.finances) ? game.finances : []
+    const gameDateMoment = getGameDateMoment(game)
 
-      const otherIncome = finances
-        .filter(({ type }) => type === 'income')
-        .reduce((acc, { sum, date }) => {
-          if (!date) return acc
-          const financeDate = moment(date).tz(TIMEZONE)
-          if (financeDate.isBefore(startMoment) || financeDate.isAfter(endMoment)) {
-            return acc
-          }
-          return acc + (Number(sum) || 0)
-        }, 0)
+    const otherIncome = finances
+      .filter(({ type }) => type === 'income')
+      .reduce((acc, { sum, date }) => {
+        if (!date) return acc
+        const financeDate = moment(date).tz(TIMEZONE)
+        if (financeDate.isBefore(startMoment) || financeDate.isAfter(endMoment)) {
+          return acc
+        }
+        return acc + (Number(sum) || 0)
+      }, 0)
 
-      const expenses = finances
-        .filter(({ type }) => type === 'expense')
-        .reduce((acc, { sum, date }) => {
-          if (!date) return acc
-          const financeDate = moment(date).tz(TIMEZONE)
-          if (financeDate.isBefore(startMoment) || financeDate.isAfter(endMoment)) {
-            return acc
-          }
-          return acc + (Number(sum) || 0)
-        }, 0)
+    const expenses = finances
+      .filter(({ type }) => type === 'expense')
+      .reduce((acc, { sum, date }) => {
+        if (!date) return acc
+        const financeDate = moment(date).tz(TIMEZONE)
+        if (financeDate.isBefore(startMoment) || financeDate.isAfter(endMoment)) {
+          return acc
+        }
+        return acc + (Number(sum) || 0)
+      }, 0)
 
-      const playerIncome = paymentsByGame[String(game._id)] || 0
+    const playerIncome = paymentsByGame[String(game._id)] || 0
 
-      const total = playerIncome + otherIncome - expenses
+    const total = playerIncome + otherIncome - expenses
 
-      return {
-        name: game.name || 'Без названия',
-        date: formatGameDate(game),
-        playerIncome,
-        otherIncome,
-        expenses,
-        total,
+    return {
+      name: game.name || 'Без названия',
+      date: formatGameDate(game),
+      playerIncome,
+      otherIncome,
+      expenses,
+      total,
+      gameDateMoment,
+    }
+  })
+
+  const statistics = rawStatistics
+    .filter(({ gameDateMoment }) => {
+      if (!gameDateMoment) {
+        return true
       }
+      if (gameDateMoment.isBefore(startMoment) || gameDateMoment.isAfter(endMoment)) {
+        return false
+      }
+      return true
     })
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => {
+      const aTime = a.gameDateMoment ? a.gameDateMoment.valueOf() : Number.POSITIVE_INFINITY
+      const bTime = b.gameDateMoment ? b.gameDateMoment.valueOf() : Number.POSITIVE_INFINITY
+
+      if (aTime !== bTime) {
+        return aTime - bTime
+      }
+
+      return a.name.localeCompare(b.name)
+    })
 
   const totals = statistics.reduce(
     (acc, item) => {
