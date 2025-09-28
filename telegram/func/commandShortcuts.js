@@ -10,6 +10,15 @@ const keyShortcuts = {
   endPickerYear: 'epy',
 }
 
+const yearKeys = new Set([
+  'startYear',
+  'endYear',
+  'startPickerYear',
+  'endPickerYear',
+])
+
+const YEAR_OFFSET = 1900
+
 export const encodeCommandKeys = (command) => {
   if (!command || typeof command !== 'object') return {}
 
@@ -19,7 +28,13 @@ export const encodeCommandKeys = (command) => {
     if (key === 'c') return
 
     const shortKey = keyShortcuts[key]
-    encoded[shortKey ?? key] = value
+    let encodedValue = value
+
+    if (yearKeys.has(key) && typeof value === 'number') {
+      encodedValue = value - YEAR_OFFSET
+    }
+
+    encoded[shortKey ?? key] = encodedValue
   })
 
   return encoded
@@ -34,6 +49,12 @@ export const decodeCommandKeys = (command) => {
     if (decoded[shortKey] !== undefined && decoded[key] === undefined) {
       decoded[key] = decoded[shortKey]
       delete decoded[shortKey]
+    }
+  })
+
+  Object.entries(decoded).forEach(([key, value]) => {
+    if (yearKeys.has(key) && typeof value === 'number') {
+      decoded[key] = value + YEAR_OFFSET
     }
   })
 
