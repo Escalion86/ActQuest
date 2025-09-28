@@ -6,9 +6,15 @@ const menuUser = async ({ telegramId, jsonCommand, location, db }) => {
     user = await db.model('Users').findOne({ telegramId })
   }
 
+  const message = user
+    ? `<b>Моя анкета</b>
+
+- <b>Имя</b>: ${user.name}`
+    : '<b>Моя анкета</b>'
+
   return {
     success: true,
-    message: `<b>Моя анкета</b>${user ? `:\n - <b>Имя</b>: ${user.name}` : ''}`,
+    message,
     buttonText: 'Команды',
     buttons: [
       { text: '\u{270F} Изменить имя', c: `setUserName` },

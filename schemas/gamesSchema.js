@@ -199,6 +199,18 @@ const gamesSchema = {
     type: [{ id: String, name: { type: String, trim: true }, price: Number }],
     default: [],
   },
+  finances: {
+    type: [
+      {
+        id: { type: String, trim: true },
+        type: { type: String, enum: ['income', 'expense'] },
+        sum: { type: Number, default: 0 },
+        date: { type: Date, default: null },
+        description: { type: String, trim: true, default: '' },
+      },
+    ],
+    default: [],
+  },
   showTasks: {
     type: Boolean,
     default: false,

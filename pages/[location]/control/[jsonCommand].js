@@ -8,6 +8,7 @@ import dbConnect from '@utils/dbConnect'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
+import { decodeCommandKeys } from 'telegram/func/commandShortcuts'
 
 const commands = [
   'setUserName',
@@ -125,8 +126,10 @@ const commands = [
   'setTaskCoordinateRadius',
   'archiveGamesEdit',
   'editGamePrices',
+  'editGameFinances',
   'editGamePrice',
   'addGamePrice',
+  'addGameFinance',
   'setGamePriceName',
   'setGamePricePrice',
   'setBonusForTaskComplite',
@@ -256,7 +259,7 @@ export const getServerSideProps = async (context) => {
 
   let cmd
   try {
-    cmd = JSON.parse(jsonCommand)
+    cmd = decodeCommandKeys(JSON.parse(jsonCommand))
   } catch (error) {
     cmd = { c: jsonCommand }
   }
