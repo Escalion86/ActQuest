@@ -85,6 +85,7 @@ import setGameFinishingPlace from './setGameFinishingPlace'
 import setGameStartingPlace from './setGameStartingPlace'
 import allUsers from './allUsers'
 import adminMenu from './adminMenu'
+import adminFinanceStatistics from './adminFinanceStatistics'
 import gameResultShow from './gameResultShow'
 import gameResultHide from './gameResultHide'
 import checkGameTeamsDoubles from './checkGameTeamsDoubles'
@@ -131,6 +132,8 @@ import gameTeamCheckPhotosInTask from './gameTeamCheckPhotosInTask'
 import gamePhotos from './gamePhotos'
 import gameTeamPhotos from './gameTeamPhotos'
 import gameTeamPayments from './gameTeamPayments'
+import editGameFinances from './editGameFinances'
+import addGameFinance from './addGameFinance'
 import usersStatistics from './usersStatistics'
 import gameResultFormTeamsPlaces from './gameResultFormTeamsPlaces'
 import cancelTask from './cancelTask'
@@ -236,6 +239,7 @@ const commandsArray = {
   setGameStartingPlace,
   allUsers,
   adminMenu,
+  adminFinanceStatistics,
   delTeamUserAdmin2,
   gameResultShow,
   gameResultHide,
@@ -264,8 +268,10 @@ const commandsArray = {
   setTaskCoordinateRadius,
   archiveGamesEdit,
   editGamePrices,
+  editGameFinances,
   editGamePrice,
   addGamePrice,
+  addGameFinance,
   setGamePriceName,
   setGamePricePrice,
   setBonusForTaskComplite,
