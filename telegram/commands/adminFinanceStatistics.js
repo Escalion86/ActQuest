@@ -147,7 +147,6 @@ const formatGameDate = (game) => {
     return 'Без даты'
   }
   return dateMoment.format('DD.MM.YYYY')
-}
 
 const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
   if (!isUserAdmin(user)) {

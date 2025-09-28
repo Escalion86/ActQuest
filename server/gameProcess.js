@@ -1,4 +1,9 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import createTaskProgressArrays, {
+  createTaskPhotoEntry,
+  createTaskPhotosArray,
+} from '@helpers/createTaskProgressArrays'
+import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 import getGameTeam from 'telegram/func/getGameTeam'
@@ -6,28 +11,21 @@ import keyboardFormer from 'telegram/func/keyboardFormer'
 import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 import secondsToTime from 'telegram/func/secondsToTime'
-import padNum from 'telegram/func/padNum'
-import moment from 'moment-timezone'
+
+const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
+  timeZone: 'Asia/Krasnoyarsk',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
 
 const timeToCodeStr = () => {
-  var d = moment.tz(new Date(), 'Asia/Krasnoyarsk')
-  var obj = d.toObject()
-  const { minutes, hours } = obj
-  return padNum(hours, 2) + padNum(minutes, 2)
+  return timeFormatter.format(new Date()).replace(':', '')
 }
 
 const endTimeSet = (endTime, taskNum, gameTasksLength) => {
   const newDate = new Date()
-  var endTimeTemp = endTime ? [...endTime] : undefined
-  if (endTimeTemp) {
-    if (endTimeTemp.length < taskNum + 1) {
-      const newArray = Array(gameTasksLength).fill(undefined)
-      endTimeTemp.forEach((item, index) => (newArray[index] = item))
-      endTimeTemp = [...newArray]
-    }
-  } else {
-    endTimeTemp = Array(gameTasksLength).fill(undefined)
-  }
+  const endTimeTemp = ensureArrayCapacity(endTime, gameTasksLength)
   endTimeTemp[taskNum] = newDate
   return endTimeTemp
 }
@@ -35,33 +33,26 @@ const endTimeSet = (endTime, taskNum, gameTasksLength) => {
 const startTimeNextSet = (startTime, taskNum, gameTasksLength) => {
   // var endTimeTemp = endTime
   const newDate = new Date()
-  var startTimeTemp = startTime ? [...startTime] : undefined
-  if (startTimeTemp) {
-    if (startTimeTemp.length < taskNum + 1) {
-      const newArray = Array(gameTasksLength).fill(undefined)
-      startTimeTemp.forEach((item, index) => (newArray[index] = item))
-      startTimeTemp = [...newArray]
-    }
-  } else {
-    startTimeTemp = Array(gameTasksLength).fill(undefined)
-  }
+  const startTimeTemp = ensureArrayCapacity(startTime, gameTasksLength)
   if (taskNum < gameTasksLength - 1) {
     startTimeTemp[taskNum + 1] = newDate
   }
   return startTimeTemp
 }
 
-const teamGameStart = async (gameTeamId, game, db) => {
+const teamGameStart = async (gameTeamId, game, GamesTeams) => {
   const gameTasksCount = game.tasks.length
   const startTime = new Array(gameTasksCount).fill(null)
   startTime[0] = new Date()
   const endTime = new Array(gameTasksCount).fill(null)
-  const findedCodes = new Array(gameTasksCount).fill([])
-  const wrongCodes = new Array(gameTasksCount).fill([])
-  const findedPenaltyCodes = new Array(gameTasksCount).fill([])
-  const findedBonusCodes = new Array(gameTasksCount).fill([])
-  const photos = new Array(gameTasksCount).fill({ photos: [], checks: {} })
-  await db.model('GamesTeams').findByIdAndUpdate(gameTeamId, {
+  const {
+    findedCodes,
+    wrongCodes,
+    findedPenaltyCodes,
+    findedBonusCodes,
+    photos,
+  } = createTaskProgressArrays(gameTasksCount)
+  await GamesTeams.findByIdAndUpdate(gameTeamId, {
     startTime,
     endTime,
     activeNum: 0,
@@ -70,6 +61,7 @@ const teamGameStart = async (gameTeamId, game, db) => {
     findedPenaltyCodes,
     findedBonusCodes,
     photos,
+    timeAddings: [],
   })
 }
 
@@ -82,6 +74,9 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
   const game = await getGame(gameTeam.gameId, db)
   if (game.success === false) return game
+
+  const GamesTeams = db.model('GamesTeams')
+  const TeamsUsers = db.model('TeamsUsers')
 
   // Если игра не стартовала или уже закончена
   if (game.status === 'active') {
@@ -100,7 +95,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
   // Если начало игры индивидуальное, то нужно создать запись в БД для старта
   if (!gameTeam.startTime || gameTeam.startTime.length === 0) {
-    await teamGameStart(gameTeam._id, game, db)
+    await teamGameStart(gameTeam._id, game, GamesTeams)
   }
 
   const {
@@ -112,6 +107,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     startTime,
     endTime,
     photos,
+    timeAddings,
   } = gameTeam
 
   const breakDuration = game.breakDuration ?? 0
@@ -190,9 +186,6 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
   // выдаем сообщение об остатке времени,
   // либо если перерыв окончен, то даем след задание
 
-  console.log('breakDuration :>> ', breakDuration)
-  console.log('endTime[taskNum] :>> ', endTime[taskNum])
-  console.log('taskNum :>> ', taskNum)
   if (endTime[taskNum] && breakDuration > 0) {
     const secondsAfterEndTime = getSecondsBetween(endTime[taskNum])
     if (secondsAfterEndTime < breakDuration)
@@ -213,7 +206,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         game.tasks.length
       )
 
-      await db.model('GamesTeams').findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
         startTime: startTimeTemp,
         activeNum: taskNum + 1,
       })
@@ -262,7 +255,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       game.tasks.length
     )
 
-    await db.model('GamesTeams').findByIdAndUpdate(jsonCommand?.gameTeamId, {
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
       startTime: startTimeTemp,
       activeNum: taskNum + 1,
     })
@@ -279,6 +272,163 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     }
   }
 
+  const currentTask = game.tasks[taskNum] ?? {}
+  const totalClues =
+    Array.isArray(currentTask.clues) && currentTask.clues.length > 0
+      ? currentTask.clues.length
+      : 0
+  const rawShowCluesNum =
+    cluesDuration > 0
+      ? Math.floor(secondsLeftAfterStartTask / cluesDuration)
+      : 0
+  const showCluesNum = Math.min(Math.max(rawShowCluesNum, 0), totalClues)
+  const cluePenalty = game.clueEarlyPenalty ?? 0
+
+  const buttonForceClue = [
+    {
+      c: {
+        c: 'gameProcess',
+        gameTeamId: String(gameTeam._id),
+        forceClue: true,
+      },
+      text: '\u{26A1} Подсказка досрочно',
+    },
+  ]
+
+  const buttonFailTask = [
+    {
+      c: {
+        c: 'gameProcess',
+        gameTeamId: String(gameTeam._id),
+        failTask: true,
+      },
+      text: '\u{1F6A8} Слить задание',
+    },
+  ]
+
+  const buildTaskButtons = (visibleCluesCount = showCluesNum) => {
+    const hasMoreClues =
+      cluesDuration > 0 &&
+      totalClues > 0 &&
+      visibleCluesCount < totalClues
+    const allCluesReceived =
+      totalClues > 0 && visibleCluesCount >= totalClues
+    return [
+      buttonRefresh,
+      ...(hasMoreClues ? [buttonForceClue] : []),
+      ...(allCluesReceived ? [buttonFailTask] : []),
+    ]
+  }
+
+  if (jsonCommand.forceClue) {
+    if (cluesDuration <= 0 || totalClues === 0)
+      return {
+        message: '<b>Подсказки для этого задания недоступны.</b>',
+        buttons: buildTaskButtons(showCluesNum),
+      }
+
+    if (showCluesNum >= totalClues)
+      return {
+        message: 'Все подсказки для этого задания уже выданы.',
+        buttons: buildTaskButtons(showCluesNum),
+      }
+
+    const remainder = secondsLeftAfterStartTask % cluesDuration
+    const secondsToSkip =
+      remainder === 0 ? cluesDuration : cluesDuration - remainder
+
+    const updatedStartTime = Array.isArray(startTime)
+      ? [...startTime]
+      : []
+
+    const currentStart =
+      startTime && startTime[taskNum]
+        ? new Date(startTime[taskNum])
+        : new Date()
+    const newStartDate = new Date(
+      currentStart.getTime() - secondsToSkip * 1000
+    )
+    updatedStartTime[taskNum] = newStartDate
+
+    const existingAddings = Array.isArray(timeAddings)
+      ? [...timeAddings]
+      : []
+    const forcedClueNumber = Math.min(showCluesNum + 1, totalClues)
+    const clueAddingName = `Досрочная подсказка №${forcedClueNumber}`
+
+    const updates = {
+      startTime: updatedStartTime,
+    }
+
+    if (
+      cluePenalty > 0 &&
+      !existingAddings.some(({ name }) => name === clueAddingName)
+    ) {
+      updates.timeAddings = [
+        ...existingAddings,
+        { name: clueAddingName, time: cluePenalty },
+      ]
+    }
+
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, updates)
+
+    const nextShowCluesNum = Math.min(showCluesNum + 1, totalClues)
+
+    const penaltyText =
+      cluePenalty > 0
+        ? `\n<b>Штраф</b>: +${secondsToTime(cluePenalty)}`
+        : ''
+    const timeText =
+      secondsToSkip > 0
+        ? `\n<b>Снято времени</b>: ${secondsToTime(secondsToSkip)}`
+        : ''
+
+    return {
+      images: currentTask.images,
+      message: `<b>Подсказка №${nextShowCluesNum} выдана досрочно</b>${timeText}${penaltyText}\n\n${taskText({
+        game,
+        taskNum,
+        findedCodes,
+        findedBonusCodes,
+        findedPenaltyCodes,
+        startTaskTime: newStartDate,
+        cluesDuration,
+        taskDuration,
+        photos,
+      })}`,
+      buttons: buildTaskButtons(nextShowCluesNum),
+    }
+  }
+
+  if (jsonCommand.failTask) {
+    if (totalClues === 0 || showCluesNum < totalClues)
+      return {
+        message:
+          'Сдать задание можно только после получения всех подсказок.',
+        buttons: buildTaskButtons(showCluesNum),
+      }
+
+    const startTimeTemp = startTimeNextSet(
+      startTime,
+      taskNum,
+      game.tasks.length
+    )
+
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      startTime: startTimeTemp,
+      activeNum: taskNum + 1,
+    })
+
+    const failMessage = `<b>Задание провалено по решению команды.</b>${
+      breakDuration > 0 ? '\n\nПЕРЕРЫВ' : ''
+    }\nШтраф за невыполнение задания будет учтен при подсчете результатов.`
+
+    return {
+      message: failMessage,
+      nextCommand: {},
+    }
+  }
+
   const {
     task,
     codes,
@@ -286,7 +436,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     images,
     penaltyCodes,
     bonusCodes,
-  } = game.tasks[taskNum]
+  } = currentTask
 
   if (gameType === 'photo') {
     // Если получаем фото-ответ на задание
@@ -294,10 +444,13 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       const existedPhotos =
         typeof photos?.length === 'number'
           ? [...photos]
-          : new Array(gameTasksCount).fill({ photos: [], checks: {} })
+          : createTaskPhotosArray(gameTasksCount)
+      if (!existedPhotos[taskNum]) {
+        existedPhotos[taskNum] = createTaskPhotoEntry()
+      }
       existedPhotos[taskNum].photos.push(jsonCommand.message)
 
-      await db.model('GamesTeams').findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
         photos: existedPhotos,
       })
 
@@ -312,7 +465,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
             taskDuration,
             photos: existedPhotos,
           }),
-        buttons: [buttonRefresh, buttonSeePhotoAnswers],
+        buttons: [...buildTaskButtons(showCluesNum), buttonSeePhotoAnswers],
       }
     }
 
@@ -334,7 +487,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
           ? filteredPhotos
           : undefined,
       buttons: [
-        buttonRefresh,
+        ...buildTaskButtons(showCluesNum),
         ...(filteredPhotos.length > 0 ? [buttonSeePhotoAnswers] : []),
       ],
     }
@@ -360,7 +513,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       return {
         images,
         message,
-        buttons: buttonRefresh,
+        buttons: buildTaskButtons(showCluesNum),
       }
     }
 
@@ -402,13 +555,9 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       const newAllFindedBonusCodes = [...allFindedBonusCodes]
       const newFindedBonusCodesInTask = [...findedBonusCodesInTask, code]
       newAllFindedBonusCodes[taskNum] = newFindedBonusCodesInTask
-      console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ЗАДАНИЕ ЕЩЕ НЕ ВЫПОЛНЕНО:>> ')
-      console.log('newAllFindedBonusCodes :>> ', newAllFindedBonusCodes)
-      const result = await db
-        .model('GamesTeams')
-        .findByIdAndUpdate(jsonCommand?.gameTeamId, {
-          findedBonusCodes: newAllFindedBonusCodes,
-        })
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+        findedBonusCodes: newAllFindedBonusCodes,
+      })
 
       return {
         images: game.tasks[taskNum]?.images,
@@ -422,7 +571,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
           cluesDuration,
           taskDuration,
         })}`,
-        buttons: buttonRefresh,
+        buttons: buildTaskButtons(showCluesNum),
       }
     }
 
@@ -435,11 +584,9 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       const newAllFindedPenaltyCodes = [...allFindedPenaltyCodes]
       const newFindedPenaltyCodesInTask = [...findedPenaltyCodesInTask, code]
       newAllFindedPenaltyCodes[taskNum] = newFindedPenaltyCodesInTask
-      const result = await db
-        .model('GamesTeams')
-        .findByIdAndUpdate(jsonCommand?.gameTeamId, {
-          findedPenaltyCodes: newAllFindedPenaltyCodes,
-        })
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+        findedPenaltyCodes: newAllFindedPenaltyCodes,
+      })
 
       return {
         images: game.tasks[taskNum]?.images,
@@ -455,7 +602,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
           cluesDuration,
           taskDuration,
         })}`,
-        buttons: buttonRefresh,
+        buttons: buildTaskButtons(showCluesNum),
       }
     }
 
@@ -482,7 +629,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         startTimeTemp = startTimeNextSet(startTime, taskNum, game.tasks.length)
 
         const teamId = gameTeam.teamId
-        const teamsUsers = await db.model('TeamsUsers').find({
+        const teamsUsers = await TeamsUsers.find({
           teamId,
         })
 
@@ -492,14 +639,12 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
         // Если игра завершена
         if (newActiveNum > game.tasks.length - 1) {
-          await db
-            .model('GamesTeams')
-            .findByIdAndUpdate(jsonCommand?.gameTeamId, {
-              findedCodes: newAllFindedCodes,
-              startTime: startTimeTemp,
-              endTime: endTimeTemp,
-              activeNum: newActiveNum,
-            })
+          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+            findedCodes: newAllFindedCodes,
+            startTime: startTimeTemp,
+            endTime: endTimeTemp,
+            activeNum: newActiveNum,
+          })
 
           const keyboard = keyboardFormer([mainMenuButton])
 
@@ -526,12 +671,10 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         } else {
           //Если должен быть перерыв
           if (breakDuration > 0) {
-            await db
-              .model('GamesTeams')
-              .findByIdAndUpdate(jsonCommand?.gameTeamId, {
-                findedCodes: newAllFindedCodes,
-                endTime: endTimeTemp,
-              })
+            await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+              findedCodes: newAllFindedCodes,
+              endTime: endTimeTemp,
+            })
 
             const keyboard = keyboardFormer(buttonRefresh)
 
@@ -561,14 +704,12 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
             //   })
             // )
           }
-          await db
-            .model('GamesTeams')
-            .findByIdAndUpdate(jsonCommand?.gameTeamId, {
-              findedCodes: newAllFindedCodes,
-              startTime: startTimeTemp,
-              endTime: endTimeTemp,
-              activeNum: newActiveNum,
-            })
+          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+            findedCodes: newAllFindedCodes,
+            startTime: startTimeTemp,
+            endTime: endTimeTemp,
+            activeNum: newActiveNum,
+          })
 
           const keyboard = keyboardFormer(buttonRefresh)
 
@@ -601,11 +742,9 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         }
       }
 
-      const result = await db
-        .model('GamesTeams')
-        .findByIdAndUpdate(jsonCommand?.gameTeamId, {
-          findedCodes: newAllFindedCodes,
-        })
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+        findedCodes: newAllFindedCodes,
+      })
 
       return {
         images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
@@ -623,7 +762,9 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
               })}`
             : ''
         }`,
-        buttons: isTaskComplite ? undefined : buttonRefresh,
+        buttons: isTaskComplite
+          ? undefined
+          : buildTaskButtons(showCluesNum),
         nextCommand: isTaskComplite ? {} : undefined,
       }
     } else {
@@ -633,11 +774,9 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       const newWrongCodesInTask = [...wrongCodesInTask, code]
       newAllWrongCodes[taskNum] = newWrongCodesInTask
 
-      const result = await db
-        .model('GamesTeams')
-        .findByIdAndUpdate(jsonCommand?.gameTeamId, {
-          wrongCodes: newAllWrongCodes,
-        })
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+        wrongCodes: newAllWrongCodes,
+      })
       return {
         message: 'Код не верен. Введите код',
       }

@@ -4,6 +4,7 @@ import getGame from 'telegram/func/getGame'
 import keyboardFormer from 'telegram/func/keyboardFormer'
 import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
+import createTaskProgressArrays from '@helpers/createTaskProgressArrays'
 
 const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -61,11 +62,13 @@ const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
     const startTime = new Array(gameTasksCount).fill(null)
     startTime[0] = new Date()
     const endTime = new Array(gameTasksCount).fill(null)
-    const findedCodes = new Array(gameTasksCount).fill([])
-    const wrongCodes = new Array(gameTasksCount).fill([])
-    const findedPenaltyCodes = new Array(gameTasksCount).fill([])
-    const findedBonusCodes = new Array(gameTasksCount).fill([])
-    const photos = new Array(gameTasksCount).fill({ photos: [], checks: {} })
+    const {
+      findedCodes,
+      wrongCodes,
+      findedPenaltyCodes,
+      findedBonusCodes,
+      photos,
+    } = createTaskProgressArrays(gameTasksCount)
     await db.model('GamesTeams').updateMany(
       {
         gameId: jsonCommand.gameId,
