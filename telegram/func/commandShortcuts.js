@@ -1,5 +1,6 @@
 const keyShortcuts = {
   gameId: 'g',
+  gameTeamId: 'gt',
   page: 'p',
   financeType: 'f',
   startYear: 'sy',
@@ -8,6 +9,8 @@ const keyShortcuts = {
   endMonth: 'em',
   startPickerYear: 'spy',
   endPickerYear: 'epy',
+  forceClue: 'fc',
+  failTask: 'ft',
 }
 
 const yearKeys = new Set([
