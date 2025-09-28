@@ -6,6 +6,8 @@ const keyShortcuts = {
   startMonth: 'sm',
   endYear: 'ey',
   endMonth: 'em',
+  startPickerYear: 'spy',
+  endPickerYear: 'epy',
 }
 
 export const encodeCommandKeys = (command) => {

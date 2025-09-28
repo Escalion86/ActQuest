@@ -3,21 +3,21 @@ import isUserAdmin from '@helpers/isUserAdmin'
 import { joinLines, joinSections } from 'telegram/func/messageFormatting'
 
 const TIMEZONE = 'Asia/Krasnoyarsk'
-const MONTHS = [
-  'Январь',
-  'Февраль',
-  'Март',
-  'Апрель',
-  'Май',
-  'Июнь',
-  'Июль',
-  'Август',
-  'Сентябрь',
-  'Октябрь',
-  'Ноябрь',
-  'Декабрь',
+const MONTHS_LOWER = [
+  'январь',
+  'февраль',
+  'март',
+  'апрель',
+  'май',
+  'июнь',
+  'июль',
+  'август',
+  'сентябрь',
+  'октябрь',
+  'ноябрь',
+  'декабрь',
 ]
-const INDENT = '&nbsp;&nbsp;'
+
 const formatAmount = (value) => {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return '0'
@@ -46,6 +46,20 @@ const chunkButtons = (buttons, size = 3) => {
   return result
 }
 
+const clampYear = (value, min, max) => {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+  if (value < min) {
+    return min
+  }
+  if (value > max) {
+    return max
+  }
+  return value
+}
+
+
 const buildCommand = (state, overrides = {}) => {
   const command = { c: 'adminFinanceStatistics' }
   const merged = {
@@ -53,6 +67,8 @@ const buildCommand = (state, overrides = {}) => {
     startMonth: state.startMonth,
     endYear: state.endYear,
     endMonth: state.endMonth,
+    startPickerYear: state.startPickerYear,
+    endPickerYear: state.endPickerYear,
     ...overrides,
   }
 
@@ -65,57 +81,51 @@ const buildCommand = (state, overrides = {}) => {
   return command
 }
 
-const buildYearSelection = ({
+const buildMonthYearSelection = ({
   headerTitle,
   prompt,
-  years,
   state,
-  overrideKey,
-  filter = () => true,
+  pickerYear,
+  pickerYearKey,
+  selectionYearKey,
+  selectionMonthKey,
+  allowedYears,
+  allowedMonths,
 }) => {
   const headerLines = ['<b>Финансовая статистика</b>', headerTitle]
   const messageSections = [joinLines(headerLines), joinLines([prompt])]
 
   const buttons = chunkButtons(
-    years
-      .filter(filter)
-      .map((year) => ({
-        text: `${year}`,
-        c: buildCommand(state, { [overrideKey]: year }),
-      })),
-    3
-  )
-
-  buttons.push([{ c: 'adminMenu', text: '\u{2B05} Назад' }])
-
-  return {
-    message: joinSections(messageSections),
-    buttons,
-  }
-}
-
-const buildMonthSelection = ({
-  headerTitle,
-  prompt,
-  state,
-  overrideKey,
-  allowedMonths,
-}) => {
-  const headerLines = ['<b>Финансовая статистика</b>', headerTitle]
-  const messageSections = [
-    joinLines(headerLines),
-    joinLines([prompt]),
-  ]
-
-  const buttons = chunkButtons(
     allowedMonths.map((month) => ({
-      text: `${MONTHS[month - 1]}`,
-      c: buildCommand(state, { [overrideKey]: month }),
+      text: `${MONTHS_LOWER[month - 1]} ${pickerYear}`,
+      c: buildCommand(state, {
+        [selectionYearKey]: pickerYear,
+        [selectionMonthKey]: month,
+        [pickerYearKey]: pickerYear,
+      }),
     })),
     3
   )
 
-  buttons.push([{ c: 'adminMenu', text: '\u{2B05} Назад' }])
+  const navigationRow = []
+  if (allowedYears.some((year) => year < pickerYear)) {
+    navigationRow.push({
+      text: '⬅️',
+      c: buildCommand(state, { [pickerYearKey]: pickerYear - 1 }),
+    })
+  }
+  if (allowedYears.some((year) => year > pickerYear)) {
+    navigationRow.push({
+      text: '➡️',
+      c: buildCommand(state, { [pickerYearKey]: pickerYear + 1 }),
+    })
+  }
+
+  if (navigationRow.length > 0) {
+    buttons.push(navigationRow)
+  }
+
+  buttons.push([{ c: 'adminMenu', text: '⬅️ Назад' }])
 
   return {
     message: joinSections(messageSections),
@@ -150,6 +160,12 @@ const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
       jsonCommand.endYear !== undefined ? Number(jsonCommand.endYear) : undefined,
     endMonth:
       jsonCommand.endMonth !== undefined ? Number(jsonCommand.endMonth) : undefined,
+    startPickerYear:
+      jsonCommand.startPickerYear !== undefined
+        ? Number(jsonCommand.startPickerYear)
+        : undefined,
+    endPickerYear:
+      jsonCommand.endPickerYear !== undefined ? Number(jsonCommand.endPickerYear) : undefined,
   }
 
   const games = await db
@@ -194,72 +210,108 @@ const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
   })
 
   const now = moment().tz(TIMEZONE)
-  const years = allDates.length
+
+  const gameYears = Array.from(
+    new Set(
+      games
+        .flatMap((game) =>
+          [game.dateStart, game.dateStartFact, game.dateEndFact].filter(Boolean)
+        )
+        .map((date) => moment(date).tz(TIMEZONE).year())
+    )
+  ).sort((a, b) => a - b)
+
+  const transactionYears = allDates.length
     ? Array.from(new Set(allDates.map((date) => date.tz(TIMEZONE).year()))).sort(
         (a, b) => a - b
       )
-    : [now.year()]
+    : []
+
+  const years =
+    gameYears.length > 0
+      ? gameYears
+      : transactionYears.length > 0
+      ? transactionYears
+      : [now.year()]
 
   const minYear = years[0]
   const maxYear = years[years.length - 1]
 
-  if (!state.startYear) {
-    return buildYearSelection({
-      headerTitle: 'Выбор периода',
-      prompt: 'С какого года нужна статистика?',
-      years,
-      state,
-      overrideKey: 'startYear',
-    })
-  }
+  const startPickerFromState = clampYear(state.startPickerYear, minYear, maxYear)
+  const startPickerFallback = clampYear(state.startYear, minYear, maxYear) ?? maxYear
+  state.startPickerYear = startPickerFromState ?? startPickerFallback
 
-  const clampedStartYear = Math.min(Math.max(state.startYear, minYear), maxYear)
-  if (clampedStartYear !== state.startYear) {
-    state.startYear = clampedStartYear
-  }
-
-  if (!state.startMonth) {
-    return buildMonthSelection({
+  if (state.startYear === undefined || state.startMonth === undefined) {
+    return buildMonthYearSelection({
       headerTitle: 'Выбор периода',
-      prompt: `Выбранный год начала: ${state.startYear}. Выберите месяц начала.`,
+      prompt: 'С какого месяца нужна статистика?',
       state,
-      overrideKey: 'startMonth',
+      pickerYear: state.startPickerYear,
+      pickerYearKey: 'startPickerYear',
+      selectionYearKey: 'startYear',
+      selectionMonthKey: 'startMonth',
+      allowedYears: years,
       allowedMonths: Array.from({ length: 12 }, (_, index) => index + 1),
     })
   }
 
-  if (!state.endYear) {
-    return buildYearSelection({
-      headerTitle: 'Выбор периода',
-      prompt: 'До какого года нужна статистика?',
-      years,
-      state,
-      overrideKey: 'endYear',
-      filter: (year) => year >= state.startYear,
-    })
+  state.startYear = clampYear(state.startYear, minYear, maxYear)
+  state.startMonth = Math.min(Math.max(state.startMonth, 1), 12)
+
+  let allowedEndYears = years.filter((year) => year >= state.startYear)
+  if (allowedEndYears.length === 0) {
+    allowedEndYears = [state.startYear]
+  }
+  const endMinYear = allowedEndYears[0]
+  const endMaxYear = allowedEndYears[allowedEndYears.length - 1]
+
+  if (state.endYear !== undefined && state.endMonth !== undefined) {
+    const startMomentCheck = moment
+      .tz({ year: state.startYear, month: state.startMonth - 1 }, TIMEZONE)
+      .startOf('month')
+    const endMomentCheck = moment
+      .tz({ year: state.endYear, month: state.endMonth - 1 }, TIMEZONE)
+      .endOf('month')
+    if (endMomentCheck.isBefore(startMomentCheck)) {
+      state.endYear = undefined
+      state.endMonth = undefined
+      state.endPickerYear = undefined
+    }
   }
 
-  const clampedEndYear = Math.min(Math.max(state.endYear, state.startYear), maxYear)
-  if (clampedEndYear !== state.endYear) {
-    state.endYear = clampedEndYear
-  }
+  const endPickerFromState = clampYear(state.endPickerYear, endMinYear, endMaxYear)
+  const endPickerFallback = (
+    clampYear(state.endYear, endMinYear, endMaxYear) ??
+    state.startYear ??
+    endMinYear
+  )
+  state.endPickerYear = endPickerFromState ?? endPickerFallback
 
-  if (!state.endMonth) {
-    const months = Array.from({ length: 12 }, (_, index) => index + 1).filter((month) => {
-      if (state.endYear === state.startYear) {
-        return month >= state.startMonth
+  if (state.endYear === undefined || state.endMonth === undefined) {
+    const allowedMonths = Array.from({ length: 12 }, (_, index) => index + 1).filter(
+      (month) => {
+        if (state.endPickerYear === state.startYear) {
+          return month >= state.startMonth
+        }
+        return true
       }
-      return true
-    })
+    )
 
-    return buildMonthSelection({
+    return buildMonthYearSelection({
       headerTitle: 'Выбор периода',
-      prompt: `Выбранный год окончания: ${state.endYear}. Выберите месяц окончания.`,
+      prompt: 'До какого месяца нужна статистика?',
       state,
-      overrideKey: 'endMonth',
-      allowedMonths: months,
+      pickerYear: state.endPickerYear,
+      pickerYearKey: 'endPickerYear',
+      selectionYearKey: 'endYear',
+      selectionMonthKey: 'endMonth',
+      allowedYears: allowedEndYears,
+      allowedMonths,
     })
   }
+
+  state.endYear = clampYear(state.endYear, state.startYear, endMaxYear)
+  state.endMonth = Math.min(Math.max(state.endMonth, 1), 12)
 
   const startMoment = moment
     .tz({ year: state.startYear, month: state.startMonth - 1 }, TIMEZONE)
@@ -267,21 +319,6 @@ const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
   const endMoment = moment
     .tz({ year: state.endYear, month: state.endMonth - 1 }, TIMEZONE)
     .endOf('month')
-
-  if (endMoment.isBefore(startMoment)) {
-    return buildMonthSelection({
-      headerTitle: 'Выбор периода',
-      prompt: `Выбранный год окончания: ${state.endYear}. Выберите месяц окончания.`,
-      state: { ...state, endMonth: undefined },
-      overrideKey: 'endMonth',
-      allowedMonths: Array.from({ length: 12 }, (_, index) => index + 1).filter((month) => {
-        if (state.endYear === state.startYear) {
-          return month >= state.startMonth
-        }
-        return true
-      }),
-    })
-  }
 
   const paymentsByGame = payments.reduce((acc, payment) => {
     const paymentGameId = String(payment?.gameId ?? '')
@@ -361,12 +398,10 @@ const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
   statistics.forEach(({ name, date, playerIncome, otherIncome, expenses, total }) => {
     const gameLines = [
       `<b>${name}, ${date}</b>`,
-      `${INDENT}\u{2795}\u{1F465} Поступления от игроков: ${formatCurrency(
-        playerIncome
-      )}`,
-      `${INDENT}\u{2795} Прочие поступления: ${formatCurrency(otherIncome)}`,
-      `${INDENT}\u{2796} Расходы: ${formatCurrency(expenses)}`,
-      `${INDENT}\u{1F4B0} <b>Итого: ${formatCurrency(total)}</b>`,
+      `\u{2795}\u{1F465} Поступления от игроков: ${formatCurrency(playerIncome)}`,
+      `\u{2795} Прочие поступления: ${formatCurrency(otherIncome)}`,
+      `\u{2796} Расходы: ${formatCurrency(expenses)}`,
+      `\u{1F4B0} <b>Итого: ${formatCurrency(total)}</b>`,
     ]
 
     messageSections.push(joinLines(gameLines))
@@ -374,12 +409,10 @@ const adminFinanceStatistics = async ({ user, db, jsonCommand = {} }) => {
 
   const totalsLines = [
     '<b>ИТОГО ПО ПЕРИОДУ</b>',
-    `${INDENT}\u{2795}\u{1F465} Поступления от игроков: ${formatCurrency(
-      totals.playerIncome
-    )}`,
-    `${INDENT}\u{2795} Прочие поступления: ${formatCurrency(totals.otherIncome)}`,
-    `${INDENT}\u{2796} Расходы: ${formatCurrency(totals.expenses)}`,
-    `${INDENT}\u{1F4B0} <b>Итого: ${formatCurrency(totals.total)}</b>`,
+    `\u{2795}\u{1F465} Поступления от игроков: ${formatCurrency(totals.playerIncome)}`,
+    `\u{2795} Прочие поступления: ${formatCurrency(totals.otherIncome)}`,
+    `\u{2796} Расходы: ${formatCurrency(totals.expenses)}`,
+    `\u{1F4B0} <b>Итого: ${formatCurrency(totals.total)}</b>`,
   ]
 
   messageSections.push(joinLines(totalsLines))
