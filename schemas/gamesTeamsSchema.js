@@ -18,6 +18,7 @@ const gamesTeamsSchema = {
   findedBonusCodes: [[String]],
   startTime: [Date],
   endTime: [Date],
+  forcedClues: [Number],
   photos: [{ photos: [String], checks: Map }],
   timerId: String,
 }
