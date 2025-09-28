@@ -107,7 +107,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     )
 
   const currentTeamUser = getTeamUserByTelegramId(telegramId)
-  const isCaptainRole = (role) => role === 'captain' || role === 'capitan'
+  const isCaptainRole = (role) => role === 'capitan'
   const isCaptain = isCaptainRole(currentTeamUser?.role)
   const telegramIdStr = String(telegramId ?? '')
 
