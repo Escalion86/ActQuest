@@ -40,6 +40,14 @@ const startTimeNextSet = (startTime, taskNum, gameTasksLength) => {
   return startTimeTemp
 }
 
+const resetForcedClueForTask = (forcedClues, taskIndex, gameTasksLength) => {
+  if (taskIndex < 0 || taskIndex >= gameTasksLength) return null
+
+  const forcedCluesTemp = ensureArrayCapacity(forcedClues, gameTasksLength, 0)
+  forcedCluesTemp[taskIndex] = 0
+  return forcedCluesTemp
+}
+
 const teamGameStart = async (gameTeamId, game, GamesTeams) => {
   const gameTasksCount = game.tasks.length
   const startTime = new Array(gameTasksCount).fill(null)
@@ -294,11 +302,19 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     )
 
     const nextTaskNum = taskNum + 1
+    const forcedCluesTemp = resetForcedClueForTask(
+      forcedClues,
+      nextTaskNum,
+      game.tasks.length
+    )
 
-    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+    const updates = {
       startTime: startTimeTemp,
       activeNum: nextTaskNum,
-    })
+    }
+    if (forcedCluesTemp) updates.forcedClues = forcedCluesTemp
+
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, updates)
 
     if (nextTaskNum > game.tasks.length - 1)
       return {
@@ -349,13 +365,21 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         taskNum,
         game.tasks.length
       )
+      const forcedCluesTemp = resetForcedClueForTask(
+        forcedClues,
+        taskNum + 1,
+        game.tasks.length
+      )
 
-      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      const updates = {
         // findedCodes: newAllFindedCodes,
         startTime: startTimeTemp,
         // endTime: endTimeTemp,
         activeNum: taskNum + 1,
-      })
+      }
+      if (forcedCluesTemp) updates.forcedClues = forcedCluesTemp
+
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, updates)
 
       const message = taskText({
         game,
@@ -735,11 +759,19 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       taskNum,
       game.tasks.length
     )
+    const forcedCluesTemp = resetForcedClueForTask(
+      forcedClues,
+      taskNum + 1,
+      game.tasks.length
+    )
 
-    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+    const updates = {
       startTime: startTimeTemp,
       activeNum: taskNum + 1,
-    })
+    }
+    if (forcedCluesTemp) updates.forcedClues = forcedCluesTemp
+
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, updates)
 
     return {
       message: `${failMessageBase}${failPenaltyNotice}`,
@@ -984,12 +1016,21 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
         // Если игра завершена
         if (newActiveNum > game.tasks.length - 1) {
-          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+          const forcedCluesTemp = resetForcedClueForTask(
+            forcedClues,
+            newActiveNum,
+            game.tasks.length
+          )
+
+          const updates = {
             findedCodes: newAllFindedCodes,
             startTime: startTimeTemp,
             endTime: endTimeTemp,
             activeNum: newActiveNum,
-          })
+          }
+          if (forcedCluesTemp) updates.forcedClues = forcedCluesTemp
+
+          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, updates)
 
           const keyboard = keyboardFormer([mainMenuButton])
 
@@ -1049,12 +1090,21 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
           }
           // console.log('ОБНОВЛЯЕМ КОДЫ ЕСЛИ ПЕРЕРЫВА НЕТ :>> ')
           // console.log('newAllFindedCodes :>> ', newAllFindedCodes)
-          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+          const forcedCluesTemp = resetForcedClueForTask(
+            forcedClues,
+            newActiveNum,
+            game.tasks.length
+          )
+
+          const updates = {
             findedCodes: newAllFindedCodes,
             startTime: startTimeTemp,
             endTime: endTimeTemp,
             activeNum: newActiveNum,
-          })
+          }
+          if (forcedCluesTemp) updates.forcedClues = forcedCluesTemp
+
+          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, updates)
 
           const keyboard = keyboardFormer(buttonRefresh)
 
