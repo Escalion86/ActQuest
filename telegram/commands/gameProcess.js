@@ -13,6 +13,7 @@ import sendMessage from 'telegram/sendMessage'
 import mainMenuButton from './menuItems/mainMenuButton'
 import secondsToTime from 'telegram/func/secondsToTime'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
+import removeCluePenalties from '@helpers/removeCluePenalties'
 
 const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
   timeZone: 'Asia/Krasnoyarsk',
@@ -48,7 +49,8 @@ const resetForcedClueForTask = (forcedClues, taskIndex, gameTasksLength) => {
   return forcedCluesTemp
 }
 
-const teamGameStart = async (gameTeamId, game, GamesTeams) => {
+const teamGameStart = async (gameTeam, game, GamesTeams) => {
+  const { _id: gameTeamId, timeAddings } = gameTeam
   const gameTasksCount = game.tasks.length
   const startTime = new Array(gameTasksCount).fill(null)
   startTime[0] = new Date()
@@ -60,6 +62,8 @@ const teamGameStart = async (gameTeamId, game, GamesTeams) => {
     findedBonusCodes,
     photos,
   } = createTaskProgressArrays(gameTasksCount)
+  const filteredAddings = removeCluePenalties(timeAddings)
+
   await GamesTeams.findByIdAndUpdate(gameTeamId, {
     startTime,
     endTime,
@@ -69,7 +73,7 @@ const teamGameStart = async (gameTeamId, game, GamesTeams) => {
     findedPenaltyCodes,
     findedBonusCodes,
     photos,
-    timeAddings: [],
+    timeAddings: filteredAddings,
     forcedClues: new Array(gameTasksCount).fill(0),
   })
 }
@@ -105,7 +109,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
   // Если начало игры индивидуальное, то нужно создать запись в БД для старта
   const shouldStartGame = !gameTeam.startTime || gameTeam.startTime.length === 0
   if (shouldStartGame) {
-    await teamGameStart(gameTeam._id, game, GamesTeams)
+    await teamGameStart(gameTeam, game, GamesTeams)
     gameTeam = await getGameTeam(jsonCommand?.gameTeamId, db)
   }
 
