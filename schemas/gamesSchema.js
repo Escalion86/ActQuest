@@ -154,6 +154,10 @@ const gamesSchema = {
     type: Boolean,
     default: true,
   },
+  allowCaptainFinishBreak: {
+    type: Boolean,
+    default: true,
+  },
   breakDuration: {
     type: Number,
     default: 0,

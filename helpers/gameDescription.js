@@ -16,6 +16,7 @@ const gameDescription = (game, creator) => {
 
   const allowCaptainForceClue = game?.allowCaptainForceClue !== false
   const allowCaptainFailTask = game?.allowCaptainFailTask !== false
+  const allowCaptainFinishBreak = game?.allowCaptainFinishBreak !== false
 
   const description = `<b>Игра "${game?.name}"</b>
   \n\n<b>Дата и время</b>: ${
@@ -46,6 +47,8 @@ const gameDescription = (game, creator) => {
         )}`
   }\n<b>Перерыв между заданиями</b>: ${
     !game?.breakDuration ? 'отсутствует' : secondsToTimeStr(game?.breakDuration)
+  }\n<b>Досрочное завершение перерыва капитаном</b>: ${
+    allowCaptainFinishBreak ? 'разрешено' : 'запрещено'
   }\n<b>Штраф за невыполнение задания</b>: ${
     !game?.taskFailurePenalty
       ? 'отсутствует'

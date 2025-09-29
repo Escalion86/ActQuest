@@ -70,6 +70,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
 
   const allowCaptainForceClue = game?.allowCaptainForceClue !== false
   const allowCaptainFailTask = game?.allowCaptainFailTask !== false
+  const allowCaptainFinishBreak = game?.allowCaptainFinishBreak !== false
 
   return {
     images: game.image ? [game.image] : undefined,
@@ -109,10 +110,12 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
       !game?.clueEarlyPenalty
         ? 'отсутствует'
         : secondsToTimeStr(game?.clueEarlyPenalty)
-    }\n<b>Перерыв между заданиями</b>: ${
+  }\n<b>Перерыв между заданиями</b>: ${
       !game?.breakDuration
         ? 'отсутствует'
         : secondsToTimeStr(game?.breakDuration)
+    }\n<b>Досрочное завершение перерыва капитаном</b>: ${
+      allowCaptainFinishBreak ? 'разрешено' : 'запрещено'
     }\n<b>Штраф за невыполнение задания</b>: ${
       !game?.taskFailurePenalty
         ? 'отсутствует'

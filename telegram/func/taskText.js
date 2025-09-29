@@ -27,6 +27,9 @@ const taskText = ({
     taskBonusForComplite,
     subTasks,
   } = tasks[taskNum]
+  const currentTaskId = tasks[taskNum]?._id
+    ? String(tasks[taskNum]._id)
+    : null
   const taskSecondsLeft = Math.floor(getSecondsBetween(startTaskTime))
 
   const haveBonusCodes = bonusCodes?.length > 0
@@ -61,9 +64,12 @@ const taskText = ({
     }
 
   const relevantAddings = Array.isArray(timeAddings)
-    ? timeAddings.filter(({ taskIndex }) =>
-        typeof taskIndex !== 'number' || taskIndex === taskNum
-      )
+    ? timeAddings.filter(({ taskIndex, taskId }) => {
+        if (currentTaskId && taskId) return taskId === currentTaskId
+        if (taskId && !currentTaskId) return false
+        if (typeof taskIndex === 'number') return taskIndex === taskNum
+        return typeof taskIndex !== 'number'
+      })
     : []
 
   const addingsSummary = `\n\n<b>Бонусы и штрафы текущего задания:</b>\n${
