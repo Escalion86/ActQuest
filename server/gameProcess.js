@@ -129,6 +129,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
   const breakDuration = game.breakDuration ?? 0
   const taskDuration = game.taskDuration ?? 3600
   const cluesDuration = game.cluesDuration ?? 1200
+  const allowCaptainFinishBreak = game.allowCaptainFinishBreak !== false
 
   const taskNum = activeNum ?? 0
 
@@ -186,6 +187,15 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       text: 'Нет, продолжить перерыв',
     },
   ]
+
+  const buildBreakButtons = ({ includeCaptainActions } = {}) => {
+    const allowCaptainActions =
+      typeof includeCaptainActions === 'boolean'
+        ? includeCaptainActions
+        : Boolean(isCaptain)
+    const canFinishBreak = allowCaptainActions && allowCaptainFinishBreak
+    return canFinishBreak ? [buttonFinishBreak, buttonRefresh] : [buttonRefresh]
+  }
 
   const buttonSeePhotoAnswers = [
     {
@@ -246,6 +256,19 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
     secondsLeftAfterStartTask < taskDuration + breakDuration
 
   if (jsonCommand.finishBreak) {
+    if (!allowCaptainFinishBreak)
+      return {
+        message:
+          'Досрочное завершение перерыва отключено организатором игры.',
+        buttons: buildBreakButtons({ includeCaptainActions: false }),
+      }
+
+    if (!isCaptain)
+      return {
+        message: 'Завершить перерыв досрочно может только капитан команды.',
+        buttons: buildBreakButtons({ includeCaptainActions: false }),
+      }
+
     if (!jsonCommand.confirmFinishBreak) {
       return {
         message:
@@ -257,13 +280,13 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
     if (breakDuration <= 0)
       return {
         message: 'Перерыв для этой игры не предусмотрен.',
-        buttons: buttonRefresh,
+        buttons: buildBreakButtons(),
       }
 
     if (!isBreakAfterSuccessActive && !isBreakAfterTimeoutActive)
       return {
         message: 'Перерыв еще не начался или уже завершен.',
-        buttons: buttonRefresh,
+        buttons: buildBreakButtons(),
       }
 
     const startTimeTemp = startTimeNextSet(
@@ -320,7 +343,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         }<b>ПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           breakDuration - secondsAfterEndTime
         )}`}`,
-        buttons: [buttonFinishBreak, buttonRefresh],
+        buttons: buildBreakButtons(),
       }
     else {
       const startTimeTemp = startTimeNextSet(
@@ -369,7 +392,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         }<b>Время вышло\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           taskDuration + breakDuration - secondsLeftAfterStartTask
         )}`}`,
-        buttons: [buttonFinishBreak, buttonRefresh],
+        buttons: buildBreakButtons(),
       }
     }
 
@@ -397,6 +420,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
   }
 
   const currentTask = game.tasks[taskNum] ?? {}
+  const currentTaskId = currentTask?._id ? String(currentTask._id) : null
   const totalClues =
     Array.isArray(currentTask.clues) && currentTask.clues.length > 0
       ? currentTask.clues.length
@@ -407,6 +431,8 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       : 0
   const showCluesNum = Math.min(Math.max(rawShowCluesNum, 0), totalClues)
   const cluePenalty = game.clueEarlyPenalty ?? 0
+  const allowCaptainForceClue = game.allowCaptainForceClue !== false
+  const allowCaptainFailTask = game.allowCaptainFailTask !== false
   const forcedCluesCount = Math.max(forcedClues?.[taskNum] ?? 0, 0)
   const visibleCluesCount = Math.min(
     totalClues,
@@ -466,13 +492,15 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
     { includeCaptainActions } = {}
   ) => {
     const allowCaptainActions = includeCaptainActions ?? Boolean(isCaptain)
+    const allowForceClueButton = allowCaptainActions && allowCaptainForceClue
+    const allowFailTaskButton = allowCaptainActions && allowCaptainFailTask
     const hasMoreClues =
-      allowCaptainActions &&
+      allowForceClueButton &&
       cluesDuration > 0 &&
       totalClues > 0 &&
       visibleCount < totalClues
     const allCluesReceived =
-      allowCaptainActions && totalClues > 0 && visibleCount >= totalClues
+      allowFailTaskButton && totalClues > 0 && visibleCount >= totalClues
     return [
       buttonRefresh,
       ...(hasMoreClues ? [buttonForceClue] : []),
@@ -517,6 +545,13 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
   }
 
   if (jsonCommand.forceClue) {
+    if (!allowCaptainForceClue)
+      return {
+        message: 'Досрочное получение подсказки отключено организатором игры.',
+        buttons: buildTaskButtons(visibleCluesCount, {
+          includeCaptainActions: false,
+        }),
+      }
     if (!isCaptain)
       return {
         message: 'Получить подсказку досрочно может только капитан команды.',
@@ -566,22 +601,25 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
     forcedCluesList[taskNum] = nextForcedCount
 
     const forcedClueNumber = Math.min(visibleCluesCount + 1, totalClues)
-    const clueAddingName = `Досрочная подсказка №${forcedClueNumber} (Задание ${
-      taskNum + 1
-    })`
+    const clueAddingName = `Досрочная подсказка №${forcedClueNumber}`
     const updates = {
       forcedClues: forcedCluesList,
     }
 
     const hasExistingCluePenalty = existingAddings.some(
-      ({ name, taskIndex }) => name === clueAddingName && taskIndex === taskNum
+      ({ name, taskIndex, taskId }) => {
+        if (name !== clueAddingName) return false
+        if (taskId && currentTaskId) return taskId === currentTaskId
+        if (typeof taskIndex === 'number') return taskIndex === taskNum
+        return false
+      }
     )
 
     if (cluePenalty > 0 && !hasExistingCluePenalty) {
-      updates.timeAddings = [
-        ...existingAddings,
-        { name: clueAddingName, time: cluePenalty, taskIndex: taskNum },
-      ]
+      const newAdding = { name: clueAddingName, time: cluePenalty, taskIndex: taskNum }
+      if (currentTaskId) newAdding.taskId = currentTaskId
+
+      updates.timeAddings = [...existingAddings, newAdding]
     }
 
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, updates)
@@ -619,6 +657,13 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
   }
 
   if (jsonCommand.failTask) {
+    if (!allowCaptainFailTask)
+      return {
+        message: 'Слив задания отключен организатором игры.',
+        buttons: buildTaskButtons(visibleCluesCount, {
+          includeCaptainActions: false,
+        }),
+      }
     if (!isCaptain)
       return {
         message: 'Слить задание может только капитан команды.',
@@ -658,7 +703,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         message: `${failMessageBase}${postTaskMessage}\n\n<b>ПЕРЕРЫВ</b>\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           breakDuration
         )}${failPenaltyNotice}`,
-        buttons: [buttonFinishBreak, buttonRefresh],
+        buttons: buildBreakButtons(),
       }
     }
 
@@ -956,7 +1001,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
               }\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
                 breakDuration
               )}`}`,
-              buttons: [buttonFinishBreak, buttonRefresh],
+              buttons: buildBreakButtons(),
             }
             // return await Promise.all(
             //   usersTelegramIdsOfTeam.map(async (telegramId) => {

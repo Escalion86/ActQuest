@@ -11,6 +11,8 @@ const cluesSettings = async ({ telegramId, jsonCommand, location, db }) => {
 
   const cluesDuration = game.cluesDuration ?? 0
   const penalty = game.clueEarlyPenalty ?? 0
+  const allowCaptainForceClue = game.allowCaptainForceClue !== false
+  const allowCaptainFailTask = game.allowCaptainFailTask !== false
 
   const cluesDurationText =
     cluesDuration <= 0
@@ -23,7 +25,11 @@ const cluesSettings = async ({ telegramId, jsonCommand, location, db }) => {
       : '<b>Штраф за досрочную подсказку</b>: отсутствует'
 
   return {
-    message: `<b>Настройки подсказок</b>\n\n${cluesDurationText}\n${penaltyText}`,
+    message: `<b>Настройки подсказок</b>\n\n${cluesDurationText}\n${penaltyText}\n<b>Досрочная подсказка капитану</b>: ${
+      allowCaptainForceClue ? 'разрешена' : 'запрещена'
+    }\n<b>Слив задания капитаном</b>: ${
+      allowCaptainFailTask ? 'разрешен' : 'запрещен'
+    }`,
     buttons: [
       [
         {
@@ -35,6 +41,22 @@ const cluesSettings = async ({ telegramId, jsonCommand, location, db }) => {
         {
           c: { c: 'setCluesPenalty', gameId: jsonCommand.gameId },
           text: '\u{270F} Штраф за досрочную подсказку',
+        },
+      ],
+      [
+        {
+          c: { c: 'setCaptainForceClue', gameId: jsonCommand.gameId },
+          text: allowCaptainForceClue
+            ? '\u{1F6AB} Запретить досрочную подсказку'
+            : '\u{2705} Разрешить досрочную подсказку',
+        },
+      ],
+      [
+        {
+          c: { c: 'setCaptainFailTask', gameId: jsonCommand.gameId },
+          text: allowCaptainFailTask
+            ? '\u{1F6AB} Запретить слив задания'
+            : '\u{2705} Разрешить слив задания',
         },
       ],
       [
