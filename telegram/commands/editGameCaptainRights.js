@@ -8,12 +8,15 @@ const editGameCaptainRights = async ({ jsonCommand, db }) => {
   const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
-  const toggleKey = jsonCommand.toggle
-  const availableToggles = [
-    'allowCaptainForceClue',
-    'allowCaptainFailTask',
-    'allowCaptainFinishBreak',
-  ]
+  const toggleMap = {
+    fc: 'allowCaptainForceClue',
+    ft: 'allowCaptainFailTask',
+    fb: 'allowCaptainFinishBreak',
+  }
+
+  const requestedToggle = jsonCommand.toggle
+  const toggleKey = toggleMap[requestedToggle] ?? requestedToggle
+  const availableToggles = Object.values(toggleMap)
 
   if (toggleKey && availableToggles.includes(toggleKey)) {
     const currentValue = game?.[toggleKey] !== false
@@ -44,7 +47,7 @@ const editGameCaptainRights = async ({ jsonCommand, db }) => {
           c: {
             c: 'editGameCaptainRights',
             gameId: jsonCommand.gameId,
-            toggle: 'allowCaptainForceClue',
+            toggle: 'fc',
           },
           text: `${allowCaptainForceClue ? '✅' : '❌'} Досрочная подсказка`,
         },
@@ -54,7 +57,7 @@ const editGameCaptainRights = async ({ jsonCommand, db }) => {
           c: {
             c: 'editGameCaptainRights',
             gameId: jsonCommand.gameId,
-            toggle: 'allowCaptainFailTask',
+            toggle: 'ft',
           },
           text: `${allowCaptainFailTask ? '✅' : '❌'} Слив задания`,
         },
@@ -64,7 +67,7 @@ const editGameCaptainRights = async ({ jsonCommand, db }) => {
           c: {
             c: 'editGameCaptainRights',
             gameId: jsonCommand.gameId,
-            toggle: 'allowCaptainFinishBreak',
+            toggle: 'fb',
           },
           text: `${allowCaptainFinishBreak ? '✅' : '❌'} Завершение перерыва`,
         },

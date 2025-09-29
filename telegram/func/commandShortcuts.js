@@ -2,6 +2,7 @@ const keyShortcuts = {
   gameId: 'g',
   gameTeamId: 'gt',
   page: 'p',
+  toggle: 't',
   financeType: 'f',
   startYear: 'sy',
   startMonth: 'sm',
