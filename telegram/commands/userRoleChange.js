@@ -92,7 +92,7 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
           )
 
           // Если пользователь является капитаном
-          if (teamUserOfUser.role === 'captain') {
+          if (teamUserOfUser.role === 'capitan') {
             // Поиск другого пользователя для передачи прав капитана
             const teamUserOfAnotherUser = teamUsers.find(
               (u) => u.userTelegramId !== jsonCommand.userTId
@@ -104,7 +104,7 @@ const userRoleChange = async ({ telegramId, jsonCommand, location, db }) => {
               await db
                 .model('TeamsUsers')
                 .findByIdAndUpdate(teamUserOfAnotherUser._id, {
-                  role: 'captain',
+                  role: 'capitan',
                 })
             }
           }
