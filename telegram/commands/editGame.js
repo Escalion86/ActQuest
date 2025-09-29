@@ -177,10 +177,8 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
       ],
       [
         {
-          c: { c: 'setCaptainFinishBreak', gameId: jsonCommand.gameId },
-          text: allowCaptainFinishBreak
-            ? '\u{1F6AB} Запретить завершать перерыв капитанам'
-            : '\u{2705} Разрешить завершать перерыв капитанам',
+          c: { c: 'editGameCaptainRights', gameId: jsonCommand.gameId },
+          text: '\u{2696}\u{FE0F} Права капитанов',
         },
       ],
       [

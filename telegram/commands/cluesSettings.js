@@ -45,22 +45,6 @@ const cluesSettings = async ({ telegramId, jsonCommand, location, db }) => {
       ],
       [
         {
-          c: { c: 'setCaptainForceClue', gameId: jsonCommand.gameId },
-          text: allowCaptainForceClue
-            ? '\u{1F6AB} Запретить досрочную подсказку'
-            : '\u{2705} Разрешить досрочную подсказку',
-        },
-      ],
-      [
-        {
-          c: { c: 'setCaptainFailTask', gameId: jsonCommand.gameId },
-          text: allowCaptainFailTask
-            ? '\u{1F6AB} Запретить слив задания'
-            : '\u{2705} Разрешить слив задания',
-        },
-      ],
-      [
-        {
           c: { c: 'editGame', gameId: jsonCommand.gameId },
           text: '\u{21A9} Назад',
         },
