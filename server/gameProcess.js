@@ -11,6 +11,7 @@ import keyboardFormer from 'telegram/func/keyboardFormer'
 import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 import secondsToTime from 'telegram/func/secondsToTime'
+import secondsToTimeStr from '@helpers/secondsToTimeStr'
 
 const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
   timeZone: 'Asia/Krasnoyarsk',
@@ -62,6 +63,7 @@ const teamGameStart = async (gameTeamId, game, GamesTeams) => {
     findedBonusCodes,
     photos,
     timeAddings: [],
+    forcedClues: new Array(gameTasksCount).fill(0),
   })
 }
 
@@ -69,7 +71,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
-  const gameTeam = await getGameTeam(jsonCommand?.gameTeamId, db)
+  let gameTeam = await getGameTeam(jsonCommand?.gameTeamId, db)
   if (gameTeam.success === false) return gameTeam
 
   const game = await getGame(gameTeam.gameId, db)
@@ -93,10 +95,23 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     }
   }
 
-  // Если начало игры индивидуальное, то нужно создать запись в БД для старта
-  if (!gameTeam.startTime || gameTeam.startTime.length === 0) {
+  const shouldStartGame = !gameTeam.startTime || gameTeam.startTime.length === 0
+  if (shouldStartGame) {
     await teamGameStart(gameTeam._id, game, GamesTeams)
+    gameTeam = await getGameTeam(jsonCommand?.gameTeamId, db)
   }
+
+  const teamUsers = await TeamsUsers.find({ teamId: gameTeam.teamId })
+
+  const getTeamUserByTelegramId = (id) =>
+    teamUsers.find(
+      ({ userTelegramId }) => String(userTelegramId) === String(id)
+    )
+
+  const currentTeamUser = getTeamUserByTelegramId(telegramId)
+  const isCaptainRole = (role) => role === 'capitan'
+  const isCaptain = isCaptainRole(currentTeamUser?.role)
+  const telegramIdStr = String(telegramId ?? '')
 
   const {
     findedCodes,
@@ -108,6 +123,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     endTime,
     photos,
     timeAddings,
+    forcedClues,
   } = gameTeam
 
   const breakDuration = game.breakDuration ?? 0
@@ -117,6 +133,20 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
   const taskNum = activeNum ?? 0
 
   const gameType = game?.type || 'classic'
+  const buildGameFinishedMessage = () =>
+    `Поздравляем Вы завершили все задания! Игра окончена. ${
+      game.finishingPlace
+        ? `Вы можете выдвигаться на точку сбора: ${game.finishingPlace}`
+        : ''
+    }${
+      game.tasks[game.tasks.length - 1].postMessage
+        ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${
+            game.tasks[game.tasks.length - 1].postMessage
+          }</blockquote>`
+        : ''
+    }`
+
+  const justStartedGame = shouldStartGame
 
   // return 'test'
 
@@ -127,6 +157,36 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     },
   ]
 
+  const buttonFinishBreak = [
+    {
+      c: {
+        c: 'gameProcess',
+        gameTeamId: String(gameTeam._id),
+        finishBreak: true,
+      },
+      text: 'Завершить перерыв',
+    },
+  ]
+
+  const buttonConfirmFinishBreak = [
+    {
+      c: {
+        c: 'gameProcess',
+        gameTeamId: String(gameTeam._id),
+        finishBreak: true,
+        confirmFinishBreak: true,
+      },
+      text: 'Да, завершить перерыв',
+    },
+  ]
+
+  const buttonCancelFinishBreak = [
+    {
+      c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
+      text: 'Нет, продолжить перерыв',
+    },
+  ]
+
   const buttonSeePhotoAnswers = [
     {
       c: { seePhotoAnswers: true },
@@ -134,31 +194,105 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     },
   ]
 
-  const filteredPhotos =
-    gameType === 'photo'
-      ? photos[taskNum]?.photos.filter((photo) => photo) || []
-      : []
+  const buttonConfirmForceClue = [
+    {
+      c: {
+        c: 'gameProcess',
+        gameTeamId: String(gameTeam._id),
+        forceClue: true,
+        confirmForceClue: true,
+      },
+      text: 'Да, получить подсказку',
+    },
+  ]
 
-  if (gameType === 'photo' && !jsonCommand.isPhoto && jsonCommand.message) {
-    return {
-      message:
-        `В качестве ответа на задание необходимо отправить фотографию!\n\n` +
-        taskText({
-          game,
-          taskNum: taskNum,
-          startTaskTime: startTime[taskNum],
-          cluesDuration,
-          taskDuration,
-          photos,
-        }),
-      buttons: [
-        buttonRefresh,
-        ...(filteredPhotos.length > 0 ? [buttonSeePhotoAnswers] : []),
-      ],
-    }
-  }
+  const buttonCancelForceClue = [
+    {
+      c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
+      text: 'Нет, продолжить задание',
+    },
+  ]
+
+  const buttonConfirmFailTask = [
+    {
+      c: {
+        c: 'gameProcess',
+        gameTeamId: String(gameTeam._id),
+        failTask: true,
+        confirmFailTask: true,
+      },
+      text: 'Да, слить задание',
+    },
+  ]
+
+  const buttonCancelFailTask = [
+    {
+      c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
+      text: 'Нет, продолжить задание',
+    },
+  ]
 
   const secondsLeftAfterStartTask = getSecondsBetween(startTime[taskNum])
+  const hasEndTime = Boolean(endTime[taskNum])
+  const secondsAfterEndTime = hasEndTime
+    ? getSecondsBetween(endTime[taskNum])
+    : 0
+  const isBreakAfterSuccessActive =
+    hasEndTime && breakDuration > 0 && secondsAfterEndTime < breakDuration
+  const isBreakAfterTimeoutActive =
+    !hasEndTime &&
+    breakDuration > 0 &&
+    secondsLeftAfterStartTask > taskDuration &&
+    secondsLeftAfterStartTask < taskDuration + breakDuration
+
+  if (jsonCommand.finishBreak) {
+    if (!jsonCommand.confirmFinishBreak) {
+      return {
+        message:
+          'Вы уверены, что хотите завершить перерыв и получить следующее задание?',
+        buttons: [buttonConfirmFinishBreak, buttonCancelFinishBreak],
+      }
+    }
+
+    if (breakDuration <= 0)
+      return {
+        message: 'Перерыв для этой игры не предусмотрен.',
+        buttons: buttonRefresh,
+      }
+
+    if (!isBreakAfterSuccessActive && !isBreakAfterTimeoutActive)
+      return {
+        message: 'Перерыв еще не начался или уже завершен.',
+        buttons: buttonRefresh,
+      }
+
+    const startTimeTemp = startTimeNextSet(
+      startTime,
+      taskNum,
+      game.tasks.length
+    )
+
+    const nextTaskNum = taskNum + 1
+
+    await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+      startTime: startTimeTemp,
+      activeNum: nextTaskNum,
+    })
+
+    if (nextTaskNum > game.tasks.length - 1)
+      return {
+        message: buildGameFinishedMessage(),
+        nextCommand: 'mainMenu',
+      }
+
+    return {
+      message: '<b>Перерыв завершен.</b>',
+      nextCommand: {
+        c: 'gameProcess',
+        gameTeamId: String(gameTeam._id),
+      },
+    }
+  }
 
   // Если больше заданий нет (все выполнены или последнее провалено)
   if (
@@ -167,17 +301,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       secondsLeftAfterStartTask >= taskDuration)
   ) {
     return {
-      message: `Поздравляем Вы завершили все задания! Игра окончена. ${
-        game.finishingPlace
-          ? `Вы можете выдвигаться на точку сбора: ${game.finishingPlace}`
-          : ''
-      }${
-        game.tasks[game.tasks.length - 1].postMessage
-          ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${
-              game.tasks[game.tasks.length - 1].postMessage
-            }</blockquote>`
-          : ''
-      }`,
+      message: buildGameFinishedMessage(),
       nextCommand: 'mainMenu',
     }
   }
@@ -187,7 +311,6 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
   // либо если перерыв окончен, то даем след задание
 
   if (endTime[taskNum] && breakDuration > 0) {
-    const secondsAfterEndTime = getSecondsBetween(endTime[taskNum])
     if (secondsAfterEndTime < breakDuration)
       return {
         message: `${
@@ -197,7 +320,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         }<b>ПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           breakDuration - secondsAfterEndTime
         )}`}`,
-        buttons: buttonRefresh,
+        buttons: [buttonFinishBreak, buttonRefresh],
       }
     else {
       const startTimeTemp = startTimeNextSet(
@@ -216,6 +339,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         taskNum: taskNum + 1,
         cluesDuration,
         taskDuration,
+        timeAddings,
       })
       return {
         images: game.tasks[taskNum + 1].images,
@@ -245,7 +369,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         }<b>Время вышло\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           taskDuration + breakDuration - secondsLeftAfterStartTask
         )}`}`,
-        buttons: buttonRefresh,
+        buttons: [buttonFinishBreak, buttonRefresh],
       }
     }
 
@@ -283,6 +407,37 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       : 0
   const showCluesNum = Math.min(Math.max(rawShowCluesNum, 0), totalClues)
   const cluePenalty = game.clueEarlyPenalty ?? 0
+  const forcedCluesCount = Math.max(forcedClues?.[taskNum] ?? 0, 0)
+  const visibleCluesCount = Math.min(
+    totalClues,
+    Math.max(showCluesNum, forcedCluesCount)
+  )
+
+  const filteredPhotos =
+    gameType === 'photo'
+      ? photos[taskNum]?.photos.filter((photo) => photo) || []
+      : []
+
+  if (gameType === 'photo' && !jsonCommand.isPhoto && jsonCommand.message) {
+    return {
+      message:
+        `В качестве ответа на задание необходимо отправить фотографию!\n\n` +
+        taskText({
+          game,
+          taskNum: taskNum,
+          startTaskTime: startTime[taskNum],
+          cluesDuration,
+          taskDuration,
+          photos,
+          timeAddings,
+          visibleCluesCount,
+        }),
+      buttons: [
+        buttonRefresh,
+        ...(filteredPhotos.length > 0 ? [buttonSeePhotoAnswers] : []),
+      ],
+    }
+  }
 
   const buttonForceClue = [
     {
@@ -306,13 +461,21 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     },
   ]
 
-  const buildTaskButtons = (visibleCluesCount = showCluesNum) => {
+  const buildTaskButtons = (
+    visibleCount = visibleCluesCount,
+    { includeCaptainActions } = {}
+  ) => {
+    const allowCaptainActions =
+      includeCaptainActions ?? Boolean(isCaptain)
     const hasMoreClues =
+      allowCaptainActions &&
       cluesDuration > 0 &&
       totalClues > 0 &&
-      visibleCluesCount < totalClues
+      visibleCount < totalClues
     const allCluesReceived =
-      totalClues > 0 && visibleCluesCount >= totalClues
+      allowCaptainActions &&
+      totalClues > 0 &&
+      visibleCount >= totalClues
     return [
       buttonRefresh,
       ...(hasMoreClues ? [buttonForceClue] : []),
@@ -320,44 +483,99 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     ]
   }
 
+  const sendTaskToOtherMembers = async ({
+    message,
+    imagesForTask,
+    visibleCluesCount: visibleCluesOverride = visibleCluesCount,
+    includePhotoButtons = false,
+  } = {}) => {
+    if (!justStartedGame || !message) return
+
+    const recipients = teamUsers.filter(
+      ({ userTelegramId }) => String(userTelegramId) !== telegramIdStr
+    )
+
+    if (recipients.length === 0) return
+
+    await Promise.all(
+      recipients.map((teamUser) => {
+        const buttonsForMember = [
+          ...buildTaskButtons(visibleCluesOverride, {
+            includeCaptainActions: isCaptainRole(teamUser.role),
+          }),
+          ...(includePhotoButtons && filteredPhotos.length > 0
+            ? [buttonSeePhotoAnswers]
+            : []),
+        ]
+
+        return sendMessage({
+          chat_id: teamUser.userTelegramId,
+          text: message,
+          keyboard: keyboardFormer(buttonsForMember),
+          images: imagesForTask,
+          location,
+        })
+      })
+    )
+  }
+
   if (jsonCommand.forceClue) {
+    if (!isCaptain)
+      return {
+        message:
+          'Получить подсказку досрочно может только капитан команды.',
+        buttons: buildTaskButtons(visibleCluesCount, {
+          includeCaptainActions: false,
+        }),
+      }
+
+    if (!jsonCommand.confirmForceClue) {
+      const penaltyNotice =
+        cluePenalty > 0
+          ? `\nШтраф за досрочную подсказку: ${secondsToTimeStr(
+              cluePenalty,
+              true
+            )}`
+          : ''
+
+      return {
+        message:
+          `Вы уверены, что хотите получить подсказку досрочно?${penaltyNotice}`,
+        buttons: [buttonConfirmForceClue, buttonCancelForceClue],
+      }
+    }
+
     if (cluesDuration <= 0 || totalClues === 0)
       return {
         message: '<b>Подсказки для этого задания недоступны.</b>',
-        buttons: buildTaskButtons(showCluesNum),
+        buttons: buildTaskButtons(visibleCluesCount),
       }
 
-    if (showCluesNum >= totalClues)
+    if (visibleCluesCount >= totalClues)
       return {
         message: 'Все подсказки для этого задания уже выданы.',
-        buttons: buildTaskButtons(showCluesNum),
+        buttons: buildTaskButtons(visibleCluesCount),
       }
-
-    const remainder = secondsLeftAfterStartTask % cluesDuration
-    const secondsToSkip =
-      remainder === 0 ? cluesDuration : cluesDuration - remainder
-
-    const updatedStartTime = Array.isArray(startTime)
-      ? [...startTime]
-      : []
-
-    const currentStart =
-      startTime && startTime[taskNum]
-        ? new Date(startTime[taskNum])
-        : new Date()
-    const newStartDate = new Date(
-      currentStart.getTime() - secondsToSkip * 1000
-    )
-    updatedStartTime[taskNum] = newStartDate
 
     const existingAddings = Array.isArray(timeAddings)
       ? [...timeAddings]
       : []
-    const forcedClueNumber = Math.min(showCluesNum + 1, totalClues)
+    const forcedCluesList = Array.isArray(forcedClues)
+      ? [...forcedClues]
+      : []
+    const currentForcedCount = Math.max(forcedCluesList[taskNum] ?? 0, 0)
+    const nextForcedCount = Math.min(
+      totalClues,
+      Math.max(currentForcedCount, Math.max(currentForcedCount, showCluesNum) + 1)
+    )
+
+    forcedCluesList[taskNum] = nextForcedCount
+
+    const forcedClueNumber = Math.min(visibleCluesCount + 1, totalClues)
     const clueAddingName = `Досрочная подсказка №${forcedClueNumber}`
 
     const updates = {
-      startTime: updatedStartTime,
+      forcedClues: forcedCluesList,
     }
 
     if (
@@ -372,41 +590,81 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
     await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, updates)
 
-    const nextShowCluesNum = Math.min(showCluesNum + 1, totalClues)
+    const nextVisibleCluesCount = Math.min(
+      totalClues,
+      Math.max(nextForcedCount, showCluesNum)
+    )
+    const nextTimeAddings = updates.timeAddings ?? timeAddings
 
     const penaltyText =
       cluePenalty > 0
-        ? `\n<b>Штраф</b>: +${secondsToTime(cluePenalty)}`
-        : ''
-    const timeText =
-      secondsToSkip > 0
-        ? `\n<b>Снято времени</b>: ${secondsToTime(secondsToSkip)}`
+        ? `\n<b>Штраф</b>: ${secondsToTimeStr(cluePenalty, true)}`
         : ''
 
     return {
       images: currentTask.images,
-      message: `<b>Подсказка №${nextShowCluesNum} выдана досрочно</b>${timeText}${penaltyText}\n\n${taskText({
+      message: `<b>Подсказка №${forcedClueNumber} выдана досрочно</b>${penaltyText}\n\n${taskText({
         game,
         taskNum,
         findedCodes,
         findedBonusCodes,
         findedPenaltyCodes,
-        startTaskTime: newStartDate,
+        startTaskTime: startTime[taskNum],
         cluesDuration,
         taskDuration,
         photos,
+        timeAddings: nextTimeAddings,
+        visibleCluesCount: nextVisibleCluesCount,
       })}`,
-      buttons: buildTaskButtons(nextShowCluesNum),
+      buttons: buildTaskButtons(nextVisibleCluesCount),
     }
   }
 
   if (jsonCommand.failTask) {
-    if (totalClues === 0 || showCluesNum < totalClues)
+    if (!isCaptain)
+      return {
+        message: 'Слить задание может только капитан команды.',
+        buttons: buildTaskButtons(visibleCluesCount, {
+          includeCaptainActions: false,
+        }),
+      }
+
+    if (totalClues > 0 && visibleCluesCount < totalClues)
       return {
         message:
-          'Сдать задание можно только после получения всех подсказок.',
-        buttons: buildTaskButtons(showCluesNum),
+          'Слить задание можно только после получения всех подсказок.',
+        buttons: buildTaskButtons(visibleCluesCount),
       }
+
+    const failMessageBase =
+      '<b>Задание провалено по решению команды.</b>'
+    const penaltyNotice =
+      '\nШтраф за невыполнение задания будет учтен при подсчете результатов.'
+
+    if (!jsonCommand.confirmFailTask)
+      return {
+        message: `Вы уверены, что хотите слить задание?${penaltyNotice}`,
+        buttons: [buttonConfirmFailTask, buttonCancelFailTask],
+      }
+
+    if (breakDuration > 0) {
+      const endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
+
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+        endTime: endTimeTemp,
+      })
+
+      const postTaskMessage = game.tasks[taskNum].postMessage
+        ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${game.tasks[taskNum].postMessage}</blockquote>`
+        : ''
+
+      return {
+        message: `${failMessageBase}${postTaskMessage}\n\n<b>ПЕРЕРЫВ</b>\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
+          breakDuration
+        )}${penaltyNotice}`,
+        buttons: [buttonFinishBreak, buttonRefresh],
+      }
+    }
 
     const startTimeTemp = startTimeNextSet(
       startTime,
@@ -419,12 +677,8 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       activeNum: taskNum + 1,
     })
 
-    const failMessage = `<b>Задание провалено по решению команды.</b>${
-      breakDuration > 0 ? '\n\nПЕРЕРЫВ' : ''
-    }\nШтраф за невыполнение задания будет учтен при подсчете результатов.`
-
     return {
-      message: failMessage,
+      message: `${failMessageBase}${penaltyNotice}`,
       nextCommand: {},
     }
   }
@@ -464,20 +718,32 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
             cluesDuration,
             taskDuration,
             photos: existedPhotos,
+            timeAddings,
+            visibleCluesCount,
           }),
-        buttons: [...buildTaskButtons(showCluesNum), buttonSeePhotoAnswers],
+        buttons: [...buildTaskButtons(visibleCluesCount), buttonSeePhotoAnswers],
       }
     }
 
+    const message = taskText({
+      game,
+      taskNum: taskNum,
+      startTaskTime: startTime[taskNum],
+      cluesDuration,
+      taskDuration,
+      photos,
+      timeAddings,
+      visibleCluesCount,
+    })
+
+    await sendTaskToOtherMembers({
+      message,
+      visibleCluesCount,
+      includePhotoButtons: filteredPhotos.length > 0,
+    })
+
     return {
-      message: taskText({
-        game,
-        taskNum: taskNum,
-        startTaskTime: startTime[taskNum],
-        cluesDuration,
-        taskDuration,
-        photos,
-      }),
+      message,
       images:
         jsonCommand.seePhotoAnswers &&
         !jsonCommand.isPhoto &&
@@ -487,7 +753,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
           ? filteredPhotos
           : undefined,
       buttons: [
-        ...buildTaskButtons(showCluesNum),
+        ...buildTaskButtons(visibleCluesCount),
         ...(filteredPhotos.length > 0 ? [buttonSeePhotoAnswers] : []),
       ],
     }
@@ -509,11 +775,19 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         startTaskTime: startTime[taskNum],
         cluesDuration,
         taskDuration,
+        timeAddings,
+        visibleCluesCount,
+      })
+
+      await sendTaskToOtherMembers({
+        message,
+        imagesForTask: images,
+        visibleCluesCount,
       })
       return {
         images,
         message,
-        buttons: buildTaskButtons(showCluesNum),
+        buttons: buildTaskButtons(visibleCluesCount),
       }
     }
 
@@ -570,8 +844,10 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
           startTaskTime: startTime[taskNum],
           cluesDuration,
           taskDuration,
+          timeAddings,
+          visibleCluesCount,
         })}`,
-        buttons: buildTaskButtons(showCluesNum),
+        buttons: buildTaskButtons(visibleCluesCount),
       }
     }
 
@@ -601,8 +877,10 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
           startTaskTime: startTime[taskNum],
           cluesDuration,
           taskDuration,
+          timeAddings,
+          visibleCluesCount,
         })}`,
-        buttons: buildTaskButtons(showCluesNum),
+        buttons: buildTaskButtons(visibleCluesCount),
       }
     }
 
@@ -628,12 +906,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
         startTimeTemp = startTimeNextSet(startTime, taskNum, game.tasks.length)
 
-        const teamId = gameTeam.teamId
-        const teamsUsers = await TeamsUsers.find({
-          teamId,
-        })
-
-        const usersTelegramIdsOfTeam = teamsUsers.map(
+        const usersTelegramIdsOfTeam = teamUsers.map(
           (teamUser) => teamUser.userTelegramId
         )
 
@@ -676,8 +949,6 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
               endTime: endTimeTemp,
             })
 
-            const keyboard = keyboardFormer(buttonRefresh)
-
             return {
               message: `<b>КОД "${code}" ПРИНЯТ\nЗадание выполнено!${
                 game.tasks[taskNum].postMessage
@@ -686,6 +957,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
               }\n\nПЕРЕРЫВ</b>${`\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
                 breakDuration
               )}`}`,
+              buttons: [buttonFinishBreak, buttonRefresh],
             }
             // return await Promise.all(
             //   usersTelegramIdsOfTeam.map(async (telegramId) => {
@@ -711,8 +983,6 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
             activeNum: newActiveNum,
           })
 
-          const keyboard = keyboardFormer(buttonRefresh)
-
           return {
             message: taskText({
               game,
@@ -720,6 +990,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
               startTaskTime: startTimeTemp[newActiveNum],
               cluesDuration,
               taskDuration,
+              timeAddings,
             }),
           }
           // return await Promise.all(
@@ -759,12 +1030,14 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
                 startTaskTime: startTime[newActiveNum],
                 cluesDuration,
                 taskDuration,
+                timeAddings,
+                visibleCluesCount,
               })}`
             : ''
         }`,
         buttons: isTaskComplite
           ? undefined
-          : buildTaskButtons(showCluesNum),
+          : buildTaskButtons(visibleCluesCount),
         nextCommand: isTaskComplite ? {} : undefined,
       }
     } else {
