@@ -33,6 +33,10 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
 
   const haveErrorsInTasks = isGameHaveErrors(game)
 
+  const allowCaptainForceClue = game?.allowCaptainForceClue !== false
+  const allowCaptainFailTask = game?.allowCaptainFailTask !== false
+  const allowCaptainFinishBreak = game?.allowCaptainFinishBreak !== false
+
   return {
     images: game.image ? [game.image] : undefined,
     message: `${game.status === 'canceled' ? '<b>(ИГРА ОТМЕНЕНА!)</b>\n' : ''}${
@@ -63,6 +67,10 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
         : `<b>Время до подсказки</b>: ${secondsToTimeStr(
             game?.cluesDuration ?? 1200
           )}`
+    }\n<b>Досрочная подсказка капитану</b>: ${
+      allowCaptainForceClue ? 'разрешена' : 'запрещена'
+    }\n<b>Слив задания капитаном</b>: ${
+      allowCaptainFailTask ? 'разрешен' : 'запрещен'
     }\n<b>Штраф за досрочную подсказку</b>: ${
       !game?.clueEarlyPenalty
         ? 'отсутствует'
@@ -71,6 +79,8 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
       !game?.breakDuration
         ? 'отсутствует'
         : secondsToTimeStr(game?.breakDuration)
+    }\n<b>Досрочное завершение перерыва капитаном</b>: ${
+      allowCaptainFinishBreak ? 'разрешено' : 'запрещено'
     }\n<b>Штраф за невыполнение задания</b>: ${
       !game?.taskFailurePenalty
         ? 'отсутствует'
@@ -163,6 +173,12 @@ const editGame = async ({ telegramId, jsonCommand, location, db }) => {
             gameId: jsonCommand.gameId,
           },
           text: '\u{270F} Перерыв',
+        },
+      ],
+      [
+        {
+          c: { c: 'editGameCaptainRights', gameId: jsonCommand.gameId },
+          text: '\u{2696}\u{FE0F} Права капитанов',
         },
       ],
       [
