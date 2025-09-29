@@ -643,7 +643,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         }),
       }
 
-    if (totalClues === 0 || showCluesNum < totalClues)
+    if (totalClues > 0 && visibleCluesCount < totalClues)
       return {
         message:
           'Слить задание можно только после получения всех подсказок.',
