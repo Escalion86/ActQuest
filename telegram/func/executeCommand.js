@@ -151,6 +151,12 @@ const executeCommand = async ({
     delete actualCommand.isVideo
     delete actualCommand.isDocument
 
+    ;['forceClue', 'confirmForceClue', 'failTask', 'confirmFailTask', 'finishBreak', 'confirmFinishBreak'].forEach(
+      (key) => {
+        if (key in actualCommand) delete actualCommand[key]
+      }
+    )
+
     return await db.model('LastCommands').findOneAndUpdate(
       {
         userTelegramId,
