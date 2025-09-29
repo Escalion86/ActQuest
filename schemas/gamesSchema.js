@@ -146,6 +146,14 @@ const gamesSchema = {
     type: Number,
     default: 0,
   },
+  allowCaptainForceClue: {
+    type: Boolean,
+    default: true,
+  },
+  allowCaptainFailTask: {
+    type: Boolean,
+    default: true,
+  },
   breakDuration: {
     type: Number,
     default: 0,

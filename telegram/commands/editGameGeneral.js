@@ -68,6 +68,9 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
 
   const haveErrorsInTasks = isGameHaveErrors(game)
 
+  const allowCaptainForceClue = game?.allowCaptainForceClue !== false
+  const allowCaptainFailTask = game?.allowCaptainFailTask !== false
+
   return {
     images: game.image ? [game.image] : undefined,
     message: `${game.status === 'canceled' ? '<b>(ИГРА ОТМЕНЕНА!)</b>\n' : ''}${
@@ -98,6 +101,10 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
         : `<b>Время до подсказки</b>: ${secondsToTimeStr(
             game?.cluesDuration ?? 1200
           )}`
+    }\n<b>Досрочная подсказка капитану</b>: ${
+      allowCaptainForceClue ? 'разрешена' : 'запрещена'
+    }\n<b>Слив задания капитаном</b>: ${
+      allowCaptainFailTask ? 'разрешен' : 'запрещен'
     }\n<b>Штраф за досрочную подсказку</b>: ${
       !game?.clueEarlyPenalty
         ? 'отсутствует'

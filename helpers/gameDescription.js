@@ -14,6 +14,9 @@ const gameDescription = (game, creator) => {
         .length
     : 0
 
+  const allowCaptainForceClue = game?.allowCaptainForceClue !== false
+  const allowCaptainFailTask = game?.allowCaptainFailTask !== false
+
   const description = `<b>Игра "${game?.name}"</b>
   \n\n<b>Дата и время</b>: ${
     game.dateStart
@@ -49,6 +52,10 @@ const gameDescription = (game, creator) => {
       : game.type === 'photo'
       ? getNounPoints(game?.taskFailurePenalty)
       : secondsToTimeStr(game?.taskFailurePenalty)
+  }\n<b>Досрочная подсказка капитану</b>: ${
+    allowCaptainForceClue ? 'разрешена' : 'запрещена'
+  }\n<b>Слив задания капитаном</b>: ${
+    allowCaptainFailTask ? 'разрешен' : 'запрещен'
   }\n<b>Штраф за досрочную подсказку</b>: ${
     !game?.clueEarlyPenalty
       ? 'отсутствует'

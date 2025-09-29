@@ -420,6 +420,8 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       : 0
   const showCluesNum = Math.min(Math.max(rawShowCluesNum, 0), totalClues)
   const cluePenalty = game.clueEarlyPenalty ?? 0
+  const allowCaptainForceClue = game.allowCaptainForceClue !== false
+  const allowCaptainFailTask = game.allowCaptainFailTask !== false
   const forcedCluesCount = Math.max(forcedClues?.[taskNum] ?? 0, 0)
   const visibleCluesCount = Math.min(
     totalClues,
@@ -481,13 +483,17 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
   ) => {
     const allowCaptainActions =
       includeCaptainActions ?? Boolean(isCaptain)
+    const allowForceClueButton =
+      allowCaptainActions && allowCaptainForceClue
+    const allowFailTaskButton =
+      allowCaptainActions && allowCaptainFailTask
     const hasMoreClues =
-      allowCaptainActions &&
+      allowForceClueButton &&
       cluesDuration > 0 &&
       totalClues > 0 &&
       visibleCount < totalClues
     const allCluesReceived =
-      allowCaptainActions &&
+      allowFailTaskButton &&
       totalClues > 0 &&
       visibleCount >= totalClues
     return [
@@ -534,6 +540,13 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
   }
 
   if (jsonCommand.forceClue) {
+    if (!allowCaptainForceClue)
+      return {
+        message: 'Досрочное получение подсказки отключено организатором игры.',
+        buttons: buildTaskButtons(visibleCluesCount, {
+          includeCaptainActions: false,
+        }),
+      }
     if (!isCaptain)
       return {
         message:
@@ -637,6 +650,13 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
   }
 
   if (jsonCommand.failTask) {
+    if (!allowCaptainFailTask)
+      return {
+        message: 'Слив задания отключен организатором игры.',
+        buttons: buildTaskButtons(visibleCluesCount, {
+          includeCaptainActions: false,
+        }),
+      }
     if (!isCaptain)
       return {
         message: 'Слить задание может только капитан команды.',
