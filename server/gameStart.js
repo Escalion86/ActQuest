@@ -5,6 +5,7 @@ import keyboardFormer from 'telegram/func/keyboardFormer'
 import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 import createTaskProgressArrays from '@helpers/createTaskProgressArrays'
+import removeCluePenalties from '@helpers/removeCluePenalties'
 
 const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -59,30 +60,35 @@ const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
     // let timerId = setTimeout(() => console.log('!'), 1000)
     // console.log('timerId :>> ', timerId)
     const gameTasksCount = game.tasks.length
-    const startTime = new Array(gameTasksCount).fill(null)
-    startTime[0] = new Date()
-    const endTime = new Array(gameTasksCount).fill(null)
-    const {
-      findedCodes,
-      wrongCodes,
-      findedPenaltyCodes,
-      findedBonusCodes,
-      photos,
-    } = createTaskProgressArrays(gameTasksCount)
-    await db.model('GamesTeams').updateMany(
-      {
-        gameId: jsonCommand.gameId,
-      },
-      {
-        startTime,
-        endTime,
-        activeNum: 0,
-        findedCodes,
-        wrongCodes,
-        findedPenaltyCodes,
-        findedBonusCodes,
-        photos,
-      }
+
+    await Promise.all(
+      gameTeams.map(async (team) => {
+        const startTime = new Array(gameTasksCount).fill(null)
+        startTime[0] = new Date()
+        const endTime = new Array(gameTasksCount).fill(null)
+        const {
+          findedCodes,
+          wrongCodes,
+          findedPenaltyCodes,
+          findedBonusCodes,
+          photos,
+        } = createTaskProgressArrays(gameTasksCount)
+
+        const filteredAddings = removeCluePenalties(team.timeAddings)
+
+        await db.model('GamesTeams').findByIdAndUpdate(team._id, {
+          startTime,
+          endTime,
+          activeNum: 0,
+          findedCodes,
+          wrongCodes,
+          findedPenaltyCodes,
+          findedBonusCodes,
+          photos,
+          timeAddings: filteredAddings,
+          forcedClues: new Array(gameTasksCount).fill(0),
+        })
+      })
     )
 
     const cluesDuration = game.cluesDuration ?? 1200
