@@ -639,12 +639,12 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
     const failMessageBase =
       '<b>Задание провалено по решению команды.</b>'
-    const penaltyNotice =
+    const failPenaltyNotice =
       '\nШтраф за невыполнение задания будет учтен при подсчете результатов.'
 
     if (!jsonCommand.confirmFailTask)
       return {
-        message: `Вы уверены, что хотите слить задание?${penaltyNotice}`,
+        message: `Вы уверены, что хотите слить задание?${failPenaltyNotice}`,
         buttons: [buttonConfirmFailTask, buttonCancelFailTask],
       }
 
@@ -662,7 +662,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       return {
         message: `${failMessageBase}${postTaskMessage}\n\n<b>ПЕРЕРЫВ</b>\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           breakDuration
-        )}${penaltyNotice}`,
+        )}${failPenaltyNotice}`,
         buttons: [buttonFinishBreak, buttonRefresh],
       }
     }
@@ -677,6 +677,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         message: `Вы уверены, что хотите слить задание?${penaltyNotice}`,
         buttons: [buttonConfirmFailTask, buttonCancelFailTask],
       }
+    }
 
     if (breakDuration > 0) {
       const endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
@@ -709,7 +710,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     })
 
     return {
-      message: `${failMessageBase}${penaltyNotice}`,
+      message: `${failMessageBase}${failPenaltyNotice}`,
       nextCommand: {},
     }
   }
