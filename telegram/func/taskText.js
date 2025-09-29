@@ -60,17 +60,24 @@ const taskText = ({
         }</blockquote>`
     }
 
-  const addingsSummary =
-    Array.isArray(timeAddings) && timeAddings.length > 0
-      ? `\n\n<b>Текущие бонусы/штрафы команды:</b>\n${timeAddings
+  const relevantAddings = Array.isArray(timeAddings)
+    ? timeAddings.filter(({ taskIndex }) =>
+        typeof taskIndex !== 'number' || taskIndex === taskNum
+      )
+    : []
+
+  const addingsSummary = `\n\n<b>Бонусы и штрафы текущего задания:</b>\n${
+    relevantAddings.length > 0
+      ? relevantAddings
           .map(({ name, time }) => {
             const isBonus = time < 0
             const timeText = secondsToTimeStr(Math.abs(time), true)
             const icon = isBonus ? '\u{1F7E2}' : '\u{1F534}'
             return `${icon} ${timeText} - ${name}`
           })
-          .join('\n')}`
-      : ''
+          .join('\n')
+      : 'Бонусы и штрафы отсутствуют'
+  }`
 
   return `<b>Задание №${taskNum + 1}${
     task.isBonusTask ? ' (БОНУСНОЕ)' : ''

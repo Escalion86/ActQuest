@@ -586,19 +586,21 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     forcedCluesList[taskNum] = nextForcedCount
 
     const forcedClueNumber = Math.min(visibleCluesCount + 1, totalClues)
-    const clueAddingName = `Досрочная подсказка №${forcedClueNumber}`
+    const clueAddingName = `Досрочная подсказка №${forcedClueNumber} (Задание ${taskNum + 1})`
 
     const updates = {
       forcedClues: forcedCluesList,
     }
 
-    if (
-      cluePenalty > 0 &&
-      !existingAddings.some(({ name }) => name === clueAddingName)
-    ) {
+    const hasExistingCluePenalty = existingAddings.some(
+      ({ name, taskIndex }) =>
+        name === clueAddingName && taskIndex === taskNum
+    )
+
+    if (cluePenalty > 0 && !hasExistingCluePenalty) {
       updates.timeAddings = [
         ...existingAddings,
-        { name: clueAddingName, time: cluePenalty },
+        { name: clueAddingName, time: cluePenalty, taskIndex: taskNum },
       ]
     }
 
