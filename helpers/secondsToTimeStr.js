@@ -7,12 +7,14 @@ const secondsToTimeStr = (seconds, short) => {
   const m = Math.floor((seconds % 3600) / 60)
   const s = seconds % 60
   var result = []
-  if (d > 0) result.push(short ? d + 'д' : getNoun(d, 'день', 'дня', 'дней'))
-  if (h > 0) result.push(short ? h + 'ч' : getNoun(h, 'час', 'часа', 'часов'))
+  if (d > 0)
+    result.push(short ? `${d} д` : getNoun(d, 'день', 'дня', 'дней'))
+  if (h > 0)
+    result.push(short ? `${h} ч` : getNoun(h, 'час', 'часа', 'часов'))
   if (m > 0)
-    result.push(short ? m + 'м' : getNoun(m, 'минута', 'минуты', 'минут'))
+    result.push(short ? `${m} мин` : getNoun(m, 'минута', 'минуты', 'минут'))
   if (s > 0)
-    result.push(short ? s + 'с' : getNoun(s, 'секунда', 'секунды', 'секунд'))
+    result.push(short ? `${s} сек` : getNoun(s, 'секунда', 'секунды', 'секунд'))
   return result.join(' ')
 }
 
