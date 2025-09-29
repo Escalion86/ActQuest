@@ -63,6 +63,7 @@ import setTaskDuration from './setTaskDuration'
 import setBreakDuration from './setBreakDuration'
 import setCluesDuration from './setCluesDuration'
 import setCluesPenalty from './setCluesPenalty'
+import editGameCaptainRights from './editGameCaptainRights'
 import setTaskPenalty from './setTaskPenalty'
 import transferCaptainRights from './transferCaptainRights'
 import archiveGames from './archiveGames'
@@ -220,6 +221,7 @@ const commandsArray = {
   cluesSettings,
   setCluesDuration,
   setCluesPenalty,
+  editGameCaptainRights,
   setTaskPenalty,
   transferCaptainRights,
   archiveGames,
