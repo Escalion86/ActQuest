@@ -573,7 +573,6 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
     const forcedClueNumber = Math.min(visibleCluesCount + 1, totalClues)
     const clueAddingName = `Досрочная подсказка №${forcedClueNumber} (Задание ${taskNum + 1})`
-
     const updates = {
       forcedClues: forcedCluesList,
     }
@@ -664,6 +663,37 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         message: `${failMessageBase}${postTaskMessage}\n\n<b>ПЕРЕРЫВ</b>\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
           breakDuration
         )}${failPenaltyNotice}`,
+        buttons: [buttonFinishBreak, buttonRefresh],
+      }
+    }
+
+    const failMessageBase =
+      '<b>Задание провалено по решению команды.</b>'
+    const penaltyNotice =
+      '\nШтраф за невыполнение задания будет учтен при подсчете результатов.'
+
+    if (!jsonCommand.confirmFailTask)
+      return {
+        message: `Вы уверены, что хотите слить задание?${penaltyNotice}`,
+        buttons: [buttonConfirmFailTask, buttonCancelFailTask],
+      }
+    }
+
+    if (breakDuration > 0) {
+      const endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
+
+      await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+        endTime: endTimeTemp,
+      })
+
+      const postTaskMessage = game.tasks[taskNum].postMessage
+        ? `\n\n<b>Сообщение от прошлого задания:</b>\n<blockquote>${game.tasks[taskNum].postMessage}</blockquote>`
+        : ''
+
+      return {
+        message: `${failMessageBase}${postTaskMessage}\n\n<b>ПЕРЕРЫВ</b>\n\n<b>Время до окончания перерыва</b>: ${secondsToTime(
+          breakDuration
+        )}${penaltyNotice}`,
         buttons: [buttonFinishBreak, buttonRefresh],
       }
     }
