@@ -45,12 +45,6 @@ const cluesSettings = async ({ telegramId, jsonCommand, location, db }) => {
       ],
       [
         {
-          c: { c: 'editGameCaptainRights', gameId: jsonCommand.gameId },
-          text: '\u{2696}\u{FE0F} Права капитанов',
-        },
-      ],
-      [
-        {
           c: { c: 'editGame', gameId: jsonCommand.gameId },
           text: '\u{21A9} Назад',
         },
