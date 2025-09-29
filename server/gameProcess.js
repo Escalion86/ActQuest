@@ -574,6 +574,10 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
     const forcedClueNumber = Math.min(visibleCluesCount + 1, totalClues)
     const clueAddingName = `Досрочная подсказка №${forcedClueNumber} (Задание ${taskNum + 1})`
 
+    forcedCluesList[taskNum] = nextForcedCount
+
+    const forcedClueNumber = Math.min(visibleCluesCount + 1, totalClues)
+    const clueAddingName = `Досрочная подсказка №${forcedClueNumber} (Задание ${taskNum + 1})`
     const updates = {
       forcedClues: forcedCluesList,
     }
