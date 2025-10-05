@@ -131,21 +131,51 @@ const CabinetPage = () => {
 
     try {
       setError(null)
+      const payload = JSON.stringify(userData)
       const result = await signIn('telegram', {
         redirect: false,
         callbackUrl: `${window.location.origin}/cabinet`,
-        data: JSON.stringify(userData),
+        data: payload,
         location,
       })
 
       if (result?.error) {
-        throw new Error(result.error)
+        let errorMessage = result.error
+
+        if (result.error === 'CredentialsSignin') {
+          try {
+            const debugResponse = await fetch('/api/webapp/telegram/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ location, data: payload }),
+            })
+
+            const debugData = await debugResponse.json().catch(() => null)
+
+            if (debugData) {
+              if (debugData.success) {
+                errorMessage =
+                  'Авторизация прошла успешно, но не удалось обновить сессию. Попробуйте перезагрузить страницу.'
+              } else if (debugData.errorMessage) {
+                errorMessage = debugData.errorMessage
+              } else if (debugData.errorCode) {
+                errorMessage = `Ошибка авторизации Telegram (${debugData.errorCode}).`
+              }
+            }
+          } catch (debugError) {
+            console.error('Telegram auth debug error', debugError)
+          }
+        }
+
+        throw new Error(errorMessage)
       }
 
       await updateSession()
     } catch (authError) {
       console.error('Telegram auth error', authError)
-      setError('Не удалось авторизоваться. Попробуйте ещё раз.')
+      setError(authError.message || 'Не удалось авторизоваться. Попробуйте ещё раз.')
     }
   }
 

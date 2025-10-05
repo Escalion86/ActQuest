@@ -1,19 +1,7 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import dbConnect from '@utils/dbConnect'
-import getTelegramTokenByLocation from '@utils/telegram/getTelegramTokenByLocation'
-import verifyTelegramAuthPayload from '@helpers/verifyTelegramAuthPayload'
-
-const buildUserName = (payload) => {
-  const parts = [payload?.first_name, payload?.last_name]
-    .filter(Boolean)
-    .map((value) => value.trim())
-    .filter(Boolean)
-
-  if (parts.length > 0) return parts.join(' ')
-  if (payload?.username) return payload.username
-  return 'Пользователь Telegram'
-}
+import authenticateTelegramUser from '@helpers/authenticateTelegramUser'
 
 const normalizeUserForSession = (user, fallback) => ({
   ...fallback,
@@ -41,55 +29,25 @@ export const authOptions = {
         location: { label: 'Location', type: 'text' },
       },
       authorize: async (credentials) => {
+        const location = credentials?.location
+        const rawData = credentials?.data
+
         try {
-          const location = credentials?.location
-          const rawData = credentials?.data
+          const result = await authenticateTelegramUser({ location, rawData })
 
-          if (!location || !rawData) return null
-
-          const payload = JSON.parse(rawData)
-          const token = getTelegramTokenByLocation(location)
-
-          if (!verifyTelegramAuthPayload(payload, token)) return null
-
-          const db = await dbConnect(location)
-          if (!db) return null
-
-          const name = buildUserName(payload)
-          const updates = {
-            name,
-            username: payload?.username ?? null,
-            photoUrl: payload?.photo_url ?? null,
-            languageCode: payload?.language_code ?? null,
-            isPremium: Boolean(payload?.is_premium),
+          if (!result.success) {
+            console.error('Telegram authorize error', {
+              location,
+              errorCode: result.errorCode,
+              errorMessage: result.errorMessage,
+            })
+            throw new Error(result.errorCode || 'TELEGRAM_AUTH_FAILED')
           }
 
-          const user = await db
-            .model('Users')
-            .findOneAndUpdate(
-              { telegramId: payload.id },
-              { $set: updates },
-              {
-                upsert: true,
-                new: true,
-                setDefaultsOnInsert: true,
-              }
-            )
-            .lean()
-
-          return {
-            id: user._id.toString(),
-            telegramId: user.telegramId,
-            location,
-            name: user.name,
-            username: user.username,
-            photoUrl: user.photoUrl,
-            languageCode: user.languageCode,
-            isPremium: user.isPremium,
-          }
+          return result.user
         } catch (error) {
-          console.error('Telegram authorize error', error)
-          return null
+          console.error('Telegram authorize unexpected error', error)
+          throw error
         }
       },
     }),
