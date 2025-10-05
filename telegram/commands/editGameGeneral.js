@@ -71,6 +71,15 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
   const allowCaptainForceClue = game?.allowCaptainForceClue !== false
   const allowCaptainFailTask = game?.allowCaptainFailTask !== false
   const allowCaptainFinishBreak = game?.allowCaptainFinishBreak !== false
+  const clueEarlyMode =
+    game?.clueEarlyAccessMode === 'time' ? 'time' : 'penalty'
+  const clueEarlyPenaltyText = !game?.clueEarlyPenalty
+    ? 'отсутствует'
+    : secondsToTimeStr(game?.clueEarlyPenalty)
+  const clueEarlySettingText =
+    clueEarlyMode === 'penalty'
+      ? `штраф организатора (${clueEarlyPenaltyText})`
+      : 'прибавляется время до следующей подсказки'
 
   return {
     images: game.image ? [game.image] : undefined,
@@ -106,11 +115,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
       allowCaptainForceClue ? 'разрешена' : 'запрещена'
     }\n<b>Слив задания капитаном</b>: ${
       allowCaptainFailTask ? 'разрешен' : 'запрещен'
-    }\n<b>Штраф за досрочную подсказку</b>: ${
-      !game?.clueEarlyPenalty
-        ? 'отсутствует'
-        : secondsToTimeStr(game?.clueEarlyPenalty)
-  }\n<b>Перерыв между заданиями</b>: ${
+    }\n<b>Способ досрочной подсказки</b>: ${clueEarlySettingText}\n<b>Перерыв между заданиями</b>: ${
       !game?.breakDuration
         ? 'отсутствует'
         : secondsToTimeStr(game?.breakDuration)

@@ -466,6 +466,8 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       ? Math.floor(secondsLeftAfterStartTask / cluesDuration)
       : 0
   const showCluesNum = Math.min(Math.max(rawShowCluesNum, 0), totalClues)
+  const clueEarlyMode =
+    game.clueEarlyAccessMode === 'time' ? 'time' : 'penalty'
   const cluePenalty = game.clueEarlyPenalty ?? 0
   const allowCaptainForceClue = game.allowCaptainForceClue !== false
   const allowCaptainFailTask = game.allowCaptainFailTask !== false
@@ -596,13 +598,29 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         }),
       }
 
+    const forcedClueNumber = Math.min(visibleCluesCount + 1, totalClues)
+    const timeUntilNextClue =
+      clueEarlyMode === 'time' && cluesDuration > 0 && forcedClueNumber > 0
+        ? Math.max(
+            forcedClueNumber * cluesDuration - secondsLeftAfterStartTask,
+            0
+          )
+        : 0
+    const penaltyToApply =
+      clueEarlyMode === 'time' ? timeUntilNextClue : cluePenalty
+
     if (!jsonCommand.confirmForceClue) {
       const penaltyNotice =
-        cluePenalty > 0
-          ? `\nШтраф за досрочную подсказку: ${secondsToTimeStr(
-              cluePenalty,
-              true
-            )}`
+        penaltyToApply > 0
+          ? clueEarlyMode === 'time'
+            ? `\nСистема засчитает, что команда играла еще ${secondsToTimeStr(
+                penaltyToApply,
+                true
+              )}.`
+            : `\nШтраф за досрочную подсказку: ${secondsToTimeStr(
+                penaltyToApply,
+                true
+              )}`
           : ''
 
       return {
@@ -636,7 +654,6 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
 
     forcedCluesList[taskNum] = nextForcedCount
 
-    const forcedClueNumber = Math.min(visibleCluesCount + 1, totalClues)
     const clueAddingName = `Досрочная подсказка №${forcedClueNumber}`
     const updates = {
       forcedClues: forcedCluesList,
@@ -651,8 +668,12 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       }
     )
 
-    if (cluePenalty > 0 && !hasExistingCluePenalty) {
-      const newAdding = { name: clueAddingName, time: cluePenalty, taskIndex: taskNum }
+    if (penaltyToApply > 0 && !hasExistingCluePenalty) {
+      const newAdding = {
+        name: clueAddingName,
+        time: penaltyToApply,
+        taskIndex: taskNum,
+      }
       if (currentTaskId) newAdding.taskId = currentTaskId
 
       updates.timeAddings = [...existingAddings, newAdding]
@@ -667,8 +688,12 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
     const nextTimeAddings = updates.timeAddings ?? timeAddings
 
     const penaltyText =
-      cluePenalty > 0
-        ? `\n<b>Штраф</b>: ${secondsToTimeStr(cluePenalty, true)}`
+      penaltyToApply > 0
+        ? `\n${
+            clueEarlyMode === 'time'
+              ? '<b>Добавленное время</b>'
+              : '<b>Штраф</b>'
+          }: ${secondsToTimeStr(penaltyToApply, true)}`
         : ''
 
     return {
