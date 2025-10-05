@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import { signOut, useSession } from 'next-auth/react'
+import { signIn, signOut, useSession } from 'next-auth/react'
 import { LOCATIONS } from '@server/serverConstants'
 import ConversationEntry from '@components/cabinet/ConversationEntry'
 import TelegramLogin from '@components/cabinet/TelegramLogin'
@@ -131,35 +131,15 @@ const CabinetPage = () => {
 
     try {
       setError(null)
-
-      const csrfResponse = await fetch('/api/auth/csrf')
-      const csrfData = await csrfResponse.json().catch(() => null)
-
-      if (!csrfResponse.ok || !csrfData?.csrfToken) {
-        throw new Error('Не удалось получить токен безопасности.')
-      }
-
-      const params = new URLSearchParams({
-        csrfToken: csrfData.csrfToken,
+      const result = await signIn('telegram', {
+        redirect: false,
         callbackUrl: `${window.location.origin}/cabinet`,
-        json: 'true',
-        redirect: 'false',
         data: JSON.stringify(userData),
         location,
       })
 
-      const response = await fetch('/api/auth/callback/telegram?json=true', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString(),
-      })
-
-      const result = await response.json().catch(() => null)
-
-      if (!response.ok || result?.error || result?.ok === false) {
-        throw new Error(result?.error || 'Не удалось авторизоваться. Попробуйте ещё раз.')
+      if (result?.error) {
+        throw new Error(result.error)
       }
 
       await updateSession()
