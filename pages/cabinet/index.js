@@ -143,6 +143,7 @@ const CabinetPage = () => {
         csrfToken: csrfData.csrfToken,
         callbackUrl: `${window.location.origin}/cabinet`,
         json: 'true',
+        redirect: 'false',
         data: JSON.stringify(userData),
         location,
       })
@@ -157,7 +158,7 @@ const CabinetPage = () => {
 
       const result = await response.json().catch(() => null)
 
-      if (!response.ok || result?.error) {
+      if (!response.ok || result?.error || result?.ok === false) {
         throw new Error(result?.error || 'Не удалось авторизоваться. Попробуйте ещё раз.')
       }
 
