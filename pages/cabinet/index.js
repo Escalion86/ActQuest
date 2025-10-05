@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import { signIn, signOut, useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { LOCATIONS } from '@server/serverConstants'
 import ConversationEntry from '@components/cabinet/ConversationEntry'
 import TelegramLogin from '@components/cabinet/TelegramLogin'
@@ -13,10 +13,8 @@ const availableLocations = Object.entries(LOCATIONS)
 const defaultLocation = availableLocations[0]?.key ?? 'dev'
 
 const CabinetPage = () => {
-  const { data: session, status } = useSession()
-  const [location, setLocation] = useState(
-    () => session?.user?.location ?? defaultLocation
-  )
+  const { data: session, status, update: updateSession } = useSession()
+  const [location, setLocation] = useState(() => session?.user?.location ?? defaultLocation)
   const [input, setInput] = useState('')
   const [history, setHistory] = useState([])
   const [isLoading, setIsLoading] = useState(false)
@@ -128,21 +126,46 @@ const CabinetPage = () => {
     setInput('')
   }
 
-  const handleTelegramAuth = (userData) => {
-    console.log('userData :>> ', userData)
+  const handleTelegramAuth = async (userData) => {
     if (!userData) return
 
-    signIn('telegram', {
-      data: JSON.stringify(userData),
-      location,
-      redirect: false,
-    }).then((response) => {
-      if (response?.error) {
-        setError('Не удалось авторизоваться. Попробуйте ещё раз.')
-      } else {
-        setError(null)
+    try {
+      setError(null)
+
+      const csrfResponse = await fetch('/api/auth/csrf')
+      const csrfData = await csrfResponse.json().catch(() => null)
+
+      if (!csrfResponse.ok || !csrfData?.csrfToken) {
+        throw new Error('Не удалось получить токен безопасности.')
       }
-    })
+
+      const params = new URLSearchParams({
+        csrfToken: csrfData.csrfToken,
+        callbackUrl: `${window.location.origin}/cabinet`,
+        json: 'true',
+        data: JSON.stringify(userData),
+        location,
+      })
+
+      const response = await fetch('/api/auth/callback/telegram?json=true', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      })
+
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok || result?.error) {
+        throw new Error(result?.error || 'Не удалось авторизоваться. Попробуйте ещё раз.')
+      }
+
+      await updateSession()
+    } catch (authError) {
+      console.error('Telegram auth error', authError)
+      setError('Не удалось авторизоваться. Попробуйте ещё раз.')
+    }
   }
 
   const renderLogin = () => (
