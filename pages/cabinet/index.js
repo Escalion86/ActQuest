@@ -1,87 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { signIn, signOut, useSession } from 'next-auth/react'
-import { TLoginButton, TLoginButtonSize } from 'react-telegram-auth'
 import { LOCATIONS } from '@server/serverConstants'
-import getTelegramBotNameByLocation from '@utils/telegram/getTelegramBotNameByLocation'
+import ConversationEntry from '@components/cabinet/ConversationEntry'
+import TelegramLogin from '@components/cabinet/TelegramLogin'
 
 const availableLocations = Object.entries(LOCATIONS)
   .filter(([, value]) => !value.hidden)
   .map(([key, value]) => ({ key, ...value }))
 
 const defaultLocation = availableLocations[0]?.key ?? 'dev'
-
-const formatText = (text) =>
-  (text || '')
-    .split('\n')
-    .map((part) => part.trim())
-    .join('\n')
-
-const BotMessage = ({ text }) => {
-  if (!text) return null
-
-  return (
-    <div
-      className="rounded-2xl bg-white p-4 shadow-sm"
-      dangerouslySetInnerHTML={{ __html: formatText(text).replaceAll('\n', '<br />') }}
-    />
-  )
-}
-
-const ConversationEntry = ({ entry }) => {
-  if (entry.type === 'user') {
-    return (
-      <div className="flex justify-end">
-        <div className="max-w-xl rounded-2xl bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm">
-          {entry.text}
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex justify-start">
-      <div className="max-w-3xl space-y-2">
-        <BotMessage text={entry.text} />
-        {entry.keyboard?.length ? (
-          <div className="flex flex-col gap-2">
-            {entry.keyboard.map((row, rowIndex) => (
-              <div key={`row-${rowIndex}`} className="flex flex-wrap gap-2">
-                {row.map((button) => {
-                  if (button.url) {
-                    return (
-                      <a
-                        key={button.url}
-                        href={button.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                      >
-                        {button.text}
-                      </a>
-                    )
-                  }
-
-                  return (
-                    <button
-                      key={button.callback_data || button.text}
-                      className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                      onClick={() => entry.onAction?.(button)}
-                      type="button"
-                    >
-                      {button.text}
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  )
-}
 
 const CabinetPage = () => {
   const { data: session, status } = useSession()
@@ -92,8 +21,6 @@ const CabinetPage = () => {
   const [error, setError] = useState(null)
   const [hasSyncedLocation, setHasSyncedLocation] = useState(false)
   const [isClient, setIsClient] = useState(false)
-
-  const botName = useMemo(() => getTelegramBotNameByLocation(location), [location])
 
   useEffect(() => {
     setIsClient(true)
@@ -216,51 +143,13 @@ const CabinetPage = () => {
   }
 
   const renderLogin = () => (
-    <div className="mx-auto mt-12 max-w-4xl rounded-3xl bg-white p-8 shadow-lg">
-      <h2 className="text-2xl font-bold text-primary">Войти через Telegram</h2>
-      <p className="mt-3 text-gray-600">
-        Выберите игровой регион и подтвердите вход через официальный виджет Telegram. Все данные
-        синхронизируются с ботом, поэтому вы сразу продолжите работу с квестами, командами и играми.
-      </p>
-      <div className="mt-6 flex flex-col gap-6">
-        <label className="flex flex-col gap-2 text-sm font-medium text-gray-700">
-          Регион
-          <select
-            className="rounded-xl border border-gray-200 px-4 py-3 text-base shadow-sm focus:border-blue-400 focus:outline-none focus:ring"
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-          >
-            {availableLocations.map((item) => (
-              <option key={item.key} value={item.key}>
-                {item.townRu[0].toUpperCase() + item.townRu.slice(1)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="flex flex-col items-start gap-4">
-          {botName && isClient ? (
-            <TLoginButton
-              botName={botName}
-              buttonSize={TLoginButtonSize.Large}
-              lang="ru"
-              cornerRadius={16}
-              usePic
-              requestAccess="write"
-              onAuthCallback={handleTelegramAuth}
-            />
-          ) : (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-gray-500">
-              Укажите название бота для региона в переменной окружения{' '}
-              <code className="rounded bg-gray-200 px-1">NEXT_PUBLIC_TELEGRAM_{location.toUpperCase()}_BOT_NAME</code>
-            </div>
-          )}
-          <p className="text-sm text-gray-500">
-            Нажимая кнопку входа, вы разрешаете ActQuest использовать данные вашей Telegram учетной записи
-            для авторизации и работы с ботом.
-          </p>
-        </div>
-      </div>
-    </div>
+    <TelegramLogin
+      availableLocations={availableLocations}
+      location={location}
+      onLocationChange={setLocation}
+      onAuth={handleTelegramAuth}
+      isClient={isClient}
+    />
   )
 
   const renderDashboard = () => (
