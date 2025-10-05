@@ -20,15 +20,28 @@ const gameTeamAddings = async ({ telegramId, jsonCommand, location, db }) => {
   if (team.success === false) return team
 
   const page = jsonCommand?.page ?? 1
+  const tasksTitlesMap = new Map(
+    (game?.tasks ?? [])
+      .filter(({ _id }) => _id)
+      .map(({ _id, title }) => [String(_id), title])
+  )
+
+  const formatAddingName = ({ name, taskId }) => {
+    if (!taskId) return name
+    const taskTitle = tasksTitlesMap.get(String(taskId))
+    return taskTitle ? `${name} (${taskTitle})` : name
+  }
+
   const buttons = gameTeam?.timeAddings
     ? buttonListConstructor(
         gameTeam.timeAddings,
         page,
-        ({ id, name, time }, number) => {
+        (adding, number) => {
+          const { name, time } = adding
           return {
             text: `${number}. \u{1F5D1} ${
               time < 0 ? `\u{1F7E2}` : `\u{1F534}`
-            } ${name}`,
+            } ${formatAddingName(adding)}`,
             c: {
               c: `delGameTeamAdding${time < 0 ? 'Bonus' : 'Penalty'}`,
               gameTeamId: jsonCommand.gameTeamId,
@@ -44,10 +57,13 @@ const gameTeamAddings = async ({ telegramId, jsonCommand, location, db }) => {
       team?.name
     }"</b>\n\n<b>Текущие бонусы/штрафы:</b>${
       gameTeam?.timeAddings && gameTeam.timeAddings.length > 0
-        ? gameTeam.timeAddings.map(({ name, time }) => {
+        ? gameTeam.timeAddings.map((adding) => {
+            const { name, time } = adding
             return `\n${
               time < 0 ? `\u{1F7E2}` : `\u{1F534}`
-            } ${secondsToTimeStr(Math.abs(time), true)} - ${name}`
+            } ${secondsToTimeStr(Math.abs(time), true)} - ${formatAddingName(
+              adding
+            )}`
           })
         : ' отсутвуют'
     }`,

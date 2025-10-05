@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { signIn, signOut, useSession } from 'next-auth/react'
-import { TLoginButton, TLoginButtonSize } from 'react-telegram-auth'
 import { LOCATIONS } from '@server/serverConstants'
-import getTelegramBotNameByLocation from '@utils/telegram/getTelegramBotNameByLocation'
+import ConversationEntry from '@components/cabinet/ConversationEntry'
+import TelegramLogin from '@components/cabinet/TelegramLogin'
 
 const availableLocations = Object.entries(LOCATIONS)
   .filter(([, value]) => !value.hidden)
