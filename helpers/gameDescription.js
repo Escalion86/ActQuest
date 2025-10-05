@@ -17,6 +17,14 @@ const gameDescription = (game, creator) => {
   const allowCaptainForceClue = game?.allowCaptainForceClue !== false
   const allowCaptainFailTask = game?.allowCaptainFailTask !== false
   const allowCaptainFinishBreak = game?.allowCaptainFinishBreak !== false
+  const clueEarlyMode =
+    game?.clueEarlyAccessMode === 'time' ? 'time' : 'penalty'
+  const clueEarlyPenaltyText =
+    clueEarlyMode === 'penalty'
+      ? !game?.clueEarlyPenalty
+        ? 'отсутствует'
+        : secondsToTimeStr(game?.clueEarlyPenalty)
+      : 'добавляется оставшееся время до подсказки'
 
   const description = `<b>Игра "${game?.name}"</b>
   \n\n<b>Дата и время</b>: ${
@@ -59,10 +67,10 @@ const gameDescription = (game, creator) => {
     allowCaptainForceClue ? 'разрешена' : 'запрещена'
   }\n<b>Слив задания капитаном</b>: ${
     allowCaptainFailTask ? 'разрешен' : 'запрещен'
-  }\n<b>Штраф за досрочную подсказку</b>: ${
-    !game?.clueEarlyPenalty
-      ? 'отсутствует'
-      : secondsToTimeStr(game?.clueEarlyPenalty)
+  }\n<b>Способ досрочной подсказки</b>: ${
+    clueEarlyMode === 'penalty'
+      ? `штраф организатора (${clueEarlyPenaltyText})`
+      : 'прибавляется время до следующей подсказки'
   }\n\n<b>Стоимость участия</b>: ${
     !game.prices || game.prices?.length === 0
       ? 'не указано'

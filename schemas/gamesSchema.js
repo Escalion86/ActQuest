@@ -146,6 +146,11 @@ const gamesSchema = {
     type: Number,
     default: 0,
   },
+  clueEarlyAccessMode: {
+    type: String,
+    enum: ['penalty', 'time'],
+    default: 'penalty',
+  },
   allowCaptainForceClue: {
     type: Boolean,
     default: true,

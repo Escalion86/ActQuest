@@ -32,9 +32,13 @@ const setCluesPenalty = async ({ telegramId, jsonCommand, location, db }) => {
 
   const penalty = Math.floor(value)
 
-  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
+  const update = {
     clueEarlyPenalty: penalty,
-  })
+  }
+
+  if (penalty > 0) update.clueEarlyAccessMode = 'penalty'
+
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, update)
 
   return {
     success: true,
