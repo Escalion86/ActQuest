@@ -268,8 +268,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
   if (jsonCommand.finishBreak) {
     if (!allowCaptainFinishBreak)
       return {
-        message:
-          'Досрочное завершение перерыва отключено организатором игры.',
+        message: 'Досрочное завершение перерыва отключено организатором игры.',
         buttons: buildBreakButtons({ includeCaptainActions: false }),
       }
 
@@ -472,7 +471,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       : 0
   const showCluesNum = Math.min(Math.max(rawShowCluesNum, 0), totalClues)
   const clueEarlyMode =
-    game.clueEarlyAccessMode === 'time' ? 'time' : 'penalty'
+    game.clueEarlyAccessMode === 'penalty' ? 'penalty' : 'time'
   const cluePenalty = game.clueEarlyPenalty ?? 0
   const allowCaptainForceClue = game.allowCaptainForceClue !== false
   const allowCaptainFailTask = game.allowCaptainFailTask !== false
@@ -535,21 +534,16 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     visibleCount = visibleCluesCount,
     { includeCaptainActions } = {}
   ) => {
-    const allowCaptainActions =
-      includeCaptainActions ?? Boolean(isCaptain)
-    const allowForceClueButton =
-      allowCaptainActions && allowCaptainForceClue
-    const allowFailTaskButton =
-      allowCaptainActions && allowCaptainFailTask
+    const allowCaptainActions = includeCaptainActions ?? Boolean(isCaptain)
+    const allowForceClueButton = allowCaptainActions && allowCaptainForceClue
+    const allowFailTaskButton = allowCaptainActions && allowCaptainFailTask
     const hasMoreClues =
       allowForceClueButton &&
       cluesDuration > 0 &&
       totalClues > 0 &&
       visibleCount < totalClues
     const allCluesReceived =
-      allowFailTaskButton &&
-      totalClues > 0 &&
-      visibleCount >= totalClues
+      allowFailTaskButton && totalClues > 0 && visibleCount >= totalClues
     return [
       buttonRefresh,
       ...(hasMoreClues ? [buttonForceClue] : []),
@@ -603,8 +597,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
       }
     if (!isCaptain)
       return {
-        message:
-          'Получить подсказку досрочно может только капитан команды.',
+        message: 'Получить подсказку досрочно может только капитан команды.',
         buttons: buildTaskButtons(visibleCluesCount, {
           includeCaptainActions: false,
         }),
@@ -636,8 +629,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
           : ''
 
       return {
-        message:
-          `Вы уверены, что хотите получить подсказку досрочно?${penaltyNotice}`,
+        message: `Вы уверены, что хотите получить подсказку досрочно?${penaltyNotice}`,
         buttons: [buttonConfirmForceClue, buttonCancelForceClue],
       }
     }
@@ -654,16 +646,15 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         buttons: buildTaskButtons(visibleCluesCount),
       }
 
-    const existingAddings = Array.isArray(timeAddings)
-      ? [...timeAddings]
-      : []
-    const forcedCluesList = Array.isArray(forcedClues)
-      ? [...forcedClues]
-      : []
+    const existingAddings = Array.isArray(timeAddings) ? [...timeAddings] : []
+    const forcedCluesList = Array.isArray(forcedClues) ? [...forcedClues] : []
     const currentForcedCount = Math.max(forcedCluesList[taskNum] ?? 0, 0)
     const nextForcedCount = Math.min(
       totalClues,
-      Math.max(currentForcedCount, Math.max(currentForcedCount, showCluesNum) + 1)
+      Math.max(
+        currentForcedCount,
+        Math.max(currentForcedCount, showCluesNum) + 1
+      )
     )
 
     forcedCluesList[taskNum] = nextForcedCount
@@ -713,19 +704,21 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
     return {
       images: currentTask.images,
-      message: `<b>Подсказка №${forcedClueNumber} выдана досрочно</b>${penaltyText}\n\n${taskText({
-        game,
-        taskNum,
-        findedCodes,
-        findedBonusCodes,
-        findedPenaltyCodes,
-        startTaskTime: startTime[taskNum],
-        cluesDuration,
-        taskDuration,
-        photos,
-        timeAddings: nextTimeAddings,
-        visibleCluesCount: nextVisibleCluesCount,
-      })}`,
+      message: `<b>Подсказка №${forcedClueNumber} выдана досрочно</b>${penaltyText}\n\n${taskText(
+        {
+          game,
+          taskNum,
+          findedCodes,
+          findedBonusCodes,
+          findedPenaltyCodes,
+          startTaskTime: startTime[taskNum],
+          cluesDuration,
+          taskDuration,
+          photos,
+          timeAddings: nextTimeAddings,
+          visibleCluesCount: nextVisibleCluesCount,
+        }
+      )}`,
       buttons: buildTaskButtons(nextVisibleCluesCount),
     }
   }
@@ -748,13 +741,11 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
     if (totalClues > 0 && visibleCluesCount < totalClues)
       return {
-        message:
-          'Слить задание можно только после получения всех подсказок.',
+        message: 'Слить задание можно только после получения всех подсказок.',
         buttons: buildTaskButtons(visibleCluesCount),
       }
 
-    const failMessageBase =
-      '<b>Задание провалено по решению команды.</b>'
+    const failMessageBase = '<b>Задание провалено по решению команды.</b>'
     const failPenaltyNotice =
       '\nШтраф за невыполнение задания будет учтен при подсчете результатов.'
 
@@ -847,7 +838,10 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
             visibleCluesCount,
           }),
         // images: [jsonCommand.message],
-        buttons: [...buildTaskButtons(visibleCluesCount), buttonSeePhotoAnswers],
+        buttons: [
+          ...buildTaskButtons(visibleCluesCount),
+          buttonSeePhotoAnswers,
+        ],
       }
     }
 

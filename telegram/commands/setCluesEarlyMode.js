@@ -1,26 +1,21 @@
 import check from 'telegram/func/check'
 
-const MODES = {
-  penalty: 'penalty',
-  time: 'time',
-}
-
 const setCluesEarlyMode = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
-  if (!jsonCommand.message) {
+  if (!jsonCommand.cm || !['penalty', 'time'].includes(jsonCommand.cm)) {
     return {
       message: 'Выберите способ досрочного получения подсказки',
       buttons: [
         [
           {
             text: 'Штраф организатора',
-            c: { message: MODES.penalty },
+            c: { cm: 'penalty' },
           },
           {
             text: 'Добавить время до подсказки',
-            c: { message: MODES.time },
+            c: { cm: 'time' },
           },
         ],
         {
@@ -31,21 +26,14 @@ const setCluesEarlyMode = async ({ telegramId, jsonCommand, location, db }) => {
     }
   }
 
-  const mode = String(jsonCommand.message)
-
-  if (!Object.values(MODES).includes(mode)) {
-    return {
-      success: false,
-      message: 'Выберите один из предложенных вариантов.',
-    }
-  }
+  const mode = String(jsonCommand.cm)
 
   await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     clueEarlyAccessMode: mode,
   })
 
   const modeText =
-    mode === MODES.time
+    mode === 'time'
       ? 'Теперь подсказка выдается досрочно с добавлением времени до подсказки.'
       : 'Теперь подсказка выдается досрочно за штраф, заданный организатором.'
 

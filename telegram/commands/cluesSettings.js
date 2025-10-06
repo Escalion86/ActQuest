@@ -14,7 +14,7 @@ const cluesSettings = async ({ telegramId, jsonCommand, location, db }) => {
   const allowCaptainForceClue = game.allowCaptainForceClue !== false
   const allowCaptainFailTask = game.allowCaptainFailTask !== false
   const clueEarlyMode =
-    game.clueEarlyAccessMode === 'time' ? 'time' : 'penalty'
+    game.clueEarlyAccessMode === 'penalty' ? 'penalty' : 'time'
 
   const cluesDurationText =
     cluesDuration <= 0
@@ -51,9 +51,12 @@ const cluesSettings = async ({ telegramId, jsonCommand, location, db }) => {
           c: { c: 'setCluesEarlyMode', gameId: jsonCommand.gameId },
           text: '\u{2699}\u{FE0F} Способ досрочной подсказки',
         },
+      ],
+      [
         {
           c: { c: 'setCluesPenalty', gameId: jsonCommand.gameId },
           text: '\u{270F} Штраф за досрочную подсказку',
+          hide: game.clueEarlyAccessMode === 'time',
         },
       ],
       [

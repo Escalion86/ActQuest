@@ -72,7 +72,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
   const allowCaptainFailTask = game?.allowCaptainFailTask !== false
   const allowCaptainFinishBreak = game?.allowCaptainFinishBreak !== false
   const clueEarlyMode =
-    game?.clueEarlyAccessMode === 'time' ? 'time' : 'penalty'
+    game?.clueEarlyAccessMode === 'penalty' ? 'penalty' : 'time'
   const clueEarlyPenaltyText = !game?.clueEarlyPenalty
     ? 'отсутствует'
     : secondsToTimeStr(game?.clueEarlyPenalty)

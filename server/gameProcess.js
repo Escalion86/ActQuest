@@ -270,8 +270,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
   if (jsonCommand.finishBreak) {
     if (!allowCaptainFinishBreak)
       return {
-        message:
-          'Досрочное завершение перерыва отключено организатором игры.',
+        message: 'Досрочное завершение перерыва отключено организатором игры.',
         buttons: buildBreakButtons({ includeCaptainActions: false }),
       }
 
@@ -467,7 +466,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       : 0
   const showCluesNum = Math.min(Math.max(rawShowCluesNum, 0), totalClues)
   const clueEarlyMode =
-    game.clueEarlyAccessMode === 'time' ? 'time' : 'penalty'
+    game.clueEarlyAccessMode === 'penalty' ? 'penalty' : 'time'
   const cluePenalty = game.clueEarlyPenalty ?? 0
   const allowCaptainForceClue = game.allowCaptainForceClue !== false
   const allowCaptainFailTask = game.allowCaptainFailTask !== false
