@@ -74,7 +74,9 @@ const buildBlocksFromResult = (result) => {
 const CabinetPage = () => {
   const { data: session, status, update: updateSession } = useSession()
   const router = useRouter()
-  const [location, setLocation] = useState(() => session?.user?.location ?? defaultLocation)
+  const [location, setLocation] = useState(
+    () => session?.user?.location ?? defaultLocation
+  )
   const [input, setInput] = useState('')
   const [displayBlocks, setDisplayBlocks] = useState([])
   const [keyboardButtons, setKeyboardButtons] = useState([])
@@ -100,7 +102,9 @@ const CabinetPage = () => {
       return
     }
 
-    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    const prefersDark = window.matchMedia?.(
+      '(prefers-color-scheme: dark)'
+    ).matches
     setTheme(prefersDark ? 'dark' : 'light')
   }, [isClient])
 
@@ -139,7 +143,11 @@ const CabinetPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status])
 
-  const loadMainMenu = async ({ resetDisplay = false, initiatedByUser = true, targetLocation } = {}) => {
+  const loadMainMenu = async ({
+    resetDisplay = false,
+    initiatedByUser = true,
+    targetLocation,
+  } = {}) => {
     await sendCommand({
       command: 'mainMenu',
       meta: 'Главное меню',
@@ -161,7 +169,8 @@ const CabinetPage = () => {
   } = {}) => {
     if (!session) return
 
-    const shouldAppend = !initiatedByUser && !resetDisplay && lastInteractionRef.current === 'bot'
+    const shouldAppend =
+      !initiatedByUser && !resetDisplay && lastInteractionRef.current === 'bot'
 
     if (initiatedByUser) {
       lastInteractionRef.current = 'user'
@@ -202,7 +211,9 @@ const CabinetPage = () => {
       const blocks = buildBlocksFromResult(data.result)
 
       if (blocks.length > 0) {
-        setDisplayBlocks((prev) => (shouldAppend ? [...prev, ...blocks] : blocks))
+        setDisplayBlocks((prev) =>
+          shouldAppend ? [...prev, ...blocks] : blocks
+        )
       } else if (!shouldAppend) {
         setDisplayBlocks([])
       }
@@ -259,7 +270,11 @@ const CabinetPage = () => {
 
   const handleLocationChange = (value) => {
     setLocation(value)
-    loadMainMenu({ resetDisplay: true, initiatedByUser: true, targetLocation: value })
+    loadMainMenu({
+      resetDisplay: true,
+      initiatedByUser: true,
+      targetLocation: value,
+    })
   }
 
   useEffect(() => {
@@ -316,7 +331,9 @@ const CabinetPage = () => {
       await updateSession()
     } catch (authError) {
       console.error('Telegram auth error', authError)
-      setError(authError.message || 'Не удалось авторизоваться. Попробуйте ещё раз.')
+      setError(
+        authError.message || 'Не удалось авторизоваться. Попробуйте ещё раз.'
+      )
     }
   }
 
@@ -332,33 +349,29 @@ const CabinetPage = () => {
 
   const renderDashboard = () => (
     <div className="flex flex-col w-full max-w-5xl gap-8 mx-auto mt-10">
-      <div className="flex flex-col gap-3 p-6 text-white shadow-lg rounded-3xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-slate-700 dark:to-slate-900 dark:shadow-slate-950/40">
-        <h2 className="text-2xl font-semibold">Личный кабинет ActQuest</h2>
-        <p className="text-sm text-blue-100">
-          {LOCATIONS[location]?.townRu
-            ? `Регион: ${
-                LOCATIONS[location].townRu[0].toUpperCase() +
-                LOCATIONS[location].townRu.slice(1)
-              }`
-            : 'Регион не выбран'}
-        </p>
-      </div>
-
       <div className="flex flex-col gap-6 p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-xl font-semibold text-primary dark:text-white">
-            Ответ сервера ActQuest
+            Личный кабинет ActQuest -{' '}
+            {LOCATIONS[location]?.townRu
+              ? `${
+                  LOCATIONS[location].townRu[0].toUpperCase() +
+                  LOCATIONS[location].townRu.slice(1)
+                }`
+              : 'Регион не выбран'}
           </h3>
           <div className="flex items-center gap-3">
             {isLoading ? (
-              <span className="text-sm text-blue-500 dark:text-blue-300">Загрузка…</span>
+              <span className="text-sm text-blue-500 dark:text-blue-300">
+                Загрузка…
+              </span>
             ) : null}
             <button
               type="button"
               onClick={() =>
                 loadMainMenu({ resetDisplay: true, initiatedByUser: true })
               }
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+              className="flex items-center justify-center w-10 h-10 text-blue-700 transition border border-blue-200 rounded-full bg-blue-50 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
               title="Обновить"
               aria-label="Обновить"
               disabled={isLoading}
@@ -371,7 +384,7 @@ const CabinetPage = () => {
                 strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-5 w-5"
+                className="w-5 h-5"
                 aria-hidden="true"
               >
                 <path d="M16.023 9.348h4.284m0 0V5.064m0 4.284-5.99-5.99A9.035 9.035 0 0 0 11.88 2.25c-4.978 0-9.023 4.045-9.023 9.023 0 .755.09 1.488.26 2.192" />
@@ -385,8 +398,9 @@ const CabinetPage = () => {
           className="min-h-[260px] max-h-[480px] overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-4 text-left text-gray-800 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-100"
         >
           {displayBlocks.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-gray-500 dark:text-slate-400">
-              Нажмите кнопку или отправьте сообщение, чтобы получить ответ сервера.
+            <div className="flex items-center justify-center h-full text-sm text-gray-500 dark:text-slate-400">
+              Нажмите кнопку или отправьте сообщение, чтобы получить ответ
+              сервера.
             </div>
           ) : (
             displayBlocks.map((block, index) => {
@@ -397,7 +411,7 @@ const CabinetPage = () => {
                     <img
                       src={block.content}
                       alt="Изображение от сервера ActQuest"
-                      className="w-full rounded-2xl border border-gray-200 object-contain dark:border-slate-700"
+                      className="object-contain w-full border border-gray-200 rounded-2xl dark:border-slate-700"
                     />
                   </div>
                 )
@@ -407,7 +421,9 @@ const CabinetPage = () => {
                 <div
                   key={block.id}
                   className={`leading-relaxed ${index > 0 ? 'mt-4' : ''}`}
-                  dangerouslySetInnerHTML={{ __html: block.content.replace(/\n/g, '<br />') }}
+                  dangerouslySetInnerHTML={{
+                    __html: block.content.replace(/\n/g, '<br />'),
+                  }}
                 />
               )
             })
@@ -435,7 +451,7 @@ const CabinetPage = () => {
                           href={button.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                          className="flex-1 px-3 py-2 text-sm font-semibold text-center text-blue-700 transition border border-blue-200 rounded-xl bg-blue-50 hover:bg-blue-100 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
                         >
                           {button.text}
                         </a>
@@ -445,7 +461,7 @@ const CabinetPage = () => {
                     return (
                       <button
                         key={button.callback_data || button.text}
-                        className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                        className="flex-1 px-3 py-2 text-sm font-semibold text-center text-blue-700 transition border border-blue-200 rounded-xl bg-blue-50 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
                         onClick={() => handleKeyboardAction(button)}
                         type="button"
                         disabled={isLoading}
@@ -460,25 +476,28 @@ const CabinetPage = () => {
           </div>
         ) : null}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 md:flex-row">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-3 md:flex-row"
+        >
           <input
             type="text"
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder="Введите команду или ответ..."
-            className="flex-1 rounded-2xl border border-gray-200 px-4 py-3 text-base shadow-sm focus:border-blue-400 focus:outline-none focus:ring dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400"
+            className="flex-1 px-4 py-3 text-base border border-gray-200 shadow-sm rounded-2xl focus:border-blue-400 focus:outline-none focus:ring dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400"
             disabled={isLoading}
           />
           <button
             type="submit"
-            className="rounded-2xl bg-blue-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="px-6 py-3 text-base font-semibold text-white transition bg-blue-600 rounded-2xl hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isLoading}
           >
             Отправить
           </button>
         </form>
         {error ? (
-          <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-300">
+          <div className="px-4 py-3 text-sm text-red-600 rounded-xl bg-red-50 dark:bg-red-500/10 dark:text-red-300">
             {error}
           </div>
         ) : null}
@@ -492,9 +511,12 @@ const CabinetPage = () => {
         <title>ActQuest — Личный кабинет</title>
       </Head>
       <div className="min-h-screen bg-[#F5F6F8] pb-16 transition-colors dark:bg-slate-950 dark:text-slate-100">
-        <header className="border-b border-gray-200 bg-white transition-colors dark:border-slate-800 dark:bg-slate-900">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
-            <Link href="/" className="text-2xl font-bold text-primary transition-colors dark:text-white">
+        <header className="transition-colors bg-white border-b border-gray-200 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center justify-between max-w-6xl px-4 py-5 mx-auto">
+            <Link
+              href="/"
+              className="text-2xl font-bold transition-colors text-primary dark:text-white"
+            >
               ActQuest
             </Link>
             <nav className="flex items-center gap-6 text-sm font-semibold text-gray-600 dark:text-slate-300">
@@ -511,7 +533,7 @@ const CabinetPage = () => {
               <button
                 type="button"
                 onClick={handleThemeToggle}
-                className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                className="px-4 py-2 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
               >
                 {theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
               </button>
@@ -519,7 +541,7 @@ const CabinetPage = () => {
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                  className="px-4 py-2 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                 >
                   Выйти
                 </button>
@@ -529,16 +551,6 @@ const CabinetPage = () => {
         </header>
 
         <main className="px-4">
-          <div className="mx-auto mt-10 max-w-4xl text-center">
-            <h1 className="text-3xl font-bold text-primary transition-colors dark:text-white md:text-4xl">
-              Управляйте квестами и командами в веб-интерфейсе ActQuest
-            </h1>
-            <p className="mt-4 text-lg text-gray-600 transition-colors dark:text-slate-300">
-              Все функции Telegram-бота, но с большими экранами, быстрым
-              доступом к действиям и удобной навигацией.
-            </p>
-          </div>
-
           {session ? renderDashboard() : renderLogin()}
         </main>
       </div>
