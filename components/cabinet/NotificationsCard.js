@@ -44,7 +44,7 @@ const NotificationsCard = ({
     }
 
     if (!isConfigured) {
-      return 'Параметры сервера для push-уведомлений не настроены. Обратитесь к администратору.'
+      return 'Push-уведомления выключены на стороне сервера. Укажите переменные окружения WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY и WEB_PUSH_CONTACT, затем перезапустите сервер.'
     }
 
     if (!canControl) {
