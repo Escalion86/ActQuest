@@ -2,13 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --aq-background: #F5F6F8;
+  --aq-text: #1C1D1F;
+}
+
+[data-theme='dark'] {
+  --aq-background: #020817;
+  --aq-text: #E2E8F0;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
 
-  background: #F5F6F8;
-  color: #1C1D1F;
+  background: var(--aq-background);
+  color: var(--aq-text);
 
   /* overflow-y: hidden;
   max-height: 100%; */
