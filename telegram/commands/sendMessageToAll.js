@@ -1,4 +1,5 @@
 import sendMessage from 'telegram/sendMessage'
+import { broadcastNotificationToUsers } from '@server/pwaNotifications'
 
 const sendMessageToAll = async ({ telegramId, jsonCommand, location, db }) => {
   // const checkData = check(jsonCommand, ['gameId'])
@@ -36,17 +37,38 @@ const sendMessageToAll = async ({ telegramId, jsonCommand, location, db }) => {
   await Promise.all(
     allUsersTelegramIds.map(async (telegramId) => {
       await sendMessage({
-        // images: game.image ? [game.image] : undefined,
         chat_id: telegramId,
         text: jsonCommand.message,
-        // keyboard,
         location,
       })
     })
   )
 
+  let notificationResult = { created: 0, delivered: 0 }
+
+  try {
+    notificationResult = await broadcastNotificationToUsers({
+      db,
+      users,
+      notification: {
+        title: 'Сообщение от администратора',
+        body: jsonCommand.message,
+        url: `/cabinet?tab=notifications&location=${location}`,
+        location,
+        tag: `admin-broadcast-${Date.now()}`,
+        data: {
+          location,
+          type: 'admin-broadcast',
+          authorTelegramId: telegramId,
+        },
+      },
+    })
+  } catch (error) {
+    console.error('Broadcast PWA notifications error', error)
+  }
+
   return {
-    message: `Сообщение отправлено всем!`,
+    message: `Сообщение отправлено всем!\nPWA уведомления: создано ${notificationResult.created}, доставлено ${notificationResult.delivered}.`,
     nextCommand: { c: 'adminMenu' },
   }
 }
