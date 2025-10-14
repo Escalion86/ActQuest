@@ -12,6 +12,7 @@ module.exports = {
   env: {
     // @see https://github.com/facebookexperimental/Recoil/issues/2135#issuecomment-1362197710
     RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED: 'false',
+    MODE: process.env.MODE ?? process.env.NODE_ENV,
   },
   // images: {
   //   domains: ['uniplatform.ru, dev.uniplatform.ru, localhost'],

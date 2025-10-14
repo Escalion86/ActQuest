@@ -10,12 +10,14 @@ import '../styles/global.css'
 RecoilEnv.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = false
 
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {
+  const mode = process.env.MODE ?? process.env.NODE_ENV
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
 
-    if (process.env.MODE === 'production' && 'serviceWorker' in navigator) {
+    if (mode === 'production' && 'serviceWorker' in navigator) {
       const register = async () => {
         try {
           await navigator.serviceWorker.register('/sw.js')
@@ -26,7 +28,7 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
 
       register()
     }
-  }, [])
+  }, [mode])
 
   return (
     <>
