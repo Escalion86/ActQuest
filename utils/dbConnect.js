@@ -9,6 +9,7 @@ import usersSchema from '@schemas/usersSchema'
 import siteSettingsSchema from '@schemas/siteSettingsSchema'
 import gamesSchema from '@schemas/gamesSchema'
 import gamesPaymentsSchema from '@schemas/gamesPaymentsSchema'
+import notificationsSchema from '@schemas/notificationsSchema'
 
 import checkLocationValid from '@server/checkLocationValid'
 
@@ -70,6 +71,10 @@ async function dbConnect(location) {
     connections[location].model(
       'Users',
       mongoose.Schema(usersSchema, { timestamps: true })
+    )
+    connections[location].model(
+      'Notifications',
+      mongoose.Schema(notificationsSchema, { timestamps: true })
     )
     connections[location].model(
       'GamesPayments',
