@@ -322,58 +322,53 @@ const CabinetPage = () => {
 
   const renderDashboard = () => (
     <div className="flex flex-col w-full max-w-5xl gap-8 mx-auto mt-10">
-      <div className="flex flex-col justify-between gap-4 p-6 text-white shadow-lg rounded-3xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-slate-700 dark:to-slate-900 dark:shadow-slate-950/40 lg:flex-row lg:items-center">
-        <div>
-          <h2 className="text-2xl font-semibold">
-            {session?.user?.name ||
-              session?.user?.username ||
-              'Участник ActQuest'}
-          </h2>
-          <p className="mt-1 text-sm text-blue-100">
-            {LOCATIONS[location]?.townRu
-              ? `Регион: ${LOCATIONS[
-                  location
-                ].townRu[0].toUpperCase()}${LOCATIONS[location].townRu.slice(
-                  1
-                )}`
-              : 'Регион не выбран'}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            className="px-4 py-2 text-sm font-semibold text-white transition border outline-none rounded-xl border-white/40 bg-white/20 hover:bg-white/30 dark:border-white/20"
-            value={location}
-            onChange={(event) => handleLocationChange(event.target.value)}
-          >
-            {availableLocations.map((item) => (
-              <option key={item.key} value={item.key} className="text-gray-900">
-                {item.townRu[0].toUpperCase() + item.townRu.slice(1)}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={() => loadMainMenu({ resetDisplay: true, initiatedByUser: true })}
-            className="px-4 py-2 text-sm font-semibold text-blue-600 transition bg-white rounded-xl hover:bg-blue-50 dark:text-blue-100 dark:bg-white/10 dark:hover:bg-white/20"
-          >
-            Обновить меню
-          </button>
-          <button
-            onClick={() => signOut({ callbackUrl: '/' })}
-            className="px-4 py-2 text-sm font-semibold text-white transition border rounded-xl border-white/40 hover:bg-white/20"
-          >
-            Выйти
-          </button>
-        </div>
+      <div className="flex flex-col gap-3 p-6 text-white shadow-lg rounded-3xl bg-gradient-to-r from-blue-600 to-purple-600 dark:from-slate-700 dark:to-slate-900 dark:shadow-slate-950/40">
+        <h2 className="text-2xl font-semibold">Личный кабинет ActQuest</h2>
+        <p className="text-sm text-blue-100">
+          {LOCATIONS[location]?.townRu
+            ? `Регион: ${
+                LOCATIONS[location].townRu[0].toUpperCase() +
+                LOCATIONS[location].townRu.slice(1)
+              }`
+            : 'Регион не выбран'}
+        </p>
       </div>
 
       <div className="flex flex-col gap-6 p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-primary dark:text-white">
-            Ответ сервера ActQuest
-          </h3>
-          {isLoading ? (
-            <span className="text-sm text-blue-500 dark:text-blue-300">Загрузка…</span>
-          ) : null}
+        <div className="flex items-center justify-between gap-3">
+//           <h3 className="text-xl font-semibold text-primary dark:text-white">
+//             ActQuest
+//           </h3>
+          <div className="flex items-center gap-3">
+            {isLoading ? (
+              <span className="text-sm text-blue-500 dark:text-blue-300">Загрузка…</span>
+            ) : null}
+            <button
+              type="button"
+              onClick={() =>
+                loadMainMenu({ resetDisplay: true, initiatedByUser: true })
+              }
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+              title="Обновить"
+              aria-label="Обновить"
+              disabled={isLoading}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+                aria-hidden="true"
+              >
+                <path d="M16.023 9.348h4.284m0 0V5.064m0 4.284-5.99-5.99A9.035 9.035 0 0 0 11.88 2.25c-4.978 0-9.023 4.045-9.023 9.023 0 .755.09 1.488.26 2.192" />
+                <path d="M7.977 14.652H3.693m0 0v4.284m0-4.284 5.99 5.99a9.035 9.035 0 0 0 2.438 1.122c4.978 0 9.023-4.045 9.023-9.023a9.06 9.06 0 0 0-.26-2.192" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div
           ref={displayRef}
@@ -493,9 +488,6 @@ const CabinetPage = () => {
               ActQuest
             </Link>
             <nav className="flex items-center gap-6 text-sm font-semibold text-gray-600 dark:text-slate-300">
-              <Link href="/" className="transition hover:text-primary dark:hover:text-white">
-                Главная
-              </Link>
               <a
                 href="https://t.me/ActQuest_dev_bot"
                 className="transition hover:text-primary dark:hover:text-white"
@@ -505,13 +497,24 @@ const CabinetPage = () => {
                 Бот в Telegram
               </a>
             </nav>
-            <button
-              type="button"
-              onClick={handleThemeToggle}
-              className="ml-6 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
-            >
-              {theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleThemeToggle}
+                className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+              >
+                {theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+              </button>
+              {session ? (
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: '/' })}
+                  className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                >
+                  Выйти
+                </button>
+              ) : null}
+            </div>
           </div>
         </header>
 
