@@ -15,7 +15,7 @@ export const LOCATIONS = {
       // 'Дрокино',
       // 'Емельяново',
     ],
-    hidden: process.env.NODE_ENV === 'production',
+    hidden: process.env.NODE_ENV !== 'development',
   },
   krsk: {
     townRu: 'красноярск',
