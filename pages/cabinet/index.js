@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { LOCATIONS } from '@server/serverConstants'
 import TelegramLogin from '@components/cabinet/TelegramLogin'
@@ -72,6 +73,7 @@ const buildBlocksFromResult = (result) => {
 
 const CabinetPage = () => {
   const { data: session, status, update: updateSession } = useSession()
+  const router = useRouter()
   const [location, setLocation] = useState(() => session?.user?.location ?? defaultLocation)
   const [input, setInput] = useState('')
   const [displayBlocks, setDisplayBlocks] = useState([])
@@ -245,6 +247,14 @@ const CabinetPage = () => {
 
   const handleThemeToggle = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({ redirect: false })
+    } finally {
+      router.push('/')
+    }
   }
 
   const handleLocationChange = (value) => {
@@ -508,7 +518,7 @@ const CabinetPage = () => {
               {session ? (
                 <button
                   type="button"
-                  onClick={() => signOut({ callbackUrl: '/' })}
+                  onClick={handleSignOut}
                   className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                 >
                   Выйти
