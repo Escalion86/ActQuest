@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import { useEffect } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import { RecoilRoot, RecoilEnv } from 'recoil'
 
@@ -9,6 +10,24 @@ import '../styles/global.css'
 RecoilEnv.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = false
 
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      const register = async () => {
+        try {
+          await navigator.serviceWorker.register('/sw.js')
+        } catch (error) {
+          console.error('Service worker registration failed:', error)
+        }
+      }
+
+      register()
+    }
+  }, [])
+
   return (
     <>
       <Head>
