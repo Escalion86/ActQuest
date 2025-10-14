@@ -1,12 +1,12 @@
 const contentType = 'application/json'
 
-let ipv4ConnectionOptionsPromise
+let ensureIpv4FirstPromise
 
-const getIpv4ConnectionOptions = async () => {
-  if (typeof window !== 'undefined') return null
+const ensureIpv4First = async () => {
+  if (typeof window !== 'undefined') return
 
-  if (!ipv4ConnectionOptionsPromise) {
-    ipv4ConnectionOptionsPromise = (async () => {
+  if (!ensureIpv4FirstPromise) {
+    ensureIpv4FirstPromise = (async () => {
       const nodeRequire = (() => {
         try {
           if (typeof require === 'function') return require
@@ -17,44 +17,47 @@ const getIpv4ConnectionOptions = async () => {
         return eval('require')
       })()
 
+      if (typeof nodeRequire !== 'function') {
+        console.warn('IPv4 helper: unable to access require to set DNS preference.')
+        return
+      }
+
       let dns
-      let http
-      let https
 
       try {
         dns = nodeRequire('dns')
-        http = nodeRequire('http')
-        https = nodeRequire('https')
       } catch (error) {
-        console.warn('IPv4 helper: failed to load Node built-ins, falling back to default fetch behaviour.', error)
-        return null
+        console.warn('IPv4 helper: failed to load dns module, cannot set IPv4 preference.', error)
+        return
       }
 
-      const lookup = (hostname, options, callback) => {
-        if (typeof options === 'function') {
-          return dns.lookup(
-            hostname,
-            { family: 4, all: false },
-            options
-          )
+      try {
+        if (typeof dns.setDefaultResultOrder === 'function') {
+          dns.setDefaultResultOrder('ipv4first')
+          return
         }
 
-        const opts = { ...(options || {}), family: 4, all: false }
-        return dns.lookup(hostname, opts, callback)
-      }
+        const setDefaultResultOrder = dns.promises?.setDefaultResultOrder
+        if (typeof setDefaultResultOrder === 'function') {
+          setDefaultResultOrder.call(dns.promises, 'ipv4first')
+        } else if (dns.lookup) {
+          const originalLookup = dns.lookup
+          dns.lookup = (...args) => {
+            if (typeof args[1] === 'function') {
+              return originalLookup.call(dns, args[0], { family: 4, all: false }, args[1])
+            }
 
-      const agentOptions = { keepAlive: true, lookup }
-      const httpAgent = new http.Agent(agentOptions)
-      const httpsAgent = new https.Agent(agentOptions)
-
-      return {
-        agent: ({ protocol }) =>
-          protocol === 'http:' ? httpAgent : httpsAgent,
+            const options = { ...(args[1] || {}), family: 4, all: false }
+            return originalLookup.call(dns, args[0], options, args[2])
+          }
+        }
+      } catch (error) {
+        console.warn('IPv4 helper: failed to enforce IPv4 DNS preference.', error)
       }
     })()
   }
 
-  return ipv4ConnectionOptionsPromise
+  return ensureIpv4FirstPromise
 }
 
 export const getData = async (
@@ -72,7 +75,7 @@ export const getData = async (
   const actualUrl = url + (getArray.length > 0 ? '?' + getArray.join('&') : '')
   console.log('actualUrl :>> ', actualUrl)
   try {
-    const connectionOptions = await getIpv4ConnectionOptions()
+    await ensureIpv4First()
     const res = await fetch(actualUrl, {
       method: 'GET',
       headers: {
@@ -108,7 +111,7 @@ export const putData = async (
   callbackOnError = null
 ) => {
   try {
-    const connectionOptions = await getIpv4ConnectionOptions()
+    await ensureIpv4First()
     const res = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -147,7 +150,7 @@ export const postData = async (
 ) => {
   try {
     const body = JSON.stringify(form)
-    const connectionOptions = await getIpv4ConnectionOptions()
+    await ensureIpv4First()
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -186,7 +189,7 @@ export const deleteData = async (
   params = {}
 ) => {
   try {
-    const connectionOptions = await getIpv4ConnectionOptions()
+    await ensureIpv4First()
     const res = await fetch(url, {
       method: 'DELETE',
       headers: {
