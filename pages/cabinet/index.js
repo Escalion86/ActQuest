@@ -20,6 +20,50 @@ const formatText = (text) =>
     .map((part) => part.trim())
     .join('\n')
 
+const decodeCallbackParam = (rawValue) => {
+  if (!rawValue) return null
+
+  const value = Array.isArray(rawValue) ? rawValue[0] : rawValue
+  if (typeof value !== 'string' || !value) return null
+
+  let decoded = value
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const nextDecoded = decodeURIComponent(decoded)
+      if (nextDecoded === decoded) break
+      decoded = nextDecoded
+    } catch (error) {
+      break
+    }
+  }
+
+  return decoded
+}
+
+const extractRelativePath = (url, baseOrigin) => {
+  if (!url) return null
+
+  if (typeof url === 'string' && url.startsWith('/')) {
+    return url
+  }
+
+  if (!baseOrigin) return null
+
+  try {
+    const parsed = new URL(url, baseOrigin)
+    const base = new URL(baseOrigin)
+
+    if (parsed.host !== base.host) {
+      return null
+    }
+
+    return `${parsed.pathname}${parsed.search}${parsed.hash}` || '/'
+  } catch (error) {
+    return null
+  }
+}
+
 const isButtonVisible = (button) =>
   Boolean(
     button &&
@@ -79,6 +123,7 @@ const CabinetPage = () => {
   const [location, setLocation] = useState(
     () => session?.user?.location ?? defaultLocation
   )
+  const [authCallbackUrl, setAuthCallbackUrl] = useState('/cabinet')
   const [input, setInput] = useState('')
   const [displayBlocks, setDisplayBlocks] = useState([])
   const [keyboardButtons, setKeyboardButtons] = useState([])
@@ -117,6 +162,35 @@ const CabinetPage = () => {
       setLocation(queryLocation)
     }
   }, [router.isReady, router.query, location])
+
+  useEffect(() => {
+    if (!router.isReady) return
+
+    const decodedCallback = decodeCallbackParam(router.query?.callbackUrl)
+
+    if (!decodedCallback) {
+      setAuthCallbackUrl('/cabinet')
+      return
+    }
+
+    if (!isClient) return
+
+    const relativeTarget = extractRelativePath(
+      decodedCallback,
+      window.location.origin
+    )
+
+    if (relativeTarget) {
+      setAuthCallbackUrl(relativeTarget)
+      return
+    }
+
+    console.error(
+      'Не удалось разобрать callbackUrl авторизации',
+      decodedCallback
+    )
+    setAuthCallbackUrl('/cabinet')
+  }, [router.isReady, router.query, isClient])
 
   useEffect(() => {
     if (!isClient) return
@@ -453,9 +527,26 @@ const CabinetPage = () => {
     try {
       setError(null)
       const payload = JSON.stringify(userData)
+      let absoluteCallbackUrl = authCallbackUrl
+
+      if (isClient) {
+        try {
+          absoluteCallbackUrl = new URL(
+            authCallbackUrl,
+            window.location.origin
+          ).toString()
+        } catch (buildUrlError) {
+          console.error(
+            'Не удалось сформировать callbackUrl авторизации',
+            buildUrlError
+          )
+          absoluteCallbackUrl = `${window.location.origin}/cabinet`
+        }
+      }
+
       const result = await signIn('telegram', {
         redirect: false,
-        callbackUrl: `${window.location.origin}/cabinet`,
+        callbackUrl: absoluteCallbackUrl,
         data: payload,
         location,
       })
@@ -494,6 +585,55 @@ const CabinetPage = () => {
       }
 
       await updateSession()
+
+      const getRedirectTarget = () => {
+        if (!isClient) {
+          return absoluteCallbackUrl
+        }
+
+        const safeResultUrl = extractRelativePath(
+          result?.url,
+          window.location.origin
+        )
+
+        if (
+          safeResultUrl &&
+          !safeResultUrl.startsWith('/cabinet') &&
+          !safeResultUrl.startsWith('/api/auth')
+        ) {
+          return new URL(safeResultUrl, window.location.origin).toString()
+        }
+
+        return absoluteCallbackUrl
+      }
+
+      const redirectTarget = getRedirectTarget()
+
+      if (isClient && redirectTarget) {
+        try {
+          const targetUrl = new URL(redirectTarget, window.location.origin)
+
+          if (targetUrl.origin === window.location.origin) {
+            const relativeTarget = `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`
+
+            if (relativeTarget && relativeTarget !== router.asPath) {
+              await router.replace(relativeTarget)
+            }
+          } else {
+            window.location.assign(targetUrl.toString())
+          }
+
+          return
+        } catch (redirectError) {
+          if (redirectTarget.startsWith('/')) {
+            await router.replace(redirectTarget)
+            return
+          }
+
+          window.location.assign(redirectTarget)
+          return
+        }
+      }
     } catch (authError) {
       console.error('Telegram auth error', authError)
       setError(
