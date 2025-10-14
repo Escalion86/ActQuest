@@ -15,7 +15,7 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
       return
     }
 
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+    if (process.env.MODE === 'production' && 'serviceWorker' in navigator) {
       const register = async () => {
         try {
           await navigator.serviceWorker.register('/sw.js')

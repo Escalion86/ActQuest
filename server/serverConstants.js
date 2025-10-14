@@ -1,4 +1,3 @@
-console.log('process.env.NODE_ENV :>> ', process.env.NODE_ENV)
 export const LOCATIONS = {
   dev: {
     townRu: 'тестовый город',
@@ -16,7 +15,7 @@ export const LOCATIONS = {
       // 'Дрокино',
       // 'Емельяново',
     ],
-    hidden: process.env.NODE_ENV !== 'development',
+    hidden: process.env.MODE !== 'development',
   },
   krsk: {
     townRu: 'красноярск',
