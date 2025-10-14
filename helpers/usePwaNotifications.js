@@ -15,6 +15,16 @@ const INITIAL_STATE = {
   error: null,
 }
 
+const SERVICE_WORKER_READY_TIMEOUT = 7000
+
+const resolveRuntimeMode = () => {
+  if (typeof process === 'undefined') {
+    return 'production'
+  }
+
+  return process.env.MODE || process.env.NODE_ENV || 'production'
+}
+
 const resolveDebugPreference = () => {
   if (typeof window === 'undefined') {
     return false
@@ -86,6 +96,93 @@ const resolveApplicationServerKey = () => {
   return trimmed.length > 0 ? trimmed : null
 }
 
+const waitForServiceWorkerRegistration = async () => {
+  if (typeof navigator === 'undefined' || !navigator.serviceWorker) {
+    throw new Error('Сервис-воркер не поддерживается этим браузером.')
+  }
+
+  const lookupRegistration = async () => {
+    if (typeof navigator.serviceWorker.getRegistration !== 'function') {
+      return null
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.getRegistration()
+
+      if (registration?.active) {
+        return registration
+      }
+
+      return registration
+    } catch (error) {
+      return null
+    }
+  }
+
+  const immediate = await lookupRegistration()
+
+  if (immediate?.active) {
+    return immediate
+  }
+
+  let timeoutId = null
+
+  const readyPromise = navigator.serviceWorker.ready
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error('timeout'))
+    }, SERVICE_WORKER_READY_TIMEOUT)
+  })
+
+  try {
+    const registration = await Promise.race([readyPromise, timeoutPromise])
+
+    if (registration) {
+      return registration
+    }
+  } catch (error) {
+    const existing = await lookupRegistration()
+
+    if (existing?.active) {
+      return existing
+    }
+
+    const mode = resolveRuntimeMode()
+
+    if (mode !== 'production') {
+      throw new Error(
+        'Сервис-воркер не запущен. Соберите приложение (npm run build && npm run start), чтобы протестировать push-уведомления.'
+      )
+    }
+
+    throw new Error(
+      'Сервис-воркер ещё не активировался. Обновите страницу и дождитесь полной загрузки перед включением уведомлений.'
+    )
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId)
+    }
+  }
+
+  const registration = await lookupRegistration()
+
+  if (registration?.active) {
+    return registration
+  }
+
+  const mode = resolveRuntimeMode()
+
+  if (mode !== 'production') {
+    throw new Error(
+      'Сервис-воркер не запущен. Соберите приложение (npm run build && npm run start), чтобы протестировать push-уведомления.'
+    )
+  }
+
+  throw new Error(
+    'Сервис-воркер ещё не активировался. Обновите страницу и дождитесь полной загрузки перед включением уведомлений.'
+  )
+}
+
 const usePwaNotifications = ({ location, session }) => {
   const initialApplicationServerKey = resolveApplicationServerKey()
 
@@ -120,18 +217,20 @@ const usePwaNotifications = ({ location, session }) => {
         isSupported,
         isSubscribed: false,
         permission: isClient && window.Notification ? window.Notification.permission : 'default',
+        isProcessing: false,
       })
       return
     }
 
     try {
-      const registration = await navigator.serviceWorker.ready
+      const registration = await waitForServiceWorkerRegistration()
       const subscription = await registration.pushManager.getSubscription()
 
       const nextState = {
         isSupported,
         isSubscribed: Boolean(subscription),
         permission: window.Notification.permission,
+        isProcessing: false,
       }
 
       debugLogRef.current('syncSubscriptionState:success', nextState)
@@ -145,6 +244,7 @@ const usePwaNotifications = ({ location, session }) => {
         isSupported,
         isSubscribed: false,
         permission: window.Notification.permission,
+        isProcessing: false,
         error: error?.message || 'Не удалось определить состояние уведомлений',
       })
     }
@@ -290,7 +390,7 @@ const usePwaNotifications = ({ location, session }) => {
         return { success: false }
       }
 
-      const registration = await navigator.serviceWorker.ready
+      const registration = await waitForServiceWorkerRegistration()
       let subscription = await registration.pushManager.getSubscription()
 
       if (!subscription) {
@@ -342,6 +442,7 @@ const usePwaNotifications = ({ location, session }) => {
       updateState({
         isSubscribed: false,
         permission: Notification.permission,
+        isProcessing: false,
         error: error?.message || 'Не удалось включить push-уведомления',
       })
       debugLogRef.current('subscribe:error', {
@@ -352,14 +453,12 @@ const usePwaNotifications = ({ location, session }) => {
       abortControllerRef.current = null
       updateState({ isProcessing: false })
 
-      try {
-        await syncSubscriptionState()
-      } catch (syncError) {
+      syncSubscriptionState().catch((syncError) => {
         console.error('Sync after subscribe failed', syncError)
         debugLogRef.current('subscribe:sync-error', {
           message: syncError?.message,
         })
-      }
+      })
 
       debugLogRef.current('subscribe:finished', {
         permission: Notification.permission,
@@ -381,7 +480,7 @@ const usePwaNotifications = ({ location, session }) => {
     }
 
     try {
-      const registration = await navigator.serviceWorker.ready
+      const registration = await waitForServiceWorkerRegistration()
       const subscription = await registration.pushManager.getSubscription()
 
       if (!subscription) {
@@ -431,6 +530,7 @@ const usePwaNotifications = ({ location, session }) => {
       console.error('Unsubscribe push error', error)
       updateState({
         error: error?.message || 'Не удалось отключить push-уведомления',
+        isProcessing: false,
       })
       debugLogRef.current('unsubscribe:error', {
         message: error?.message,
@@ -440,11 +540,9 @@ const usePwaNotifications = ({ location, session }) => {
       abortControllerRef.current = null
       updateState({ isProcessing: false })
 
-      try {
-        await syncSubscriptionState()
-      } catch (syncError) {
+      syncSubscriptionState().catch((syncError) => {
         console.error('Sync after unsubscribe failed', syncError)
-      }
+      })
     }
   }, [isSupported, location, syncSubscriptionState, updateState])
 
