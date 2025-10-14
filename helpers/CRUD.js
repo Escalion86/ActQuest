@@ -1,77 +1,5 @@
 const contentType = 'application/json'
 
-let ensureIpv4FirstPromise
-
-const ensureIpv4First = async () => {
-  if (typeof window !== 'undefined') return
-
-  if (!ensureIpv4FirstPromise) {
-    ensureIpv4FirstPromise = (async () => {
-      if (typeof process === 'undefined' || process.release?.name !== 'node') {
-        return
-      }
-
-      let dnsModule
-
-      try {
-        dnsModule = await import(/* webpackIgnore: true */ 'node:dns')
-      } catch (nodeDnsError) {
-        try {
-          dnsModule = await import(/* webpackIgnore: true */ 'dns')
-        } catch (dnsImportError) {
-          try {
-            const { createRequire } = await import('module')
-            const requireFromNode = createRequire?.(
-              typeof __filename !== 'undefined' ? __filename : process.cwd()
-            )
-            const moduleName = 'dns'
-            dnsModule = requireFromNode ? requireFromNode(moduleName) : null
-          } catch (fallbackError) {
-            console.warn(
-              'IPv4 helper: failed to load dns module, cannot set IPv4 preference.',
-              fallbackError
-            )
-            return
-          }
-        }
-      }
-
-      const dns = dnsModule?.default ?? dnsModule
-
-      if (!dns) {
-        console.warn('IPv4 helper: dns module unavailable, cannot set IPv4 preference.')
-        return
-      }
-
-      try {
-        if (typeof dns.setDefaultResultOrder === 'function') {
-          dns.setDefaultResultOrder('ipv4first')
-          return
-        }
-
-        const setDefaultResultOrder = dns.promises?.setDefaultResultOrder
-        if (typeof setDefaultResultOrder === 'function') {
-          setDefaultResultOrder.call(dns.promises, 'ipv4first')
-        } else if (dns.lookup) {
-          const originalLookup = dns.lookup
-          dns.lookup = (...args) => {
-            if (typeof args[1] === 'function') {
-              return originalLookup.call(dns, args[0], { family: 4, all: false }, args[1])
-            }
-
-            const options = { ...(args[1] || {}), family: 4, all: false }
-            return originalLookup.call(dns, args[0], options, args[2])
-          }
-        }
-      } catch (error) {
-        console.warn('IPv4 helper: failed to enforce IPv4 DNS preference.', error)
-      }
-    })()
-  }
-
-  return ensureIpv4FirstPromise
-}
-
 export const getData = async (
   url,
   form,
@@ -87,7 +15,6 @@ export const getData = async (
   const actualUrl = url + (getArray.length > 0 ? '?' + getArray.join('&') : '')
   console.log('actualUrl :>> ', actualUrl)
   try {
-    await ensureIpv4First()
     const res = await fetch(actualUrl, {
       method: 'GET',
       headers: {
@@ -123,7 +50,6 @@ export const putData = async (
   callbackOnError = null
 ) => {
   try {
-    await ensureIpv4First()
     const res = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -162,7 +88,6 @@ export const postData = async (
 ) => {
   try {
     const body = JSON.stringify(form)
-    await ensureIpv4First()
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -201,7 +126,6 @@ export const deleteData = async (
   params = {}
 ) => {
   try {
-    await ensureIpv4First()
     const res = await fetch(url, {
       method: 'DELETE',
       headers: {
