@@ -7,9 +7,28 @@ const getIpv4ConnectionOptions = async () => {
 
   if (!ipv4ConnectionOptionsPromise) {
     ipv4ConnectionOptionsPromise = (async () => {
-      const dns = await import('dns')
-      const http = await import('http')
-      const https = await import('https')
+      const nodeRequire = (() => {
+        try {
+          if (typeof require === 'function') return require
+        } catch (error) {
+          // ignore and fall back to eval below
+        }
+
+        return eval('require')
+      })()
+
+      let dns
+      let http
+      let https
+
+      try {
+        dns = nodeRequire('dns')
+        http = nodeRequire('http')
+        https = nodeRequire('https')
+      } catch (error) {
+        console.warn('IPv4 helper: failed to load Node built-ins, falling back to default fetch behaviour.', error)
+        return null
+      }
 
       const lookup = (hostname, options, callback) => {
         if (typeof options === 'function') {
