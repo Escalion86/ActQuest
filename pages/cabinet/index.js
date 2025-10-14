@@ -17,6 +17,16 @@ const formatText = (text) =>
     .map((part) => part.trim())
     .join('\n')
 
+const isButtonVisible = (button) =>
+  Boolean(
+    button &&
+      !button.hidden &&
+      !button.hide &&
+      !button.is_hidden &&
+      !button.hidden_by_condition &&
+      (button.text || button.url)
+  )
+
 const buildBlocksFromResult = (result) => {
   if (!result) return []
 
@@ -401,37 +411,47 @@ const CabinetPage = () => {
 
         {keyboardButtons.length ? (
           <div className="flex flex-col gap-2">
-            {keyboardButtons.map((row, rowIndex) => (
-              <div key={`row-${rowIndex}`} className="flex flex-wrap gap-2">
-                {row.map((button) => {
-                  if (button.url) {
+            {keyboardButtons.map((row, rowIndex) => {
+              const visibleButtons = Array.isArray(row)
+                ? row.filter(isButtonVisible)
+                : []
+
+              if (visibleButtons.length === 0) {
+                return null
+              }
+
+              return (
+                <div key={`row-${rowIndex}`} className="flex flex-wrap gap-2">
+                  {visibleButtons.map((button) => {
+                    if (button.url) {
+                      return (
+                        <a
+                          key={button.url}
+                          href={button.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                        >
+                          {button.text}
+                        </a>
+                      )
+                    }
+
                     return (
-                      <a
-                        key={button.url}
-                        href={button.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                      <button
+                        key={button.callback_data || button.text}
+                        className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                        onClick={() => handleKeyboardAction(button)}
+                        type="button"
+                        disabled={isLoading}
                       >
                         {button.text}
-                      </a>
+                      </button>
                     )
-                  }
-
-                  return (
-                    <button
-                      key={button.callback_data || button.text}
-                      className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
-                      onClick={() => handleKeyboardAction(button)}
-                      type="button"
-                      disabled={isLoading}
-                    >
-                      {button.text}
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
+                  })}
+                </div>
+              )
+            })}
           </div>
         ) : null}
 
