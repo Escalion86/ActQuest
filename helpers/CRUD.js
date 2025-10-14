@@ -82,6 +82,7 @@ export const getData = async (
         Accept: contentType,
         'Content-Type': contentType,
       },
+      ...(connectionOptions ?? {}),
     })
     console.log('res :>> ', res)
     // Throw error with status code in case Fetch API req failed
@@ -118,6 +119,7 @@ export const putData = async (
         'Content-Type': contentType,
       },
       body: JSON.stringify(form),
+      ...(connectionOptions ?? {}),
     })
 
     // Throw error with status code in case Fetch API req failed
@@ -156,6 +158,7 @@ export const postData = async (
         'Content-Type': contentType,
       },
       body,
+      ...(connectionOptions ?? {}),
     })
 
     // Throw error with status code in case Fetch API req failed
@@ -194,6 +197,7 @@ export const deleteData = async (
         'Content-Type': contentType,
       },
       body: JSON.stringify({ params }),
+      ...(connectionOptions ?? {}),
       // body: dontAddUserId
       //   ? JSON.stringify(form)
       //   : JSON.stringify({ data: form, userId }),
