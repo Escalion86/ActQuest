@@ -1,17 +1,37 @@
 {
   "name": "ActQuest",
   "short_name": "ActQuest",
-  "description": "Платформа ActQuest для организации квестов и отслеживания прогресса участников.",
-  "start_url": "/",
+  "description": "Платформа ActQuest для организации квестов.",
+  "start_url": "./?mode=standalone",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#111827",
   "theme_color": "#111827",
+  "id": "actquest",
+  "dir": "auto",
   "lang": "ru",
+  "display_override": [
+    "standalone",
+    "fullscreen",
+    "browser",
+    "window-controls-overlay",
+    "minimal-ui"
+  ],
   "icons": [
     {
       "src": "/icons/pwa-icon-192.png",
       "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/pwa-icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/pwa-icon-384.png",
+      "sizes": "384x384",
       "type": "image/png"
     },
     {
