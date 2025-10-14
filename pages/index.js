@@ -22,14 +22,14 @@ const features = [
 
 const steps = [
   {
-    title: 'Авторизуйтесь через Telegram',
-    description:
-      'Используйте официальный виджет Telegram, чтобы безопасно войти в систему и синхронизировать данные с ботом.',
-  },
-  {
     title: 'Выберите регион',
     description:
       'ActQuest поддерживает несколько городов. Работайте с теми играми и командами, которые вам нужны.',
+  },
+  {
+    title: 'Авторизуйтесь через Telegram',
+    description:
+      'Используйте официальный виджет Telegram, чтобы безопасно войти в систему и синхронизировать данные с ботом.',
   },
   {
     title: 'Работайте в личном кабинете',
@@ -57,7 +57,7 @@ const Home = () => {
                 Личный кабинет
               </Link>
               <a
-                href="https://t.me/ActQuest_dev_bot"
+                href="https://t.me/ActQuest_bot"
                 className="transition hover:text-primary"
                 target="_blank"
                 rel="noreferrer"
@@ -87,7 +87,7 @@ const Home = () => {
                   Перейти в личный кабинет
                 </Link>
                 <a
-                  href="https://t.me/ActQuest_dev_bot"
+                  href="https://t.me/ActQuest_bot"
                   className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-blue-700 transition border border-blue-200 rounded-2xl bg-blue-50 hover:bg-blue-100"
                   target="_blank"
                   rel="noreferrer"
@@ -125,7 +125,7 @@ const Home = () => {
 
           <section className="max-w-6xl p-8 mx-auto bg-white shadow-lg rounded-3xl">
             <h2 className="text-2xl font-bold text-primary">
-              Как начать работу
+              Как начать?
             </h2>
             <div className="grid gap-6 mt-8 md:grid-cols-3">
               {steps.map((step, index) => (
@@ -229,7 +229,7 @@ const Home = () => {
                 info@actquest.ru
               </a>
               <a
-                href="https://t.me/ActQuest_dev_bot"
+                href="https://t.me/escalion"
                 className="hover:text-primary"
                 target="_blank"
                 rel="noreferrer"
