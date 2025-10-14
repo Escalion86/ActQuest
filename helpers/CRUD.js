@@ -7,16 +7,32 @@ const ensureIpv4First = async () => {
 
   if (!ensureIpv4FirstPromise) {
     ensureIpv4FirstPromise = (async () => {
+      if (typeof process === 'undefined' || process.release?.name !== 'node') {
+        return
+      }
+
       let dnsModule
 
       try {
-        dnsModule = await import('node:dns')
+        dnsModule = await import(/* webpackIgnore: true */ 'node:dns')
       } catch (nodeDnsError) {
         try {
-          dnsModule = await import('dns')
-        } catch (error) {
-          console.warn('IPv4 helper: failed to load dns module, cannot set IPv4 preference.', error)
-          return
+          dnsModule = await import(/* webpackIgnore: true */ 'dns')
+        } catch (dnsImportError) {
+          try {
+            const { createRequire } = await import('module')
+            const requireFromNode = createRequire?.(
+              typeof __filename !== 'undefined' ? __filename : process.cwd()
+            )
+            const moduleName = 'dns'
+            dnsModule = requireFromNode ? requireFromNode(moduleName) : null
+          } catch (fallbackError) {
+            console.warn(
+              'IPv4 helper: failed to load dns module, cannot set IPv4 preference.',
+              fallbackError
+            )
+            return
+          }
         }
       }
 
