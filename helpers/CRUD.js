@@ -1,5 +1,19 @@
 const contentType = 'application/json'
 
+let ipv4DispatcherPromise
+
+const getIpv4Dispatcher = async () => {
+  if (typeof window !== 'undefined') return null
+
+  if (!ipv4DispatcherPromise) {
+    ipv4DispatcherPromise = import('undici').then(
+      ({ Agent }) => new Agent({ connect: { family: 4 } })
+    )
+  }
+
+  return ipv4DispatcherPromise
+}
+
 export const getData = async (
   url,
   form,
@@ -15,12 +29,14 @@ export const getData = async (
   const actualUrl = url + (getArray.length > 0 ? '?' + getArray.join('&') : '')
   console.log('actualUrl :>> ', actualUrl)
   try {
+    const dispatcher = await getIpv4Dispatcher()
     const res = await fetch(actualUrl, {
       method: 'GET',
       headers: {
         Accept: contentType,
         'Content-Type': contentType,
       },
+      ...(dispatcher ? { dispatcher } : {}),
     })
     console.log('res :>> ', res)
     // Throw error with status code in case Fetch API req failed
@@ -49,6 +65,7 @@ export const putData = async (
   callbackOnError = null
 ) => {
   try {
+    const dispatcher = await getIpv4Dispatcher()
     const res = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -56,6 +73,7 @@ export const putData = async (
         'Content-Type': contentType,
       },
       body: JSON.stringify(form),
+      ...(dispatcher ? { dispatcher } : {}),
     })
 
     // Throw error with status code in case Fetch API req failed
@@ -86,6 +104,7 @@ export const postData = async (
 ) => {
   try {
     const body = JSON.stringify(form)
+    const dispatcher = await getIpv4Dispatcher()
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -93,6 +112,7 @@ export const postData = async (
         'Content-Type': contentType,
       },
       body,
+      ...(dispatcher ? { dispatcher } : {}),
     })
 
     // Throw error with status code in case Fetch API req failed
@@ -123,6 +143,7 @@ export const deleteData = async (
   params = {}
 ) => {
   try {
+    const dispatcher = await getIpv4Dispatcher()
     const res = await fetch(url, {
       method: 'DELETE',
       headers: {
@@ -130,6 +151,7 @@ export const deleteData = async (
         'Content-Type': contentType,
       },
       body: JSON.stringify({ params }),
+      ...(dispatcher ? { dispatcher } : {}),
       // body: dontAddUserId
       //   ? JSON.stringify(form)
       //   : JSON.stringify({ data: form, userId }),
