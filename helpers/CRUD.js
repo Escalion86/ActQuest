@@ -7,27 +7,39 @@ const ensureIpv4First = async () => {
 
   if (!ensureIpv4FirstPromise) {
     ensureIpv4FirstPromise = (async () => {
-      const nodeRequire = (() => {
-        try {
-          if (typeof require === 'function') return require
-        } catch (error) {
-          // ignore and fall back to eval below
-        }
-
-        return eval('require')
-      })()
-
-      if (typeof nodeRequire !== 'function') {
-        console.warn('IPv4 helper: unable to access require to set DNS preference.')
+      if (typeof process === 'undefined' || process.release?.name !== 'node') {
         return
       }
 
-      let dns
+      let dnsModule
 
       try {
-        dns = nodeRequire('dns')
-      } catch (error) {
-        console.warn('IPv4 helper: failed to load dns module, cannot set IPv4 preference.', error)
+        dnsModule = await import(/* webpackIgnore: true */ 'node:dns')
+      } catch (nodeDnsError) {
+        try {
+          dnsModule = await import(/* webpackIgnore: true */ 'dns')
+        } catch (dnsImportError) {
+          try {
+            const { createRequire } = await import('module')
+            const requireFromNode = createRequire?.(
+              typeof __filename !== 'undefined' ? __filename : process.cwd()
+            )
+            const moduleName = 'dns'
+            dnsModule = requireFromNode ? requireFromNode(moduleName) : null
+          } catch (fallbackError) {
+            console.warn(
+              'IPv4 helper: failed to load dns module, cannot set IPv4 preference.',
+              fallbackError
+            )
+            return
+          }
+        }
+      }
+
+      const dns = dnsModule?.default ?? dnsModule
+
+      if (!dns) {
+        console.warn('IPv4 helper: dns module unavailable, cannot set IPv4 preference.')
         return
       }
 
