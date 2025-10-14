@@ -2,10 +2,28 @@ import crypto from 'crypto'
 
 const TELEGRAM_AUTH_TTL = 86400 // 24 hours
 
+const serializeValue = (value) => {
+  if (value === null || typeof value === 'undefined') return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value)
+    } catch (error) {
+      return ''
+    }
+  }
+
+  return ''
+}
+
 const buildCheckString = (payload) =>
   Object.keys(payload)
     .sort()
-    .map((key) => `${key}=${payload[key]}`)
+    .map((key) => `${key}=${serializeValue(payload[key])}`)
     .join('\n')
 
 const verifyTelegramAuthPayload = (payload, botToken) => {
