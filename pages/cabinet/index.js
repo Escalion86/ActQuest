@@ -336,9 +336,9 @@ const CabinetPage = () => {
 
       <div className="flex flex-col gap-6 p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
         <div className="flex items-center justify-between gap-3">
-//           <h3 className="text-xl font-semibold text-primary dark:text-white">
-//             ActQuest
-//           </h3>
+          <h3 className="text-xl font-semibold text-primary dark:text-white">
+            Ответ сервера ActQuest
+          </h3>
           <div className="flex items-center gap-3">
             {isLoading ? (
               <span className="text-sm text-blue-500 dark:text-blue-300">Загрузка…</span>
@@ -425,7 +425,7 @@ const CabinetPage = () => {
                           href={button.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                          className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-100 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
                         >
                           {button.text}
                         </a>
@@ -435,7 +435,7 @@ const CabinetPage = () => {
                     return (
                       <button
                         key={button.callback_data || button.text}
-                        className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                        className="flex-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
                         onClick={() => handleKeyboardAction(button)}
                         type="button"
                         disabled={isLoading}
