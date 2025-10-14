@@ -1,17 +1,41 @@
 const contentType = 'application/json'
 
-let ipv4DispatcherPromise
+let ipv4ConnectionOptionsPromise
 
-const getIpv4Dispatcher = async () => {
+const getIpv4ConnectionOptions = async () => {
   if (typeof window !== 'undefined') return null
 
-  if (!ipv4DispatcherPromise) {
-    ipv4DispatcherPromise = import('undici').then(
-      ({ Agent }) => new Agent({ connect: { family: 4 } })
-    )
+  if (!ipv4ConnectionOptionsPromise) {
+    ipv4ConnectionOptionsPromise = (async () => {
+      const dns = await import('node:dns')
+      const http = await import('node:http')
+      const https = await import('node:https')
+
+      const lookup = (hostname, options, callback) => {
+        if (typeof options === 'function') {
+          return dns.lookup(
+            hostname,
+            { family: 4, all: false },
+            options
+          )
+        }
+
+        const opts = { ...(options || {}), family: 4, all: false }
+        return dns.lookup(hostname, opts, callback)
+      }
+
+      const agentOptions = { keepAlive: true, lookup }
+      const httpAgent = new http.Agent(agentOptions)
+      const httpsAgent = new https.Agent(agentOptions)
+
+      return {
+        agent: ({ protocol }) =>
+          protocol === 'http:' ? httpAgent : httpsAgent,
+      }
+    })()
   }
 
-  return ipv4DispatcherPromise
+  return ipv4ConnectionOptionsPromise
 }
 
 export const getData = async (
@@ -29,14 +53,14 @@ export const getData = async (
   const actualUrl = url + (getArray.length > 0 ? '?' + getArray.join('&') : '')
   console.log('actualUrl :>> ', actualUrl)
   try {
-    const dispatcher = await getIpv4Dispatcher()
+    const connectionOptions = await getIpv4ConnectionOptions()
     const res = await fetch(actualUrl, {
       method: 'GET',
       headers: {
         Accept: contentType,
         'Content-Type': contentType,
       },
-      ...(dispatcher ? { dispatcher } : {}),
+      ...(connectionOptions ?? {}),
     })
     console.log('res :>> ', res)
     // Throw error with status code in case Fetch API req failed
@@ -65,7 +89,7 @@ export const putData = async (
   callbackOnError = null
 ) => {
   try {
-    const dispatcher = await getIpv4Dispatcher()
+    const connectionOptions = await getIpv4ConnectionOptions()
     const res = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -73,7 +97,7 @@ export const putData = async (
         'Content-Type': contentType,
       },
       body: JSON.stringify(form),
-      ...(dispatcher ? { dispatcher } : {}),
+      ...(connectionOptions ?? {}),
     })
 
     // Throw error with status code in case Fetch API req failed
@@ -104,7 +128,7 @@ export const postData = async (
 ) => {
   try {
     const body = JSON.stringify(form)
-    const dispatcher = await getIpv4Dispatcher()
+    const connectionOptions = await getIpv4ConnectionOptions()
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -112,7 +136,7 @@ export const postData = async (
         'Content-Type': contentType,
       },
       body,
-      ...(dispatcher ? { dispatcher } : {}),
+      ...(connectionOptions ?? {}),
     })
 
     // Throw error with status code in case Fetch API req failed
@@ -143,7 +167,7 @@ export const deleteData = async (
   params = {}
 ) => {
   try {
-    const dispatcher = await getIpv4Dispatcher()
+    const connectionOptions = await getIpv4ConnectionOptions()
     const res = await fetch(url, {
       method: 'DELETE',
       headers: {
@@ -151,7 +175,7 @@ export const deleteData = async (
         'Content-Type': contentType,
       },
       body: JSON.stringify({ params }),
-      ...(dispatcher ? { dispatcher } : {}),
+      ...(connectionOptions ?? {}),
       // body: dontAddUserId
       //   ? JSON.stringify(form)
       //   : JSON.stringify({ data: form, userId }),
