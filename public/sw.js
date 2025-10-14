@@ -1,4 +1,4 @@
-const CACHE_NAME = 'actquest-cache-v1'
+const CACHE_NAME = 'actquest-cache-v2'
 const PRECACHE_URLS = [
   '/',
   '/favicon.ico',
@@ -26,26 +26,43 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') {
+  const { request } = event
+
+  if (request.method !== 'GET') {
     return
   }
 
-  const requestURL = new URL(event.request.url)
+  const requestURL = new URL(request.url)
+  const isSameOrigin = requestURL.origin === self.location.origin
+  const isAuthRequest = requestURL.pathname.startsWith('/api/auth/')
+  const isApiRequest = requestURL.pathname.startsWith('/api/')
+  const cacheControl = request.headers.get('cache-control') || ''
+  const shouldBypassCacheControl =
+    cacheControl.includes('no-store') || request.cache === 'no-store'
+
+  if (!isSameOrigin || isAuthRequest || shouldBypassCacheControl) {
+    return
+  }
+
+  if (isApiRequest) {
+    return
+  }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse
       }
 
-      return fetch(event.request)
+      return fetch(request)
         .then((networkResponse) => {
-          const shouldCache = networkResponse && networkResponse.status === 200 && requestURL.origin === self.location.origin
+          const shouldCache =
+            networkResponse && networkResponse.status === 200 && isSameOrigin
 
           if (shouldCache) {
             const responseToCache = networkResponse.clone()
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache)
+              cache.put(request, responseToCache)
             })
           }
 
