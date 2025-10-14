@@ -54,7 +54,7 @@ const NotificationsCard = ({
     }
 
     if (!isConfigured) {
-      return 'Push-уведомления выключены на стороне сервера. Укажите переменные окружения WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY и WEB_PUSH_CONTACT, затем перезапустите сервер.'
+      return 'Push-уведомления выключены на стороне сервера. Укажите переменные окружения WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY и WEB_PUSH_CONTACT (или WEB_PUSH_CONTACT_EMAIL), затем перезапустите сервер.'
     }
 
     if (!canControl) {
