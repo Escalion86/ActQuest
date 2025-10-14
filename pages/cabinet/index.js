@@ -41,6 +41,29 @@ const decodeCallbackParam = (rawValue) => {
   return decoded
 }
 
+const extractRelativePath = (url, baseOrigin) => {
+  if (!url) return null
+
+  if (typeof url === 'string' && url.startsWith('/')) {
+    return url
+  }
+
+  if (!baseOrigin) return null
+
+  try {
+    const parsed = new URL(url, baseOrigin)
+    const base = new URL(baseOrigin)
+
+    if (parsed.host !== base.host) {
+      return null
+    }
+
+    return `${parsed.pathname}${parsed.search}${parsed.hash}` || '/'
+  } catch (error) {
+    return null
+  }
+}
+
 const isButtonVisible = (button) =>
   Boolean(
     button &&
@@ -150,26 +173,22 @@ const CabinetPage = () => {
       return
     }
 
-    if (decodedCallback.startsWith('/')) {
-      setAuthCallbackUrl(decodedCallback)
+    if (!isClient) return
+
+    const relativeTarget = extractRelativePath(
+      decodedCallback,
+      window.location.origin
+    )
+
+    if (relativeTarget) {
+      setAuthCallbackUrl(relativeTarget)
       return
     }
 
-    if (!isClient) return
-
-    try {
-      const parsed = new URL(decodedCallback, window.location.origin)
-
-      if (parsed.origin === window.location.origin) {
-        const relativeTarget = `${parsed.pathname}${parsed.search}${parsed.hash}`
-
-        setAuthCallbackUrl(relativeTarget || '/cabinet')
-        return
-      }
-    } catch (callbackError) {
-      console.error('Не удалось разобрать callbackUrl авторизации', callbackError)
-    }
-
+    console.error(
+      'Не удалось разобрать callbackUrl авторизации',
+      decodedCallback
+    )
     setAuthCallbackUrl('/cabinet')
   }, [router.isReady, router.query, isClient])
 
@@ -512,9 +531,15 @@ const CabinetPage = () => {
 
       if (isClient) {
         try {
-          absoluteCallbackUrl = new URL(authCallbackUrl, window.location.origin).toString()
+          absoluteCallbackUrl = new URL(
+            authCallbackUrl,
+            window.location.origin
+          ).toString()
         } catch (buildUrlError) {
-          console.error('Не удалось сформировать callbackUrl авторизации', buildUrlError)
+          console.error(
+            'Не удалось сформировать callbackUrl авторизации',
+            buildUrlError
+          )
           absoluteCallbackUrl = `${window.location.origin}/cabinet`
         }
       }
@@ -561,7 +586,28 @@ const CabinetPage = () => {
 
       await updateSession()
 
-      const redirectTarget = result?.url || absoluteCallbackUrl
+      const getRedirectTarget = () => {
+        if (!isClient) {
+          return absoluteCallbackUrl
+        }
+
+        const safeResultUrl = extractRelativePath(
+          result?.url,
+          window.location.origin
+        )
+
+        if (
+          safeResultUrl &&
+          !safeResultUrl.startsWith('/cabinet') &&
+          !safeResultUrl.startsWith('/api/auth')
+        ) {
+          return new URL(safeResultUrl, window.location.origin).toString()
+        }
+
+        return absoluteCallbackUrl
+      }
+
+      const redirectTarget = getRedirectTarget()
 
       if (isClient && redirectTarget) {
         try {
