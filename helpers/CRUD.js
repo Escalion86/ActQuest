@@ -7,9 +7,9 @@ const getIpv4ConnectionOptions = async () => {
 
   if (!ipv4ConnectionOptionsPromise) {
     ipv4ConnectionOptionsPromise = (async () => {
-      const dns = await import('node:dns')
-      const http = await import('node:http')
-      const https = await import('node:https')
+      const dns = await import('dns')
+      const http = await import('http')
+      const https = await import('https')
 
       const lookup = (hostname, options, callback) => {
         if (typeof options === 'function') {
