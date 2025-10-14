@@ -36,11 +36,21 @@ const NotificationsCard = ({
     unsubscribe,
     canControl,
     isConfigured,
+    configStatus,
+    configError,
   } = pushState || {}
 
   const renderPushStatus = () => {
     if (!isSupported) {
       return 'Ваш браузер не поддерживает push-уведомления. Используйте последнюю версию Chrome, Safari или Firefox.'
+    }
+
+    if (configStatus === 'loading') {
+      return 'Проверяем настройки push-уведомлений…'
+    }
+
+    if (configStatus === 'error') {
+      return 'Не удалось проверить настройки push-уведомлений. Попробуйте обновить страницу.'
     }
 
     if (!isConfigured) {
@@ -88,6 +98,7 @@ const NotificationsCard = ({
   const subscriptionButtonDisabled =
     !pushState ||
     !isSupported ||
+    configStatus === 'loading' ||
     !isConfigured ||
     !canControl ||
     permission === 'denied' ||
@@ -113,6 +124,11 @@ const NotificationsCard = ({
           {pushError ? (
             <p className="mt-2 text-sm text-red-600 dark:text-red-300">
               {pushError}
+            </p>
+          ) : null}
+          {configError && !pushError ? (
+            <p className="mt-2 text-sm text-red-600 dark:text-red-300">
+              {configError}
             </p>
           ) : null}
         </div>
@@ -256,6 +272,8 @@ NotificationsCard.propTypes = {
     unsubscribe: PropTypes.func,
     canControl: PropTypes.bool,
     isConfigured: PropTypes.bool,
+    configStatus: PropTypes.oneOf(['loading', 'success', 'error']),
+    configError: PropTypes.string,
   }),
 }
 
@@ -275,6 +293,8 @@ NotificationsCard.defaultProps = {
     unsubscribe: () => {},
     canControl: false,
     isConfigured: false,
+    configStatus: 'loading',
+    configError: null,
   },
 }
 

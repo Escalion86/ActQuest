@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import urlBase64ToUint8Array from './urlBase64ToUint8Array'
 
@@ -17,18 +17,30 @@ const resolveApplicationServerKey = () => {
     return null
   }
 
-  return (
-    process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY ||
-    process.env.WEB_PUSH_PUBLIC_KEY ||
-    null
-  )
+  const fromEnv = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY || null
+
+  if (typeof fromEnv !== 'string') {
+    return null
+  }
+
+  const trimmed = fromEnv.trim()
+
+  return trimmed.length > 0 ? trimmed : null
 }
 
 const usePwaNotifications = ({ location, session }) => {
-  const [state, setState] = useState(() => ({ ...INITIAL_STATE }))
-  const abortControllerRef = useRef(null)
+  const initialApplicationServerKey = resolveApplicationServerKey()
 
-  const applicationServerKey = useMemo(() => resolveApplicationServerKey(), [])
+  const [state, setState] = useState(() => ({ ...INITIAL_STATE }))
+  const [applicationServerKey, setApplicationServerKey] = useState(
+    initialApplicationServerKey
+  )
+  const [configStatus, setConfigStatus] = useState('loading')
+  const [configError, setConfigError] = useState(null)
+  const [isServerConfigured, setIsServerConfigured] = useState(
+    Boolean(initialApplicationServerKey)
+  )
+  const abortControllerRef = useRef(null)
 
   const isClient = typeof window !== 'undefined'
   const isSupported =
@@ -75,6 +87,62 @@ const usePwaNotifications = ({ location, session }) => {
   }, [isSupported, updateState])
 
   useEffect(() => {
+    if (!isClient) {
+      return
+    }
+
+    if (configStatus !== 'loading') {
+      return
+    }
+
+    let isActive = true
+    const controller = new AbortController()
+
+    const loadConfig = async () => {
+      try {
+        const response = await fetch('/api/webapp/push/config', {
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || 'Не удалось загрузить настройки уведомлений')
+        }
+
+        const data = await response.json()
+
+        if (!isActive) {
+          return
+        }
+
+        setApplicationServerKey(data?.publicKey || null)
+        const resolvedConfigured =
+          typeof data?.isConfigured === 'boolean'
+            ? data.isConfigured
+            : Boolean(data?.publicKey)
+        setIsServerConfigured(resolvedConfigured)
+        setConfigStatus('success')
+        setConfigError(null)
+      } catch (error) {
+        if (!isActive || controller.signal.aborted) {
+          return
+        }
+
+        console.error('Push config load error', error)
+        setConfigStatus('error')
+        setConfigError(error?.message || 'Не удалось проверить настройки уведомлений')
+      }
+    }
+
+    loadConfig()
+
+    return () => {
+      isActive = false
+      controller.abort()
+    }
+  }, [configStatus, isClient])
+
+  useEffect(() => {
     syncSubscriptionState()
     return () => {
       if (abortControllerRef.current) {
@@ -92,6 +160,11 @@ const usePwaNotifications = ({ location, session }) => {
 
     if (!session) {
       updateState({ error: 'Авторизуйтесь через Telegram, чтобы включить уведомления.' })
+      return { success: false }
+    }
+
+    if (configStatus === 'loading') {
+      updateState({ error: 'Проверяем настройки уведомлений. Попробуйте ещё раз чуть позже.' })
       return { success: false }
     }
 
@@ -231,7 +304,12 @@ const usePwaNotifications = ({ location, session }) => {
 
   return {
     ...state,
-    isConfigured: Boolean(applicationServerKey),
+    isConfigured:
+      configStatus === 'success'
+        ? Boolean(isServerConfigured)
+        : Boolean(applicationServerKey),
+    configStatus,
+    configError,
     canControl: Boolean(isSupported && session),
     subscribe,
     unsubscribe,
