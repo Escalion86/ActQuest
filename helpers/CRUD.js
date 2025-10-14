@@ -7,22 +7,6 @@ const getIpv4ConnectionOptions = async () => {
 
   if (!ipv4ConnectionOptionsPromise) {
     ipv4ConnectionOptionsPromise = (async () => {
-      try {
-        const undici = await import('undici')
-        if (undici?.Agent) {
-          return {
-            dispatcher: new undici.Agent({ connect: { family: 4 } }),
-          }
-        }
-      } catch (error) {
-        if (
-          error?.code !== 'ERR_MODULE_NOT_FOUND' &&
-          error?.code !== 'MODULE_NOT_FOUND'
-        ) {
-          console.warn('Failed to load undici for IPv4 fetch forcing', error)
-        }
-      }
-
       const dns = await import('node:dns')
       const http = await import('node:http')
       const https = await import('node:https')
