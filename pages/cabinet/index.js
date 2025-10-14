@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import { LOCATIONS } from '@server/serverConstants'
 import TelegramLogin from '@components/cabinet/TelegramLogin'
+import NotificationsCard from '@components/cabinet/NotificationsCard'
+import usePwaNotifications from '@helpers/usePwaNotifications'
 
 const availableLocations = Object.entries(LOCATIONS)
   .filter(([, value]) => !value.hidden)
@@ -82,15 +84,39 @@ const CabinetPage = () => {
   const [keyboardButtons, setKeyboardButtons] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [notifications, setNotifications] = useState([])
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationsError, setNotificationsError] = useState(null)
+  const [notificationsExpanded, setNotificationsExpanded] = useState(false)
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false)
   const [hasSyncedLocation, setHasSyncedLocation] = useState(false)
   const [isClient, setIsClient] = useState(false)
   const [theme, setTheme] = useState('light')
   const lastInteractionRef = useRef('bot')
   const displayRef = useRef(null)
+  const pushNotifications = usePwaNotifications({ location, session })
 
   useEffect(() => {
     setIsClient(true)
   }, [])
+
+  useEffect(() => {
+    if (!router.isReady) return
+
+    const queryTab = router.query?.tab
+    if (queryTab === 'notifications') {
+      setNotificationsExpanded(true)
+    }
+
+    const queryLocation = router.query?.location
+    if (
+      typeof queryLocation === 'string' &&
+      LOCATIONS[queryLocation] &&
+      queryLocation !== location
+    ) {
+      setLocation(queryLocation)
+    }
+  }, [router.isReady, router.query, location])
 
   useEffect(() => {
     if (!isClient) return
@@ -133,6 +159,10 @@ const CabinetPage = () => {
       setDisplayBlocks([])
       setKeyboardButtons([])
       lastInteractionRef.current = 'bot'
+      setNotifications([])
+      setNotificationsError(null)
+      setHasUnreadNotifications(false)
+      setNotificationsExpanded(false)
     }
   }, [session])
 
@@ -142,6 +172,21 @@ const CabinetPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status])
+
+  useEffect(() => {
+    if (!notifications || notifications.length === 0) {
+      setHasUnreadNotifications(false)
+      return
+    }
+
+    setHasUnreadNotifications(notifications.some((item) => !item.readAt))
+  }, [notifications])
+
+  useEffect(() => {
+    if (hasUnreadNotifications) {
+      setNotificationsExpanded(true)
+    }
+  }, [hasUnreadNotifications])
 
   const loadMainMenu = async ({
     resetDisplay = false,
@@ -157,6 +202,123 @@ const CabinetPage = () => {
       targetLocation,
     })
   }
+
+  const fetchNotifications = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!session) {
+        setNotifications([])
+        setNotificationsError(null)
+        setHasUnreadNotifications(false)
+        if (!silent) {
+          setNotificationsLoading(false)
+        }
+        return
+      }
+
+      if (!silent) {
+        setNotificationsLoading(true)
+      }
+      setNotificationsError(null)
+
+      try {
+        const response = await fetch(
+          `/api/webapp/notifications?location=${encodeURIComponent(location)}`
+        )
+
+        const data = await response.json().catch(() => null)
+
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.error || 'Не удалось загрузить уведомления')
+        }
+
+        const items = Array.isArray(data.notifications) ? data.notifications : []
+
+        setNotifications(
+          items.map((item) => {
+            const rawId = item.id || item._id
+            const resolvedId =
+              typeof rawId === 'string'
+                ? rawId
+                : rawId?.toString?.() || `notification-${Math.random().toString(36).slice(2)}`
+
+            return {
+              id: resolvedId,
+              title: item.title || 'Уведомление',
+              body: item.body || '',
+              data: item.data || {},
+              readAt: item.readAt || null,
+              createdAt: item.createdAt || null,
+            }
+          })
+        )
+        setNotificationsError(null)
+      } catch (fetchError) {
+        setNotificationsError(fetchError.message)
+      } finally {
+        if (!silent) {
+          setNotificationsLoading(false)
+        }
+      }
+    },
+    [session, location]
+  )
+
+  const handleRefreshNotifications = useCallback(() => {
+    fetchNotifications()
+  }, [fetchNotifications])
+
+  const handleMarkNotificationsAsRead = useCallback(async () => {
+    if (!session) return
+
+    const unreadIds = notifications.filter((item) => !item.readAt).map((item) => item.id)
+
+    if (unreadIds.length === 0) return
+
+    try {
+      setNotificationsError(null)
+      const response = await fetch('/api/webapp/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ location, notificationIds: unreadIds }),
+      })
+
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Не удалось обновить уведомления')
+      }
+
+      const readAt = data?.readAt || new Date().toISOString()
+
+      setNotifications((prev) =>
+        prev.map((item) =>
+          unreadIds.includes(item.id)
+            ? {
+                ...item,
+                readAt,
+              }
+            : item
+        )
+      )
+
+      setHasUnreadNotifications(false)
+    } catch (updateError) {
+      setNotificationsError(updateError.message)
+    }
+  }, [session, notifications, location])
+
+  useEffect(() => {
+    if (!session) return
+    fetchNotifications()
+  }, [session, location, fetchNotifications])
+
+  useEffect(() => {
+    if (notificationsExpanded && session && !notifications.length && !notificationsLoading) {
+      fetchNotifications({ silent: true })
+    }
+  }, [notificationsExpanded, session, notifications.length, notificationsLoading, fetchNotifications])
 
   const sendCommand = async ({
     command,
@@ -262,6 +424,9 @@ const CabinetPage = () => {
 
   const handleSignOut = async () => {
     try {
+      if (pushNotifications?.isSubscribed && typeof pushNotifications.unsubscribe === 'function') {
+        await pushNotifications.unsubscribe().catch(() => null)
+      }
       await signOut({ redirect: false })
     } finally {
       router.push('/')
@@ -501,6 +666,18 @@ const CabinetPage = () => {
             {error}
           </div>
         ) : null}
+
+        <NotificationsCard
+          notifications={notifications}
+          hasUnread={hasUnreadNotifications}
+          isExpanded={notificationsExpanded}
+          onToggle={() => setNotificationsExpanded((prev) => !prev)}
+          onRefresh={handleRefreshNotifications}
+          onMarkAllRead={handleMarkNotificationsAsRead}
+          isLoading={notificationsLoading}
+          error={notificationsError}
+          pushState={pushNotifications}
+        />
       </div>
     </div>
   )
