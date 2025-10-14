@@ -336,9 +336,9 @@ const CabinetPage = () => {
 
       <div className="flex flex-col gap-6 p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-xl font-semibold text-primary dark:text-white">
-            Ответ сервера ActQuest
-          </h3>
+//           <h3 className="text-xl font-semibold text-primary dark:text-white">
+//             ActQuest
+//           </h3>
           <div className="flex items-center gap-3">
             {isLoading ? (
               <span className="text-sm text-blue-500 dark:text-blue-300">Загрузка…</span>
