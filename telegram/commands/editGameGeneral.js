@@ -18,12 +18,19 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
   const game = await getGame(jsonCommand.gameId, db)
   if (game.success === false) return game
 
-  if (jsonCommand.toggleShowCreator) {
+  if (typeof jsonCommand.toggleShowCreator === 'boolean') {
     await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
       showCreator: !game.showCreator,
     })
     game.showCreator = !game.showCreator
     jsonCommand.toggleShowCreator = !jsonCommand.toggleShowCreator
+  }
+  if (typeof jsonCommand.toggleHidden === 'boolean') {
+    await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
+      hidden: !game.hidden,
+    })
+    game.hidden = !game.hidden
+    jsonCommand.toggleHidden = !jsonCommand.toggleHidden
   }
 
   const gameTeams = await db
@@ -308,8 +315,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
       // },
       {
         c: {
-          c: 'unhideGame',
-          gameId: jsonCommand.gameId,
+          toggleHidden: true,
         },
         text: (game.hidden ? '❌' : '✅') + ' Отобразить игру в списке игр',
       },
