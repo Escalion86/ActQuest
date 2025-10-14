@@ -137,6 +137,8 @@ const CabinetPage = () => {
   const [hasSyncedLocation, setHasSyncedLocation] = useState(false)
   const [isClient, setIsClient] = useState(false)
   const [theme, setTheme] = useState('light')
+  const authCallbackSourceRef = useRef(null)
+  const processedCallbackRef = useRef(null)
   const lastInteractionRef = useRef('bot')
   const displayRef = useRef(null)
   const pushNotifications = usePwaNotifications({ location, session })
@@ -170,6 +172,10 @@ const CabinetPage = () => {
 
     if (!decodedCallback) {
       setAuthCallbackUrl('/cabinet')
+      if (authCallbackSourceRef.current !== null) {
+        processedCallbackRef.current = null
+      }
+      authCallbackSourceRef.current = null
       return
     }
 
@@ -181,7 +187,11 @@ const CabinetPage = () => {
     )
 
     if (relativeTarget) {
+      if (authCallbackSourceRef.current !== decodedCallback) {
+        processedCallbackRef.current = null
+      }
       setAuthCallbackUrl(relativeTarget)
+      authCallbackSourceRef.current = decodedCallback
       return
     }
 
@@ -190,7 +200,59 @@ const CabinetPage = () => {
       decodedCallback
     )
     setAuthCallbackUrl('/cabinet')
+    if (authCallbackSourceRef.current !== decodedCallback) {
+      processedCallbackRef.current = null
+    }
+    authCallbackSourceRef.current = decodedCallback
   }, [router.isReady, router.query, isClient])
+
+  useEffect(() => {
+    if (!isClient || !router.isReady) return
+
+    const rawCallbackParam = router.query?.callbackUrl
+    if (!rawCallbackParam) {
+      processedCallbackRef.current = null
+      return
+    }
+
+    if (status !== 'authenticated') return
+
+    if (!authCallbackUrl) return
+
+    const decodedSource = authCallbackSourceRef.current
+    if (!decodedSource) return
+
+    if (processedCallbackRef.current === decodedSource) return
+
+    const navigateToCallback = async () => {
+      const targetPath = authCallbackUrl.startsWith('/')
+        ? authCallbackUrl
+        : `/${authCallbackUrl}`
+
+      try {
+        processedCallbackRef.current = decodedSource
+
+        if (targetPath === '/cabinet') {
+          await router.replace('/cabinet', '/cabinet')
+          return
+        }
+
+        await router.replace(targetPath, targetPath)
+      } catch (navError) {
+        console.error('Не удалось перейти по сохранённому callbackUrl', navError)
+        await router.replace('/cabinet', '/cabinet').catch(() => null)
+      }
+    }
+
+    navigateToCallback()
+  }, [
+    authCallbackUrl,
+    isClient,
+    router,
+    router.isReady,
+    router.query?.callbackUrl,
+    status,
+  ])
 
   useEffect(() => {
     if (!isClient) return
