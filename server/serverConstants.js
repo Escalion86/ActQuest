@@ -1,3 +1,4 @@
+console.log('process.env.MODE', process.env.MODE)
 export const LOCATIONS = {
   dev: {
     townRu: 'тестовый город',
