@@ -1,5 +1,43 @@
 const contentType = 'application/json'
 
+let ipv4ConnectionOptionsPromise
+
+const getIpv4ConnectionOptions = async () => {
+  if (typeof window !== 'undefined') return null
+
+  if (!ipv4ConnectionOptionsPromise) {
+    ipv4ConnectionOptionsPromise = (async () => {
+      const dns = await import('dns')
+      const http = await import('http')
+      const https = await import('https')
+
+      const lookup = (hostname, options, callback) => {
+        if (typeof options === 'function') {
+          return dns.lookup(
+            hostname,
+            { family: 4, all: false },
+            options
+          )
+        }
+
+        const opts = { ...(options || {}), family: 4, all: false }
+        return dns.lookup(hostname, opts, callback)
+      }
+
+      const agentOptions = { keepAlive: true, lookup }
+      const httpAgent = new http.Agent(agentOptions)
+      const httpsAgent = new https.Agent(agentOptions)
+
+      return {
+        agent: ({ protocol }) =>
+          protocol === 'http:' ? httpAgent : httpsAgent,
+      }
+    })()
+  }
+
+  return ipv4ConnectionOptionsPromise
+}
+
 export const getData = async (
   url,
   form,
@@ -15,12 +53,14 @@ export const getData = async (
   const actualUrl = url + (getArray.length > 0 ? '?' + getArray.join('&') : '')
   console.log('actualUrl :>> ', actualUrl)
   try {
+    const connectionOptions = await getIpv4ConnectionOptions()
     const res = await fetch(actualUrl, {
       method: 'GET',
       headers: {
         Accept: contentType,
         'Content-Type': contentType,
       },
+      ...(connectionOptions ?? {}),
     })
     console.log('res :>> ', res)
     // Throw error with status code in case Fetch API req failed
@@ -49,6 +89,7 @@ export const putData = async (
   callbackOnError = null
 ) => {
   try {
+    const connectionOptions = await getIpv4ConnectionOptions()
     const res = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -56,6 +97,7 @@ export const putData = async (
         'Content-Type': contentType,
       },
       body: JSON.stringify(form),
+      ...(connectionOptions ?? {}),
     })
 
     // Throw error with status code in case Fetch API req failed
@@ -86,6 +128,7 @@ export const postData = async (
 ) => {
   try {
     const body = JSON.stringify(form)
+    const connectionOptions = await getIpv4ConnectionOptions()
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -93,6 +136,7 @@ export const postData = async (
         'Content-Type': contentType,
       },
       body,
+      ...(connectionOptions ?? {}),
     })
 
     // Throw error with status code in case Fetch API req failed
@@ -123,6 +167,7 @@ export const deleteData = async (
   params = {}
 ) => {
   try {
+    const connectionOptions = await getIpv4ConnectionOptions()
     const res = await fetch(url, {
       method: 'DELETE',
       headers: {
@@ -130,6 +175,7 @@ export const deleteData = async (
         'Content-Type': contentType,
       },
       body: JSON.stringify({ params }),
+      ...(connectionOptions ?? {}),
       // body: dontAddUserId
       //   ? JSON.stringify(form)
       //   : JSON.stringify({ data: form, userId }),
