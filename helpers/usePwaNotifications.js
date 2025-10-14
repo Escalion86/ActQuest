@@ -218,14 +218,14 @@ const usePwaNotifications = ({ location, session }) => {
         signal: abortControllerRef.current.signal,
       })
 
-      if (!response.ok) {
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || data?.success === false) {
         await subscription.unsubscribe().catch(() => null)
-        const data = await response.json().catch(() => null)
         throw new Error(data?.error || 'Не удалось сохранить подписку на уведомления')
       }
 
       updateState({
-        isProcessing: false,
         isSubscribed: true,
         permission: Notification.permission,
         error: null,
@@ -235,7 +235,6 @@ const usePwaNotifications = ({ location, session }) => {
     } catch (error) {
       console.error('Subscribe push error', error)
       updateState({
-        isProcessing: false,
         isSubscribed: false,
         permission: Notification.permission,
         error: error?.message || 'Не удалось включить push-уведомления',
@@ -243,8 +242,22 @@ const usePwaNotifications = ({ location, session }) => {
       return { success: false, error }
     } finally {
       abortControllerRef.current = null
+      updateState({ isProcessing: false })
+
+      try {
+        await syncSubscriptionState()
+      } catch (syncError) {
+        console.error('Sync after subscribe failed', syncError)
+      }
     }
-  }, [applicationServerKey, isSupported, location, session, updateState])
+  }, [
+    applicationServerKey,
+    isSupported,
+    location,
+    session,
+    syncSubscriptionState,
+    updateState,
+  ])
 
   const unsubscribe = useCallback(async () => {
     if (!isSupported) {
@@ -276,15 +289,15 @@ const usePwaNotifications = ({ location, session }) => {
         signal: abortControllerRef.current.signal,
       })
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => null)
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || data?.success === false) {
         throw new Error(data?.error || 'Не удалось удалить подписку на уведомления')
       }
 
       await subscription.unsubscribe().catch(() => null)
 
       updateState({
-        isProcessing: false,
         isSubscribed: false,
         permission: Notification.permission,
       })
@@ -293,14 +306,20 @@ const usePwaNotifications = ({ location, session }) => {
     } catch (error) {
       console.error('Unsubscribe push error', error)
       updateState({
-        isProcessing: false,
         error: error?.message || 'Не удалось отключить push-уведомления',
       })
       return { success: false, error }
     } finally {
       abortControllerRef.current = null
+      updateState({ isProcessing: false })
+
+      try {
+        await syncSubscriptionState()
+      } catch (syncError) {
+        console.error('Sync after unsubscribe failed', syncError)
+      }
     }
-  }, [isSupported, location, updateState])
+  }, [isSupported, location, syncSubscriptionState, updateState])
 
   return {
     ...state,
