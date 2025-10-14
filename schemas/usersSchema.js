@@ -48,6 +48,47 @@ const usersSchema = {
     type: String,
     default: 'client',
   },
+  pushSubscriptions: {
+    type: [
+      {
+        endpoint: {
+          type: String,
+          required: true,
+        },
+        keys: {
+          type: {
+            p256dh: {
+              type: String,
+              required: true,
+            },
+            auth: {
+              type: String,
+              required: true,
+            },
+          },
+          required: true,
+        },
+        expirationTime: {
+          type: Number,
+          default: null,
+        },
+        userAgent: {
+          type: String,
+          default: null,
+          trim: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+        updatedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    default: [],
+  },
 }
 
 export default usersSchema
