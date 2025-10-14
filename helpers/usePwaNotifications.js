@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import urlBase64ToUint8Array from './urlBase64ToUint8Array'
 
+const DEBUG_STORAGE_KEY = 'aq-push-debug'
+const DEBUG_NAMESPACE = '[push-debug]'
+
 const INITIAL_STATE = {
   isSupported: false,
   permission: typeof window !== 'undefined' && window.Notification
@@ -10,6 +13,61 @@ const INITIAL_STATE = {
   isSubscribed: false,
   isProcessing: false,
   error: null,
+}
+
+const resolveDebugPreference = () => {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  const debugApi = window.__aqPushDebug
+
+  if (debugApi && typeof debugApi.enabled === 'boolean') {
+    return debugApi.enabled
+  }
+
+  try {
+    const stored = window.localStorage?.getItem(DEBUG_STORAGE_KEY)
+
+    if (stored === '1' || stored === 'true') {
+      return true
+    }
+
+    if (stored === '0' || stored === 'false') {
+      return false
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(`${DEBUG_NAMESPACE} Не удалось прочитать настройку из localStorage`, error)
+  }
+
+  return false
+}
+
+const createDebugLogger = () => {
+  const getEnabled = () => {
+    if (typeof window === 'undefined') {
+      return false
+    }
+
+    const debugApi = window.__aqPushDebug
+
+    if (debugApi && typeof debugApi.enabled === 'boolean') {
+      return debugApi.enabled
+    }
+
+    return resolveDebugPreference()
+  }
+
+  return (...args) => {
+    if (!getEnabled()) {
+      return
+    }
+
+    const now = new Date().toISOString()
+    // eslint-disable-next-line no-console
+    console.debug(DEBUG_NAMESPACE, now, ...args)
+  }
 }
 
 const resolveApplicationServerKey = () => {
@@ -41,6 +99,7 @@ const usePwaNotifications = ({ location, session }) => {
     Boolean(initialApplicationServerKey)
   )
   const abortControllerRef = useRef(null)
+  const debugNoticeShownRef = useRef(false)
 
   const isClient = typeof window !== 'undefined'
   const isSupported =
@@ -48,6 +107,8 @@ const usePwaNotifications = ({ location, session }) => {
     'serviceWorker' in navigator &&
     'PushManager' in window &&
     'Notification' in window
+
+  const debugLogRef = useRef(createDebugLogger())
 
   const updateState = useCallback((patch) => {
     setState((prev) => ({ ...prev, ...patch }))
@@ -67,12 +128,19 @@ const usePwaNotifications = ({ location, session }) => {
       const registration = await navigator.serviceWorker.ready
       const subscription = await registration.pushManager.getSubscription()
 
-      updateState({
+      const nextState = {
         isSupported,
         isSubscribed: Boolean(subscription),
         permission: window.Notification.permission,
-      })
+      }
+
+      debugLogRef.current('syncSubscriptionState:success', nextState)
+
+      updateState(nextState)
     } catch (error) {
+      debugLogRef.current('syncSubscriptionState:error', {
+        message: error?.message,
+      })
       updateState({
         isSupported,
         isSubscribed: false,
@@ -85,6 +153,21 @@ const usePwaNotifications = ({ location, session }) => {
   useEffect(() => {
     updateState({ isSupported })
   }, [isSupported, updateState])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !debugNoticeShownRef.current) {
+      debugNoticeShownRef.current = true
+      debugLogRef.current('init', { mode: process.env.MODE ?? process.env.NODE_ENV })
+
+      if (!window.__aqPushDebug?.suppressIntro) {
+        const introMessage =
+          'ActQuest push debug: вызовите window.__aqPushDebug.logSnapshot(), чтобы получить текущее состояние уведомлений. ' +
+          'Используйте window.__aqPushDebug.enable(true), чтобы включить подробные логи.'
+        // eslint-disable-next-line no-console
+        console.info(introMessage)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!isClient) {
@@ -123,6 +206,11 @@ const usePwaNotifications = ({ location, session }) => {
         setIsServerConfigured(resolvedConfigured)
         setConfigStatus('success')
         setConfigError(null)
+
+        debugLogRef.current('config:success', {
+          isConfigured: resolvedConfigured,
+          hasPublicKey: Boolean(data?.publicKey),
+        })
       } catch (error) {
         if (!isActive || controller.signal.aborted) {
           return
@@ -131,6 +219,9 @@ const usePwaNotifications = ({ location, session }) => {
         console.error('Push config load error', error)
         setConfigStatus('error')
         setConfigError(error?.message || 'Не удалось проверить настройки уведомлений')
+        debugLogRef.current('config:error', {
+          message: error?.message,
+        })
       }
     }
 
@@ -173,12 +264,20 @@ const usePwaNotifications = ({ location, session }) => {
       return { success: false }
     }
 
+    debugLogRef.current('subscribe:start', {
+      location,
+      permission: Notification.permission,
+    })
+
     updateState({ isProcessing: true, error: null })
 
     try {
       const permission = await Notification.requestPermission()
 
       if (permission !== 'granted') {
+        debugLogRef.current('subscribe:permission-denied', {
+          permission,
+        })
         updateState({
           isProcessing: false,
           permission,
@@ -231,6 +330,12 @@ const usePwaNotifications = ({ location, session }) => {
         error: null,
       })
 
+      debugLogRef.current('subscribe:success', {
+        endpoint: subscription.endpoint,
+        permission: Notification.permission,
+        serverResponse: data,
+      })
+
       return { success: true }
     } catch (error) {
       console.error('Subscribe push error', error)
@@ -238,6 +343,9 @@ const usePwaNotifications = ({ location, session }) => {
         isSubscribed: false,
         permission: Notification.permission,
         error: error?.message || 'Не удалось включить push-уведомления',
+      })
+      debugLogRef.current('subscribe:error', {
+        message: error?.message,
       })
       return { success: false, error }
     } finally {
@@ -248,7 +356,14 @@ const usePwaNotifications = ({ location, session }) => {
         await syncSubscriptionState()
       } catch (syncError) {
         console.error('Sync after subscribe failed', syncError)
+        debugLogRef.current('subscribe:sync-error', {
+          message: syncError?.message,
+        })
       }
+
+      debugLogRef.current('subscribe:finished', {
+        permission: Notification.permission,
+      })
     }
   }, [
     applicationServerKey,
@@ -273,6 +388,10 @@ const usePwaNotifications = ({ location, session }) => {
         updateState({ isSubscribed: false })
         return { success: true }
       }
+
+      debugLogRef.current('unsubscribe:start', {
+        endpoint: subscription.endpoint,
+      })
 
       updateState({ isProcessing: true, error: null })
 
@@ -302,11 +421,19 @@ const usePwaNotifications = ({ location, session }) => {
         permission: Notification.permission,
       })
 
+      debugLogRef.current('unsubscribe:success', {
+        endpoint,
+        permission: Notification.permission,
+      })
+
       return { success: true }
     } catch (error) {
       console.error('Unsubscribe push error', error)
       updateState({
         error: error?.message || 'Не удалось отключить push-уведомления',
+      })
+      debugLogRef.current('unsubscribe:error', {
+        message: error?.message,
       })
       return { success: false, error }
     } finally {
@@ -320,6 +447,100 @@ const usePwaNotifications = ({ location, session }) => {
       }
     }
   }, [isSupported, location, syncSubscriptionState, updateState])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const snapshot = {
+      state: {
+        isSupported: state.isSupported,
+        permission: state.permission,
+        isSubscribed: state.isSubscribed,
+        isProcessing: state.isProcessing,
+        error: state.error,
+      },
+      configStatus,
+      configError,
+      isServerConfigured,
+      hasApplicationServerKey: Boolean(applicationServerKey),
+      location,
+      sessionTelegramId: session?.user?.telegramId ?? null,
+      abortControllerPending: Boolean(abortControllerRef.current),
+    }
+
+    const previous = window.__aqPushDebug || {}
+
+    const api = {
+      ...previous,
+      enabled:
+        typeof previous.enabled === 'boolean'
+          ? previous.enabled
+          : resolveDebugPreference(),
+      enable(value = true) {
+        this.enabled = Boolean(value)
+        try {
+          if (this.enabled) {
+            window.localStorage?.setItem(DEBUG_STORAGE_KEY, '1')
+          } else {
+            window.localStorage?.setItem(DEBUG_STORAGE_KEY, '0')
+          }
+        } catch (error) {
+          console.warn(`${DEBUG_NAMESPACE} Не удалось сохранить настройку`, error)
+        }
+        const status = this.enabled ? 'включены' : 'отключены'
+        console.info(`${DEBUG_NAMESPACE} Подробные логи ${status}`)
+        return this.enabled
+      },
+      disable() {
+        return this.enable(false)
+      },
+      toggle() {
+        return this.enable(!this.enabled)
+      },
+      getSnapshot() {
+        return {
+          ...snapshot,
+          state: { ...snapshot.state },
+        }
+      },
+      logSnapshot() {
+        const nextSnapshot = this.getSnapshot()
+        console.groupCollapsed(`${DEBUG_NAMESPACE} snapshot`, new Date().toISOString())
+        console.table(nextSnapshot.state)
+        console.log({
+          configStatus: nextSnapshot.configStatus,
+          configError: nextSnapshot.configError,
+          isServerConfigured: nextSnapshot.isServerConfigured,
+          hasApplicationServerKey: nextSnapshot.hasApplicationServerKey,
+          location: nextSnapshot.location,
+          sessionTelegramId: nextSnapshot.sessionTelegramId,
+          abortControllerPending: nextSnapshot.abortControllerPending,
+        })
+        console.groupEnd()
+        return nextSnapshot
+      },
+      abortPending() {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+          return true
+        }
+        return false
+      },
+    }
+
+    window.__aqPushDebug = api
+    debugLogRef.current = createDebugLogger()
+  }, [
+    applicationServerKey,
+    configError,
+    configStatus,
+    isServerConfigured,
+    location,
+    session,
+    state,
+  ])
 
   return {
     ...state,
