@@ -1,7 +1,9 @@
+console.log('process.env.NODE_ENV :>> ', process.env.NODE_ENV)
 export const LOCATIONS = {
   dev: {
     townRu: 'тестовый город',
     roditPadeg: 'тестового города',
+    botName: 'ActQuest_dev_bot',
     // location: 'https://половинкауспеха.рф',
     // short: 'krsk',
     // imageFolder: 'polovinka_uspeha_dev',
@@ -14,11 +16,12 @@ export const LOCATIONS = {
       // 'Дрокино',
       // 'Емельяново',
     ],
-    hidden: false,
+    hidden: process.env.NODE_ENV !== 'development',
   },
   krsk: {
     townRu: 'красноярск',
     roditPadeg: 'красноярского',
+    botName: 'ActQuest_krsk_bot',
     // location: 'https://половинкауспеха.рф',
     // short: 'krsk',
     // imageFolder: 'polovinka_uspeha',
@@ -36,6 +39,7 @@ export const LOCATIONS = {
   nrsk: {
     townRu: 'норильск',
     roditPadeg: 'норильского',
+    botName: 'ActQuest_nrsk_bot',
     // location: 'https://nrsk.половинкауспеха.рф',
     // short: 'nrsk',
     // imageFolder: 'polovinka_uspeha_nrsk',
@@ -46,6 +50,7 @@ export const LOCATIONS = {
   ekb: {
     townRu: 'екатеринбург',
     roditPadeg: 'екатеринбуржского',
+    botName: 'ActQuest_ekb_bot',
     // location: 'https://nrsk.половинкауспеха.рф',
     // short: 'nrsk',
     // imageFolder: 'polovinka_uspeha_ekb',

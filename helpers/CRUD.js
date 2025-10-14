@@ -1,5 +1,65 @@
 const contentType = 'application/json'
 
+let ensureIpv4FirstPromise
+
+const ensureIpv4First = async () => {
+  if (typeof window !== 'undefined') return
+
+  if (!ensureIpv4FirstPromise) {
+    ensureIpv4FirstPromise = (async () => {
+      const nodeRequire = (() => {
+        try {
+          if (typeof require === 'function') return require
+        } catch (error) {
+          // ignore and fall back to eval below
+        }
+
+        return eval('require')
+      })()
+
+      if (typeof nodeRequire !== 'function') {
+        console.warn('IPv4 helper: unable to access require to set DNS preference.')
+        return
+      }
+
+      let dns
+
+      try {
+        dns = nodeRequire('dns')
+      } catch (error) {
+        console.warn('IPv4 helper: failed to load dns module, cannot set IPv4 preference.', error)
+        return
+      }
+
+      try {
+        if (typeof dns.setDefaultResultOrder === 'function') {
+          dns.setDefaultResultOrder('ipv4first')
+          return
+        }
+
+        const setDefaultResultOrder = dns.promises?.setDefaultResultOrder
+        if (typeof setDefaultResultOrder === 'function') {
+          setDefaultResultOrder.call(dns.promises, 'ipv4first')
+        } else if (dns.lookup) {
+          const originalLookup = dns.lookup
+          dns.lookup = (...args) => {
+            if (typeof args[1] === 'function') {
+              return originalLookup.call(dns, args[0], { family: 4, all: false }, args[1])
+            }
+
+            const options = { ...(args[1] || {}), family: 4, all: false }
+            return originalLookup.call(dns, args[0], options, args[2])
+          }
+        }
+      } catch (error) {
+        console.warn('IPv4 helper: failed to enforce IPv4 DNS preference.', error)
+      }
+    })()
+  }
+
+  return ensureIpv4FirstPromise
+}
+
 export const getData = async (
   url,
   form,
@@ -15,12 +75,14 @@ export const getData = async (
   const actualUrl = url + (getArray.length > 0 ? '?' + getArray.join('&') : '')
   console.log('actualUrl :>> ', actualUrl)
   try {
+    await ensureIpv4First()
     const res = await fetch(actualUrl, {
       method: 'GET',
       headers: {
         Accept: contentType,
         'Content-Type': contentType,
       },
+      ...(connectionOptions ?? {}),
     })
     console.log('res :>> ', res)
     // Throw error with status code in case Fetch API req failed
@@ -49,6 +111,7 @@ export const putData = async (
   callbackOnError = null
 ) => {
   try {
+    await ensureIpv4First()
     const res = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -56,6 +119,7 @@ export const putData = async (
         'Content-Type': contentType,
       },
       body: JSON.stringify(form),
+      ...(connectionOptions ?? {}),
     })
 
     // Throw error with status code in case Fetch API req failed
@@ -86,6 +150,7 @@ export const postData = async (
 ) => {
   try {
     const body = JSON.stringify(form)
+    await ensureIpv4First()
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -93,6 +158,7 @@ export const postData = async (
         'Content-Type': contentType,
       },
       body,
+      ...(connectionOptions ?? {}),
     })
 
     // Throw error with status code in case Fetch API req failed
@@ -123,6 +189,7 @@ export const deleteData = async (
   params = {}
 ) => {
   try {
+    await ensureIpv4First()
     const res = await fetch(url, {
       method: 'DELETE',
       headers: {
@@ -130,6 +197,7 @@ export const deleteData = async (
         'Content-Type': contentType,
       },
       body: JSON.stringify({ params }),
+      ...(connectionOptions ?? {}),
       // body: dontAddUserId
       //   ? JSON.stringify(form)
       //   : JSON.stringify({ data: form, userId }),

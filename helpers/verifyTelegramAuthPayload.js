@@ -12,7 +12,9 @@ const verifyTelegramAuthPayload = (payload, botToken) => {
   if (!payload || typeof payload !== 'object') return false
   if (!botToken) return false
 
-  const { hash, auth_date: authDate, ...rest } = payload
+  const { hash, ...rest } = payload
+
+  const authDate = payload?.auth_date
 
   if (!hash || !authDate) return false
 

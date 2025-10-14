@@ -11,6 +11,10 @@ const cluesSettings = async ({ telegramId, jsonCommand, location, db }) => {
 
   const cluesDuration = game.cluesDuration ?? 0
   const penalty = game.clueEarlyPenalty ?? 0
+  const allowCaptainForceClue = game.allowCaptainForceClue !== false
+  const allowCaptainFailTask = game.allowCaptainFailTask !== false
+  const clueEarlyMode =
+    game.clueEarlyAccessMode === 'penalty' ? 'penalty' : 'time'
 
   const cluesDurationText =
     cluesDuration <= 0
@@ -18,12 +22,23 @@ const cluesSettings = async ({ telegramId, jsonCommand, location, db }) => {
       : `<b>Время до подсказки</b>: ${secondsToTimeStr(cluesDuration)}`
 
   const penaltyText =
-    penalty > 0
-      ? `<b>Штраф за досрочную подсказку</b>: ${secondsToTimeStr(penalty)}`
-      : '<b>Штраф за досрочную подсказку</b>: отсутствует'
+    clueEarlyMode === 'penalty'
+      ? penalty > 0
+        ? `<b>Штраф за досрочную подсказку</b>: ${secondsToTimeStr(penalty)}`
+        : '<b>Штраф за досрочную подсказку</b>: отсутствует'
+      : '<b>Штраф за досрочную подсказку</b>: не используется'
+
+  const modeText =
+    clueEarlyMode === 'penalty'
+      ? '<b>Способ досрочной подсказки</b>: штраф организатора'
+      : '<b>Способ досрочной подсказки</b>: добавляется оставшееся время до подсказки'
 
   return {
-    message: `<b>Настройки подсказок</b>\n\n${cluesDurationText}\n${penaltyText}`,
+    message: `<b>Настройки подсказок</b>\n\n${cluesDurationText}\n${penaltyText}\n${modeText}\n<b>Досрочная подсказка капитану</b>: ${
+      allowCaptainForceClue ? 'разрешена' : 'запрещена'
+    }\n<b>Слив задания капитаном</b>: ${
+      allowCaptainFailTask ? 'разрешен' : 'запрещен'
+    }`,
     buttons: [
       [
         {
@@ -33,8 +48,15 @@ const cluesSettings = async ({ telegramId, jsonCommand, location, db }) => {
       ],
       [
         {
+          c: { c: 'setCluesEarlyMode', gameId: jsonCommand.gameId },
+          text: '\u{2699}\u{FE0F} Способ досрочной подсказки',
+        },
+      ],
+      [
+        {
           c: { c: 'setCluesPenalty', gameId: jsonCommand.gameId },
           text: '\u{270F} Штраф за досрочную подсказку',
+          hide: game.clueEarlyAccessMode === 'time',
         },
       ],
       [

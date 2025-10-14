@@ -10,6 +10,13 @@ class MyDocument extends Document {
     return (
       <Html className="scroll-smooth">
         <Head>
+          <meta name="application-name" content="ActQuest" />
+          <meta name="theme-color" content="#111827" />
+          <meta name="mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+          <link rel="manifest" href="/manifest.json" />
+          <link rel="apple-touch-icon" href="/icons/pwa-icon-192.png" />
           <link
             rel="stylesheet"
             href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"

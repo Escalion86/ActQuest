@@ -53,6 +53,18 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user, db }) => {
     url: `t.me/+${user.phone}`,
   }))
 
+  const tasksTitlesMap = new Map(
+    (game?.tasks ?? [])
+      .filter(({ _id }) => _id)
+      .map(({ _id, title }) => [String(_id), title])
+  )
+
+  const formatAddingName = ({ name, taskId }) => {
+    if (!taskId) return name
+    const taskTitle = tasksTitlesMap.get(String(taskId))
+    return taskTitle ? `${name} (${taskTitle})` : name
+  }
+
   return {
     message: `<b>Игра ${formatGameName(game)}\n\nКоманда "${
       team?.name
@@ -65,10 +77,13 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user, db }) => {
       )
       .join('\n')}\n\n<b>Текущие бонусы/штрафы:</b>${
       gameTeam?.timeAddings && gameTeam.timeAddings.length > 0
-        ? gameTeam.timeAddings.map(({ name, time }) => {
+        ? gameTeam.timeAddings.map((adding) => {
+            const { name, time } = adding
             return `\n${
               time < 0 ? `\u{1F7E2}` : `\u{1F534}`
-            } ${secondsToTimeStr(Math.abs(time), true)} - ${name}`
+            } ${secondsToTimeStr(Math.abs(time), true)} - ${formatAddingName(
+              adding
+            )}`
           })
         : ' отсутвуют'
     }\n\n<b>Суммарно оплачено командой</b>: ${paymentsOfUsers.reduce(
