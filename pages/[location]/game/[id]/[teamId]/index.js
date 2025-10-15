@@ -3,13 +3,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { getSession, signOut, useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
+import { getServerSession } from 'next-auth/next'
 
 import fetchGame from '@server/fetchGame'
 import fetchTeam from '@server/fetchTeam'
 import webGameProcess from '@server/webGameProcess'
 import dbConnect from '@utils/dbConnect'
 import taskText from 'telegram/func/taskText'
+
+import { authOptions } from '@pages/api/auth/[...nextauth]'
 
 const ensureDateValue = (value) => {
   if (!value) return null
@@ -676,7 +679,7 @@ GameTeamPage.defaultProps = {
 export default GameTeamPage
 
 export const getServerSideProps = async (context) => {
-  const { params, req, resolvedUrl, query } = context
+  const { params, req, res, resolvedUrl, query } = context
   const locationParam = params?.location
   const gameIdParam = params?.id
   const teamIdParam = params?.teamId
@@ -689,7 +692,7 @@ export const getServerSideProps = async (context) => {
     return { notFound: true }
   }
 
-  const session = await getSession({ req })
+  const session = await getServerSession(req, res, authOptions)
 
   if (!session) {
     const callbackUrl = resolvedUrl?.startsWith('/')
@@ -754,13 +757,17 @@ export const getServerSideProps = async (context) => {
     const telegramId = session?.user?.telegramId
     const telegramIdStr = telegramId ? String(telegramId) : null
 
-    let currentTeamUser = null
+    const teamUsers = await teamsUsersModel
+      .find({ teamId: teamIdParam })
+      .lean()
 
-    if (telegramIdStr) {
-      currentTeamUser = await teamsUsersModel
-        .findOne({ teamId: teamIdParam, userTelegramId: telegramIdStr })
-        .lean()
-    }
+    const currentTeamUser = telegramIdStr
+      ? teamUsers.find(
+          (teamUser) =>
+            teamUser &&
+            String(teamUser.userTelegramId ?? '') === telegramIdStr
+        )
+      : null
 
     if (!currentTeamUser) {
       return {
