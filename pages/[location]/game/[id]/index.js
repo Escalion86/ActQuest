@@ -50,6 +50,8 @@ function GameEntryPage({
   const { data: session } = useSession()
   const router = useRouter()
 
+  console.log('session :>> ', session)
+
   const [theme, setTheme] = useState('light')
   const [isClient, setIsClient] = useState(false)
 
@@ -68,7 +70,9 @@ function GameEntryPage({
       return
     }
 
-    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    const prefersDark = window.matchMedia?.(
+      '(prefers-color-scheme: dark)'
+    ).matches
     setTheme(prefersDark ? 'dark' : 'light')
   }, [isClient])
 
@@ -89,7 +93,10 @@ function GameEntryPage({
     router.push('/')
   }
 
-  const plannedStart = useMemo(() => formatDateTime(game?.dateStart), [game?.dateStart])
+  const plannedStart = useMemo(
+    () => formatDateTime(game?.dateStart),
+    [game?.dateStart]
+  )
   const actualStart = useMemo(
     () => formatDateTime(game?.dateStartFact),
     [game?.dateStartFact]
@@ -112,7 +119,9 @@ function GameEntryPage({
   return (
     <>
       <Head>
-        <title>{`ActQuest — ${game?.name ? `Игра «${game.name}»` : 'Игра'}`}</title>
+        <title>{`ActQuest — ${
+          game?.name ? `Игра «${game.name}»` : 'Игра'
+        }`}</title>
       </Head>
       <div className="min-h-screen bg-[#F5F6F8] pb-16 transition-colors dark:bg-slate-950 dark:text-slate-100">
         <header className="transition-colors bg-white border-b border-gray-200 dark:border-slate-800 dark:bg-slate-900">
@@ -167,7 +176,10 @@ function GameEntryPage({
                   </span>
                 </div>
                 <div className="text-sm text-gray-500 dark:text-slate-400">
-                  Локация: <span className="font-medium text-gray-700 dark:text-slate-200">{location}</span>
+                  Локация:{' '}
+                  <span className="font-medium text-gray-700 dark:text-slate-200">
+                    {location}
+                  </span>
                 </div>
                 {descriptionParts.length > 0 ? (
                   <div className="flex flex-col gap-2 text-base leading-relaxed text-gray-700 dark:text-slate-200">
@@ -179,7 +191,7 @@ function GameEntryPage({
                 <div className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2 dark:text-slate-300">
                   {plannedStart ? (
                     <div className="flex flex-col">
-                      <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                      <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
                         Планируемый старт
                       </span>
                       <span className="font-medium text-gray-800 dark:text-slate-100">
@@ -189,7 +201,7 @@ function GameEntryPage({
                   ) : null}
                   {actualStart ? (
                     <div className="flex flex-col">
-                      <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                      <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
                         Фактический старт
                       </span>
                       <span className="font-medium text-gray-800 dark:text-slate-100">
@@ -199,7 +211,7 @@ function GameEntryPage({
                   ) : null}
                   {actualFinish ? (
                     <div className="flex flex-col">
-                      <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                      <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
                         Фактическое завершение
                       </span>
                       <span className="font-medium text-gray-800 dark:text-slate-100">
@@ -209,7 +221,7 @@ function GameEntryPage({
                   ) : null}
                   {game?.startingPlace ? (
                     <div className="flex flex-col">
-                      <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                      <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
                         Место старта
                       </span>
                       <span className="font-medium text-gray-800 dark:text-slate-100">
@@ -219,7 +231,7 @@ function GameEntryPage({
                   ) : null}
                   {game?.finishingPlace ? (
                     <div className="flex flex-col">
-                      <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                      <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
                         Место финиша
                       </span>
                       <span className="font-medium text-gray-800 dark:text-slate-100">
@@ -244,7 +256,8 @@ function GameEntryPage({
                     Игра ещё не началась
                   </h2>
                   <p className="mt-2 text-sm text-yellow-800 dark:text-amber-100">
-                    Мы сообщим, когда организаторы запустят игру. Пока вы не можете перейти к заданиям.
+                    Мы сообщим, когда организаторы запустят игру. Пока вы не
+                    можете перейти к заданиям.
                   </p>
                 </div>
               ) : null}
@@ -255,7 +268,8 @@ function GameEntryPage({
                     Игра завершена
                   </h2>
                   <p className="mt-2 text-sm text-emerald-800 dark:text-emerald-100">
-                    Организаторы остановили игру. Вы можете посмотреть результаты или перейти в карточку своей команды ниже.
+                    Организаторы остановили игру. Вы можете посмотреть
+                    результаты или перейти в карточку своей команды ниже.
                   </p>
                 </div>
               ) : null}
@@ -266,7 +280,9 @@ function GameEntryPage({
                     Вы не участвуете в этой игре
                   </h2>
                   <p className="mt-2 text-sm text-red-800 dark:text-red-100">
-                    Судя по нашим данным, вас нет ни в одной команде, зарегистрированной на игру. Если это ошибка, свяжитесь с организатором.
+                    Судя по нашим данным, вас нет ни в одной команде,
+                    зарегистрированной на игру. Если это ошибка, свяжитесь с
+                    организатором.
                   </p>
                 </div>
               ) : null}
@@ -287,7 +303,7 @@ function GameEntryPage({
                         </div>
                         <Link
                           href={`/${location}/game/${game?._id}/${team.id}`}
-                          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white transition rounded-xl bg-blue-600 hover:bg-blue-700"
+                          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white transition bg-blue-600 rounded-xl hover:bg-blue-700"
                         >
                           Перейти к заданиям
                         </Link>
@@ -324,7 +340,9 @@ export const getServerSideProps = async (context) => {
 
     return {
       redirect: {
-        destination: `/api/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        destination: `/api/auth/signin?callbackUrl=${encodeURIComponent(
+          callbackUrl
+        )}`,
         permanent: false,
       },
     }
