@@ -1160,16 +1160,25 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
             taskDuration,
             timeAddings,
             visibleCluesCount,
+            includeActionPrompt: false,
           })
         : null
+
+      const shouldIncludePrompt = !isTaskComplite
+      const promptMessage = shouldIncludePrompt
+        ? `<b>${game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'}</b>`
+        : null
+
+      const messages = [statusMessage]
+      if (followUpTaskMessage) messages.push(followUpTaskMessage)
+      if (promptMessage) messages.push(promptMessage)
 
       return {
         images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
         message: statusMessage,
         followUpMessage: followUpTaskMessage,
-        messages: followUpTaskMessage
-          ? [statusMessage, followUpTaskMessage]
-          : [statusMessage],
+        promptMessage,
+        messages,
         buttons: isTaskComplite
           ? undefined
           : buildTaskButtons(visibleCluesCount),
@@ -1185,7 +1194,10 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
         wrongCodes: newAllWrongCodes,
       })
-      const statusMessage = 'Код не верен. Введите код'
+      const statusMessage = 'Код не верен.'
+      const promptMessage = `<b>${
+        game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'
+      }</b>`
       const followUpTaskMessage = taskText({
         game,
         taskNum,
@@ -1197,12 +1209,18 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         taskDuration,
         timeAddings,
         visibleCluesCount,
+        includeActionPrompt: false,
       })
 
       return {
         message: statusMessage,
         followUpMessage: followUpTaskMessage,
-        messages: [statusMessage, followUpTaskMessage],
+        promptMessage,
+        messages: [
+          statusMessage,
+          followUpTaskMessage,
+          promptMessage,
+        ].filter(Boolean),
       }
     }
   }

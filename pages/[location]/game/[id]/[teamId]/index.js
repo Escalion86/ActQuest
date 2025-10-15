@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -44,6 +44,18 @@ const normalizeForComparison = (value) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+const formatCountdownSeconds = (totalSeconds) => {
+  if (!Number.isFinite(totalSeconds)) return '00:00:00'
+
+  const safeSeconds = Math.max(totalSeconds, 0)
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+  const seconds = safeSeconds % 60
+  const pad = (num) => String(num).padStart(2, '0')
+
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+}
+
 function GameTeamPage({
   location,
   game,
@@ -66,6 +78,9 @@ function GameTeamPage({
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
+  const taskContentRef = useRef(null)
+  const countdownElementsRef = useRef([])
+  const refreshRequestedRef = useRef(false)
 
   const resolvedSession = session ?? initialSession
 
@@ -103,6 +118,10 @@ function GameTeamPage({
     if (!router.isReady) return
     setAnswer('')
   }, [router.asPath, router.isReady])
+
+  useEffect(() => {
+    refreshRequestedRef.current = false
+  }, [taskHtml])
 
   useEffect(() => {
     if (!isClient) return
@@ -154,26 +173,38 @@ function GameTeamPage({
   const actualStart = useMemo(() => formatDateTime(game?.dateStartFact), [game?.dateStartFact])
   const actualFinish = useMemo(() => formatDateTime(game?.dateEndFact), [game?.dateEndFact])
 
-  const formattedResultMessage = useMemo(
-    () => transformHtml(result?.message ?? ''),
-    [result?.message]
+  const formattedTaskMessage = useMemo(() => transformHtml(taskHtml ?? ''), [taskHtml])
+  const normalizedTaskMessage = useMemo(
+    () => normalizeForComparison(taskHtml),
+    [taskHtml]
   )
 
-  const formattedTaskMessage = useMemo(() => transformHtml(taskHtml ?? ''), [taskHtml])
-  const shouldShowLastMessage = useMemo(() => {
-    if (!formattedResultMessage) {
-      return false
-    }
+  const resultMessages = useMemo(() => {
+    if (!result) return []
 
-    const normalizedTaskMessage = normalizeForComparison(taskHtml)
-    const normalizedResultMessage = normalizeForComparison(result?.message)
+    const rawMessages = Array.isArray(result.messages) && result.messages.length > 0
+      ? result.messages
+      : [result.message].filter(Boolean)
 
-    if (normalizedTaskMessage && normalizedTaskMessage === normalizedResultMessage) {
-      return false
-    }
+    if (rawMessages.length === 0) return []
 
-    return true
-  }, [formattedResultMessage, result?.message, taskHtml])
+    const seen = new Set()
+
+    const filtered = rawMessages.filter((message) => {
+      const normalized = normalizeForComparison(message)
+      if (!normalized) return false
+      if (normalizedTaskMessage && normalized === normalizedTaskMessage) {
+        return false
+      }
+      if (seen.has(normalized)) return false
+      seen.add(normalized)
+      return true
+    })
+
+    return filtered.map((message) => transformHtml(message))
+  }, [normalizedTaskMessage, result])
+
+  const shouldShowLastMessage = resultMessages.length > 0
   const statusNotice = useMemo(() => {
     if (error) return null
     if (!isGameStarted && status === 'active') {
@@ -184,6 +215,85 @@ function GameTeamPage({
     }
     return null
   }, [error, isGameFinished, isGameStarted, status])
+
+  useEffect(() => {
+    if (!isClient) return
+
+    const container = taskContentRef.current
+    if (!container) {
+      countdownElementsRef.current = []
+      return
+    }
+
+    const elements = Array.from(
+      container.querySelectorAll('[data-task-countdown]')
+    ).map((element) => {
+      const targetAttr = element.getAttribute('data-target')
+      const secondsAttr = element.getAttribute('data-seconds')
+      const refreshAttr = element.getAttribute('data-refresh-on-complete')
+      const target = Number(targetAttr)
+      const seconds = Number(secondsAttr)
+
+      return {
+        element,
+        target: Number.isFinite(target) ? target : null,
+        initialSeconds: Number.isFinite(seconds) ? seconds : null,
+        refreshOnComplete: refreshAttr === 'true' || refreshAttr === '1',
+        startTimestamp: Date.now(),
+      }
+    })
+
+    countdownElementsRef.current = elements
+  }, [formattedTaskMessage, isClient])
+
+  useEffect(() => {
+    if (!isClient) return
+    if (countdownElementsRef.current.length === 0) return
+
+    const updateCountdowns = () => {
+      const now = Date.now()
+
+      countdownElementsRef.current = countdownElementsRef.current.map((item) => {
+        const { element, target, initialSeconds, startTimestamp } = item
+        let remainingMs = null
+
+        if (Number.isFinite(target)) {
+          remainingMs = target - now
+        } else if (Number.isFinite(initialSeconds)) {
+          const base = Number.isFinite(startTimestamp) ? startTimestamp : now
+          remainingMs = initialSeconds * 1000 - (now - base)
+        }
+
+        const remainingSeconds = Math.max(
+          Math.ceil((remainingMs ?? 0) / 1000),
+          0
+        )
+
+        element.textContent = formatCountdownSeconds(remainingSeconds)
+
+        if (
+          item.refreshOnComplete &&
+          remainingSeconds <= 0 &&
+          !refreshRequestedRef.current
+        ) {
+          refreshRequestedRef.current = true
+          void router.replace(router.asPath, undefined, { scroll: false })
+        }
+
+        return {
+          ...item,
+          startTimestamp: Number.isFinite(startTimestamp) ? startTimestamp : now,
+        }
+      })
+    }
+
+    updateCountdowns()
+    const intervalId = window.setInterval(updateCountdowns, 1000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [formattedTaskMessage, isClient, router])
 
   return (
     <>
@@ -340,6 +450,7 @@ function GameTeamPage({
                 <h2 className="text-lg font-semibold text-primary dark:text-white">Текущее задание</h2>
                 <div
                   className="mt-4 text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200"
+                  ref={taskContentRef}
                   dangerouslySetInnerHTML={{ __html: formattedTaskMessage }}
                 />
               </section>
@@ -347,11 +458,16 @@ function GameTeamPage({
 
             {shouldShowLastMessage ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-                <h2 className="text-lg font-semibold text-primary dark:text-white">Последнее сообщение</h2>
-                <div
-                  className="mt-4 text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200"
-                  dangerouslySetInnerHTML={{ __html: formattedResultMessage }}
-                />
+                <h2 className="text-lg font-semibold text-primary dark:text-white">Последние сообщения</h2>
+                <div className="flex flex-col mt-4 gap-4">
+                  {resultMessages.map((html, index) => (
+                    <div
+                      key={`result-message-${index}`}
+                      className="text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200"
+                      dangerouslySetInnerHTML={{ __html: html }}
+                    />
+                  ))}
+                </div>
               </section>
             ) : null}
 
@@ -424,6 +540,7 @@ GameTeamPage.propTypes = {
     message: PropTypes.string,
     images: PropTypes.arrayOf(PropTypes.string),
     followUpMessage: PropTypes.string,
+    promptMessage: PropTypes.string,
     messages: PropTypes.arrayOf(PropTypes.string),
   }),
   taskHtml: PropTypes.string,
@@ -628,6 +745,8 @@ export const getServerSideProps = async (context) => {
         photos: effectiveGameTeam.photos,
         timeAddings: effectiveGameTeam.timeAddings,
         visibleCluesCount,
+        includeActionPrompt: false,
+        format: 'web',
       })
     }
 
