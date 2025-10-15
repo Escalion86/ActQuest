@@ -1,4 +1,6 @@
-const normalizePublicKey = (value) => {
+const { ensureWebPushConfigured } = require('../../../../server/pwaNotifications')
+
+const normalizeString = (value) => {
   if (!value || typeof value !== 'string') {
     return null
   }
@@ -14,16 +16,40 @@ export default function handler(req, res) {
     return res.status(405).json({ success: false, error: 'Метод не поддерживается.' })
   }
 
-  const publicKey =
-    normalizePublicKey(process.env.WEB_PUSH_PUBLIC_KEY) ||
-    normalizePublicKey(process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY)
+  const config = ensureWebPushConfigured()
 
-  const privateKey = normalizePublicKey(process.env.WEB_PUSH_PRIVATE_KEY)
-  const contact = normalizePublicKey(process.env.WEB_PUSH_CONTACT)
+  const configPublicKey = normalizeString(config?.publicKey)
+  const publicKey =
+    configPublicKey ||
+    normalizeString(process.env.WEB_PUSH_PUBLIC_KEY) ||
+    normalizeString(process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY)
+
+  const privateKey =
+    typeof config?.hasPrivateKey === 'boolean'
+      ? config.hasPrivateKey
+      : Boolean(normalizeString(process.env.WEB_PUSH_PRIVATE_KEY))
+
+  const contactValue =
+    normalizeString(process.env.WEB_PUSH_CONTACT) ||
+    normalizeString(process.env.WEB_PUSH_CONTACT_EMAIL) ||
+    normalizeString(config?.subject)
+
+  const moduleAvailable = config?.reason !== 'MODULE_UNAVAILABLE'
+
+  const isConfigured = Boolean(
+    config?.isReady || (publicKey && privateKey && contactValue && moduleAvailable)
+  )
 
   return res.status(200).json({
     success: true,
     publicKey,
-    isConfigured: Boolean(publicKey && privateKey && contact),
+    isConfigured,
+    reason: config?.isReady ? null : config?.reason || null,
+    details: {
+      hasPublicKey: Boolean(publicKey),
+      hasPrivateKey: Boolean(privateKey),
+      hasContact: Boolean(contactValue),
+      moduleAvailable,
+    },
   })
 }
