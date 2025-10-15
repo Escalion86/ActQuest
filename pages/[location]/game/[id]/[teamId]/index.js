@@ -437,9 +437,37 @@ function GameTeamPage({
                   <button
                     type="button"
                     onClick={handleGameInfoToggle}
-                    className="self-start px-4 py-2 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                    className="self-start flex items-center justify-center p-2 text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                    aria-label={
+                      isGameInfoCollapsed
+                        ? 'Развернуть информацию об игре'
+                        : 'Свернуть информацию об игре'
+                    }
+                    title={
+                      isGameInfoCollapsed
+                        ? 'Развернуть информацию об игре'
+                        : 'Свернуть информацию об игре'
+                    }
                   >
-                    {isGameInfoCollapsed ? 'Развернуть' : 'Свернуть'}
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d={isGameInfoCollapsed ? 'M6 9l6 6 6-6' : 'M6 15l6-6 6 6'}
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span className="sr-only">
+                      {isGameInfoCollapsed
+                        ? 'Развернуть информацию об игре'
+                        : 'Свернуть информацию об игре'}
+                    </span>
                   </button>
                 </div>
                 {!isGameInfoCollapsed ? (
@@ -478,7 +506,7 @@ function GameTeamPage({
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
                 <h2 className="text-lg font-semibold text-primary dark:text-white">Текущее задание</h2>
                 <div
-                  className="mt-4 text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200"
+                  className="mt-4 text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200 aq-task-content"
                   ref={taskContentRef}
                   dangerouslySetInnerHTML={{ __html: formattedTaskMessage }}
                 />
@@ -492,7 +520,7 @@ function GameTeamPage({
                   {resultMessages.map((html, index) => (
                     <div
                       key={`result-message-${index}`}
-                      className="text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200"
+                      className="text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200 aq-task-content"
                       dangerouslySetInnerHTML={{ __html: html }}
                     />
                   ))}
@@ -547,6 +575,29 @@ function GameTeamPage({
           </div>
         </main>
       </div>
+      <style jsx global>{`
+        .aq-task-content a {
+          color: #2563eb;
+          text-decoration: underline;
+          text-decoration-thickness: 2px;
+          text-underline-offset: 3px;
+          transition: color 0.2s ease-in-out;
+        }
+
+        .aq-task-content a:hover,
+        .aq-task-content a:focus-visible {
+          color: #1d4ed8;
+        }
+
+        .dark .aq-task-content a {
+          color: #60a5fa;
+        }
+
+        .dark .aq-task-content a:hover,
+        .dark .aq-task-content a:focus-visible {
+          color: #bfdbfe;
+        }
+      `}</style>
     </>
   )
 }
