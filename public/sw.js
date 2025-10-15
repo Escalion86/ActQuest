@@ -1,4 +1,4 @@
-const CACHE_NAME = 'actquest-cache-v2'
+const CACHE_NAME = 'actquest-cache-v3'
 const PRECACHE_URLS = [
   '/',
   '/favicon.ico',
@@ -36,6 +36,9 @@ self.addEventListener('fetch', (event) => {
   const isSameOrigin = requestURL.origin === self.location.origin
   const isAuthRequest = requestURL.pathname.startsWith('/api/auth/')
   const isApiRequest = requestURL.pathname.startsWith('/api/')
+  const acceptHeader = request.headers.get('accept') || ''
+  const isHtmlRequest =
+    request.mode === 'navigate' || acceptHeader.includes('text/html')
   const cacheControl = request.headers.get('cache-control') || ''
   const shouldBypassCacheControl =
     cacheControl.includes('no-store') || request.cache === 'no-store'
@@ -48,6 +51,21 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  if (isHtmlRequest) {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            return networkResponse
+          }
+
+          return caches.match(request)
+        })
+        .catch(() => caches.match(request))
+    )
+    return
+  }
+
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -57,9 +75,14 @@ self.addEventListener('fetch', (event) => {
       return fetch(request)
         .then((networkResponse) => {
           const shouldCache =
-            networkResponse && networkResponse.status === 200 && isSameOrigin
+            networkResponse &&
+            networkResponse.status === 200 &&
+            isSameOrigin
+          const responseContentType =
+            networkResponse.headers.get('content-type') || ''
+          const isHtmlResponse = responseContentType.includes('text/html')
 
-          if (shouldCache) {
+          if (shouldCache && !isHtmlResponse) {
             const responseToCache = networkResponse.clone()
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, responseToCache)
