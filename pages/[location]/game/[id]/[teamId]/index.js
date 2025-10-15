@@ -36,6 +36,14 @@ const transformHtml = (value) => {
   return value.replace(/\n/g, '<br />')
 }
 
+const normalizeForComparison = (value) =>
+  (value || '')
+    .replace(/<br\s*\/?>(\s|\u00a0)*/gi, '\n')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\r?\n/g, '\n')
+    .replace(/\s+/g, ' ')
+    .trim()
+
 function GameTeamPage({
   location,
   game,
@@ -57,8 +65,14 @@ function GameTeamPage({
   const [isClient, setIsClient] = useState(false)
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
 
   const resolvedSession = session ?? initialSession
+
+  const collapseStorageKey = useMemo(
+    () => `aq-game-info-collapsed-${gameId}-${teamId}`,
+    [gameId, teamId]
+  )
 
   useEffect(() => {
     setIsClient(true)
@@ -90,8 +104,29 @@ function GameTeamPage({
     setAnswer('')
   }, [router.asPath, router.isReady])
 
+  useEffect(() => {
+    if (!isClient) return
+
+    const storedValue = window.localStorage.getItem(collapseStorageKey)
+    setIsGameInfoCollapsed(storedValue === 'true')
+  }, [collapseStorageKey, isClient])
+
   const handleThemeToggle = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  }
+
+  const handleGameInfoToggle = () => {
+    setIsGameInfoCollapsed((prev) => {
+      const nextValue = !prev
+      if (isClient) {
+        if (nextValue) {
+          window.localStorage.setItem(collapseStorageKey, 'true')
+        } else {
+          window.localStorage.removeItem(collapseStorageKey)
+        }
+      }
+      return nextValue
+    })
   }
 
   const handleSignOut = async () => {
@@ -125,6 +160,20 @@ function GameTeamPage({
   )
 
   const formattedTaskMessage = useMemo(() => transformHtml(taskHtml ?? ''), [taskHtml])
+  const shouldShowLastMessage = useMemo(() => {
+    if (!formattedResultMessage) {
+      return false
+    }
+
+    const normalizedTaskMessage = normalizeForComparison(taskHtml)
+    const normalizedResultMessage = normalizeForComparison(result?.message)
+
+    if (normalizedTaskMessage && normalizedTaskMessage === normalizedResultMessage) {
+      return false
+    }
+
+    return true
+  }, [formattedResultMessage, result?.message, taskHtml])
   const statusNotice = useMemo(() => {
     if (error) return null
     if (!isGameStarted && status === 'active') {
@@ -184,78 +233,93 @@ function GameTeamPage({
         <main className="px-4">
           <div className="flex flex-col w-full max-w-5xl gap-8 mx-auto mt-10">
             <section className="flex flex-col gap-6 p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h1 className="text-2xl font-semibold text-primary dark:text-white">
-                    {game?.name || 'Игра'}
-                  </h1>
-                  <span className="px-3 py-1 text-xs font-semibold text-blue-700 uppercase bg-blue-100 border border-blue-200 rounded-full dark:bg-blue-500/10 dark:border-blue-400/40 dark:text-blue-200">
-                    {statusLabel}
-                  </span>
-                </div>
-                <div className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2 dark:text-slate-300">
-                  <div className="flex flex-col">
-                    <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
-                      Локация
-                    </span>
-                    <span className="font-medium text-gray-800 dark:text-slate-100">
-                      {location}
-                    </span>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                      <h1 className="text-2xl font-semibold text-primary dark:text-white">
+                        {game?.name || 'Игра'}
+                      </h1>
+                      <span className="px-3 py-1 text-xs font-semibold text-blue-700 uppercase bg-blue-100 border border-blue-200 rounded-full dark:bg-blue-500/10 dark:border-blue-400/40 dark:text-blue-200">
+                        {statusLabel}
+                      </span>
+                    </div>
+                    {!isGameInfoCollapsed ? (
+                      <div className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2 dark:text-slate-300">
+                        <div className="flex flex-col">
+                          <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                            Локация
+                          </span>
+                          <span className="font-medium text-gray-800 dark:text-slate-100">
+                            {location}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                            Команда
+                          </span>
+                          <span className="font-medium text-gray-800 dark:text-slate-100">
+                            {team?.name || 'Команда без названия'}
+                          </span>
+                        </div>
+                        {plannedStart ? (
+                          <div className="flex flex-col">
+                            <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                              Планируемый старт
+                            </span>
+                            <span className="font-medium text-gray-800 dark:text-slate-100">
+                              {plannedStart}
+                            </span>
+                          </div>
+                        ) : null}
+                        {actualStart ? (
+                          <div className="flex flex-col">
+                            <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                              Фактический старт
+                            </span>
+                            <span className="font-medium text-gray-800 dark:text-slate-100">
+                              {actualStart}
+                            </span>
+                          </div>
+                        ) : null}
+                        {actualFinish ? (
+                          <div className="flex flex-col">
+                            <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                              Фактическое завершение
+                            </span>
+                            <span className="font-medium text-gray-800 dark:text-slate-100">
+                              {actualFinish}
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
-                      Команда
-                    </span>
-                    <span className="font-medium text-gray-800 dark:text-slate-100">
-                      {team?.name || 'Команда без названия'}
-                    </span>
-                  </div>
-                  {plannedStart ? (
-                    <div className="flex flex-col">
-                      <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
-                        Планируемый старт
-                      </span>
-                      <span className="font-medium text-gray-800 dark:text-slate-100">
-                        {plannedStart}
-                      </span>
-                    </div>
-                  ) : null}
-                  {actualStart ? (
-                    <div className="flex flex-col">
-                      <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
-                        Фактический старт
-                      </span>
-                      <span className="font-medium text-gray-800 dark:text-slate-100">
-                        {actualStart}
-                      </span>
-                    </div>
-                  ) : null}
-                  {actualFinish ? (
-                    <div className="flex flex-col">
-                      <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
-                        Фактическое завершение
-                      </span>
-                      <span className="font-medium text-gray-800 dark:text-slate-100">
-                        {actualFinish}
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex items-center gap-3 pt-2">
-                  <Link
-                    href={`/${location}/game/${gameId}`}
-                    className="text-sm font-semibold text-blue-600 transition hover:underline dark:text-blue-300"
-                  >
-                    Вернуться к игре
-                  </Link>
                   <button
                     type="button"
-                    onClick={() => router.replace(router.asPath)}
-                    className="text-sm font-semibold text-gray-600 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-300"
+                    onClick={handleGameInfoToggle}
+                    className="self-start px-4 py-2 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                   >
-                    Обновить
+                    {isGameInfoCollapsed ? 'Развернуть' : 'Свернуть'}
                   </button>
                 </div>
+                {!isGameInfoCollapsed ? (
+                  <div className="flex items-center gap-3 pt-2">
+                    <Link
+                      href={`/${location}/game/${gameId}`}
+                      className="text-sm font-semibold text-blue-600 transition hover:underline dark:text-blue-300"
+                    >
+                      Вернуться к игре
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => router.replace(router.asPath)}
+                      className="text-sm font-semibold text-gray-600 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-300"
+                    >
+                      Обновить
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </section>
 
@@ -271,22 +335,22 @@ function GameTeamPage({
               </section>
             ) : null}
 
-            {formattedResultMessage ? (
-              <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-                <h2 className="text-lg font-semibold text-primary dark:text-white">Последнее сообщение</h2>
-                <div
-                  className="mt-4 text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200"
-                  dangerouslySetInnerHTML={{ __html: formattedResultMessage }}
-                />
-              </section>
-            ) : null}
-
             {formattedTaskMessage ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
                 <h2 className="text-lg font-semibold text-primary dark:text-white">Текущее задание</h2>
                 <div
                   className="mt-4 text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200"
                   dangerouslySetInnerHTML={{ __html: formattedTaskMessage }}
+                />
+              </section>
+            ) : null}
+
+            {shouldShowLastMessage ? (
+              <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
+                <h2 className="text-lg font-semibold text-primary dark:text-white">Последнее сообщение</h2>
+                <div
+                  className="mt-4 text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200"
+                  dangerouslySetInnerHTML={{ __html: formattedResultMessage }}
                 />
               </section>
             ) : null}
