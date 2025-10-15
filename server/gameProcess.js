@@ -1147,24 +1147,29 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         findedCodes: newAllFindedCodes,
       })
 
+      const statusMessage = `КОД "${code}" ПРИНЯТ`
+      const followUpTaskMessage = !isTaskComplite
+        ? taskText({
+            game,
+            taskNum: newActiveNum,
+            findedCodes: newAllFindedCodes,
+            findedBonusCodes: allFindedBonusCodes,
+            findedPenaltyCodes: allFindedPenaltyCodes,
+            startTaskTime: startTime[newActiveNum],
+            cluesDuration,
+            taskDuration,
+            timeAddings,
+            visibleCluesCount,
+          })
+        : null
+
       return {
         images: isTaskComplite ? game.tasks[newActiveNum]?.images : undefined,
-        message: `КОД "${code}" ПРИНЯТ${
-          !isTaskComplite
-            ? `\n\n${taskText({
-                game,
-                taskNum: newActiveNum,
-                findedCodes: isTaskComplite ? [] : newAllFindedCodes,
-                findedBonusCodes: isTaskComplite ? [] : allFindedBonusCodes,
-                findedPenaltyCodes: isTaskComplite ? [] : allFindedPenaltyCodes,
-                startTaskTime: startTime[newActiveNum],
-                cluesDuration,
-                taskDuration,
-                timeAddings,
-                visibleCluesCount,
-              })}`
-            : ''
-        }`,
+        message: statusMessage,
+        followUpMessage: followUpTaskMessage,
+        messages: followUpTaskMessage
+          ? [statusMessage, followUpTaskMessage]
+          : [statusMessage],
         buttons: isTaskComplite
           ? undefined
           : buildTaskButtons(visibleCluesCount),
@@ -1180,8 +1185,24 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
         wrongCodes: newAllWrongCodes,
       })
+      const statusMessage = 'Код не верен. Введите код'
+      const followUpTaskMessage = taskText({
+        game,
+        taskNum,
+        findedCodes: allFindedCodes,
+        findedBonusCodes: allFindedBonusCodes,
+        findedPenaltyCodes: allFindedPenaltyCodes,
+        startTaskTime: startTime[taskNum],
+        cluesDuration,
+        taskDuration,
+        timeAddings,
+        visibleCluesCount,
+      })
+
       return {
-        message: 'Код не верен. Введите код',
+        message: statusMessage,
+        followUpMessage: followUpTaskMessage,
+        messages: [statusMessage, followUpTaskMessage],
       }
     }
   }

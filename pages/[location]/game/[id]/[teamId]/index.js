@@ -423,6 +423,8 @@ GameTeamPage.propTypes = {
   result: PropTypes.shape({
     message: PropTypes.string,
     images: PropTypes.arrayOf(PropTypes.string),
+    followUpMessage: PropTypes.string,
+    messages: PropTypes.arrayOf(PropTypes.string),
   }),
   taskHtml: PropTypes.string,
   error: PropTypes.string,
