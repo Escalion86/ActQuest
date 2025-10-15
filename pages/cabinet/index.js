@@ -181,6 +181,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   const processedCallbackRef = useRef(null)
   const lastInteractionRef = useRef('bot')
   const displayRef = useRef(null)
+  const hasLoadedInitialMenuRef = useRef(false)
   const gameTeamCacheRef = useRef(new Map())
   const pushNotifications = usePwaNotifications({ location, session })
 
@@ -341,6 +342,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
       setDisplayBlocks([])
       setKeyboardButtons([])
       lastInteractionRef.current = 'bot'
+      hasLoadedInitialMenuRef.current = false
       setNotifications([])
       setNotificationsError(null)
       setHasUnreadNotifications(false)
@@ -349,14 +351,17 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   }, [session])
 
   useEffect(() => {
-    if (status === 'authenticated' && session) {
-      if (!hasLoadedInitialMenuRef.current) {
-        loadMainMenu({ resetDisplay: true, initiatedByUser: false })
-        hasLoadedInitialMenuRef.current = true
-      }
-    } else {
+    if (!session || status !== 'authenticated') {
       hasLoadedInitialMenuRef.current = false
+      return
     }
+
+    if (hasLoadedInitialMenuRef.current) {
+      return
+    }
+
+    hasLoadedInitialMenuRef.current = true
+    loadMainMenu({ resetDisplay: true, initiatedByUser: false })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status])
 
