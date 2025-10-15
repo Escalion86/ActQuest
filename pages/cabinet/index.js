@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import PropTypes from 'prop-types'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { signIn, signOut, useSession } from 'next-auth/react'
+import { getSession, signIn, signOut, useSession } from 'next-auth/react'
 import { LOCATIONS } from '@server/serverConstants'
 import TelegramLogin from '@components/cabinet/TelegramLogin'
 import NotificationsCard from '@components/cabinet/NotificationsCard'
@@ -64,6 +65,38 @@ const extractRelativePath = (url, baseOrigin) => {
   }
 }
 
+const getRequestOrigin = (req) => {
+  if (!req?.headers) return null
+
+  const forwardedProto = req.headers['x-forwarded-proto']
+  const forwardedHost = req.headers['x-forwarded-host']
+  const hostHeader = req.headers.host
+
+  const rawProtocol = Array.isArray(forwardedProto)
+    ? forwardedProto[0]
+    : typeof forwardedProto === 'string'
+    ? forwardedProto.split(',')[0]?.trim()
+    : null
+
+  const protocol =
+    rawProtocol ||
+    (hostHeader?.startsWith('localhost') || hostHeader?.startsWith('127.0.0.1')
+      ? 'http'
+      : 'https')
+
+  const rawHost = Array.isArray(forwardedHost)
+    ? forwardedHost[0]
+    : typeof forwardedHost === 'string'
+    ? forwardedHost.split(',')[0]?.trim()
+    : null
+
+  const host = rawHost || hostHeader
+
+  if (!host) return null
+
+  return `${protocol}://${host}`
+}
+
 const isButtonVisible = (button) =>
   Boolean(
     button &&
@@ -117,13 +150,19 @@ const buildBlocksFromResult = (result) => {
   return blocks
 }
 
-const CabinetPage = () => {
+const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   const { data: session, status, update: updateSession } = useSession()
   const router = useRouter()
   const [location, setLocation] = useState(
     () => session?.user?.location ?? defaultLocation
   )
-  const [authCallbackUrl, setAuthCallbackUrl] = useState('/cabinet')
+  const [authCallbackUrl, setAuthCallbackUrl] = useState(() => {
+    if (typeof initialCallbackUrl === 'string' && initialCallbackUrl) {
+      return initialCallbackUrl
+    }
+
+    return '/cabinet'
+  })
   const [input, setInput] = useState('')
   const [displayBlocks, setDisplayBlocks] = useState([])
   const [keyboardButtons, setKeyboardButtons] = useState([])
@@ -137,7 +176,7 @@ const CabinetPage = () => {
   const [hasSyncedLocation, setHasSyncedLocation] = useState(false)
   const [isClient, setIsClient] = useState(false)
   const [theme, setTheme] = useState('light')
-  const authCallbackSourceRef = useRef(null)
+  const authCallbackSourceRef = useRef(initialCallbackSource)
   const processedCallbackRef = useRef(null)
   const lastInteractionRef = useRef('bot')
   const displayRef = useRef(null)
@@ -935,6 +974,48 @@ const CabinetPage = () => {
       </div>
     </>
   )
+}
+
+CabinetPage.propTypes = {
+  initialCallbackUrl: PropTypes.string,
+  initialCallbackSource: PropTypes.string,
+}
+
+CabinetPage.defaultProps = {
+  initialCallbackUrl: null,
+  initialCallbackSource: null,
+}
+
+export const getServerSideProps = async (context) => {
+  const { req, query } = context
+
+  const session = await getSession({ req })
+  const rawCallbackParam = query?.callbackUrl
+  const decodedCallback = decodeCallbackParam(rawCallbackParam)
+  const requestOrigin = getRequestOrigin(req)
+  const relativeCallback = extractRelativePath(decodedCallback, requestOrigin)
+
+  const isSafeCallback =
+    typeof relativeCallback === 'string' &&
+    relativeCallback &&
+    !relativeCallback.startsWith('/cabinet') &&
+    !relativeCallback.startsWith('/api/auth')
+
+  if (session && isSafeCallback) {
+    return {
+      redirect: {
+        destination: relativeCallback,
+        permanent: false,
+      },
+    }
+  }
+
+  return {
+    props: {
+      initialCallbackUrl: relativeCallback || null,
+      initialCallbackSource: decodedCallback || null,
+    },
+  }
 }
 
 export default CabinetPage
