@@ -7,7 +7,7 @@ import { getSession, signOut, useSession } from 'next-auth/react'
 
 import fetchGame from '@server/fetchGame'
 import fetchTeam from '@server/fetchTeam'
-import gameProcess from '@server/gameProcess'
+import webGameProcess from '@server/webGameProcess'
 import dbConnect from '@utils/dbConnect'
 import taskText from 'telegram/func/taskText'
 
@@ -754,20 +754,13 @@ export const getServerSideProps = async (context) => {
     let processResult = null
 
     if (actingTelegramId) {
-      const commandPayload = {
-        gameTeamId: String(gameTeam._id),
-      }
-
-      if (sanitizedMessage) {
-        commandPayload.message = sanitizedMessage
-      }
-
       try {
-        processResult = await gameProcess({
-          telegramId: actingTelegramId,
-          jsonCommand: commandPayload,
-          location: locationParam,
+        processResult = await webGameProcess({
           db,
+          game,
+          gameTeam,
+          gameTeamId: gameTeam._id,
+          message: sanitizedMessage,
         })
       } catch (processError) {
         console.error('Game process execution error', processError)
@@ -831,11 +824,11 @@ export const getServerSideProps = async (context) => {
         const finishingPlace = game.finishingPlace
         const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
         if (finishingPlace) {
-          completionParts.push(`\\n\\n<b>Точка сбора:</b> ${finishingPlace}`)
+          completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
         }
         if (lastTask?.postMessage) {
           completionParts.push(
-            `\\n\\n<b>Сообщение от организаторов:</b>\\n<blockquote>${lastTask.postMessage}</blockquote>`
+            `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${lastTask.postMessage}</blockquote>`
           )
         }
         taskHtml = completionParts.join('')
@@ -877,14 +870,12 @@ export const getServerSideProps = async (context) => {
           const breakParts = ['<b>Задание выполнено.</b>']
           if (postMessage) {
             breakParts.push(
-              `\\n\\n<b>Сообщение от организаторов:</b>\\n<blockquote>${postMessage}</blockquote>`
+              `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${postMessage}</blockquote>`
             )
           }
+          breakParts.push('<br /><br /><b>Ожидайте следующее задание после перерыва.</b>')
           breakParts.push(
-            '\\n\\n<b>Ожидайте следующее задание после перерыва.</b>'
-          )
-          breakParts.push(
-            `\\n\\n<b>Время до окончания перерыва:</b> ${createCountdownSpan(
+            `<br /><br /><b>Время до окончания перерыва:</b> ${createCountdownSpan(
               breakSecondsLeft,
               breakTargetTimestamp
             )}`
@@ -946,11 +937,11 @@ export const getServerSideProps = async (context) => {
       const finishingPlace = game.finishingPlace
       const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
       if (finishingPlace) {
-        completionParts.push(`\\n\\n<b>Точка сбора:</b> ${finishingPlace}`)
+        completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
       }
       if (lastTask?.postMessage) {
         completionParts.push(
-          `\\n\\n<b>Сообщение от организаторов:</b>\\n<blockquote>${lastTask.postMessage}</blockquote>`
+          `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${lastTask.postMessage}</blockquote>`
         )
       }
       taskHtml = completionParts.join('')
