@@ -320,16 +320,21 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   }, [theme, isClient])
 
   useEffect(() => {
-    if (session?.user?.location && !hasSyncedLocation) {
+    if (
+      status === 'authenticated' &&
+      session?.user?.location &&
+      !hasSyncedLocation
+    ) {
       setLocation(session.user.location)
       setHasSyncedLocation(true)
+      return
     }
 
-    if (!session && hasSyncedLocation) {
+    if (status === 'unauthenticated' && hasSyncedLocation) {
       setHasSyncedLocation(false)
       setLocation(defaultLocation)
     }
-  }, [session, hasSyncedLocation])
+  }, [session, status, hasSyncedLocation])
 
   useEffect(() => {
     if (!session) {
@@ -344,8 +349,13 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   }, [session])
 
   useEffect(() => {
-    if (session && status === 'authenticated') {
-      loadMainMenu({ resetDisplay: true, initiatedByUser: false })
+    if (status === 'authenticated' && session) {
+      if (!hasLoadedInitialMenuRef.current) {
+        loadMainMenu({ resetDisplay: true, initiatedByUser: false })
+        hasLoadedInitialMenuRef.current = true
+      }
+    } else {
+      hasLoadedInitialMenuRef.current = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status])
@@ -408,7 +418,9 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
           throw new Error(data?.error || 'Не удалось загрузить уведомления')
         }
 
-        const items = Array.isArray(data.notifications) ? data.notifications : []
+        const items = Array.isArray(data.notifications)
+          ? data.notifications
+          : []
 
         setNotifications(
           items.map((item) => {
@@ -416,7 +428,8 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
             const resolvedId =
               typeof rawId === 'string'
                 ? rawId
-                : rawId?.toString?.() || `notification-${Math.random().toString(36).slice(2)}`
+                : rawId?.toString?.() ||
+                  `notification-${Math.random().toString(36).slice(2)}`
 
             return {
               id: resolvedId,
@@ -447,7 +460,9 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   const handleMarkNotificationsAsRead = useCallback(async () => {
     if (!session) return
 
-    const unreadIds = notifications.filter((item) => !item.readAt).map((item) => item.id)
+    const unreadIds = notifications
+      .filter((item) => !item.readAt)
+      .map((item) => item.id)
 
     if (unreadIds.length === 0) return
 
@@ -492,10 +507,21 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   }, [session, location, fetchNotifications])
 
   useEffect(() => {
-    if (notificationsExpanded && session && !notifications.length && !notificationsLoading) {
+    if (
+      notificationsExpanded &&
+      session &&
+      !notifications.length &&
+      !notificationsLoading
+    ) {
       fetchNotifications({ silent: true })
     }
-  }, [notificationsExpanded, session, notifications.length, notificationsLoading, fetchNotifications])
+  }, [
+    notificationsExpanded,
+    session,
+    notifications.length,
+    notificationsLoading,
+    fetchNotifications,
+  ])
 
   const sendCommand = async ({
     command,
@@ -722,7 +748,10 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
 
   const handleSignOut = async () => {
     try {
-      if (pushNotifications?.isSubscribed && typeof pushNotifications.unsubscribe === 'function') {
+      if (
+        pushNotifications?.isSubscribed &&
+        typeof pushNotifications.unsubscribe === 'function'
+      ) {
         await pushNotifications.unsubscribe().catch(() => null)
       }
       await signOut({ redirect: false })
@@ -867,13 +896,32 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   }
 
   const renderLogin = () => (
-    <TelegramLogin
-      availableLocations={availableLocations}
-      location={location}
-      onLocationChange={handleLocationChange}
-      onAuth={handleTelegramAuth}
-      isClient={isClient}
-    />
+    <>
+      {/* <button
+        className="btn btn-primary"
+        onClick={() =>
+          handleTelegramAuth({
+            id: 261102161,
+            first_name: 'Алексей',
+            last_name: 'Белинский Иллюзионист',
+            username: 'Escalion',
+            photo_url:
+              'https://t.me/i/userpic/320/i4TFzvCH_iU5FLtMAmYEpCPz7guDcuETRzLoynlZamo.jpg',
+            auth_date: 1760503777,
+            hash: 'b1ff0088369bdfb0ab507d8f005dfe4688c610d311df993235721896e66c18fd',
+          })
+        }
+      >
+        Войти
+      </button> */}
+      <TelegramLogin
+        availableLocations={availableLocations}
+        location={location}
+        onLocationChange={handleLocationChange}
+        onAuth={handleTelegramAuth}
+        isClient={isClient}
+      />
+    </>
   )
 
   const renderDashboard = () => (
