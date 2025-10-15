@@ -121,6 +121,12 @@ const NotificationsCard = ({
           <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-slate-300">
             {renderPushStatus()}
           </p>
+          {isSupported && isConfigured ? (
+            <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-slate-400">
+              На смартфоне уведомления придут как системный push, если установить
+              PWA на главный экран и разрешить показ уведомлений.
+            </p>
+          ) : null}
           {pushError ? (
             <p className="mt-2 text-sm text-red-600 dark:text-red-300">
               {pushError}
