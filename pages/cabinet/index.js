@@ -8,6 +8,7 @@ import { LOCATIONS } from '@server/serverConstants'
 import TelegramLogin from '@components/cabinet/TelegramLogin'
 import NotificationsCard from '@components/cabinet/NotificationsCard'
 import usePwaNotifications from '@helpers/usePwaNotifications'
+import { decodeCommandKeys } from 'telegram/func/commandShortcuts'
 
 const availableLocations = Object.entries(LOCATIONS)
   .filter(([, value]) => !value.hidden)
@@ -180,7 +181,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   const processedCallbackRef = useRef(null)
   const lastInteractionRef = useRef('bot')
   const displayRef = useRef(null)
-  const hasLoadedInitialMenuRef = useRef(false)
+  const gameTeamCacheRef = useRef(new Map())
   const pushNotifications = usePwaNotifications({ location, session })
 
   useEffect(() => {
@@ -279,10 +280,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
 
         await router.replace(targetPath, targetPath)
       } catch (navError) {
-        console.error(
-          'Не удалось перейти по сохранённому callbackUrl',
-          navError
-        )
+        console.error('Не удалось перейти по сохранённому callbackUrl', navError)
         await router.replace('/cabinet', '/cabinet').catch(() => null)
       }
     }
@@ -609,11 +607,132 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
     setInput('')
   }
 
-  const handleKeyboardAction = (button) => {
+  const parseCallbackData = useCallback((value) => {
+    if (!value) return null
+
+    if (typeof value !== 'string') {
+      return decodeCommandKeys(value)
+    }
+
+    try {
+      return decodeCommandKeys(JSON.parse(value))
+    } catch (error) {
+      return null
+    }
+  }, [])
+
+  const isEnterGameButton = useCallback((text) => {
+    if (!text) return false
+
+    const normalized = text
+      .replace(/["'«»“”()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+
+    if (!normalized) return false
+
+    return (
+      normalized.includes('войти в игру') || normalized.includes('зайти в игру')
+    )
+  }, [])
+
+  const navigateToGameEntry = useCallback(
+    async (button) => {
+      if (!button) return false
+
+      if (!isEnterGameButton(button.text)) {
+        return false
+      }
+
+      const callbackValue =
+        button.callback_data ?? button.callbackData ?? button.c ?? null
+
+      if (!callbackValue || typeof callbackValue !== 'string') {
+        return false
+      }
+
+      const decoded = parseCallbackData(callbackValue)
+      const gameTeamId = decoded?.gameTeamId || decoded?.gt
+
+      if (!gameTeamId || typeof gameTeamId !== 'string') {
+        return false
+      }
+
+      const cache = gameTeamCacheRef.current
+      let gameId = cache.get(gameTeamId)
+
+      if (!gameId) {
+        try {
+          const params = new URLSearchParams({ gameTeamId })
+          if (location) {
+            params.set('location', location)
+          }
+
+          const response = await fetch(
+            `/api/webapp/game-team?${params.toString()}`
+          )
+
+          if (!response.ok) {
+            return false
+          }
+
+          const data = await response.json().catch(() => null)
+
+          if (!data?.success || !data?.gameTeam?.gameId) {
+            return false
+          }
+
+          gameId = data.gameTeam.gameId
+          cache.set(gameTeamId, gameId)
+        } catch (error) {
+          console.error('Не удалось получить информацию об игре', error)
+          return false
+        }
+      }
+
+      if (!gameId) {
+        return false
+      }
+
+      const targetLocation =
+        location || session?.user?.location || defaultLocation || null
+
+      if (!targetLocation) {
+        return false
+      }
+
+      const targetPath = `/${targetLocation}/game/${gameId}`
+
+      try {
+        await router.push(targetPath)
+      } catch (navigationError) {
+        console.error('Не удалось перейти на страницу игры', navigationError)
+        return false
+      }
+
+      return true
+    },
+    [
+      isEnterGameButton,
+      location,
+      parseCallbackData,
+      router,
+      session?.user?.location,
+    ]
+  )
+
+  const handleKeyboardAction = async (button) => {
     if (!button) return
 
     if (button.url) {
       window.open(button.url, '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    const handled = await navigateToGameEntry(button)
+
+    if (handled) {
       return
     }
 
