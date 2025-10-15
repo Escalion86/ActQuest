@@ -33,12 +33,41 @@ const formatDateTime = (value) => {
 
 const transformHtml = (value) => {
   if (!value) return ''
-  return value.replace(/\n/g, '<br />')
+
+  const urlRegex = /(https?:\/\/[^\s<]+)/gi
+  const parts = String(value).split(/(<[^>]+>)/g)
+  let insideAnchor = false
+
+  return parts
+    .map((part) => {
+      if (!part) return ''
+      if (part.startsWith('<') && part.endsWith('>')) {
+        if (/^<a\b/i.test(part)) {
+          insideAnchor = true
+        } else if (/^<\/a>/i.test(part)) {
+          insideAnchor = false
+        }
+        return part
+      }
+
+      if (insideAnchor) {
+        return part.replace(/\n/g, '<br />')
+      }
+
+      const withLinks = part.replace(urlRegex, (url) => {
+        const href = url
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${href}</a>`
+      })
+
+      return withLinks.replace(/\n/g, '<br />')
+    })
+    .join('')
 }
 
 const normalizeForComparison = (value) =>
   (value || '')
     .replace(/<br\s*\/?>(\s|\u00a0)*/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/gi, ' ')
     .replace(/\r?\n/g, '\n')
     .replace(/\s+/g, ' ')
