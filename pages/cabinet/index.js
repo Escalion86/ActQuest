@@ -180,6 +180,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   const processedCallbackRef = useRef(null)
   const lastInteractionRef = useRef('bot')
   const displayRef = useRef(null)
+  const hasLoadedInitialMenuRef = useRef(false)
   const pushNotifications = usePwaNotifications({ location, session })
 
   useEffect(() => {
@@ -318,16 +319,17 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   }, [theme, isClient])
 
   useEffect(() => {
-    if (session?.user?.location && !hasSyncedLocation) {
+    if (status === 'authenticated' && session?.user?.location && !hasSyncedLocation) {
       setLocation(session.user.location)
       setHasSyncedLocation(true)
+      return
     }
 
-    if (!session && hasSyncedLocation) {
+    if (status === 'unauthenticated' && hasSyncedLocation) {
       setHasSyncedLocation(false)
       setLocation(defaultLocation)
     }
-  }, [session, hasSyncedLocation])
+  }, [session, status, hasSyncedLocation])
 
   useEffect(() => {
     if (!session) {
@@ -342,8 +344,13 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   }, [session])
 
   useEffect(() => {
-    if (session && status === 'authenticated') {
-      loadMainMenu({ resetDisplay: true, initiatedByUser: false })
+    if (status === 'authenticated' && session) {
+      if (!hasLoadedInitialMenuRef.current) {
+        loadMainMenu({ resetDisplay: true, initiatedByUser: false })
+        hasLoadedInitialMenuRef.current = true
+      }
+    } else {
+      hasLoadedInitialMenuRef.current = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status])
