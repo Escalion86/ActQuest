@@ -7,9 +7,35 @@ import { getSession, signOut, useSession } from 'next-auth/react'
 
 import fetchGame from '@server/fetchGame'
 import fetchTeam from '@server/fetchTeam'
-import gameProcess from '@server/gameProcess'
+import webGameProcess from '@server/webGameProcess'
 import dbConnect from '@utils/dbConnect'
 import taskText from 'telegram/func/taskText'
+
+const ensureDateValue = (value) => {
+  if (!value) return null
+
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const cloneDateValue = (value) => {
+  const date = ensureDateValue(value)
+  return date ? new Date(date.getTime()) : null
+}
+
+const ensureArrayWithLength = (value, length, filler) => {
+  const base = Array.isArray(value) ? [...value] : []
+  if (base.length < length) {
+    return base.concat(new Array(length - base.length).fill(filler))
+  }
+  return base.slice(0, length)
+}
+
+const parseDurationSeconds = (value, fallback) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  return Math.max(Math.floor(numeric), 0)
+}
 
 const statusLabels = {
   active: 'Ещё не началась',
@@ -94,6 +120,7 @@ function GameTeamPage({
   isGameFinished,
   result,
   taskHtml,
+  taskState,
   error,
   session: initialSession,
   gameId,
@@ -208,6 +235,8 @@ function GameTeamPage({
     [taskHtml]
   )
 
+  const isBreakState = taskState === 'break'
+
   const resultMessages = useMemo(() => {
     if (!result) return []
 
@@ -225,13 +254,16 @@ function GameTeamPage({
       if (normalizedTaskMessage && normalized === normalizedTaskMessage) {
         return false
       }
+      if (isBreakState && /перерыв/i.test(normalized)) {
+        return false
+      }
       if (seen.has(normalized)) return false
       seen.add(normalized)
       return true
     })
 
     return filtered.map((message) => transformHtml(message))
-  }, [normalizedTaskMessage, result])
+  }, [isBreakState, normalizedTaskMessage, result])
 
   const shouldShowLastMessage = resultMessages.length > 0
   const statusNotice = useMemo(() => {
@@ -239,11 +271,11 @@ function GameTeamPage({
     if (!isGameStarted && status === 'active') {
       return 'Игра ещё не началась. Ожидайте старта организатора.'
     }
-    if (isGameFinished) {
+    if (isGameFinished && taskState !== 'completed') {
       return 'Игра завершена. Проверьте результаты в кабинете.'
     }
     return null
-  }, [error, isGameFinished, isGameStarted, status])
+  }, [error, isGameFinished, isGameStarted, status, taskState])
 
   useEffect(() => {
     if (!isClient) return
@@ -624,6 +656,7 @@ GameTeamPage.propTypes = {
     messages: PropTypes.arrayOf(PropTypes.string),
   }),
   taskHtml: PropTypes.string,
+  taskState: PropTypes.oneOf(['idle', 'active', 'break', 'completed']),
   error: PropTypes.string,
   session: PropTypes.shape({}),
   gameId: PropTypes.string.isRequired,
@@ -635,6 +668,7 @@ GameTeamPage.defaultProps = {
   team: null,
   result: null,
   taskHtml: '',
+  taskState: 'idle',
   error: null,
   session: null,
 }
@@ -698,6 +732,7 @@ export const getServerSideProps = async (context) => {
           isGameFinished,
           result: null,
           taskHtml: '',
+          taskState: 'idle',
           error: 'DB_CONNECTION_FAILED',
           gameId: gameIdParam,
           teamId: teamIdParam,
@@ -745,20 +780,13 @@ export const getServerSideProps = async (context) => {
     let processResult = null
 
     if (actingTelegramId) {
-      const commandPayload = {
-        gameTeamId: String(gameTeam._id),
-      }
-
-      if (sanitizedMessage) {
-        commandPayload.message = sanitizedMessage
-      }
-
       try {
-        processResult = await gameProcess({
-          telegramId: actingTelegramId,
-          jsonCommand: commandPayload,
-          location: locationParam,
+        processResult = await webGameProcess({
           db,
+          game,
+          gameTeam,
+          gameTeamId: gameTeam._id,
+          message: sanitizedMessage,
         })
       } catch (processError) {
         console.error('Game process execution error', processError)
@@ -770,64 +798,348 @@ export const getServerSideProps = async (context) => {
       .findById(gameTeam._id)
       .lean()
 
-    const effectiveGameTeam = refreshedGameTeam ?? gameTeam
+    let effectiveGameTeam = refreshedGameTeam ?? gameTeam
 
-    let taskHtml = ''
+    const tasks = Array.isArray(game.tasks) ? game.tasks : []
+    const tasksCount = tasks.length
 
-    if (
-      isGameStarted &&
-      !isGameFinished &&
-      effectiveGameTeam &&
-      typeof effectiveGameTeam.activeNum === 'number' &&
-      Array.isArray(game.tasks) &&
-      effectiveGameTeam.activeNum < game.tasks.length
-    ) {
-      const activeNum = effectiveGameTeam.activeNum
-      const startTimes = Array.isArray(effectiveGameTeam.startTime)
-        ? effectiveGameTeam.startTime
-        : []
-      const forcedClues = Array.isArray(effectiveGameTeam.forcedClues)
-        ? effectiveGameTeam.forcedClues
-        : []
-      const startTaskTimeRaw = startTimes[activeNum]
-      const startTaskTime = startTaskTimeRaw ? new Date(startTaskTimeRaw) : null
-      const resolvedCluesDuration = Number(game.cluesDuration)
-      const resolvedTaskDuration = Number(game.taskDuration)
-      const cluesDuration = Number.isFinite(resolvedCluesDuration)
-        ? resolvedCluesDuration
-        : 1200
-      const taskDuration = Number.isFinite(resolvedTaskDuration)
-        ? resolvedTaskDuration
-        : 3600
+    const breakDurationSeconds = parseDurationSeconds(game.breakDuration, 0)
+    const taskDurationSeconds = parseDurationSeconds(game.taskDuration, 3600)
+    const cluesDurationSeconds = parseDurationSeconds(game.cluesDuration, 1200)
 
-      let elapsedSeconds = 0
-      if (startTaskTime instanceof Date && !Number.isNaN(startTaskTime.getTime())) {
-        elapsedSeconds = Math.max(
-          Math.floor((Date.now() - startTaskTime.getTime()) / 1000),
-          0
-        )
+    const autoProgressMessages = []
+
+    const maybeHandleAutomaticProgress = async (teamState) => {
+      if (!teamState || tasksCount === 0) return teamState
+
+      const activeNumValue = Number.isInteger(teamState?.activeNum)
+        ? teamState.activeNum
+        : 0
+      const clampedIndex = Math.max(
+        Math.min(activeNumValue, tasksCount - 1),
+        0
+      )
+
+      if (activeNumValue >= tasksCount) {
+        return teamState
       }
 
-      const forcedCluesCount = Math.max(forcedClues[activeNum] ?? 0, 0)
-      const timedCluesCount =
-        cluesDuration > 0 ? Math.max(Math.floor(elapsedSeconds / cluesDuration), 0) : 0
-      const visibleCluesCount = Math.max(timedCluesCount, forcedCluesCount)
+      const nextIndex = clampedIndex + 1
+      const hasNextTask = nextIndex < tasksCount
 
-      taskHtml = taskText({
-        game,
-        taskNum: activeNum,
-        findedCodes: effectiveGameTeam.findedCodes,
-        findedBonusCodes: effectiveGameTeam.findedBonusCodes,
-        findedPenaltyCodes: effectiveGameTeam.findedPenaltyCodes,
-        startTaskTime,
-        cluesDuration,
-        taskDuration,
-        photos: effectiveGameTeam.photos,
-        timeAddings: effectiveGameTeam.timeAddings,
-        visibleCluesCount,
-        includeActionPrompt: false,
-        format: 'web',
-      })
+      const startTimes = ensureArrayWithLength(
+        teamState.startTime,
+        tasksCount,
+        null
+      )
+      const endTimes = ensureArrayWithLength(teamState.endTime, tasksCount, null)
+
+      const activeStart = ensureDateValue(startTimes[clampedIndex])
+      const activeEnd = ensureDateValue(endTimes[clampedIndex])
+      const nowMs = Date.now()
+
+      const updateActiveNum = async (nextActiveNum, extraUpdates = {}) => {
+        const updates = { activeNum: nextActiveNum, ...extraUpdates }
+        const updatedTeam = await gamesTeamsModel
+          .findByIdAndUpdate(teamState._id, updates, { new: true })
+          .lean()
+
+        return updatedTeam ?? { ...teamState, ...updates }
+      }
+
+      if (!hasNextTask) {
+        if (activeEnd) {
+          return updateActiveNum(nextIndex)
+        }
+
+        if (activeStart && taskDurationSeconds > 0) {
+          const elapsedSinceStart = Math.max(
+            Math.floor((nowMs - activeStart.getTime()) / 1000),
+            0
+          )
+
+          if (elapsedSinceStart >= taskDurationSeconds) {
+            return updateActiveNum(nextIndex)
+          }
+        }
+
+        return teamState
+      }
+
+      const advanceToNextTask = async () => {
+        const startTimeUpdates = ensureArrayWithLength(
+          teamState.startTime,
+          tasksCount,
+          null
+        ).map(cloneDateValue)
+        startTimeUpdates[nextIndex] = new Date()
+
+        const forcedCluesUpdates = ensureArrayWithLength(
+          teamState.forcedClues,
+          tasksCount,
+          0
+        ).map((value) => (Number.isFinite(value) ? value : 0))
+        forcedCluesUpdates[nextIndex] = 0
+
+        return updateActiveNum(nextIndex, {
+          startTime: startTimeUpdates,
+          forcedClues: forcedCluesUpdates,
+        })
+      }
+
+      if (activeEnd) {
+        if (breakDurationSeconds <= 0) {
+          return advanceToNextTask()
+        }
+
+        const elapsedAfterEnd = Math.max(
+          Math.floor((nowMs - activeEnd.getTime()) / 1000),
+          0
+        )
+
+        if (elapsedAfterEnd >= breakDurationSeconds) {
+          return advanceToNextTask()
+        }
+
+        return teamState
+      }
+
+      if (activeStart && taskDurationSeconds > 0) {
+        const elapsedSinceStart = Math.max(
+          Math.floor((nowMs - activeStart.getTime()) / 1000),
+          0
+        )
+
+        if (elapsedSinceStart >= taskDurationSeconds) {
+          if (breakDurationSeconds > 0) {
+            if (elapsedSinceStart >= taskDurationSeconds + breakDurationSeconds) {
+              autoProgressMessages.push('<b>Перерыв завершён.</b>')
+              return advanceToNextTask()
+            }
+          } else {
+            autoProgressMessages.push('<b>Время на задание вышло.</b>')
+            return advanceToNextTask()
+          }
+        }
+      }
+
+      return teamState
+    }
+
+    effectiveGameTeam = await maybeHandleAutomaticProgress(effectiveGameTeam)
+
+    const activeNumRaw = Number.isInteger(effectiveGameTeam?.activeNum)
+      ? effectiveGameTeam.activeNum
+      : 0
+
+    if (autoProgressMessages.length > 0) {
+      const baseMessages = Array.isArray(processResult?.messages)
+        ? [...processResult.messages]
+        : []
+
+      if (!processResult?.messages && processResult?.message) {
+        baseMessages.push(processResult.message)
+      }
+
+      const combinedMessages = [...baseMessages, ...autoProgressMessages].filter(
+        Boolean
+      )
+
+      processResult = {
+        ...(processResult || {}),
+        message: processResult?.message || combinedMessages[0] || '',
+        messages: combinedMessages,
+      }
+    }
+
+    const formatSecondsForCountdown = (totalSeconds) => {
+      if (!Number.isFinite(totalSeconds)) return '00:00:00'
+      const safeSeconds = Math.max(Math.floor(totalSeconds), 0)
+      const hours = Math.floor(safeSeconds / 3600)
+      const minutes = Math.floor((safeSeconds % 3600) / 60)
+      const seconds = safeSeconds % 60
+      const pad = (num) => String(num).padStart(2, '0')
+      return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+    }
+
+    const createCountdownSpan = (secondsLeft, targetTimestamp) => {
+      const attributes = ['data-task-countdown="break"', 'data-refresh-on-complete="true"']
+      if (Number.isFinite(targetTimestamp)) {
+        attributes.push(`data-target="${targetTimestamp}"`)
+      }
+      if (Number.isFinite(secondsLeft)) {
+        attributes.push(`data-seconds="${secondsLeft}"`)
+      }
+      return `<span ${attributes.join(' ')}>${formatSecondsForCountdown(
+        secondsLeft
+      )}</span>`
+    }
+
+    let taskHtml = ''
+    let taskState = 'idle'
+
+    const hasCompletedAllTasks = tasksCount > 0 && activeNumRaw >= tasksCount
+
+    if (isGameStarted && !isGameFinished && tasksCount > 0) {
+      if (hasCompletedAllTasks) {
+        const lastTask = tasks[tasksCount - 1] ?? null
+        const finishingPlace = game.finishingPlace
+        const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
+        if (finishingPlace) {
+          completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
+        }
+        if (lastTask?.postMessage) {
+          completionParts.push(
+            `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${lastTask.postMessage}</blockquote>`
+          )
+        }
+        taskHtml = completionParts.join('')
+        taskState = 'completed'
+      } else {
+        const startTimes = ensureArrayWithLength(
+          effectiveGameTeam.startTime,
+          tasksCount,
+          null
+        )
+        const forcedClues = ensureArrayWithLength(
+          effectiveGameTeam.forcedClues,
+          tasksCount,
+          0
+        )
+        const endTimes = ensureArrayWithLength(
+          effectiveGameTeam.endTime,
+          tasksCount,
+          null
+        )
+
+        const activeTaskIndex = Math.max(
+          Math.min(activeNumRaw, tasksCount - 1),
+          0
+        )
+        const activeTaskEndTime = ensureDateValue(endTimes[activeTaskIndex])
+        const activeTaskStartTime = ensureDateValue(
+          startTimes[activeTaskIndex]
+        )
+
+        let breakSecondsLeft = null
+        let breakTargetTimestamp = null
+        let breakReason = null
+
+        if (breakDurationSeconds > 0) {
+          const nowMs = Date.now()
+
+          if (activeTaskEndTime) {
+            const elapsed = Math.max(
+              Math.floor((nowMs - activeTaskEndTime.getTime()) / 1000),
+              0
+            )
+            if (elapsed < breakDurationSeconds) {
+              breakSecondsLeft = breakDurationSeconds - elapsed
+              breakTargetTimestamp =
+                activeTaskEndTime.getTime() + breakDurationSeconds * 1000
+              breakReason = 'success'
+            }
+          } else if (
+            activeTaskStartTime &&
+            taskDurationSeconds > 0
+          ) {
+            const elapsedSinceStart = Math.max(
+              Math.floor((nowMs - activeTaskStartTime.getTime()) / 1000),
+              0
+            )
+            if (elapsedSinceStart >= taskDurationSeconds) {
+              const overtime = elapsedSinceStart - taskDurationSeconds
+              if (overtime < breakDurationSeconds) {
+                breakSecondsLeft = breakDurationSeconds - overtime
+                breakTargetTimestamp =
+                  activeTaskStartTime.getTime() +
+                  (taskDurationSeconds + breakDurationSeconds) * 1000
+                breakReason = 'timeout'
+              }
+            }
+          }
+        }
+
+        if (breakSecondsLeft !== null) {
+          const postMessage = tasks[activeTaskIndex]?.postMessage
+          const breakParts = [
+            breakReason === 'timeout'
+              ? '<b>Время на задание вышло.</b>'
+              : '<b>Задание выполнено.</b>',
+          ]
+          if (postMessage) {
+            breakParts.push(
+              `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${postMessage}</blockquote>`
+            )
+          }
+          breakParts.push('<br /><br /><b>Перерыв.</b>')
+          breakParts.push(
+            '<br /><br /><b>Ожидайте следующее задание после перерыва.</b>'
+          )
+          breakParts.push(
+            `<br /><br /><b>Время до окончания перерыва:</b> ${createCountdownSpan(
+              breakSecondsLeft,
+              breakTargetTimestamp
+            )}`
+          )
+          taskHtml = breakParts.join('')
+          taskState = 'break'
+        } else {
+          let elapsedSeconds = 0
+          if (activeTaskStartTime) {
+            elapsedSeconds = Math.max(
+              Math.floor((Date.now() - activeTaskStartTime.getTime()) / 1000),
+              0
+            )
+          }
+
+          const forcedCluesCount = Math.max(
+            forcedClues[activeTaskIndex] ?? 0,
+            0
+          )
+          const timedCluesCount =
+            cluesDurationSeconds > 0
+              ? Math.max(
+                  Math.floor(elapsedSeconds / cluesDurationSeconds),
+                  0
+                )
+              : 0
+          const visibleCluesCount = Math.max(timedCluesCount, forcedCluesCount)
+
+          taskHtml = taskText({
+            game,
+            taskNum: activeTaskIndex,
+            findedCodes: effectiveGameTeam.findedCodes,
+            findedBonusCodes: effectiveGameTeam.findedBonusCodes,
+            findedPenaltyCodes: effectiveGameTeam.findedPenaltyCodes,
+            startTaskTime: activeTaskStartTime,
+            cluesDuration: cluesDurationSeconds,
+            taskDuration: taskDurationSeconds,
+            photos: effectiveGameTeam.photos,
+            timeAddings: effectiveGameTeam.timeAddings,
+            visibleCluesCount,
+            includeActionPrompt: false,
+            format: 'web',
+          })
+          taskState = 'active'
+        }
+      }
+    }
+
+    if (!taskHtml && (hasCompletedAllTasks || isGameFinished) && tasksCount > 0) {
+      const lastTask = tasks[tasksCount - 1] ?? null
+      const finishingPlace = game.finishingPlace
+      const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
+      if (finishingPlace) {
+        completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
+      }
+      if (lastTask?.postMessage) {
+        completionParts.push(
+          `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${lastTask.postMessage}</blockquote>`
+        )
+      }
+      taskHtml = completionParts.join('')
+      taskState = 'completed'
     }
 
     return {
@@ -841,6 +1153,7 @@ export const getServerSideProps = async (context) => {
         isGameFinished,
         result: processResult ? JSON.parse(JSON.stringify(processResult)) : null,
         taskHtml,
+        taskState,
         error: null,
         gameId: gameIdParam,
         teamId: teamIdParam,
@@ -859,6 +1172,7 @@ export const getServerSideProps = async (context) => {
         isGameFinished: false,
         result: null,
         taskHtml: '',
+        taskState: 'idle',
         error: 'UNKNOWN_ERROR',
         gameId: gameIdParam,
         teamId: teamIdParam,

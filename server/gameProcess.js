@@ -945,20 +945,31 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         findedBonusCodes: newAllFindedBonusCodes,
       })
 
+      const statusMessage = `КОД "${code}" - БОНУСНЫЙ!`
+      const followUpTaskMessage = taskText({
+        game,
+        taskNum: taskNum,
+        findedCodes: allFindedCodes,
+        findedBonusCodes: newAllFindedBonusCodes,
+        findedPenaltyCodes: allFindedPenaltyCodes,
+        startTaskTime: startTime[taskNum],
+        cluesDuration,
+        taskDuration,
+        timeAddings,
+        visibleCluesCount,
+        includeActionPrompt: false,
+      })
+
+      const promptMessage = `<b>${
+        game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'
+      }</b>`
+
       return {
         images: game.tasks[taskNum]?.images,
-        message: `КОД "${code}" - БОНУСНЫЙ!\n\n${taskText({
-          game,
-          taskNum: taskNum,
-          findedCodes: allFindedCodes,
-          findedBonusCodes: newAllFindedBonusCodes,
-          findedPenaltyCodes: allFindedPenaltyCodes,
-          startTaskTime: startTime[taskNum],
-          cluesDuration,
-          taskDuration,
-          timeAddings,
-          visibleCluesCount,
-        })}`,
+        message: statusMessage,
+        followUpMessage: followUpTaskMessage,
+        promptMessage,
+        messages: [statusMessage, promptMessage].filter(Boolean),
         buttons: buildTaskButtons(visibleCluesCount),
       }
     }
@@ -976,22 +987,33 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         findedPenaltyCodes: newAllFindedPenaltyCodes,
       })
 
+      const statusMessage = `КОД "${code}" - ШТРАФНОЙ!\nОписание штрафа: "${
+        penaltyCode.description
+      }"`
+      const followUpTaskMessage = taskText({
+        game,
+        taskNum: taskNum,
+        findedCodes: allFindedCodes,
+        findedBonusCodes: allFindedBonusCodes,
+        findedPenaltyCodes: newAllFindedPenaltyCodes,
+        startTaskTime: startTime[taskNum],
+        cluesDuration,
+        taskDuration,
+        timeAddings,
+        visibleCluesCount,
+        includeActionPrompt: false,
+      })
+
+      const promptMessage = `<b>${
+        game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'
+      }</b>`
+
       return {
         images: game.tasks[taskNum]?.images,
-        message: `КОД "${code}" - ШТРАФНОЙ!\nОписание штрафа: "${
-          penaltyCode.description
-        }"\n\n${taskText({
-          game,
-          taskNum: taskNum,
-          findedCodes: allFindedCodes,
-          findedBonusCodes: allFindedBonusCodes,
-          findedPenaltyCodes: newAllFindedPenaltyCodes,
-          startTaskTime: startTime[taskNum],
-          cluesDuration,
-          taskDuration,
-          timeAddings,
-          visibleCluesCount,
-        })}`,
+        message: statusMessage,
+        followUpMessage: followUpTaskMessage,
+        promptMessage,
+        messages: [statusMessage, promptMessage].filter(Boolean),
         buttons: buildTaskButtons(visibleCluesCount),
       }
     }
@@ -1170,7 +1192,6 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         : null
 
       const messages = [statusMessage]
-      if (followUpTaskMessage) messages.push(followUpTaskMessage)
       if (promptMessage) messages.push(promptMessage)
 
       return {
@@ -1216,11 +1237,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         message: statusMessage,
         followUpMessage: followUpTaskMessage,
         promptMessage,
-        messages: [
-          statusMessage,
-          followUpTaskMessage,
-          promptMessage,
-        ].filter(Boolean),
+        messages: [statusMessage, promptMessage].filter(Boolean),
       }
     }
   }
