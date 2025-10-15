@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import PropTypes from 'prop-types'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { signIn, signOut, useSession } from 'next-auth/react'
+import { getSession, signIn, signOut, useSession } from 'next-auth/react'
 import { LOCATIONS } from '@server/serverConstants'
 import TelegramLogin from '@components/cabinet/TelegramLogin'
 import NotificationsCard from '@components/cabinet/NotificationsCard'
@@ -19,6 +20,82 @@ const formatText = (text) =>
     .split('\n')
     .map((part) => part.trim())
     .join('\n')
+
+const decodeCallbackParam = (rawValue) => {
+  if (!rawValue) return null
+
+  const value = Array.isArray(rawValue) ? rawValue[0] : rawValue
+  if (typeof value !== 'string' || !value) return null
+
+  let decoded = value
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const nextDecoded = decodeURIComponent(decoded)
+      if (nextDecoded === decoded) break
+      decoded = nextDecoded
+    } catch (error) {
+      break
+    }
+  }
+
+  return decoded
+}
+
+const extractRelativePath = (url, baseOrigin) => {
+  if (!url) return null
+
+  if (typeof url === 'string' && url.startsWith('/')) {
+    return url
+  }
+
+  if (!baseOrigin) return null
+
+  try {
+    const parsed = new URL(url, baseOrigin)
+    const base = new URL(baseOrigin)
+
+    if (parsed.host !== base.host) {
+      return null
+    }
+
+    return `${parsed.pathname}${parsed.search}${parsed.hash}` || '/'
+  } catch (error) {
+    return null
+  }
+}
+
+const getRequestOrigin = (req) => {
+  if (!req?.headers) return null
+
+  const forwardedProto = req.headers['x-forwarded-proto']
+  const forwardedHost = req.headers['x-forwarded-host']
+  const hostHeader = req.headers.host
+
+  const rawProtocol = Array.isArray(forwardedProto)
+    ? forwardedProto[0]
+    : typeof forwardedProto === 'string'
+    ? forwardedProto.split(',')[0]?.trim()
+    : null
+
+  const protocol =
+    rawProtocol ||
+    (hostHeader?.startsWith('localhost') || hostHeader?.startsWith('127.0.0.1')
+      ? 'http'
+      : 'https')
+
+  const rawHost = Array.isArray(forwardedHost)
+    ? forwardedHost[0]
+    : typeof forwardedHost === 'string'
+    ? forwardedHost.split(',')[0]?.trim()
+    : null
+
+  const host = rawHost || hostHeader
+
+  if (!host) return null
+
+  return `${protocol}://${host}`
+}
 
 const isButtonVisible = (button) =>
   Boolean(
@@ -73,12 +150,19 @@ const buildBlocksFromResult = (result) => {
   return blocks
 }
 
-const CabinetPage = () => {
+const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   const { data: session, status, update: updateSession } = useSession()
   const router = useRouter()
   const [location, setLocation] = useState(
     () => session?.user?.location ?? defaultLocation
   )
+  const [authCallbackUrl, setAuthCallbackUrl] = useState(() => {
+    if (typeof initialCallbackUrl === 'string' && initialCallbackUrl) {
+      return initialCallbackUrl
+    }
+
+    return '/cabinet'
+  })
   const [input, setInput] = useState('')
   const [displayBlocks, setDisplayBlocks] = useState([])
   const [keyboardButtons, setKeyboardButtons] = useState([])
@@ -92,6 +176,8 @@ const CabinetPage = () => {
   const [hasSyncedLocation, setHasSyncedLocation] = useState(false)
   const [isClient, setIsClient] = useState(false)
   const [theme, setTheme] = useState('light')
+  const authCallbackSourceRef = useRef(initialCallbackSource)
+  const processedCallbackRef = useRef(null)
   const lastInteractionRef = useRef('bot')
   const displayRef = useRef(null)
   const pushNotifications = usePwaNotifications({ location, session })
@@ -117,6 +203,95 @@ const CabinetPage = () => {
       setLocation(queryLocation)
     }
   }, [router.isReady, router.query, location])
+
+  useEffect(() => {
+    if (!router.isReady) return
+
+    const decodedCallback = decodeCallbackParam(router.query?.callbackUrl)
+
+    if (!decodedCallback) {
+      setAuthCallbackUrl('/cabinet')
+      if (authCallbackSourceRef.current !== null) {
+        processedCallbackRef.current = null
+      }
+      authCallbackSourceRef.current = null
+      return
+    }
+
+    if (!isClient) return
+
+    const relativeTarget = extractRelativePath(
+      decodedCallback,
+      window.location.origin
+    )
+
+    if (relativeTarget) {
+      if (authCallbackSourceRef.current !== decodedCallback) {
+        processedCallbackRef.current = null
+      }
+      setAuthCallbackUrl(relativeTarget)
+      authCallbackSourceRef.current = decodedCallback
+      return
+    }
+
+    console.error(
+      'Не удалось разобрать callbackUrl авторизации',
+      decodedCallback
+    )
+    setAuthCallbackUrl('/cabinet')
+    if (authCallbackSourceRef.current !== decodedCallback) {
+      processedCallbackRef.current = null
+    }
+    authCallbackSourceRef.current = decodedCallback
+  }, [router.isReady, router.query, isClient])
+
+  useEffect(() => {
+    if (!isClient || !router.isReady) return
+
+    const rawCallbackParam = router.query?.callbackUrl
+    if (!rawCallbackParam) {
+      processedCallbackRef.current = null
+      return
+    }
+
+    if (status !== 'authenticated') return
+
+    if (!authCallbackUrl) return
+
+    const decodedSource = authCallbackSourceRef.current
+    if (!decodedSource) return
+
+    if (processedCallbackRef.current === decodedSource) return
+
+    const navigateToCallback = async () => {
+      const targetPath = authCallbackUrl.startsWith('/')
+        ? authCallbackUrl
+        : `/${authCallbackUrl}`
+
+      try {
+        processedCallbackRef.current = decodedSource
+
+        if (targetPath === '/cabinet') {
+          await router.replace('/cabinet', '/cabinet')
+          return
+        }
+
+        await router.replace(targetPath, targetPath)
+      } catch (navError) {
+        console.error('Не удалось перейти по сохранённому callbackUrl', navError)
+        await router.replace('/cabinet', '/cabinet').catch(() => null)
+      }
+    }
+
+    navigateToCallback()
+  }, [
+    authCallbackUrl,
+    isClient,
+    router,
+    router.isReady,
+    router.query?.callbackUrl,
+    status,
+  ])
 
   useEffect(() => {
     if (!isClient) return
@@ -453,9 +628,26 @@ const CabinetPage = () => {
     try {
       setError(null)
       const payload = JSON.stringify(userData)
+      let absoluteCallbackUrl = authCallbackUrl
+
+      if (isClient) {
+        try {
+          absoluteCallbackUrl = new URL(
+            authCallbackUrl,
+            window.location.origin
+          ).toString()
+        } catch (buildUrlError) {
+          console.error(
+            'Не удалось сформировать callbackUrl авторизации',
+            buildUrlError
+          )
+          absoluteCallbackUrl = `${window.location.origin}/cabinet`
+        }
+      }
+
       const result = await signIn('telegram', {
         redirect: false,
-        callbackUrl: `${window.location.origin}/cabinet`,
+        callbackUrl: absoluteCallbackUrl,
         data: payload,
         location,
       })
@@ -494,6 +686,55 @@ const CabinetPage = () => {
       }
 
       await updateSession()
+
+      const getRedirectTarget = () => {
+        if (!isClient) {
+          return absoluteCallbackUrl
+        }
+
+        const safeResultUrl = extractRelativePath(
+          result?.url,
+          window.location.origin
+        )
+
+        if (
+          safeResultUrl &&
+          !safeResultUrl.startsWith('/cabinet') &&
+          !safeResultUrl.startsWith('/api/auth')
+        ) {
+          return new URL(safeResultUrl, window.location.origin).toString()
+        }
+
+        return absoluteCallbackUrl
+      }
+
+      const redirectTarget = getRedirectTarget()
+
+      if (isClient && redirectTarget) {
+        try {
+          const targetUrl = new URL(redirectTarget, window.location.origin)
+
+          if (targetUrl.origin === window.location.origin) {
+            const relativeTarget = `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`
+
+            if (relativeTarget && relativeTarget !== router.asPath) {
+              await router.replace(relativeTarget)
+            }
+          } else {
+            window.location.assign(targetUrl.toString())
+          }
+
+          return
+        } catch (redirectError) {
+          if (redirectTarget.startsWith('/')) {
+            await router.replace(redirectTarget)
+            return
+          }
+
+          window.location.assign(redirectTarget)
+          return
+        }
+      }
     } catch (authError) {
       console.error('Telegram auth error', authError)
       setError(
@@ -733,6 +974,48 @@ const CabinetPage = () => {
       </div>
     </>
   )
+}
+
+CabinetPage.propTypes = {
+  initialCallbackUrl: PropTypes.string,
+  initialCallbackSource: PropTypes.string,
+}
+
+CabinetPage.defaultProps = {
+  initialCallbackUrl: null,
+  initialCallbackSource: null,
+}
+
+export const getServerSideProps = async (context) => {
+  const { req, query } = context
+
+  const session = await getSession({ req })
+  const rawCallbackParam = query?.callbackUrl
+  const decodedCallback = decodeCallbackParam(rawCallbackParam)
+  const requestOrigin = getRequestOrigin(req)
+  const relativeCallback = extractRelativePath(decodedCallback, requestOrigin)
+
+  const isSafeCallback =
+    typeof relativeCallback === 'string' &&
+    relativeCallback &&
+    !relativeCallback.startsWith('/cabinet') &&
+    !relativeCallback.startsWith('/api/auth')
+
+  if (session && isSafeCallback) {
+    return {
+      redirect: {
+        destination: relativeCallback,
+        permanent: false,
+      },
+    }
+  }
+
+  return {
+    props: {
+      initialCallbackUrl: relativeCallback || null,
+      initialCallbackSource: decodedCallback || null,
+    },
+  }
 }
 
 export default CabinetPage
