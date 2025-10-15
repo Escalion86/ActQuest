@@ -2,12 +2,33 @@ import { getServerSession } from 'next-auth/next'
 
 import dbConnect from '@utils/dbConnect'
 
+import { LOCATIONS } from '@server/serverConstants'
+
 import { authOptions } from '../auth/[...nextauth]'
 
 const normalizeLocation = (value) => {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
   return trimmed ? trimmed : null
+}
+
+const getLocationOrder = (preferredLocation) => {
+  const availableLocations = Object.keys(LOCATIONS || {})
+
+  if (!preferredLocation) {
+    return availableLocations
+  }
+
+  const normalizedPreferred = preferredLocation.trim()
+  const order = [normalizedPreferred]
+
+  availableLocations.forEach((locationKey) => {
+    if (locationKey !== normalizedPreferred) {
+      order.push(locationKey)
+    }
+  })
+
+  return order
 }
 
 export default async function handler(req, res) {
@@ -36,34 +57,50 @@ export default async function handler(req, res) {
       .json({ success: false, error: 'Не указан идентификатор команды игры' })
   }
 
-  const location =
+  const normalizedPreferredLocation =
     normalizeLocation(rawLocation) || normalizeLocation(session.user?.location)
 
-  if (!location) {
-    return res
-      .status(400)
-      .json({ success: false, error: 'Не удалось определить игровую площадку' })
-  }
+  const locationsToTry = getLocationOrder(normalizedPreferredLocation)
 
   try {
-    const db = await dbConnect(location)
+    let foundGameTeam = null
+    let resolvedLocation = null
 
-    if (!db) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'Указана неизвестная игровая площадка' })
+    for (const locationKey of locationsToTry) {
+      if (!locationKey) continue
+
+      try {
+        const db = await dbConnect(locationKey)
+
+        if (!db) {
+          continue
+        }
+
+        // eslint-disable-next-line no-await-in-loop
+        const gameTeam = await db.model('GamesTeams').findById(gameTeamId).lean()
+
+        if (gameTeam) {
+          foundGameTeam = gameTeam
+          resolvedLocation = locationKey
+          break
+        }
+      } catch (dbError) {
+        console.error(
+          'Failed to lookup gameTeam in location',
+          locationKey,
+          dbError
+        )
+      }
     }
 
-    const gameTeam = await db.model('GamesTeams').findById(gameTeamId).lean()
-
-    if (!gameTeam) {
+    if (!foundGameTeam || !resolvedLocation) {
       return res
         .status(404)
         .json({ success: false, error: 'Команда не найдена в игре' })
     }
 
-    const gameId = gameTeam.gameId ? String(gameTeam.gameId) : null
-    const teamId = gameTeam.teamId ? String(gameTeam.teamId) : null
+    const gameId = foundGameTeam.gameId ? String(foundGameTeam.gameId) : null
+    const teamId = foundGameTeam.teamId ? String(foundGameTeam.teamId) : null
 
     if (!gameId) {
       return res
@@ -74,9 +111,10 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       gameTeam: {
-        id: String(gameTeam._id),
+        id: String(foundGameTeam._id),
         gameId,
         teamId,
+        location: resolvedLocation,
       },
     })
   } catch (error) {

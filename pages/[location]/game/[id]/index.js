@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { getSession, signOut, useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
+import { getServerSession } from 'next-auth/next'
 
 import fetchGame from '@server/fetchGame'
 import dbConnect from '@utils/dbConnect'
+
+import { authOptions } from '@pages/api/auth/[...nextauth]'
 
 const statusLabels = {
   active: 'Ещё не началась',
@@ -307,7 +310,7 @@ function GameEntryPage({
 export default GameEntryPage
 
 export const getServerSideProps = async (context) => {
-  const { params, req, resolvedUrl } = context
+  const { params, req, res, resolvedUrl } = context
   const locationParam = params?.location
   const gameIdParam = params?.id
 
@@ -315,7 +318,7 @@ export const getServerSideProps = async (context) => {
     return { notFound: true }
   }
 
-  const session = await getSession({ req })
+  const session = await getServerSession(req, res, authOptions)
 
   if (!session) {
     const callbackUrl = resolvedUrl?.startsWith('/')

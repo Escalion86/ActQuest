@@ -665,9 +665,13 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
       }
 
       const cache = gameTeamCacheRef.current
-      let gameId = cache.get(gameTeamId)
+      let cachedInfo = cache.get(gameTeamId)
 
-      if (!gameId) {
+      if (cachedInfo && typeof cachedInfo === 'string') {
+        cachedInfo = { gameId: cachedInfo }
+      }
+
+      if (!cachedInfo?.gameId) {
         try {
           const params = new URLSearchParams({ gameTeamId })
           if (location) {
@@ -688,26 +692,41 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
             return false
           }
 
-          gameId = data.gameTeam.gameId
-          cache.set(gameTeamId, gameId)
+          cachedInfo = {
+            gameId: data.gameTeam.gameId,
+            teamId: data.gameTeam.teamId || null,
+            location: data.gameTeam.location || null,
+          }
+
+          cache.set(gameTeamId, cachedInfo)
         } catch (error) {
           console.error('Не удалось получить информацию об игре', error)
           return false
         }
       }
 
-      if (!gameId) {
+      const targetGameId = cachedInfo?.gameId
+      const targetTeamId = cachedInfo?.teamId || null
+      const resolvedLocation = cachedInfo?.location || null
+
+      if (!targetGameId) {
         return false
       }
 
       const targetLocation =
-        location || session?.user?.location || defaultLocation || null
+        resolvedLocation ||
+        location ||
+        session?.user?.location ||
+        defaultLocation ||
+        null
 
       if (!targetLocation) {
         return false
       }
 
-      const targetPath = `/${targetLocation}/game/${gameId}`
+      const targetPath = targetTeamId
+        ? `/${targetLocation}/game/${targetGameId}/${targetTeamId}`
+        : `/${targetLocation}/game/${targetGameId}`
 
       try {
         await router.push(targetPath)
