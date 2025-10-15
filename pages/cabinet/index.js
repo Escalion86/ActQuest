@@ -278,10 +278,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
 
         await router.replace(targetPath, targetPath)
       } catch (navError) {
-        console.error(
-          'Не удалось перейти по сохранённому callbackUrl',
-          navError
-        )
+        console.error('Не удалось перейти по сохранённому callbackUrl', navError)
         await router.replace('/cabinet', '/cabinet').catch(() => null)
       }
     }
