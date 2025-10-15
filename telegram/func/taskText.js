@@ -15,6 +15,8 @@ const taskText = ({
   photos,
   timeAddings,
   visibleCluesCount,
+  includeActionPrompt = true,
+  format = 'telegram',
 }) => {
   const { tasks } = game
   const {
@@ -28,7 +30,14 @@ const taskText = ({
     subTasks,
   } = tasks[taskNum]
   const currentTaskId = tasks[taskNum]?._id ? String(tasks[taskNum]._id) : null
-  const taskSecondsLeft = Math.floor(getSecondsBetween(startTaskTime))
+  const startTaskDate =
+    startTaskTime instanceof Date && !Number.isNaN(startTaskTime.getTime())
+      ? startTaskTime
+      : null
+
+  const taskSecondsLeft = startTaskDate
+    ? Math.floor(getSecondsBetween(startTaskDate))
+    : 0
 
   const haveBonusCodes = bonusCodes?.length > 0
   const havePenaltyCodes = penaltyCodes?.length > 0
@@ -81,6 +90,57 @@ const taskText = ({
           })
           .join('\n')}`
       : ''
+
+  const showTimedCountdown =
+    cluesDuration > 0 && effectiveVisibleClues < totalCluesCount
+
+  const nextClueIndex = effectiveVisibleClues + 1
+  const secondsToNextClue = showTimedCountdown
+    ? Math.max(nextClueIndex * cluesDuration - taskSecondsLeft, 0)
+    : 0
+  const secondsToTaskFinish = Math.max(taskDuration - taskSecondsLeft, 0)
+
+  const countdownLabel = showTimedCountdown
+    ? 'Время до подсказки'
+    : 'Время до завершения задания'
+
+  const countdownSeconds = showTimedCountdown
+    ? secondsToNextClue
+    : secondsToTaskFinish
+
+  const targetTimestamp = (() => {
+    if (!startTaskDate) return null
+    const base = startTaskDate.getTime()
+    if (showTimedCountdown) {
+      return base + nextClueIndex * cluesDuration * 1000
+    }
+    return base + taskDuration * 1000
+  })()
+
+  const countdownValue = (() => {
+    if (format === 'web') {
+      const attributes = [
+        `data-task-countdown="${showTimedCountdown ? 'hint' : 'task'}"`,
+        'data-refresh-on-complete="true"',
+      ]
+      if (Number.isFinite(targetTimestamp)) {
+        attributes.push(`data-target="${targetTimestamp}"`)
+      }
+      if (Number.isFinite(countdownSeconds)) {
+        attributes.push(`data-seconds="${countdownSeconds}"`)
+      }
+
+      return `<span ${attributes.join(' ')}>${secondsToTime(
+        countdownSeconds
+      )}</span>`
+    }
+
+    return secondsToTime(countdownSeconds)
+  })()
+
+  const actionPrompt = `<b>${
+    game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'
+  }</b>`
 
   return `<b>Задание №${taskNum + 1}${
     task.isBonusTask ? ' (БОНУСНОЕ)' : ''
@@ -157,18 +217,9 @@ const taskText = ({
     game.type === 'photo' && photos && photos[taskNum]?.photos?.length > 0
       ? `\n\n<b>Получено фото-ответов</b>: ${photos[taskNum]?.photos.length} шт.`
       : ''
-  }${addingsSummary}\n\n${
-    cluesDuration > 0 && effectiveVisibleClues < totalCluesCount
-      ? `<b>Время до подсказки</b>: ${secondsToTime(
-          Math.max(
-            (effectiveVisibleClues + 1) * cluesDuration - taskSecondsLeft,
-            0
-          )
-        )}`
-      : `<b>Время до завершения задания</b>: ${secondsToTime(
-          taskDuration - taskSecondsLeft
-        )}`
-  }\n\n<b>${game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'}</b>`
+  }${addingsSummary}\n\n<b>${countdownLabel}</b>: ${countdownValue}${
+    includeActionPrompt ? `\n\n${actionPrompt}` : ''
+  }`
 }
 
 export default taskText
