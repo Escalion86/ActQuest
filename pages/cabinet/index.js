@@ -279,7 +279,10 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
 
         await router.replace(targetPath, targetPath)
       } catch (navError) {
-        console.error('Не удалось перейти по сохранённому callbackUrl', navError)
+        console.error(
+          'Не удалось перейти по сохранённому callbackUrl',
+          navError
+        )
         await router.replace('/cabinet', '/cabinet').catch(() => null)
       }
     }
@@ -319,7 +322,11 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   }, [theme, isClient])
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.location && !hasSyncedLocation) {
+    if (
+      status === 'authenticated' &&
+      session?.user?.location &&
+      !hasSyncedLocation
+    ) {
       setLocation(session.user.location)
       setHasSyncedLocation(true)
       return
@@ -413,7 +420,9 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
           throw new Error(data?.error || 'Не удалось загрузить уведомления')
         }
 
-        const items = Array.isArray(data.notifications) ? data.notifications : []
+        const items = Array.isArray(data.notifications)
+          ? data.notifications
+          : []
 
         setNotifications(
           items.map((item) => {
@@ -421,7 +430,8 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
             const resolvedId =
               typeof rawId === 'string'
                 ? rawId
-                : rawId?.toString?.() || `notification-${Math.random().toString(36).slice(2)}`
+                : rawId?.toString?.() ||
+                  `notification-${Math.random().toString(36).slice(2)}`
 
             return {
               id: resolvedId,
@@ -452,7 +462,9 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   const handleMarkNotificationsAsRead = useCallback(async () => {
     if (!session) return
 
-    const unreadIds = notifications.filter((item) => !item.readAt).map((item) => item.id)
+    const unreadIds = notifications
+      .filter((item) => !item.readAt)
+      .map((item) => item.id)
 
     if (unreadIds.length === 0) return
 
@@ -497,10 +509,21 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   }, [session, location, fetchNotifications])
 
   useEffect(() => {
-    if (notificationsExpanded && session && !notifications.length && !notificationsLoading) {
+    if (
+      notificationsExpanded &&
+      session &&
+      !notifications.length &&
+      !notificationsLoading
+    ) {
       fetchNotifications({ silent: true })
     }
-  }, [notificationsExpanded, session, notifications.length, notificationsLoading, fetchNotifications])
+  }, [
+    notificationsExpanded,
+    session,
+    notifications.length,
+    notificationsLoading,
+    fetchNotifications,
+  ])
 
   const sendCommand = async ({
     command,
@@ -606,7 +629,10 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
 
   const handleSignOut = async () => {
     try {
-      if (pushNotifications?.isSubscribed && typeof pushNotifications.unsubscribe === 'function') {
+      if (
+        pushNotifications?.isSubscribed &&
+        typeof pushNotifications.unsubscribe === 'function'
+      ) {
         await pushNotifications.unsubscribe().catch(() => null)
       }
       await signOut({ redirect: false })
@@ -752,7 +778,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
 
   const renderLogin = () => (
     <>
-      <button
+      {/* <button
         className="btn btn-primary"
         onClick={() =>
           handleTelegramAuth({
@@ -768,7 +794,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
         }
       >
         Войти
-      </button>
+      </button> */}
       <TelegramLogin
         availableLocations={availableLocations}
         location={location}
