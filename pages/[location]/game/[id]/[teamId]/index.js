@@ -11,6 +11,32 @@ import webGameProcess from '@server/webGameProcess'
 import dbConnect from '@utils/dbConnect'
 import taskText from 'telegram/func/taskText'
 
+const ensureDateValue = (value) => {
+  if (!value) return null
+
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const cloneDateValue = (value) => {
+  const date = ensureDateValue(value)
+  return date ? new Date(date.getTime()) : null
+}
+
+const ensureArrayWithLength = (value, length, filler) => {
+  const base = Array.isArray(value) ? [...value] : []
+  if (base.length < length) {
+    return base.concat(new Array(length - base.length).fill(filler))
+  }
+  return base.slice(0, length)
+}
+
+const parseDurationSeconds = (value, fallback) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  return Math.max(Math.floor(numeric), 0)
+}
+
 const statusLabels = {
   active: 'Ещё не началась',
   started: 'В процессе',
@@ -772,22 +798,158 @@ export const getServerSideProps = async (context) => {
       .findById(gameTeam._id)
       .lean()
 
-    const effectiveGameTeam = refreshedGameTeam ?? gameTeam
+    let effectiveGameTeam = refreshedGameTeam ?? gameTeam
 
     const tasks = Array.isArray(game.tasks) ? game.tasks : []
     const tasksCount = tasks.length
+
+    const breakDurationSeconds = parseDurationSeconds(game.breakDuration, 0)
+    const taskDurationSeconds = parseDurationSeconds(game.taskDuration, 3600)
+    const cluesDurationSeconds = parseDurationSeconds(game.cluesDuration, 1200)
+
+    const autoProgressMessages = []
+
+    const maybeHandleAutomaticProgress = async (teamState) => {
+      if (!teamState || tasksCount === 0) return teamState
+
+      const activeNumValue = Number.isInteger(teamState?.activeNum)
+        ? teamState.activeNum
+        : 0
+      const clampedIndex = Math.max(
+        Math.min(activeNumValue, tasksCount - 1),
+        0
+      )
+
+      if (activeNumValue >= tasksCount) {
+        return teamState
+      }
+
+      const nextIndex = clampedIndex + 1
+      const hasNextTask = nextIndex < tasksCount
+
+      const startTimes = ensureArrayWithLength(
+        teamState.startTime,
+        tasksCount,
+        null
+      )
+      const endTimes = ensureArrayWithLength(teamState.endTime, tasksCount, null)
+
+      const activeStart = ensureDateValue(startTimes[clampedIndex])
+      const activeEnd = ensureDateValue(endTimes[clampedIndex])
+      const nowMs = Date.now()
+
+      const updateActiveNum = async (nextActiveNum, extraUpdates = {}) => {
+        const updates = { activeNum: nextActiveNum, ...extraUpdates }
+        const updatedTeam = await gamesTeamsModel
+          .findByIdAndUpdate(teamState._id, updates, { new: true })
+          .lean()
+
+        return updatedTeam ?? { ...teamState, ...updates }
+      }
+
+      if (!hasNextTask) {
+        if (activeEnd) {
+          return updateActiveNum(nextIndex)
+        }
+
+        if (activeStart && taskDurationSeconds > 0) {
+          const elapsedSinceStart = Math.max(
+            Math.floor((nowMs - activeStart.getTime()) / 1000),
+            0
+          )
+
+          if (elapsedSinceStart >= taskDurationSeconds) {
+            return updateActiveNum(nextIndex)
+          }
+        }
+
+        return teamState
+      }
+
+      const advanceToNextTask = async () => {
+        const startTimeUpdates = ensureArrayWithLength(
+          teamState.startTime,
+          tasksCount,
+          null
+        ).map(cloneDateValue)
+        startTimeUpdates[nextIndex] = new Date()
+
+        const forcedCluesUpdates = ensureArrayWithLength(
+          teamState.forcedClues,
+          tasksCount,
+          0
+        ).map((value) => (Number.isFinite(value) ? value : 0))
+        forcedCluesUpdates[nextIndex] = 0
+
+        return updateActiveNum(nextIndex, {
+          startTime: startTimeUpdates,
+          forcedClues: forcedCluesUpdates,
+        })
+      }
+
+      if (activeEnd) {
+        if (breakDurationSeconds <= 0) {
+          return advanceToNextTask()
+        }
+
+        const elapsedAfterEnd = Math.max(
+          Math.floor((nowMs - activeEnd.getTime()) / 1000),
+          0
+        )
+
+        if (elapsedAfterEnd >= breakDurationSeconds) {
+          return advanceToNextTask()
+        }
+
+        return teamState
+      }
+
+      if (activeStart && taskDurationSeconds > 0) {
+        const elapsedSinceStart = Math.max(
+          Math.floor((nowMs - activeStart.getTime()) / 1000),
+          0
+        )
+
+        if (elapsedSinceStart >= taskDurationSeconds) {
+          if (breakDurationSeconds > 0) {
+            if (elapsedSinceStart >= taskDurationSeconds + breakDurationSeconds) {
+              autoProgressMessages.push('<b>Перерыв завершён.</b>')
+              return advanceToNextTask()
+            }
+          } else {
+            autoProgressMessages.push('<b>Время на задание вышло.</b>')
+            return advanceToNextTask()
+          }
+        }
+      }
+
+      return teamState
+    }
+
+    effectiveGameTeam = await maybeHandleAutomaticProgress(effectiveGameTeam)
+
     const activeNumRaw = Number.isInteger(effectiveGameTeam?.activeNum)
       ? effectiveGameTeam.activeNum
       : 0
-    const breakDurationRaw = Number(game.breakDuration)
-    const breakDurationSeconds = Number.isFinite(breakDurationRaw)
-      ? Math.max(Math.floor(breakDurationRaw), 0)
-      : 0
 
-    const ensureDate = (value) => {
-      if (!value) return null
-      const date = value instanceof Date ? value : new Date(value)
-      return Number.isNaN(date.getTime()) ? null : date
+    if (autoProgressMessages.length > 0) {
+      const baseMessages = Array.isArray(processResult?.messages)
+        ? [...processResult.messages]
+        : []
+
+      if (!processResult?.messages && processResult?.message) {
+        baseMessages.push(processResult.message)
+      }
+
+      const combinedMessages = [...baseMessages, ...autoProgressMessages].filter(
+        Boolean
+      )
+
+      processResult = {
+        ...(processResult || {}),
+        message: processResult?.message || combinedMessages[0] || '',
+        messages: combinedMessages,
+      }
     }
 
     const formatSecondsForCountdown = (totalSeconds) => {
@@ -834,46 +996,86 @@ export const getServerSideProps = async (context) => {
         taskHtml = completionParts.join('')
         taskState = 'completed'
       } else {
-        const startTimes = Array.isArray(effectiveGameTeam.startTime)
-          ? effectiveGameTeam.startTime
-          : []
-        const forcedClues = Array.isArray(effectiveGameTeam.forcedClues)
-          ? effectiveGameTeam.forcedClues
-          : []
-        const endTimes = Array.isArray(effectiveGameTeam.endTime)
-          ? effectiveGameTeam.endTime
-          : []
+        const startTimes = ensureArrayWithLength(
+          effectiveGameTeam.startTime,
+          tasksCount,
+          null
+        )
+        const forcedClues = ensureArrayWithLength(
+          effectiveGameTeam.forcedClues,
+          tasksCount,
+          0
+        )
+        const endTimes = ensureArrayWithLength(
+          effectiveGameTeam.endTime,
+          tasksCount,
+          null
+        )
 
         const activeTaskIndex = Math.max(
           Math.min(activeNumRaw, tasksCount - 1),
           0
         )
-        const activeTaskEndTime = ensureDate(endTimes[activeTaskIndex])
+        const activeTaskEndTime = ensureDateValue(endTimes[activeTaskIndex])
+        const activeTaskStartTime = ensureDateValue(
+          startTimes[activeTaskIndex]
+        )
 
         let breakSecondsLeft = null
         let breakTargetTimestamp = null
+        let breakReason = null
 
-        if (activeTaskEndTime && breakDurationSeconds > 0) {
-          const elapsed = Math.max(
-            Math.floor((Date.now() - activeTaskEndTime.getTime()) / 1000),
-            0
-          )
-          if (elapsed < breakDurationSeconds) {
-            breakSecondsLeft = breakDurationSeconds - elapsed
-            breakTargetTimestamp =
-              activeTaskEndTime.getTime() + breakDurationSeconds * 1000
+        if (breakDurationSeconds > 0) {
+          const nowMs = Date.now()
+
+          if (activeTaskEndTime) {
+            const elapsed = Math.max(
+              Math.floor((nowMs - activeTaskEndTime.getTime()) / 1000),
+              0
+            )
+            if (elapsed < breakDurationSeconds) {
+              breakSecondsLeft = breakDurationSeconds - elapsed
+              breakTargetTimestamp =
+                activeTaskEndTime.getTime() + breakDurationSeconds * 1000
+              breakReason = 'success'
+            }
+          } else if (
+            activeTaskStartTime &&
+            taskDurationSeconds > 0
+          ) {
+            const elapsedSinceStart = Math.max(
+              Math.floor((nowMs - activeTaskStartTime.getTime()) / 1000),
+              0
+            )
+            if (elapsedSinceStart >= taskDurationSeconds) {
+              const overtime = elapsedSinceStart - taskDurationSeconds
+              if (overtime < breakDurationSeconds) {
+                breakSecondsLeft = breakDurationSeconds - overtime
+                breakTargetTimestamp =
+                  activeTaskStartTime.getTime() +
+                  (taskDurationSeconds + breakDurationSeconds) * 1000
+                breakReason = 'timeout'
+              }
+            }
           }
         }
 
         if (breakSecondsLeft !== null) {
           const postMessage = tasks[activeTaskIndex]?.postMessage
-          const breakParts = ['<b>Задание выполнено.</b>']
+          const breakParts = [
+            breakReason === 'timeout'
+              ? '<b>Время на задание вышло.</b>'
+              : '<b>Задание выполнено.</b>',
+          ]
           if (postMessage) {
             breakParts.push(
               `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${postMessage}</blockquote>`
             )
           }
-          breakParts.push('<br /><br /><b>Ожидайте следующее задание после перерыва.</b>')
+          breakParts.push('<br /><br /><b>Перерыв.</b>')
+          breakParts.push(
+            '<br /><br /><b>Ожидайте следующее задание после перерыва.</b>'
+          )
           breakParts.push(
             `<br /><br /><b>Время до окончания перерыва:</b> ${createCountdownSpan(
               breakSecondsLeft,
@@ -883,21 +1085,10 @@ export const getServerSideProps = async (context) => {
           taskHtml = breakParts.join('')
           taskState = 'break'
         } else {
-          const startTaskTimeRaw = startTimes[activeTaskIndex]
-          const startTaskTime = ensureDate(startTaskTimeRaw)
-          const resolvedCluesDuration = Number(game.cluesDuration)
-          const resolvedTaskDuration = Number(game.taskDuration)
-          const cluesDuration = Number.isFinite(resolvedCluesDuration)
-            ? resolvedCluesDuration
-            : 1200
-          const taskDuration = Number.isFinite(resolvedTaskDuration)
-            ? resolvedTaskDuration
-            : 3600
-
           let elapsedSeconds = 0
-          if (startTaskTime) {
+          if (activeTaskStartTime) {
             elapsedSeconds = Math.max(
-              Math.floor((Date.now() - startTaskTime.getTime()) / 1000),
+              Math.floor((Date.now() - activeTaskStartTime.getTime()) / 1000),
               0
             )
           }
@@ -907,8 +1098,11 @@ export const getServerSideProps = async (context) => {
             0
           )
           const timedCluesCount =
-            cluesDuration > 0
-              ? Math.max(Math.floor(elapsedSeconds / cluesDuration), 0)
+            cluesDurationSeconds > 0
+              ? Math.max(
+                  Math.floor(elapsedSeconds / cluesDurationSeconds),
+                  0
+                )
               : 0
           const visibleCluesCount = Math.max(timedCluesCount, forcedCluesCount)
 
@@ -918,9 +1112,9 @@ export const getServerSideProps = async (context) => {
             findedCodes: effectiveGameTeam.findedCodes,
             findedBonusCodes: effectiveGameTeam.findedBonusCodes,
             findedPenaltyCodes: effectiveGameTeam.findedPenaltyCodes,
-            startTaskTime,
-            cluesDuration,
-            taskDuration,
+            startTaskTime: activeTaskStartTime,
+            cluesDuration: cluesDurationSeconds,
+            taskDuration: taskDurationSeconds,
             photos: effectiveGameTeam.photos,
             timeAddings: effectiveGameTeam.timeAddings,
             visibleCluesCount,
