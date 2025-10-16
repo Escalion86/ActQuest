@@ -345,7 +345,7 @@ function GameTeamPage({
 
   const handleSignOut = async () => {
     await signOut({ redirect: false })
-    router.push('/')
+    await router.push(`/${location}/game/${gameId}`)
   }
 
   const handleSubmit = async (event) => {
