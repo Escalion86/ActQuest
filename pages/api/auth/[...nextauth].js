@@ -44,7 +44,7 @@ export const authOptions = {
             throw new Error(result.errorCode || 'TELEGRAM_AUTH_FAILED')
           }
 
-          return result.user
+          return { ...result.user, isTestAuth: Boolean(result.isTestAuth) }
         } catch (error) {
           console.error('Telegram authorize unexpected error', error)
           throw error
@@ -63,6 +63,7 @@ export const authOptions = {
         token.photoUrl = user.photoUrl
         token.languageCode = user.languageCode
         token.isPremium = user.isPremium
+        token.isTestAuth = Boolean(user.isTestAuth)
       }
 
       return token
@@ -79,6 +80,13 @@ export const authOptions = {
           languageCode: token.languageCode,
           isPremium: token.isPremium,
           location: token.location,
+        }
+
+        if (token?.isTestAuth) {
+          session.user = normalizeUserForSession(null, fallbackUser)
+          session.user.location = token.location
+          session.user.isTestAuth = true
+          return session
         }
 
         try {
