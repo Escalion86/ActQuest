@@ -2,6 +2,7 @@ import getSecondsBetween from '@helpers/getSecondsBetween'
 import secondsToTime from './secondsToTime'
 import { getNounCodes, getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
+import linkifyText from './linkifyText'
 
 const taskText = ({
   game,
@@ -66,7 +67,7 @@ const taskText = ({
     for (let i = 0; i < effectiveVisibleClues; i++) {
       if (clues[i]?.clue)
         cluesText += `\n\n<b>Подсказка №${i + 1}</b>:\n<blockquote>${
-          clues[i].clue
+          linkifyText(clues[i].clue)
         }</blockquote>`
     }
 
@@ -144,7 +145,7 @@ const taskText = ({
 
   return `<b>Задание №${taskNum + 1}${
     task.isBonusTask ? ' (БОНУСНОЕ)' : ''
-  }:</b>\n<blockquote>${task}</blockquote>${cluesText}${
+  }:</b>\n<blockquote>${linkifyText(task)}</blockquote>${cluesText}${
     game.type !== 'photo' && (haveBonusCodes || havePenaltyCodes)
       ? `\n\n<b>Внимание:</b> На месте есть ${
           haveBonusCodes && havePenaltyCodes
@@ -169,10 +170,12 @@ const taskText = ({
                 subTasks.length > 0
                   ? subTasks
                       .map(
-                        ({ name, task, bonus }) =>
+                        ({ name, task: subTaskText, bonus }) =>
                           `"${name}" - ${getNounPoints(
                             bonus
-                          )}\n<blockquote>${task}</blockquote>`
+                          )}\n<blockquote>${linkifyText(
+                            subTaskText
+                          )}</blockquote>`
                       )
                       .join('')
                   : ''

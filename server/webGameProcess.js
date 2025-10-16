@@ -484,7 +484,7 @@ const webGameProcess = async ({
     })
 
     return createBaseResponse({
-      statusMessage: 'Код не верен.',
+      statusMessage: `Код "${codeInput}" не верен.`,
       followUpMessage,
       promptMessage: createPromptMessage(resolvedGame.type),
     })

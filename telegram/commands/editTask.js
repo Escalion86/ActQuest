@@ -2,6 +2,7 @@ import { getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
+import linkifyText from 'telegram/func/linkifyText'
 
 const editTask = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId', 'i'])
@@ -50,12 +51,12 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
   const cluesText =
     typeof clues === 'object'
       ? clues
-          .map(
-            ({ clue, images }, index) =>
-              `\n\n<b>Подсказка №${
-                index + 1
-              }</b>:\n<blockquote>${clue}</blockquote>`
-          )
+          .map(({ clue, images }, index) => {
+            const clueHtml = linkifyText(clue)
+            return `\n\n<b>Подсказка №${
+              index + 1
+            }</b>:\n<blockquote>${clueHtml}</blockquote>`
+          })
           .join('')
       : ''
 
@@ -95,7 +96,9 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
         ? '[не заданы]'
         : `<code>${latitude} ${longitude}</code>`
     }\n\n${!task?.task ? `\u{2757}` : ''}<b>Текст задания</b>:${
-      !task?.task ? ' [не задано]' : `\n<blockquote>${task.task}</blockquote>`
+      !task?.task
+        ? ' [не задано]'
+        : `\n<blockquote>${linkifyText(task.task)}</blockquote>`
     }${cluesText}${
       isCluesError ? `\n\u{2757}Количество подсказок не достаточно` : ''
     }${
@@ -107,10 +110,12 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
                   task?.subTasks.length > 0
                     ? task?.subTasks
                         .map(
-                          ({ name, task, bonus }) =>
+                          ({ name, task: subTaskText, bonus }) =>
                             `"${name}" - ${getNounPoints(
                               bonus
-                            )}\n<blockquote>${task}</blockquote>`
+                            )}\n<blockquote>${linkifyText(
+                              subTaskText
+                            )}</blockquote>`
                         )
                         .join('')
                     : ''
@@ -167,7 +172,9 @@ const editTask = async ({ telegramId, jsonCommand, location, db }) => {
         : ''
     }${
       task.postMessage
-        ? `\n\n<b>Сообщение после задания</b>:\n"${task.postMessage}"`
+        ? `\n\n<b>Сообщение после задания</b>:\n"${linkifyText(
+            task.postMessage
+          )}"`
         : ''
     }`,
     buttons: [
