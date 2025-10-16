@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { signOut, useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import { getServerSession } from 'next-auth/next'
 
 import fetchGame from '@server/fetchGame'
@@ -87,10 +87,9 @@ function GameEntryPage({
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
   }
 
-  const handleSignOut = async () => {
-    await signOut({ redirect: false })
-    router.push('/')
-  }
+  const handleGoToCabinet = useCallback(() => {
+    router.push('/cabinet')
+  }, [router])
 
   const plannedStart = useMemo(() => formatDateTime(game?.dateStart), [game?.dateStart])
   const actualStart = useMemo(
@@ -155,10 +154,10 @@ function GameEntryPage({
               {resolvedSession ? (
                 <button
                   type="button"
-                  onClick={handleSignOut}
+                  onClick={handleGoToCabinet}
                   className="px-4 py-2 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                 >
-                  Выйти
+                  Вернуться в кабинет
                 </button>
               ) : null}
             </div>
