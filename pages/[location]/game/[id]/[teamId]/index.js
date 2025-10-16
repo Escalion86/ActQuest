@@ -218,6 +218,7 @@ function GameTeamPage({
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
   const isInitialThemeSyncRef = useRef(true)
+  const previousTaskStateRef = useRef(taskState || 'idle')
   const initialShouldClearMessages = Boolean(result?.shouldResetMessages)
 
   const [taskData, setTaskData] = useState(() =>
@@ -315,8 +316,10 @@ function GameTeamPage({
       postCompletionMessage,
     })
     setShouldClearMessagesForActiveTask((prev) => {
-      const next = Boolean(result?.shouldResetMessages)
-      return next === prev ? prev : next
+      if (result?.shouldResetMessages) {
+        return true
+      }
+      return prev
     })
   }, [
     postCompletionMessage,
@@ -562,6 +565,17 @@ function GameTeamPage({
       setLastResultSnapshot(null)
     }
   }, [currentResult, visibleActiveTaskMessages, shouldClearMessagesForActiveTask])
+
+  useEffect(() => {
+    const previousState = previousTaskStateRef.current
+    if (previousState !== currentTaskState) {
+      if (currentTaskState === 'active' && previousState !== 'active') {
+        setShouldClearMessagesForActiveTask(true)
+        setLastResultSnapshot(null)
+      }
+      previousTaskStateRef.current = currentTaskState
+    }
+  }, [currentTaskState])
 
   const fallbackResultMessages = useMemo(
     () => {
