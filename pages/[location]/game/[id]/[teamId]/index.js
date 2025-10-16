@@ -77,6 +77,47 @@ const normalizeForComparison = (value) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+const collectResultMessages = ({
+  result,
+  normalizedTaskMessage,
+  isBreakState,
+  isGameCompletion,
+}) => {
+  if (!result) return []
+
+  const rawMessages =
+    Array.isArray(result.messages) && result.messages.length > 0
+      ? result.messages
+      : [result.message].filter(Boolean)
+
+  if (rawMessages.length === 0) return []
+
+  const seen = new Set()
+
+  return rawMessages
+    .filter((message) => {
+      const normalized = normalizeForComparison(message)
+      if (!normalized) return false
+      if (normalizedTaskMessage && normalized === normalizedTaskMessage) {
+        return false
+      }
+      if (isBreakState && /перерыв/i.test(normalized)) {
+        return false
+      }
+      if (
+        isGameCompletion &&
+        (/(^|\s)введите\s+код/i.test(normalized) ||
+          /код\s+не\s+верен/i.test(normalized))
+      ) {
+        return false
+      }
+      if (seen.has(normalized)) return false
+      seen.add(normalized)
+      return true
+    })
+    .map((message) => transformHtml(message))
+}
+
 const formatCountdownSeconds = (totalSeconds) => {
   if (!Number.isFinite(totalSeconds)) return '00:00:00'
 
@@ -134,6 +175,15 @@ function GameTeamPage({
   const [currentResult, setCurrentResult] = useState(result)
   const [isTaskRefreshing, setIsTaskRefreshing] = useState(false)
   const [taskRefreshError, setTaskRefreshError] = useState(null)
+  const [lastResultSnapshot, setLastResultSnapshot] = useState(() => {
+    const initialMessages = collectResultMessages({
+      result,
+      normalizedTaskMessage: normalizeForComparison(taskHtml),
+      isBreakState: taskState === 'break',
+      isGameCompletion: isGameFinished || taskState === 'completed',
+    })
+    return initialMessages.length > 0 ? result : null
+  })
 
   const resolvedSession = session ?? initialSession
 
@@ -183,6 +233,16 @@ function GameTeamPage({
   }, [result, taskHtml, taskState])
 
   useEffect(() => {
+    const nextMessages = collectResultMessages({
+      result,
+      normalizedTaskMessage: normalizeForComparison(taskHtml),
+      isBreakState: taskState === 'break',
+      isGameCompletion: isGameFinished || taskState === 'completed',
+    })
+    setLastResultSnapshot(nextMessages.length > 0 ? result : null)
+  }, [result, taskHtml, taskState, isGameFinished])
+
+  useEffect(() => {
     if (!isClient) return
     if (!router.isReady) return
     if (!shouldClearMessageParam) return
@@ -228,48 +288,60 @@ function GameTeamPage({
     })
   }
 
-  const handleTaskRefresh = useCallback(async () => {
-    if (isTaskRefreshing) return
+  const handleTaskRefresh = useCallback(
+    async ({ recordTimestamp = true } = {}) => {
+      if (isTaskRefreshing) return null
 
-    setTaskRefreshError(null)
-    setIsTaskRefreshing(true)
+      if (recordTimestamp) {
+        refreshRequestedRef.current = Date.now()
+      }
 
-    try {
-      const response = await fetch('/api/webapp/game-task', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          location,
-          gameId,
-          teamId,
-        }),
-      })
+      setTaskRefreshError(null)
+      setIsTaskRefreshing(true)
 
-      if (!response.ok) {
+      try {
+        const response = await fetch('/api/webapp/game-task', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            location,
+            gameId,
+            teamId,
+          }),
+        })
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || 'Не удалось обновить задание')
+        }
+
         const data = await response.json().catch(() => null)
-        throw new Error(data?.error || 'Не удалось обновить задание')
+
+        if (!data?.success) {
+          throw new Error(data?.error || 'Не удалось обновить задание')
+        }
+
+        const payload = data.data || {}
+        setCurrentTaskHtml(payload.taskHtml || '')
+        setCurrentTaskState(payload.taskState || 'idle')
+        setCurrentResult(payload.result || null)
+        return true
+      } catch (refreshError) {
+        setTaskRefreshError(
+          refreshError?.message || 'Не удалось обновить задание'
+        )
+        if (recordTimestamp) {
+          refreshRequestedRef.current = 0
+        }
+        return false
+      } finally {
+        setIsTaskRefreshing(false)
       }
-
-      const data = await response.json().catch(() => null)
-
-      if (!data?.success) {
-        throw new Error(data?.error || 'Не удалось обновить задание')
-      }
-
-      const payload = data.data || {}
-      setCurrentTaskHtml(payload.taskHtml || '')
-      setCurrentTaskState(payload.taskState || 'idle')
-      setCurrentResult(payload.result || null)
-    } catch (refreshError) {
-      setTaskRefreshError(
-        refreshError?.message || 'Не удалось обновить задание'
-      )
-    } finally {
-      setIsTaskRefreshing(false)
-    }
-  }, [gameId, isTaskRefreshing, location, teamId])
+    },
+    [gameId, isTaskRefreshing, location, teamId]
+  )
 
   const handleSignOut = async () => {
     await signOut({ redirect: false })
@@ -315,45 +387,48 @@ function GameTeamPage({
   const isCompletedState = currentTaskState === 'completed'
   const isGameCompletion = isGameFinished || isCompletedState
 
-  const resultMessages = useMemo(() => {
-    if (!currentResult) return []
+  const currentResultMessages = useMemo(
+    () =>
+      collectResultMessages({
+        result: currentResult,
+        normalizedTaskMessage,
+        isBreakState,
+        isGameCompletion,
+      }),
+    [currentResult, normalizedTaskMessage, isBreakState, isGameCompletion]
+  )
 
-    const rawMessages =
-      Array.isArray(currentResult.messages) && currentResult.messages.length > 0
-        ? currentResult.messages
-        : [currentResult.message].filter(Boolean)
+  useEffect(() => {
+    if (currentResultMessages.length > 0 && currentResult) {
+      setLastResultSnapshot(currentResult)
+    } else if (currentResult && currentResultMessages.length === 0) {
+      setLastResultSnapshot(null)
+    }
+  }, [currentResult, currentResultMessages])
 
-    if (rawMessages.length === 0) return []
+  const fallbackResultMessages = useMemo(
+    () =>
+      currentResult
+        ? []
+        : collectResultMessages({
+            result: lastResultSnapshot,
+            normalizedTaskMessage,
+            isBreakState,
+            isGameCompletion,
+          }),
+    [
+      currentResult,
+      lastResultSnapshot,
+      normalizedTaskMessage,
+      isBreakState,
+      isGameCompletion,
+    ]
+  )
 
-    const seen = new Set()
-
-    const filtered = rawMessages.filter((message) => {
-      const normalized = normalizeForComparison(message)
-      if (!normalized) return false
-      if (normalizedTaskMessage && normalized === normalizedTaskMessage) {
-        return false
-      }
-      if (isBreakState && /перерыв/i.test(normalized)) {
-        return false
-      }
-      if (
-        isGameCompletion &&
-        (/(^|\s)введите\s+код/i.test(normalized) || /код\s+не\s+верен/i.test(normalized))
-      ) {
-        return false
-      }
-      if (seen.has(normalized)) return false
-      seen.add(normalized)
-      return true
-    })
-
-    return filtered.map((message) => transformHtml(message))
-  }, [
-    currentResult,
-    isBreakState,
-    isGameCompletion,
-    normalizedTaskMessage,
-  ])
+  const resultMessages =
+    currentResultMessages.length > 0
+      ? currentResultMessages
+      : fallbackResultMessages
 
   const shouldShowLastMessage = resultMessages.length > 0
   const shouldShowAnswerForm = !isGameCompletion && !isBreakState
@@ -434,10 +509,20 @@ function GameTeamPage({
           const MIN_REFRESH_INTERVAL = 3000
 
           if (now - lastRefreshAt >= MIN_REFRESH_INTERVAL) {
-            refreshRequestedRef.current = now
-            void router
-              .replace(router.asPath, undefined, { scroll: false })
-              .catch(() => null)
+            const triggerRefresh = async () => {
+              refreshRequestedRef.current = now
+              const success = await handleTaskRefresh({
+                recordTimestamp: false,
+              })
+
+              if (success === false) {
+                void router
+                  .replace(router.asPath, undefined, { scroll: false })
+                  .catch(() => null)
+              }
+            }
+
+            void triggerRefresh()
           }
         }
 
@@ -454,7 +539,7 @@ function GameTeamPage({
     return () => {
       window.clearInterval(intervalId)
     }
-  }, [formattedTaskMessage, isClient, router])
+  }, [formattedTaskMessage, handleTaskRefresh, isClient, router])
 
   return (
     <>
@@ -471,14 +556,16 @@ function GameTeamPage({
               ActQuest
             </Link>
             <nav className="flex items-center gap-6 text-sm font-semibold text-gray-600 dark:text-slate-300">
-              <a
-                href="https://t.me/ActQuest_bot"
-                className="transition hover:text-primary dark:hover:text-white"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Бот в Telegram
-              </a>
+              {/**
+               * <a
+               *   href="https://t.me/ActQuest_bot"
+               *   className="transition hover:text-primary dark:hover:text-white"
+               *   target="_blank"
+               *   rel="noreferrer"
+               * >
+               *   Бот в Telegram
+               * </a>
+               */}
             </nav>
             <div className="flex items-center gap-3">
               <button
@@ -625,7 +712,9 @@ function GameTeamPage({
                   </h2>
                   <button
                     type="button"
-                    onClick={handleTaskRefresh}
+                    onClick={() => {
+                      void handleTaskRefresh()
+                    }}
                     disabled={isTaskRefreshing}
                     className="inline-flex items-center justify-center p-2 text-gray-600 transition border border-gray-300 rounded-full hover:text-blue-600 hover:border-blue-400 disabled:opacity-60 disabled:cursor-not-allowed dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                     aria-label="Обновить текущее задание"

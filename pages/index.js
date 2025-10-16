@@ -56,14 +56,16 @@ const Home = () => {
               <Link href="/cabinet" className="transition hover:text-primary">
                 Личный кабинет
               </Link>
-              <a
-                href="https://t.me/ActQuest_bot"
-                className="transition hover:text-primary"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Бот в Telegram
-              </a>
+              {/**
+               * <a
+               *   href="https://t.me/ActQuest_bot"
+               *   className="transition hover:text-primary"
+               *   target="_blank"
+               *   rel="noreferrer"
+               * >
+               *   Бот в Telegram
+               * </a>
+               */}
             </nav>
           </div>
         </header>

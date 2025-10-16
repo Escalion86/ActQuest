@@ -31,6 +31,8 @@ const gameActive = async ({ telegramId, jsonCommand, location, db }) => {
   await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     status: 'active',
     result: null,
+    dateStartFact: null,
+    dateEndFact: null,
   })
 
   return {
