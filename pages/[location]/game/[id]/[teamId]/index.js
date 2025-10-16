@@ -228,48 +228,60 @@ function GameTeamPage({
     })
   }
 
-  const handleTaskRefresh = useCallback(async () => {
-    if (isTaskRefreshing) return
+  const handleTaskRefresh = useCallback(
+    async ({ recordTimestamp = true } = {}) => {
+      if (isTaskRefreshing) return null
 
-    setTaskRefreshError(null)
-    setIsTaskRefreshing(true)
+      if (recordTimestamp) {
+        refreshRequestedRef.current = Date.now()
+      }
 
-    try {
-      const response = await fetch('/api/webapp/game-task', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          location,
-          gameId,
-          teamId,
-        }),
-      })
+      setTaskRefreshError(null)
+      setIsTaskRefreshing(true)
 
-      if (!response.ok) {
+      try {
+        const response = await fetch('/api/webapp/game-task', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            location,
+            gameId,
+            teamId,
+          }),
+        })
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || 'Не удалось обновить задание')
+        }
+
         const data = await response.json().catch(() => null)
-        throw new Error(data?.error || 'Не удалось обновить задание')
+
+        if (!data?.success) {
+          throw new Error(data?.error || 'Не удалось обновить задание')
+        }
+
+        const payload = data.data || {}
+        setCurrentTaskHtml(payload.taskHtml || '')
+        setCurrentTaskState(payload.taskState || 'idle')
+        setCurrentResult(payload.result || null)
+        return true
+      } catch (refreshError) {
+        setTaskRefreshError(
+          refreshError?.message || 'Не удалось обновить задание'
+        )
+        if (recordTimestamp) {
+          refreshRequestedRef.current = 0
+        }
+        return false
+      } finally {
+        setIsTaskRefreshing(false)
       }
-
-      const data = await response.json().catch(() => null)
-
-      if (!data?.success) {
-        throw new Error(data?.error || 'Не удалось обновить задание')
-      }
-
-      const payload = data.data || {}
-      setCurrentTaskHtml(payload.taskHtml || '')
-      setCurrentTaskState(payload.taskState || 'idle')
-      setCurrentResult(payload.result || null)
-    } catch (refreshError) {
-      setTaskRefreshError(
-        refreshError?.message || 'Не удалось обновить задание'
-      )
-    } finally {
-      setIsTaskRefreshing(false)
-    }
-  }, [gameId, isTaskRefreshing, location, teamId])
+    },
+    [gameId, isTaskRefreshing, location, teamId]
+  )
 
   const handleSignOut = async () => {
     await signOut({ redirect: false })
@@ -434,10 +446,20 @@ function GameTeamPage({
           const MIN_REFRESH_INTERVAL = 3000
 
           if (now - lastRefreshAt >= MIN_REFRESH_INTERVAL) {
-            refreshRequestedRef.current = now
-            void router
-              .replace(router.asPath, undefined, { scroll: false })
-              .catch(() => null)
+            const triggerRefresh = async () => {
+              refreshRequestedRef.current = now
+              const success = await handleTaskRefresh({
+                recordTimestamp: false,
+              })
+
+              if (success === false) {
+                void router
+                  .replace(router.asPath, undefined, { scroll: false })
+                  .catch(() => null)
+              }
+            }
+
+            void triggerRefresh()
           }
         }
 
@@ -454,7 +476,7 @@ function GameTeamPage({
     return () => {
       window.clearInterval(intervalId)
     }
-  }, [formattedTaskMessage, isClient, router])
+  }, [formattedTaskMessage, handleTaskRefresh, isClient, router])
 
   return (
     <>
@@ -625,7 +647,9 @@ function GameTeamPage({
                   </h2>
                   <button
                     type="button"
-                    onClick={handleTaskRefresh}
+                    onClick={() => {
+                      void handleTaskRefresh()
+                    }}
                     disabled={isTaskRefreshing}
                     className="inline-flex items-center justify-center p-2 text-gray-600 transition border border-gray-300 rounded-full hover:text-blue-600 hover:border-blue-400 disabled:opacity-60 disabled:cursor-not-allowed dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                     aria-label="Обновить текущее задание"
