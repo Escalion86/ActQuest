@@ -224,6 +224,7 @@ const computeTaskHtml = async ({
 
   let taskHtml = ''
   let taskState = 'idle'
+  let postCompletionMessage = null
 
   const hasCompletedAllTasks = tasksCount > 0 && activeNumRaw >= tasksCount
 
@@ -360,6 +361,13 @@ const computeTaskHtml = async ({
         })
 
         taskState = 'active'
+
+        if (activeTaskIndex > 0) {
+          const previousTask = tasks[activeTaskIndex - 1] ?? null
+          if (previousTask?.postMessage) {
+            postCompletionMessage = previousTask.postMessage
+          }
+        }
       }
     }
   }
@@ -385,6 +393,7 @@ const computeTaskHtml = async ({
     taskState,
     processResult,
     effectiveGameTeam,
+    postCompletionMessage,
   }
 }
 
@@ -432,7 +441,7 @@ const getTeamGameTaskState = async ({
     const gamesTeamsModel = db.model('GamesTeams')
     const teamsUsersModel = db.model('TeamsUsers')
 
-    const gameTeam = await gamesTeamsModel
+    let gameTeam = await gamesTeamsModel
       .findOne({ gameId, teamId })
       .lean()
 
@@ -475,6 +484,14 @@ const getTeamGameTaskState = async ({
           gameTeamId: gameTeam._id,
           message,
         })
+        if (processResult) {
+          const updatedGameTeam = await gamesTeamsModel
+            .findById(gameTeam._id)
+            .lean()
+          if (updatedGameTeam) {
+            gameTeam = updatedGameTeam
+          }
+        }
       } catch (processError) {
         console.error('Game process execution error', processError)
         processResult = {
@@ -483,7 +500,12 @@ const getTeamGameTaskState = async ({
       }
     }
 
-    const { taskHtml, taskState, processResult: finalResult } =
+    const {
+      taskHtml,
+      taskState,
+      processResult: finalResult,
+      postCompletionMessage,
+    } =
       await computeTaskHtml({
         game,
         gameTeam,
@@ -505,6 +527,10 @@ const getTeamGameTaskState = async ({
         taskHtml,
         taskState,
         gameTeamId: String(gameTeam._id),
+        postCompletionMessage:
+          typeof postCompletionMessage === 'string'
+            ? postCompletionMessage
+            : null,
       },
     }
   } catch (error) {
