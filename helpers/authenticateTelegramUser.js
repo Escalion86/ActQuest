@@ -21,10 +21,6 @@ const errorResponse = (code, message, details = null) => ({
 })
 
 const authenticateTelegramUser = async ({ location, rawData }) => {
-  if (!location) {
-    return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации Telegram.')
-  }
-
   if (!rawData) {
     return errorResponse('MISSING_PAYLOAD', 'Не получены данные авторизации Telegram.')
   }
@@ -43,6 +39,46 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
 
   if (!payload || typeof payload !== 'object') {
     return errorResponse('INVALID_PAYLOAD_TYPE', 'Некорректный формат данных авторизации Telegram.')
+  }
+
+  const isTestAuth =
+    Boolean(payload?.__isTestAuth) && process.env.NODE_ENV !== 'production'
+
+  if (!location && !isTestAuth) {
+    return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации Telegram.')
+  }
+
+  if (isTestAuth) {
+    const sanitizedPayload = { ...payload }
+    delete sanitizedPayload.__isTestAuth
+
+    const telegramId =
+      sanitizedPayload?.id !== undefined && sanitizedPayload?.id !== null
+        ? String(sanitizedPayload.id)
+        : 'test-user'
+    const userLocation = location || 'test'
+    const name = buildUserName(sanitizedPayload)
+
+    return {
+      success: true,
+      isTestAuth: true,
+      user: {
+        id: `test-${telegramId}`,
+        telegramId,
+        location: userLocation,
+        name,
+        username: sanitizedPayload?.username ?? null,
+        photoUrl: sanitizedPayload?.photo_url ?? null,
+        languageCode: sanitizedPayload?.language_code ?? null,
+        isPremium: Boolean(sanitizedPayload?.is_premium),
+        isTestAuth: true,
+      },
+      payload: sanitizedPayload,
+    }
+  }
+
+  if (!location) {
+    return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации Telegram.')
   }
 
   const token = getTelegramTokenByLocation(location)

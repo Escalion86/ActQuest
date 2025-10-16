@@ -177,6 +177,10 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
   const [hasSyncedLocation, setHasSyncedLocation] = useState(false)
   const [isClient, setIsClient] = useState(false)
   const [theme, setTheme] = useState('light')
+  const isLocalhost =
+    isClient &&
+    typeof window !== 'undefined' &&
+    window.location.hostname === 'localhost'
   const authCallbackSourceRef = useRef(initialCallbackSource)
   const processedCallbackRef = useRef(null)
   const lastInteractionRef = useRef('bot')
@@ -936,23 +940,26 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
 
   const renderLogin = () => (
     <>
-      {/* <button
-        className="btn btn-primary"
-        onClick={() =>
-          handleTelegramAuth({
-            id: 261102161,
-            first_name: 'Алексей',
-            last_name: 'Белинский Иллюзионист',
-            username: 'Escalion',
-            photo_url:
-              'https://t.me/i/userpic/320/i4TFzvCH_iU5FLtMAmYEpCPz7guDcuETRzLoynlZamo.jpg',
-            auth_date: 1760503777,
-            hash: 'b1ff0088369bdfb0ab507d8f005dfe4688c610d311df993235721896e66c18fd',
-          })
-        }
-      >
-        Войти
-      </button> */}
+      {isLocalhost && (
+        <button
+          className="btn btn-primary"
+          onClick={() =>
+            handleTelegramAuth({
+              id: 261102161,
+              first_name: 'Алексей',
+              last_name: 'Белинский Иллюзионист',
+              username: 'Escalion',
+              photo_url:
+                'https://t.me/i/userpic/320/i4TFzvCH_iU5FLtMAmYEpCPz7guDcuETRzLoynlZamo.jpg',
+              auth_date: 1760503777,
+              hash: 'b1ff0088369bdfb0ab507d8f005dfe4688c610d311df993235721896e66c18fd',
+              __isTestAuth: true,
+            })
+          }
+        >
+          Войти
+        </button>
+      )}
       <TelegramLogin
         availableLocations={availableLocations}
         location={location}
