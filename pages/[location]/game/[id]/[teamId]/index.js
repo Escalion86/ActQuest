@@ -186,7 +186,9 @@ const resolveThemePreference = () => {
     // ignore inaccessible storage
   }
 
-  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
+  const prefersDark = window.matchMedia?.(
+    '(prefers-color-scheme: dark)'
+  ).matches
   return prefersDark ? 'dark' : 'light'
 }
 
@@ -214,8 +216,10 @@ function GameTeamPage({
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
-  const [isPostCompletionMessageCollapsed, setIsPostCompletionMessageCollapsed] =
-    useState(false)
+  const [
+    isPostCompletionMessageCollapsed,
+    setIsPostCompletionMessageCollapsed,
+  ] = useState(false)
   const taskContentRef = useRef(null)
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
@@ -234,8 +238,10 @@ function GameTeamPage({
   )
   const [isTaskRefreshing, setIsTaskRefreshing] = useState(false)
   const [taskRefreshError, setTaskRefreshError] = useState(null)
-  const [shouldClearMessagesForActiveTask, setShouldClearMessagesForActiveTask] =
-    useState(initialShouldClearMessages)
+  const [
+    shouldClearMessagesForActiveTask,
+    setShouldClearMessagesForActiveTask,
+  ] = useState(initialShouldClearMessages)
   const [lastResultSnapshot, setLastResultSnapshot] = useState(() => {
     if (initialShouldClearMessages) {
       return null
@@ -324,13 +330,7 @@ function GameTeamPage({
       }
       return prev
     })
-  }, [
-    postCompletionMessage,
-    result,
-    taskHtml,
-    taskState,
-    updateTaskData,
-  ])
+  }, [postCompletionMessage, result, taskHtml, taskState, updateTaskData])
 
   useEffect(() => {
     const nextMessages = collectResultMessages({
@@ -355,9 +355,9 @@ function GameTeamPage({
 
     const cleanPath = `/${location}/game/${gameId}/${teamId}`
     hasClearedMessageRef.current = true
-    router.replace(cleanPath, undefined, { shallow: true, scroll: false }).catch(
-      () => null
-    )
+    router
+      .replace(cleanPath, undefined, { shallow: true, scroll: false })
+      .catch(() => null)
   }, [
     gameId,
     isClient,
@@ -571,7 +571,11 @@ function GameTeamPage({
     } else if (currentResult && visibleActiveTaskMessages.length === 0) {
       setLastResultSnapshot(null)
     }
-  }, [currentResult, visibleActiveTaskMessages, shouldClearMessagesForActiveTask])
+  }, [
+    currentResult,
+    visibleActiveTaskMessages,
+    shouldClearMessagesForActiveTask,
+  ])
 
   useEffect(() => {
     const previousState = previousTaskStateRef.current
@@ -584,28 +588,25 @@ function GameTeamPage({
     }
   }, [currentTaskState])
 
-  const fallbackResultMessages = useMemo(
-    () => {
-      if (currentResult || shouldClearMessagesForActiveTask) {
-        return []
-      }
+  const fallbackResultMessages = useMemo(() => {
+    if (currentResult || shouldClearMessagesForActiveTask) {
+      return []
+    }
 
-      return collectResultMessages({
-        result: lastResultSnapshot,
-        normalizedTaskMessage,
-        isBreakState,
-        isGameCompletion,
-      })
-    },
-    [
-      currentResult,
-      lastResultSnapshot,
+    return collectResultMessages({
+      result: lastResultSnapshot,
       normalizedTaskMessage,
       isBreakState,
       isGameCompletion,
-      shouldClearMessagesForActiveTask,
-    ]
-  )
+    })
+  }, [
+    currentResult,
+    lastResultSnapshot,
+    normalizedTaskMessage,
+    isBreakState,
+    isGameCompletion,
+    shouldClearMessagesForActiveTask,
+  ])
 
   const resultMessages =
     visibleActiveTaskMessages.length > 0
@@ -655,10 +656,7 @@ function GameTeamPage({
     })
 
     return output
-  }, [
-    resultMessages,
-    shouldClearMessagesForActiveTask,
-  ])
+  }, [resultMessages, shouldClearMessagesForActiveTask])
 
   const shouldShowLastMessage = displayedResultMessages.length > 0
   const shouldShowAnswerForm = !isGameCompletion && !isBreakState
@@ -671,13 +669,7 @@ function GameTeamPage({
       return 'Игра завершена. Проверьте результаты в кабинете.'
     }
     return null
-  }, [
-    currentTaskState,
-    error,
-    isGameFinished,
-    isGameStarted,
-    status,
-  ])
+  }, [currentTaskState, error, isGameFinished, isGameStarted, status])
 
   useEffect(() => {
     if (!isClient) return
@@ -751,7 +743,9 @@ function GameTeamPage({
 
         return {
           ...item,
-          startTimestamp: Number.isFinite(startTimestamp) ? startTimestamp : now,
+          startTimestamp: Number.isFinite(startTimestamp)
+            ? startTimestamp
+            : now,
         }
       })
     }
@@ -828,7 +822,7 @@ function GameTeamPage({
                     {!isGameInfoCollapsed ? (
                       <div className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2 dark:text-slate-300">
                         <div className="flex flex-col">
-                          <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                          <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
                             ГОРОД
                           </span>
                           <span className="font-medium text-gray-800 dark:text-slate-100">
@@ -836,7 +830,7 @@ function GameTeamPage({
                           </span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                          <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
                             Команда
                           </span>
                           <span className="font-medium text-gray-800 dark:text-slate-100">
@@ -845,7 +839,7 @@ function GameTeamPage({
                         </div>
                         {plannedStart ? (
                           <div className="flex flex-col">
-                            <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                            <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
                               Планируемый старт
                             </span>
                             <span className="font-medium text-gray-800 dark:text-slate-100">
@@ -855,7 +849,7 @@ function GameTeamPage({
                         ) : null}
                         {actualStart ? (
                           <div className="flex flex-col">
-                            <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                            <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
                               Фактический старт
                             </span>
                             <span className="font-medium text-gray-800 dark:text-slate-100">
@@ -865,7 +859,7 @@ function GameTeamPage({
                         ) : null}
                         {actualFinish ? (
                           <div className="flex flex-col">
-                            <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
+                            <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
                               Фактическое завершение
                             </span>
                             <span className="font-medium text-gray-800 dark:text-slate-100">
@@ -879,7 +873,7 @@ function GameTeamPage({
                   <button
                     type="button"
                     onClick={handleGameInfoToggle}
-                    className="self-start flex items-center justify-center p-2 text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                    className="flex items-center self-start justify-center p-2 text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                     aria-label={
                       isGameInfoCollapsed
                         ? 'Развернуть информацию об игре'
@@ -898,7 +892,9 @@ function GameTeamPage({
                       xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
-                        d={isGameInfoCollapsed ? 'M6 9l6 6 6-6' : 'M6 15l6-6 6 6'}
+                        d={
+                          isGameInfoCollapsed ? 'M6 9l6 6 6-6' : 'M6 15l6-6 6 6'
+                        }
                         stroke="currentColor"
                         strokeWidth="1.5"
                         strokeLinecap="round"
@@ -916,54 +912,20 @@ function GameTeamPage({
             </section>
 
             {error ? (
-              <section className="p-6 text-sm text-red-700 bg-red-50 border border-red-200 rounded-3xl dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-100">
-                Произошла ошибка при загрузке данных. Попробуйте обновить страницу позже.
+              <section className="p-6 text-sm text-red-700 border border-red-200 bg-red-50 rounded-3xl dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-100">
+                Произошла ошибка при загрузке данных. Попробуйте обновить
+                страницу позже.
               </section>
             ) : null}
 
             {statusNotice ? (
-              <section className="p-6 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-3xl dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-100">
+              <section className="p-6 text-sm text-blue-800 border border-blue-200 bg-blue-50 rounded-3xl dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-100">
                 {statusNotice}
               </section>
             ) : null}
 
-            {formattedTaskMessage ? (
-              <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-primary dark:text-white">
-                    Текущее задание
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleTaskRefresh()
-                    }}
-                    disabled={isTaskRefreshing}
-                    className="inline-flex items-center justify-center p-2 text-gray-600 transition border border-gray-300 rounded-full hover:text-blue-600 hover:border-blue-400 disabled:opacity-60 disabled:cursor-not-allowed dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
-                    aria-label="Обновить текущее задание"
-                    title="Обновить текущее задание"
-                  >
-                    <FontAwesomeIcon
-                      icon={faArrowsRotate}
-                      className={`w-5 h-5 ${isTaskRefreshing ? 'animate-spin' : ''}`}
-                    />
-                  </button>
-                </div>
-                {taskRefreshError ? (
-                  <p className="mt-3 text-sm text-red-600 dark:text-red-300">
-                    {taskRefreshError}
-                  </p>
-                ) : null}
-                <div
-                  className="mt-4 text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200 aq-task-content"
-                  ref={taskContentRef}
-                  dangerouslySetInnerHTML={{ __html: formattedTaskMessage }}
-                />
-              </section>
-            ) : null}
-
             {shouldRenderPostCompletionMessage ? (
-              <section className="p-6 bg-purple-50 border border-purple-200 shadow-lg rounded-3xl dark:bg-purple-500/10 dark:border-purple-500/30 dark:shadow-slate-950/40">
+              <section className="p-6 border border-purple-200 shadow-lg bg-purple-50 rounded-3xl dark:bg-purple-500/10 dark:border-purple-500/30 dark:shadow-slate-950/40">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-purple-800 dark:text-purple-100">
                     Сообщение после предыдущего задания
@@ -1010,21 +972,62 @@ function GameTeamPage({
                 </div>
                 {!isPostCompletionMessageCollapsed ? (
                   <div
-                    className="mt-4 text-base leading-relaxed text-purple-900 whitespace-pre-wrap break-words dark:text-purple-100 aq-task-content"
-                    dangerouslySetInnerHTML={{ __html: postCompletionMessageHtml }}
+                    className="mt-4 text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100 aq-task-content"
+                    dangerouslySetInnerHTML={{
+                      __html: postCompletionMessageHtml,
+                    }}
                   />
                 ) : null}
               </section>
             ) : null}
 
+            {formattedTaskMessage ? (
+              <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-primary dark:text-white">
+                    Текущее задание
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleTaskRefresh()
+                    }}
+                    disabled={isTaskRefreshing}
+                    className="inline-flex items-center justify-center p-2 text-gray-600 transition border border-gray-300 rounded-full hover:text-blue-600 hover:border-blue-400 disabled:opacity-60 disabled:cursor-not-allowed dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                    aria-label="Обновить текущее задание"
+                    title="Обновить текущее задание"
+                  >
+                    <FontAwesomeIcon
+                      icon={faArrowsRotate}
+                      className={`w-5 h-5 ${
+                        isTaskRefreshing ? 'animate-spin' : ''
+                      }`}
+                    />
+                  </button>
+                </div>
+                {taskRefreshError ? (
+                  <p className="mt-3 text-sm text-red-600 dark:text-red-300">
+                    {taskRefreshError}
+                  </p>
+                ) : null}
+                <div
+                  className="mt-4 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200 aq-task-content"
+                  ref={taskContentRef}
+                  dangerouslySetInnerHTML={{ __html: formattedTaskMessage }}
+                />
+              </section>
+            ) : null}
+
             {shouldShowLastMessage ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-                <h2 className="text-lg font-semibold text-primary dark:text-white">Последние сообщения</h2>
-                <div className="flex flex-col mt-4 gap-4">
+                <h2 className="text-lg font-semibold text-primary dark:text-white">
+                  Последние сообщения
+                </h2>
+                <div className="flex flex-col gap-4 mt-4">
                   {displayedResultMessages.map((html, index) => (
                     <div
                       key={`result-message-${index}`}
-                      className="text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200 aq-task-content"
+                      className="text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200 aq-task-content"
                       dangerouslySetInnerHTML={{ __html: html }}
                     />
                   ))}
@@ -1034,8 +1037,13 @@ function GameTeamPage({
 
             {shouldShowAnswerForm ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-                <h2 className="text-lg font-semibold text-primary dark:text-white">Ответ на задание</h2>
-                <form className="flex flex-col gap-4 mt-4" onSubmit={handleSubmit}>
+                <h2 className="text-lg font-semibold text-primary dark:text-white">
+                  Ответ на задание
+                </h2>
+                <form
+                  className="flex flex-col gap-4 mt-4"
+                  onSubmit={handleSubmit}
+                >
                   <input
                     type="text"
                     value={answer}
@@ -1059,9 +1067,12 @@ function GameTeamPage({
               </section>
             ) : null}
 
-            {Array.isArray(currentResult?.images) && currentResult.images.length > 0 ? (
+            {Array.isArray(currentResult?.images) &&
+            currentResult.images.length > 0 ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-                <h2 className="text-lg font-semibold text-primary dark:text-white">Изображения задания</h2>
+                <h2 className="text-lg font-semibold text-primary dark:text-white">
+                  Изображения задания
+                </h2>
                 <div className="grid gap-4 mt-4 sm:grid-cols-2">
                   {currentResult.images.map((src, index) => (
                     <img
@@ -1108,9 +1119,18 @@ GameTeamPage.propTypes = {
   location: PropTypes.string.isRequired,
   game: PropTypes.shape({
     name: PropTypes.string,
-    dateStart: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
-    dateStartFact: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
-    dateEndFact: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
+    dateStart: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.instanceOf(Date),
+    ]),
+    dateStartFact: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.instanceOf(Date),
+    ]),
+    dateEndFact: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.instanceOf(Date),
+    ]),
   }),
   team: PropTypes.shape({
     name: PropTypes.string,
@@ -1173,15 +1193,20 @@ export const getServerSideProps = async (context) => {
 
     return {
       redirect: {
-        destination: `/api/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        destination: `/api/auth/signin?callbackUrl=${encodeURIComponent(
+          callbackUrl
+        )}`,
         permanent: false,
       },
     }
   }
 
-  const messageParam = typeof query.message === 'string' ? query.message : undefined
+  const messageParam =
+    typeof query.message === 'string' ? query.message : undefined
   const sanitizedMessage =
-    messageParam && messageParam !== 'undefined' ? messageParam.trim() : undefined
+    messageParam && messageParam !== 'undefined'
+      ? messageParam.trim()
+      : undefined
   const shouldClearMessageParam = Boolean(sanitizedMessage)
 
   try {
@@ -1215,7 +1240,8 @@ export const getServerSideProps = async (context) => {
       if (errorCode === GAME_TASK_ERRORS.DB_CONNECTION_FAILED) {
         const fallbackGame = stateResult.game || null
         const fallbackTeam = stateResult.team || null
-        const fallbackStatus = stateResult.status || fallbackGame?.status || 'active'
+        const fallbackStatus =
+          stateResult.status || fallbackGame?.status || 'active'
         const isGameStarted =
           stateResult.isGameStarted ?? fallbackStatus === 'started'
         const isGameFinished =
@@ -1295,15 +1321,15 @@ export const getServerSideProps = async (context) => {
         status: 'active',
         isGameStarted: false,
         isGameFinished: false,
-      result: null,
-      taskHtml: '',
-      taskState: 'idle',
-      postCompletionMessage: '',
-      error: 'UNKNOWN_ERROR',
-      gameId: gameIdParam,
-      teamId: teamIdParam,
-      shouldClearMessageParam,
-    },
+        result: null,
+        taskHtml: '',
+        taskState: 'idle',
+        postCompletionMessage: '',
+        error: 'UNKNOWN_ERROR',
+        gameId: gameIdParam,
+        teamId: teamIdParam,
+        shouldClearMessageParam,
+      },
     }
   }
 }
