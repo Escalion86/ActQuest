@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faRotateRight } from '@fortawesome/free-solid-svg-icons'
 import { signOut, useSession } from 'next-auth/react'
 import { getServerSession } from 'next-auth/next'
 
@@ -271,7 +273,7 @@ function GameTeamPage({
 
   const handleSignOut = async () => {
     await signOut({ redirect: false })
-    router.push('/')
+    await router.push(`/${location}/game/${gameId}`)
   }
 
   const handleSubmit = async (event) => {
@@ -294,7 +296,10 @@ function GameTeamPage({
   const statusLabel = statusLabels[status] ?? 'Статус неизвестен'
   const plannedStart = useMemo(() => formatDateTime(game?.dateStart), [game?.dateStart])
   const actualStart = useMemo(() => formatDateTime(game?.dateStartFact), [game?.dateStartFact])
-  const actualFinish = useMemo(() => formatDateTime(game?.dateEndFact), [game?.dateEndFact])
+  const actualFinish = useMemo(
+    () => (isGameFinished ? formatDateTime(game?.dateEndFact) : null),
+    [game?.dateEndFact, isGameFinished]
+  )
   const cityName = useMemo(() => formatCityName(location), [location])
 
   const formattedTaskMessage = useMemo(
@@ -597,23 +602,6 @@ function GameTeamPage({
                     </span>
                   </button>
                 </div>
-                {!isGameInfoCollapsed ? (
-                  <div className="flex items-center gap-3 pt-2">
-                    <Link
-                      href={`/${location}/game/${gameId}`}
-                      className="text-sm font-semibold text-blue-600 transition hover:underline dark:text-blue-300"
-                    >
-                      Вернуться к игре
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => router.replace(router.asPath)}
-                      className="text-sm font-semibold text-gray-600 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-300"
-                    >
-                      Обновить
-                    </button>
-                  </div>
-                ) : null}
               </div>
             </section>
 
@@ -643,25 +631,10 @@ function GameTeamPage({
                     aria-label="Обновить текущее задание"
                     title="Обновить текущее задание"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
+                    <FontAwesomeIcon
+                      icon={faRotateRight}
                       className={`w-5 h-5 ${isTaskRefreshing ? 'animate-spin' : ''}`}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4.5 9.75a7.5 7.5 0 0112.664-3.9L19.5 6"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M19.5 14.25a7.5 7.5 0 01-12.664 3.9L4.5 18"
-                      />
-                    </svg>
+                    />
                   </button>
                 </div>
                 {taskRefreshError ? (
