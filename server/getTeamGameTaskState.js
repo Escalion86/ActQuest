@@ -305,16 +305,14 @@ const computeTaskHtml = async ({
 
       if (breakSecondsLeft !== null) {
         const postMessage = tasks[activeTaskIndex]?.postMessage
+        if (postMessage) {
+          postCompletionMessage = postMessage
+        }
         const breakParts = [
           breakReason === 'timeout'
             ? '<b>Время на задание вышло.</b>'
             : '<b>Задание выполнено.</b>',
         ]
-        if (postMessage) {
-          breakParts.push(
-            `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${postMessage}</blockquote>`
-          )
-        }
         breakParts.push('<br /><br /><b>Перерыв.</b>')
         breakParts.push('<br /><br /><b>Ожидайте следующее задание после перерыва.</b>')
         breakParts.push(
@@ -380,9 +378,7 @@ const computeTaskHtml = async ({
       completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
     }
     if (lastTask?.postMessage) {
-      completionParts.push(
-        `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${lastTask.postMessage}</blockquote>`
-      )
+      postCompletionMessage = lastTask.postMessage
     }
     taskHtml = completionParts.join('')
     taskState = 'completed'

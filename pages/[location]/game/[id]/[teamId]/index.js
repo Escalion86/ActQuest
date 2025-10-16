@@ -621,11 +621,10 @@ function GameTeamPage({
     return transformHtml(currentPostCompletionMessage)
   }, [currentPostCompletionMessage])
 
-  const shouldShowPostCompletionMessage =
-    isBreakState && Boolean(postCompletionMessageHtml)
+  const shouldRenderPostCompletionMessage = Boolean(postCompletionMessageHtml)
 
   useEffect(() => {
-    if (!shouldShowPostCompletionMessage) {
+    if (!shouldRenderPostCompletionMessage) {
       previousPostCompletionMessageRef.current = ''
       setIsPostCompletionMessageCollapsed(false)
       return
@@ -640,7 +639,7 @@ function GameTeamPage({
     }
 
     previousPostCompletionMessageRef.current = normalizedMessage
-  }, [postCompletionMessageHtml, shouldShowPostCompletionMessage])
+  }, [postCompletionMessageHtml, shouldRenderPostCompletionMessage])
 
   const displayedResultMessages = useMemo(() => {
     const unique = new Set()
@@ -655,19 +654,10 @@ function GameTeamPage({
       output.push(message)
     })
 
-    if (postCompletionMessageHtml && !shouldShowPostCompletionMessage) {
-      if (!unique.has(postCompletionMessageHtml)) {
-        unique.add(postCompletionMessageHtml)
-        output.push(postCompletionMessageHtml)
-      }
-    }
-
     return output
   }, [
     resultMessages,
     shouldClearMessagesForActiveTask,
-    postCompletionMessageHtml,
-    shouldShowPostCompletionMessage,
   ])
 
   const shouldShowLastMessage = displayedResultMessages.length > 0
@@ -972,7 +962,7 @@ function GameTeamPage({
               </section>
             ) : null}
 
-            {shouldShowPostCompletionMessage ? (
+            {shouldRenderPostCompletionMessage ? (
               <section className="p-6 bg-purple-50 border border-purple-200 shadow-lg rounded-3xl dark:bg-purple-500/10 dark:border-purple-500/30 dark:shadow-slate-950/40">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-purple-800 dark:text-purple-100">
