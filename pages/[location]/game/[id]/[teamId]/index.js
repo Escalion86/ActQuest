@@ -430,6 +430,7 @@ function GameTeamPage({
   const isBreakState = currentTaskState === 'break'
   const isCompletedState = currentTaskState === 'completed'
   const isGameCompletion = isGameFinished || isCompletedState
+  const shouldClearMessagesForNewTask = currentTaskState === 'active'
 
   const activeTaskResultMessages = useMemo(
     () =>
@@ -439,7 +440,18 @@ function GameTeamPage({
         isBreakState,
         isGameCompletion,
       }),
-    [currentResult, normalizedTaskMessage, isBreakState, isGameCompletion]
+    [
+      currentResult,
+      normalizedTaskMessage,
+      isBreakState,
+      isGameCompletion,
+      shouldClearMessagesForNewTask,
+    ]
+  )
+
+  const currentResultMessages = useMemo(
+    () => (shouldClearMessagesForNewTask ? [] : currentResultMessagesRaw),
+    [shouldClearMessagesForNewTask, currentResultMessagesRaw]
   )
 
   const visibleActiveTaskMessages = useMemo(
