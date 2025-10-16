@@ -953,6 +953,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
                 'https://t.me/i/userpic/320/i4TFzvCH_iU5FLtMAmYEpCPz7guDcuETRzLoynlZamo.jpg',
               auth_date: 1760503777,
               hash: 'b1ff0088369bdfb0ab507d8f005dfe4688c610d311df993235721896e66c18fd',
+              __isTestAuth: true,
             })
           }
         >
