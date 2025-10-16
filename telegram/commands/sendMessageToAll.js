@@ -1,7 +1,13 @@
 import sendMessage from 'telegram/sendMessage'
 import { broadcastNotificationToUsers } from '@server/pwaNotifications'
 
-const sendMessageToAll = async ({ telegramId, jsonCommand, location, db }) => {
+const sendMessageToAll = async ({
+  telegramId,
+  jsonCommand,
+  location,
+  db,
+  source,
+}) => {
   // const checkData = check(jsonCommand, ['gameId'])
   // if (checkData) return checkData
 
@@ -34,15 +40,19 @@ const sendMessageToAll = async ({ telegramId, jsonCommand, location, db }) => {
   //   mainMenuButton,
   // ])
 
-  await Promise.all(
-    allUsersTelegramIds.map(async (telegramId) => {
-      await sendMessage({
-        chat_id: telegramId,
-        text: jsonCommand.message,
-        location,
+  const shouldSendToTelegram = source !== 'web'
+
+  if (shouldSendToTelegram) {
+    await Promise.all(
+      allUsersTelegramIds.map(async (targetTelegramId) => {
+        await sendMessage({
+          chat_id: targetTelegramId,
+          text: jsonCommand.message,
+          location,
+        })
       })
-    })
-  )
+    )
+  }
 
   let notificationResult = { created: 0, delivered: 0 }
 
@@ -67,8 +77,12 @@ const sendMessageToAll = async ({ telegramId, jsonCommand, location, db }) => {
     console.error('Broadcast PWA notifications error', error)
   }
 
+  const telegramSummary = shouldSendToTelegram
+    ? `Telegram: отправлено ${allUsersTelegramIds.length}.`
+    : 'Telegram-рассылка отключена для веб-кабинета.'
+
   return {
-    message: `Сообщение отправлено всем!\nPWA уведомления: создано ${notificationResult.created}, доставлено ${notificationResult.delivered}.`,
+    message: `Сообщение отправлено всем!\n${telegramSummary}\nPWA уведомления: создано ${notificationResult.created}, доставлено ${notificationResult.delivered}.`,
     nextCommand: { c: 'adminMenu' },
   }
 }
