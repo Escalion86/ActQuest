@@ -217,6 +217,7 @@ function GameTeamPage({
   const taskContentRef = useRef(null)
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
+  const isInitialThemeSyncRef = useRef(true)
   const initialShouldClearMessages = Boolean(result?.shouldResetMessages)
 
   const [taskData, setTaskData] = useState(() =>
