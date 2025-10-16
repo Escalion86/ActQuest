@@ -432,15 +432,14 @@ function GameTeamPage({
   const isGameCompletion = isGameFinished || isCompletedState
   const shouldClearMessagesForNewTask = currentTaskState === 'active'
 
-  const currentResultMessagesRaw = useMemo(
+  const activeTaskResultMessages = useMemo(
     () =>
       collectResultMessages({
         result: currentResult,
         normalizedTaskMessage,
         isBreakState,
         isGameCompletion,
-      })
-    },
+      }),
     [
       currentResult,
       normalizedTaskMessage,
@@ -455,9 +454,9 @@ function GameTeamPage({
     [shouldClearMessagesForNewTask, currentResultMessagesRaw]
   )
 
-  const currentResultMessages = useMemo(
-    () => (shouldClearMessagesForActiveTask ? [] : currentResultMessagesRaw),
-    [shouldClearMessagesForActiveTask, currentResultMessagesRaw]
+  const visibleActiveTaskMessages = useMemo(
+    () => (shouldClearMessagesForActiveTask ? [] : activeTaskResultMessages),
+    [shouldClearMessagesForActiveTask, activeTaskResultMessages]
   )
 
   useEffect(() => {
@@ -478,14 +477,14 @@ function GameTeamPage({
     if (
       currentResult &&
       shouldClearMessagesForActiveTask &&
-      currentResultMessagesRaw.length > 0
+      activeTaskResultMessages.length > 0
     ) {
       setShouldClearMessagesForActiveTask(false)
     }
   }, [
     currentResult,
     currentTaskState,
-    currentResultMessagesRaw,
+    activeTaskResultMessages,
     shouldClearMessagesForActiveTask,
   ])
 
@@ -495,12 +494,12 @@ function GameTeamPage({
       return
     }
 
-    if (currentResultMessages.length > 0 && currentResult) {
+    if (visibleActiveTaskMessages.length > 0 && currentResult) {
       setLastResultSnapshot(currentResult)
-    } else if (currentResult && currentResultMessages.length === 0) {
+    } else if (currentResult && visibleActiveTaskMessages.length === 0) {
       setLastResultSnapshot(null)
     }
-  }, [currentResult, currentResultMessages, shouldClearMessagesForActiveTask])
+  }, [currentResult, visibleActiveTaskMessages, shouldClearMessagesForActiveTask])
 
   const fallbackResultMessages = useMemo(
     () => {
@@ -526,8 +525,8 @@ function GameTeamPage({
   )
 
   const resultMessages =
-    currentResultMessages.length > 0
-      ? currentResultMessages
+    visibleActiveTaskMessages.length > 0
+      ? visibleActiveTaskMessages
       : fallbackResultMessages
 
   const postCompletionMessageHtml = useMemo(() => {
