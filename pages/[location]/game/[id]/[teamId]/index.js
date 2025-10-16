@@ -4,7 +4,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faRotateRight } from '@fortawesome/free-solid-svg-icons'
+import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons'
 import { signOut, useSession } from 'next-auth/react'
 import { getServerSession } from 'next-auth/next'
 
@@ -632,7 +632,7 @@ function GameTeamPage({
                     title="Обновить текущее задание"
                   >
                     <FontAwesomeIcon
-                      icon={faRotateRight}
+                      icon={faArrowsRotate}
                       className={`w-5 h-5 ${isTaskRefreshing ? 'animate-spin' : ''}`}
                     />
                   </button>
