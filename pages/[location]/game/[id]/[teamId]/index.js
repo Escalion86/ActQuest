@@ -154,6 +154,24 @@ const formatCityName = (locationKey) => {
   return trimmed[0].toUpperCase() + trimmed.slice(1)
 }
 
+const normalizeTaskPayload = ({
+  taskHtml = '',
+  taskState = 'idle',
+  result = null,
+  postCompletionMessage = '',
+}) => ({
+  html: taskHtml || '',
+  state: taskState || 'idle',
+  result: result || null,
+  postCompletionMessage: postCompletionMessage || '',
+})
+
+const areTaskPayloadsEqual = (prev, next) =>
+  prev.html === next.html &&
+  prev.state === next.state &&
+  prev.result === next.result &&
+  prev.postCompletionMessage === next.postCompletionMessage
+
 function GameTeamPage({
   location,
   game,
@@ -175,21 +193,21 @@ function GameTeamPage({
   const router = useRouter()
 
   const [theme, setTheme] = useState('light')
-  const [isClient, setIsClient] = useState(false)
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
   const taskContentRef = useRef(null)
-  const countdownElementsRef = useRef([])
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
   const initialShouldClearMessages = Boolean(result?.shouldResetMessages)
 
-  const [currentTaskHtml, setCurrentTaskHtml] = useState(taskHtml)
-  const [currentTaskState, setCurrentTaskState] = useState(taskState)
-  const [currentResult, setCurrentResult] = useState(result)
-  const [currentPostCompletionMessage, setCurrentPostCompletionMessage] = useState(
-    postCompletionMessage || ''
+  const [taskData, setTaskData] = useState(() =>
+    normalizeTaskPayload({
+      taskHtml,
+      taskState,
+      result,
+      postCompletionMessage,
+    })
   )
   const [isTaskRefreshing, setIsTaskRefreshing] = useState(false)
   const [taskRefreshError, setTaskRefreshError] = useState(null)
@@ -210,14 +228,18 @@ function GameTeamPage({
   })
 
   const resolvedSession = session ?? initialSession
+  const isClient = typeof window !== 'undefined'
 
   const collapseStorageKey = useMemo(
     () => `aq-game-info-collapsed-${gameId}-${teamId}`,
     [gameId, teamId]
   )
 
-  useEffect(() => {
-    setIsClient(true)
+  const updateTaskData = useCallback((payload) => {
+    setTaskData((prev) => {
+      const next = normalizeTaskPayload(payload)
+      return areTaskPayloadsEqual(prev, next) ? prev : next
+    })
   }, [])
 
   useEffect(() => {
@@ -248,15 +270,26 @@ function GameTeamPage({
 
   useEffect(() => {
     refreshRequestedRef.current = 0
-  }, [currentTaskHtml])
+  }, [taskData.html])
 
   useEffect(() => {
-    setCurrentTaskHtml(taskHtml)
-    setCurrentTaskState(taskState)
-    setCurrentResult(result)
-    setCurrentPostCompletionMessage(postCompletionMessage || '')
-    setShouldClearMessagesForActiveTask(Boolean(result?.shouldResetMessages))
-  }, [result, taskHtml, taskState, postCompletionMessage])
+    updateTaskData({
+      taskHtml,
+      taskState,
+      result,
+      postCompletionMessage,
+    })
+    setShouldClearMessagesForActiveTask((prev) => {
+      const next = Boolean(result?.shouldResetMessages)
+      return next === prev ? prev : next
+    })
+  }, [
+    postCompletionMessage,
+    result,
+    taskHtml,
+    taskState,
+    updateTaskData,
+  ])
 
   useEffect(() => {
     const nextMessages = collectResultMessages({
@@ -355,10 +388,7 @@ function GameTeamPage({
         }
 
         const payload = data.data || {}
-        setCurrentTaskHtml(payload.taskHtml || '')
-        setCurrentTaskState(payload.taskState || 'idle')
-        setCurrentResult(payload.result || null)
-        setCurrentPostCompletionMessage(payload.postCompletionMessage || '')
+        updateTaskData(payload)
         return true
       } catch (refreshError) {
         setTaskRefreshError(
@@ -372,7 +402,7 @@ function GameTeamPage({
         setIsTaskRefreshing(false)
       }
     },
-    [gameId, isTaskRefreshing, location, teamId]
+    [gameId, isTaskRefreshing, location, teamId, updateTaskData]
   )
 
   const handleLeaveGame = useCallback(() => {
@@ -397,6 +427,12 @@ function GameTeamPage({
   }
 
   const statusLabel = statusLabels[status] ?? 'Статус неизвестен'
+  const {
+    html: currentTaskHtml,
+    state: currentTaskState,
+    result: currentResult,
+    postCompletionMessage: currentPostCompletionMessage,
+  } = taskData
   const locationTimeZone = useMemo(
     () => LOCATIONS?.[location]?.timeZone || null,
     [location]
@@ -430,7 +466,6 @@ function GameTeamPage({
   const isBreakState = currentTaskState === 'break'
   const isCompletedState = currentTaskState === 'completed'
   const isGameCompletion = isGameFinished || isCompletedState
-  const shouldClearMessagesForNewTask = currentTaskState === 'active'
 
   const activeTaskResultMessages = useMemo(
     () =>
@@ -440,18 +475,7 @@ function GameTeamPage({
         isBreakState,
         isGameCompletion,
       }),
-    [
-      currentResult,
-      normalizedTaskMessage,
-      isBreakState,
-      isGameCompletion,
-      shouldClearMessagesForNewTask,
-    ]
-  )
-
-  const currentResultMessages = useMemo(
-    () => (shouldClearMessagesForNewTask ? [] : currentResultMessagesRaw),
-    [shouldClearMessagesForNewTask, currentResultMessagesRaw]
+    [currentResult, normalizedTaskMessage, isBreakState, isGameCompletion]
   )
 
   const visibleActiveTaskMessages = useMemo(
@@ -582,16 +606,16 @@ function GameTeamPage({
 
   useEffect(() => {
     if (!isClient) return
-
     const container = taskContentRef.current
-    if (!container) {
-      countdownElementsRef.current = []
-      return
-    }
+    if (!container) return
 
-    const elements = Array.from(
+    const nodes = Array.from(
       container.querySelectorAll('[data-task-countdown]')
-    ).map((element) => {
+    )
+
+    if (nodes.length === 0) return
+
+    let countdowns = nodes.map((element) => {
       const targetAttr = element.getAttribute('data-target')
       const secondsAttr = element.getAttribute('data-seconds')
       const refreshAttr = element.getAttribute('data-refresh-on-complete')
@@ -607,17 +631,10 @@ function GameTeamPage({
       }
     })
 
-    countdownElementsRef.current = elements
-  }, [formattedTaskMessage, isClient])
-
-  useEffect(() => {
-    if (!isClient) return
-    if (countdownElementsRef.current.length === 0) return
-
     const updateCountdowns = () => {
       const now = Date.now()
 
-      countdownElementsRef.current = countdownElementsRef.current.map((item) => {
+      countdowns = countdowns.map((item) => {
         const { element, target, initialSeconds, startTimestamp } = item
         let remainingMs = null
 
