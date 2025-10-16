@@ -1,44 +1,19 @@
 import PropTypes from 'prop-types'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faRotateRight } from '@fortawesome/free-solid-svg-icons'
 import { signOut, useSession } from 'next-auth/react'
 import { getServerSession } from 'next-auth/next'
 
-import fetchGame from '@server/fetchGame'
-import fetchTeam from '@server/fetchTeam'
-import webGameProcess from '@server/webGameProcess'
-import dbConnect from '@utils/dbConnect'
-import taskText from 'telegram/func/taskText'
+import getTeamGameTaskState, {
+  GAME_TASK_ERRORS,
+} from '@server/getTeamGameTaskState'
+import { LOCATIONS } from '@server/serverConstants'
 
 import { authOptions } from '@pages/api/auth/[...nextauth]'
-
-const ensureDateValue = (value) => {
-  if (!value) return null
-
-  const date = value instanceof Date ? value : new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
-}
-
-const cloneDateValue = (value) => {
-  const date = ensureDateValue(value)
-  return date ? new Date(date.getTime()) : null
-}
-
-const ensureArrayWithLength = (value, length, filler) => {
-  const base = Array.isArray(value) ? [...value] : []
-  if (base.length < length) {
-    return base.concat(new Array(length - base.length).fill(filler))
-  }
-  return base.slice(0, length)
-}
-
-const parseDurationSeconds = (value, fallback) => {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return fallback
-  return Math.max(Math.floor(numeric), 0)
-}
 
 const statusLabels = {
   active: 'Ещё не началась',
@@ -114,6 +89,18 @@ const formatCountdownSeconds = (totalSeconds) => {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
 }
 
+const formatCityName = (locationKey) => {
+  if (!locationKey) return ''
+
+  const town = LOCATIONS?.[locationKey]?.townRu
+  if (!town) return locationKey
+
+  const trimmed = town.trim()
+  if (!trimmed) return locationKey
+
+  return trimmed[0].toUpperCase() + trimmed.slice(1)
+}
+
 function GameTeamPage({
   location,
   game,
@@ -142,6 +129,11 @@ function GameTeamPage({
   const countdownElementsRef = useRef([])
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
+  const [currentTaskHtml, setCurrentTaskHtml] = useState(taskHtml)
+  const [currentTaskState, setCurrentTaskState] = useState(taskState)
+  const [currentResult, setCurrentResult] = useState(result)
+  const [isTaskRefreshing, setIsTaskRefreshing] = useState(false)
+  const [taskRefreshError, setTaskRefreshError] = useState(null)
 
   const resolvedSession = session ?? initialSession
 
@@ -182,7 +174,13 @@ function GameTeamPage({
 
   useEffect(() => {
     refreshRequestedRef.current = 0
-  }, [taskHtml])
+  }, [currentTaskHtml])
+
+  useEffect(() => {
+    setCurrentTaskHtml(taskHtml)
+    setCurrentTaskState(taskState)
+    setCurrentResult(result)
+  }, [result, taskHtml, taskState])
 
   useEffect(() => {
     if (!isClient) return
@@ -230,9 +228,52 @@ function GameTeamPage({
     })
   }
 
+  const handleTaskRefresh = useCallback(async () => {
+    if (isTaskRefreshing) return
+
+    setTaskRefreshError(null)
+    setIsTaskRefreshing(true)
+
+    try {
+      const response = await fetch('/api/webapp/game-task', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          location,
+          gameId,
+          teamId,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error || 'Не удалось обновить задание')
+      }
+
+      const data = await response.json().catch(() => null)
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Не удалось обновить задание')
+      }
+
+      const payload = data.data || {}
+      setCurrentTaskHtml(payload.taskHtml || '')
+      setCurrentTaskState(payload.taskState || 'idle')
+      setCurrentResult(payload.result || null)
+    } catch (refreshError) {
+      setTaskRefreshError(
+        refreshError?.message || 'Не удалось обновить задание'
+      )
+    } finally {
+      setIsTaskRefreshing(false)
+    }
+  }, [gameId, isTaskRefreshing, location, teamId])
+
   const handleSignOut = async () => {
     await signOut({ redirect: false })
-    router.push('/')
+    await router.push(`/${location}/game/${gameId}`)
   }
 
   const handleSubmit = async (event) => {
@@ -255,24 +296,32 @@ function GameTeamPage({
   const statusLabel = statusLabels[status] ?? 'Статус неизвестен'
   const plannedStart = useMemo(() => formatDateTime(game?.dateStart), [game?.dateStart])
   const actualStart = useMemo(() => formatDateTime(game?.dateStartFact), [game?.dateStartFact])
-  const actualFinish = useMemo(() => formatDateTime(game?.dateEndFact), [game?.dateEndFact])
+  const actualFinish = useMemo(
+    () => (isGameFinished ? formatDateTime(game?.dateEndFact) : null),
+    [game?.dateEndFact, isGameFinished]
+  )
+  const cityName = useMemo(() => formatCityName(location), [location])
 
-  const formattedTaskMessage = useMemo(() => transformHtml(taskHtml ?? ''), [taskHtml])
+  const formattedTaskMessage = useMemo(
+    () => transformHtml(currentTaskHtml ?? ''),
+    [currentTaskHtml]
+  )
   const normalizedTaskMessage = useMemo(
-    () => normalizeForComparison(taskHtml),
-    [taskHtml]
+    () => normalizeForComparison(currentTaskHtml),
+    [currentTaskHtml]
   )
 
-  const isBreakState = taskState === 'break'
-  const isCompletedState = taskState === 'completed'
+  const isBreakState = currentTaskState === 'break'
+  const isCompletedState = currentTaskState === 'completed'
   const isGameCompletion = isGameFinished || isCompletedState
 
   const resultMessages = useMemo(() => {
-    if (!result) return []
+    if (!currentResult) return []
 
-    const rawMessages = Array.isArray(result.messages) && result.messages.length > 0
-      ? result.messages
-      : [result.message].filter(Boolean)
+    const rawMessages =
+      Array.isArray(currentResult.messages) && currentResult.messages.length > 0
+        ? currentResult.messages
+        : [currentResult.message].filter(Boolean)
 
     if (rawMessages.length === 0) return []
 
@@ -299,7 +348,12 @@ function GameTeamPage({
     })
 
     return filtered.map((message) => transformHtml(message))
-  }, [isBreakState, isGameCompletion, normalizedTaskMessage, result])
+  }, [
+    currentResult,
+    isBreakState,
+    isGameCompletion,
+    normalizedTaskMessage,
+  ])
 
   const shouldShowLastMessage = resultMessages.length > 0
   const shouldShowAnswerForm = !isGameCompletion && !isBreakState
@@ -308,11 +362,17 @@ function GameTeamPage({
     if (!isGameStarted && status === 'active') {
       return 'Игра ещё не началась. Ожидайте старта организатора.'
     }
-    if (isGameFinished && taskState !== 'completed') {
+    if (isGameFinished && currentTaskState !== 'completed') {
       return 'Игра завершена. Проверьте результаты в кабинете.'
     }
     return null
-  }, [error, isGameFinished, isGameStarted, status, taskState])
+  }, [
+    currentTaskState,
+    error,
+    isGameFinished,
+    isGameStarted,
+    status,
+  ])
 
   useEffect(() => {
     if (!isClient) return
@@ -459,10 +519,10 @@ function GameTeamPage({
                       <div className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2 dark:text-slate-300">
                         <div className="flex flex-col">
                           <span className="text-xs uppercase text-gray-400 dark:text-slate-500">
-                            Локация
+                            ГОРОД
                           </span>
                           <span className="font-medium text-gray-800 dark:text-slate-100">
-                            {location}
+                            {cityName || location}
                           </span>
                         </div>
                         <div className="flex flex-col">
@@ -542,23 +602,6 @@ function GameTeamPage({
                     </span>
                   </button>
                 </div>
-                {!isGameInfoCollapsed ? (
-                  <div className="flex items-center gap-3 pt-2">
-                    <Link
-                      href={`/${location}/game/${gameId}`}
-                      className="text-sm font-semibold text-blue-600 transition hover:underline dark:text-blue-300"
-                    >
-                      Вернуться к игре
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => router.replace(router.asPath)}
-                      className="text-sm font-semibold text-gray-600 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-300"
-                    >
-                      Обновить
-                    </button>
-                  </div>
-                ) : null}
               </div>
             </section>
 
@@ -576,7 +619,29 @@ function GameTeamPage({
 
             {formattedTaskMessage ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-                <h2 className="text-lg font-semibold text-primary dark:text-white">Текущее задание</h2>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-primary dark:text-white">
+                    Текущее задание
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={handleTaskRefresh}
+                    disabled={isTaskRefreshing}
+                    className="inline-flex items-center justify-center p-2 text-gray-600 transition border border-gray-300 rounded-full hover:text-blue-600 hover:border-blue-400 disabled:opacity-60 disabled:cursor-not-allowed dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                    aria-label="Обновить текущее задание"
+                    title="Обновить текущее задание"
+                  >
+                    <FontAwesomeIcon
+                      icon={faRotateRight}
+                      className={`w-5 h-5 ${isTaskRefreshing ? 'animate-spin' : ''}`}
+                    />
+                  </button>
+                </div>
+                {taskRefreshError ? (
+                  <p className="mt-3 text-sm text-red-600 dark:text-red-300">
+                    {taskRefreshError}
+                  </p>
+                ) : null}
                 <div
                   className="mt-4 text-base leading-relaxed text-gray-700 whitespace-pre-wrap break-words dark:text-slate-200 aq-task-content"
                   ref={taskContentRef}
@@ -634,11 +699,11 @@ function GameTeamPage({
               </section>
             ) : null}
 
-            {Array.isArray(result?.images) && result.images.length > 0 ? (
+            {Array.isArray(currentResult?.images) && currentResult.images.length > 0 ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
                 <h2 className="text-lg font-semibold text-primary dark:text-white">Изображения задания</h2>
                 <div className="grid gap-4 mt-4 sm:grid-cols-2">
-                  {result.images.map((src, index) => (
+                  {currentResult.images.map((src, index) => (
                     <img
                       key={`task-image-${index}`}
                       src={src}
@@ -751,38 +816,81 @@ export const getServerSideProps = async (context) => {
     }
   }
 
-  let shouldClearMessageParam = false
+  const messageParam = typeof query.message === 'string' ? query.message : undefined
+  const sanitizedMessage =
+    messageParam && messageParam !== 'undefined' ? messageParam.trim() : undefined
+  const shouldClearMessageParam = Boolean(sanitizedMessage)
 
   try {
-    const [game, team] = await Promise.all([
-      fetchGame(locationParam, gameIdParam),
-      fetchTeam(locationParam, teamIdParam),
-    ])
+    const stateResult = await getTeamGameTaskState({
+      location: locationParam,
+      gameId: gameIdParam,
+      teamId: teamIdParam,
+      telegramId: session?.user?.telegramId,
+      message: sanitizedMessage,
+    })
 
-    if (!game || !game._id || !team || !team._id) {
-      return { notFound: true }
-    }
+    if (!stateResult.success) {
+      const { errorCode } = stateResult
 
-    const status = game.status || 'active'
-    const isGameStarted = status === 'started'
-    const isGameFinished = status === 'finished'
+      if (
+        errorCode === GAME_TASK_ERRORS.GAME_NOT_FOUND ||
+        errorCode === GAME_TASK_ERRORS.TEAM_NOT_FOUND
+      ) {
+        return { notFound: true }
+      }
 
-    const db = await dbConnect(locationParam)
+      if (errorCode === GAME_TASK_ERRORS.TEAM_ACCESS_DENIED) {
+        return {
+          redirect: {
+            destination: `/${locationParam}/game/${gameIdParam}`,
+            permanent: false,
+          },
+        }
+      }
 
-    if (!db) {
+      if (errorCode === GAME_TASK_ERRORS.DB_CONNECTION_FAILED) {
+        const fallbackGame = stateResult.game || null
+        const fallbackTeam = stateResult.team || null
+        const fallbackStatus = stateResult.status || fallbackGame?.status || 'active'
+        const isGameStarted =
+          stateResult.isGameStarted ?? fallbackStatus === 'started'
+        const isGameFinished =
+          stateResult.isGameFinished ?? fallbackStatus === 'finished'
+
+        return {
+          props: {
+            session,
+            location: locationParam,
+            game: fallbackGame,
+            team: fallbackTeam,
+            status: fallbackStatus,
+            isGameStarted,
+            isGameFinished,
+            result: null,
+            taskHtml: '',
+            taskState: 'idle',
+            error: 'DB_CONNECTION_FAILED',
+            gameId: gameIdParam,
+            teamId: teamIdParam,
+            shouldClearMessageParam,
+          },
+        }
+      }
+
       return {
         props: {
           session,
           location: locationParam,
-          game: JSON.parse(JSON.stringify(game)),
-          team: JSON.parse(JSON.stringify(team)),
-          status,
-          isGameStarted,
-          isGameFinished,
+          game: stateResult.game || null,
+          team: stateResult.team || null,
+          status: stateResult.status || 'active',
+          isGameStarted: stateResult.isGameStarted ?? false,
+          isGameFinished: stateResult.isGameFinished ?? false,
           result: null,
           taskHtml: '',
           taskState: 'idle',
-          error: 'DB_CONNECTION_FAILED',
+          error: 'UNKNOWN_ERROR',
           gameId: gameIdParam,
           teamId: teamIdParam,
           shouldClearMessageParam,
@@ -790,426 +898,20 @@ export const getServerSideProps = async (context) => {
       }
     }
 
-    const gamesTeamsModel = db.model('GamesTeams')
-    const teamsUsersModel = db.model('TeamsUsers')
-
-    const gameTeam = await gamesTeamsModel
-      .findOne({ gameId: gameIdParam, teamId: teamIdParam })
-      .lean()
-
-    if (!gameTeam) {
-      return { notFound: true }
-    }
-
-    const telegramId = session?.user?.telegramId
-    const telegramIdStr = telegramId ? String(telegramId) : null
-
-    const teamUsers = await teamsUsersModel
-      .find({ teamId: teamIdParam })
-      .lean()
-
-    const currentTeamUser = telegramIdStr
-      ? teamUsers.find(
-          (teamUser) =>
-            teamUser &&
-            String(teamUser.userTelegramId ?? '') === telegramIdStr
-        )
-      : null
-
-    if (!currentTeamUser) {
-      return {
-        redirect: {
-          destination: `/${locationParam}/game/${gameIdParam}`,
-          permanent: false,
-        },
-      }
-    }
-
-    const messageParam = typeof query.message === 'string' ? query.message : undefined
-    const sanitizedMessage =
-      messageParam && messageParam !== 'undefined' ? messageParam.trim() : undefined
-
-    shouldClearMessageParam = Boolean(sanitizedMessage)
-
-    const actingTelegramId = currentTeamUser?.userTelegramId
-
-    let processResult = null
-
-    if (actingTelegramId) {
-      try {
-        processResult = await webGameProcess({
-          db,
-          game,
-          gameTeam,
-          gameTeamId: gameTeam._id,
-          message: sanitizedMessage,
-        })
-      } catch (processError) {
-        console.error('Game process execution error', processError)
-        processResult = { message: 'Не удалось получить текущее состояние задания.' }
-      }
-    }
-
-    const refreshedGameTeam = await gamesTeamsModel
-      .findById(gameTeam._id)
-      .lean()
-
-    let effectiveGameTeam = refreshedGameTeam ?? gameTeam
-
-    const tasks = Array.isArray(game.tasks) ? game.tasks : []
-    const tasksCount = tasks.length
-
-    const breakDurationSeconds = parseDurationSeconds(game.breakDuration, 0)
-    const taskDurationSeconds = parseDurationSeconds(game.taskDuration, 3600)
-    const cluesDurationSeconds = parseDurationSeconds(game.cluesDuration, 1200)
-
-    const autoProgressMessages = []
-
-    const maybeHandleAutomaticProgress = async (teamState) => {
-      if (!teamState || tasksCount === 0) return teamState
-
-      const activeNumValue = Number.isInteger(teamState?.activeNum)
-        ? teamState.activeNum
-        : 0
-      const clampedIndex = Math.max(
-        Math.min(activeNumValue, tasksCount - 1),
-        0
-      )
-
-      if (activeNumValue >= tasksCount) {
-        return teamState
-      }
-
-      const nextIndex = clampedIndex + 1
-      const hasNextTask = nextIndex < tasksCount
-
-      const startTimes = ensureArrayWithLength(
-        teamState.startTime,
-        tasksCount,
-        null
-      )
-      const endTimes = ensureArrayWithLength(teamState.endTime, tasksCount, null)
-
-      const activeStart = ensureDateValue(startTimes[clampedIndex])
-      const activeEnd = ensureDateValue(endTimes[clampedIndex])
-      const nowMs = Date.now()
-
-      const updateActiveNum = async (nextActiveNum, extraUpdates = {}) => {
-        const updates = { activeNum: nextActiveNum, ...extraUpdates }
-        const updatedTeam = await gamesTeamsModel
-          .findByIdAndUpdate(teamState._id, updates, { new: true })
-          .lean()
-
-        return updatedTeam ?? { ...teamState, ...updates }
-      }
-
-      if (!hasNextTask) {
-        if (activeEnd) {
-          return updateActiveNum(nextIndex)
-        }
-
-        if (activeStart && taskDurationSeconds > 0) {
-          const elapsedSinceStart = Math.max(
-            Math.floor((nowMs - activeStart.getTime()) / 1000),
-            0
-          )
-
-          if (elapsedSinceStart >= taskDurationSeconds) {
-            return updateActiveNum(nextIndex)
-          }
-        }
-
-        return teamState
-      }
-
-      const advanceToNextTask = async () => {
-        const startTimeUpdates = ensureArrayWithLength(
-          teamState.startTime,
-          tasksCount,
-          null
-        ).map(cloneDateValue)
-        startTimeUpdates[nextIndex] = new Date()
-
-        const forcedCluesUpdates = ensureArrayWithLength(
-          teamState.forcedClues,
-          tasksCount,
-          0
-        ).map((value) => (Number.isFinite(value) ? value : 0))
-        forcedCluesUpdates[nextIndex] = 0
-
-        return updateActiveNum(nextIndex, {
-          startTime: startTimeUpdates,
-          forcedClues: forcedCluesUpdates,
-        })
-      }
-
-      if (activeEnd) {
-        if (breakDurationSeconds <= 0) {
-          return advanceToNextTask()
-        }
-
-        const elapsedAfterEnd = Math.max(
-          Math.floor((nowMs - activeEnd.getTime()) / 1000),
-          0
-        )
-
-        if (elapsedAfterEnd >= breakDurationSeconds) {
-          return advanceToNextTask()
-        }
-
-        return teamState
-      }
-
-      if (activeStart && taskDurationSeconds > 0) {
-        const elapsedSinceStart = Math.max(
-          Math.floor((nowMs - activeStart.getTime()) / 1000),
-          0
-        )
-
-        if (elapsedSinceStart >= taskDurationSeconds) {
-          if (breakDurationSeconds > 0) {
-            if (elapsedSinceStart >= taskDurationSeconds + breakDurationSeconds) {
-              autoProgressMessages.push('<b>Перерыв завершён.</b>')
-              return advanceToNextTask()
-            }
-          } else {
-            autoProgressMessages.push('<b>Время на задание вышло.</b>')
-            return advanceToNextTask()
-          }
-        }
-      }
-
-      return teamState
-    }
-
-    effectiveGameTeam = await maybeHandleAutomaticProgress(effectiveGameTeam)
-
-    const activeNumRaw = Number.isInteger(effectiveGameTeam?.activeNum)
-      ? effectiveGameTeam.activeNum
-      : 0
-
-    if (autoProgressMessages.length > 0) {
-      const baseMessages = Array.isArray(processResult?.messages)
-        ? [...processResult.messages]
-        : []
-
-      if (!processResult?.messages && processResult?.message) {
-        baseMessages.push(processResult.message)
-      }
-
-      const combinedMessages = [...baseMessages, ...autoProgressMessages].filter(
-        Boolean
-      )
-
-      processResult = {
-        ...(processResult || {}),
-        message: processResult?.message || combinedMessages[0] || '',
-        messages: combinedMessages,
-      }
-    }
-
-    const formatSecondsForCountdown = (totalSeconds) => {
-      if (!Number.isFinite(totalSeconds)) return '00:00:00'
-      const safeSeconds = Math.max(Math.floor(totalSeconds), 0)
-      const hours = Math.floor(safeSeconds / 3600)
-      const minutes = Math.floor((safeSeconds % 3600) / 60)
-      const seconds = safeSeconds % 60
-      const pad = (num) => String(num).padStart(2, '0')
-      return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-    }
-
-    const createCountdownSpan = (secondsLeft, targetTimestamp) => {
-      const attributes = ['data-task-countdown="break"', 'data-refresh-on-complete="true"']
-      if (Number.isFinite(targetTimestamp)) {
-        attributes.push(`data-target="${targetTimestamp}"`)
-      }
-      if (Number.isFinite(secondsLeft)) {
-        attributes.push(`data-seconds="${secondsLeft}"`)
-      }
-      return `<span ${attributes.join(' ')}>${formatSecondsForCountdown(
-        secondsLeft
-      )}</span>`
-    }
-
-    let taskHtml = ''
-    let taskState = 'idle'
-
-    const hasCompletedAllTasks = tasksCount > 0 && activeNumRaw >= tasksCount
-
-    if (isGameStarted && !isGameFinished && tasksCount > 0) {
-      if (hasCompletedAllTasks) {
-        const lastTask = tasks[tasksCount - 1] ?? null
-        const finishingPlace = game.finishingPlace
-        const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
-        if (finishingPlace) {
-          completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
-        }
-        if (lastTask?.postMessage) {
-          completionParts.push(
-            `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${lastTask.postMessage}</blockquote>`
-          )
-        }
-        taskHtml = completionParts.join('')
-        taskState = 'completed'
-      } else {
-        const startTimes = ensureArrayWithLength(
-          effectiveGameTeam.startTime,
-          tasksCount,
-          null
-        )
-        const forcedClues = ensureArrayWithLength(
-          effectiveGameTeam.forcedClues,
-          tasksCount,
-          0
-        )
-        const endTimes = ensureArrayWithLength(
-          effectiveGameTeam.endTime,
-          tasksCount,
-          null
-        )
-
-        const activeTaskIndex = Math.max(
-          Math.min(activeNumRaw, tasksCount - 1),
-          0
-        )
-        const activeTaskEndTime = ensureDateValue(endTimes[activeTaskIndex])
-        const activeTaskStartTime = ensureDateValue(
-          startTimes[activeTaskIndex]
-        )
-
-        let breakSecondsLeft = null
-        let breakTargetTimestamp = null
-        let breakReason = null
-
-        if (breakDurationSeconds > 0) {
-          const nowMs = Date.now()
-
-          if (activeTaskEndTime) {
-            const elapsed = Math.max(
-              Math.floor((nowMs - activeTaskEndTime.getTime()) / 1000),
-              0
-            )
-            if (elapsed < breakDurationSeconds) {
-              breakSecondsLeft = breakDurationSeconds - elapsed
-              breakTargetTimestamp =
-                activeTaskEndTime.getTime() + breakDurationSeconds * 1000
-              breakReason = 'success'
-            }
-          } else if (
-            activeTaskStartTime &&
-            taskDurationSeconds > 0
-          ) {
-            const elapsedSinceStart = Math.max(
-              Math.floor((nowMs - activeTaskStartTime.getTime()) / 1000),
-              0
-            )
-            if (elapsedSinceStart >= taskDurationSeconds) {
-              const overtime = elapsedSinceStart - taskDurationSeconds
-              if (overtime < breakDurationSeconds) {
-                breakSecondsLeft = breakDurationSeconds - overtime
-                breakTargetTimestamp =
-                  activeTaskStartTime.getTime() +
-                  (taskDurationSeconds + breakDurationSeconds) * 1000
-                breakReason = 'timeout'
-              }
-            }
-          }
-        }
-
-        if (breakSecondsLeft !== null) {
-          const postMessage = tasks[activeTaskIndex]?.postMessage
-          const breakParts = [
-            breakReason === 'timeout'
-              ? '<b>Время на задание вышло.</b>'
-              : '<b>Задание выполнено.</b>',
-          ]
-          if (postMessage) {
-            breakParts.push(
-              `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${postMessage}</blockquote>`
-            )
-          }
-          breakParts.push('<br /><br /><b>Перерыв.</b>')
-          breakParts.push(
-            '<br /><br /><b>Ожидайте следующее задание после перерыва.</b>'
-          )
-          breakParts.push(
-            `<br /><br /><b>Время до окончания перерыва:</b> ${createCountdownSpan(
-              breakSecondsLeft,
-              breakTargetTimestamp
-            )}`
-          )
-          taskHtml = breakParts.join('')
-          taskState = 'break'
-        } else {
-          let elapsedSeconds = 0
-          if (activeTaskStartTime) {
-            elapsedSeconds = Math.max(
-              Math.floor((Date.now() - activeTaskStartTime.getTime()) / 1000),
-              0
-            )
-          }
-
-          const forcedCluesCount = Math.max(
-            forcedClues[activeTaskIndex] ?? 0,
-            0
-          )
-          const timedCluesCount =
-            cluesDurationSeconds > 0
-              ? Math.max(
-                  Math.floor(elapsedSeconds / cluesDurationSeconds),
-                  0
-                )
-              : 0
-          const visibleCluesCount = Math.max(timedCluesCount, forcedCluesCount)
-
-          taskHtml = taskText({
-            game,
-            taskNum: activeTaskIndex,
-            findedCodes: effectiveGameTeam.findedCodes,
-            findedBonusCodes: effectiveGameTeam.findedBonusCodes,
-            findedPenaltyCodes: effectiveGameTeam.findedPenaltyCodes,
-            startTaskTime: activeTaskStartTime,
-            cluesDuration: cluesDurationSeconds,
-            taskDuration: taskDurationSeconds,
-            photos: effectiveGameTeam.photos,
-            timeAddings: effectiveGameTeam.timeAddings,
-            visibleCluesCount,
-            includeActionPrompt: false,
-            format: 'web',
-          })
-          taskState = 'active'
-        }
-      }
-    }
-
-    if (!taskHtml && (hasCompletedAllTasks || isGameFinished) && tasksCount > 0) {
-      const lastTask = tasks[tasksCount - 1] ?? null
-      const finishingPlace = game.finishingPlace
-      const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
-      if (finishingPlace) {
-        completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
-      }
-      if (lastTask?.postMessage) {
-        completionParts.push(
-          `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${lastTask.postMessage}</blockquote>`
-        )
-      }
-      taskHtml = completionParts.join('')
-      taskState = 'completed'
-    }
+    const data = stateResult.data
 
     return {
       props: {
         session,
         location: locationParam,
-        game: JSON.parse(JSON.stringify(game)),
-        team: JSON.parse(JSON.stringify(team)),
-        status,
-        isGameStarted,
-        isGameFinished,
-        result: processResult ? JSON.parse(JSON.stringify(processResult)) : null,
-        taskHtml,
-        taskState,
+        game: data.game,
+        team: data.team,
+        status: data.status,
+        isGameStarted: data.isGameStarted,
+        isGameFinished: data.isGameFinished,
+        result: data.result,
+        taskHtml: data.taskHtml,
+        taskState: data.taskState,
         error: null,
         gameId: gameIdParam,
         teamId: teamIdParam,
