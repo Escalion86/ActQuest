@@ -3,17 +3,44 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import dbConnect from '@utils/dbConnect'
 import authenticateTelegramUser from '@helpers/authenticateTelegramUser'
 
-const normalizeUserForSession = (user, fallback) => ({
-  ...fallback,
-  _id: user?._id,
-  telegramId: user?.telegramId ?? fallback.telegramId,
-  name: user?.name ?? fallback.name,
-  username: user?.username ?? fallback.username ?? null,
-  photoUrl: user?.photoUrl ?? fallback.photoUrl ?? null,
-  languageCode: user?.languageCode ?? fallback.languageCode ?? null,
-  isPremium: user?.isPremium ?? fallback.isPremium ?? false,
-  role: user?.role ?? fallback.role ?? 'client',
-})
+const ensureSerializableId = (value) => {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'string') return value
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'object' && typeof value.toString === 'function') {
+    const stringValue = value.toString()
+    return stringValue && stringValue !== '[object Object]' ? stringValue : null
+  }
+
+  return null
+}
+
+const normalizeUserForSession = (user, fallback = {}) => {
+  const { userId: fallbackUserId, ...fallbackData } = fallback
+
+  const normalizedUser = {
+    ...fallbackData,
+    telegramId: user?.telegramId ?? fallbackData.telegramId ?? null,
+    name: user?.name ?? fallbackData.name ?? null,
+    username: user?.username ?? fallbackData.username ?? null,
+    photoUrl: user?.photoUrl ?? fallbackData.photoUrl ?? null,
+    languageCode: user?.languageCode ?? fallbackData.languageCode ?? null,
+    isPremium: user?.isPremium ?? fallbackData.isPremium ?? false,
+    role: user?.role ?? fallbackData.role ?? 'client',
+  }
+
+  const rawId =
+    user?._id ??
+    user?.id ??
+    fallbackData._id ??
+    fallbackData.id ??
+    fallbackUserId ??
+    null
+
+  normalizedUser._id = ensureSerializableId(rawId)
+
+  return normalizedUser
+}
 
 export const authOptions = {
   session: {
@@ -44,7 +71,7 @@ export const authOptions = {
             throw new Error(result.errorCode || 'TELEGRAM_AUTH_FAILED')
           }
 
-          return result.user
+          return { ...result.user, isTestAuth: Boolean(result.isTestAuth) }
         } catch (error) {
           console.error('Telegram authorize unexpected error', error)
           throw error
@@ -55,7 +82,7 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.userId = user.id
+        token.userId = ensureSerializableId(user.id ?? user._id ?? null)
         token.telegramId = user.telegramId
         token.location = user.location
         token.name = user.name
@@ -63,6 +90,7 @@ export const authOptions = {
         token.photoUrl = user.photoUrl
         token.languageCode = user.languageCode
         token.isPremium = user.isPremium
+        token.isTestAuth = Boolean(user.isTestAuth)
       }
 
       return token
@@ -72,6 +100,9 @@ export const authOptions = {
 
       if (token?.telegramId && token?.location) {
         const fallbackUser = {
+          _id: token.userId ?? null,
+          id: token.userId ?? null,
+          userId: token.userId ?? null,
           telegramId: token.telegramId,
           name: token.name,
           username: token.username,
@@ -79,6 +110,13 @@ export const authOptions = {
           languageCode: token.languageCode,
           isPremium: token.isPremium,
           location: token.location,
+        }
+
+        if (token?.isTestAuth) {
+          session.user = normalizeUserForSession(null, fallbackUser)
+          session.user.location = token.location
+          session.user.isTestAuth = true
+          return session
         }
 
         try {
