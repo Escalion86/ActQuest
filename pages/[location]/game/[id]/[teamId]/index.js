@@ -239,6 +239,8 @@ function GameTeamPage({
   )
 
   const isBreakState = taskState === 'break'
+  const isCompletedState = taskState === 'completed'
+  const isGameCompletion = isGameFinished || isCompletedState
 
   const resultMessages = useMemo(() => {
     if (!result) return []
@@ -260,15 +262,22 @@ function GameTeamPage({
       if (isBreakState && /перерыв/i.test(normalized)) {
         return false
       }
+      if (
+        isGameCompletion &&
+        (/(^|\s)введите\s+код/i.test(normalized) || /код\s+не\s+верен/i.test(normalized))
+      ) {
+        return false
+      }
       if (seen.has(normalized)) return false
       seen.add(normalized)
       return true
     })
 
     return filtered.map((message) => transformHtml(message))
-  }, [isBreakState, normalizedTaskMessage, result])
+  }, [isBreakState, isGameCompletion, normalizedTaskMessage, result])
 
   const shouldShowLastMessage = resultMessages.length > 0
+  const shouldShowAnswerForm = !isGameCompletion && !isBreakState
   const statusNotice = useMemo(() => {
     if (error) return null
     if (!isGameStarted && status === 'active') {
@@ -563,34 +572,36 @@ function GameTeamPage({
               </section>
             ) : null}
 
-            <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-              <h2 className="text-lg font-semibold text-primary dark:text-white">Ответ на задание</h2>
-              <form className="flex flex-col gap-4 mt-4" onSubmit={handleSubmit}>
-                <input
-                  type="text"
-                  value={answer}
-                  onChange={(event) => setAnswer(event.target.value)}
-                  placeholder="Введите код или сообщение"
-                  className="w-full px-4 py-3 text-base transition border border-gray-300 rounded-2xl focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400"
-                />
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !answer.trim()}
-                    className="px-6 py-3 text-sm font-semibold text-white transition rounded-full bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    Отправить
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/${location}/game/${gameId}/${teamId}`)}
-                    className="px-6 py-3 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
-                  >
-                    Сбросить
-                  </button>
-                </div>
-              </form>
-            </section>
+            {shouldShowAnswerForm ? (
+              <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
+                <h2 className="text-lg font-semibold text-primary dark:text-white">Ответ на задание</h2>
+                <form className="flex flex-col gap-4 mt-4" onSubmit={handleSubmit}>
+                  <input
+                    type="text"
+                    value={answer}
+                    onChange={(event) => setAnswer(event.target.value)}
+                    placeholder="Введите код или сообщение"
+                    className="w-full px-4 py-3 text-base transition border border-gray-300 rounded-2xl focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400"
+                  />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !answer.trim()}
+                      className="px-6 py-3 text-sm font-semibold text-white transition rounded-full bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      Отправить
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/${location}/game/${gameId}/${teamId}`)}
+                      className="px-6 py-3 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                    >
+                      Сбросить
+                    </button>
+                  </div>
+                </form>
+              </section>
+            ) : null}
 
             {Array.isArray(result?.images) && result.images.length > 0 ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
