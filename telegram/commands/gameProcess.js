@@ -1234,7 +1234,7 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         // endTime: endTimeTemp,
         // activeNum: newActiveNum,
       })
-      const statusMessage = 'Код не верен.'
+      const statusMessage = `Код "${code}" не верен.`
       const promptMessage = `<b>${
         game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'
       }</b>`

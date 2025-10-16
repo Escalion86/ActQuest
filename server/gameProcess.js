@@ -1215,7 +1215,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
         wrongCodes: newAllWrongCodes,
       })
-      const statusMessage = 'Код не верен.'
+      const statusMessage = `Код "${code}" не верен.`
       const promptMessage = `<b>${
         game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'
       }</b>`

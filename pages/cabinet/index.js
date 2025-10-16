@@ -743,9 +743,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
         return false
       }
 
-      const targetPath = targetTeamId
-        ? `/${targetLocation}/game/${targetGameId}/${targetTeamId}`
-        : `/${targetLocation}/game/${targetGameId}`
+      const targetPath = `/${targetLocation}/game/${targetGameId}`
 
       try {
         await router.push(targetPath)
@@ -894,6 +892,7 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
 
         if (
           safeResultUrl &&
+          safeResultUrl !== '/' &&
           !safeResultUrl.startsWith('/cabinet') &&
           !safeResultUrl.startsWith('/api/auth')
         ) {
