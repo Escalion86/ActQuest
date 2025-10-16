@@ -4,6 +4,8 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { getSession, signIn, signOut, useSession } from 'next-auth/react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons'
 import { LOCATIONS } from '@server/serverConstants'
 import TelegramLogin from '@components/cabinet/TelegramLogin'
 import NotificationsCard from '@components/cabinet/NotificationsCard'
@@ -998,20 +1000,10 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
               aria-label="Обновить"
               disabled={isLoading}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-5 h-5"
-                aria-hidden="true"
-              >
-                <path d="M16.023 9.348h4.284m0 0V5.064m0 4.284-5.99-5.99A9.035 9.035 0 0 0 11.88 2.25c-4.978 0-9.023 4.045-9.023 9.023 0 .755.09 1.488.26 2.192" />
-                <path d="M7.977 14.652H3.693m0 0v4.284m0-4.284 5.99 5.99a9.035 9.035 0 0 0 2.438 1.122c4.978 0 9.023-4.045 9.023-9.023a9.06 9.06 0 0 0-.26-2.192" />
-              </svg>
+              <FontAwesomeIcon
+                icon={faArrowsRotate}
+                className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`}
+              />
             </button>
           </div>
         </div>
@@ -1155,14 +1147,16 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
               ActQuest
             </Link>
             <nav className="flex items-center gap-6 text-sm font-semibold text-gray-600 dark:text-slate-300">
-              <a
-                href="https://t.me/ActQuest_bot"
-                className="transition hover:text-primary dark:hover:text-white"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Бот в Telegram
-              </a>
+              {/**
+               * <a
+               *   href="https://t.me/ActQuest_bot"
+               *   className="transition hover:text-primary dark:hover:text-white"
+               *   target="_blank"
+               *   rel="noreferrer"
+               * >
+               *   Бот в Telegram
+               * </a>
+               */}
             </nav>
             <div className="flex items-center gap-3">
               <button

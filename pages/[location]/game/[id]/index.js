@@ -108,9 +108,15 @@ function GameEntryPage({
   )
 
   const statusLabel = statusLabels[status] ?? 'Статус неизвестен'
-
-  const showParticipantTeams =
-    participantTeams.length > 0 && (isGameStarted || isGameFinished)
+  const participantTeam = useMemo(
+    () => (participantTeams.length > 0 ? participantTeams[0] : null),
+    [participantTeams]
+  )
+  const participantTeamId = participantTeam?.id
+    ? String(participantTeam.id)
+    : null
+  const canEnterGame = isGameStarted && !isGameFinished
+  const showParticipantInfo = Boolean(participantTeamId && isParticipant)
 
   return (
     <>
@@ -127,14 +133,16 @@ function GameEntryPage({
               ActQuest
             </Link>
             <nav className="flex items-center gap-6 text-sm font-semibold text-gray-600 dark:text-slate-300">
-              <a
-                href="https://t.me/ActQuest_bot"
-                className="transition hover:text-primary dark:hover:text-white"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Бот в Telegram
-              </a>
+              {/**
+               * <a
+               *   href="https://t.me/ActQuest_bot"
+               *   className="transition hover:text-primary dark:hover:text-white"
+               *   target="_blank"
+               *   rel="noreferrer"
+               * >
+               *   Бот в Telegram
+               * </a>
+               */}
             </nav>
             <div className="flex items-center gap-3">
               <button
@@ -274,29 +282,29 @@ function GameEntryPage({
                 </div>
               ) : null}
 
-              {showParticipantTeams ? (
-                <div className="flex flex-col gap-4">
-                  <h2 className="text-lg font-semibold text-primary dark:text-white">
-                    Ваши команды в игре
-                  </h2>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {participantTeams.map((team) => (
-                      <div
-                        key={team.id}
-                        className="flex flex-col gap-3 p-4 border border-gray-200 rounded-2xl bg-gray-50 dark:bg-slate-800/60 dark:border-slate-700"
+              {showParticipantInfo ? (
+                <div className="flex flex-col gap-3 p-4 border border-gray-200 rounded-2xl bg-gray-50 dark:bg-slate-800/60 dark:border-slate-700">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-base font-medium text-gray-800 dark:text-slate-100">
+                      Вы участвуете в игре в команде{' '}
+                      <span className="font-semibold">
+                        {participantTeam.name || 'Команда без названия'}
+                      </span>
+                    </div>
+                    {canEnterGame ? (
+                      <Link
+                        href={`/${location}/game/${game?._id}/${participantTeamId}`}
+                        className="inline-flex items-center justify-center px-6 py-3 text-sm font-extrabold tracking-wide text-white transition rounded-xl bg-blue-600 hover:bg-blue-700"
                       >
-                        <div className="text-base font-semibold text-gray-800 dark:text-slate-100">
-                          {team.name}
-                        </div>
-                        <Link
-                          href={`/${location}/game/${game?._id}/${team.id}`}
-                          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white transition rounded-xl bg-blue-600 hover:bg-blue-700"
-                        >
-                          Перейти к заданиям
-                        </Link>
-                      </div>
-                    ))}
+                        ЗАЙТИ В ИГРУ
+                      </Link>
+                    ) : null}
                   </div>
+                  {!canEnterGame && !isGameFinished ? (
+                    <p className="text-sm text-gray-600 dark:text-slate-300">
+                      Дождитесь старта игры, чтобы перейти к заданиям.
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>
