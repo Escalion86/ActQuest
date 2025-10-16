@@ -237,9 +237,7 @@ const computeTaskHtml = async ({
         completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
       }
       if (lastTask?.postMessage) {
-        completionParts.push(
-          `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${lastTask.postMessage}</blockquote>`
-        )
+        postCompletionMessage = lastTask.postMessage
       }
       taskHtml = completionParts.join('')
       taskState = 'completed'
