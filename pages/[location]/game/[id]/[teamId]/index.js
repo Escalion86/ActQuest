@@ -210,7 +210,7 @@ function GameTeamPage({
   const { data: session } = useSession()
   const router = useRouter()
 
-  const [theme, setTheme] = useState(resolveThemePreference)
+  const [theme, setTheme] = useState(null)
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
@@ -254,6 +254,8 @@ function GameTeamPage({
     [gameId, teamId]
   )
 
+  const effectiveTheme = theme ?? 'light'
+
   const updateTaskData = useCallback((payload) => {
     setTaskData((prev) => {
       const next = normalizeTaskPayload(payload)
@@ -262,7 +264,7 @@ function GameTeamPage({
   }, [])
 
   useEffect(() => {
-    if (!isClient) return
+    if (typeof window === 'undefined') return
 
     const rootElement = window.document?.documentElement
     if (!rootElement) return
@@ -272,16 +274,11 @@ function GameTeamPage({
       rootElement.setAttribute('data-theme', nextTheme)
     }
 
-    if (isInitialThemeSyncRef.current) {
-      isInitialThemeSyncRef.current = false
-
+    if (theme == null) {
       const resolvedTheme = resolveThemePreference()
       applyTheme(resolvedTheme)
 
-      if (resolvedTheme !== theme) {
-        setTheme(resolvedTheme)
-        return
-      }
+      setTheme(resolvedTheme)
 
       try {
         window.localStorage.setItem('aq-theme', resolvedTheme)
@@ -299,7 +296,7 @@ function GameTeamPage({
     } catch {
       // ignore inaccessible storage
     }
-  }, [theme, isClient])
+  }, [theme])
 
   useEffect(() => {
     if (!router.isReady) return
@@ -373,7 +370,10 @@ function GameTeamPage({
   }, [collapseStorageKey, isClient])
 
   const handleThemeToggle = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+    setTheme((prev) => {
+      const current = prev ?? 'light'
+      return current === 'dark' ? 'light' : 'dark'
+    })
   }
 
   const handleGameInfoToggle = () => {
@@ -759,7 +759,7 @@ function GameTeamPage({
                 onClick={handleThemeToggle}
                 className="px-4 py-2 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
               >
-                {theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+                {effectiveTheme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
               </button>
               {resolvedSession ? (
                 <button
