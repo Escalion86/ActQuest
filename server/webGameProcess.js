@@ -593,12 +593,17 @@ const webGameProcess = async ({
       format: 'web',
     })
 
-    return createBaseResponse({
+    const baseResponse = createBaseResponse({
       statusMessage: `КОД "${codeInput}" ПРИНЯТ`,
       followUpMessage,
       promptMessage: createPromptMessage(resolvedGame.type),
       images: tasks[nextTaskIndex]?.images,
     })
+
+    return {
+      ...baseResponse,
+      shouldResetMessages: true,
+    }
   }
 
   await GamesTeams.findByIdAndUpdate(effectiveTeamId, updates)
