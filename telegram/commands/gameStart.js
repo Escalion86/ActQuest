@@ -122,15 +122,22 @@ const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
 
         await Promise.all(
           usersTelegramIdsOfTeam.map(async (telegramId) => {
-            await sendMessage({
-              chat_id: telegramId,
-              text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\u{26A0}\n\n\n${taskText(
-                { game, taskNum, findedCodes, cluesDuration }
-              )}`,
-              keyboard,
-              images: game.tasks[taskNum].images,
-              location,
-            })
+            try {
+              await sendMessage({
+                chat_id: telegramId,
+                text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\u{26A0}\n\n\n${taskText(
+                  { game, taskNum, findedCodes, cluesDuration }
+                )}`,
+                keyboard,
+                images: game.tasks[taskNum].images,
+                location,
+              })
+            } catch (notificationError) {
+              console.error(
+                'Failed to notify participant about game start',
+                notificationError
+              )
+            }
           })
         )
       })
