@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons'
-import { signOut, useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import { getServerSession } from 'next-auth/next'
 
 import getTeamGameTaskState, {
@@ -183,6 +183,8 @@ function GameTeamPage({
   const countdownElementsRef = useRef([])
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
+  const initialShouldClearMessages = Boolean(result?.shouldResetMessages)
+
   const [currentTaskHtml, setCurrentTaskHtml] = useState(taskHtml)
   const [currentTaskState, setCurrentTaskState] = useState(taskState)
   const [currentResult, setCurrentResult] = useState(result)
@@ -191,7 +193,14 @@ function GameTeamPage({
   )
   const [isTaskRefreshing, setIsTaskRefreshing] = useState(false)
   const [taskRefreshError, setTaskRefreshError] = useState(null)
+  const [shouldClearMessagesForNewTask, setShouldClearMessagesForNewTask] = useState(
+    initialShouldClearMessages
+  )
   const [lastResultSnapshot, setLastResultSnapshot] = useState(() => {
+    if (initialShouldClearMessages) {
+      return null
+    }
+
     const initialMessages = collectResultMessages({
       result,
       normalizedTaskMessage: normalizeForComparison(taskHtml),
@@ -247,6 +256,7 @@ function GameTeamPage({
     setCurrentTaskState(taskState)
     setCurrentResult(result)
     setCurrentPostCompletionMessage(postCompletionMessage || '')
+    setShouldClearMessagesForNewTask(Boolean(result?.shouldResetMessages))
   }, [result, taskHtml, taskState, postCompletionMessage])
 
   useEffect(() => {
@@ -256,6 +266,11 @@ function GameTeamPage({
       isBreakState: taskState === 'break',
       isGameCompletion: isGameFinished || taskState === 'completed',
     })
+    if (result?.shouldResetMessages) {
+      setLastResultSnapshot(null)
+      return
+    }
+
     setLastResultSnapshot(nextMessages.length > 0 ? result : null)
   }, [result, taskHtml, taskState, isGameFinished])
 
@@ -361,10 +376,9 @@ function GameTeamPage({
     [gameId, isTaskRefreshing, location, teamId]
   )
 
-  const handleSignOut = async () => {
-    await signOut({ redirect: false })
-    await router.push(`/${location}/game/${gameId}`)
-  }
+  const handleLeaveGame = useCallback(() => {
+    router.push(`/${location}/game/${gameId}`)
+  }, [gameId, location, router])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -419,13 +433,9 @@ function GameTeamPage({
   const isGameCompletion = isGameFinished || isCompletedState
   const shouldClearMessagesForNewTask = currentTaskState === 'active'
 
-  const currentResultMessages = useMemo(
-    () => {
-      if (shouldClearMessagesForNewTask) {
-        return []
-      }
-
-      return collectResultMessages({
+  const currentResultMessagesRaw = useMemo(
+    () =>
+      collectResultMessages({
         result: currentResult,
         normalizedTaskMessage,
         isBreakState,
@@ -441,13 +451,52 @@ function GameTeamPage({
     ]
   )
 
+  const currentResultMessages = useMemo(
+    () => (shouldClearMessagesForNewTask ? [] : currentResultMessagesRaw),
+    [shouldClearMessagesForNewTask, currentResultMessagesRaw]
+  )
+
   useEffect(() => {
+    if (currentResult?.shouldResetMessages) {
+      if (!shouldClearMessagesForNewTask) {
+        setShouldClearMessagesForNewTask(true)
+      }
+      return
+    }
+
+    if (currentTaskState !== 'active') {
+      if (shouldClearMessagesForNewTask) {
+        setShouldClearMessagesForNewTask(false)
+      }
+      return
+    }
+
+    if (
+      currentResult &&
+      shouldClearMessagesForNewTask &&
+      currentResultMessagesRaw.length > 0
+    ) {
+      setShouldClearMessagesForNewTask(false)
+    }
+  }, [
+    currentResult,
+    currentTaskState,
+    currentResultMessagesRaw,
+    shouldClearMessagesForNewTask,
+  ])
+
+  useEffect(() => {
+    if (shouldClearMessagesForNewTask) {
+      setLastResultSnapshot(null)
+      return
+    }
+
     if (currentResultMessages.length > 0 && currentResult) {
       setLastResultSnapshot(currentResult)
     } else if (currentResult && currentResultMessages.length === 0) {
       setLastResultSnapshot(null)
     }
-  }, [currentResult, currentResultMessages])
+  }, [currentResult, currentResultMessages, shouldClearMessagesForNewTask])
 
   const fallbackResultMessages = useMemo(
     () => {
@@ -657,10 +706,10 @@ function GameTeamPage({
               {resolvedSession ? (
                 <button
                   type="button"
-                  onClick={handleSignOut}
+                  onClick={handleLeaveGame}
                   className="px-4 py-2 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                 >
-                  Выйти
+                  Выйти из игры
                 </button>
               ) : null}
             </div>
@@ -925,6 +974,7 @@ GameTeamPage.propTypes = {
     followUpMessage: PropTypes.string,
     promptMessage: PropTypes.string,
     messages: PropTypes.arrayOf(PropTypes.string),
+    shouldResetMessages: PropTypes.bool,
   }),
   taskHtml: PropTypes.string,
   taskState: PropTypes.oneOf(['idle', 'active', 'break', 'completed']),
