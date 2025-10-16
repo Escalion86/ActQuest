@@ -172,6 +172,24 @@ const areTaskPayloadsEqual = (prev, next) =>
   prev.result === next.result &&
   prev.postCompletionMessage === next.postCompletionMessage
 
+const resolveThemePreference = () => {
+  if (typeof window === 'undefined') {
+    return 'light'
+  }
+
+  try {
+    const storedTheme = window.localStorage?.getItem('aq-theme')
+    if (storedTheme === 'light' || storedTheme === 'dark') {
+      return storedTheme
+    }
+  } catch {
+    // ignore inaccessible storage
+  }
+
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
+  return prefersDark ? 'dark' : 'light'
+}
+
 function GameTeamPage({
   location,
   game,
@@ -192,13 +210,14 @@ function GameTeamPage({
   const { data: session } = useSession()
   const router = useRouter()
 
-  const [theme, setTheme] = useState('light')
+  const [theme, setTheme] = useState(resolveThemePreference)
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
   const taskContentRef = useRef(null)
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
+  const isInitialThemeSyncRef = useRef(true)
   const initialShouldClearMessages = Boolean(result?.shouldResetMessages)
 
   const [taskData, setTaskData] = useState(() =>
@@ -245,22 +264,41 @@ function GameTeamPage({
   useEffect(() => {
     if (!isClient) return
 
-    const storedTheme = window.localStorage.getItem('aq-theme')
-    if (storedTheme === 'light' || storedTheme === 'dark') {
-      setTheme(storedTheme)
+    const rootElement = window.document?.documentElement
+    if (!rootElement) return
+
+    const applyTheme = (nextTheme) => {
+      rootElement.classList.toggle('dark', nextTheme === 'dark')
+      rootElement.setAttribute('data-theme', nextTheme)
+    }
+
+    if (isInitialThemeSyncRef.current) {
+      isInitialThemeSyncRef.current = false
+
+      const resolvedTheme = resolveThemePreference()
+      applyTheme(resolvedTheme)
+
+      if (resolvedTheme !== theme) {
+        setTheme(resolvedTheme)
+        return
+      }
+
+      try {
+        window.localStorage.setItem('aq-theme', resolvedTheme)
+      } catch {
+        // ignore inaccessible storage
+      }
+
       return
     }
 
-    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
-    setTheme(prefersDark ? 'dark' : 'light')
-  }, [isClient])
+    applyTheme(theme)
 
-  useEffect(() => {
-    if (!isClient) return
-
-    window.document.documentElement.classList.toggle('dark', theme === 'dark')
-    window.document.documentElement.setAttribute('data-theme', theme)
-    window.localStorage.setItem('aq-theme', theme)
+    try {
+      window.localStorage.setItem('aq-theme', theme)
+    } catch {
+      // ignore inaccessible storage
+    }
   }, [theme, isClient])
 
   useEffect(() => {
