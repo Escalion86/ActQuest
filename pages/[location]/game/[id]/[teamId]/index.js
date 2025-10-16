@@ -214,11 +214,14 @@ function GameTeamPage({
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
+  const [isPostCompletionMessageCollapsed, setIsPostCompletionMessageCollapsed] =
+    useState(false)
   const taskContentRef = useRef(null)
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
   const isInitialThemeSyncRef = useRef(true)
   const previousTaskStateRef = useRef(taskState || 'idle')
+  const previousPostCompletionMessageRef = useRef('')
   const initialShouldClearMessages = Boolean(result?.shouldResetMessages)
 
   const [taskData, setTaskData] = useState(() =>
@@ -391,6 +394,10 @@ function GameTeamPage({
       }
       return nextValue
     })
+  }
+
+  const handlePostCompletionMessageToggle = () => {
+    setIsPostCompletionMessageCollapsed((prev) => !prev)
   }
 
   const handleTaskRefresh = useCallback(
@@ -614,6 +621,27 @@ function GameTeamPage({
     return transformHtml(currentPostCompletionMessage)
   }, [currentPostCompletionMessage])
 
+  const shouldShowPostCompletionMessage =
+    isBreakState && Boolean(postCompletionMessageHtml)
+
+  useEffect(() => {
+    if (!shouldShowPostCompletionMessage) {
+      previousPostCompletionMessageRef.current = ''
+      setIsPostCompletionMessageCollapsed(false)
+      return
+    }
+
+    const normalizedMessage = postCompletionMessageHtml || ''
+    if (
+      normalizedMessage &&
+      previousPostCompletionMessageRef.current !== normalizedMessage
+    ) {
+      setIsPostCompletionMessageCollapsed(false)
+    }
+
+    previousPostCompletionMessageRef.current = normalizedMessage
+  }, [postCompletionMessageHtml, shouldShowPostCompletionMessage])
+
   const displayedResultMessages = useMemo(() => {
     const unique = new Set()
     const output = []
@@ -627,7 +655,7 @@ function GameTeamPage({
       output.push(message)
     })
 
-    if (postCompletionMessageHtml) {
+    if (postCompletionMessageHtml && !shouldShowPostCompletionMessage) {
       if (!unique.has(postCompletionMessageHtml)) {
         unique.add(postCompletionMessageHtml)
         output.push(postCompletionMessageHtml)
@@ -635,7 +663,12 @@ function GameTeamPage({
     }
 
     return output
-  }, [resultMessages, shouldClearMessagesForActiveTask, postCompletionMessageHtml])
+  }, [
+    resultMessages,
+    shouldClearMessagesForActiveTask,
+    postCompletionMessageHtml,
+    shouldShowPostCompletionMessage,
+  ])
 
   const shouldShowLastMessage = displayedResultMessages.length > 0
   const shouldShowAnswerForm = !isGameCompletion && !isBreakState
@@ -936,6 +969,61 @@ function GameTeamPage({
                   ref={taskContentRef}
                   dangerouslySetInnerHTML={{ __html: formattedTaskMessage }}
                 />
+              </section>
+            ) : null}
+
+            {shouldShowPostCompletionMessage ? (
+              <section className="p-6 bg-purple-50 border border-purple-200 shadow-lg rounded-3xl dark:bg-purple-500/10 dark:border-purple-500/30 dark:shadow-slate-950/40">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-purple-800 dark:text-purple-100">
+                    Сообщение после предыдущего задания
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={handlePostCompletionMessageToggle}
+                    className="inline-flex items-center justify-center p-2 text-purple-700 transition border border-purple-200 rounded-full hover:text-purple-900 hover:border-purple-300 dark:border-purple-500/40 dark:text-purple-100 dark:hover:border-purple-300 dark:hover:text-purple-50"
+                    aria-label={
+                      isPostCompletionMessageCollapsed
+                        ? 'Развернуть сообщение после задания'
+                        : 'Свернуть сообщение после задания'
+                    }
+                    title={
+                      isPostCompletionMessageCollapsed
+                        ? 'Развернуть сообщение после задания'
+                        : 'Свернуть сообщение после задания'
+                    }
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d={
+                          isPostCompletionMessageCollapsed
+                            ? 'M6 9l6 6 6-6'
+                            : 'M6 15l6-6 6 6'
+                        }
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span className="sr-only">
+                      {isPostCompletionMessageCollapsed
+                        ? 'Развернуть сообщение после задания'
+                        : 'Свернуть сообщение после задания'}
+                    </span>
+                  </button>
+                </div>
+                {!isPostCompletionMessageCollapsed ? (
+                  <div
+                    className="mt-4 text-base leading-relaxed text-purple-900 whitespace-pre-wrap break-words dark:text-purple-100 aq-task-content"
+                    dangerouslySetInnerHTML={{ __html: postCompletionMessageHtml }}
+                  />
+                ) : null}
               </section>
             ) : null}
 
