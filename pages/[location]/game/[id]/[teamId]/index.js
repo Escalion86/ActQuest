@@ -77,6 +77,47 @@ const normalizeForComparison = (value) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+const collectResultMessages = ({
+  result,
+  normalizedTaskMessage,
+  isBreakState,
+  isGameCompletion,
+}) => {
+  if (!result) return []
+
+  const rawMessages =
+    Array.isArray(result.messages) && result.messages.length > 0
+      ? result.messages
+      : [result.message].filter(Boolean)
+
+  if (rawMessages.length === 0) return []
+
+  const seen = new Set()
+
+  return rawMessages
+    .filter((message) => {
+      const normalized = normalizeForComparison(message)
+      if (!normalized) return false
+      if (normalizedTaskMessage && normalized === normalizedTaskMessage) {
+        return false
+      }
+      if (isBreakState && /перерыв/i.test(normalized)) {
+        return false
+      }
+      if (
+        isGameCompletion &&
+        (/(^|\s)введите\s+код/i.test(normalized) ||
+          /код\s+не\s+верен/i.test(normalized))
+      ) {
+        return false
+      }
+      if (seen.has(normalized)) return false
+      seen.add(normalized)
+      return true
+    })
+    .map((message) => transformHtml(message))
+}
+
 const formatCountdownSeconds = (totalSeconds) => {
   if (!Number.isFinite(totalSeconds)) return '00:00:00'
 
@@ -134,6 +175,15 @@ function GameTeamPage({
   const [currentResult, setCurrentResult] = useState(result)
   const [isTaskRefreshing, setIsTaskRefreshing] = useState(false)
   const [taskRefreshError, setTaskRefreshError] = useState(null)
+  const [lastResultSnapshot, setLastResultSnapshot] = useState(() => {
+    const initialMessages = collectResultMessages({
+      result,
+      normalizedTaskMessage: normalizeForComparison(taskHtml),
+      isBreakState: taskState === 'break',
+      isGameCompletion: isGameFinished || taskState === 'completed',
+    })
+    return initialMessages.length > 0 ? result : null
+  })
 
   const resolvedSession = session ?? initialSession
 
@@ -181,6 +231,16 @@ function GameTeamPage({
     setCurrentTaskState(taskState)
     setCurrentResult(result)
   }, [result, taskHtml, taskState])
+
+  useEffect(() => {
+    const nextMessages = collectResultMessages({
+      result,
+      normalizedTaskMessage: normalizeForComparison(taskHtml),
+      isBreakState: taskState === 'break',
+      isGameCompletion: isGameFinished || taskState === 'completed',
+    })
+    setLastResultSnapshot(nextMessages.length > 0 ? result : null)
+  }, [result, taskHtml, taskState, isGameFinished])
 
   useEffect(() => {
     if (!isClient) return
@@ -327,45 +387,48 @@ function GameTeamPage({
   const isCompletedState = currentTaskState === 'completed'
   const isGameCompletion = isGameFinished || isCompletedState
 
-  const resultMessages = useMemo(() => {
-    if (!currentResult) return []
+  const currentResultMessages = useMemo(
+    () =>
+      collectResultMessages({
+        result: currentResult,
+        normalizedTaskMessage,
+        isBreakState,
+        isGameCompletion,
+      }),
+    [currentResult, normalizedTaskMessage, isBreakState, isGameCompletion]
+  )
 
-    const rawMessages =
-      Array.isArray(currentResult.messages) && currentResult.messages.length > 0
-        ? currentResult.messages
-        : [currentResult.message].filter(Boolean)
+  useEffect(() => {
+    if (currentResultMessages.length > 0 && currentResult) {
+      setLastResultSnapshot(currentResult)
+    } else if (currentResult && currentResultMessages.length === 0) {
+      setLastResultSnapshot(null)
+    }
+  }, [currentResult, currentResultMessages])
 
-    if (rawMessages.length === 0) return []
+  const fallbackResultMessages = useMemo(
+    () =>
+      currentResult
+        ? []
+        : collectResultMessages({
+            result: lastResultSnapshot,
+            normalizedTaskMessage,
+            isBreakState,
+            isGameCompletion,
+          }),
+    [
+      currentResult,
+      lastResultSnapshot,
+      normalizedTaskMessage,
+      isBreakState,
+      isGameCompletion,
+    ]
+  )
 
-    const seen = new Set()
-
-    const filtered = rawMessages.filter((message) => {
-      const normalized = normalizeForComparison(message)
-      if (!normalized) return false
-      if (normalizedTaskMessage && normalized === normalizedTaskMessage) {
-        return false
-      }
-      if (isBreakState && /перерыв/i.test(normalized)) {
-        return false
-      }
-      if (
-        isGameCompletion &&
-        (/(^|\s)введите\s+код/i.test(normalized) || /код\s+не\s+верен/i.test(normalized))
-      ) {
-        return false
-      }
-      if (seen.has(normalized)) return false
-      seen.add(normalized)
-      return true
-    })
-
-    return filtered.map((message) => transformHtml(message))
-  }, [
-    currentResult,
-    isBreakState,
-    isGameCompletion,
-    normalizedTaskMessage,
-  ])
+  const resultMessages =
+    currentResultMessages.length > 0
+      ? currentResultMessages
+      : fallbackResultMessages
 
   const shouldShowLastMessage = resultMessages.length > 0
   const shouldShowAnswerForm = !isGameCompletion && !isBreakState
@@ -493,14 +556,16 @@ function GameTeamPage({
               ActQuest
             </Link>
             <nav className="flex items-center gap-6 text-sm font-semibold text-gray-600 dark:text-slate-300">
-              <a
-                href="https://t.me/ActQuest_bot"
-                className="transition hover:text-primary dark:hover:text-white"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Бот в Telegram
-              </a>
+              {/**
+               * <a
+               *   href="https://t.me/ActQuest_bot"
+               *   className="transition hover:text-primary dark:hover:text-white"
+               *   target="_blank"
+               *   rel="noreferrer"
+               * >
+               *   Бот в Telegram
+               * </a>
+               */}
             </nav>
             <div className="flex items-center gap-3">
               <button

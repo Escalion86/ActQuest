@@ -1147,14 +1147,16 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
               ActQuest
             </Link>
             <nav className="flex items-center gap-6 text-sm font-semibold text-gray-600 dark:text-slate-300">
-              <a
-                href="https://t.me/ActQuest_bot"
-                className="transition hover:text-primary dark:hover:text-white"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Бот в Telegram
-              </a>
+              {/**
+               * <a
+               *   href="https://t.me/ActQuest_bot"
+               *   className="transition hover:text-primary dark:hover:text-white"
+               *   target="_blank"
+               *   rel="noreferrer"
+               * >
+               *   Бот в Telegram
+               * </a>
+               */}
             </nav>
             <div className="flex items-center gap-3">
               <button
