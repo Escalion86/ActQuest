@@ -13,9 +13,19 @@ const lastCommandHandler = async (
   location,
   user,
   db,
-  lastCommand
+  lastCommand,
+  source
 ) => {
   let actualJsonCommand = { ...jsonCommand }
+  const buildCommandArgs = (customJsonCommand = actualJsonCommand) => ({
+    telegramId,
+    jsonCommand: customJsonCommand,
+    location,
+    user,
+    db,
+    lastCommand,
+    source,
+  })
 
   if (typeof jsonCommand.c === 'number') {
     if (
@@ -26,14 +36,7 @@ const lastCommandHandler = async (
       actualJsonCommand.page = lastCommand.pages[jsonCommand.c]
     }
 
-    return await commandsArray[numToCommand[jsonCommand.c]]({
-      telegramId,
-      jsonCommand: actualJsonCommand,
-      location,
-      user,
-      db,
-      lastCommand,
-    })
+    return await commandsArray[numToCommand[jsonCommand.c]](buildCommandArgs())
   }
 
   if (commandsArray[jsonCommand.c]) {
@@ -43,14 +46,7 @@ const lastCommandHandler = async (
         actualJsonCommand.page = lastCommand.pages[commandNum]
     }
 
-    return await commandsArray[jsonCommand.c]({
-      telegramId,
-      jsonCommand: actualJsonCommand,
-      location,
-      user,
-      db,
-      lastCommand,
-    })
+    return await commandsArray[jsonCommand.c](buildCommandArgs())
   }
 
   return {
@@ -69,6 +65,7 @@ const executeCommand = async ({
   user,
   db,
   lastCommand,
+  source = 'web',
 }) => {
   let actualDb = db
   if (!db) actualDb = await dbConnect(location)
@@ -79,7 +76,8 @@ const executeCommand = async ({
     location,
     user,
     actualDb,
-    lastCommand
+    lastCommand,
+    source
   )
   const keyboard = keyboardFormer(result.buttons)
 
@@ -130,6 +128,7 @@ const executeCommand = async ({
         user,
         db: actualDb,
         lastCommand,
+        source,
       })
     }
     // Если команда содержит в себе command, то значт это готовая команда,
@@ -148,6 +147,7 @@ const executeCommand = async ({
       user,
       db: actualDb,
       lastCommand,
+      source,
     })
   } else {
     const actualCommand = { ...jsonCommand }

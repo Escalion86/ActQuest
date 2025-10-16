@@ -596,11 +596,13 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
     }
   }
 
-  const handleSubmit = (event) => {
-    event.preventDefault()
-    if (!input.trim()) return
-
+  const submitInput = () => {
     const value = input.trim()
+
+    if (!value) {
+      return false
+    }
+
     const isCommand = value.startsWith('/')
 
     sendCommand({
@@ -610,6 +612,19 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
     })
 
     setInput('')
+    return true
+  }
+
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    submitInput()
+  }
+
+  const handleInputKeyDown = (event) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault()
+      submitInput()
+    }
   }
 
   const parseCallbackData = useCallback((value) => {
@@ -1081,12 +1096,13 @@ const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
           onSubmit={handleSubmit}
           className="flex flex-col gap-3 md:flex-row"
         >
-          <input
-            type="text"
+          <textarea
             value={input}
             onChange={(event) => setInput(event.target.value)}
+            onKeyDown={handleInputKeyDown}
             placeholder="Введите команду или ответ..."
-            className="flex-1 px-4 py-3 text-base border border-gray-200 shadow-sm rounded-2xl focus:border-blue-400 focus:outline-none focus:ring dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400"
+            rows={3}
+            className="flex-1 px-4 py-3 text-base border border-gray-200 shadow-sm rounded-2xl focus:border-blue-400 focus:outline-none focus:ring dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 resize-y"
             disabled={isLoading}
           />
           <button
