@@ -193,9 +193,8 @@ function GameTeamPage({
   )
   const [isTaskRefreshing, setIsTaskRefreshing] = useState(false)
   const [taskRefreshError, setTaskRefreshError] = useState(null)
-  const [shouldClearMessagesForNewTask, setShouldClearMessagesForNewTask] = useState(
-    initialShouldClearMessages
-  )
+  const [shouldClearMessagesForActiveTask, setShouldClearMessagesForActiveTask] =
+    useState(initialShouldClearMessages)
   const [lastResultSnapshot, setLastResultSnapshot] = useState(() => {
     if (initialShouldClearMessages) {
       return null
@@ -256,7 +255,7 @@ function GameTeamPage({
     setCurrentTaskState(taskState)
     setCurrentResult(result)
     setCurrentPostCompletionMessage(postCompletionMessage || '')
-    setShouldClearMessagesForNewTask(Boolean(result?.shouldResetMessages))
+    setShouldClearMessagesForActiveTask(Boolean(result?.shouldResetMessages))
   }, [result, taskHtml, taskState, postCompletionMessage])
 
   useEffect(() => {
@@ -456,37 +455,42 @@ function GameTeamPage({
     [shouldClearMessagesForNewTask, currentResultMessagesRaw]
   )
 
+  const currentResultMessages = useMemo(
+    () => (shouldClearMessagesForActiveTask ? [] : currentResultMessagesRaw),
+    [shouldClearMessagesForActiveTask, currentResultMessagesRaw]
+  )
+
   useEffect(() => {
     if (currentResult?.shouldResetMessages) {
-      if (!shouldClearMessagesForNewTask) {
-        setShouldClearMessagesForNewTask(true)
+      if (!shouldClearMessagesForActiveTask) {
+        setShouldClearMessagesForActiveTask(true)
       }
       return
     }
 
     if (currentTaskState !== 'active') {
-      if (shouldClearMessagesForNewTask) {
-        setShouldClearMessagesForNewTask(false)
+      if (shouldClearMessagesForActiveTask) {
+        setShouldClearMessagesForActiveTask(false)
       }
       return
     }
 
     if (
       currentResult &&
-      shouldClearMessagesForNewTask &&
+      shouldClearMessagesForActiveTask &&
       currentResultMessagesRaw.length > 0
     ) {
-      setShouldClearMessagesForNewTask(false)
+      setShouldClearMessagesForActiveTask(false)
     }
   }, [
     currentResult,
     currentTaskState,
     currentResultMessagesRaw,
-    shouldClearMessagesForNewTask,
+    shouldClearMessagesForActiveTask,
   ])
 
   useEffect(() => {
-    if (shouldClearMessagesForNewTask) {
+    if (shouldClearMessagesForActiveTask) {
       setLastResultSnapshot(null)
       return
     }
@@ -496,11 +500,11 @@ function GameTeamPage({
     } else if (currentResult && currentResultMessages.length === 0) {
       setLastResultSnapshot(null)
     }
-  }, [currentResult, currentResultMessages, shouldClearMessagesForNewTask])
+  }, [currentResult, currentResultMessages, shouldClearMessagesForActiveTask])
 
   const fallbackResultMessages = useMemo(
     () => {
-      if (currentResult || shouldClearMessagesForNewTask) {
+      if (currentResult || shouldClearMessagesForActiveTask) {
         return []
       }
 
@@ -517,7 +521,7 @@ function GameTeamPage({
       normalizedTaskMessage,
       isBreakState,
       isGameCompletion,
-      shouldClearMessagesForNewTask,
+      shouldClearMessagesForActiveTask,
     ]
   )
 
@@ -539,7 +543,7 @@ function GameTeamPage({
     const unique = new Set()
     const output = []
 
-    const baseMessages = shouldClearMessagesForNewTask ? [] : resultMessages
+    const baseMessages = shouldClearMessagesForActiveTask ? [] : resultMessages
 
     baseMessages.forEach((message) => {
       if (!message) return
@@ -556,7 +560,7 @@ function GameTeamPage({
     }
 
     return output
-  }, [resultMessages, shouldClearMessagesForNewTask, postCompletionMessageHtml])
+  }, [resultMessages, shouldClearMessagesForActiveTask, postCompletionMessageHtml])
 
   const shouldShowLastMessage = displayedResultMessages.length > 0
   const shouldShowAnswerForm = !isGameCompletion && !isBreakState
