@@ -128,6 +128,7 @@ function GameTeamPage({
   session: initialSession,
   gameId,
   teamId,
+  shouldClearMessageParam,
 }) {
   const { data: session } = useSession()
   const router = useRouter()
@@ -139,7 +140,8 @@ function GameTeamPage({
   const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
   const taskContentRef = useRef(null)
   const countdownElementsRef = useRef([])
-  const refreshRequestedRef = useRef(false)
+  const refreshRequestedRef = useRef(0)
+  const hasClearedMessageRef = useRef(false)
 
   const resolvedSession = session ?? initialSession
 
@@ -179,8 +181,29 @@ function GameTeamPage({
   }, [router.asPath, router.isReady])
 
   useEffect(() => {
-    refreshRequestedRef.current = false
+    refreshRequestedRef.current = 0
   }, [taskHtml])
+
+  useEffect(() => {
+    if (!isClient) return
+    if (!router.isReady) return
+    if (!shouldClearMessageParam) return
+    if (hasClearedMessageRef.current) return
+
+    const cleanPath = `/${location}/game/${gameId}/${teamId}`
+    hasClearedMessageRef.current = true
+    router.replace(cleanPath, undefined, { shallow: true, scroll: false }).catch(
+      () => null
+    )
+  }, [
+    gameId,
+    isClient,
+    location,
+    router.isReady,
+    router,
+    shouldClearMessageParam,
+    teamId,
+  ])
 
   useEffect(() => {
     if (!isClient) return
@@ -214,13 +237,15 @@ function GameTeamPage({
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    if (!answer.trim()) return
+    const trimmedAnswer = answer.trim().slice(0, 20)
+    if (!trimmedAnswer) return
 
     setIsSubmitting(true)
     try {
+      hasClearedMessageRef.current = false
       await router.push({
         pathname: `/${location}/game/${gameId}/${teamId}`,
-        query: { message: answer.trim() },
+        query: { message: trimmedAnswer },
       })
     } finally {
       setIsSubmitting(false)
@@ -344,13 +369,16 @@ function GameTeamPage({
 
         element.textContent = formatCountdownSeconds(remainingSeconds)
 
-        if (
-          item.refreshOnComplete &&
-          remainingSeconds <= 0 &&
-          !refreshRequestedRef.current
-        ) {
-          refreshRequestedRef.current = true
-          void router.replace(router.asPath, undefined, { scroll: false })
+        if (item.refreshOnComplete && remainingSeconds <= 0) {
+          const lastRefreshAt = refreshRequestedRef.current || 0
+          const MIN_REFRESH_INTERVAL = 3000
+
+          if (now - lastRefreshAt >= MIN_REFRESH_INTERVAL) {
+            refreshRequestedRef.current = now
+            void router
+              .replace(router.asPath, undefined, { scroll: false })
+              .catch(() => null)
+          }
         }
 
         return {
@@ -579,7 +607,10 @@ function GameTeamPage({
                   <input
                     type="text"
                     value={answer}
-                    onChange={(event) => setAnswer(event.target.value)}
+                    maxLength={20}
+                    onChange={(event) =>
+                      setAnswer(event.target.value.slice(0, 20))
+                    }
                     placeholder="Введите код или сообщение"
                     className="w-full px-4 py-3 text-base transition border border-gray-300 rounded-2xl focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400"
                   />
@@ -675,6 +706,7 @@ GameTeamPage.propTypes = {
   session: PropTypes.shape({}),
   gameId: PropTypes.string.isRequired,
   teamId: PropTypes.string.isRequired,
+  shouldClearMessageParam: PropTypes.bool,
 }
 
 GameTeamPage.defaultProps = {
@@ -685,6 +717,7 @@ GameTeamPage.defaultProps = {
   taskState: 'idle',
   error: null,
   session: null,
+  shouldClearMessageParam: false,
 }
 
 export default GameTeamPage
@@ -718,6 +751,8 @@ export const getServerSideProps = async (context) => {
     }
   }
 
+  let shouldClearMessageParam = false
+
   try {
     const [game, team] = await Promise.all([
       fetchGame(locationParam, gameIdParam),
@@ -750,6 +785,7 @@ export const getServerSideProps = async (context) => {
           error: 'DB_CONNECTION_FAILED',
           gameId: gameIdParam,
           teamId: teamIdParam,
+          shouldClearMessageParam,
         },
       }
     }
@@ -792,6 +828,8 @@ export const getServerSideProps = async (context) => {
     const messageParam = typeof query.message === 'string' ? query.message : undefined
     const sanitizedMessage =
       messageParam && messageParam !== 'undefined' ? messageParam.trim() : undefined
+
+    shouldClearMessageParam = Boolean(sanitizedMessage)
 
     const actingTelegramId = currentTeamUser?.userTelegramId
 
@@ -1175,6 +1213,7 @@ export const getServerSideProps = async (context) => {
         error: null,
         gameId: gameIdParam,
         teamId: teamIdParam,
+        shouldClearMessageParam,
       },
     }
   } catch (err) {
@@ -1194,6 +1233,7 @@ export const getServerSideProps = async (context) => {
         error: 'UNKNOWN_ERROR',
         gameId: gameIdParam,
         teamId: teamIdParam,
+        shouldClearMessageParam,
       },
     }
   }
