@@ -3,8 +3,6 @@ import { useEffect } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import { RecoilRoot, RecoilEnv } from 'recoil'
 
-import Script from 'next/script'
-
 import '../styles/global.css'
 
 RecoilEnv.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = false
@@ -13,6 +11,44 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   const mode = process.env.MODE ?? process.env.NODE_ENV
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+      window.IntersectionObserver = class {
+        constructor(callback) {
+          this.callback = typeof callback === 'function' ? callback : () => {}
+          this.elements = new Set()
+        }
+
+        observe(element) {
+          if (!element) return
+          this.elements.add(element)
+          this.callback(
+            [
+              {
+                isIntersecting: true,
+                intersectionRatio: 1,
+                target: element,
+                time: Date.now(),
+              },
+            ],
+            this
+          )
+        }
+
+        unobserve(element) {
+          if (!element) return
+          this.elements.delete(element)
+        }
+
+        disconnect() {
+          this.elements.clear()
+        }
+
+        takeRecords() {
+          return []
+        }
+      }
+    }
+
     if (typeof window === 'undefined') {
       return
     }
@@ -40,10 +76,6 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
       </Head>
       <SessionProvider session={session} refetchInterval={5 * 60}>
         <RecoilRoot>
-          <Script
-            src="https://polyfill.io/v3/polyfill.min.js?features=IntersectionObserver"
-            strategy="beforeInteractive"
-          />
           <Component {...pageProps} />
         </RecoilRoot>
       </SessionProvider>
