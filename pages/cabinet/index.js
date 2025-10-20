@@ -1,28 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import PropTypes from 'prop-types'
 import Head from 'next/head'
-import Link from 'next/link'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
-import { getSession, signIn, signOut, useSession } from 'next-auth/react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons'
+import { signIn, useSession } from 'next-auth/react'
+
+import getSessionSafe from '@helpers/getSessionSafe'
+import CabinetLayout from '@components/cabinet/CabinetLayout'
 import { LOCATIONS } from '@server/serverConstants'
-import TelegramLogin from '@components/cabinet/TelegramLogin'
-import NotificationsCard from '@components/cabinet/NotificationsCard'
-import usePwaNotifications from '@helpers/usePwaNotifications'
-import { decodeCommandKeys } from 'telegram/func/commandShortcuts'
+import getTelegramBotNameByLocation from '@utils/telegram/getTelegramBotNameByLocation'
 
 const availableLocations = Object.entries(LOCATIONS)
   .filter(([, value]) => !value.hidden)
   .map(([key, value]) => ({ key, ...value }))
 
 const defaultLocation = availableLocations[0]?.key ?? 'dev'
-
-const formatText = (text) =>
-  (text || '')
-    .split('\n')
-    .map((part) => part.trim())
-    .join('\n')
 
 const decodeCallbackParam = (rawValue) => {
   if (!rawValue) return null
@@ -58,7 +48,7 @@ const extractRelativePath = (url, baseOrigin) => {
     const parsed = new URL(url, baseOrigin)
     const base = new URL(baseOrigin)
 
-    if (parsed.host !== base.host) {
+    if (parsed.origin !== base.origin) {
       return null
     }
 
@@ -100,1107 +90,471 @@ const getRequestOrigin = (req) => {
   return `${protocol}://${host}`
 }
 
-const isButtonVisible = (button) =>
-  Boolean(
-    button &&
-      !button.hidden &&
-      !button.hide &&
-      !button.is_hidden &&
-      !button.hidden_by_condition &&
-      (button.text || button.url)
-  )
+const quickActions = [
+  {
+    id: 'create-game',
+    title: 'Создать новую игру',
+    description:
+      'Заполните сценарий, настройте расписание и пригласите команды в несколько шагов.',
+    href: '/cabinet/games',
+  },
+  {
+    id: 'invite-team',
+    title: 'Пригласить команду',
+    description:
+      'Отправьте ссылку на участие, назначьте капитана и управляйте составом.',
+    href: '/cabinet/teams',
+  },
+  {
+    id: 'update-profile',
+    title: 'Обновить анкету',
+    description:
+      'Укажите актуальные контакты и роль в проекте, чтобы коллеги могли вас найти.',
+    href: '/cabinet/profile',
+  },
+]
 
-const buildBlocksFromResult = (result) => {
-  if (!result) return []
+const activityFeed = [
+  {
+    id: 'activity-1',
+    title: 'Команда «Северный свет» добавлена',
+    time: '5 минут назад',
+    category: 'Команды',
+  },
+  {
+    id: 'activity-2',
+    title: 'Игра «Осенний марафон» опубликована',
+    time: '2 часа назад',
+    category: 'Игры',
+  },
+  {
+    id: 'activity-3',
+    title: 'Обновлены контактные данные организатора',
+    time: 'вчера',
+    category: 'Профиль',
+  },
+]
 
-  const blocks = []
-  const formattedText = formatText(result.text)
+const statsConfig = [
+  {
+    id: 'games',
+    title: 'Активные игры',
+    value: 4,
+    delta: '+2 за неделю',
+  },
+  {
+    id: 'teams',
+    title: 'Команд участвует',
+    value: 18,
+    delta: '+5 новых',
+  },
+  {
+    id: 'players',
+    title: 'Игроков задействовано',
+    value: 112,
+    delta: 'стабильно',
+  },
+]
 
-  if (formattedText) {
-    blocks.push({
-      id: `text-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      type: 'text',
-      content: formattedText,
-    })
-  }
-
-  const media = []
-
-  if (Array.isArray(result.images)) {
-    media.push(...result.images.filter(Boolean))
-  }
-
-  if (Array.isArray(result.photos)) {
-    media.push(...result.photos.filter(Boolean))
-  }
-
-  if (result.photo) {
-    media.push(result.photo)
-  }
-
-  if (result.image) {
-    media.push(result.image)
-  }
-
-  media.forEach((url, index) => {
-    blocks.push({
-      id: `image-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
-      type: 'image',
-      content: url,
-    })
-  })
-
-  return blocks
-}
-
-const CabinetPage = ({ initialCallbackUrl, initialCallbackSource }) => {
-  const { data: session, status, update: updateSession } = useSession()
+const CabinetDashboard = ({ authCallbackUrl, authCallbackSource, session: initialSession }) => {
+  const { data: session, status, update } = useSession()
   const router = useRouter()
   const [location, setLocation] = useState(
-    () => session?.user?.location ?? defaultLocation
+    () => session?.user?.location || initialSession?.user?.location || defaultLocation
   )
-  const [authCallbackUrl, setAuthCallbackUrl] = useState(() => {
-    if (typeof initialCallbackUrl === 'string' && initialCallbackUrl) {
-      return initialCallbackUrl
+  const [authError, setAuthError] = useState(null)
+  const [isAuthenticating, setIsAuthenticating] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+  const widgetContainerRef = useRef(null)
+
+  const activeSession = session ?? initialSession ?? null
+  const botName = useMemo(() => getTelegramBotNameByLocation(location), [location])
+  const normalizedStats = useMemo(
+    () =>
+      statsConfig.map((item) => ({
+        ...item,
+        value: new Intl.NumberFormat('ru-RU').format(item.value),
+      })),
+    []
+  )
+
+  const updateSession = useCallback(() => {
+    if (typeof update === 'function') {
+      return update()
     }
 
-    return '/cabinet'
-  })
-  const [input, setInput] = useState('')
-  const [displayBlocks, setDisplayBlocks] = useState([])
-  const [keyboardButtons, setKeyboardButtons] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [notifications, setNotifications] = useState([])
-  const [notificationsLoading, setNotificationsLoading] = useState(false)
-  const [notificationsError, setNotificationsError] = useState(null)
-  const [notificationsExpanded, setNotificationsExpanded] = useState(false)
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false)
-  const [hasSyncedLocation, setHasSyncedLocation] = useState(false)
-  const [isClient, setIsClient] = useState(false)
-  const [theme, setTheme] = useState('light')
-  const isLocalhost =
-    isClient &&
-    typeof window !== 'undefined' &&
-    window.location.hostname === 'localhost'
-  const authCallbackSourceRef = useRef(initialCallbackSource)
-  const processedCallbackRef = useRef(null)
-  const lastInteractionRef = useRef('bot')
-  const displayRef = useRef(null)
-  const hasLoadedInitialMenuRef = useRef(false)
-  const gameTeamCacheRef = useRef(new Map())
-  const pushNotifications = usePwaNotifications({ location, session })
+    return Promise.resolve()
+  }, [update])
 
   useEffect(() => {
     setIsClient(true)
   }, [])
 
   useEffect(() => {
-    if (!router.isReady) return
-
-    const queryTab = router.query?.tab
-    if (queryTab === 'notifications') {
-      setNotificationsExpanded(true)
+    if (activeSession?.user?.location) {
+      setLocation(activeSession.user.location)
     }
+  }, [activeSession?.user?.location])
 
-    const queryLocation = router.query?.location
-    if (
-      typeof queryLocation === 'string' &&
-      LOCATIONS[queryLocation] &&
-      queryLocation !== location
-    ) {
-      setLocation(queryLocation)
-    }
-  }, [router.isReady, router.query, location])
+  const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
 
-  useEffect(() => {
-    if (!router.isReady) return
-
-    const decodedCallback = decodeCallbackParam(router.query?.callbackUrl)
-
-    if (!decodedCallback) {
-      setAuthCallbackUrl('/cabinet')
-      if (authCallbackSourceRef.current !== null) {
-        processedCallbackRef.current = null
-      }
-      authCallbackSourceRef.current = null
-      return
-    }
-
-    if (!isClient) return
-
-    const relativeTarget = extractRelativePath(
-      decodedCallback,
-      window.location.origin
-    )
-
-    if (relativeTarget) {
-      if (authCallbackSourceRef.current !== decodedCallback) {
-        processedCallbackRef.current = null
-      }
-      setAuthCallbackUrl(relativeTarget)
-      authCallbackSourceRef.current = decodedCallback
-      return
-    }
-
-    console.error(
-      'Не удалось разобрать callbackUrl авторизации',
-      decodedCallback
-    )
-    setAuthCallbackUrl('/cabinet')
-    if (authCallbackSourceRef.current !== decodedCallback) {
-      processedCallbackRef.current = null
-    }
-    authCallbackSourceRef.current = decodedCallback
-  }, [router.isReady, router.query, isClient])
-
-  useEffect(() => {
-    if (!isClient || !router.isReady) return
-
-    const rawCallbackParam = router.query?.callbackUrl
-    if (!rawCallbackParam) {
-      processedCallbackRef.current = null
-      return
-    }
-
-    if (status !== 'authenticated') return
-
-    if (!authCallbackUrl) return
-
-    const decodedSource = authCallbackSourceRef.current
-    if (!decodedSource) return
-
-    if (processedCallbackRef.current === decodedSource) return
-
-    const navigateToCallback = async () => {
-      const targetPath = authCallbackUrl.startsWith('/')
-        ? authCallbackUrl
-        : `/${authCallbackUrl}`
+  const handleTelegramAuth = useCallback(
+    async (userData) => {
+      if (!userData || isAuthenticating) return
 
       try {
-        processedCallbackRef.current = decodedSource
-
-        if (targetPath === '/cabinet') {
-          await router.replace('/cabinet', '/cabinet')
-          return
-        }
-
-        await router.replace(targetPath, targetPath)
-      } catch (navError) {
-        console.error('Не удалось перейти по сохранённому callbackUrl', navError)
-        await router.replace('/cabinet', '/cabinet').catch(() => null)
-      }
-    }
-
-    navigateToCallback()
-  }, [
-    authCallbackUrl,
-    isClient,
-    router,
-    router.isReady,
-    router.query?.callbackUrl,
-    status,
-  ])
-
-  useEffect(() => {
-    if (!isClient) return
-
-    const storedTheme = window.localStorage.getItem('aq-theme')
-
-    if (storedTheme === 'light' || storedTheme === 'dark') {
-      setTheme(storedTheme)
-      return
-    }
-
-    const prefersDark = window.matchMedia?.(
-      '(prefers-color-scheme: dark)'
-    ).matches
-    setTheme(prefersDark ? 'dark' : 'light')
-  }, [isClient])
-
-  useEffect(() => {
-    if (!isClient) return
-
-    window.document.documentElement.classList.toggle('dark', theme === 'dark')
-    window.document.documentElement.setAttribute('data-theme', theme)
-    window.localStorage.setItem('aq-theme', theme)
-  }, [theme, isClient])
-
-  useEffect(() => {
-    if (
-      status === 'authenticated' &&
-      session?.user?.location &&
-      !hasSyncedLocation
-    ) {
-      setLocation(session.user.location)
-      setHasSyncedLocation(true)
-      return
-    }
-
-    if (status === 'unauthenticated' && hasSyncedLocation) {
-      setHasSyncedLocation(false)
-      setLocation(defaultLocation)
-    }
-  }, [session, status, hasSyncedLocation])
-
-  useEffect(() => {
-    if (!session) {
-      setDisplayBlocks([])
-      setKeyboardButtons([])
-      lastInteractionRef.current = 'bot'
-      hasLoadedInitialMenuRef.current = false
-      setNotifications([])
-      setNotificationsError(null)
-      setHasUnreadNotifications(false)
-      setNotificationsExpanded(false)
-    }
-  }, [session])
-
-  useEffect(() => {
-    if (!session || status !== 'authenticated') {
-      hasLoadedInitialMenuRef.current = false
-      return
-    }
-
-    if (hasLoadedInitialMenuRef.current) {
-      return
-    }
-
-    hasLoadedInitialMenuRef.current = true
-    loadMainMenu({ resetDisplay: true, initiatedByUser: false })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, status])
-
-  useEffect(() => {
-    if (!notifications || notifications.length === 0) {
-      setHasUnreadNotifications(false)
-      return
-    }
-
-    setHasUnreadNotifications(notifications.some((item) => !item.readAt))
-  }, [notifications])
-
-  useEffect(() => {
-    if (hasUnreadNotifications) {
-      setNotificationsExpanded(true)
-    }
-  }, [hasUnreadNotifications])
-
-  const loadMainMenu = async ({
-    resetDisplay = false,
-    initiatedByUser = true,
-    targetLocation,
-  } = {}) => {
-    await sendCommand({
-      command: 'mainMenu',
-      meta: 'Главное меню',
-      skipUserEcho: true,
-      initiatedByUser,
-      resetDisplay,
-      targetLocation,
-    })
-  }
-
-  const fetchNotifications = useCallback(
-    async ({ silent = false } = {}) => {
-      if (!session) {
-        setNotifications([])
-        setNotificationsError(null)
-        setHasUnreadNotifications(false)
-        if (!silent) {
-          setNotificationsLoading(false)
-        }
-        return
-      }
-
-      if (!silent) {
-        setNotificationsLoading(true)
-      }
-      setNotificationsError(null)
-
-      try {
-        const response = await fetch(
-          `/api/webapp/notifications?location=${encodeURIComponent(location)}`
-        )
-
-        const data = await response.json().catch(() => null)
-
-        if (!response.ok || !data?.success) {
-          throw new Error(data?.error || 'Не удалось загрузить уведомления')
-        }
-
-        const items = Array.isArray(data.notifications)
-          ? data.notifications
-          : []
-
-        setNotifications(
-          items.map((item) => {
-            const rawId = item.id || item._id
-            const resolvedId =
-              typeof rawId === 'string'
-                ? rawId
-                : rawId?.toString?.() ||
-                  `notification-${Math.random().toString(36).slice(2)}`
-
-            return {
-              id: resolvedId,
-              title: item.title || 'Уведомление',
-              body: item.body || '',
-              data: item.data || {},
-              readAt: item.readAt || null,
-              createdAt: item.createdAt || null,
-            }
-          })
-        )
-        setNotificationsError(null)
-      } catch (fetchError) {
-        setNotificationsError(fetchError.message)
-      } finally {
-        if (!silent) {
-          setNotificationsLoading(false)
-        }
-      }
-    },
-    [session, location]
-  )
-
-  const handleRefreshNotifications = useCallback(() => {
-    fetchNotifications()
-  }, [fetchNotifications])
-
-  const handleMarkNotificationsAsRead = useCallback(async () => {
-    if (!session) return
-
-    const unreadIds = notifications
-      .filter((item) => !item.readAt)
-      .map((item) => item.id)
-
-    if (unreadIds.length === 0) return
-
-    try {
-      setNotificationsError(null)
-      const response = await fetch('/api/webapp/notifications', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ location, notificationIds: unreadIds }),
-      })
-
-      const data = await response.json().catch(() => null)
-
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.error || 'Не удалось обновить уведомления')
-      }
-
-      const readAt = data?.readAt || new Date().toISOString()
-
-      setNotifications((prev) =>
-        prev.map((item) =>
-          unreadIds.includes(item.id)
-            ? {
-                ...item,
-                readAt,
-              }
-            : item
-        )
-      )
-
-      setHasUnreadNotifications(false)
-    } catch (updateError) {
-      setNotificationsError(updateError.message)
-    }
-  }, [session, notifications, location])
-
-  useEffect(() => {
-    if (!session) return
-    fetchNotifications()
-  }, [session, location, fetchNotifications])
-
-  useEffect(() => {
-    if (
-      notificationsExpanded &&
-      session &&
-      !notifications.length &&
-      !notificationsLoading
-    ) {
-      fetchNotifications({ silent: true })
-    }
-  }, [
-    notificationsExpanded,
-    session,
-    notifications.length,
-    notificationsLoading,
-    fetchNotifications,
-  ])
-
-  const sendCommand = async ({
-    command,
-    message,
-    meta: _meta,
-    skipUserEcho: _skipUserEcho,
-    initiatedByUser = true,
-    resetDisplay = false,
-    targetLocation,
-  } = {}) => {
-    if (!session) return
-
-    const shouldAppend =
-      !initiatedByUser && !resetDisplay && lastInteractionRef.current === 'bot'
-
-    if (initiatedByUser) {
-      lastInteractionRef.current = 'user'
-    }
-
-    if (resetDisplay) {
-      setDisplayBlocks([])
-      setKeyboardButtons([])
-    }
-
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const resolvedLocation = targetLocation ?? location
-      const response = await fetch('/api/webapp/command', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ location: resolvedLocation, command, message }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null)
-        throw new Error(data?.error || 'Не удалось выполнить команду')
-      }
-
-      const data = await response.json()
-
-      if (!data.success) {
-        throw new Error(data.error || 'Не удалось выполнить команду')
-      }
-
-      const keyboard = data.result?.keyboard?.inline_keyboard || []
-      setKeyboardButtons(keyboard)
-
-      const blocks = buildBlocksFromResult(data.result)
-
-      if (blocks.length > 0) {
-        setDisplayBlocks((prev) =>
-          shouldAppend ? [...prev, ...blocks] : blocks
-        )
-      } else if (!shouldAppend) {
-        setDisplayBlocks([])
-      }
-
-      lastInteractionRef.current = 'bot'
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const submitInput = () => {
-    const value = input.trim()
-
-    if (!value) {
-      return false
-    }
-
-    const isCommand = value.startsWith('/')
-
-    sendCommand({
-      command: isCommand ? value : undefined,
-      message: isCommand ? undefined : value,
-      meta: value,
-    })
-
-    setInput('')
-    return true
-  }
-
-  const handleSubmit = (event) => {
-    event.preventDefault()
-    submitInput()
-  }
-
-  const handleInputKeyDown = (event) => {
-    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault()
-      submitInput()
-    }
-  }
-
-  const parseCallbackData = useCallback((value) => {
-    if (!value) return null
-
-    if (typeof value !== 'string') {
-      return decodeCommandKeys(value)
-    }
-
-    try {
-      return decodeCommandKeys(JSON.parse(value))
-    } catch (error) {
-      return null
-    }
-  }, [])
-
-  const isEnterGameButton = useCallback((text) => {
-    if (!text) return false
-
-    const normalized = text
-      .replace(/["'«»“”()]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .toLowerCase()
-
-    if (!normalized) return false
-
-    return (
-      normalized.includes('войти в игру') || normalized.includes('зайти в игру')
-    )
-  }, [])
-
-  const navigateToGameEntry = useCallback(
-    async (button) => {
-      if (!button) return false
-
-      if (!isEnterGameButton(button.text)) {
-        return false
-      }
-
-      const callbackValue =
-        button.callback_data ?? button.callbackData ?? button.c ?? null
-
-      if (!callbackValue || typeof callbackValue !== 'string') {
-        return false
-      }
-
-      const decoded = parseCallbackData(callbackValue)
-      const gameTeamId = decoded?.gameTeamId || decoded?.gt
-
-      if (!gameTeamId || typeof gameTeamId !== 'string') {
-        return false
-      }
-
-      const cache = gameTeamCacheRef.current
-      let cachedInfo = cache.get(gameTeamId)
-
-      if (cachedInfo && typeof cachedInfo === 'string') {
-        cachedInfo = { gameId: cachedInfo }
-      }
-
-      if (!cachedInfo?.gameId) {
-        try {
-          const params = new URLSearchParams({ gameTeamId })
-          if (location) {
-            params.set('location', location)
-          }
-
-          const response = await fetch(
-            `/api/webapp/game-team?${params.toString()}`
-          )
-
-          if (!response.ok) {
-            return false
-          }
-
-          const data = await response.json().catch(() => null)
-
-          if (!data?.success || !data?.gameTeam?.gameId) {
-            return false
-          }
-
-          cachedInfo = {
-            gameId: data.gameTeam.gameId,
-            teamId: data.gameTeam.teamId || null,
-            location: data.gameTeam.location || null,
-          }
-
-          cache.set(gameTeamId, cachedInfo)
-        } catch (error) {
-          console.error('Не удалось получить информацию об игре', error)
-          return false
-        }
-      }
-
-      const targetGameId = cachedInfo?.gameId
-      const targetTeamId = cachedInfo?.teamId || null
-      const resolvedLocation = cachedInfo?.location || null
-
-      if (!targetGameId) {
-        return false
-      }
-
-      const targetLocation =
-        resolvedLocation ||
-        location ||
-        session?.user?.location ||
-        defaultLocation ||
-        null
-
-      if (!targetLocation) {
-        return false
-      }
-
-      const targetPath = `/${targetLocation}/game/${targetGameId}`
-
-      try {
-        await router.push(targetPath)
-      } catch (navigationError) {
-        console.error('Не удалось перейти на страницу игры', navigationError)
-        return false
-      }
-
-      return true
-    },
-    [
-      isEnterGameButton,
-      location,
-      parseCallbackData,
-      router,
-      session?.user?.location,
-    ]
-  )
-
-  const handleKeyboardAction = async (button) => {
-    if (!button) return
-
-    if (button.url) {
-      window.open(button.url, '_blank', 'noopener,noreferrer')
-      return
-    }
-
-    const handled = await navigateToGameEntry(button)
-
-    if (handled) {
-      return
-    }
-
-    sendCommand({
-      command: button.callback_data,
-      meta: button.text,
-    })
-  }
-
-  const handleThemeToggle = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
-  }
-
-  const handleSignOut = async () => {
-    try {
-      if (
-        pushNotifications?.isSubscribed &&
-        typeof pushNotifications.unsubscribe === 'function'
-      ) {
-        await pushNotifications.unsubscribe().catch(() => null)
-      }
-      await signOut({ redirect: false })
-    } finally {
-      router.push('/')
-    }
-  }
-
-  const handleLocationChange = (value) => {
-    setLocation(value)
-    loadMainMenu({
-      resetDisplay: true,
-      initiatedByUser: true,
-      targetLocation: value,
-    })
-  }
-
-  useEffect(() => {
-    if (!displayRef.current) return
-    displayRef.current.scrollTop = displayRef.current.scrollHeight
-  }, [displayBlocks])
-
-  const handleTelegramAuth = async (userData) => {
-    if (!userData) return
-
-    try {
-      setError(null)
-      const payload = JSON.stringify(userData)
-      let absoluteCallbackUrl = authCallbackUrl
-
-      if (isClient) {
-        try {
-          absoluteCallbackUrl = new URL(
-            authCallbackUrl,
-            window.location.origin
-          ).toString()
-        } catch (buildUrlError) {
-          console.error(
-            'Не удалось сформировать callbackUrl авторизации',
-            buildUrlError
-          )
-          absoluteCallbackUrl = `${window.location.origin}/cabinet`
-        }
-      }
-
-      const result = await signIn('telegram', {
-        redirect: false,
-        callbackUrl: absoluteCallbackUrl,
-        data: payload,
-        location,
-      })
-
-      if (result?.error) {
-        let errorMessage = result.error
-
-        if (result.error === 'CredentialsSignin') {
+        setAuthError(null)
+        setIsAuthenticating(true)
+        const payload = JSON.stringify(userData)
+        let absoluteCallbackUrl = effectiveCallbackUrl
+
+        if (isClient) {
           try {
-            const debugResponse = await fetch('/api/webapp/telegram/verify', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ location, data: payload }),
-            })
-
-            const debugData = await debugResponse.json().catch(() => null)
-
-            if (debugData) {
-              if (debugData.success) {
-                errorMessage =
-                  'Авторизация прошла успешно, но не удалось обновить сессию. Попробуйте перезагрузить страницу.'
-              } else if (debugData.errorMessage) {
-                errorMessage = debugData.errorMessage
-              } else if (debugData.errorCode) {
-                errorMessage = `Ошибка авторизации Telegram (${debugData.errorCode}).`
-              }
-            }
-          } catch (debugError) {
-            console.error('Telegram auth debug error', debugError)
+            absoluteCallbackUrl = new URL(effectiveCallbackUrl, window.location.origin).toString()
+          } catch (buildUrlError) {
+            console.error('Не удалось сформировать callbackUrl авторизации', buildUrlError)
+            absoluteCallbackUrl = `${window.location.origin}/cabinet`
           }
         }
 
-        throw new Error(errorMessage)
-      }
+        const result = await signIn('telegram', {
+          redirect: false,
+          callbackUrl: absoluteCallbackUrl,
+          data: payload,
+          location,
+        })
 
-      await updateSession()
+        if (result?.error) {
+          let errorMessage = result.error
 
-      const getRedirectTarget = () => {
-        if (!isClient) {
+          if (result.error === 'CredentialsSignin') {
+            try {
+              const debugResponse = await fetch('/api/webapp/telegram/verify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ location, data: payload }),
+              })
+
+              const debugData = await debugResponse.json().catch(() => null)
+
+              if (debugData) {
+                if (debugData.success) {
+                  errorMessage =
+                    'Авторизация прошла успешно, но не удалось обновить сессию. Попробуйте перезагрузить страницу.'
+                } else if (debugData.errorMessage) {
+                  errorMessage = debugData.errorMessage
+                } else if (debugData.errorCode) {
+                  errorMessage = `Ошибка авторизации Telegram (${debugData.errorCode}).`
+                }
+              }
+            } catch (debugError) {
+              console.error('Telegram auth debug error', debugError)
+            }
+          }
+
+          throw new Error(errorMessage)
+        }
+
+        await updateSession()
+
+        const resolveRedirectTarget = () => {
+          if (!isClient) {
+            return absoluteCallbackUrl
+          }
+
+          const safeResultUrl = extractRelativePath(result?.url, window.location.origin)
+
+          if (
+            safeResultUrl &&
+            safeResultUrl !== '/' &&
+            !safeResultUrl.startsWith('/cabinet') &&
+            !safeResultUrl.startsWith('/api/auth')
+          ) {
+            return new URL(safeResultUrl, window.location.origin).toString()
+          }
+
           return absoluteCallbackUrl
         }
 
-        const safeResultUrl = extractRelativePath(
-          result?.url,
-          window.location.origin
-        )
+        const redirectTarget = resolveRedirectTarget()
 
-        if (
-          safeResultUrl &&
-          safeResultUrl !== '/' &&
-          !safeResultUrl.startsWith('/cabinet') &&
-          !safeResultUrl.startsWith('/api/auth')
-        ) {
-          return new URL(safeResultUrl, window.location.origin).toString()
-        }
+        if (isClient && redirectTarget) {
+          try {
+            const targetUrl = new URL(redirectTarget, window.location.origin)
 
-        return absoluteCallbackUrl
-      }
+            if (targetUrl.origin === window.location.origin) {
+              const relativeTarget = `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`
 
-      const redirectTarget = getRedirectTarget()
+              if (relativeTarget && relativeTarget !== router.asPath) {
+                await router.replace(relativeTarget)
+              }
 
-      if (isClient && redirectTarget) {
-        try {
-          const targetUrl = new URL(redirectTarget, window.location.origin)
-
-          if (targetUrl.origin === window.location.origin) {
-            const relativeTarget = `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`
-
-            if (relativeTarget && relativeTarget !== router.asPath) {
-              await router.replace(relativeTarget)
+              return
             }
-          } else {
-            window.location.assign(targetUrl.toString())
-          }
 
-          return
-        } catch (redirectError) {
-          if (redirectTarget.startsWith('/')) {
-            await router.replace(redirectTarget)
+            window.location.assign(targetUrl.toString())
+            return
+          } catch (redirectError) {
+            if (redirectTarget.startsWith('/')) {
+              await router.replace(redirectTarget)
+              return
+            }
+
+            window.location.assign(redirectTarget)
             return
           }
-
-          window.location.assign(redirectTarget)
-          return
         }
+      } catch (authError) {
+        console.error('Telegram auth error', authError)
+        setAuthError(authError.message || 'Не удалось авторизоваться. Попробуйте ещё раз.')
+      } finally {
+        setIsAuthenticating(false)
       }
-    } catch (authError) {
-      console.error('Telegram auth error', authError)
-      setError(
-        authError.message || 'Не удалось авторизоваться. Попробуйте ещё раз.'
-      )
+    },
+    [effectiveCallbackUrl, isAuthenticating, isClient, location, router, updateSession]
+  )
+
+  useEffect(() => {
+    if (!isClient) return undefined
+
+    const container = widgetContainerRef.current
+    if (!container) return undefined
+
+    while (container.firstChild) {
+      container.removeChild(container.firstChild)
     }
+
+    if (!botName) return undefined
+
+    if (typeof window !== 'undefined') {
+      window.actquestTelegramAuth = (user) => handleTelegramAuth(user)
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://telegram.org/js/telegram-widget.js?22'
+    script.async = true
+    script.setAttribute('data-telegram-login', botName)
+    script.setAttribute('data-size', 'large')
+    script.setAttribute('data-radius', '16')
+    script.setAttribute('data-userpic', 'false')
+    script.setAttribute('data-lang', 'ru')
+    script.setAttribute('data-request-access', 'write')
+    script.setAttribute('data-onauth', 'actquestTelegramAuth')
+
+    container.appendChild(script)
+
+    return () => {
+      if (typeof window !== 'undefined' && window.actquestTelegramAuth) {
+        delete window.actquestTelegramAuth
+      }
+
+      while (container.firstChild) {
+        container.removeChild(container.firstChild)
+      }
+    }
+  }, [botName, handleTelegramAuth, isClient])
+
+  if (!activeSession && status === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
+        <span className="text-sm font-semibold tracking-widest uppercase">Загрузка кабинета…</span>
+      </div>
+    )
   }
 
-  const renderLogin = () => (
-    <>
-      {isLocalhost && (
-        <button
-          className="btn btn-primary"
-          onClick={() =>
-            handleTelegramAuth({
-              id: 261102161,
-              first_name: 'Алексей',
-              last_name: 'Белинский Иллюзионист',
-              username: 'Escalion',
-              photo_url:
-                'https://t.me/i/userpic/320/i4TFzvCH_iU5FLtMAmYEpCPz7guDcuETRzLoynlZamo.jpg',
-              auth_date: 1760503777,
-              hash: 'b1ff0088369bdfb0ab507d8f005dfe4688c610d311df993235721896e66c18fd',
-              __isTestAuth: true,
-            })
-          }
-        >
-          Войти
-        </button>
-      )}
-      <TelegramLogin
-        availableLocations={availableLocations}
-        location={location}
-        onLocationChange={handleLocationChange}
-        onAuth={handleTelegramAuth}
-        isClient={isClient}
-      />
-    </>
-  )
+  if (!activeSession) {
+    const callbackDescription =
+      effectiveCallbackUrl && effectiveCallbackUrl !== '/cabinet'
+        ? 'После входа мы автоматически перенаправим вас на исходную страницу.'
+        : 'После входа откроется панель управления ActQuest.'
 
-  const renderDashboard = () => (
-    <div className="flex flex-col w-full max-w-5xl gap-8 mx-auto mt-10">
-      <div className="flex flex-col gap-6 p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-xl font-semibold text-primary dark:text-white">
-            Личный кабинет ActQuest -{' '}
-            {LOCATIONS[location]?.townRu
-              ? `${
-                  LOCATIONS[location].townRu[0].toUpperCase() +
-                  LOCATIONS[location].townRu.slice(1)
-                }`
-              : 'Регион не выбран'}
-          </h3>
-          <div className="flex items-center gap-3">
-            {isLoading ? (
-              <span className="text-sm text-blue-500 dark:text-blue-300">
-                Загрузка…
-              </span>
-            ) : null}
-            <button
-              type="button"
-              onClick={() =>
-                loadMainMenu({ resetDisplay: true, initiatedByUser: true })
-              }
-              className="flex items-center justify-center w-10 h-10 text-blue-700 transition border border-blue-200 rounded-full bg-blue-50 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
-              title="Обновить"
-              aria-label="Обновить"
-              disabled={isLoading}
-            >
-              <FontAwesomeIcon
-                icon={faArrowsRotate}
-                className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`}
-              />
-            </button>
-          </div>
-        </div>
-        <div
-          ref={displayRef}
-          className="min-h-[260px] max-h-[480px] overflow-y-auto rounded-2xl border border-gray-200 bg-gray-50 p-4 text-left text-gray-800 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-100"
-        >
-          {displayBlocks.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-sm text-gray-500 dark:text-slate-400">
-              Нажмите кнопку или отправьте сообщение, чтобы получить ответ
-              сервера.
-            </div>
-          ) : (
-            displayBlocks.map((block, index) => {
-              if (block.type === 'image') {
-                return (
-                  <div key={block.id} className={index > 0 ? 'mt-4' : ''}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={block.content}
-                      alt="Изображение от сервера ActQuest"
-                      className="object-contain w-full border border-gray-200 rounded-2xl dark:border-slate-700"
+    return (
+      <>
+        <Head>
+          <title>ActQuest — вход в кабинет</title>
+        </Head>
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+          <div className="px-4 py-16 mx-auto max-w-6xl">
+            <div className="grid gap-10 md:grid-cols-[1.05fr_0.95fr] items-start">
+              <div className="space-y-6 text-white">
+                <p className="inline-flex items-center px-4 py-2 text-xs font-semibold tracking-widest uppercase rounded-full bg-white/10">
+                  Личный кабинет ActQuest
+                </p>
+                <h1 className="text-3xl font-semibold md:text-4xl">
+                  Управляйте играми и командами в едином центре управления
+                </h1>
+                <p className="text-base text-slate-200 md:text-lg">
+                  Собирайте команды, планируйте игры, контролируйте статистику и настройки проекта без переключения между ботами и таблицами. Всё, что нужно организатору, — в одном кабинете.
+                </p>
+                <ul className="space-y-3 text-sm text-slate-200 md:text-base">
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 bg-white rounded-full">
+                      1
+                    </span>
+                    <span>Выберите игровой регион, чтобы подключить нужную базу данных ActQuest.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 bg-white rounded-full">
+                      2
+                    </span>
+                    <span>Подтвердите вход через Telegram — мы сверим данные с ботом и подготовим рабочую сессию.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 bg-white rounded-full">
+                      3
+                    </span>
+                    <span>Вернём вас в нужный раздел кабинета и подгрузим все связанные данные.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-8 bg-white rounded-3xl shadow-2xl">
+                <h2 className="text-2xl font-semibold text-primary">Войти в кабинет</h2>
+                <p className="mt-2 text-sm text-slate-500">{callbackDescription}</p>
+                {authCallbackSource ? (
+                  <p className="mt-1 text-xs text-slate-400 break-words">
+                    Запрошенный адрес: {authCallbackSource}
+                  </p>
+                ) : null}
+
+                <div className="mt-6 space-y-5">
+                  <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                    Игровой регион
+                    <select
+                      className="px-4 py-3 text-base transition border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      value={location}
+                      onChange={(event) => setLocation(event.target.value)}
+                      disabled={isAuthenticating}
+                    >
+                      {availableLocations.map((item) => (
+                        <option key={item.key} value={item.key}>
+                          {item.townRu[0].toUpperCase() + item.townRu.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="flex flex-col items-center gap-3">
+                    <div
+                      ref={widgetContainerRef}
+                      className="flex items-center justify-center w-full h-20"
                     />
+                    {!botName ? (
+                      <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
+                        Укажите переменную окружения <code className="px-1 bg-white rounded">NEXT_PUBLIC_TELEGRAM_{location.toUpperCase()}_BOT_NAME</code>, чтобы включить авторизацию.
+                      </div>
+                    ) : null}
+                    <p className="text-xs text-center text-slate-400">
+                      Нажимая кнопку входа, вы подтверждаете передачу данных Telegram для авторизации в ActQuest.
+                    </p>
+                    {authError ? (
+                      <p className="w-full px-3 py-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
+                        {authError}
+                      </p>
+                    ) : null}
                   </div>
-                )
-              }
-
-              return (
-                <div
-                  key={block.id}
-                  className={`leading-relaxed ${index > 0 ? 'mt-4' : ''}`}
-                  dangerouslySetInnerHTML={{
-                    __html: block.content.replace(/\n/g, '<br />'),
-                  }}
-                />
-              )
-            })
-          )}
-        </div>
-
-        {keyboardButtons.length ? (
-          <div className="flex flex-col gap-2">
-            {keyboardButtons.map((row, rowIndex) => {
-              const visibleButtons = Array.isArray(row)
-                ? row.filter(isButtonVisible)
-                : []
-
-              if (visibleButtons.length === 0) {
-                return null
-              }
-
-              return (
-                <div key={`row-${rowIndex}`} className="flex flex-wrap gap-2">
-                  {visibleButtons.map((button) => {
-                    if (button.url) {
-                      return (
-                        <a
-                          key={button.url}
-                          href={button.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-1 px-3 py-2 text-sm font-semibold text-center text-blue-700 transition border border-blue-200 rounded-xl bg-blue-50 hover:bg-blue-100 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
-                        >
-                          {button.text}
-                        </a>
-                      )
-                    }
-
-                    return (
-                      <button
-                        key={button.callback_data || button.text}
-                        className="flex-1 px-3 py-2 text-sm font-semibold text-center text-blue-700 transition border border-blue-200 rounded-xl bg-blue-50 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-400/40 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
-                        onClick={() => handleKeyboardAction(button)}
-                        type="button"
-                        disabled={isLoading}
-                      >
-                        {button.text}
-                      </button>
-                    )
-                  })}
                 </div>
-              )
-            })}
+              </div>
+            </div>
           </div>
-        ) : null}
-
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-3 md:flex-row"
-        >
-          <textarea
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={handleInputKeyDown}
-            placeholder="Введите команду или ответ..."
-            rows={3}
-            className="flex-1 px-4 py-3 text-base border border-gray-200 shadow-sm rounded-2xl focus:border-blue-400 focus:outline-none focus:ring dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 resize-y"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            className="px-6 py-3 text-base font-semibold text-white transition bg-blue-600 rounded-2xl hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isLoading}
-          >
-            Отправить
-          </button>
-        </form>
-        {error ? (
-          <div className="px-4 py-3 text-sm text-red-600 rounded-xl bg-red-50 dark:bg-red-500/10 dark:text-red-300">
-            {error}
-          </div>
-        ) : null}
-
-        <NotificationsCard
-          notifications={notifications}
-          hasUnread={hasUnreadNotifications}
-          isExpanded={notificationsExpanded}
-          onToggle={() => setNotificationsExpanded((prev) => !prev)}
-          onRefresh={handleRefreshNotifications}
-          onMarkAllRead={handleMarkNotificationsAsRead}
-          isLoading={notificationsLoading}
-          error={notificationsError}
-          pushState={pushNotifications}
-        />
-      </div>
-    </div>
-  )
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
       <Head>
-        <title>ActQuest — Личный кабинет</title>
+        <title>ActQuest — Кабинет</title>
       </Head>
-      <div className="min-h-screen bg-[#F5F6F8] pb-16 transition-colors dark:bg-slate-950 dark:text-slate-100">
-        <header className="transition-colors bg-white border-b border-gray-200 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between max-w-6xl px-4 py-5 mx-auto">
-            <Link
-              href="/"
-              className="text-2xl font-bold transition-colors text-primary dark:text-white"
+      <CabinetLayout
+        title="Обзор"
+        description="Следите за активными играми, командами и ключевыми событиями вашего города."
+        activePage="dashboard"
+      >
+        <section className="grid gap-4 md:grid-cols-3">
+          {normalizedStats.map((stat) => (
+            <article
+              key={stat.id}
+              className="p-5 transition-shadow bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md"
             >
-              ActQuest
-            </Link>
-            <nav className="flex items-center gap-6 text-sm font-semibold text-gray-600 dark:text-slate-300">
-              {/**
-               * <a
-               *   href="https://t.me/ActQuest_bot"
-               *   className="transition hover:text-primary dark:hover:text-white"
-               *   target="_blank"
-               *   rel="noreferrer"
-               * >
-               *   Бот в Telegram
-               * </a>
-               */}
-            </nav>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleThemeToggle}
-                className="px-4 py-2 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
-              >
-                {theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-              </button>
-              {session ? (
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  className="px-4 py-2 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+              <p className="text-sm font-medium text-slate-500">{stat.title}</p>
+              <p className="mt-3 text-3xl font-semibold text-primary">{stat.value}</p>
+              <p className="mt-2 text-xs font-medium text-emerald-600">{stat.delta}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="grid gap-6 md:grid-cols-5">
+          <div className="md:col-span-3 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <h3 className="text-lg font-semibold text-primary">Быстрые действия</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Сосредоточьтесь на задачах — переходите к нужным разделам без лишних шагов.
+            </p>
+            <div className="mt-4 space-y-4">
+              {quickActions.map((action) => (
+                <a
+                  key={action.id}
+                  href={action.href}
+                  className="block p-4 transition bg-slate-50 rounded-xl hover:bg-blue-50"
                 >
-                  Выйти
-                </button>
-              ) : null}
+                  <p className="text-sm font-semibold text-primary">{action.title}</p>
+                  <p className="mt-1 text-xs text-slate-500">{action.description}</p>
+                </a>
+              ))}
             </div>
           </div>
-        </header>
 
-        <main className="px-4">
-          {session ? renderDashboard() : renderLogin()}
-        </main>
-      </div>
+          <div className="md:col-span-2 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <h3 className="text-lg font-semibold text-primary">Лента активности</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Последние изменения, которые произошли в вашем кабинете.
+            </p>
+            <ul className="mt-4 space-y-4">
+              {activityFeed.map((item) => (
+                <li key={item.id} className="p-4 bg-slate-50 rounded-xl">
+                  <p className="text-sm font-semibold text-primary">{item.title}</p>
+                  <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
+                    <span>{item.category}</span>
+                    <span>{item.time}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section className="p-6 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl text-white shadow-md">
+          <h3 className="text-xl font-semibold">Запланируйте следующую игру</h3>
+          <p className="mt-2 text-sm text-blue-100">
+            Создавайте сценарии заранее, чтобы вовремя запустить квест и подготовить команды к старту.
+          </p>
+          <div className="flex flex-col gap-3 mt-6 md:flex-row">
+            <a
+              href="/cabinet/games"
+              className="inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-blue-700 bg-white rounded-xl shadow-sm"
+            >
+              Перейти к списку игр
+            </a>
+            <a
+              href="/cabinet/admin"
+              className="inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-white border border-white/40 rounded-xl hover:bg-white/10"
+            >
+              Управление доступами
+            </a>
+          </div>
+        </section>
+      </CabinetLayout>
     </>
   )
 }
 
-CabinetPage.propTypes = {
-  initialCallbackUrl: PropTypes.string,
-  initialCallbackSource: PropTypes.string,
-}
-
-CabinetPage.defaultProps = {
-  initialCallbackUrl: null,
-  initialCallbackSource: null,
-}
-
-export const getServerSideProps = async (context) => {
+export async function getServerSideProps(context) {
+  const session = await getSessionSafe(context)
   const { req, query } = context
 
-  const session = await getSession({ req })
   const rawCallbackParam = query?.callbackUrl
   const decodedCallback = decodeCallbackParam(rawCallbackParam)
   const requestOrigin = getRequestOrigin(req)
@@ -1209,6 +563,7 @@ export const getServerSideProps = async (context) => {
   const isSafeCallback =
     typeof relativeCallback === 'string' &&
     relativeCallback &&
+    relativeCallback !== '/' &&
     !relativeCallback.startsWith('/cabinet') &&
     !relativeCallback.startsWith('/api/auth')
 
@@ -1223,10 +578,11 @@ export const getServerSideProps = async (context) => {
 
   return {
     props: {
-      initialCallbackUrl: relativeCallback || null,
-      initialCallbackSource: decodedCallback || null,
+      session,
+      authCallbackUrl: isSafeCallback ? relativeCallback : '/cabinet',
+      authCallbackSource: decodedCallback || null,
     },
   }
 }
 
-export default CabinetPage
+export default CabinetDashboard

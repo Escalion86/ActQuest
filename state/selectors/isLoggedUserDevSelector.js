@@ -1,9 +1,6 @@
+import { atom } from 'jotai'
 import loggedUserActiveRoleAtom from '@state/atoms/loggedUserActiveRoleAtom'
-import { selector } from 'recoil'
 
-const isLoggedUserDevSelector = selector({
-  key: 'isLoggedUserDevSelector',
-  get: ({ get }) => get(loggedUserActiveRoleAtom) === 'dev',
-})
+const isLoggedUserDevSelector = atom((get) => get(loggedUserActiveRoleAtom) === 'dev')
 
 export default isLoggedUserDevSelector
