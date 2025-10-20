@@ -240,16 +240,19 @@ export async function getServerSideProps(context) {
   const session = await getSessionSafe(context)
 
   if (!session) {
+    const callbackTarget = context.resolvedUrl || '/cabinet/games'
     return {
       redirect: {
-        destination: '/',
+        destination: `/cabinet?callbackUrl=${encodeURIComponent(callbackTarget)}`,
         permanent: false,
       },
     }
   }
 
   return {
-    props: {},
+    props: {
+      session,
+    },
   }
 }
 

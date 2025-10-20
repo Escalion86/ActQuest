@@ -21,9 +21,21 @@ const clearAuthCookies = (res) => {
   res.setHeader('Set-Cookie', [...normalizedExisting, ...expiredCookies])
 }
 
+const buildSessionContext = (context) => {
+  if (!context) {
+    return undefined
+  }
+
+  if (context.req) {
+    return { req: context.req }
+  }
+
+  return context
+}
+
 const getSessionSafe = async (context) => {
   try {
-    return await getSession(context)
+    return await getSession(buildSessionContext(context))
   } catch (error) {
     console.error('Не удалось получить сессию пользователя', error)
     clearAuthCookies(context?.res)
