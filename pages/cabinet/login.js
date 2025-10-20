@@ -17,8 +17,24 @@ const availableLocations = Object.entries(LOCATIONS)
 
 const defaultLocation = availableLocations[0]?.key ?? 'dev'
 
-const isTestEnvironment =
-  (process.env.MODE ?? process.env.NODE_ENV ?? 'production') !== 'production'
+const parseBooleanFlag = (value) => {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value === 1
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+
+    if (!normalized) return false
+
+    return ['1', 'true', 'yes', 'on'].includes(normalized)
+  }
+
+  return false
+}
+
+const rawMode = process.env.MODE ?? process.env.NODE_ENV ?? 'production'
+
+const isTestAuthEnabled =
+  rawMode !== 'production' || parseBooleanFlag(process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH)
 
 const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const { data: session, status, update } = useSession()
@@ -196,7 +212,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   )
 
   const handleTestLogin = useCallback(() => {
-    if (!isTestEnvironment) return
+    if (!isTestAuthEnabled) return
 
     handleTelegramAuth({
       id: '261102161',
@@ -204,8 +220,9 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       last_name: 'Tester',
       username: 'actquest_tester',
       __isTestAuth: true,
+      __testLocation: location,
     })
-  }, [handleTelegramAuth])
+  }, [handleTelegramAuth, location])
 
   useEffect(() => {
     if (!isClient) return undefined
@@ -325,7 +342,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                       Укажите переменную окружения <code className="px-1 bg-white rounded">NEXT_PUBLIC_TELEGRAM_{location.toUpperCase()}_BOT_NAME</code>, чтобы включить авторизацию.
                     </div>
                   ) : null}
-                  {isTestEnvironment ? (
+                  {isTestAuthEnabled ? (
                     <button
                       type="button"
                       onClick={handleTestLogin}
