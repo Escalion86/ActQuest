@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import Head from 'next/head'
-import { getSession } from 'next-auth/react'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import getSessionSafe from '@helpers/getSessionSafe'
 
 const initialTeams = [
   {
@@ -196,7 +196,7 @@ const TeamsPage = () => {
 }
 
 export async function getServerSideProps(context) {
-  const session = await getSession(context)
+  const session = await getSessionSafe(context)
 
   if (!session) {
     return {

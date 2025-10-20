@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import { useMemo } from 'react'
-import { getSession } from 'next-auth/react'
+import getSessionSafe from '@helpers/getSessionSafe'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 
 const quickActions = [
@@ -167,7 +167,7 @@ const CabinetDashboard = () => {
 }
 
 export async function getServerSideProps(context) {
-  const session = await getSession(context)
+  const session = await getSessionSafe(context)
 
   if (!session) {
     return {

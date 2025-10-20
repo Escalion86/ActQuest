@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import Head from 'next/head'
-import { getSession, useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import isUserAdmin from '@helpers/isUserAdmin'
+import getSessionSafe from '@helpers/getSessionSafe'
 
 const SettingsPage = () => {
   const { data: session } = useSession()
@@ -138,7 +139,7 @@ const SettingsPage = () => {
 }
 
 export async function getServerSideProps(context) {
-  const session = await getSession(context)
+  const session = await getSessionSafe(context)
 
   if (!session) {
     return {
