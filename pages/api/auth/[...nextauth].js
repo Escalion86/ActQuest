@@ -142,7 +142,7 @@ export const authOptions = {
     },
   },
   pages: {
-    signIn: '/cabinet',
+    signIn: '/cabinet/login',
   },
 }
 
