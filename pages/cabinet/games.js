@@ -137,9 +137,16 @@ const buildUpdatePayload = (game) => {
   }
 }
 
-const GamesPage = ({ initialGames, initialLocation }) => {
+const GamesPage = ({ initialGames, initialLocation, session: initialSession }) => {
   const { data: session } = useSession()
-  const location = session?.user?.location ?? initialLocation ?? null
+  const activeSession = session ?? initialSession ?? null
+  const location = activeSession?.user?.location ?? initialLocation ?? null
+  const userRole = activeSession?.user?.role ?? 'client'
+  const currentUserTelegramId = activeSession?.user?.telegramId ?? null
+  const currentUserIdString =
+    currentUserTelegramId === null || currentUserTelegramId === undefined
+      ? null
+      : String(currentUserTelegramId)
 
   const [games, setGames] = useState(initialGames)
   const [persistedGames, setPersistedGames] = useState(initialGames)
@@ -194,9 +201,52 @@ const GamesPage = ({ initialGames, initialLocation }) => {
     )
   }, [persistedSelectedGame, selectedGame])
 
+  const canEditAllGames = userRole === 'admin' || userRole === 'dev'
+  const canEditOwnGames = userRole === 'moder'
+
+  const canEditSelectedGame = useMemo(() => {
+    if (!selectedGame) {
+      return false
+    }
+
+    if (canEditAllGames) {
+      return true
+    }
+
+    if (canEditOwnGames) {
+      if (!currentUserIdString) {
+        return false
+      }
+
+      const creatorId = selectedGame.creatorTelegramId
+      if (!creatorId) {
+        return false
+      }
+
+      return creatorId === currentUserIdString
+    }
+
+    return false
+  }, [canEditAllGames, canEditOwnGames, currentUserIdString, selectedGame])
+
+  const editRestrictionMessage = useMemo(() => {
+    if (!selectedGame || canEditSelectedGame) {
+      return null
+    }
+
+    if (canEditOwnGames) {
+      const creatorId = selectedGame?.creatorTelegramId ?? ''
+      if (currentUserIdString && creatorId && creatorId !== currentUserIdString) {
+        return 'Эта игра создана другим организатором. Модераторы могут редактировать только собственные игры.'
+      }
+    }
+
+    return 'Недостаточно прав для редактирования игры. Обратитесь к администратору.'
+  }, [canEditOwnGames, canEditSelectedGame, currentUserIdString, selectedGame])
+
   const updateSelectedGame = useCallback(
     (updater) => {
-      if (!selectedGameId) return
+      if (!selectedGameId || !canEditSelectedGame) return
 
       setGames((prevGames) =>
         prevGames.map((game) => {
@@ -209,7 +259,7 @@ const GamesPage = ({ initialGames, initialLocation }) => {
         })
       )
     },
-    [selectedGameId]
+    [canEditSelectedGame, selectedGameId]
   )
 
   const handleResetChanges = useCallback(() => {
@@ -229,7 +279,7 @@ const GamesPage = ({ initialGames, initialLocation }) => {
   }, [persistedGames, selectedGameId])
 
   const handleSaveChanges = useCallback(async () => {
-    if (!selectedGame || !location) return
+    if (!selectedGame || !location || !canEditSelectedGame) return
 
     setIsSaving(true)
     setFeedback(null)
@@ -268,16 +318,18 @@ const GamesPage = ({ initialGames, initialLocation }) => {
     } finally {
       setIsSaving(false)
     }
-  }, [location, selectedGame])
+  }, [canEditSelectedGame, location, selectedGame])
 
   const handleAddPrice = useCallback(() => {
+    if (!canEditSelectedGame) return
     updateSelectedGame((game) => ({
       prices: [...(game.prices ?? []), createPrice()],
     }))
-  }, [updateSelectedGame])
+  }, [canEditSelectedGame, updateSelectedGame])
 
   const handlePriceChange = useCallback(
     (priceId, field, value) => {
+      if (!canEditSelectedGame) return
       updateSelectedGame((game) => ({
         prices: (game.prices ?? []).map((price) =>
           price.id === priceId
@@ -289,26 +341,29 @@ const GamesPage = ({ initialGames, initialLocation }) => {
         ),
       }))
     },
-    [updateSelectedGame]
+    [canEditSelectedGame, updateSelectedGame]
   )
 
   const handleRemovePrice = useCallback(
     (priceId) => {
+      if (!canEditSelectedGame) return
       updateSelectedGame((game) => ({
         prices: (game.prices ?? []).filter((price) => price.id !== priceId),
       }))
     },
-    [updateSelectedGame]
+    [canEditSelectedGame, updateSelectedGame]
   )
 
   const handleAddFinance = useCallback(() => {
+    if (!canEditSelectedGame) return
     updateSelectedGame((game) => ({
       finances: [...(game.finances ?? []), createFinanceEntry()],
     }))
-  }, [updateSelectedGame])
+  }, [canEditSelectedGame, updateSelectedGame])
 
   const handleFinanceChange = useCallback(
     (financeId, field, value) => {
+      if (!canEditSelectedGame) return
       updateSelectedGame((game) => ({
         finances: (game.finances ?? []).map((entry) => {
           if (entry.id !== financeId) {
@@ -327,20 +382,21 @@ const GamesPage = ({ initialGames, initialLocation }) => {
             return { ...entry, type: value === 'expense' ? 'expense' : 'income' }
           }
 
-          return { ...entry, [field]: value }
-        }),
-      }))
-    },
-    [updateSelectedGame]
+        return { ...entry, [field]: value }
+      }),
+    }))
+  },
+    [canEditSelectedGame, updateSelectedGame]
   )
 
   const handleRemoveFinance = useCallback(
     (financeId) => {
+      if (!canEditSelectedGame) return
       updateSelectedGame((game) => ({
         finances: (game.finances ?? []).filter((entry) => entry.id !== financeId),
       }))
     },
-    [updateSelectedGame]
+    [canEditSelectedGame, updateSelectedGame]
   )
 
   const tasksSummary = useMemo(() => {
@@ -489,7 +545,14 @@ const GamesPage = ({ initialGames, initialLocation }) => {
                   </div>
                 )}
 
-                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                {editRestrictionMessage && (
+                  <div className="p-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl">
+                    {editRestrictionMessage}
+                  </div>
+                )}
+
+                <fieldset disabled={!canEditSelectedGame} className="space-y-6 border-0 p-0 m-0">
+                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label htmlFor="game-title" className="text-sm font-semibold text-primary">
@@ -652,9 +715,9 @@ const GamesPage = ({ initialGames, initialLocation }) => {
                       />
                     )}
                   </div>
-                </section>
+                  </section>
 
-                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
                   <h2 className="text-lg font-semibold text-primary">Настройки заданий и подсказок</h2>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -871,9 +934,9 @@ const GamesPage = ({ initialGames, initialLocation }) => {
                       Досрочное завершение перерыва
                     </label>
                   </div>
-                </section>
+                  </section>
 
-                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
                   <h2 className="text-lg font-semibold text-primary">Публикация и результаты</h2>
                   <div className="grid gap-3 md:grid-cols-2">
                     <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -921,9 +984,9 @@ const GamesPage = ({ initialGames, initialLocation }) => {
                       Скрыть результаты для участников
                     </label>
                   </div>
-                </section>
+                  </section>
 
-                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-primary">Стоимость участия</h2>
                     <button
@@ -1063,34 +1126,35 @@ const GamesPage = ({ initialGames, initialLocation }) => {
                       Баланс: {currencyFormatter.format(financesSummary.balance)}
                     </p>
                   </div>
-                </section>
+                  </section>
 
-                <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                  <button
-                    type="button"
-                    onClick={handleSaveChanges}
-                    disabled={!isDirty || isSaving || !location}
-                    className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-                      !isDirty || isSaving || !location
-                        ? 'bg-slate-400 cursor-not-allowed'
-                        : 'bg-primary hover:bg-blue-700'
-                    }`}
-                  >
-                    {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleResetChanges}
-                    disabled={!isDirty}
-                    className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
-                      !isDirty
-                        ? 'border-slate-200 text-slate-400 cursor-not-allowed'
-                        : 'border-primary text-primary hover:bg-blue-50'
-                    }`}
-                  >
-                    Отменить изменения
-                  </button>
-                </div>
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                    <button
+                      type="button"
+                      onClick={handleSaveChanges}
+                      disabled={!canEditSelectedGame || !isDirty || isSaving || !location}
+                      className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
+                        !canEditSelectedGame || !isDirty || isSaving || !location
+                          ? 'bg-slate-400 cursor-not-allowed'
+                          : 'bg-primary hover:bg-blue-700'
+                      }`}
+                    >
+                      {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetChanges}
+                      disabled={!canEditSelectedGame || !isDirty}
+                      className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
+                        !canEditSelectedGame || !isDirty
+                          ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                          : 'border-primary text-primary hover:bg-blue-50'
+                      }`}
+                    >
+                      Отменить изменения
+                    </button>
+                  </div>
+                </fieldset>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full p-6 bg-white border border-dashed rounded-2xl border-slate-200">
@@ -1158,11 +1222,13 @@ GamesPage.propTypes = {
     })
   ),
   initialLocation: PropTypes.string,
+  session: PropTypes.object,
 }
 
 GamesPage.defaultProps = {
   initialGames: [],
   initialLocation: null,
+  session: null,
 }
 
 export async function getServerSideProps(context) {
@@ -1179,6 +1245,15 @@ export async function getServerSideProps(context) {
   }
 
   const location = session?.user?.location ?? null
+  const userRole = session?.user?.role ?? 'client'
+  const rawTelegramId = session?.user?.telegramId
+  const numericTelegramId =
+    rawTelegramId === null || rawTelegramId === undefined
+      ? null
+      : Number(rawTelegramId)
+  const creatorTelegramId = Number.isFinite(numericTelegramId)
+    ? numericTelegramId
+    : null
   let initialGames = []
 
   if (location) {
@@ -1189,72 +1264,79 @@ export async function getServerSideProps(context) {
         const GamesModel = db.model('Games')
         const GamesTeamsModel = db.model('GamesTeams')
 
-        const gamesDocs = await GamesModel.find({})
-          .sort({ updatedAt: -1 })
-          .select({
-            _id: 1,
-            name: 1,
-            status: 1,
-            dateStart: 1,
-            dateStartFact: 1,
-            dateEndFact: 1,
-            type: 1,
-            description: 1,
-            image: 1,
-            startingPlace: 1,
-            finishingPlace: 1,
-            taskDuration: 1,
-            cluesDuration: 1,
-            clueEarlyAccessMode: 1,
-            clueEarlyPenalty: 1,
-            allowCaptainForceClue: 1,
-            allowCaptainFailTask: 1,
-            allowCaptainFinishBreak: 1,
-            breakDuration: 1,
-            taskFailurePenalty: 1,
-            manyCodesPenalty: 1,
-            individualStart: 1,
-            hidden: 1,
-            showCreator: 1,
-            showTasks: 1,
-            hideResult: 1,
-            prices: 1,
-            finances: 1,
-            tasks: 1,
-            updatedAt: 1,
-            createdAt: 1,
-            creatorTelegramId: 1,
-          })
-          .lean()
+        const canLoadAllGames = userRole === 'admin' || userRole === 'dev'
+        const canLoadOwnGames = userRole === 'moder' && creatorTelegramId !== null
 
-        const gameIds = gamesDocs
-          .map((game) => (game?._id ? game._id.toString() : null))
-          .filter(Boolean)
+        if (canLoadAllGames || canLoadOwnGames) {
+          const query = canLoadAllGames ? {} : { creatorTelegramId }
 
-        let teamsCountMap = {}
-
-        if (gameIds.length > 0) {
-          const gamesTeams = await GamesTeamsModel.find({ gameId: { $in: gameIds } })
-            .select({ gameId: 1 })
+          const gamesDocs = await GamesModel.find(query)
+            .sort({ updatedAt: -1 })
+            .select({
+              _id: 1,
+              name: 1,
+              status: 1,
+              dateStart: 1,
+              dateStartFact: 1,
+              dateEndFact: 1,
+              type: 1,
+              description: 1,
+              image: 1,
+              startingPlace: 1,
+              finishingPlace: 1,
+              taskDuration: 1,
+              cluesDuration: 1,
+              clueEarlyAccessMode: 1,
+              clueEarlyPenalty: 1,
+              allowCaptainForceClue: 1,
+              allowCaptainFailTask: 1,
+              allowCaptainFinishBreak: 1,
+              breakDuration: 1,
+              taskFailurePenalty: 1,
+              manyCodesPenalty: 1,
+              individualStart: 1,
+              hidden: 1,
+              showCreator: 1,
+              showTasks: 1,
+              hideResult: 1,
+              prices: 1,
+              finances: 1,
+              tasks: 1,
+              updatedAt: 1,
+              createdAt: 1,
+              creatorTelegramId: 1,
+            })
             .lean()
 
-          teamsCountMap = gamesTeams.reduce((acc, doc) => {
-            if (!doc?.gameId) {
+          const gameIds = gamesDocs
+            .map((game) => (game?._id ? game._id.toString() : null))
+            .filter(Boolean)
+
+          let teamsCountMap = {}
+
+          if (gameIds.length > 0) {
+            const gamesTeams = await GamesTeamsModel.find({ gameId: { $in: gameIds } })
+              .select({ gameId: 1 })
+              .lean()
+
+            teamsCountMap = gamesTeams.reduce((acc, doc) => {
+              if (!doc?.gameId) {
+                return acc
+              }
+
+              const key = doc.gameId
+              acc[key] = (acc[key] ?? 0) + 1
               return acc
-            }
+            }, {})
+          }
 
-            const key = doc.gameId
-            acc[key] = (acc[key] ?? 0) + 1
-            return acc
-          }, {})
+          initialGames = gamesDocs.map((game) =>
+            normalizeGameForCabinet({
+              ...game,
+              teamsCount: game?._id ? teamsCountMap[game._id.toString()] ?? 0 : 0,
+            })
+          )
         }
-
-        initialGames = gamesDocs.map((game) =>
-          normalizeGameForCabinet({
-            ...game,
-            teamsCount: game?._id ? teamsCountMap[game._id.toString()] ?? 0 : 0,
-          })
-        )
       }
     } catch (error) {
       console.error('Failed to load games for cabinet', error)
