@@ -2,6 +2,24 @@ import dbConnect from '@utils/dbConnect'
 import getTelegramTokenByLocation from '@utils/telegram/getTelegramTokenByLocation'
 import verifyTelegramAuthPayload from '@helpers/verifyTelegramAuthPayload'
 
+const parseBooleanFlag = (value) => {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value === 1
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+
+    if (!normalized) return false
+
+    return ['1', 'true', 'yes', 'on'].includes(normalized)
+  }
+
+  return false
+}
+
+const isExplicitTestAuthEnabled =
+  parseBooleanFlag(process.env.ENABLE_TEST_AUTH) ||
+  parseBooleanFlag(process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH)
+
 const buildUserName = (payload) => {
   const parts = [payload?.first_name, payload?.last_name]
     .filter(Boolean)
@@ -44,7 +62,10 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
   const currentMode =
     process.env.MODE ?? process.env.NODE_ENV ?? 'production'
 
-  const isTestAuth = Boolean(payload?.__isTestAuth) && currentMode !== 'production'
+  const isTestAuthAllowed =
+    currentMode !== 'production' || isExplicitTestAuthEnabled
+
+  const isTestAuth = Boolean(payload?.__isTestAuth) && isTestAuthAllowed
 
   if (!location && !isTestAuth) {
     return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации Telegram.')
