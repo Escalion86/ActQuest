@@ -202,7 +202,7 @@ export async function getServerSideProps(context) {
     const callbackTarget = context.resolvedUrl || '/cabinet/teams'
     return {
       redirect: {
-        destination: `/cabinet?callbackUrl=${encodeURIComponent(callbackTarget)}`,
+        destination: `/cabinet/login?callbackUrl=${encodeURIComponent(callbackTarget)}`,
         permanent: false,
       },
     }
