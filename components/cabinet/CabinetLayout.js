@@ -121,20 +121,22 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
               activePage === item.id || router.pathname === item.href
 
             return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={`flex items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
-                  isActive
-                    ? 'text-primary bg-blue-50 border-r-4 border-primary'
-                    : 'text-slate-600 hover:text-primary hover:bg-blue-50'
-                } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
-                onClick={closeSidebarOnMobile}
-              >
-                <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
-                <span className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}>
-                  {item.label}
-                </span>
+              <Link key={item.id} href={item.href} legacyBehavior>
+                <a
+                  className={`flex items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
+                    isActive
+                      ? 'text-primary bg-blue-50 border-r-4 border-primary'
+                      : 'text-slate-600 hover:text-primary hover:bg-blue-50'
+                  } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
+                  onClick={closeSidebarOnMobile}
+                >
+                  <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
+                  <span
+                    className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
+                  >
+                    {item.label}
+                  </span>
+                </a>
               </Link>
             )
           })}
