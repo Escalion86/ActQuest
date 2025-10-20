@@ -563,6 +563,7 @@ export async function getServerSideProps(context) {
   const isSafeCallback =
     typeof relativeCallback === 'string' &&
     relativeCallback &&
+    relativeCallback !== '/' &&
     !relativeCallback.startsWith('/cabinet') &&
     !relativeCallback.startsWith('/api/auth')
 
