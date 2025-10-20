@@ -217,7 +217,7 @@ export async function getServerSideProps(context) {
   if (isSafe && relativeCallback) {
     return {
       redirect: {
-        destination: relativeCallback,
+        destination: '/',
         permanent: false,
       },
     }
