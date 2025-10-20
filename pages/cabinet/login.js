@@ -17,6 +17,9 @@ const availableLocations = Object.entries(LOCATIONS)
 
 const defaultLocation = availableLocations[0]?.key ?? 'dev'
 
+const isTestEnvironment =
+  (process.env.MODE ?? process.env.NODE_ENV ?? 'production') !== 'production'
+
 const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const { data: session, status, update } = useSession()
   const router = useRouter()
@@ -192,6 +195,18 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
     ]
   )
 
+  const handleTestLogin = useCallback(() => {
+    if (!isTestEnvironment) return
+
+    handleTelegramAuth({
+      id: '261102161',
+      first_name: 'ActQuest',
+      last_name: 'Tester',
+      username: 'actquest_tester',
+      __isTestAuth: true,
+    })
+  }, [handleTelegramAuth])
+
   useEffect(() => {
     if (!isClient) return undefined
 
@@ -309,6 +324,16 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                     <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
                       Укажите переменную окружения <code className="px-1 bg-white rounded">NEXT_PUBLIC_TELEGRAM_{location.toUpperCase()}_BOT_NAME</code>, чтобы включить авторизацию.
                     </div>
+                  ) : null}
+                  {isTestEnvironment ? (
+                    <button
+                      type="button"
+                      onClick={handleTestLogin}
+                      disabled={isAuthenticating}
+                      className="w-full px-4 py-3 text-sm font-semibold text-white transition bg-slate-600 rounded-xl hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Тестовый вход без Telegram
+                    </button>
                   ) : null}
                   <p className="text-xs text-center text-slate-400">
                     Нажимая кнопку входа, вы подтверждаете передачу данных Telegram для авторизации в ActQuest.
