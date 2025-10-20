@@ -1,12 +1,11 @@
+import { atom } from 'jotai'
 import errorAtom from '@state/atoms/errorAtom'
-import { selector } from 'recoil'
 
-const setNotErrorSelector = selector({
-  key: 'setNotErrorSelector',
-  get: ({ get }) => false,
-  set: ({ set }, itemNameId) => {
+const setNotErrorSelector = atom(
+  () => false,
+  (_get, set, itemNameId) => {
     set(errorAtom(itemNameId), false)
-  },
-})
+  }
+)
 
 export default setNotErrorSelector

@@ -41,8 +41,10 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
     return errorResponse('INVALID_PAYLOAD_TYPE', 'Некорректный формат данных авторизации Telegram.')
   }
 
-  const isTestAuth =
-    Boolean(payload?.__isTestAuth) && process.env.NODE_ENV !== 'production'
+  const currentMode =
+    process.env.MODE ?? process.env.NODE_ENV ?? 'production'
+
+  const isTestAuth = Boolean(payload?.__isTestAuth) && currentMode !== 'production'
 
   if (!location && !isTestAuth) {
     return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации Telegram.')

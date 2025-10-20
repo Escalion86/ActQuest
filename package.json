@@ -32,7 +32,7 @@
     "react-telegram-auth": "^1.0.4",
     "react-telegram-login": "^1.1.2",
     "react-window": "^1.8.8",
-    "recoil": "^0.7.6",
+    "jotai": "file:lib/jotai",
     "swr": "^1.3.0",
     "tailwindcss-scoped-groups": "^2.0.0",
     "uuid": "^8.3.2",
