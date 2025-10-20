@@ -220,8 +220,9 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       last_name: 'Tester',
       username: 'actquest_tester',
       __isTestAuth: true,
+      __testLocation: location,
     })
-  }, [handleTelegramAuth])
+  }, [handleTelegramAuth, location])
 
   useEffect(() => {
     if (!isClient) return undefined

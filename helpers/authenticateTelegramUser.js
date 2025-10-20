@@ -67,19 +67,36 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
 
   const isTestAuth = Boolean(payload?.__isTestAuth) && isTestAuthAllowed
 
-  if (!location && !isTestAuth) {
+  const resolveLocation = () => {
+    if (location) {
+      return String(location)
+    }
+
+    if (payload?.__testLocation) {
+      return String(payload.__testLocation)
+    }
+
+    return null
+  }
+
+  const resolvedLocation = resolveLocation()
+
+  if (!resolvedLocation && !isTestAuth) {
     return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации Telegram.')
   }
 
   if (isTestAuth) {
     const sanitizedPayload = { ...payload }
     delete sanitizedPayload.__isTestAuth
+    if (sanitizedPayload.__testLocation) {
+      delete sanitizedPayload.__testLocation
+    }
 
     const telegramId =
       sanitizedPayload?.id !== undefined && sanitizedPayload?.id !== null
         ? String(sanitizedPayload.id)
         : 'test-user'
-    const userLocation = location || 'test'
+    const userLocation = resolvedLocation || 'test'
     const name = buildUserName(sanitizedPayload)
 
     return {
@@ -100,11 +117,11 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
     }
   }
 
-  if (!location) {
+  if (!resolvedLocation) {
     return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации Telegram.')
   }
 
-  const token = getTelegramTokenByLocation(location)
+  const token = getTelegramTokenByLocation(resolvedLocation)
 
   if (!token) {
     return errorResponse('MISSING_TELEGRAM_TOKEN', 'Для выбранного региона не настроен бот Telegram.')
@@ -119,7 +136,7 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
     )
   }
 
-  const db = await dbConnect(location)
+  const db = await dbConnect(resolvedLocation)
 
   if (!db) {
     return errorResponse(
@@ -160,7 +177,7 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
       user: {
         id: user._id.toString(),
         telegramId: user.telegramId,
-        location,
+        location: resolvedLocation,
         name: user.name,
         username: user.username,
         photoUrl: user.photoUrl,
