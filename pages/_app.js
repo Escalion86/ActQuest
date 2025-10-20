@@ -1,11 +1,9 @@
 import Head from 'next/head'
 import { useEffect } from 'react'
 import { SessionProvider } from 'next-auth/react'
-import { RecoilRoot, RecoilEnv } from 'recoil'
+import { Provider as JotaiProvider } from 'jotai'
 
 import '../styles/global.css'
-
-RecoilEnv.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = false
 
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   const mode = process.env.MODE ?? process.env.NODE_ENV
@@ -75,9 +73,9 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <SessionProvider session={session} refetchInterval={5 * 60}>
-        <RecoilRoot>
+        <JotaiProvider>
           <Component {...pageProps} />
-        </RecoilRoot>
+        </JotaiProvider>
       </SessionProvider>
     </>
   )
