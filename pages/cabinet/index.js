@@ -566,10 +566,10 @@ export async function getServerSideProps(context) {
     !relativeCallback.startsWith('/cabinet') &&
     !relativeCallback.startsWith('/api/auth')
 
-  if (session && isSafeCallback) {
+  if (!session) {
     return {
       redirect: {
-        destination: relativeCallback,
+        destination: '/',
         permanent: false,
       },
     }
