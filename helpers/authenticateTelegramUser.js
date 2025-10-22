@@ -31,6 +31,34 @@ const buildUserName = (payload) => {
   return 'Пользователь Telegram'
 }
 
+const normalizeTelegramId = (value) => {
+  if (value === null || typeof value === 'undefined') {
+    return null
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+
+    if (!trimmed) {
+      return null
+    }
+
+    const parsed = Number(trimmed)
+
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+
+    return null
+  }
+
+  return null
+}
+
 const errorResponse = (code, message, details = null) => ({
   success: false,
   errorCode: code,
@@ -92,27 +120,59 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
       delete sanitizedPayload.__testLocation
     }
 
-    const telegramId =
-      sanitizedPayload?.id !== undefined && sanitizedPayload?.id !== null
-        ? String(sanitizedPayload.id)
-        : 'test-user'
     const userLocation = resolvedLocation || 'test'
-    const name = buildUserName(sanitizedPayload)
+    const rawPayloadTelegramId =
+      sanitizedPayload?.id ?? sanitizedPayload?.telegramId ?? null
+    const normalizedTelegramId = normalizeTelegramId(rawPayloadTelegramId)
+
+    let dbUser = null
+
+    if (resolvedLocation && normalizedTelegramId !== null) {
+      try {
+        const db = await dbConnect(resolvedLocation)
+        if (db) {
+          dbUser = await db
+            .model('Users')
+            .findOne({ telegramId: normalizedTelegramId })
+            .lean()
+        }
+      } catch (lookupError) {
+        console.error('Test auth user lookup error', lookupError)
+      }
+    }
+
+    const fallbackTelegramId = dbUser?.telegramId ?? normalizedTelegramId ?? null
+
+    const fallbackUserId = dbUser?._id
+      ? dbUser._id.toString()
+      : `test-${String(rawPayloadTelegramId ?? fallbackTelegramId ?? 'user')}`
+
+    const resultUser = {
+      id: fallbackUserId,
+      telegramId:
+        fallbackTelegramId !== null
+          ? fallbackTelegramId
+          : normalizeTelegramId(rawPayloadTelegramId),
+      location: userLocation,
+      name: dbUser?.name ?? buildUserName(sanitizedPayload),
+      username: dbUser?.username ?? sanitizedPayload?.username ?? null,
+      photoUrl: dbUser?.photoUrl ?? sanitizedPayload?.photo_url ?? null,
+      languageCode: dbUser?.languageCode ?? sanitizedPayload?.language_code ?? null,
+      isPremium:
+        typeof dbUser?.isPremium === 'boolean'
+          ? dbUser.isPremium
+          : Boolean(sanitizedPayload?.is_premium),
+      isTestAuth: true,
+    }
+
+    if (dbUser?.role) {
+      resultUser.role = dbUser.role
+    }
 
     return {
       success: true,
       isTestAuth: true,
-      user: {
-        id: `test-${telegramId}`,
-        telegramId,
-        location: userLocation,
-        name,
-        username: sanitizedPayload?.username ?? null,
-        photoUrl: sanitizedPayload?.photo_url ?? null,
-        languageCode: sanitizedPayload?.language_code ?? null,
-        isPremium: Boolean(sanitizedPayload?.is_premium),
-        isTestAuth: true,
-      },
+      user: resultUser,
       payload: sanitizedPayload,
     }
   }
