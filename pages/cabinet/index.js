@@ -28,7 +28,7 @@ const quickActions = [
   },
   {
     id: 'update-profile',
-    title: 'Обновить анкету',
+    title: 'Обновить профиль',
     description:
       'Укажите актуальные контакты и роль в проекте, чтобы коллеги могли вас найти.',
     href: '/cabinet/profile',

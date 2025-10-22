@@ -34,6 +34,15 @@ const usersSchema = {
     type: Number,
     default: null,
   },
+  about: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  preferences: {
+    type: [String],
+    default: [],
+  },
   location: {
     type: {
       date: Date,
