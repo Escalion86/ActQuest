@@ -1,25 +1,99 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import isUserAdmin from '@helpers/isUserAdmin'
 import getSessionSafe from '@helpers/getSessionSafe'
+import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
+import dbConnect from '@utils/dbConnect'
 
-const SettingsPage = () => {
+const SettingsPage = ({ initialSiteSettings }) => {
   const { data: session } = useSession()
   const isAdmin = isUserAdmin({ role: session?.user?.role })
-  const [siteSettings, setSiteSettings] = useState({
-    supportEmail: 'support@actquest.ru',
-    publicPhone: '+7 (000) 000-00-00',
-    registrationEnabled: true,
-    maintenanceMode: false,
-    announcement:
-      'ActQuest готовит обновление сценариев. Следите за новостями и не забудьте проверить расписание игр.',
-  })
+  const [siteSettings, setSiteSettings] = useState(() => initialSiteSettings)
+  const [saveState, setSaveState] = useState({ isSaving: false, isSaved: false, error: null })
 
-  const handleSettingsChange = (field, value) => {
+  useEffect(() => {
+    setSiteSettings(initialSiteSettings)
+    setSaveState({ isSaving: false, isSaved: false, error: null })
+  }, [initialSiteSettings])
+
+  const handleSettingsChange = useCallback((field, value) => {
     setSiteSettings((prevState) => ({ ...prevState, [field]: value }))
-  }
+    setSaveState((prevState) => ({ ...prevState, isSaved: false, error: null }))
+  }, [])
+
+  const handleSave = useCallback(async () => {
+    if (!isAdmin) {
+      return
+    }
+
+    const location = session?.user?.location ?? null
+
+    if (!location) {
+      setSaveState({ isSaving: false, isSaved: false, error: 'Не удалось определить город для сохранения настроек.' })
+      return
+    }
+
+    setSaveState({ isSaving: true, isSaved: false, error: null })
+
+    const normalizeField = (value) => {
+      if (typeof value !== 'string') {
+        return null
+      }
+
+      const trimmed = value.trim()
+      return trimmed.length > 0 ? trimmed : null
+    }
+
+    const payload = {
+      supportPhone: normalizeField(siteSettings.supportPhone),
+      announcement:
+        typeof siteSettings.announcement === 'string'
+          ? siteSettings.announcement.trim()
+          : '',
+      chatUrl: normalizeField(siteSettings.chatUrl),
+    }
+
+    const baseUrl = `/api/${location}/custom?collection=sitesettings`
+    const requestUrl = siteSettings.id ? `${baseUrl}&id=${siteSettings.id}` : baseUrl
+    const method = siteSettings.id ? 'PUT' : 'POST'
+
+    try {
+      const response = await fetch(requestUrl, {
+        method,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: payload }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(errorText || 'Unknown error')
+      }
+
+      const json = await response.json()
+
+      if (!json?.success) {
+        throw new Error('Не удалось сохранить изменения')
+      }
+
+      const normalized = normalizeSiteSettings(json.data)
+
+      setSiteSettings(normalized)
+      setSaveState({ isSaving: false, isSaved: true, error: null })
+    } catch (error) {
+      console.error('Failed to save site settings', error)
+      setSaveState({
+        isSaving: false,
+        isSaved: false,
+        error: 'Не удалось сохранить настройки. Попробуйте ещё раз.',
+      })
+    }
+  }, [isAdmin, session, siteSettings])
 
   if (!isAdmin) {
     return (
@@ -55,54 +129,31 @@ const SettingsPage = () => {
         <section className="p-6 space-y-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label htmlFor="settings-support-email" className="text-sm font-semibold text-primary">
-                Почта поддержки
+              <label htmlFor="settings-support-phone" className="text-sm font-semibold text-primary">
+                Телефон поддержки
               </label>
               <input
-                id="settings-support-email"
-                type="email"
-                value={siteSettings.supportEmail}
-                onChange={(event) => handleSettingsChange('supportEmail', event.target.value)}
+                id="settings-support-phone"
+                type="tel"
+                value={siteSettings.supportPhone}
+                onChange={(event) => handleSettingsChange('supportPhone', event.target.value)}
                 className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                placeholder="Например, +7 (900) 000-00-00"
               />
             </div>
             <div>
-              <label htmlFor="settings-public-phone" className="text-sm font-semibold text-primary">
-                Телефон для участников
+              <label htmlFor="settings-chat-url" className="text-sm font-semibold text-primary">
+                Ссылка на чат проекта
               </label>
               <input
-                id="settings-public-phone"
-                type="tel"
-                value={siteSettings.publicPhone}
-                onChange={(event) => handleSettingsChange('publicPhone', event.target.value)}
+                id="settings-chat-url"
+                type="url"
+                value={siteSettings.chatUrl}
+                onChange={(event) => handleSettingsChange('chatUrl', event.target.value)}
                 className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                placeholder="https://t.me/actquest"
               />
             </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex items-center gap-3 p-4 border border-slate-200 rounded-2xl">
-              <input
-                type="checkbox"
-                checked={siteSettings.registrationEnabled}
-                onChange={(event) => handleSettingsChange('registrationEnabled', event.target.checked)}
-                className="w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary"
-              />
-              <span className="text-sm text-slate-700">
-                Разрешить регистрацию новых команд
-              </span>
-            </label>
-            <label className="flex items-center gap-3 p-4 border border-slate-200 rounded-2xl">
-              <input
-                type="checkbox"
-                checked={siteSettings.maintenanceMode}
-                onChange={(event) => handleSettingsChange('maintenanceMode', event.target.checked)}
-                className="w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary"
-              />
-              <span className="text-sm text-slate-700">
-                Включить режим обслуживания
-              </span>
-            </label>
           </div>
 
           <div>
@@ -118,12 +169,29 @@ const SettingsPage = () => {
             />
           </div>
 
+          {saveState.error ? (
+            <div className="px-4 py-3 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl">
+              {saveState.error}
+            </div>
+          ) : null}
+          {saveState.isSaved ? (
+            <div className="px-4 py-3 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl">
+              Настройки успешно сохранены.
+            </div>
+          ) : null}
+
           <div className="flex flex-col gap-3 md:flex-row">
             <button
               type="button"
-              className="inline-flex justify-center px-5 py-3 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-blue-700"
+              onClick={handleSave}
+              disabled={saveState.isSaving}
+              className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
+                saveState.isSaving
+                  ? 'bg-blue-400 cursor-not-allowed'
+                  : 'bg-primary hover:bg-blue-700'
+              }`}
             >
-              Сохранить настройки
+              {saveState.isSaving ? 'Сохраняем…' : 'Сохранить настройки'}
             </button>
             <button
               type="button"
@@ -136,6 +204,19 @@ const SettingsPage = () => {
       </CabinetLayout>
     </>
   )
+}
+
+SettingsPage.propTypes = {
+  initialSiteSettings: PropTypes.shape({
+    id: PropTypes.string,
+    supportPhone: PropTypes.string,
+    announcement: PropTypes.string,
+    chatUrl: PropTypes.string,
+  }),
+}
+
+SettingsPage.defaultProps = {
+  initialSiteSettings: normalizeSiteSettings(),
 }
 
 export async function getServerSideProps(context) {
@@ -151,9 +232,27 @@ export async function getServerSideProps(context) {
     }
   }
 
+  const location = session?.user?.location ?? null
+  let initialSiteSettings = normalizeSiteSettings()
+
+  if (location) {
+    try {
+      const db = await dbConnect(location)
+
+      if (db) {
+        const SiteSettingsModel = db.model('SiteSettings')
+        const settingsDoc = await SiteSettingsModel.findOne({}).lean()
+        initialSiteSettings = normalizeSiteSettings(settingsDoc)
+      }
+    } catch (error) {
+      console.error('Failed to load site settings', error)
+    }
+  }
+
   return {
     props: {
       session,
+      initialSiteSettings,
     },
   }
 }

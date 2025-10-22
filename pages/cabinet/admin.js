@@ -81,36 +81,6 @@ const AdminPage = () => {
           ))}
         </section>
 
-        <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
-          <h3 className="text-lg font-semibold text-primary">Последние запросы на доступ</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Отслеживайте, какие команды и организаторы запрашивают административные права.
-          </p>
-          <div className="mt-4 space-y-3">
-            {[1, 2, 3].map((index) => (
-              <div key={index} className="p-4 border border-slate-200 rounded-xl">
-                <p className="text-sm font-semibold text-primary">Запрос #{index}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Пользователь хочет получить права на управление играми и командами.
-                </p>
-                <div className="flex gap-3 mt-3">
-                  <button
-                    type="button"
-                    className="inline-flex justify-center px-4 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
-                  >
-                    Одобрить
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex justify-center px-4 py-2 text-xs font-semibold text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50"
-                  >
-                    Отклонить
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       </CabinetLayout>
     </>
   )

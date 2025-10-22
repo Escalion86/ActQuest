@@ -98,7 +98,7 @@ export const authOptions = {
     async session({ session, token }) {
       if (!session?.user) session.user = {}
 
-      if (token?.telegramId && token?.location) {
+      if (token?.location) {
         const fallbackUser = {
           _id: token.userId ?? null,
           id: token.userId ?? null,
@@ -112,30 +112,29 @@ export const authOptions = {
           location: token.location,
         }
 
-        if (token?.isTestAuth) {
-          session.user = normalizeUserForSession(null, fallbackUser)
-          session.user.location = token.location
-          session.user.isTestAuth = true
-          return session
-        }
+        if (typeof token.telegramId !== 'undefined' && token.telegramId !== null) {
+          try {
+            const db = await dbConnect(token.location)
+            if (db) {
+              const user = await db
+                .model('Users')
+                .findOne({ telegramId: token.telegramId })
+                .lean()
 
-        try {
-          const db = await dbConnect(token.location)
-          if (db) {
-            const user = await db
-              .model('Users')
-              .findOne({ telegramId: token.telegramId })
-              .lean()
-
-            session.user = normalizeUserForSession(user, fallbackUser)
-            session.user.location = token.location
-          } else {
+              session.user = normalizeUserForSession(user, fallbackUser)
+            } else {
+              session.user = normalizeUserForSession(null, fallbackUser)
+            }
+          } catch (error) {
+            console.error('Session callback error', error)
             session.user = normalizeUserForSession(null, fallbackUser)
           }
-        } catch (error) {
-          console.error('Session callback error', error)
+        } else {
           session.user = normalizeUserForSession(null, fallbackUser)
         }
+
+        session.user.location = token.location
+        session.user.isTestAuth = Boolean(token.isTestAuth)
       }
 
       return session
