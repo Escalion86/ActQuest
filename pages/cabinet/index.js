@@ -1,10 +1,15 @@
 import Head from 'next/head'
-import { useMemo } from 'react'
+import PropTypes from 'prop-types'
+import { useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import getSessionSafe from '@helpers/getSessionSafe'
 import { resolveCabinetCallback } from '@helpers/cabinetAuth'
+import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
+import getGameStatusLabel from '@helpers/getGameStatusLabel'
+import { getNounTeams, getNounUsers } from '@helpers/getNoun'
+import dbConnect from '@utils/dbConnect'
 
 const quickActions = [
   {
@@ -30,60 +35,100 @@ const quickActions = [
   },
 ]
 
-const activityFeed = [
-  {
-    id: 'activity-1',
-    title: 'Команда «Северный свет» добавлена',
-    time: '5 минут назад',
-    category: 'Команды',
-  },
-  {
-    id: 'activity-2',
-    title: 'Игра «Осенний марафон» опубликована',
-    time: '2 часа назад',
-    category: 'Игры',
-  },
-  {
-    id: 'activity-3',
-    title: 'Обновлены контактные данные организатора',
-    time: 'вчера',
-    category: 'Профиль',
-  },
-]
-
-const statsConfig = [
-  {
-    id: 'games',
-    title: 'Активные игры',
-    value: 4,
-    delta: '+2 за неделю',
-  },
-  {
-    id: 'teams',
-    title: 'Команд участвует',
-    value: 18,
-    delta: '+5 новых',
-  },
-  {
-    id: 'players',
-    title: 'Игроков задействовано',
-    value: 112,
-    delta: 'стабильно',
-  },
-]
-
-const CabinetDashboard = ({ session: initialSession }) => {
+const CabinetDashboard = ({
+  session: initialSession,
+  stats: initialStats,
+  activity: initialActivity,
+}) => {
   const { data: session, status } = useSession()
   const activeSession = session ?? initialSession ?? null
 
+  const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
+  const stats = initialStats ?? { activeGames: 0, teams: 0, players: 0 }
+
   const normalizedStats = useMemo(
-    () =>
-      statsConfig.map((item) => ({
-        ...item,
-        value: new Intl.NumberFormat('ru-RU').format(item.value),
-      })),
-    []
+    () => [
+      {
+        id: 'games',
+        title: 'Активные игры',
+        value: numberFormatter.format(stats.activeGames ?? 0),
+        description: 'Статусы «активна» и «запущена» по выбранному городу.',
+      },
+      {
+        id: 'teams',
+        title: 'Команд участвует',
+        value: numberFormatter.format(stats.teams ?? 0),
+        description: 'Всего зарегистрированных команд.',
+      },
+      {
+        id: 'players',
+        title: 'Игроков задействовано',
+        value: numberFormatter.format(stats.players ?? 0),
+        description: 'Количество участников, привязанных к командам.',
+      },
+    ],
+    [numberFormatter, stats]
   )
+
+  const buildGameDetails = useCallback((item) => {
+    const parts = []
+
+    if (item.status) {
+      parts.push(`Статус: ${getGameStatusLabel(item.status)}`)
+    }
+
+    if (typeof item.teamsCount === 'number' && item.teamsCount >= 0) {
+      parts.push(getNounTeams(item.teamsCount))
+    }
+
+    if (item.hidden) {
+      parts.push('Скрыта из списка')
+    }
+
+    return parts.length > 0 ? parts.join(' · ') : 'Изменение параметров игры'
+  }, [])
+
+  const buildTeamDetails = useCallback((item) => {
+    const parts = []
+
+    if (typeof item.membersCount === 'number' && item.membersCount >= 0) {
+      parts.push(getNounUsers(item.membersCount))
+    }
+
+    return parts.length > 0 ? parts.join(' · ') : 'Обновление карточки команды'
+  }, [])
+
+  const activityItems = useMemo(() => {
+    if (!Array.isArray(initialActivity)) {
+      return []
+    }
+
+    return initialActivity.map((item) => {
+      const timestamp = item.timestamp ?? null
+      const relativeTime = timestamp
+        ? formatRelativeTimeFromNow(timestamp)
+        : '—'
+      const absoluteTime = timestamp
+        ? new Date(timestamp).toLocaleString('ru-RU')
+        : undefined
+
+      const isGame = item.type === 'game'
+      const title = isGame
+        ? `Игра «${item.name || 'Без названия'}» обновлена`
+        : `Команда «${item.name || 'Без названия'}» обновлена`
+
+      const details = isGame ? buildGameDetails(item) : buildTeamDetails(item)
+
+      return {
+        id: item.id,
+        title,
+        category: isGame ? 'Игры' : 'Команды',
+        relativeTime,
+        absoluteTime,
+        details,
+      }
+    })
+  }, [buildGameDetails, buildTeamDetails, initialActivity])
 
   if (!activeSession) {
     if (status === 'loading') {
@@ -106,8 +151,8 @@ const CabinetDashboard = ({ session: initialSession }) => {
           </p>
           <a
             href="/cabinet/login"
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-slate-900 bg-white rounded-xl"
-          >
+          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-slate-900 bg-white rounded-xl"
+        >
             Перейти к авторизации
           </a>
         </div>
@@ -133,7 +178,7 @@ const CabinetDashboard = ({ session: initialSession }) => {
             >
               <p className="text-sm font-medium text-slate-500">{stat.title}</p>
               <p className="mt-3 text-3xl font-semibold text-primary">{stat.value}</p>
-              <p className="mt-2 text-xs font-medium text-emerald-600">{stat.delta}</p>
+              <p className="mt-2 text-xs font-medium text-slate-500">{stat.description}</p>
             </article>
           ))}
         </section>
@@ -160,15 +205,22 @@ const CabinetDashboard = ({ session: initialSession }) => {
               Последние изменения, которые произошли в вашем кабинете.
             </p>
             <ul className="mt-4 space-y-4">
-              {activityFeed.map((item) => (
-                <li key={item.id} className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-sm font-semibold text-primary">{item.title}</p>
-                  <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
-                    <span>{item.category}</span>
-                    <span>{item.time}</span>
-                  </div>
+              {activityItems.length > 0 ? (
+                activityItems.map((item) => (
+                  <li key={item.id} className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm font-semibold text-primary">{item.title}</p>
+                    <p className="mt-2 text-xs text-slate-500">{item.details}</p>
+                    <div className="flex items-center justify-between mt-3 text-xs text-slate-500">
+                      <span>{item.category}</span>
+                      <span title={item.absoluteTime}>{item.relativeTime}</span>
+                    </div>
+                  </li>
+                ))
+              ) : (
+                <li className="p-4 bg-slate-50 rounded-xl">
+                  <p className="text-sm text-slate-500">Недавняя активность не найдена.</p>
                 </li>
-              ))}
+              )}
             </ul>
           </div>
         </section>
@@ -198,6 +250,33 @@ const CabinetDashboard = ({ session: initialSession }) => {
   )
 }
 
+CabinetDashboard.propTypes = {
+  session: PropTypes.object,
+  stats: PropTypes.shape({
+    activeGames: PropTypes.number,
+    teams: PropTypes.number,
+    players: PropTypes.number,
+  }),
+  activity: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      type: PropTypes.string,
+      name: PropTypes.string,
+      status: PropTypes.string,
+      hidden: PropTypes.bool,
+      teamsCount: PropTypes.number,
+      membersCount: PropTypes.number,
+      timestamp: PropTypes.string,
+    })
+  ),
+}
+
+CabinetDashboard.defaultProps = {
+  session: null,
+  stats: { activeGames: 0, teams: 0, players: 0 },
+  activity: [],
+}
+
 export async function getServerSideProps(context) {
   const session = await getSessionSafe(context)
   const { relativeCallback, isSafe } = resolveCabinetCallback(context?.query?.callbackUrl, context?.req)
@@ -223,9 +302,140 @@ export async function getServerSideProps(context) {
     }
   }
 
+  const location = session?.user?.location ?? null
+  let stats = { activeGames: 0, teams: 0, players: 0 }
+  let activity = []
+
+  if (location) {
+    try {
+      const db = await dbConnect(location)
+
+      if (db) {
+        const GamesModel = db.model('Games')
+        const TeamsModel = db.model('Teams')
+        const TeamsUsersModel = db.model('TeamsUsers')
+        const GamesTeamsModel = db.model('GamesTeams')
+
+        const [activeGamesCount, totalTeamsCount, totalPlayersCount, recentGames, recentTeams] =
+          await Promise.all([
+            GamesModel.countDocuments({ status: { $in: ['active', 'started'] } }),
+            TeamsModel.countDocuments({}),
+            TeamsUsersModel.countDocuments({}),
+            GamesModel.find({})
+              .sort({ updatedAt: -1 })
+              .limit(5)
+              .select({
+                _id: 1,
+                name: 1,
+                status: 1,
+                hidden: 1,
+                updatedAt: 1,
+                createdAt: 1,
+              })
+              .lean(),
+            TeamsModel.find({})
+              .sort({ updatedAt: -1 })
+              .limit(5)
+              .select({ _id: 1, name: 1, updatedAt: 1, createdAt: 1 })
+              .lean(),
+          ])
+
+        stats = {
+          activeGames: activeGamesCount,
+          teams: totalTeamsCount,
+          players: totalPlayersCount,
+        }
+
+        const gameIds = recentGames
+          .map((game) => (game?._id ? game._id.toString() : null))
+          .filter(Boolean)
+
+        let teamsCountMap = {}
+
+        if (gameIds.length > 0) {
+          const gamesTeams = await GamesTeamsModel.find({ gameId: { $in: gameIds } })
+            .select({ gameId: 1 })
+            .lean()
+
+          teamsCountMap = gamesTeams.reduce((acc, doc) => {
+            if (!doc?.gameId) {
+              return acc
+            }
+
+            const key = doc.gameId
+            acc[key] = (acc[key] ?? 0) + 1
+            return acc
+          }, {})
+        }
+
+        const teamIds = recentTeams
+          .map((team) => (team?._id ? team._id.toString() : null))
+          .filter(Boolean)
+
+        let membersCountMap = {}
+
+        if (teamIds.length > 0) {
+          const teamMembers = await TeamsUsersModel.find({ teamId: { $in: teamIds } })
+            .select({ teamId: 1 })
+            .lean()
+
+          membersCountMap = teamMembers.reduce((acc, doc) => {
+            if (!doc?.teamId) {
+              return acc
+            }
+
+            const key = doc.teamId
+            acc[key] = (acc[key] ?? 0) + 1
+            return acc
+          }, {})
+        }
+
+        const gamesActivity = recentGames.map((game) => {
+          const idString = game?._id ? game._id.toString() : null
+          const timestamp = game?.updatedAt ?? game?.createdAt ?? null
+
+          return {
+            id: `game-${idString ?? Math.random().toString(36).slice(2)}`,
+            type: 'game',
+            name: game?.name ?? 'Без названия',
+            status: game?.status ?? null,
+            hidden: Boolean(game?.hidden),
+            teamsCount: idString ? teamsCountMap[idString] ?? 0 : 0,
+            timestamp: timestamp ? new Date(timestamp).toISOString() : null,
+          }
+        })
+
+        const teamsActivity = recentTeams.map((team) => {
+          const idString = team?._id ? team._id.toString() : null
+          const timestamp = team?.updatedAt ?? team?.createdAt ?? null
+
+          return {
+            id: `team-${idString ?? Math.random().toString(36).slice(2)}`,
+            type: 'team',
+            name: team?.name ?? 'Без названия',
+            membersCount: idString ? membersCountMap[idString] ?? 0 : 0,
+            timestamp: timestamp ? new Date(timestamp).toISOString() : null,
+          }
+        })
+
+        activity = [...gamesActivity, ...teamsActivity]
+          .filter((item) => item.timestamp)
+          .sort(
+            (a, b) =>
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          )
+          .slice(0, 8)
+      }
+    } catch (error) {
+      console.error('Failed to load cabinet dashboard data', error)
+    }
+  }
+
   return {
     props: {
       session,
+      stats,
+      activity,
     },
   }
 }

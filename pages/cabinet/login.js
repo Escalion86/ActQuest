@@ -212,17 +212,14 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   )
 
   const handleTestLogin = useCallback(() => {
-    if (!isTestAuthEnabled) return
+    if (!isTestAuthEnabled || isAuthenticating) return
 
     handleTelegramAuth({
       id: '261102161',
-      first_name: 'ActQuest',
-      last_name: 'Tester',
-      username: 'actquest_tester',
       __isTestAuth: true,
       __testLocation: location,
     })
-  }, [handleTelegramAuth, location])
+  }, [handleTelegramAuth, isAuthenticating, location])
 
   useEffect(() => {
     if (!isClient) return undefined
