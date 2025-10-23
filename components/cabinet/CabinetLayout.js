@@ -32,7 +32,7 @@ const baseMenuItems = [
   { id: 'dashboard', label: 'Обзор', href: '/cabinet', icon: faGaugeHigh },
   { id: 'games', label: 'Игры', href: '/cabinet/games', icon: faGamepad },
   { id: 'teams', label: 'Мои команды', href: '/cabinet/teams', icon: faUsers },
-  { id: 'profile', label: 'Моя анкета', href: '/cabinet/profile', icon: faUser },
+  { id: 'profile', label: 'Мой профиль', href: '/cabinet/profile', icon: faUser },
 ]
 
 const adminMenuItems = [
@@ -113,7 +113,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
         }`}
       >
         <div className="flex items-center justify-center h-16 border-b border-slate-200">
-          <span className="text-lg font-semibold text-primary">AQ</span>
+          <span className="text-lg font-semibold text-primary">ActQuest</span>
         </div>
         <nav className="flex-1 py-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {

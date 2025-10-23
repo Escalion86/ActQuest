@@ -4,13 +4,13 @@ import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
-import getSessionSafe from '@helpers/getSessionSafe'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { getNounUsers } from '@helpers/getNoun'
-import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
-import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
+import getSessionSafe from '@helpers/getSessionSafe'
+import isUserAdmin from '@helpers/isUserAdmin'
 import dbConnect from '@utils/dbConnect'
+import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 
 const serializeTeamForComparison = (team) => {
   if (!team) {
@@ -43,20 +43,17 @@ const normalizePhoneLink = (phone) => {
   return phone.replace(/[^+\d]/g, '')
 }
 
-const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) => {
+const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession }) => {
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
-  const userRole = activeSession?.user?.role ?? 'client'
-  const currentTelegramId = activeSession?.user?.telegramId ?? null
-  const currentTelegramIdString =
-    currentTelegramId === null || currentTelegramId === undefined
-      ? null
-      : String(currentTelegramId)
+  const isAdmin = isUserAdmin({ role: activeSession?.user?.role })
 
   const [teams, setTeams] = useState(initialTeams)
   const [persistedTeams, setPersistedTeams] = useState(initialTeams)
   const [selectedTeamId, setSelectedTeamId] = useState(initialTeams[0]?.id ?? null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [visibilityFilter, setVisibilityFilter] = useState('all')
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
@@ -73,20 +70,63 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
     })
   }, [initialTeams])
 
+  const filteredTeams = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+
+    return teams.filter((team) => {
+      if (visibilityFilter === 'open' && !team.open) {
+        return false
+      }
+
+      if (visibilityFilter === 'closed' && team.open) {
+        return false
+      }
+
+      if (!normalizedQuery) {
+        return true
+      }
+
+      const memberNames = Array.isArray(team.members)
+        ? team.members.map((member) => member.name || '').join(' ')
+        : ''
+
+      const haystack = [team.name, team.description, team.captain?.name, memberNames]
+        .filter(Boolean)
+        .map((value) => value.toLowerCase())
+
+      return haystack.some((value) => value.includes(normalizedQuery))
+    })
+  }, [teams, searchQuery, visibilityFilter])
+
   useEffect(() => {
-    setFeedback(null)
-    setMemberActionId(null)
-  }, [selectedTeamId])
+    if (filteredTeams.length === 0) {
+      setSelectedTeamId(null)
+      return
+    }
+
+    setSelectedTeamId((prev) => {
+      if (prev && filteredTeams.some((team) => team.id === prev)) {
+        return prev
+      }
+
+      return filteredTeams[0]?.id ?? null
+    })
+  }, [filteredTeams])
 
   const selectedTeam = useMemo(
     () => teams.find((team) => team.id === selectedTeamId) ?? null,
-    [teams, selectedTeamId]
+    [selectedTeamId, teams]
   )
 
   const persistedSelectedTeam = useMemo(
     () => persistedTeams.find((team) => team.id === selectedTeamId) ?? null,
     [persistedTeams, selectedTeamId]
   )
+
+  useEffect(() => {
+    setFeedback(null)
+    setMemberActionId(null)
+  }, [selectedTeamId])
 
   const isDirty = useMemo(() => {
     if (!selectedTeam || !persistedSelectedTeam) {
@@ -99,18 +139,7 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
     )
   }, [persistedSelectedTeam, selectedTeam])
 
-  const isAdmin = userRole === 'admin' || userRole === 'dev'
-  const isTeamCaptain = useMemo(() => {
-    if (!selectedTeam || !currentTelegramIdString) {
-      return false
-    }
-
-    return selectedTeam.members?.some(
-      (member) => member.isCaptain && member.telegramId === currentTelegramIdString
-    )
-  }, [currentTelegramIdString, selectedTeam])
-
-  const canManageSelectedTeam = isAdmin || isTeamCaptain
+  const canManageSelectedTeam = isAdmin && Boolean(location)
 
   const updateSelectedTeam = useCallback(
     (updater) => {
@@ -199,6 +228,7 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
       setPersistedTeams((prevTeams) =>
         prevTeams.map((team) => (team.id === selectedTeamId ? updatedTeam : team))
       )
+
       setFeedback({ type: 'success', message: 'Изменения сохранены' })
     } catch (error) {
       console.error('Failed to update team', error)
@@ -363,24 +393,8 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
     [canManageSelectedTeam, location, selectedTeam, selectedTeamId]
   )
 
-  const teamRestrictionMessage = useMemo(() => {
-    if (!selectedTeam || canManageSelectedTeam) {
-      return null
-    }
-
-    if (selectedTeam.captain && selectedTeam.captain.telegramId === currentTelegramIdString) {
-      return null
-    }
-
-    return 'Изменять данные может только администратор или капитан команды. Вы можете просматривать информацию.'
-  }, [canManageSelectedTeam, currentTelegramIdString, selectedTeam])
-
   const teamsForList = useMemo(() => {
-    if (!Array.isArray(teams)) {
-      return []
-    }
-
-    return teams.map((team) => {
+    return filteredTeams.map((team) => {
       const updatedLabel = team.updatedAt
         ? formatRelativeTimeFromNow(team.updatedAt)
         : '—'
@@ -388,31 +402,94 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
       return {
         id: team.id,
         name: team.name || 'Без названия',
-        membersCount: getNounUsers(team.membersCount ?? 0),
-        gamesCount: team.gamesCount ?? 0,
+        membersLabel: getNounUsers(team.membersCount ?? 0),
         updatedLabel,
         open: Boolean(team.open),
       }
     })
+  }, [filteredTeams])
+
+  const summary = useMemo(() => {
+    const total = teams.length
+    const open = teams.filter((team) => team.open).length
+    return {
+      total,
+      open,
+      closed: total - open,
+    }
   }, [teams])
+
+  if (!isAdmin) {
+    return (
+      <>
+        <Head>
+          <title>ActQuest — Управление командами</title>
+        </Head>
+        <CabinetLayout
+          title="Управление командами"
+          description="Доступ ограничен: административные права отсутствуют."
+          activePage="admin"
+        >
+          <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <p className="text-sm text-slate-600">
+              У вас нет доступа к управлению командами. Если вы считаете, что это ошибка, обратитесь к главному
+              организатору.
+            </p>
+          </section>
+        </CabinetLayout>
+      </>
+    )
+  }
 
   return (
     <>
       <Head>
-        <title>ActQuest — Мои команды</title>
+        <title>ActQuest — Управление командами</title>
       </Head>
       <CabinetLayout
-        title="Мои команды"
-        description="Следите за составом, назначайте капитанов и контролируйте участие в играх."
-        activePage="teams"
+        title="Управление командами"
+        description="Редактируйте составы, управляйте капитанами и следите за активностью команд."
+        activePage="admin"
       >
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-2 space-y-4">
             <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-              <p className="text-sm font-semibold text-primary">Ваши команды</p>
+              <p className="text-sm font-semibold text-primary">Все команды</p>
               <p className="mt-1 text-xs text-slate-500">
-                Выберите команду, чтобы просмотреть состав и изменить основные параметры.
+                Всего: {summary.total}. Открытых: {summary.open}. Закрытых: {summary.closed}.
               </p>
+            </div>
+
+            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3">
+              <div>
+                <label htmlFor="team-search" className="text-xs font-semibold text-slate-500">
+                  Поиск
+                </label>
+                <input
+                  id="team-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Введите название команды или участника"
+                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="team-visibility-filter" className="text-xs font-semibold text-slate-500">
+                  Доступность
+                </label>
+                <select
+                  id="team-visibility-filter"
+                  value={visibilityFilter}
+                  onChange={(event) => setVisibilityFilter(event.target.value)}
+                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary"
+                >
+                  <option value="all">Все команды</option>
+                  <option value="open">Открытые</option>
+                  <option value="closed">Закрытые</option>
+                </select>
+              </div>
             </div>
 
             {teamsForList.length > 0 ? (
@@ -422,14 +499,17 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
                     <button
                       type="button"
                       onClick={() => setSelectedTeamId(team.id)}
-                      className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 ${
+                      className={`w-full text-left p-4 border rounded-2xl transition ${
                         selectedTeamId === team.id
                           ? 'border-primary bg-blue-50 shadow-sm'
-                          : 'border-slate-200 bg-white'
+                          : 'border-slate-200 bg-white hover:border-primary hover:bg-blue-50'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-primary">{team.name}</p>
+                        <div>
+                          <p className="text-sm font-semibold text-primary">{team.name}</p>
+                          <p className="text-xs text-slate-500">{team.membersLabel}</p>
+                        </div>
                         <span
                           className={`text-xs font-medium px-2 py-1 rounded-full ${
                             team.open
@@ -440,19 +520,14 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
                           {team.open ? 'Открыта' : 'Закрыта'}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">{team.membersCount}</p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {team.gamesCount > 0
-                          ? `Игр: ${team.gamesCount} · Обновлено ${team.updatedLabel}`
-                          : `Обновлено ${team.updatedLabel}`}
-                      </p>
+                      <p className="mt-2 text-xs text-slate-400">Обновлено {team.updatedLabel}</p>
                     </button>
                   </li>
                 ))}
               </ul>
             ) : (
               <div className="p-6 text-sm text-center text-slate-500 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                У вас пока нет команд. Создайте команду в телеграм-боте, чтобы она появилась в списке.
+                Команды не найдены. Измените параметры фильтра или сбросьте поиск.
               </div>
             )}
           </div>
@@ -460,7 +535,25 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
           <div className="md:col-span-3">
             {selectedTeam ? (
               <div className="space-y-6">
-                <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                {!location && (
+                  <div className="p-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl">
+                    Не удалось определить площадку пользователя. Сохранение изменений недоступно.
+                  </div>
+                )}
+
+                {feedback && (
+                  <div
+                    className={`p-4 text-sm border rounded-2xl ${
+                      feedback.type === 'success'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        : 'bg-rose-50 border-rose-200 text-rose-700'
+                    }`}
+                  >
+                    {feedback.message}
+                  </div>
+                )}
+
+                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
                   <div className="flex flex-wrap items-center gap-3">
                     <span
                       className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
@@ -482,32 +575,13 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
                         Обновлено {formatRelativeTimeFromNow(selectedTeam.updatedAt)}
                       </span>
                     )}
+                    {selectedTeam.createdAt && (
+                      <span className="text-xs text-slate-400">
+                        Создана {formatRelativeTimeFromNow(selectedTeam.createdAt)}
+                      </span>
+                    )}
                   </div>
-                </div>
-
-                {!location && (
-                  <div className="p-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl">
-                    Не удалось определить площадку пользователя. Сохранение изменений недоступно.
-                  </div>
-                )}
-
-                {feedback && (
-                  <div
-                    className={`p-4 text-sm border rounded-2xl ${
-                      feedback.type === 'success'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                        : 'bg-rose-50 border-rose-200 text-rose-700'
-                    }`}
-                  >
-                    {feedback.message}
-                  </div>
-                )}
-
-                {teamRestrictionMessage && (
-                  <div className="p-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl">
-                    {teamRestrictionMessage}
-                  </div>
-                )}
+                </section>
 
                 <fieldset disabled={!canManageSelectedTeam} className="space-y-6 border-0 p-0 m-0">
                   <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
@@ -643,37 +717,8 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
                       </div>
                     ) : (
                       <p className="text-sm text-slate-500">
-                        Пока нет участников. Пригласите игроков через телеграм-бота, чтобы они появились здесь.
+                        В команде пока нет участников.
                       </p>
-                    )}
-                  </section>
-
-                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
-                    <h2 className="text-lg font-semibold text-primary">Игры команды</h2>
-                    {selectedTeam.games?.length > 0 ? (
-                      <ul className="space-y-3">
-                        {selectedTeam.games.map((game) => (
-                          <li key={game.id} className="p-4 border border-slate-200 rounded-2xl bg-slate-50">
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <p className="text-sm font-semibold text-primary">{game.name || 'Без названия'}</p>
-                              <span className="text-xs text-slate-500">
-                                {game.dateStart
-                                  ? new Date(game.dateStart).toLocaleString('ru-RU', {
-                                      dateStyle: 'short',
-                                      timeStyle: 'short',
-                                    })
-                                  : 'Дата не указана'}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {getGameStatusLabel(game.status)}
-                              {game.hidden ? ' · Скрыта' : ''}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-slate-500">Команда пока не зарегистрирована ни в одной игре.</p>
                     )}
                   </section>
 
@@ -704,6 +749,35 @@ const TeamsPage = ({ initialTeams, initialLocation, session: initialSession }) =
                     </button>
                   </div>
                 </fieldset>
+
+                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+                  <h3 className="text-base font-semibold text-primary">Игры команды</h3>
+
+                  {selectedTeam.games?.length > 0 ? (
+                    <ul className="space-y-3">
+                      {selectedTeam.games.map((game) => (
+                        <li
+                          key={game.id}
+                          className="p-4 border border-slate-200 rounded-2xl flex flex-col gap-1 md:flex-row md:items-center md:justify-between"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-primary">{game.name || 'Без названия'}</p>
+                            <p className="text-xs text-slate-500">
+                              Статус: {getGameStatusLabel(game.status)}
+                            </p>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            {game.dateStart
+                              ? `Старт ${formatRelativeTimeFromNow(game.dateStart)}`
+                              : 'Дата старта неизвестна'}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-slate-500">Команда ещё не участвовала в играх.</p>
+                  )}
+                </section>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full p-6 bg-white border border-dashed border-slate-200 rounded-2xl">
@@ -736,7 +810,7 @@ const teamGameShape = PropTypes.shape({
   hidden: PropTypes.bool,
 })
 
-TeamsPage.propTypes = {
+AdminTeamsPage.propTypes = {
   initialTeams: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
@@ -756,7 +830,7 @@ TeamsPage.propTypes = {
   session: PropTypes.object,
 }
 
-TeamsPage.defaultProps = {
+AdminTeamsPage.defaultProps = {
   initialTeams: [],
   initialLocation: null,
   session: null,
@@ -766,7 +840,7 @@ export async function getServerSideProps(context) {
   const session = await getSessionSafe(context)
 
   if (!session) {
-    const callbackTarget = context.resolvedUrl || '/cabinet/teams'
+    const callbackTarget = context.resolvedUrl || '/cabinet/admin/teams'
     return {
       redirect: {
         destination: `/cabinet/login?callbackUrl=${encodeURIComponent(callbackTarget)}`,
@@ -775,13 +849,16 @@ export async function getServerSideProps(context) {
     }
   }
 
-  const location = session?.user?.location ?? null
-  const rawTelegramId = session?.user?.telegramId
-  const numericTelegramId =
-    rawTelegramId === null || rawTelegramId === undefined
-      ? null
-      : Number(rawTelegramId)
+  if (!isUserAdmin({ role: session?.user?.role })) {
+    return {
+      redirect: {
+        destination: '/cabinet',
+        permanent: false,
+      },
+    }
+  }
 
+  const location = session?.user?.location ?? null
   let initialTeams = []
 
   if (location) {
@@ -789,29 +866,10 @@ export async function getServerSideProps(context) {
       const db = await dbConnect(location)
 
       if (db) {
-        const TeamsUsersModel = db.model('TeamsUsers')
-        if (Number.isFinite(numericTelegramId)) {
-          const memberships = await TeamsUsersModel.find({ userTelegramId: numericTelegramId })
-            .select({ teamId: 1 })
-            .lean()
-
-          const teamIds = [
-            ...new Set(
-              memberships
-                .map((membership) =>
-                  membership?.teamId ? membership.teamId.toString() : null
-                )
-                .filter(Boolean)
-            ),
-          ]
-
-          if (teamIds.length > 0) {
-            initialTeams = await fetchTeamsForCabinet({ db, teamIds })
-          }
-        }
+        initialTeams = await fetchTeamsForCabinet({ db })
       }
     } catch (error) {
-      console.error('Failed to load teams for cabinet', error)
+      console.error('Failed to load admin teams', error)
     }
   }
 
@@ -824,4 +882,4 @@ export async function getServerSideProps(context) {
   }
 }
 
-export default TeamsPage
+export default AdminTeamsPage
