@@ -1,5 +1,7 @@
 import Head from 'next/head'
+import Link from 'next/link'
 import { useSession } from 'next-auth/react'
+
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import isUserAdmin from '@helpers/isUserAdmin'
 import getSessionSafe from '@helpers/getSessionSafe'
@@ -8,20 +10,26 @@ const adminTools = [
   {
     id: 'manage-users',
     title: 'Управление пользователями',
-    description: 'Назначайте роли, сбрасывайте доступ и контролируйте права организаторов.',
-    action: 'Открыть список пользователей',
+    description:
+      'Назначайте роли, контролируйте права доступа и просматривайте команды, в которых состоят участники.',
+    action: 'Перейти к пользователям',
+    href: '/cabinet/admin/users',
   },
   {
-    id: 'moderate-games',
-    title: 'Проверка сценариев',
-    description: 'Просматривайте новые игры перед публикацией и утверждайте изменения.',
-    action: 'Перейти к модерации',
+    id: 'manage-teams',
+    title: 'Управление командами',
+    description:
+      'Просматривайте составы, управляйте капитанами и обновляйте данные команд без перехода в Telegram.',
+    action: 'Открыть список команд',
+    href: '/cabinet/admin/teams',
   },
   {
     id: 'statistics',
     title: 'Статистика и отчёты',
-    description: 'Следите за показателями участников, командами и активностью в разрезе периодов.',
+    description:
+      'Анализируйте ключевые показатели проекта: рост аудитории, активность команд и динамику игр.',
     action: 'Посмотреть отчёты',
+    href: '/cabinet/admin/reports',
   },
 ]
 
@@ -58,7 +66,7 @@ const AdminPage = () => {
       </Head>
       <CabinetLayout
         title="Администрирование"
-        description="Контролируйте доступ, модерируйте сценарии и отслеживайте показатели."
+        description="Управляйте пользователями, командами и отслеживайте динамику проекта."
         activePage="admin"
       >
         <section className="grid gap-6 md:grid-cols-3">
@@ -71,16 +79,14 @@ const AdminPage = () => {
                 <h3 className="text-lg font-semibold text-primary">{tool.title}</h3>
                 <p className="mt-2 text-sm text-slate-500">{tool.description}</p>
               </div>
-              <button
-                type="button"
-                className="inline-flex justify-center px-4 py-3 mt-6 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-blue-700"
-              >
-                {tool.action}
-              </button>
+              <Link href={tool.href} legacyBehavior>
+                <a className="inline-flex justify-center px-4 py-3 mt-6 text-sm font-semibold text-white bg-primary rounded-xl transition hover:bg-blue-700">
+                  {tool.action}
+                </a>
+              </Link>
             </article>
           ))}
         </section>
-
       </CabinetLayout>
     </>
   )
