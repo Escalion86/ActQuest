@@ -176,9 +176,9 @@ const CabinetDashboard = ({
               key={stat.id}
               className="p-5 transition-shadow bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md dark:bg-slate-900/80 dark:border-slate-700 dark:hover:shadow-lg"
             >
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{stat.title}</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-300">{stat.title}</p>
               <p className="mt-3 text-3xl font-semibold text-primary dark:text-slate-100">{stat.value}</p>
-              <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">{stat.description}</p>
+              <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-300">{stat.description}</p>
             </article>
           ))}
         </section>
@@ -186,7 +186,7 @@ const CabinetDashboard = ({
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-3 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm dark:bg-slate-900/80 dark:border-slate-700">
             <h3 className="text-lg font-semibold text-primary dark:text-slate-100">Быстрые действия</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
               Сосредоточьтесь на задачах — переходите к нужным разделам без лишних шагов.
             </p>
             <div className="mt-4 space-y-4">
@@ -197,7 +197,7 @@ const CabinetDashboard = ({
                   className="block p-4 transition bg-slate-50 rounded-xl hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-500/10"
                 >
                   <p className="text-sm font-semibold text-primary dark:text-slate-100">{action.title}</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{action.description}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{action.description}</p>
                 </a>
               ))}
             </div>
@@ -205,7 +205,7 @@ const CabinetDashboard = ({
 
           <div className="md:col-span-2 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm dark:bg-slate-900/80 dark:border-slate-700">
             <h3 className="text-lg font-semibold text-primary dark:text-slate-100">Лента активности</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
               Последние изменения, которые произошли в вашем кабинете.
             </p>
             <ul className="mt-4 space-y-4">
@@ -213,8 +213,8 @@ const CabinetDashboard = ({
                 activityItems.map((item) => (
                   <li key={item.id} className="p-4 bg-slate-50 rounded-xl dark:bg-slate-800">
                     <p className="text-sm font-semibold text-primary dark:text-slate-100">{item.title}</p>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{item.details}</p>
-                    <div className="flex items-center justify-between mt-3 text-xs text-slate-500 dark:text-slate-400">
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">{item.details}</p>
+                    <div className="flex items-center justify-between mt-3 text-xs text-slate-500 dark:text-slate-300">
                       <span>{item.category}</span>
                       <span title={item.absoluteTime}>{item.relativeTime}</span>
                     </div>
@@ -222,7 +222,7 @@ const CabinetDashboard = ({
                 ))
               ) : (
                 <li className="p-4 bg-slate-50 rounded-xl dark:bg-slate-800">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Недавняя активность не найдена.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-300">Недавняя активность не найдена.</p>
                 </li>
               )}
             </ul>
