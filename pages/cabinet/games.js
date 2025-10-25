@@ -474,9 +474,9 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                       <button
                         type="button"
                         onClick={() => setSelectedGameId(game.id)}
-                        className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 ${
+                        className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10 ${
                           selectedGameId === game.id
-                            ? 'border-primary bg-blue-50 shadow-sm'
+                            ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
                             : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
                         }`}
                       >
@@ -506,7 +506,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
               <div className="space-y-6">
                 <div className="p-5 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className="px-2.5 py-1 text-xs font-semibold text-primary bg-blue-50 rounded-full">
+                    <span className="px-2.5 py-1 text-xs font-semibold text-primary bg-blue-50 rounded-full dark:bg-violet-500/20 dark:text-violet-100">
                       {getGameStatusLabel(selectedGame.status)}
                     </span>
                     <span className="text-xs text-slate-500">
@@ -1148,7 +1148,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                       className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
                         !canEditSelectedGame || !isDirty
                           ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                          : 'border-primary text-primary hover:bg-blue-50'
+                          : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-violet-500/10'
                       }`}
                     >
                       Отменить изменения

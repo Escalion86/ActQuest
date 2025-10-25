@@ -453,15 +453,15 @@ const TeamsPage = ({
               <ul className="space-y-3">
                 {teamsForList.map((team) => (
                   <li key={team.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTeamId(team.id)}
-                      className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 ${
-                        selectedTeamId === team.id
-                          ? 'border-primary bg-blue-50 shadow-sm'
-                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
-                      }`}
-                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTeamId(team.id)}
+                        className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10 ${
+                          selectedTeamId === team.id
+                            ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
+                        }`}
+                      >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-primary">
                           {team.name}
@@ -692,7 +692,7 @@ const TeamsPage = ({
                                       className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
                                         isProcessing
                                           ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                                          : 'border-primary text-primary hover:bg-blue-50'
+                                          : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-violet-500/10'
                                       }`}
                                     >
                                       Назначить капитаном
@@ -797,7 +797,7 @@ const TeamsPage = ({
                       className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
                         !canManageSelectedTeam || !isDirty
                           ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                          : 'border-primary text-primary hover:bg-blue-50'
+                          : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-violet-500/10'
                       }`}
                     >
                       Отменить изменения
