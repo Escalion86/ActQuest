@@ -448,11 +448,19 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
       >
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-2 space-y-4">
-            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-              <p className="text-sm font-semibold text-primary">Ваши игры</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Выберите игру для редактирования основных настроек и финансовой информации.
-              </p>
+            <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-100 shadow-sm rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-violet-600 font-semibold shadow-sm dark:bg-violet-500/40 dark:text-violet-100"
+                aria-hidden="true"
+              >
+                i
+              </span>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-violet-900 dark:text-violet-50">Ваши игры</p>
+                <p className="text-xs leading-5 text-violet-700 dark:text-violet-200">
+                  Выберите игру, чтобы открыть ключевые настройки, управлять составами и следить за финансами.
+                </p>
+              </div>
             </div>
 
             {games.length > 0 ? (
@@ -474,10 +482,10 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                       <button
                         type="button"
                         onClick={() => setSelectedGameId(game.id)}
-                        className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 ${
+                        className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10 ${
                           selectedGameId === game.id
-                            ? 'border-primary bg-blue-50 shadow-sm'
-                            : 'border-slate-200 bg-white'
+                            ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
                         }`}
                       >
                         <p className="text-sm font-semibold text-primary">
@@ -495,7 +503,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                 })}
               </ul>
             ) : (
-              <div className="p-6 text-sm text-center text-slate-500 bg-white border border-slate-200 rounded-2xl shadow-sm">
+              <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 Для выбранного города пока нет игр. Создайте сценарий в телеграм-боте, чтобы он появился здесь.
               </div>
             )}
@@ -504,9 +512,9 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
           <div className="md:col-span-3">
             {selectedGame ? (
               <div className="space-y-6">
-                <div className="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                <div className="p-5 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className="px-2.5 py-1 text-xs font-semibold text-primary bg-blue-50 rounded-full">
+                    <span className="px-2.5 py-1 text-xs font-semibold text-primary bg-blue-50 rounded-full dark:bg-violet-500/20 dark:text-violet-100">
                       {getGameStatusLabel(selectedGame.status)}
                     </span>
                     <span className="text-xs text-slate-500">
@@ -552,7 +560,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                 )}
 
                 <fieldset disabled={!canEditSelectedGame} className="space-y-6 border-0 p-0 m-0">
-                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                  <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label htmlFor="game-title" className="text-sm font-semibold text-primary">
@@ -565,7 +573,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                         onChange={(event) =>
                           updateSelectedGame({ name: event.target.value })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
                     <div>
@@ -578,7 +586,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                         onChange={(event) =>
                           updateSelectedGame({ status: event.target.value })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       >
                         {GAME_STATUS_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -600,7 +608,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                         onChange={(event) =>
                           updateSelectedGame({ type: event.target.value })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       >
                         {GAME_TYPE_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -628,7 +636,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                               : null,
                           })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
                   </div>
@@ -660,7 +668,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                         onChange={(event) =>
                           updateSelectedGame({ startingPlace: event.target.value })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
                     <div>
@@ -674,7 +682,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                         onChange={(event) =>
                           updateSelectedGame({ finishingPlace: event.target.value })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
                   </div>
@@ -690,7 +698,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                         updateSelectedGame({ description: event.target.value })
                       }
                       rows={5}
-                      className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                      className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                     />
                   </div>
 
@@ -705,19 +713,19 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                       onChange={(event) =>
                         updateSelectedGame({ image: event.target.value })
                       }
-                      className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                      className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                     />
                     {selectedGame.image && (
                       <img
                         src={selectedGame.image}
                         alt={selectedGame.name || 'Обложка игры'}
-                        className="object-cover w-full h-40 mt-3 rounded-xl border border-slate-200"
+                        className="object-cover w-full h-40 mt-3 rounded-xl border border-slate-200 dark:border-slate-700"
                       />
                     )}
                   </div>
                   </section>
 
-                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                  <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                   <h2 className="text-lg font-semibold text-primary">Настройки заданий и подсказок</h2>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -734,7 +742,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                             taskDuration: toSeconds(event.target.value),
                           })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
                     <div>
@@ -751,7 +759,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                             cluesDuration: toSeconds(event.target.value),
                           })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                       <p className="mt-1 text-xs text-slate-500">
                         Укажите 0, чтобы отключить автоматическую выдачу подсказок.
@@ -772,7 +780,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                             clueEarlyAccessMode: event.target.value,
                           })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       >
                         {CLUE_EARLY_MODE_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -797,7 +805,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                             clueEarlyPenalty: toSeconds(event.target.value),
                           })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
                   </div>
@@ -817,7 +825,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                             breakDuration: toSeconds(event.target.value),
                           })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
                     <div>
@@ -843,7 +851,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                                 : toSeconds(event.target.value),
                           })
                         }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
                   </div>
@@ -867,7 +875,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                               ],
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -887,7 +895,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                               ],
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -936,7 +944,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                   </div>
                   </section>
 
-                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                  <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                   <h2 className="text-lg font-semibold text-primary">Публикация и результаты</h2>
                   <div className="grid gap-3 md:grid-cols-2">
                     <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -986,7 +994,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                   </div>
                   </section>
 
-                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                  <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-primary">Стоимость участия</h2>
                     <button
@@ -1003,7 +1011,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                       {selectedGame.prices.map((price) => (
                         <div
                           key={price.id}
-                          className="grid gap-3 md:grid-cols-[2fr_1fr_auto] items-center p-4 border border-slate-200 rounded-2xl"
+                          className="grid gap-3 md:grid-cols-[2fr_1fr_auto] items-center p-4 border border-slate-200 dark:border-slate-700 rounded-2xl"
                         >
                           <input
                             type="text"
@@ -1012,7 +1020,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                               handlePriceChange(price.id, 'name', event.target.value)
                             }
                             placeholder="Название тарифа"
-                            className="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                            className="w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                           />
                           <input
                             type="number"
@@ -1022,7 +1030,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                               handlePriceChange(price.id, 'price', event.target.value)
                             }
                             placeholder="Стоимость"
-                            className="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                            className="w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                           />
                           <button
                             type="button"
@@ -1041,7 +1049,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                   )}
                 </section>
 
-                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h2 className="text-lg font-semibold text-primary">Финансы игры</h2>
                     <button
@@ -1058,14 +1066,14 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                       {selectedGame.finances.map((entry) => (
                         <div
                           key={entry.id}
-                          className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto] items-center p-4 border border-slate-200 rounded-2xl"
+                          className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto] items-center p-4 border border-slate-200 dark:border-slate-700 rounded-2xl"
                         >
                           <select
                             value={entry.type}
                             onChange={(event) =>
                               handleFinanceChange(entry.id, 'type', event.target.value)
                             }
-                            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                            className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                           >
                             <option value="income">Доход</option>
                             <option value="expense">Расход</option>
@@ -1078,7 +1086,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                               handleFinanceChange(entry.id, 'sum', event.target.value)
                             }
                             placeholder="Сумма"
-                            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                            className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                           />
                           <input
                             type="date"
@@ -1086,7 +1094,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                             onChange={(event) =>
                               handleFinanceChange(entry.id, 'date', event.target.value)
                             }
-                            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                            className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                           />
                           <button
                             type="button"
@@ -1103,7 +1111,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                                 handleFinanceChange(entry.id, 'description', event.target.value)
                               }
                               placeholder="Комментарий"
-                              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                             />
                           </div>
                         </div>
@@ -1115,7 +1123,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                     </p>
                   )}
 
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                  <div className="p-4 bg-slate-50 border border-slate-200 dark:border-slate-700 rounded-2xl">
                     <p className="text-sm text-slate-600">
                       Доходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.income)}</span>
                     </p>
@@ -1147,8 +1155,8 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                       disabled={!canEditSelectedGame || !isDirty}
                       className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
                         !canEditSelectedGame || !isDirty
-                          ? 'border-slate-200 text-slate-400 cursor-not-allowed'
-                          : 'border-primary text-primary hover:bg-blue-50'
+                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
+                          : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-violet-500/10'
                       }`}
                     >
                       Отменить изменения
@@ -1157,7 +1165,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                 </fieldset>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full p-6 bg-white border border-dashed rounded-2xl border-slate-200">
+              <div className="flex items-center justify-center h-full p-6 bg-white dark:bg-slate-900/80 border border-dashed rounded-2xl border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-500">Выберите игру из списка слева, чтобы начать редактирование.</p>
               </div>
             )}

@@ -48,7 +48,7 @@ const AdminPage = () => {
           description="Доступ только для администраторов проекта."
           activePage="admin"
         >
-          <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+          <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
             <p className="text-sm text-slate-600">
               У вас нет доступа к административным инструментам. Если вы считаете, что это ошибка,
               обратитесь к главному организатору или поддержке ActQuest.
@@ -73,7 +73,7 @@ const AdminPage = () => {
           {adminTools.map((tool) => (
             <article
               key={tool.id}
-              className="flex flex-col justify-between p-6 bg-white border border-slate-200 rounded-2xl shadow-sm"
+              className="flex flex-col justify-between p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm"
             >
               <div>
                 <h3 className="text-lg font-semibold text-primary">{tool.title}</h3>

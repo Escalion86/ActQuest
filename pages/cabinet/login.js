@@ -286,19 +286,19 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
               </p>
               <ul className="space-y-3 text-sm text-slate-200 md:text-base">
                 <li className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 bg-white rounded-full">
+                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900/80 rounded-full">
                     1
                   </span>
                   <span>Выберите игровой регион, чтобы подключить нужную базу данных ActQuest.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 bg-white rounded-full">
+                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900/80 rounded-full">
                     2
                   </span>
                   <span>Подтвердите вход через Telegram — мы сверим данные с ботом и подготовим рабочую сессию.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 bg-white rounded-full">
+                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900/80 rounded-full">
                     3
                   </span>
                   <span>Вернём вас в нужный раздел кабинета и подгрузим все связанные данные.</span>
@@ -306,7 +306,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
               </ul>
             </div>
 
-            <div className="p-8 bg-white rounded-3xl shadow-2xl">
+            <div className="p-8 bg-white dark:bg-slate-900/80 rounded-3xl shadow-2xl">
               <h2 className="text-2xl font-semibold text-primary">Войти в кабинет</h2>
               <p className="mt-2 text-sm text-slate-500">{callbackDescription}</p>
               {authCallbackSource ? (
@@ -319,7 +319,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                 <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
                   Игровой регион
                   <select
-                    className="px-4 py-3 text-base transition border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    className="px-4 py-3 text-base transition border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
                     value={location}
                     onChange={(event) => setLocation(event.target.value)}
                     disabled={isAuthenticating}
@@ -336,7 +336,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                   <div ref={widgetContainerRef} className="flex items-center justify-center w-full h-20" />
                   {!botName ? (
                     <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
-                      Укажите переменную окружения <code className="px-1 bg-white rounded">NEXT_PUBLIC_TELEGRAM_{location.toUpperCase()}_BOT_NAME</code>, чтобы включить авторизацию.
+                      Укажите переменную окружения <code className="px-1 bg-white dark:bg-slate-900/80 rounded">NEXT_PUBLIC_TELEGRAM_{location.toUpperCase()}_BOT_NAME</code>, чтобы включить авторизацию.
                     </div>
                   ) : null}
                   {isTestAuthEnabled ? (

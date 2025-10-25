@@ -441,27 +441,34 @@ const TeamsPage = ({
       >
         <section className="grid gap-6 md:grid-cols-5">
           <div className="space-y-4 md:col-span-2">
-            <div className="p-4 bg-white border shadow-sm border-slate-200 rounded-2xl">
-              <p className="text-sm font-semibold text-primary">Ваши команды</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Выберите команду, чтобы просмотреть состав и изменить основные
-                параметры.
-              </p>
+            <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-100 shadow-sm rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-violet-600 font-semibold shadow-sm dark:bg-violet-500/40 dark:text-violet-100"
+                aria-hidden="true"
+              >
+                i
+              </span>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-violet-900 dark:text-violet-50">Ваши команды</p>
+                <p className="text-xs leading-5 text-violet-700 dark:text-violet-200">
+                  Выберите команду, чтобы посмотреть состав, управлять статусом и назначить капитана.
+                </p>
+              </div>
             </div>
 
             {teamsForList.length > 0 ? (
               <ul className="space-y-3">
                 {teamsForList.map((team) => (
                   <li key={team.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTeamId(team.id)}
-                      className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 ${
-                        selectedTeamId === team.id
-                          ? 'border-primary bg-blue-50 shadow-sm'
-                          : 'border-slate-200 bg-white'
-                      }`}
-                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTeamId(team.id)}
+                        className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10 ${
+                          selectedTeamId === team.id
+                            ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
+                        }`}
+                      >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-primary">
                           {team.name}
@@ -470,7 +477,7 @@ const TeamsPage = ({
                           className={`text-xs font-medium px-2 py-1 rounded-full ${
                             team.open
                               ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 border border-slate-200'
+                              : 'bg-slate-100 text-slate-600 border border-slate-200 dark:border-slate-700'
                           }`}
                         >
                           {team.open ? 'Открыта' : 'Закрыта'}
@@ -489,7 +496,7 @@ const TeamsPage = ({
                 ))}
               </ul>
             ) : (
-              <div className="p-6 text-sm text-center bg-white border shadow-sm text-slate-500 border-slate-200 rounded-2xl">
+              <div className="p-6 text-sm text-center bg-white dark:bg-slate-900/80 border shadow-sm text-slate-500 border-slate-200 dark:border-slate-700 rounded-2xl">
                 У вас пока нет команд. Создайте команду в телеграм-боте, чтобы
                 она появилась в списке.
               </div>
@@ -499,13 +506,13 @@ const TeamsPage = ({
           <div className="md:col-span-3">
             {selectedTeam ? (
               <div className="space-y-6">
-                <div className="p-5 bg-white border shadow-sm border-slate-200 rounded-2xl">
+                <div className="p-5 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
                   <div className="flex flex-wrap items-center gap-3">
                     <span
                       className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
                         selectedTeam.open
                           ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
-                          : 'text-slate-600 bg-slate-100 border-slate-200'
+                          : 'text-slate-600 bg-slate-100 border-slate-200 dark:border-slate-700'
                       }`}
                     >
                       {selectedTeam.open
@@ -556,7 +563,7 @@ const TeamsPage = ({
                   disabled={!canManageSelectedTeam}
                   className="p-0 m-0 space-y-6 border-0"
                 >
-                  <section className="p-6 space-y-5 bg-white border shadow-sm border-slate-200 rounded-2xl">
+                  <section className="p-6 space-y-5 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
                         <label
@@ -572,7 +579,7 @@ const TeamsPage = ({
                           onChange={(event) =>
                             handleTeamFieldChange('name', event.target.value)
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -619,12 +626,12 @@ const TeamsPage = ({
                           )
                         }
                         rows={5}
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
                   </section>
 
-                  <section className="p-6 space-y-5 bg-white border shadow-sm border-slate-200 rounded-2xl">
+                  <section className="p-6 space-y-5 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-semibold text-primary">
                         Состав команды
@@ -645,7 +652,7 @@ const TeamsPage = ({
                           return (
                             <div
                               key={member.id}
-                              className="p-4 bg-white border shadow-sm border-slate-200 rounded-2xl"
+                              className="p-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl"
                             >
                               <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
@@ -691,8 +698,8 @@ const TeamsPage = ({
                                       disabled={isProcessing}
                                       className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
                                         isProcessing
-                                          ? 'border-slate-200 text-slate-400 cursor-not-allowed'
-                                          : 'border-primary text-primary hover:bg-blue-50'
+                                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
+                                          : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-violet-500/10'
                                       }`}
                                     >
                                       Назначить капитаном
@@ -707,7 +714,7 @@ const TeamsPage = ({
                                       disabled={isProcessing}
                                       className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
                                         isProcessing
-                                          ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
                                           : 'border-rose-200 text-rose-600 hover:bg-rose-50'
                                       }`}
                                     >
@@ -728,7 +735,7 @@ const TeamsPage = ({
                     )}
                   </section>
 
-                  <section className="p-6 space-y-4 bg-white border shadow-sm border-slate-200 rounded-2xl">
+                  <section className="p-6 space-y-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
                     <h2 className="text-lg font-semibold text-primary">
                       Игры команды
                     </h2>
@@ -737,7 +744,7 @@ const TeamsPage = ({
                         {selectedTeam.games.map((game) => (
                           <li
                             key={game.id}
-                            className="p-4 border border-slate-200 rounded-2xl bg-slate-50"
+                            className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-3">
                               <p className="text-sm font-semibold text-primary">
@@ -796,8 +803,8 @@ const TeamsPage = ({
                       disabled={!canManageSelectedTeam || !isDirty}
                       className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
                         !canManageSelectedTeam || !isDirty
-                          ? 'border-slate-200 text-slate-400 cursor-not-allowed'
-                          : 'border-primary text-primary hover:bg-blue-50'
+                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
+                          : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-violet-500/10'
                       }`}
                     >
                       Отменить изменения
@@ -806,7 +813,7 @@ const TeamsPage = ({
                 </fieldset>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full p-6 bg-white border border-dashed border-slate-200 rounded-2xl">
+              <div className="flex items-center justify-center h-full p-6 bg-white dark:bg-slate-900/80 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
                 <p className="text-sm text-slate-500">
                   Выберите команду из списка слева, чтобы просмотреть детали.
                 </p>
