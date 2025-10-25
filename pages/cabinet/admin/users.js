@@ -365,7 +365,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
           description="Доступ ограничен: административные права отсутствуют."
           activePage="admin"
         >
-          <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+          <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
             <p className="text-sm text-slate-600">
               У вас нет доступа к управлению пользователями. Если вы считаете, что это ошибка, обратитесь к
               главному организатору.
@@ -388,14 +388,14 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
       >
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-2 space-y-4">
-            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
               <p className="text-sm font-semibold text-primary">Все пользователи</p>
               <p className="mt-1 text-xs text-slate-500">
                 Всего: {users.length}. Выберите участника, чтобы просмотреть детали и обновить его роль.
               </p>
             </div>
 
-            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3">
+            <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-3">
               <div>
                 <label htmlFor="user-search" className="text-xs font-semibold text-slate-500">
                   Поиск
@@ -406,7 +406,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Введите имя, ник или Telegram ID"
-                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary"
+                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
 
@@ -418,7 +418,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                   id="user-role-filter"
                   value={roleFilter}
                   onChange={(event) => setRoleFilter(event.target.value)}
-                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary"
+                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
                 >
                   {filterOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -445,7 +445,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                         className={`w-full text-left p-4 border rounded-2xl transition ${
                           isActive
                             ? 'border-primary bg-blue-50 shadow-sm'
-                            : 'border-slate-200 bg-white hover:border-primary hover:bg-blue-50'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -473,7 +473,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                 })}
               </ul>
             ) : (
-              <div className="p-6 text-sm text-center text-slate-500 bg-white border border-slate-200 rounded-2xl shadow-sm">
+              <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 Пользователи не найдены. Измените параметры фильтра или сбросьте поиск.
               </div>
             )}
@@ -500,7 +500,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                   </div>
                 )}
 
-                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-6">
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-6">
                   <div>
                     <h2 className="text-lg font-semibold text-primary">
                       {selectedUser.name || 'Без имени'}
@@ -520,7 +520,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                       <p className="text-xs text-emerald-600">Игры</p>
                       <p className="mt-1 text-xl font-semibold text-emerald-700">{selectedUser.gamesCount}</p>
                     </div>
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                    <div className="p-4 bg-slate-50 border border-slate-200 dark:border-slate-700 rounded-xl">
                       <p className="text-xs text-slate-600">Последнее обновление</p>
                       <p className="mt-1 text-sm text-slate-700">
                         {selectedUser.updatedAt
@@ -538,7 +538,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                       id="user-role"
                       value={selectedUser.role}
                       onChange={(event) => handleRoleChange(event.target.value)}
-                      className="w-full px-4 py-3 mt-2 text-sm border rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary"
+                      className="w-full px-4 py-3 mt-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
                     >
                       {roleOptions.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -567,7 +567,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                       disabled={!isDirty}
                       className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
                         !isDirty
-                          ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
                           : 'border-primary text-primary hover:bg-blue-50'
                       }`}
                     >
@@ -576,7 +576,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                   </div>
                 </section>
 
-                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
                   <h3 className="text-base font-semibold text-primary">Команды пользователя</h3>
 
                   {selectedUser.teams.length > 0 ? (
@@ -584,7 +584,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                       {selectedUser.teams.map((team) => (
                         <li
                           key={team.id}
-                          className="p-4 border border-slate-200 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+                          className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
                         >
                           <div>
                             <p className="text-sm font-semibold text-primary">{team.name || 'Без названия'}</p>
@@ -607,7 +607,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                   )}
                 </section>
 
-                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
                   <h3 className="text-base font-semibold text-primary">Дополнительная информация</h3>
 
                   <div className="grid gap-3 md:grid-cols-2">
@@ -654,7 +654,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                 </section>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full p-6 bg-white border border-dashed border-slate-200 rounded-2xl">
+              <div className="flex items-center justify-center h-full p-6 bg-white dark:bg-slate-900/80 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
                 <p className="text-sm text-slate-500">Выберите пользователя из списка слева, чтобы просмотреть детали.</p>
               </div>
             )}
