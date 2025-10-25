@@ -151,7 +151,7 @@ const CabinetDashboard = ({
           </p>
           <a
             href="/cabinet/login"
-          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-slate-900 bg-white rounded-xl"
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900/80 rounded-xl"
         >
             Перейти к авторизации
           </a>
@@ -174,51 +174,55 @@ const CabinetDashboard = ({
           {normalizedStats.map((stat) => (
             <article
               key={stat.id}
-              className="p-5 transition-shadow bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md"
+              className="p-5 transition-shadow bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md dark:bg-slate-900/80 dark:border-slate-700 dark:hover:shadow-lg"
             >
-              <p className="text-sm font-medium text-slate-500">{stat.title}</p>
-              <p className="mt-3 text-3xl font-semibold text-primary">{stat.value}</p>
-              <p className="mt-2 text-xs font-medium text-slate-500">{stat.description}</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{stat.title}</p>
+              <p className="mt-3 text-3xl font-semibold text-primary dark:text-slate-100">{stat.value}</p>
+              <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">{stat.description}</p>
             </article>
           ))}
         </section>
 
         <section className="grid gap-6 md:grid-cols-5">
-          <div className="md:col-span-3 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
-            <h3 className="text-lg font-semibold text-primary">Быстрые действия</h3>
-            <p className="mt-1 text-sm text-slate-500">
+          <div className="md:col-span-3 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm dark:bg-slate-900/80 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-primary dark:text-slate-100">Быстрые действия</h3>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Сосредоточьтесь на задачах — переходите к нужным разделам без лишних шагов.
             </p>
             <div className="mt-4 space-y-4">
               {quickActions.map((action) => (
-                <a key={action.id} href={action.href} className="block p-4 transition bg-slate-50 rounded-xl hover:bg-blue-50">
-                  <p className="text-sm font-semibold text-primary">{action.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">{action.description}</p>
+                <a
+                  key={action.id}
+                  href={action.href}
+                  className="block p-4 transition bg-slate-50 rounded-xl hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-500/10"
+                >
+                  <p className="text-sm font-semibold text-primary dark:text-slate-100">{action.title}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{action.description}</p>
                 </a>
               ))}
             </div>
           </div>
 
-          <div className="md:col-span-2 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
-            <h3 className="text-lg font-semibold text-primary">Лента активности</h3>
-            <p className="mt-1 text-sm text-slate-500">
+          <div className="md:col-span-2 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm dark:bg-slate-900/80 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-primary dark:text-slate-100">Лента активности</h3>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Последние изменения, которые произошли в вашем кабинете.
             </p>
             <ul className="mt-4 space-y-4">
               {activityItems.length > 0 ? (
                 activityItems.map((item) => (
-                  <li key={item.id} className="p-4 bg-slate-50 rounded-xl">
-                    <p className="text-sm font-semibold text-primary">{item.title}</p>
-                    <p className="mt-2 text-xs text-slate-500">{item.details}</p>
-                    <div className="flex items-center justify-between mt-3 text-xs text-slate-500">
+                  <li key={item.id} className="p-4 bg-slate-50 rounded-xl dark:bg-slate-800">
+                    <p className="text-sm font-semibold text-primary dark:text-slate-100">{item.title}</p>
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{item.details}</p>
+                    <div className="flex items-center justify-between mt-3 text-xs text-slate-500 dark:text-slate-400">
                       <span>{item.category}</span>
                       <span title={item.absoluteTime}>{item.relativeTime}</span>
                     </div>
                   </li>
                 ))
               ) : (
-                <li className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-sm text-slate-500">Недавняя активность не найдена.</p>
+                <li className="p-4 bg-slate-50 rounded-xl dark:bg-slate-800">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Недавняя активность не найдена.</p>
                 </li>
               )}
             </ul>
@@ -233,7 +237,7 @@ const CabinetDashboard = ({
           <div className="flex flex-col gap-3 mt-6 md:flex-row">
             <a
               href="/cabinet/games"
-              className="inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-blue-700 bg-white rounded-xl shadow-sm"
+              className="inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-blue-700 dark:text-blue-200 bg-white dark:bg-slate-900/80 rounded-xl shadow-sm"
             >
               Перейти к списку игр
             </a>

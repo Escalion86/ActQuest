@@ -430,7 +430,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
           description="Доступ ограничен: административные права отсутствуют."
           activePage="admin"
         >
-          <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+          <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
             <p className="text-sm text-slate-600">
               У вас нет доступа к управлению командами. Если вы считаете, что это ошибка, обратитесь к главному
               организатору.
@@ -453,14 +453,14 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
       >
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-2 space-y-4">
-            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
               <p className="text-sm font-semibold text-primary">Все команды</p>
               <p className="mt-1 text-xs text-slate-500">
                 Всего: {summary.total}. Открытых: {summary.open}. Закрытых: {summary.closed}.
               </p>
             </div>
 
-            <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-3">
+            <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-3">
               <div>
                 <label htmlFor="team-search" className="text-xs font-semibold text-slate-500">
                   Поиск
@@ -471,7 +471,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Введите название команды или участника"
-                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary"
+                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
 
@@ -483,7 +483,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                   id="team-visibility-filter"
                   value={visibilityFilter}
                   onChange={(event) => setVisibilityFilter(event.target.value)}
-                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary"
+                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
                 >
                   <option value="all">Все команды</option>
                   <option value="open">Открытые</option>
@@ -502,7 +502,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                       className={`w-full text-left p-4 border rounded-2xl transition ${
                         selectedTeamId === team.id
                           ? 'border-primary bg-blue-50 shadow-sm'
-                          : 'border-slate-200 bg-white hover:border-primary hover:bg-blue-50'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -514,7 +514,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                           className={`text-xs font-medium px-2 py-1 rounded-full ${
                             team.open
                               ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 border border-slate-200'
+                              : 'bg-slate-100 text-slate-600 border border-slate-200 dark:border-slate-700'
                           }`}
                         >
                           {team.open ? 'Открыта' : 'Закрыта'}
@@ -526,7 +526,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                 ))}
               </ul>
             ) : (
-              <div className="p-6 text-sm text-center text-slate-500 bg-white border border-slate-200 rounded-2xl shadow-sm">
+              <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 Команды не найдены. Измените параметры фильтра или сбросьте поиск.
               </div>
             )}
@@ -553,13 +553,13 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                   </div>
                 )}
 
-                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
                   <div className="flex flex-wrap items-center gap-3">
                     <span
                       className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
                         selectedTeam.open
                           ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
-                          : 'text-slate-600 bg-slate-100 border-slate-200'
+                          : 'text-slate-600 bg-slate-100 border-slate-200 dark:border-slate-700'
                       }`}
                     >
                       {selectedTeam.open ? 'Открыта для заявок' : 'Закрытый состав'}
@@ -584,7 +584,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                 </section>
 
                 <fieldset disabled={!canManageSelectedTeam} className="space-y-6 border-0 p-0 m-0">
-                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                  <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
                         <label htmlFor="team-name" className="text-sm font-semibold text-primary">
@@ -595,7 +595,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                           type="text"
                           value={selectedTeam.name}
                           onChange={(event) => handleTeamFieldChange('name', event.target.value)}
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -626,12 +626,12 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                         value={selectedTeam.description}
                         onChange={(event) => handleTeamFieldChange('description', event.target.value)}
                         rows={5}
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
                   </section>
 
-                  <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-5">
+                  <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-semibold text-primary">Состав команды</h2>
                       {selectedTeam.captain && (
@@ -650,7 +650,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                           return (
                             <div
                               key={member.id}
-                              className="p-4 border border-slate-200 rounded-2xl bg-white shadow-sm"
+                              className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-900/80 shadow-sm"
                             >
                               <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
@@ -688,7 +688,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                                       disabled={isProcessing}
                                       className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
                                         isProcessing
-                                          ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
                                           : 'border-primary text-primary hover:bg-blue-50'
                                       }`}
                                     >
@@ -702,7 +702,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                                       disabled={isProcessing}
                                       className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
                                         isProcessing
-                                          ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
                                           : 'border-rose-200 text-rose-600 hover:bg-rose-50'
                                       }`}
                                     >
@@ -741,7 +741,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                       disabled={!canManageSelectedTeam || !isDirty}
                       className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
                         !canManageSelectedTeam || !isDirty
-                          ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
                           : 'border-primary text-primary hover:bg-blue-50'
                       }`}
                     >
@@ -750,7 +750,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                   </div>
                 </fieldset>
 
-                <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
                   <h3 className="text-base font-semibold text-primary">Игры команды</h3>
 
                   {selectedTeam.games?.length > 0 ? (
@@ -758,7 +758,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                       {selectedTeam.games.map((game) => (
                         <li
                           key={game.id}
-                          className="p-4 border border-slate-200 rounded-2xl flex flex-col gap-1 md:flex-row md:items-center md:justify-between"
+                          className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-1 md:flex-row md:items-center md:justify-between"
                         >
                           <div>
                             <p className="text-sm font-semibold text-primary">{game.name || 'Без названия'}</p>
@@ -780,7 +780,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                 </section>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full p-6 bg-white border border-dashed border-slate-200 rounded-2xl">
+              <div className="flex items-center justify-center h-full p-6 bg-white dark:bg-slate-900/80 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
                 <p className="text-sm text-slate-500">Выберите команду из списка слева, чтобы просмотреть детали.</p>
               </div>
             )}

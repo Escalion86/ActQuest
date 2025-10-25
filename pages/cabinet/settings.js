@@ -106,7 +106,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
           description="Обновление публичной информации доступно только администраторам."
           activePage="settings"
         >
-          <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+          <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
             <p className="text-sm text-slate-600">
               У вас нет прав на изменение общих настроек. Свяжитесь с администратором проекта, чтобы получить доступ.
             </p>
@@ -126,7 +126,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
         description="Настройте основные контакты, уведомления и режимы доступа."
         activePage="settings"
       >
-        <section className="p-6 space-y-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+        <section className="p-6 space-y-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label htmlFor="settings-support-phone" className="text-sm font-semibold text-primary">
@@ -137,7 +137,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
                 type="tel"
                 value={siteSettings.supportPhone}
                 onChange={(event) => handleSettingsChange('supportPhone', event.target.value)}
-                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                 placeholder="Например, +7 (900) 000-00-00"
               />
             </div>
@@ -150,7 +150,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
                 type="url"
                 value={siteSettings.chatUrl}
                 onChange={(event) => handleSettingsChange('chatUrl', event.target.value)}
-                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                 placeholder="https://t.me/actquest"
               />
             </div>
@@ -165,7 +165,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
               value={siteSettings.announcement}
               onChange={(event) => handleSettingsChange('announcement', event.target.value)}
               rows={5}
-              className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+              className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
             />
           </div>
 
