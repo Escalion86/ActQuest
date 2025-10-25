@@ -448,11 +448,19 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
       >
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-2 space-y-4">
-            <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-              <p className="text-sm font-semibold text-primary">Ваши игры</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Выберите игру для редактирования основных настроек и финансовой информации.
-              </p>
+            <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-100 shadow-sm rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-violet-600 font-semibold shadow-sm dark:bg-violet-500/40 dark:text-violet-100"
+                aria-hidden="true"
+              >
+                i
+              </span>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-violet-900 dark:text-violet-50">Ваши игры</p>
+                <p className="text-xs leading-5 text-violet-700 dark:text-violet-200">
+                  Выберите игру, чтобы открыть ключевые настройки, управлять составами и следить за финансами.
+                </p>
+              </div>
             </div>
 
             {games.length > 0 ? (

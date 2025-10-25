@@ -441,12 +441,19 @@ const TeamsPage = ({
       >
         <section className="grid gap-6 md:grid-cols-5">
           <div className="space-y-4 md:col-span-2">
-            <div className="p-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
-              <p className="text-sm font-semibold text-primary">Ваши команды</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Выберите команду, чтобы просмотреть состав и изменить основные
-                параметры.
-              </p>
+            <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-100 shadow-sm rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-violet-600 font-semibold shadow-sm dark:bg-violet-500/40 dark:text-violet-100"
+                aria-hidden="true"
+              >
+                i
+              </span>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-violet-900 dark:text-violet-50">Ваши команды</p>
+                <p className="text-xs leading-5 text-violet-700 dark:text-violet-200">
+                  Выберите команду, чтобы посмотреть состав, управлять статусом и назначить капитана.
+                </p>
+              </div>
             </div>
 
             {teamsForList.length > 0 ? (
