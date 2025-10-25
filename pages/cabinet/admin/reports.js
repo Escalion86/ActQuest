@@ -132,7 +132,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
           description="Доступ ограничен: административные права отсутствуют."
           activePage="admin"
         >
-          <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+          <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
             <p className="text-sm text-slate-600">
               У вас нет доступа к статистике проекта. Если вы считаете, что это ошибка, обратитесь к главному
               организатору.
@@ -157,7 +157,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
           {summarySections.map((section) => (
             <article
               key={section.id}
-              className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4"
+              className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4"
             >
               <h2 className="text-lg font-semibold text-primary">{section.title}</h2>
               <ul className="space-y-2">
@@ -175,7 +175,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
         </section>
 
         <section className="grid gap-6 mt-6 md:grid-cols-2">
-          <article className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+          <article className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-primary">Распределение ролей</h2>
               <span className="text-xs text-slate-500">
@@ -211,14 +211,14 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
             )}
           </article>
 
-          <article className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+          <article className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
             <h2 className="text-lg font-semibold text-primary">Топ команд по активности</h2>
             {initialReports.topTeams.length > 0 ? (
               <ul className="space-y-3">
                 {initialReports.topTeams.map((team) => (
                   <li
                     key={team.id}
-                    className="p-4 border border-slate-200 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+                    className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
                   >
                     <div>
                       <p className="text-sm font-semibold text-primary">{team.name}</p>
@@ -240,14 +240,14 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
           </article>
         </section>
 
-        <section className="mt-6 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+        <section className="mt-6 p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
           <h2 className="text-lg font-semibold text-primary">Недавняя активность</h2>
           {initialReports.recentActivity.length > 0 ? (
             <ul className="space-y-3">
               {initialReports.recentActivity.map((activity) => (
                 <li
                   key={activity.id}
-                  className="p-4 border border-slate-200 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+                  className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
                 >
                   <div>
                     <p className="text-sm font-semibold text-primary">{activity.name}</p>

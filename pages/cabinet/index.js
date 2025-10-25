@@ -151,7 +151,7 @@ const CabinetDashboard = ({
           </p>
           <a
             href="/cabinet/login"
-          className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-slate-900 bg-white rounded-xl"
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900/80 rounded-xl"
         >
             Перейти к авторизации
           </a>
@@ -237,7 +237,7 @@ const CabinetDashboard = ({
           <div className="flex flex-col gap-3 mt-6 md:flex-row">
             <a
               href="/cabinet/games"
-              className="inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-blue-700 bg-white rounded-xl shadow-sm"
+              className="inline-flex items-center justify-center px-5 py-3 text-sm font-semibold text-blue-700 dark:text-blue-200 bg-white dark:bg-slate-900/80 rounded-xl shadow-sm"
             >
               Перейти к списку игр
             </a>

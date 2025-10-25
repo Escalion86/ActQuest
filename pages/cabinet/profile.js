@@ -142,7 +142,7 @@ const ProfilePage = ({ initialProfile }) => {
         description="Обновите контакты, чтобы участники и коллеги могли быстро связаться с вами."
         activePage="profile"
       >
-        <section className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+        <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
@@ -154,7 +154,7 @@ const ProfilePage = ({ initialProfile }) => {
                   type="text"
                   value={formState.name}
                   onChange={(event) => handleChange('name', event.target.value)}
-                  className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                  className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                 />
               </div>
 
@@ -167,7 +167,7 @@ const ProfilePage = ({ initialProfile }) => {
                   type="text"
                   value={formState.username ?? ''}
                   onChange={(event) => handleChange('username', event.target.value)}
-                  className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                  className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                   placeholder="Например, quest_master"
                 />
               </div>
@@ -182,7 +182,7 @@ const ProfilePage = ({ initialProfile }) => {
                 type="tel"
                 value={formState.phone}
                 onChange={(event) => handleChange('phone', event.target.value)}
-                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                 placeholder="+7 900 000-00-00"
               />
             </div>
@@ -196,7 +196,7 @@ const ProfilePage = ({ initialProfile }) => {
                 value={formState.about}
                 onChange={(event) => handleChange('about', event.target.value)}
                 rows={5}
-                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 rounded-xl focus:border-primary focus:outline-none"
+                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                 placeholder="Расскажите об опыте, любимых форматах и роли в команде."
               />
             </div>
@@ -215,7 +215,7 @@ const ProfilePage = ({ initialProfile }) => {
                       className={`px-4 py-2 text-sm font-semibold rounded-xl transition ${
                         isActive
                           ? 'text-white bg-primary shadow-sm'
-                          : 'text-slate-600 border border-slate-200 hover:border-primary hover:text-primary'
+                          : 'text-slate-600 border border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary'
                       }`}
                     >
                       {preference}
