@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useSession } from 'next-auth/react'
@@ -58,6 +58,10 @@ const TeamsPage = ({
     currentTelegramId === null || currentTelegramId === undefined
       ? null
       : String(currentTelegramId)
+  const currentTelegramIdNumber =
+    currentTelegramId === null || currentTelegramId === undefined
+      ? null
+      : Number(currentTelegramId)
 
   const [teams, setTeams] = useState(initialTeams)
   const [persistedTeams, setPersistedTeams] = useState(initialTeams)
@@ -65,9 +69,21 @@ const TeamsPage = ({
     initialTeams[0]?.id ?? null
   )
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
+  const [newTeamName, setNewTeamName] = useState('')
+  const [newTeamDescription, setNewTeamDescription] = useState('')
+  const [newTeamOpen, setNewTeamOpen] = useState(true)
+  const [createFeedback, setCreateFeedback] = useState(null)
+  const [isCreatingTeam, setIsCreatingTeam] = useState(false)
+  const [joinTeamId, setJoinTeamId] = useState('')
+  const [joinFeedback, setJoinFeedback] = useState(null)
+  const [isJoiningTeam, setIsJoiningTeam] = useState(false)
+  const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
+  const copyTimeoutRef = useRef(null)
 
   useEffect(() => {
     setTeams(initialTeams)
@@ -86,6 +102,23 @@ const TeamsPage = ({
     setMemberActionId(null)
     setIsEditModalOpen(false)
   }, [selectedTeamId])
+
+  useEffect(() => {
+    if (!isEditModalOpen) {
+      setIsTeamIdCopied(false)
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+        copyTimeoutRef.current = null
+      }
+    }
+  }, [isEditModalOpen])
+
+  useEffect(() => () => {
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current)
+      copyTimeoutRef.current = null
+    }
+  }, [])
 
   const selectedTeam = useMemo(
     () => teams.find((team) => team.id === selectedTeamId) ?? null,
@@ -121,6 +154,63 @@ const TeamsPage = ({
   }, [currentTelegramIdString, selectedTeam])
 
   const canManageSelectedTeam = isAdmin || isTeamCaptain
+  const canUseSelfServiceTeams =
+    Boolean(location) && Number.isFinite(currentTelegramIdNumber)
+
+  const sortTeamsByUpdatedAt = useCallback((items) => {
+    if (!Array.isArray(items)) {
+      return []
+    }
+
+    return [...items].sort((first, second) => {
+      const firstTime = first?.updatedAt ? new Date(first.updatedAt).getTime() : 0
+      const secondTime = second?.updatedAt
+        ? new Date(second.updatedAt).getTime()
+        : 0
+
+      if (Number.isNaN(secondTime) && Number.isNaN(firstTime)) {
+        return 0
+      }
+
+      if (Number.isNaN(firstTime)) {
+        return 1
+      }
+
+      if (Number.isNaN(secondTime)) {
+        return -1
+      }
+
+      return secondTime - firstTime
+    })
+  }, [])
+
+  const fetchTeamsSnapshot = useCallback(
+    async (teamIds) => {
+      if (!location || !Array.isArray(teamIds) || teamIds.length === 0) {
+        return []
+      }
+
+      const params = new URLSearchParams({ location })
+      teamIds
+        .map((id) => (typeof id === 'string' ? id : id?.toString?.() ?? ''))
+        .filter((id) => id.length > 0)
+        .forEach((id) => params.append('teamIds', id))
+
+      if ([...params.keys()].filter((key) => key === 'teamIds').length === 0) {
+        return []
+      }
+
+      const response = await fetch(`/api/cabinet/teams?${params.toString()}`)
+      const json = await response.json()
+
+      if (!response.ok || json?.success === false) {
+        throw new Error(json?.error || 'Не удалось загрузить данные команды')
+      }
+
+      return Array.isArray(json?.data) ? json.data : []
+    },
+    [location]
+  )
 
   const updateSelectedTeam = useCallback(
     (updater) => {
@@ -174,6 +264,38 @@ const TeamsPage = ({
     setFeedback(null)
   }, [canManageSelectedTeam, persistedTeams, selectedTeamId])
 
+  const handleOpenCreateModal = useCallback(() => {
+    setCreateFeedback(null)
+    setIsCreateModalOpen(true)
+  }, [])
+
+  const handleCloseCreateModal = useCallback(() => {
+    if (isCreatingTeam) {
+      return
+    }
+
+    setIsCreateModalOpen(false)
+    setCreateFeedback(null)
+    setNewTeamName('')
+    setNewTeamDescription('')
+    setNewTeamOpen(true)
+  }, [isCreatingTeam])
+
+  const handleOpenJoinModal = useCallback(() => {
+    setJoinFeedback(null)
+    setIsJoinModalOpen(true)
+  }, [])
+
+  const handleCloseJoinModal = useCallback(() => {
+    if (isJoiningTeam) {
+      return
+    }
+
+    setIsJoinModalOpen(false)
+    setJoinFeedback(null)
+    setJoinTeamId('')
+  }, [isJoiningTeam])
+
   const handleOpenEditModal = useCallback(() => {
     if (!canManageSelectedTeam) {
       return
@@ -189,6 +311,320 @@ const TeamsPage = ({
 
     setIsEditModalOpen(false)
   }, [isSaving])
+
+  const handleCopyTeamId = useCallback(() => {
+    const value = selectedTeam?.id
+
+    if (!value || typeof window === 'undefined') {
+      return
+    }
+
+    const copyText = value.toString()
+
+    const copyPromise = navigator?.clipboard?.writeText
+      ? navigator.clipboard.writeText(copyText)
+      : new Promise((resolve, reject) => {
+          try {
+            const textarea = document.createElement('textarea')
+            textarea.value = copyText
+            textarea.setAttribute('readonly', '')
+            textarea.style.position = 'absolute'
+            textarea.style.left = '-9999px'
+            document.body.appendChild(textarea)
+            textarea.select()
+            const successful = document.execCommand('copy')
+            document.body.removeChild(textarea)
+            if (successful) {
+              resolve()
+            } else {
+              reject(new Error('Copy command failed'))
+            }
+          } catch (error) {
+            reject(error)
+          }
+        })
+
+    copyPromise
+      .then(() => {
+        setIsTeamIdCopied(true)
+        if (copyTimeoutRef.current) {
+          clearTimeout(copyTimeoutRef.current)
+        }
+        copyTimeoutRef.current = setTimeout(() => {
+          setIsTeamIdCopied(false)
+          copyTimeoutRef.current = null
+        }, 2000)
+      })
+      .catch(() => {
+        setIsTeamIdCopied(false)
+      })
+  }, [copyTimeoutRef, selectedTeam])
+
+  const handleCreateTeam = useCallback(async () => {
+    const trimmedName = newTeamName.trim()
+    const trimmedDescription = newTeamDescription.trim()
+
+    if (!trimmedName) {
+      setCreateFeedback({
+        type: 'error',
+        message: 'Введите название команды',
+      })
+      return
+    }
+
+    if (!location) {
+      setCreateFeedback({
+        type: 'error',
+        message:
+          'Не удалось определить площадку пользователя. Создание команды недоступно.',
+      })
+      return
+    }
+
+    if (!Number.isFinite(currentTelegramIdNumber)) {
+      setCreateFeedback({
+        type: 'error',
+        message:
+          'Чтобы управлять командами, привяжите Telegram-аккаунт в профиле.',
+      })
+      return
+    }
+
+    setIsCreatingTeam(true)
+    setCreateFeedback(null)
+
+    try {
+      const createPayload = buildTeamUpdatePayload({
+        name: trimmedName,
+        description: trimmedDescription,
+        open: Boolean(newTeamOpen),
+      })
+
+      const response = await fetch(
+        `/api/${location}/custom?collection=teams`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: createPayload }),
+        }
+      )
+
+      const json = await response.json()
+
+      if (!response.ok || json?.success === false) {
+        throw new Error(json?.error || 'Не удалось создать команду')
+      }
+
+      const createdTeamIdRaw = json?.data?._id ?? json?.data?.id
+      const createdTeamId =
+        typeof createdTeamIdRaw === 'string'
+          ? createdTeamIdRaw
+          : createdTeamIdRaw?.toString?.() ?? null
+
+      if (!createdTeamId) {
+        throw new Error('Не удалось получить идентификатор новой команды')
+      }
+
+      const membershipResponse = await fetch(
+        `/api/${location}/custom?collection=teamsusers`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: {
+              teamId: createdTeamId,
+              userTelegramId: currentTelegramIdNumber,
+              role: 'capitan',
+            },
+          }),
+        }
+      )
+
+      const membershipJson = await membershipResponse.json()
+
+      if (!membershipResponse.ok || membershipJson?.success === false) {
+        throw new Error(
+          membershipJson?.error || 'Не удалось добавить вас в новую команду'
+        )
+      }
+
+      const [freshTeam] = await fetchTeamsSnapshot([createdTeamId])
+
+      if (!freshTeam) {
+        throw new Error(
+          'Команда создана, но не удалось обновить список. Обновите страницу.'
+        )
+      }
+
+      setTeams((prev) =>
+        sortTeamsByUpdatedAt([
+          ...prev.filter((item) => item.id !== freshTeam.id),
+          freshTeam,
+        ])
+      )
+      setPersistedTeams((prev) =>
+        sortTeamsByUpdatedAt([
+          ...prev.filter((item) => item.id !== freshTeam.id),
+          freshTeam,
+        ])
+      )
+      setSelectedTeamId(freshTeam.id)
+
+      setIsCreateModalOpen(false)
+      setNewTeamName('')
+      setNewTeamDescription('')
+      setNewTeamOpen(true)
+      setFeedback({
+        type: 'success',
+        message: `Команда «${freshTeam.name || trimmedName}» создана. Вы назначены капитаном.`,
+      })
+    } catch (error) {
+      console.error('Failed to create team', error)
+      setCreateFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось создать команду',
+      })
+    } finally {
+      setIsCreatingTeam(false)
+    }
+  }, [
+    currentTelegramIdNumber,
+    fetchTeamsSnapshot,
+    location,
+    newTeamDescription,
+    newTeamName,
+    newTeamOpen,
+    sortTeamsByUpdatedAt,
+  ])
+
+  const handleJoinTeam = useCallback(async () => {
+    const trimmedTeamId = joinTeamId.trim()
+
+    if (!trimmedTeamId) {
+      setJoinFeedback({
+        type: 'error',
+        message: 'Введите идентификатор команды',
+      })
+      return
+    }
+
+    if (!location) {
+      setJoinFeedback({
+        type: 'error',
+        message:
+          'Не удалось определить площадку пользователя. Вступление в команду недоступно.',
+      })
+      return
+    }
+
+    if (!Number.isFinite(currentTelegramIdNumber)) {
+      setJoinFeedback({
+        type: 'error',
+        message:
+          'Чтобы присоединяться к командам, привяжите Telegram-аккаунт в профиле.',
+      })
+      return
+    }
+
+    if (teams.some((team) => team.id === trimmedTeamId)) {
+      setJoinFeedback({
+        type: 'error',
+        message: 'Вы уже состоите в этой команде',
+      })
+      return
+    }
+
+    setIsJoiningTeam(true)
+    setJoinFeedback(null)
+
+    try {
+      const teamResponse = await fetch(
+        `/api/${location}/teams/${trimmedTeamId}`
+      )
+      const teamJson = await teamResponse.json()
+
+      if (!teamResponse.ok || teamJson?.success === false) {
+        throw new Error(teamJson?.error || 'Команда не найдена')
+      }
+
+      const rawOpen = teamJson?.data?.open
+      const isTeamOpen =
+        rawOpen === true || rawOpen === 'true' || rawOpen === 1 || rawOpen === '1'
+
+      if (!isTeamOpen) {
+        throw new Error(
+          'В этой команде закрыт набор. Попросите капитана добавить вас вручную.'
+        )
+      }
+
+      const membershipResponse = await fetch(
+        `/api/${location}/custom?collection=teamsusers`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: {
+              teamId: trimmedTeamId,
+              userTelegramId: currentTelegramIdNumber,
+              role: 'participant',
+            },
+          }),
+        }
+      )
+
+      const membershipJson = await membershipResponse.json()
+
+      if (!membershipResponse.ok || membershipJson?.success === false) {
+        throw new Error(
+          membershipJson?.error || 'Не удалось присоединиться к команде'
+        )
+      }
+
+      const [freshTeam] = await fetchTeamsSnapshot([trimmedTeamId])
+
+      if (!freshTeam) {
+        throw new Error(
+          'Вы вступили в команду, но не удалось обновить список. Обновите страницу.'
+        )
+      }
+
+      setTeams((prev) =>
+        sortTeamsByUpdatedAt([
+          ...prev.filter((item) => item.id !== freshTeam.id),
+          freshTeam,
+        ])
+      )
+      setPersistedTeams((prev) =>
+        sortTeamsByUpdatedAt([
+          ...prev.filter((item) => item.id !== freshTeam.id),
+          freshTeam,
+        ])
+      )
+      setSelectedTeamId(freshTeam.id)
+
+      setIsJoinModalOpen(false)
+      setJoinTeamId('')
+      setFeedback({
+        type: 'success',
+        message: `Вы присоединились к команде «${freshTeam.name || 'без названия'}».`,
+      })
+    } catch (error) {
+      console.error('Failed to join team', error)
+      setJoinFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось присоединиться к команде',
+      })
+    } finally {
+      setIsJoiningTeam(false)
+    }
+  }, [
+    currentTelegramIdNumber,
+    fetchTeamsSnapshot,
+    location,
+    joinTeamId,
+    sortTeamsByUpdatedAt,
+    teams,
+  ])
 
   const handleSaveTeam = useCallback(async () => {
     if (!selectedTeam || !location || !canManageSelectedTeam) {
@@ -427,6 +863,12 @@ const TeamsPage = ({
     return 'Изменять данные может только администратор или капитан команды. Вы можете просматривать информацию.'
   }, [canManageSelectedTeam, currentTelegramIdString, selectedTeam])
 
+  const isCreateActionDisabled =
+    isCreatingTeam || !canUseSelfServiceTeams || newTeamName.trim().length === 0
+
+  const isJoinActionDisabled =
+    isJoiningTeam || !canUseSelfServiceTeams || joinTeamId.trim().length === 0
+
   const teamsForList = useMemo(() => {
     if (!Array.isArray(teams)) {
       return []
@@ -475,6 +917,43 @@ const TeamsPage = ({
               </div>
             </div>
 
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleOpenCreateModal}
+                disabled={!canUseSelfServiceTeams}
+                title={
+                  canUseSelfServiceTeams
+                    ? undefined
+                    : 'Функция доступна после привязки Telegram и выбора площадки'
+                }
+                className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 ${
+                  canUseSelfServiceTeams
+                    ? 'bg-primary text-white hover:bg-blue-700'
+                    : 'bg-slate-300 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                }`}
+              >
+                Создать команду
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenJoinModal}
+                disabled={!canUseSelfServiceTeams}
+                title={
+                  canUseSelfServiceTeams
+                    ? undefined
+                    : 'Функция доступна после привязки Telegram и выбора площадки'
+                }
+                className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  canUseSelfServiceTeams
+                    ? 'border border-primary text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                    : 'border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'
+                }`}
+              >
+                Присоединиться по id
+              </button>
+            </div>
+
             {teamsForList.length > 0 ? (
               <ul className="space-y-3">
                 {teamsForList.map((team) => (
@@ -515,9 +994,8 @@ const TeamsPage = ({
                 ))}
               </ul>
             ) : (
-              <div className="p-6 text-sm text-center bg-white dark:bg-slate-900/80 border shadow-sm text-slate-500 border-slate-200 dark:border-slate-700 rounded-2xl">
-                У вас пока нет команд. Создайте команду в телеграм-боте, чтобы
-                она появилась в списке.
+              <div className="p-6 text-sm text-center bg-white dark:bg-slate-900/80 border shadow-sm text-slate-500 dark:text-slate-300 border-slate-200 dark:border-slate-700 rounded-2xl">
+                У вас пока нет команд. Нажмите «Создать команду», чтобы сформировать новую, или используйте кнопку вступления, если знаете id команды.
               </div>
             )}
           </div>
@@ -782,10 +1260,22 @@ const TeamsPage = ({
                             }
                             className="w-4 h-4 rounded text-primary border-slate-300"
                           />
-                          <span className="text-sm text-slate-600">
-                            Разрешить новым участникам подавать заявки
+                          <span className="text-sm text-slate-600 dark:text-slate-300">
+                            Разрешить новым участникам присоединяться к команде по id
                           </span>
                         </div>
+                        {selectedTeam.open ? (
+                          <button
+                            type="button"
+                            onClick={handleCopyTeamId}
+                            className="mt-2 inline-flex w-full items-center justify-between rounded-lg border border-dashed border-primary/40 bg-blue-50/70 px-3 py-2 text-xs font-medium text-primary transition hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:border-blue-300/30 dark:bg-blue-500/10 dark:text-blue-100 dark:hover:bg-blue-500/20"
+                          >
+                            <span>ID команды: {selectedTeam.id}</span>
+                            <span className="text-[11px] font-normal uppercase tracking-wide">
+                              {isTeamIdCopied ? 'Скопировано' : 'Нажмите, чтобы скопировать'}
+                            </span>
+                          </button>
+                        ) : null}
                       </div>
                     </div>
 
@@ -1002,6 +1492,185 @@ const TeamsPage = ({
             )}
           </div>
         </section>
+        <Modal
+          isOpen={isCreateModalOpen}
+          title="Создание команды"
+          onClose={handleCloseCreateModal}
+          footer={(
+            <>
+              <button
+                type="button"
+                onClick={handleCloseCreateModal}
+                disabled={isCreatingTeam}
+                className={`inline-flex justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isCreatingTeam
+                    ? 'border-slate-200 text-slate-400 dark:border-slate-700 dark:text-slate-500'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateTeam}
+                disabled={isCreateActionDisabled}
+                className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isCreateActionDisabled
+                    ? 'bg-slate-400'
+                    : 'bg-primary hover:bg-blue-700'
+                }`}
+              >
+                {isCreatingTeam ? 'Создание…' : 'Создать команду'}
+              </button>
+            </>
+          )}
+        >
+          <fieldset
+            disabled={isCreatingTeam}
+            className="m-0 space-y-5 border-0 p-0"
+          >
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Название команды можно изменить позже. Вы автоматически станете капитаном созданной команды.
+            </p>
+            {createFeedback ? (
+              <div
+                className={`rounded-2xl border p-4 text-sm ${
+                  createFeedback.type === 'error'
+                    ? 'border-rose-200 bg-rose-50 text-rose-700'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                }`}
+              >
+                {createFeedback.message}
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <label
+                htmlFor="new-team-name"
+                className="text-sm font-semibold text-primary"
+              >
+                Название команды
+              </label>
+              <input
+                id="new-team-name"
+                type="text"
+                value={newTeamName}
+                onChange={(event) => setNewTeamName(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
+                placeholder="Например, Стремительные"
+              />
+            </div>
+            <div className="space-y-2">
+              <label
+                htmlFor="new-team-description"
+                className="text-sm font-semibold text-primary"
+              >
+                Краткое описание (по желанию)
+              </label>
+              <textarea
+                id="new-team-description"
+                value={newTeamDescription}
+                onChange={(event) => setNewTeamDescription(event.target.value)}
+                rows={4}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
+                placeholder="Расскажите, для кого эта команда"
+              />
+            </div>
+            <div className="flex items-start gap-3">
+              <input
+                id="new-team-open"
+                type="checkbox"
+                checked={newTeamOpen}
+                onChange={(event) => setNewTeamOpen(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-primary"
+              />
+              <div className="space-y-1">
+                <label
+                  htmlFor="new-team-open"
+                  className="text-sm font-semibold text-primary"
+                >
+                  Разрешить присоединяться по id
+                </label>
+                <p className="text-xs text-slate-500 dark:text-slate-300">
+                  Когда настройка включена, новые участники смогут вступить в команду, введя её id в личном кабинете.
+                </p>
+              </div>
+            </div>
+          </fieldset>
+        </Modal>
+        <Modal
+          isOpen={isJoinModalOpen}
+          title="Присоединиться к команде"
+          onClose={handleCloseJoinModal}
+          footer={(
+            <>
+              <button
+                type="button"
+                onClick={handleCloseJoinModal}
+                disabled={isJoiningTeam}
+                className={`inline-flex justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isJoiningTeam
+                    ? 'border-slate-200 text-slate-400 dark:border-slate-700 dark:text-slate-500'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleJoinTeam}
+                disabled={isJoinActionDisabled}
+                className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isJoinActionDisabled
+                    ? 'bg-slate-400'
+                    : 'bg-primary hover:bg-blue-700'
+                }`}
+              >
+                {isJoiningTeam ? 'Отправка…' : 'Вступить в команду'}
+              </button>
+            </>
+          )}
+        >
+          <fieldset
+            disabled={isJoiningTeam}
+            className="m-0 space-y-5 border-0 p-0"
+          >
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Введите идентификатор команды. Его можно получить у капитана, если в настройках команды разрешено присоединение по id.
+            </p>
+            {joinFeedback ? (
+              <div
+                className={`rounded-2xl border p-4 text-sm ${
+                  joinFeedback.type === 'error'
+                    ? 'border-rose-200 bg-rose-50 text-rose-700'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                }`}
+              >
+                {joinFeedback.message}
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <label
+                htmlFor="join-team-id"
+                className="text-sm font-semibold text-primary"
+              >
+                ID команды
+              </label>
+              <input
+                id="join-team-id"
+                type="text"
+                value={joinTeamId}
+                onChange={(event) => setJoinTeamId(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm uppercase tracking-wide focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
+                placeholder="Например, 64ff0c2e12"
+              />
+            </div>
+            {!canUseSelfServiceTeams ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                Укажите площадку в профиле и привяжите Telegram, чтобы присоединяться к командам.
+              </div>
+            ) : null}
+          </fieldset>
+        </Modal>
       </CabinetLayout>
     </>
   )
