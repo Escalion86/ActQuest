@@ -513,6 +513,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
         prevGames.map((game) => (game.id === normalizedGame.id ? normalizedGame : game))
       )
       setFeedback({ type: 'success', message: 'Изменения сохранены' })
+      setIsEditModalOpen(false)
     } catch (error) {
       console.error('Failed to update game', error)
       setFeedback({
@@ -1157,6 +1158,18 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
 
     setIsEditModalOpen(false)
   }, [isSaving])
+
+  const handleModalPrimaryAction = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+
+    if (isDirty && canEditSelectedGame) {
+      handleSaveChanges()
+    } else {
+      handleCloseEditModal()
+    }
+  }, [canEditSelectedGame, handleCloseEditModal, handleSaveChanges, isDirty, isSaving])
 
   const tasksSummary = useMemo(() => {
     if (!selectedGame?.tasksStats) {
@@ -3057,15 +3070,21 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                   <div className="flex flex-col gap-3 md:flex-row md:items-center">
                     <button
                       type="button"
-                      onClick={handleSaveChanges}
-                      disabled={!canEditSelectedGame || !isDirty || isSaving || !location}
+                      onClick={handleModalPrimaryAction}
+                      disabled={
+                        isSaving || (isDirty && (!canEditSelectedGame || !location))
+                      }
                       className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-                        !canEditSelectedGame || !isDirty || isSaving || !location
+                        isSaving || (isDirty && (!canEditSelectedGame || !location))
                           ? 'bg-slate-400 cursor-not-allowed'
                           : 'bg-primary hover:bg-blue-700'
                       }`}
                     >
-                      {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
+                      {isDirty
+                        ? isSaving
+                          ? 'Сохранение…'
+                          : 'Сохранить и закрыть'
+                        : 'Закрыть'}
                     </button>
                     <button
                       type="button"

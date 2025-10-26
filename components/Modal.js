@@ -30,7 +30,7 @@ const Modal = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0 sm:items-center sm:px-4 sm:py-6">
       <div
         className="absolute inset-0 bg-slate-900/50 transition-colors dark:bg-slate-950/80"
         onClick={() => onClose?.()}
@@ -40,7 +40,7 @@ const Modal = ({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative z-10 w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-xl dark:bg-slate-900/95"
+        className="relative z-10 flex h-full w-full flex-col overflow-y-auto bg-white shadow-xl dark:bg-slate-900/95 sm:h-auto sm:max-h-[90vh] sm:max-w-5xl sm:rounded-2xl"
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-700/60">
           <h2 className="text-lg font-semibold text-primary">{title}</h2>

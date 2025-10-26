@@ -44,6 +44,18 @@ const normalizePhoneLink = (phone) => {
   return phone.replace(/[^+\d]/g, '')
 }
 
+const getErrorMessage = (value, fallbackMessage) => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value
+  }
+
+  if (value && typeof value.message === 'string' && value.message.trim().length > 0) {
+    return value.message
+  }
+
+  return fallbackMessage
+}
+
 const TeamsPage = ({
   initialTeams,
   initialLocation,
@@ -204,7 +216,9 @@ const TeamsPage = ({
       const json = await response.json()
 
       if (!response.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось загрузить данные команды')
+        throw new Error(
+          getErrorMessage(json?.error, 'Не удалось загрузить данные команды')
+        )
       }
 
       return Array.isArray(json?.data) ? json.data : []
@@ -301,6 +315,7 @@ const TeamsPage = ({
       return
     }
 
+    setFeedback(null)
     setIsEditModalOpen(true)
   }, [canManageSelectedTeam])
 
@@ -311,6 +326,7 @@ const TeamsPage = ({
 
     setIsEditModalOpen(false)
   }, [isSaving])
+
 
   const handleCopyTeamId = useCallback(() => {
     const value = selectedTeam?.id
@@ -412,7 +428,9 @@ const TeamsPage = ({
       const json = await response.json()
 
       if (!response.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось создать команду')
+        throw new Error(
+          getErrorMessage(json?.error, 'Не удалось создать команду')
+        )
       }
 
       const createdTeamIdRaw = json?.data?._id ?? json?.data?.id
@@ -444,7 +462,10 @@ const TeamsPage = ({
 
       if (!membershipResponse.ok || membershipJson?.success === false) {
         throw new Error(
-          membershipJson?.error || 'Не удалось добавить вас в новую команду'
+          getErrorMessage(
+            membershipJson?.error,
+            'Не удалось добавить вас в новую команду'
+          )
         )
       }
 
@@ -544,7 +565,9 @@ const TeamsPage = ({
       const teamJson = await teamResponse.json()
 
       if (!teamResponse.ok || teamJson?.success === false) {
-        throw new Error(teamJson?.error || 'Команда не найдена')
+        throw new Error(
+          getErrorMessage(teamJson?.error, 'Команда не найдена')
+        )
       }
 
       const rawOpen = teamJson?.data?.open
@@ -576,7 +599,10 @@ const TeamsPage = ({
 
       if (!membershipResponse.ok || membershipJson?.success === false) {
         throw new Error(
-          membershipJson?.error || 'Не удалось присоединиться к команде'
+          getErrorMessage(
+            membershipJson?.error,
+            'Не удалось присоединиться к команде'
+          )
         )
       }
 
@@ -647,7 +673,9 @@ const TeamsPage = ({
       const json = await response.json()
 
       if (!response.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось сохранить команду')
+        throw new Error(
+          getErrorMessage(json?.error, 'Не удалось сохранить команду')
+        )
       }
 
       const updatedTeam = {
@@ -671,6 +699,7 @@ const TeamsPage = ({
         )
       )
       setFeedback({ type: 'success', message: 'Изменения сохранены' })
+      setIsEditModalOpen(false)
     } catch (error) {
       console.error('Failed to update team', error)
       setFeedback({
@@ -681,6 +710,18 @@ const TeamsPage = ({
       setIsSaving(false)
     }
   }, [canManageSelectedTeam, location, selectedTeam, selectedTeamId])
+
+  const handleModalPrimaryAction = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+
+    if (isDirty && canManageSelectedTeam) {
+      handleSaveTeam()
+    } else {
+      handleCloseEditModal()
+    }
+  }, [canManageSelectedTeam, handleCloseEditModal, handleSaveTeam, isDirty, isSaving])
 
   const handleRemoveMember = useCallback(
     async (memberId) => {
@@ -715,7 +756,9 @@ const TeamsPage = ({
         const json = await response.json()
 
         if (!response.ok || json?.success === false) {
-          throw new Error(json?.error || 'Не удалось удалить участника')
+          throw new Error(
+            getErrorMessage(json?.error, 'Не удалось удалить участника')
+          )
         }
 
         const updatedMembers = (selectedTeam.members ?? []).filter(
@@ -1053,7 +1096,7 @@ const TeamsPage = ({
                   </div>
                 )}
 
-                {feedback && (
+                {feedback && !isEditModalOpen && (
                   <div
                     className={`p-4 text-sm border rounded-2xl ${
                       feedback.type === 'success'
@@ -1217,6 +1260,18 @@ const TeamsPage = ({
                   title={`Редактирование команды «${selectedTeam.name || 'Без названия'}»`}
                   onClose={handleCloseEditModal}
                 >
+                <>
+                  {feedback && (
+                    <div
+                      className={`mb-6 rounded-2xl border p-4 text-sm ${
+                        feedback.type === 'success'
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-rose-50 border-rose-200 text-rose-700'
+                      }`}
+                    >
+                      {feedback.message}
+                    </div>
+                  )}
                 <fieldset
                   disabled={!canManageSelectedTeam || isSaving}
                   className="p-0 m-0 space-y-6 border-0"
@@ -1405,67 +1460,26 @@ const TeamsPage = ({
                     )}
                   </section>
 
-                  <section className="p-6 space-y-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
-                    <h2 className="text-lg font-semibold text-primary">
-                      Игры команды
-                    </h2>
-                    {selectedTeam.games?.length > 0 ? (
-                      <ul className="space-y-3">
-                        {selectedTeam.games.map((game) => (
-                          <li
-                            key={game.id}
-                            className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <p className="text-sm font-semibold text-primary">
-                                {game.name || 'Без названия'}
-                              </p>
-                              <span className="text-xs text-slate-500">
-                                {game.dateStart
-                                  ? new Date(game.dateStart).toLocaleString(
-                                      'ru-RU',
-                                      {
-                                        dateStyle: 'short',
-                                        timeStyle: 'short',
-                                      }
-                                    )
-                                  : 'Дата не указана'}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {getGameStatusLabel(game.status)}
-                              {game.hidden ? ' · Скрыта' : ''}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-slate-500">
-                        Команда пока не зарегистрирована ни в одной игре.
-                      </p>
-                    )}
-                  </section>
-
                   <div className="flex flex-col gap-3 md:flex-row md:items-center">
                     <button
                       type="button"
-                      onClick={handleSaveTeam}
+                      onClick={handleModalPrimaryAction}
                       disabled={
-                        !canManageSelectedTeam ||
-                        !location ||
-                        !isDirty ||
-                        isSaving
+                        isSaving ||
+                        (isDirty && (!canManageSelectedTeam || !location))
                       }
                       className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-                        !canManageSelectedTeam ||
-                        !location ||
-                        !isDirty ||
-                        isSaving
+                        isSaving ||
+                        (isDirty && (!canManageSelectedTeam || !location))
                           ? 'bg-slate-400 cursor-not-allowed'
                           : 'bg-primary hover:bg-blue-700'
                       }`}
                     >
-                      {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
+                      {isDirty
+                        ? isSaving
+                          ? 'Сохранение…'
+                          : 'Сохранить и закрыть'
+                        : 'Закрыть'}
                     </button>
                     <button
                       type="button"
@@ -1481,6 +1495,7 @@ const TeamsPage = ({
                     </button>
                   </div>
                 </fieldset>
+                </>
                 </Modal>
               </div>
             ) : (
