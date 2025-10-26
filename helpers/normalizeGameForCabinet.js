@@ -74,12 +74,123 @@ const normalizeFinances = (finances = []) => {
   }))
 }
 
+const ensureNullableNumber = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
 const normalizeManyCodesPenalty = (value) => {
   if (!Array.isArray(value) || value.length < 2) {
     return [0, 0]
   }
 
   return [ensureNumber(value[0], 0), ensureNumber(value[1], 0)]
+}
+
+const normalizeStringArray = (values = []) => {
+  if (!Array.isArray(values) || values.length === 0) {
+    return []
+  }
+
+  return values
+    .map((item) => ensureString(item, '').trim())
+    .filter((item) => item !== '')
+}
+
+const normalizeClues = (clues = []) => {
+  if (!Array.isArray(clues) || clues.length === 0) {
+    return []
+  }
+
+  return clues.map((clue, index) => ({
+    id: ensureString(clue?._id ?? clue?.id, `clue-${index}`),
+    mongoId: clue?._id ? ensureString(clue._id) : null,
+    clue: ensureString(clue?.clue, ''),
+    images: normalizeStringArray(clue?.images),
+  }))
+}
+
+const normalizeSubTasks = (subTasks = []) => {
+  if (!Array.isArray(subTasks) || subTasks.length === 0) {
+    return []
+  }
+
+  return subTasks.map((subTask, index) => ({
+    id: ensureString(subTask?._id ?? subTask?.id, `subtask-${index}`),
+    mongoId: subTask?._id ? ensureString(subTask._id) : null,
+    name: ensureString(subTask?.name, ''),
+    task: ensureString(subTask?.task, ''),
+    bonus: ensureNumber(subTask?.bonus, 0),
+  }))
+}
+
+const normalizePenaltyCodes = (penaltyCodes = []) => {
+  if (!Array.isArray(penaltyCodes) || penaltyCodes.length === 0) {
+    return []
+  }
+
+  return penaltyCodes.map((penaltyCode, index) => ({
+    id: ensureString(penaltyCode?._id ?? penaltyCode?.id, `penalty-${index}`),
+    mongoId: penaltyCode?._id ? ensureString(penaltyCode._id) : null,
+    code: ensureString(penaltyCode?.code, ''),
+    penalty: ensureNumber(penaltyCode?.penalty, 0),
+    description: ensureString(penaltyCode?.description, ''),
+  }))
+}
+
+const normalizeBonusCodes = (bonusCodes = []) => {
+  if (!Array.isArray(bonusCodes) || bonusCodes.length === 0) {
+    return []
+  }
+
+  return bonusCodes.map((bonusCode, index) => ({
+    id: ensureString(bonusCode?._id ?? bonusCode?.id, `bonus-${index}`),
+    mongoId: bonusCode?._id ? ensureString(bonusCode._id) : null,
+    code: ensureString(bonusCode?.code, ''),
+    bonus: ensureNumber(bonusCode?.bonus, 0),
+    description: ensureString(bonusCode?.description, ''),
+  }))
+}
+
+const normalizeCoordinates = (coordinates) => {
+  if (!coordinates || typeof coordinates !== 'object') {
+    return { latitude: null, longitude: null, radius: null }
+  }
+
+  return {
+    latitude: ensureNullableNumber(coordinates.latitude),
+    longitude: ensureNullableNumber(coordinates.longitude),
+    radius: ensureNullableNumber(coordinates.radius),
+  }
+}
+
+const normalizeTasks = (tasks = []) => {
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    return []
+  }
+
+  return tasks.map((task, index) => ({
+    id: ensureString(task?._id ?? task?.id, `task-${index}`),
+    mongoId: task?._id ? ensureString(task._id) : null,
+    title: ensureString(task?.title, ''),
+    task: ensureString(task?.task, ''),
+    taskBonusForComplite: ensureNumber(task?.taskBonusForComplite, 0),
+    clues: normalizeClues(task?.clues),
+    subTasks: normalizeSubTasks(task?.subTasks),
+    images: normalizeStringArray(task?.images),
+    codes: normalizeStringArray(task?.codes),
+    coordinates: normalizeCoordinates(task?.coordinates),
+    penaltyCodes: normalizePenaltyCodes(task?.penaltyCodes),
+    bonusCodes: normalizeBonusCodes(task?.bonusCodes),
+    numCodesToCompliteTask: ensureNullableNumber(task?.numCodesToCompliteTask),
+    postMessage: ensureString(task?.postMessage, ''),
+    canceled: ensureBoolean(task?.canceled, false),
+    isBonusTask: ensureBoolean(task?.isBonusTask, false),
+  }))
 }
 
 const computeTasksStats = (tasks = []) => {
@@ -143,6 +254,7 @@ const normalizeGameForCabinet = (game) => {
     hideResult: ensureBoolean(game.hideResult, false),
     prices: normalizePrices(game.prices),
     finances: normalizeFinances(game.finances),
+    tasks: normalizeTasks(game.tasks),
     teamsCount: ensureNumber(game.teamsCount, 0),
     tasksStats,
     updatedAt: ensureDateISOString(game.updatedAt),
