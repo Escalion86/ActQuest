@@ -4,6 +4,7 @@ import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import Modal from '@components/Modal'
 import getSessionSafe from '@helpers/getSessionSafe'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
@@ -63,6 +64,7 @@ const TeamsPage = ({
   const [selectedTeamId, setSelectedTeamId] = useState(
     initialTeams[0]?.id ?? null
   )
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
@@ -82,6 +84,7 @@ const TeamsPage = ({
   useEffect(() => {
     setFeedback(null)
     setMemberActionId(null)
+    setIsEditModalOpen(false)
   }, [selectedTeamId])
 
   const selectedTeam = useMemo(
@@ -170,6 +173,22 @@ const TeamsPage = ({
     )
     setFeedback(null)
   }, [canManageSelectedTeam, persistedTeams, selectedTeamId])
+
+  const handleOpenEditModal = useCallback(() => {
+    if (!canManageSelectedTeam) {
+      return
+    }
+
+    setIsEditModalOpen(true)
+  }, [canManageSelectedTeam])
+
+  const handleCloseEditModal = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+
+    setIsEditModalOpen(false)
+  }, [isSaving])
 
   const handleSaveTeam = useCallback(async () => {
     if (!selectedTeam || !location || !canManageSelectedTeam) {
@@ -507,29 +526,44 @@ const TeamsPage = ({
             {selectedTeam ? (
               <div className="space-y-6">
                 <div className="p-5 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
-                        selectedTeam.open
-                          ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
-                          : 'text-slate-600 bg-slate-100 border-slate-200 dark:border-slate-700'
-                      }`}
-                    >
-                      {selectedTeam.open
-                        ? 'Открыта для заявок'
-                        : 'Закрытый состав'}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      Участников: {selectedTeam.membersCount ?? 0}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      Участвует в играх: {selectedTeam.gamesCount ?? 0}
-                    </span>
-                    {selectedTeam.updatedAt && (
-                      <span className="text-xs text-slate-500">
-                        Обновлено{' '}
-                        {formatRelativeTimeFromNow(selectedTeam.updatedAt)}
-                      </span>
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
+                            selectedTeam.open
+                              ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
+                              : 'text-slate-600 bg-slate-100 border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          {selectedTeam.open
+                            ? 'Открыта для заявок'
+                            : 'Закрытый состав'}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          Участников: {selectedTeam.membersCount ?? 0}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          Участвует в играх: {selectedTeam.gamesCount ?? 0}
+                        </span>
+                        {selectedTeam.updatedAt && (
+                          <span className="text-xs text-slate-500">
+                            Обновлено {formatRelativeTimeFromNow(selectedTeam.updatedAt)}
+                          </span>
+                        )}
+                      </div>
+                      <h2 className="mt-4 text-xl font-semibold text-primary">
+                        {selectedTeam.name || 'Без названия'}
+                      </h2>
+                    </div>
+                    {canManageSelectedTeam && (
+                      <button
+                        type="button"
+                        onClick={handleOpenEditModal}
+                        className="inline-flex justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                      >
+                        Редактировать команду
+                      </button>
                     )}
                   </div>
                 </div>
@@ -559,8 +593,154 @@ const TeamsPage = ({
                   </div>
                 )}
 
+                <section className="p-6 space-y-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
+                  <h3 className="text-lg font-semibold text-primary">Информация о команде</h3>
+                  <dl className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Статус набора
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedTeam.open ? 'Открыта для заявок' : 'Закрытый состав'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Участников
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedTeam.membersCount ?? 0}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Участие в играх
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedTeam.gamesCount ?? 0}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Капитан
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedTeam.captain?.name || 'Не назначен'}
+                        {selectedTeam.captain?.username
+                          ? ` (@${selectedTeam.captain.username})`
+                          : ''}
+                      </dd>
+                    </div>
+                  </dl>
+                  {selectedTeam.description ? (
+                    <p className="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
+                      {selectedTeam.description}
+                    </p>
+                  ) : (
+                    <p className="mt-3 text-sm text-slate-500">
+                      Описание команды пока не заполнено.
+                    </p>
+                  )}
+                </section>
+
+                <section className="p-6 space-y-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-primary">Состав команды</h3>
+                    {selectedTeam.captain && (
+                      <span className="text-xs text-slate-500">
+                        Капитан: {selectedTeam.captain.name || 'не указан'}
+                      </span>
+                    )}
+                  </div>
+                  {selectedTeam.members?.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedTeam.members.map((member) => {
+                        const phoneLink = normalizePhoneLink(member.phone)
+
+                        return (
+                          <div
+                            key={member.id}
+                            className="p-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-primary">
+                                  {member.name || 'Без имени'}
+                                  {member.isCaptain ? ' · Капитан' : ''}
+                                </p>
+                                {member.username && (
+                                  <p className="mt-1 text-xs text-slate-500">@{member.username}</p>
+                                )}
+                                {member.userRole && (
+                                  <p className="mt-1 text-xs text-slate-400">
+                                    Роль в системе: {member.userRole}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                {member.phone && (
+                                  <a
+                                    href={phoneLink ? `tel:${phoneLink}` : undefined}
+                                    className="block text-xs text-primary hover:underline"
+                                  >
+                                    {member.phone}
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      Пока нет участников. Пригласите игроков через телеграм-бота, чтобы они появились здесь.
+                    </p>
+                  )}
+                </section>
+
+                <section className="p-6 space-y-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
+                  <h3 className="text-lg font-semibold text-primary">Игры команды</h3>
+                  {selectedTeam.games?.length > 0 ? (
+                    <ul className="space-y-3">
+                      {selectedTeam.games.map((game) => (
+                        <li
+                          key={game.id}
+                          className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-800/80"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-primary">
+                              {game.name || 'Без названия'}
+                            </p>
+                            <span className="text-xs text-slate-500">
+                              {getGameStatusLabel(game.status)}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs text-slate-500">
+                            {game.dateStart
+                              ? new Date(game.dateStart).toLocaleString('ru-RU', {
+                                  dateStyle: 'short',
+                                  timeStyle: 'short',
+                                })
+                              : 'Дата не назначена'}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      Команда пока не участвовала в играх.
+                    </p>
+                  )}
+                </section>
+
+                <Modal
+                  isOpen={isEditModalOpen}
+                  title={`Редактирование команды «${selectedTeam.name || 'Без названия'}»`}
+                  onClose={handleCloseEditModal}
+                >
                 <fieldset
-                  disabled={!canManageSelectedTeam}
+                  disabled={!canManageSelectedTeam || isSaving}
                   className="p-0 m-0 space-y-6 border-0"
                 >
                   <section className="p-6 space-y-5 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
@@ -811,6 +991,7 @@ const TeamsPage = ({
                     </button>
                   </div>
                 </fieldset>
+                </Modal>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full p-6 bg-white dark:bg-slate-900/80 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">

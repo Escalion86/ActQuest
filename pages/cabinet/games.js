@@ -4,6 +4,7 @@ import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import Modal from '@components/Modal'
 import getSessionSafe from '@helpers/getSessionSafe'
 import formatDate from '@helpers/formatDate'
 import formatDateTime from '@helpers/formatDateTime'
@@ -151,6 +152,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
   const [games, setGames] = useState(initialGames)
   const [persistedGames, setPersistedGames] = useState(initialGames)
   const [selectedGameId, setSelectedGameId] = useState(initialGames[0]?.id ?? null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [feedback, setFeedback] = useState(null)
 
@@ -167,6 +169,10 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
 
   useEffect(() => {
     setFeedback(null)
+  }, [selectedGameId])
+
+  useEffect(() => {
+    setIsEditModalOpen(false)
   }, [selectedGameId])
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
@@ -399,6 +405,22 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
     [canEditSelectedGame, updateSelectedGame]
   )
 
+  const handleOpenEditModal = useCallback(() => {
+    if (!canEditSelectedGame) {
+      return
+    }
+
+    setIsEditModalOpen(true)
+  }, [canEditSelectedGame])
+
+  const handleCloseEditModal = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+
+    setIsEditModalOpen(false)
+  }, [isSaving])
+
   const tasksSummary = useMemo(() => {
     if (!selectedGame?.tasksStats) {
       return null
@@ -413,6 +435,116 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
       bonusLabel: bonus > 0 ? getNounBonusTasks(bonus) : null,
       canceledLabel: canceled > 0 ? `${canceled} отменено` : null,
     }
+  }, [selectedGame])
+
+  const gameTypeLabel = useMemo(() => {
+    if (!selectedGame) {
+      return '—'
+    }
+
+    const option = GAME_TYPE_OPTIONS.find((item) => item.value === selectedGame.type)
+    return option?.label ?? '—'
+  }, [selectedGame])
+
+  const plannedStartLabel = useMemo(() => {
+    if (!selectedGame?.dateStart) {
+      return 'Дата не назначена'
+    }
+
+    try {
+      return new Date(selectedGame.dateStart).toLocaleString('ru-RU', {
+        dateStyle: 'long',
+        timeStyle: 'short',
+      })
+    } catch (error) {
+      return 'Дата не назначена'
+    }
+  }, [selectedGame])
+
+  const taskDurationLabel = useMemo(() => {
+    if (!selectedGame) {
+      return '—'
+    }
+
+    const minutes = toMinutes(selectedGame.taskDuration)
+    return minutes > 0 ? `${minutes} мин` : 'Не задано'
+  }, [selectedGame])
+
+  const cluesDurationLabel = useMemo(() => {
+    if (!selectedGame) {
+      return '—'
+    }
+
+    const minutes = toMinutes(selectedGame.cluesDuration)
+    return minutes > 0 ? `${minutes} мин` : 'Подсказки отключены'
+  }, [selectedGame])
+
+  const clueModeDetails = useMemo(() => {
+    if (!selectedGame) {
+      return { modeLabel: '—', valueLabel: '—' }
+    }
+
+    const option = CLUE_EARLY_MODE_OPTIONS.find(
+      (item) => item.value === selectedGame.clueEarlyAccessMode
+    )
+    const minutes = toMinutes(selectedGame.clueEarlyPenalty)
+
+    if (selectedGame.clueEarlyAccessMode === 'penalty') {
+      return {
+        modeLabel: option?.label ?? '—',
+        valueLabel: minutes > 0 ? `Штраф ${minutes} мин` : 'Штраф не применяется',
+      }
+    }
+
+    return {
+      modeLabel: option?.label ?? '—',
+      valueLabel:
+        minutes > 0
+          ? `После подсказки добавляется ${minutes} мин ожидания`
+          : 'Без дополнительного времени',
+    }
+  }, [selectedGame])
+
+  const breakDurationLabel = useMemo(() => {
+    if (!selectedGame) {
+      return '—'
+    }
+
+    const minutes = toMinutes(selectedGame.breakDuration)
+    return minutes > 0 ? `${minutes} мин` : 'Без перерывов'
+  }, [selectedGame])
+
+  const taskFailurePenaltyLabel = useMemo(() => {
+    if (!selectedGame) {
+      return '—'
+    }
+
+    if (selectedGame.type === 'photo') {
+      const value = Number(selectedGame.taskFailurePenalty) || 0
+      return value > 0 ? `${value} баллов` : 'Штраф отсутствует'
+    }
+
+    const minutes = toMinutes(selectedGame.taskFailurePenalty)
+    return minutes > 0 ? `${minutes} мин` : 'Штраф отсутствует'
+  }, [selectedGame])
+
+  const manyCodesLimitLabel = useMemo(() => {
+    if (!selectedGame || selectedGame.type === 'photo') {
+      return null
+    }
+
+    const limit = Number(selectedGame.manyCodesPenalty?.[0]) || 0
+    return limit > 0 ? `${limit} попыток` : 'Лимит не задан'
+  }, [selectedGame])
+
+  const manyCodesPenaltyLabel = useMemo(() => {
+    if (!selectedGame || selectedGame.type === 'photo') {
+      return null
+    }
+
+    const seconds = Number(selectedGame.manyCodesPenalty?.[1]) || 0
+    const minutes = toMinutes(seconds)
+    return minutes > 0 ? `${minutes} мин` : 'Без штрафа'
   }, [selectedGame])
 
   const financesSummary = useMemo(() => {
@@ -513,26 +645,42 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
             {selectedGame ? (
               <div className="space-y-6">
                 <div className="p-5 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="px-2.5 py-1 text-xs font-semibold text-primary bg-blue-50 rounded-full dark:bg-violet-500/20 dark:text-violet-100">
-                      {getGameStatusLabel(selectedGame.status)}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      Команд: {numberFormatter.format(selectedGame.teamsCount ?? 0)}
-                    </span>
-                    {selectedGame.updatedAt && (
-                      <span className="text-xs text-slate-500">
-                        Обновлено {formatRelativeTimeFromNow(selectedGame.updatedAt)}
-                      </span>
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="px-2.5 py-1 text-xs font-semibold text-primary bg-blue-50 rounded-full dark:bg-violet-500/20 dark:text-violet-100">
+                          {getGameStatusLabel(selectedGame.status)}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          Команд: {numberFormatter.format(selectedGame.teamsCount ?? 0)}
+                        </span>
+                        {selectedGame.updatedAt && (
+                          <span className="text-xs text-slate-500">
+                            Обновлено {formatRelativeTimeFromNow(selectedGame.updatedAt)}
+                          </span>
+                        )}
+                      </div>
+                      <h2 className="mt-4 text-xl font-semibold text-primary">
+                        {selectedGame.name || 'Без названия'}
+                      </h2>
+                      {tasksSummary && (
+                        <p className="mt-3 text-sm text-slate-600">
+                          {tasksSummary.totalLabel}
+                          {tasksSummary.bonusLabel ? ` · ${tasksSummary.bonusLabel}` : ''}
+                          {tasksSummary.canceledLabel ? ` · ${tasksSummary.canceledLabel}` : ''}
+                        </p>
+                      )}
+                    </div>
+                    {canEditSelectedGame && (
+                      <button
+                        type="button"
+                        onClick={handleOpenEditModal}
+                        className="inline-flex justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                      >
+                        Редактировать игру
+                      </button>
                     )}
                   </div>
-                  {tasksSummary && (
-                    <p className="mt-3 text-sm text-slate-600">
-                      {tasksSummary.totalLabel}
-                      {tasksSummary.bonusLabel ? ` · ${tasksSummary.bonusLabel}` : ''}
-                      {tasksSummary.canceledLabel ? ` · ${tasksSummary.canceledLabel}` : ''}
-                    </p>
-                  )}
                 </div>
 
                 {!location && (
@@ -559,7 +707,258 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                   </div>
                 )}
 
-                <fieldset disabled={!canEditSelectedGame} className="space-y-6 border-0 p-0 m-0">
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                  <h3 className="text-lg font-semibold text-primary">Общая информация</h3>
+                  {selectedGame.image && (
+                    <img
+                      src={selectedGame.image}
+                      alt="Обложка игры"
+                      className="mt-4 h-48 w-full rounded-xl object-cover"
+                    />
+                  )}
+                  <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Тип игры
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{gameTypeLabel}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Плановое начало
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {plannedStartLabel}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Место старта
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.startingPlace || 'Не указано'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Финиш
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.finishingPlace || 'Не указан'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Индивидуальный старт
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.individualStart ? 'Да' : 'Нет'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Показывать организатора
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.showCreator ? 'Да' : 'Нет'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Публиковать задания в кабинете
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.showTasks ? 'Да' : 'Нет'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Скрывать результаты
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.hideResult ? 'Да' : 'Нет'}
+                      </dd>
+                    </div>
+                  </dl>
+                  {selectedGame.description && (
+                    <p className="mt-4 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
+                      {selectedGame.description}
+                    </p>
+                  )}
+                </section>
+
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                  <h3 className="text-lg font-semibold text-primary">Параметры проведения</h3>
+                  <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Длительность задания
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{taskDurationLabel}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Интервал подсказок
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{cluesDurationLabel}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Режим досрочной подсказки
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {clueModeDetails.modeLabel}
+                        <br />
+                        <span className="text-xs text-slate-500">{clueModeDetails.valueLabel}</span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Перерыв между заданиями
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{breakDurationLabel}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Штраф за невыполненное задание
+                      </dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {taskFailurePenaltyLabel}
+                      </dd>
+                    </div>
+                    {manyCodesLimitLabel && (
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Лимит неверных кодов
+                        </dt>
+                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                          {manyCodesLimitLabel}
+                        </dd>
+                      </div>
+                    )}
+                    {manyCodesPenaltyLabel && (
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Штраф за превышение лимита
+                        </dt>
+                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                          {manyCodesPenaltyLabel}
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                </section>
+
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                  <h3 className="text-lg font-semibold text-primary">Опции для капитана</h3>
+                  <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                    <li className="flex items-center gap-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${selectedGame.allowCaptainForceClue ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                        aria-hidden="true"
+                      />
+                      <span>
+                        Капитан {selectedGame.allowCaptainForceClue ? 'может' : 'не может'} запрашивать подсказку
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${selectedGame.allowCaptainFailTask ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                        aria-hidden="true"
+                      />
+                      <span>
+                        Капитан {selectedGame.allowCaptainFailTask ? 'может' : 'не может'} провалить задание
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${selectedGame.allowCaptainFinishBreak ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                        aria-hidden="true"
+                      />
+                      <span>
+                        Капитан {selectedGame.allowCaptainFinishBreak ? 'может' : 'не может'} завершать перерыв
+                      </span>
+                    </li>
+                  </ul>
+                </section>
+
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                  <h3 className="text-lg font-semibold text-primary">Стоимость участия</h3>
+                  {selectedGame.prices?.length > 0 ? (
+                    <ul className="mt-4 space-y-3">
+                      {selectedGame.prices.map((price) => (
+                        <li
+                          key={price.id}
+                          className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
+                        >
+                          <span className="text-slate-600 dark:text-slate-200">
+                            {price.name || 'Без названия'}
+                          </span>
+                          <span className="font-semibold text-primary">
+                            {currencyFormatter.format(Number(price.price) || 0)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-4 text-sm text-slate-500">Стоимость участия не указана.</p>
+                  )}
+                </section>
+
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                  <h3 className="text-lg font-semibold text-primary">Финансы</h3>
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
+                    <p>
+                      Доходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.income)}</span>
+                    </p>
+                    <p className="mt-1">
+                      Расходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.expense)}</span>
+                    </p>
+                    <p className={`mt-1 font-semibold ${balanceClass}`}>
+                      Баланс: {currencyFormatter.format(financesSummary.balance)}
+                    </p>
+                  </div>
+                  {selectedGame.finances?.length > 0 ? (
+                    <ul className="mt-4 space-y-3">
+                      {selectedGame.finances.map((entry) => (
+                        <li
+                          key={entry.id}
+                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <span
+                              className={`text-xs font-semibold ${
+                                entry.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
+                              }`}
+                            >
+                              {entry.type === 'expense' ? 'Расход' : 'Доход'}
+                            </span>
+                            <span className="text-sm font-semibold text-primary">
+                              {currencyFormatter.format(Number(entry.sum) || 0)}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs text-slate-500">
+                            {entry.date ? formatDate(entry.date) : 'Дата не указана'}
+                          </p>
+                          {entry.description ? (
+                            <p className="mt-2 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
+                              {entry.description}
+                            </p>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-4 text-sm text-slate-500">Финансовые записи отсутствуют.</p>
+                  )}
+                </section>
+
+                <Modal
+                  isOpen={isEditModalOpen}
+                  title={`Редактирование игры «${selectedGame.name || 'Без названия'}»`}
+                  onClose={handleCloseEditModal}
+                >
+                <fieldset disabled={!canEditSelectedGame || isSaving} className="space-y-6 border-0 p-0 m-0">
                   <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -1163,10 +1562,11 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                     </button>
                   </div>
                 </fieldset>
+                </Modal>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full p-6 bg-white dark:bg-slate-900/80 border border-dashed rounded-2xl border-slate-200 dark:border-slate-700">
-                <p className="text-sm text-slate-500">Выберите игру из списка слева, чтобы начать редактирование.</p>
+                <p className="text-sm text-slate-500">Выберите игру из списка слева, чтобы просмотреть детали.</p>
               </div>
             )}
           </div>
