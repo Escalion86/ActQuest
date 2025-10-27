@@ -239,6 +239,8 @@ export default async function handler(Schema, req, res, params = null) {
           //   // body.userId === id &&
           //   Schema === Users && !isUserQuestionnaireFilled(data)
 
+          const afterUpdateNeedToNotificate = false
+
           data = await db.model(Schema).findByIdAndUpdate(id, body.data, {
             new: true,
             runValidators: true,
