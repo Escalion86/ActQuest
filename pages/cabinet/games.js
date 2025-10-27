@@ -113,6 +113,26 @@ const createBonusCode = () => ({
   description: '',
 })
 
+const extractErrorMessage = (error) => {
+  if (!error) {
+    return null
+  }
+
+  if (typeof error === 'string') {
+    return error
+  }
+
+  if (typeof error.message === 'string' && error.message.trim().length > 0) {
+    return error.message
+  }
+
+  if (typeof error.error === 'string' && error.error.trim().length > 0) {
+    return error.error
+  }
+
+  return null
+}
+
 const createTask = () => ({
   id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
   mongoId: null,
@@ -938,31 +958,69 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
     setTeamsModalState((prev) => ({ ...prev, isLoading: true, error: null }))
 
     try {
+      const teamsParams = new URLSearchParams({ location })
       const [gameTeamsResponse, teamsResponse] = await Promise.all([
         fetch(
-          `/api/${location}/custom?collection=gamesteams&gameId=${encodeURIComponent(
+          `/api/cabinet/games/${encodeURIComponent(
             selectedGame.id
-          )}`
+          )}/teams?${teamsParams.toString()}`
         ),
         fetch(`/api/${location}/custom?collection=teams&limit=200&sort=name_lowered`),
       ])
 
       const gameTeamsJson = await gameTeamsResponse.json()
       if (!gameTeamsResponse.ok || gameTeamsJson?.success === false) {
-        throw new Error(gameTeamsJson?.error || 'Не удалось загрузить команды игры')
+        throw new Error(
+          extractErrorMessage(gameTeamsJson?.error) ||
+            'Не удалось загрузить команды игры'
+        )
       }
 
       const teamsJson = await teamsResponse.json()
       if (!teamsResponse.ok || teamsJson?.success === false) {
-        throw new Error(teamsJson?.error || 'Не удалось загрузить список команд')
+        throw new Error(
+          extractErrorMessage(teamsJson?.error) ||
+            'Не удалось загрузить список команд'
+        )
       }
 
-      const gameTeamsData = Array.isArray(gameTeamsJson.data)
-        ? gameTeamsJson.data
+      const gameTeamsEntries = Array.isArray(gameTeamsJson?.data?.entries)
+        ? gameTeamsJson.data.entries
+        : []
+      const linkedTeams = Array.isArray(gameTeamsJson?.data?.teams)
+        ? gameTeamsJson.data.teams
         : []
       const allTeamsData = Array.isArray(teamsJson.data) ? teamsJson.data : []
 
-      const teamsMap = allTeamsData.reduce((acc, team) => {
+      const linkedTeamsMap = linkedTeams.reduce((acc, team) => {
+        if (team?.id) {
+          acc[team.id] = team
+        }
+
+        return acc
+      }, {})
+
+      const gameTeams = gameTeamsEntries
+        .map((entry) => {
+          const entryId = entry?.id ? String(entry.id) : entry?._id?.toString()
+          const teamId = entry?.teamId ? String(entry.teamId) : ''
+
+          if (!entryId || !teamId) {
+            return null
+          }
+
+          const teamInfo = linkedTeamsMap[teamId] ?? null
+
+          return {
+            id: entryId,
+            teamId,
+            teamName: teamInfo?.name || 'Неизвестная команда',
+            teamDescription: teamInfo?.description || '',
+          }
+        })
+        .filter(Boolean)
+
+      const allTeamsMap = allTeamsData.reduce((acc, team) => {
         if (team?._id) {
           const id = team._id.toString()
           acc[id] = {
@@ -971,73 +1029,14 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
             description: team.description || '',
           }
         }
+
         return acc
       }, {})
 
-      const missingTeamIds = gameTeamsData
-        .map((entry) => (entry?.teamId ? entry.teamId.toString() : null))
-        .filter((teamId) => teamId && !teamsMap[teamId])
-
-      if (missingTeamIds.length > 0) {
-        const additionalTeams = await Promise.all(
-          missingTeamIds.map(async (teamId) => {
-            try {
-              const response = await fetch(`/api/${location}/teams/${teamId}`)
-              const json = await response.json()
-              if (!response.ok || json?.success === false) {
-                return null
-              }
-
-              const team = json.data
-              if (team?._id) {
-                return {
-                  id: team._id.toString(),
-                  name: team.name || 'Без названия',
-                  description: team.description || '',
-                }
-              }
-
-              return null
-            } catch (error) {
-              console.error('Failed to load team details', error)
-              return null
-            }
-          })
-        )
-
-        additionalTeams
-          .filter(Boolean)
-          .forEach((team) => {
-            teamsMap[team.id] = team
-          })
-      }
-
-      const existingTeamIds = new Set(
-        gameTeamsData
-          .map((entry) => (entry?.teamId ? entry.teamId.toString() : null))
-          .filter(Boolean)
+      const existingTeamIds = new Set(gameTeams.map((entry) => entry.teamId))
+      const availableTeams = Object.values(allTeamsMap).filter(
+        (team) => team.id && !existingTeamIds.has(team.id)
       )
-
-      const availableTeams = allTeamsData
-        .map((team) => ({
-          id: team?._id ? team._id.toString() : '',
-          name: team?.name || 'Без названия',
-          description: team?.description || '',
-        }))
-        .filter((team) => team.id && !existingTeamIds.has(team.id))
-
-      const gameTeams = gameTeamsData.map((entry) => {
-        const entryId = entry?._id ? entry._id.toString() : entry?.id || ''
-        const teamId = entry?.teamId ? entry.teamId.toString() : ''
-        const teamInfo = teamId ? teamsMap[teamId] : null
-
-        return {
-          id: entryId,
-          teamId,
-          teamName: teamInfo?.name || 'Неизвестная команда',
-          teamDescription: teamInfo?.description || '',
-        }
-      })
 
       setTeamsModalState({
         isLoading: false,
@@ -1059,7 +1058,8 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
       console.error('Failed to load teams for modal', error)
       setTeamsModalState({
         isLoading: false,
-        error: error?.message || 'Не удалось загрузить данные',
+        error:
+          extractErrorMessage(error) || 'Не удалось загрузить данные команд игры',
         gameTeams: [],
         availableTeams: [],
       })
@@ -1080,14 +1080,18 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          teamId: selectedTeamToAdd,
-          gameId: selectedGame.id,
+          data: {
+            teamId: selectedTeamToAdd,
+            gameId: selectedGame.id,
+          },
         }),
       })
 
       const json = await response.json()
       if (!response.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось добавить команду')
+        throw new Error(
+          extractErrorMessage(json?.error) || 'Не удалось добавить команду'
+        )
       }
 
       await loadTeamsModalData()
@@ -1095,7 +1099,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
       console.error('Failed to add team to game', error)
       setTeamsModalState((prev) => ({
         ...prev,
-        error: error?.message || 'Не удалось добавить команду',
+        error: extractErrorMessage(error) || 'Не удалось добавить команду',
       }))
     } finally {
       setIsAddingTeam(false)
@@ -1120,7 +1124,9 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
 
         const json = await response.json()
         if (!response.ok || json?.success === false) {
-          throw new Error(json?.error || 'Не удалось удалить команду')
+          throw new Error(
+            extractErrorMessage(json?.error) || 'Не удалось удалить команду'
+          )
         }
 
         await loadTeamsModalData()
@@ -1128,7 +1134,7 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
         console.error('Failed to remove team from game', error)
         setTeamsModalState((prev) => ({
           ...prev,
-          error: error?.message || 'Не удалось удалить команду',
+          error: extractErrorMessage(error) || 'Не удалось удалить команду',
         }))
       } finally {
         setRemovingTeamIds((prev) => prev.filter((id) => id !== gameTeamId))
