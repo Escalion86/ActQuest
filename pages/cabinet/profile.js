@@ -144,6 +144,18 @@ const ProfilePage = ({ initialProfile }) => {
     [formState, session]
   )
 
+  const submitButtonClasses = useMemo(() => {
+    if (saveState.isSaving) {
+      return 'bg-blue-400 text-white cursor-wait'
+    }
+
+    if (!hasChanges) {
+      return 'bg-slate-200 text-slate-500 dark:bg-slate-700/60 dark:text-slate-300 cursor-not-allowed'
+    }
+
+    return 'bg-primary hover:bg-blue-700 text-white'
+  }, [hasChanges, saveState.isSaving])
+
   return (
     <>
       <Head>
@@ -252,11 +264,7 @@ const ProfilePage = ({ initialProfile }) => {
               <button
                 type="submit"
                 disabled={saveState.isSaving || !hasChanges}
-                className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-                  saveState.isSaving
-                    ? 'bg-blue-400 cursor-not-allowed'
-                    : 'bg-primary hover:bg-blue-700'
-                }`}
+                className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl transition ${submitButtonClasses}`}
               >
                 {saveState.isSaving ? 'Сохраняем…' : 'Сохранить профиль'}
               </button>
