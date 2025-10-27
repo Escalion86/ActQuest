@@ -1243,6 +1243,559 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
     }
   }, [canEditSelectedGame, handleCloseEditModal, handleSaveChanges, isDirty, isSaving])
 
+  const updateTask = useCallback(
+    (taskId, updater) => {
+      if (!canEditSelectedGame) return
+
+      updateSelectedGame((game) => ({
+        tasks: (game.tasks ?? []).map((task) => {
+          if (task.id !== taskId) {
+            return task
+          }
+
+          const patch = typeof updater === 'function' ? updater(task) : updater
+          return { ...task, ...patch }
+        }),
+      }))
+    },
+    [canEditSelectedGame, updateSelectedGame]
+  )
+
+  const handleAddTask = useCallback(() => {
+    if (!canEditSelectedGame) return
+
+    const newTask = createTask()
+    updateSelectedGame((game) => ({
+      tasks: [...(game.tasks ?? []), newTask],
+    }))
+    setExpandedTaskIds((prev) => [...prev, newTask.id])
+  }, [canEditSelectedGame, updateSelectedGame])
+
+  const handleRemoveTask = useCallback(
+    (taskId) => {
+      if (!canEditSelectedGame) return
+      updateSelectedGame((game) => ({
+        tasks: (game.tasks ?? []).filter((task) => task.id !== taskId),
+      }))
+      setExpandedTaskIds((prev) => prev.filter((id) => id !== taskId))
+    },
+    [canEditSelectedGame, updateSelectedGame]
+  )
+
+  const handleTaskFieldChange = useCallback(
+    (taskId, field, value) => {
+      updateTask(taskId, { [field]: value })
+    },
+    [updateTask]
+  )
+
+  const handleTaskNumberChange = useCallback(
+    (taskId, field, value) => {
+      const numeric = Number(value)
+      updateTask(taskId, { [field]: Number.isFinite(numeric) ? numeric : 0 })
+    },
+    [updateTask]
+  )
+
+  const handleTaskOptionalNumberChange = useCallback(
+    (taskId, field, value) => {
+      updateTask(taskId, { [field]: toNullableNumber(value) })
+    },
+    [updateTask]
+  )
+
+  const handleTaskCheckboxChange = useCallback(
+    (taskId, field, checked) => {
+      updateTask(taskId, { [field]: Boolean(checked) })
+    },
+    [updateTask]
+  )
+
+  const handleTaskCoordinateChange = useCallback(
+    (taskId, field, value) => {
+      const numericValue = toNullableNumber(value)
+      updateTask(taskId, (task) => ({
+        coordinates: {
+          ...(task.coordinates ?? { latitude: null, longitude: null, radius: null }),
+          [field]: numericValue,
+        },
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleAddTaskCode = useCallback(
+    (taskId) => {
+      updateTask(taskId, (task) => ({ codes: [...(task.codes ?? []), ''] }))
+    },
+    [updateTask]
+  )
+
+  const handleTaskCodeChange = useCallback(
+    (taskId, index, value) => {
+      updateTask(taskId, (task) => {
+        const nextCodes = [...(task.codes ?? [])]
+        nextCodes[index] = value
+        return { codes: nextCodes }
+      })
+    },
+    [updateTask]
+  )
+
+  const handleRemoveTaskCode = useCallback(
+    (taskId, index) => {
+      updateTask(taskId, (task) => ({
+        codes: (task.codes ?? []).filter((_, codeIndex) => codeIndex !== index),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleAddTaskImage = useCallback(
+    (taskId) => {
+      updateTask(taskId, (task) => ({ images: [...(task.images ?? []), ''] }))
+    },
+    [updateTask]
+  )
+
+  const handleTaskImageChange = useCallback(
+    (taskId, index, value) => {
+      updateTask(taskId, (task) => {
+        const nextImages = [...(task.images ?? [])]
+        nextImages[index] = value
+        return { images: nextImages }
+      })
+    },
+    [updateTask]
+  )
+
+  const handleRemoveTaskImage = useCallback(
+    (taskId, index) => {
+      updateTask(taskId, (task) => ({
+        images: (task.images ?? []).filter((_, imageIndex) => imageIndex !== index),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleAddClue = useCallback(
+    (taskId) => {
+      const newClue = createClue()
+      updateTask(taskId, (task) => ({ clues: [...(task.clues ?? []), newClue] }))
+    },
+    [updateTask]
+  )
+
+  const handleTaskClueChange = useCallback(
+    (taskId, clueId, field, value) => {
+      updateTask(taskId, (task) => ({
+        clues: (task.clues ?? []).map((clue) =>
+          clue.id === clueId ? { ...clue, [field]: value } : clue
+        ),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleRemoveClue = useCallback(
+    (taskId, clueId) => {
+      updateTask(taskId, (task) => ({
+        clues: (task.clues ?? []).filter((clue) => clue.id !== clueId),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleAddClueImage = useCallback(
+    (taskId, clueId) => {
+      updateTask(taskId, (task) => ({
+        clues: (task.clues ?? []).map((clue) =>
+          clue.id === clueId
+            ? { ...clue, images: [...(clue.images ?? []), ''] }
+            : clue
+        ),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleClueImageChange = useCallback(
+    (taskId, clueId, index, value) => {
+      updateTask(taskId, (task) => ({
+        clues: (task.clues ?? []).map((clue) => {
+          if (clue.id !== clueId) {
+            return clue
+          }
+
+          const nextImages = [...(clue.images ?? [])]
+          nextImages[index] = value
+          return { ...clue, images: nextImages }
+        }),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleRemoveClueImage = useCallback(
+    (taskId, clueId, index) => {
+      updateTask(taskId, (task) => ({
+        clues: (task.clues ?? []).map((clue) =>
+          clue.id === clueId
+            ? {
+                ...clue,
+                images: (clue.images ?? []).filter((_, imageIndex) => imageIndex !== index),
+              }
+            : clue
+        ),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleAddSubTask = useCallback(
+    (taskId) => {
+      const newSubTask = createSubTask()
+      updateTask(taskId, (task) => ({ subTasks: [...(task.subTasks ?? []), newSubTask] }))
+    },
+    [updateTask]
+  )
+
+  const handleSubTaskChange = useCallback(
+    (taskId, subTaskId, field, value) => {
+      updateTask(taskId, (task) => ({
+        subTasks: (task.subTasks ?? []).map((subTask) =>
+          subTask.id === subTaskId ? { ...subTask, [field]: value } : subTask
+        ),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleRemoveSubTask = useCallback(
+    (taskId, subTaskId) => {
+      updateTask(taskId, (task) => ({
+        subTasks: (task.subTasks ?? []).filter((subTask) => subTask.id !== subTaskId),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleAddPenaltyCode = useCallback(
+    (taskId) => {
+      const newPenalty = createPenaltyCode()
+      updateTask(taskId, (task) => ({
+        penaltyCodes: [...(task.penaltyCodes ?? []), newPenalty],
+      }))
+    },
+    [updateTask]
+  )
+
+  const handlePenaltyCodeChange = useCallback(
+    (taskId, penaltyId, field, value) => {
+      updateTask(taskId, (task) => ({
+        penaltyCodes: (task.penaltyCodes ?? []).map((penalty) =>
+          penalty.id === penaltyId ? { ...penalty, [field]: value } : penalty
+        ),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleRemovePenaltyCode = useCallback(
+    (taskId, penaltyId) => {
+      updateTask(taskId, (task) => ({
+        penaltyCodes: (task.penaltyCodes ?? []).filter((penalty) => penalty.id !== penaltyId),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleAddBonusCode = useCallback(
+    (taskId) => {
+      const newBonus = createBonusCode()
+      updateTask(taskId, (task) => ({
+        bonusCodes: [...(task.bonusCodes ?? []), newBonus],
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleBonusCodeChange = useCallback(
+    (taskId, bonusId, field, value) => {
+      updateTask(taskId, (task) => ({
+        bonusCodes: (task.bonusCodes ?? []).map((bonus) =>
+          bonus.id === bonusId ? { ...bonus, [field]: value } : bonus
+        ),
+      }))
+    },
+    [updateTask]
+  )
+
+  const handleRemoveBonusCode = useCallback(
+    (taskId, bonusId) => {
+      updateTask(taskId, (task) => ({
+        bonusCodes: (task.bonusCodes ?? []).filter((bonus) => bonus.id !== bonusId),
+      }))
+    },
+    [updateTask]
+  )
+
+  const toggleTaskExpansion = useCallback((taskId) => {
+    setExpandedTaskIds((prev) =>
+      prev.includes(taskId)
+        ? prev.filter((id) => id !== taskId)
+        : [...prev, taskId]
+    )
+  }, [])
+
+  const handleOpenTeamsModal = useCallback(() => {
+    if (!canManageTeams) {
+      return
+    }
+
+    setIsTeamsModalOpen(true)
+  }, [canManageTeams])
+
+  const handleCloseTeamsModal = useCallback(() => {
+    setIsTeamsModalOpen(false)
+  }, [])
+
+  const loadTeamsModalData = useCallback(async () => {
+    if (!selectedGame || !location) {
+      setTeamsModalState({
+        isLoading: false,
+        error: location
+          ? 'Не выбрана игра для управления командами'
+          : 'Не удалось определить площадку',
+        gameTeams: [],
+        availableTeams: [],
+      })
+      setSelectedTeamToAdd('')
+      return
+    }
+
+    setTeamsModalState((prev) => ({ ...prev, isLoading: true, error: null }))
+
+    try {
+      const teamsParams = new URLSearchParams({ location })
+      const [gameTeamsResponse, teamsResponse] = await Promise.all([
+        fetch(
+          `/api/cabinet/games/${encodeURIComponent(
+            selectedGame.id
+          )}/teams?${teamsParams.toString()}`
+        ),
+        fetch(`/api/${location}/custom?collection=teams&limit=200&sort=name_lowered`),
+      ])
+
+      const gameTeamsJson = await gameTeamsResponse.json()
+      if (!gameTeamsResponse.ok || gameTeamsJson?.success === false) {
+        throw new Error(
+          extractErrorMessage(gameTeamsJson?.error) ||
+            'Не удалось загрузить команды игры'
+        )
+      }
+
+      const teamsJson = await teamsResponse.json()
+      if (!teamsResponse.ok || teamsJson?.success === false) {
+        throw new Error(
+          extractErrorMessage(teamsJson?.error) ||
+            'Не удалось загрузить список команд'
+        )
+      }
+
+      const gameTeamsEntries = Array.isArray(gameTeamsJson?.data?.entries)
+        ? gameTeamsJson.data.entries
+        : []
+      const linkedTeams = Array.isArray(gameTeamsJson?.data?.teams)
+        ? gameTeamsJson.data.teams
+        : []
+      const allTeamsData = Array.isArray(teamsJson.data) ? teamsJson.data : []
+
+      const linkedTeamsMap = linkedTeams.reduce((acc, team) => {
+        if (team?.id) {
+          acc[team.id] = team
+        }
+
+        return acc
+      }, {})
+
+      const gameTeams = gameTeamsEntries
+        .map((entry) => {
+          const entryId = entry?.id ? String(entry.id) : entry?._id?.toString()
+          const teamId = entry?.teamId ? String(entry.teamId) : ''
+
+          if (!entryId || !teamId) {
+            return null
+          }
+
+          const teamInfo = linkedTeamsMap[teamId] ?? null
+
+          return {
+            id: entryId,
+            teamId,
+            teamName: teamInfo?.name || 'Неизвестная команда',
+            teamDescription: teamInfo?.description || '',
+          }
+        })
+        .filter(Boolean)
+
+      const allTeamsMap = allTeamsData.reduce((acc, team) => {
+        if (team?._id) {
+          const id = team._id.toString()
+          acc[id] = {
+            id,
+            name: team.name || 'Без названия',
+            description: team.description || '',
+          }
+        }
+
+        return acc
+      }, {})
+
+      const existingTeamIds = new Set(gameTeams.map((entry) => entry.teamId))
+      const availableTeams = Object.values(allTeamsMap).filter(
+        (team) => team.id && !existingTeamIds.has(team.id)
+      )
+
+      setTeamsModalState({
+        isLoading: false,
+        error: null,
+        gameTeams,
+        availableTeams,
+      })
+
+      if (availableTeams.length > 0) {
+        setSelectedTeamToAdd((prev) =>
+          prev && availableTeams.some((team) => team.id === prev)
+            ? prev
+            : availableTeams[0].id
+        )
+      } else {
+        setSelectedTeamToAdd('')
+      }
+    } catch (error) {
+      console.error('Failed to load teams for modal', error)
+      setTeamsModalState({
+        isLoading: false,
+        error:
+          extractErrorMessage(error) || 'Не удалось загрузить данные команд игры',
+        gameTeams: [],
+        availableTeams: [],
+      })
+      setSelectedTeamToAdd('')
+    }
+  }, [location, selectedGame])
+
+  const handleAddTeamToGame = useCallback(async () => {
+    if (!selectedGame || !location || !selectedTeamToAdd) {
+      return
+    }
+
+    setIsAddingTeam(true)
+    setTeamsModalState((prev) => ({ ...prev, error: null }))
+
+    try {
+      const response = await fetch(`/api/${location}/gamesteams`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            teamId: selectedTeamToAdd,
+            gameId: selectedGame.id,
+          },
+        }),
+      })
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(
+          extractErrorMessage(json?.error) || 'Не удалось добавить команду'
+        )
+      }
+
+      await loadTeamsModalData()
+    } catch (error) {
+      console.error('Failed to add team to game', error)
+      setTeamsModalState((prev) => ({
+        ...prev,
+        error: extractErrorMessage(error) || 'Не удалось добавить команду',
+      }))
+    } finally {
+      setIsAddingTeam(false)
+    }
+  }, [selectedGame, location, selectedTeamToAdd, loadTeamsModalData])
+
+  const handleRemoveTeamFromGame = useCallback(
+    async (gameTeamId) => {
+      if (!gameTeamId || !location) {
+        return
+      }
+
+      setRemovingTeamIds((prev) =>
+        prev.includes(gameTeamId) ? prev : [...prev, gameTeamId]
+      )
+      setTeamsModalState((prev) => ({ ...prev, error: null }))
+
+      try {
+        const response = await fetch(`/api/${location}/gamesteams/${gameTeamId}`, {
+          method: 'DELETE',
+        })
+
+        const json = await response.json()
+        if (!response.ok || json?.success === false) {
+          throw new Error(
+            extractErrorMessage(json?.error) || 'Не удалось удалить команду'
+          )
+        }
+
+        await loadTeamsModalData()
+      } catch (error) {
+        console.error('Failed to remove team from game', error)
+        setTeamsModalState((prev) => ({
+          ...prev,
+          error: extractErrorMessage(error) || 'Не удалось удалить команду',
+        }))
+      } finally {
+        setRemovingTeamIds((prev) => prev.filter((id) => id !== gameTeamId))
+      }
+    },
+    [location, loadTeamsModalData]
+  )
+
+  useEffect(() => {
+    if (isTeamsModalOpen) {
+      loadTeamsModalData()
+    }
+  }, [isTeamsModalOpen, loadTeamsModalData])
+
+  const handleOpenEditModal = useCallback(() => {
+    if (!canEditSelectedGame) {
+      return
+    }
+
+    setIsEditModalOpen(true)
+  }, [canEditSelectedGame])
+
+  const handleCloseEditModal = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+
+    setIsEditModalOpen(false)
+  }, [isSaving])
+
+  const handleModalPrimaryAction = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+
+    if (isDirty && canEditSelectedGame) {
+      handleSaveChanges()
+    } else {
+      handleCloseEditModal()
+    }
+  }, [canEditSelectedGame, handleCloseEditModal, handleSaveChanges, isDirty, isSaving])
+
   const tasksSummary = useMemo(() => {
     if (!selectedGame?.tasksStats) {
       return null
