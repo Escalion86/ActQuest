@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useSession } from 'next-auth/react'
@@ -18,12 +18,23 @@ const preferenceOptions = [
 const ProfilePage = ({ initialProfile }) => {
   const { data: session } = useSession()
   const [formState, setFormState] = useState(() => initialProfile)
+  const [lastSavedState, setLastSavedState] = useState(() => initialProfile)
   const [saveState, setSaveState] = useState({ isSaving: false, isSaved: false, error: null })
 
   useEffect(() => {
     setFormState(initialProfile)
+    setLastSavedState(initialProfile)
     setSaveState({ isSaving: false, isSaved: false, error: null })
   }, [initialProfile])
+
+  const hasChanges = useMemo(() => {
+    try {
+      return JSON.stringify(formState) !== JSON.stringify(lastSavedState)
+    } catch (error) {
+      console.error('Failed to compare profile states', error)
+      return true
+    }
+  }, [formState, lastSavedState])
 
   const handleChange = useCallback((field, value) => {
     setFormState((prevState) => ({ ...prevState, [field]: value }))
@@ -119,6 +130,7 @@ const ProfilePage = ({ initialProfile }) => {
         const normalized = normalizeUserProfile(json.data)
 
         setFormState(normalized)
+        setLastSavedState(normalized)
         setSaveState({ isSaving: false, isSaved: true, error: null })
       } catch (error) {
         console.error('Failed to update profile', error)
@@ -131,6 +143,18 @@ const ProfilePage = ({ initialProfile }) => {
     },
     [formState, session]
   )
+
+  const submitButtonClasses = useMemo(() => {
+    if (saveState.isSaving) {
+      return 'bg-blue-400 text-white cursor-wait'
+    }
+
+    if (!hasChanges) {
+      return 'bg-slate-200 text-slate-500 dark:bg-slate-700/60 dark:text-slate-300 cursor-not-allowed'
+    }
+
+    return 'bg-primary hover:bg-blue-700 text-white'
+  }, [hasChanges, saveState.isSaving])
 
   return (
     <>
@@ -239,12 +263,8 @@ const ProfilePage = ({ initialProfile }) => {
             <div className="flex flex-col gap-3 md:flex-row">
               <button
                 type="submit"
-                disabled={saveState.isSaving}
-                className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-                  saveState.isSaving
-                    ? 'bg-blue-400 cursor-not-allowed'
-                    : 'bg-primary hover:bg-blue-700'
-                }`}
+                disabled={saveState.isSaving || !hasChanges}
+                className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl transition ${submitButtonClasses}`}
               >
                 {saveState.isSaving ? 'Сохраняем…' : 'Сохранить профиль'}
               </button>
