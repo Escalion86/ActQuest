@@ -4,6 +4,7 @@ import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import Modal from '@components/Modal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
@@ -153,6 +154,11 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
   const [roleFilter, setRoleFilter] = useState('all')
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [userAboutModal, setUserAboutModal] = useState({
+    isOpen: false,
+    name: '',
+    about: '',
+  })
 
   useEffect(() => {
     setUsers(initialUsers)
@@ -165,6 +171,10 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
       return initialUsers[0]?.id ?? null
     })
   }, [initialUsers])
+
+  const closeUserAboutModal = useCallback(() => {
+    setUserAboutModal({ isOpen: false, name: '', about: '' })
+  }, [])
 
   const roleOptions = useMemo(() => {
     const baseOptions = USERS_ROLES.map(({ value, name }) => ({ value, name }))
@@ -233,6 +243,27 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
   useEffect(() => {
     setFeedback(null)
   }, [selectedUserId])
+
+  const handleUserCardClick = useCallback(
+    (user) => {
+      if (!user) {
+        return
+      }
+
+      setSelectedUserId(user.id)
+      const fullUser = users.find((item) => item.id === user.id) ?? null
+      const about =
+        typeof fullUser?.about === 'string' ? fullUser.about.trim() : ''
+      const name = fullUser?.name || user.name || 'Без имени'
+
+      setUserAboutModal({
+        isOpen: true,
+        name,
+        about,
+      })
+    },
+    [users]
+  )
 
   const isDirty = useMemo(() => {
     if (!selectedUser || !persistedSelectedUser) {
@@ -441,7 +472,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                     <li key={user.id}>
                       <button
                         type="button"
-                        onClick={() => setSelectedUserId(user.id)}
+                        onClick={() => handleUserCardClick(user)}
                         className={`w-full text-left p-4 border rounded-2xl transition ${
                           isActive
                             ? 'border-primary bg-blue-50 shadow-sm'
@@ -643,14 +674,12 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                     </div>
                   )}
 
-                  {selectedUser.about && (
-                    <div>
-                      <p className="text-xs text-slate-500">О себе</p>
-                      <p className="mt-1 text-sm text-slate-700 whitespace-pre-line">
-                        {selectedUser.about}
-                      </p>
-                    </div>
-                  )}
+                  <div>
+                    <p className="text-xs text-slate-500">О себе</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Описание профиля отображается в карточке пользователя.
+                    </p>
+                  </div>
                 </section>
               </div>
             ) : (
@@ -660,6 +689,21 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
             )}
           </div>
         </section>
+        <Modal
+          isOpen={userAboutModal.isOpen}
+          onClose={closeUserAboutModal}
+          title={`О пользователе — ${userAboutModal.name || 'Без имени'}`}
+        >
+          {userAboutModal.about ? (
+            <p className="whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
+              {userAboutModal.about}
+            </p>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Пользователь пока не добавил описание профиля.
+            </p>
+          )}
+        </Modal>
       </CabinetLayout>
     </>
   )

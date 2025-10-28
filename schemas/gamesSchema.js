@@ -240,6 +240,10 @@ const gamesSchema = {
     type: Boolean,
     default: true,
   },
+  moderators: {
+    type: [{ type: Schema.Types.ObjectId, ref: 'Users' }],
+    default: [],
+  },
 }
 
 export default gamesSchema

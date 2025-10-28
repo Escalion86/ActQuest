@@ -156,6 +156,29 @@ const normalizeBonusCodes = (bonusCodes = []) => {
   }))
 }
 
+const normalizeModerators = (moderators = []) => {
+  if (!Array.isArray(moderators) || moderators.length === 0) {
+    return []
+  }
+
+  return moderators
+    .map((moderator) => {
+      const id = ensureString(moderator?._id ?? moderator?.id, '')
+
+      if (!id) {
+        return null
+      }
+
+      return {
+        id,
+        name: ensureString(moderator?.name, ''),
+        username: ensureString(moderator?.username, ''),
+        telegramId: ensureString(moderator?.telegramId, ''),
+      }
+    })
+    .filter(Boolean)
+}
+
 const normalizeCoordinates = (coordinates) => {
   if (!coordinates || typeof coordinates !== 'object') {
     return { latitude: null, longitude: null, radius: null }
@@ -260,6 +283,7 @@ const normalizeGameForCabinet = (game) => {
     updatedAt: ensureDateISOString(game.updatedAt),
     createdAt: ensureDateISOString(game.createdAt),
     creatorTelegramId: ensureString(game.creatorTelegramId, ''),
+    moderators: normalizeModerators(game.moderators),
   }
 }
 

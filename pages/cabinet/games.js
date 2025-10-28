@@ -285,6 +285,26 @@ const buildUpdatePayload = (game) => {
     ? [Number(game.manyCodesPenalty[0]) || 0, Number(game.manyCodesPenalty[1]) || 0]
     : [0, 0]
 
+  const moderatorsSet = new Set()
+  const normalizedModerators = Array.isArray(game.moderators)
+    ? game.moderators
+    : []
+
+  normalizedModerators.forEach((moderator) => {
+    if (!moderator) {
+      return
+    }
+
+    if (typeof moderator === 'string' && moderator) {
+      moderatorsSet.add(moderator)
+      return
+    }
+
+    if (typeof moderator?.id === 'string' && moderator.id) {
+      moderatorsSet.add(moderator.id)
+    }
+  })
+
   return {
     name: game.name,
     status: game.status,
@@ -312,10 +332,16 @@ const buildUpdatePayload = (game) => {
     prices,
     finances,
     tasks,
+    moderators: Array.from(moderatorsSet),
   }
 }
 
-const GamesPage = ({ initialGames, initialLocation, session: initialSession }) => {
+const GamesPage = ({
+  initialGames,
+  initialLocation,
+  session: initialSession,
+  availableModerators: initialAvailableModerators,
+}) => {
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
@@ -325,6 +351,10 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
     currentUserTelegramId === null || currentUserTelegramId === undefined
       ? null
       : String(currentUserTelegramId)
+  const currentUserDbId =
+    activeSession?.user?._id === null || activeSession?.user?._id === undefined
+      ? null
+      : String(activeSession.user._id)
 
   const [games, setGames] = useState(initialGames)
   const [persistedGames, setPersistedGames] = useState(initialGames)
@@ -343,6 +373,12 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
   const [selectedTeamToAdd, setSelectedTeamToAdd] = useState('')
   const [isAddingTeam, setIsAddingTeam] = useState(false)
   const [removingTeamIds, setRemovingTeamIds] = useState([])
+  const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
+  const [descriptionModalData, setDescriptionModalData] = useState({
+    isOpen: false,
+    title: '',
+    description: '',
+  })
 
   useEffect(() => {
     setGames(initialGames)
@@ -374,7 +410,24 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
     })
     setSelectedTeamToAdd('')
     setRemovingTeamIds([])
+    setSelectedModeratorToAdd('')
   }, [selectedGameId])
+
+  const availableModerators = useMemo(
+    () =>
+      Array.isArray(initialAvailableModerators)
+        ? initialAvailableModerators
+        : [],
+    [initialAvailableModerators]
+  )
+
+  const availableModeratorsMap = useMemo(
+    () =>
+      new Map(
+        availableModerators.map((moderator) => [moderator.id, moderator])
+      ),
+    [availableModerators]
+  )
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
   const currencyFormatter = useMemo(
@@ -385,6 +438,24 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
         maximumFractionDigits: 0,
       }),
     []
+  )
+
+  const upcomingGames = useMemo(
+    () =>
+      games.filter((game) => {
+        const status = (game?.status ?? '').toString().toLowerCase()
+        return status !== 'finished' && status !== 'canceled'
+      }),
+    [games]
+  )
+
+  const pastGames = useMemo(
+    () =>
+      games.filter((game) => {
+        const status = (game?.status ?? '').toString().toLowerCase()
+        return status === 'finished' || status === 'canceled'
+      }),
+    [games]
   )
 
   const selectedGame = useMemo(
@@ -410,6 +481,24 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
     [persistedGames, selectedGameId]
   )
 
+  const isGameModerator = useMemo(() => {
+    if (!selectedGame || !currentUserDbId) {
+      return false
+    }
+
+    return (selectedGame.moderators ?? []).some((moderator) => {
+      if (!moderator) {
+        return false
+      }
+
+      if (typeof moderator === 'string') {
+        return moderator === currentUserDbId
+      }
+
+      return moderator.id === currentUserDbId
+    })
+  }, [currentUserDbId, selectedGame])
+
   const isDirty = useMemo(() => {
     if (!selectedGame || !persistedSelectedGame) {
       return false
@@ -433,6 +522,10 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
       return true
     }
 
+    if (isGameModerator) {
+      return true
+    }
+
     if (canEditOwnGames) {
       if (!currentUserIdString) {
         return false
@@ -447,11 +540,55 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
     }
 
     return false
-  }, [canEditAllGames, canEditOwnGames, currentUserIdString, selectedGame])
+  }, [canEditAllGames, canEditOwnGames, currentUserIdString, isGameModerator, selectedGame])
 
   const canViewRestrictedGameInfo = canEditSelectedGame
 
   const canManageTeams = canViewRestrictedGameInfo
+
+  const canManageGame = useCallback(
+    (game) => {
+      if (!game) {
+        return false
+      }
+
+      if (canEditAllGames) {
+        return true
+      }
+
+      if (canEditOwnGames) {
+        if (!currentUserIdString) {
+          return false
+        }
+
+        const creatorId = game?.creatorTelegramId
+        if (creatorId && creatorId === currentUserIdString) {
+          return true
+        }
+      }
+
+      if (!currentUserDbId) {
+        return false
+      }
+
+      const moderators = Array.isArray(game?.moderators)
+        ? game.moderators
+        : []
+
+      return moderators.some((moderator) => {
+        if (!moderator) {
+          return false
+        }
+
+        if (typeof moderator === 'string') {
+          return moderator === currentUserDbId
+        }
+
+        return moderator.id === currentUserDbId
+      })
+    },
+    [canEditAllGames, canEditOwnGames, currentUserDbId, currentUserIdString]
+  )
 
   const editRestrictionMessage = useMemo(() => {
     if (!selectedGame || canEditSelectedGame) {
@@ -934,8 +1071,9 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
       return
     }
 
+    closeDescriptionModal()
     setIsTeamsModalOpen(true)
-  }, [canManageTeams])
+  }, [canManageTeams, closeDescriptionModal])
 
   const handleCloseTeamsModal = useCallback(() => {
     setIsTeamsModalOpen(false)
@@ -1215,13 +1353,59 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
     }
   }, [isTeamsModalOpen, loadTeamsModalData])
 
+  const closeDescriptionModal = useCallback(() => {
+    setDescriptionModalData({ isOpen: false, title: '', description: '' })
+  }, [])
+
+  const handleSelectGameCard = useCallback((game) => {
+    if (!game) {
+      return
+    }
+
+    setSelectedGameId(game.id)
+    const description =
+      typeof game.description === 'string' ? game.description.trim() : ''
+    setDescriptionModalData({
+      isOpen: true,
+      title: game.name || 'Без названия',
+      description,
+    })
+  }, [])
+
+  const handleEditGameFromList = useCallback(
+    (game) => {
+      if (!game || !canManageGame(game)) {
+        return
+      }
+
+      setSelectedGameId(game.id)
+      closeDescriptionModal()
+      setIsEditModalOpen(true)
+    },
+    [canManageGame, closeDescriptionModal]
+  )
+
+  const handleManageTeamsFromList = useCallback(
+    (game) => {
+      if (!game || !canManageGame(game)) {
+        return
+      }
+
+      setSelectedGameId(game.id)
+      closeDescriptionModal()
+      setIsTeamsModalOpen(true)
+    },
+    [canManageGame, closeDescriptionModal]
+  )
+
   const handleOpenEditModal = useCallback(() => {
     if (!canEditSelectedGame) {
       return
     }
 
+    closeDescriptionModal()
     setIsEditModalOpen(true)
-  }, [canEditSelectedGame])
+  }, [canEditSelectedGame, closeDescriptionModal])
 
   const handleCloseEditModal = useCallback(() => {
     if (isSaving) {
@@ -1242,6 +1426,203 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
       handleCloseEditModal()
     }
   }, [canEditSelectedGame, handleCloseEditModal, handleSaveChanges, isDirty, isSaving])
+
+  const handleAddModerator = useCallback(() => {
+    if (!selectedGame || !canEditSelectedGame) {
+      return
+    }
+
+    const candidateId = selectedModeratorToAdd
+    if (!candidateId) {
+      return
+    }
+
+    const candidate = availableModeratorsMap.get(candidateId)
+    if (!candidate) {
+      return
+    }
+
+    updateSelectedGame((game) => {
+      const currentModerators = Array.isArray(game.moderators)
+        ? game.moderators.filter(Boolean)
+        : []
+
+      const alreadyExists = currentModerators.some((moderator) => {
+        if (!moderator) {
+          return false
+        }
+
+        if (typeof moderator === 'string') {
+          return moderator === candidate.id
+        }
+
+        return moderator.id === candidate.id
+      })
+
+      if (alreadyExists) {
+        return { moderators: currentModerators }
+      }
+
+      return {
+        moderators: [...currentModerators, candidate],
+      }
+    })
+
+    setSelectedModeratorToAdd('')
+  }, [availableModeratorsMap, canEditSelectedGame, selectedGame, selectedModeratorToAdd, updateSelectedGame])
+
+  const handleRemoveModerator = useCallback(
+    (moderatorId) => {
+      if (!canEditSelectedGame || !moderatorId) {
+        return
+      }
+
+      updateSelectedGame((game) => ({
+        moderators: (Array.isArray(game.moderators) ? game.moderators : []).filter((moderator) => {
+          if (!moderator) {
+            return false
+          }
+
+          if (typeof moderator === 'string') {
+            return moderator !== moderatorId
+          }
+
+          return moderator.id !== moderatorId
+        }),
+      }))
+    },
+    [canEditSelectedGame, updateSelectedGame]
+  )
+
+  const renderGameListItem = useCallback(
+    (game) => {
+      const startDateLabel = game.dateStart
+        ? new Date(game.dateStart).toLocaleString('ru-RU', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+          })
+        : 'Дата не задана'
+
+      const relativeUpdatedAt = game.updatedAt
+        ? formatRelativeTimeFromNow(game.updatedAt)
+        : '—'
+
+      const isActive = selectedGameId === game.id
+      const canManageThisGame = canManageGame(game)
+
+      return (
+        <li key={game.id}>
+          <div
+            className={`rounded-2xl border p-4 transition focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 ${
+              isActive
+                ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
+                : 'border-slate-200 bg-white hover:border-primary hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900/80 dark:hover:bg-violet-500/10'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => handleSelectGameCard(game)}
+                className="flex-1 text-left"
+              >
+                <p className="text-sm font-semibold text-primary">
+                  {game.name || 'Без названия'}
+                </p>
+              </button>
+              {canManageThisGame && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEditGameFromList(game)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
+                    aria-label="Редактировать игру"
+                    title="Редактировать игру"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M4 13.5V16h2.5L15 7.5l-2.5-2.5L4 13.5z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12.5 5.5l2-2a1.5 1.5 0 112.121 2.121l-2 2"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleManageTeamsFromList(game)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
+                    aria-label="Управление командами"
+                    title="Управление командами"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M7 10a3 3 0 100-6 3 3 0 000 6z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M13.5 9.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M2.5 15.5a4.5 4.5 0 019 0V17h-9v-1.5z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M13.5 12.5c1.933 0 3.5 1.567 3.5 3.5V17h-5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-1 font-semibold ${getStatusBadgeClassName(game.status)}`}
+              >
+                {getGameStatusLabel(game.status)}
+              </span>
+              <span className="text-slate-500">{startDateLabel}</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">
+              {getNounTeams(game.teamsCount)} · Обновлено {relativeUpdatedAt}
+            </p>
+          </div>
+        </li>
+      )
+    },
+    [canManageGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleSelectGameCard, selectedGameId]
+  )
 
   const tasksSummary = useMemo(() => {
     if (!selectedGame?.tasksStats) {
@@ -1300,6 +1681,38 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
     const minutes = toMinutes(selectedGame.cluesDuration)
     return minutes > 0 ? `${minutes} мин` : 'Подсказки отключены'
   }, [selectedGame])
+
+  const selectedGameModerators = useMemo(() => {
+    if (!selectedGame) {
+      return []
+    }
+
+    return (selectedGame.moderators ?? []).filter(Boolean)
+  }, [selectedGame])
+
+  const availableModeratorsForSelect = useMemo(() => {
+    if (!selectedGame) {
+      return []
+    }
+
+    const existingIds = new Set(
+      selectedGameModerators
+        .map((moderator) => {
+          if (!moderator) {
+            return null
+          }
+
+          if (typeof moderator === 'string') {
+            return moderator
+          }
+
+          return moderator.id
+        })
+        .filter(Boolean)
+    )
+
+    return availableModerators.filter((moderator) => !existingIds.has(moderator.id))
+  }, [availableModerators, selectedGame, selectedGameModerators])
 
   const clueModeDetails = useMemo(() => {
     if (!selectedGame) {
@@ -1418,49 +1831,28 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
             </div>
 
             {games.length > 0 ? (
-              <ul className="space-y-3">
-                {games.map((game) => {
-                  const startDateLabel = game.dateStart
-                    ? new Date(game.dateStart).toLocaleString('ru-RU', {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })
-                    : 'Дата не задана'
-
-                  const relativeUpdatedAt = game.updatedAt
-                    ? formatRelativeTimeFromNow(game.updatedAt)
-                    : '—'
-
-                  return (
-                    <li key={game.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedGameId(game.id)}
-                        className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10 ${
-                          selectedGameId === game.id
-                            ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
-                        }`}
-                      >
-                        <p className="text-sm font-semibold text-primary">
-                          {game.name || 'Без названия'}
-                        </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-1 font-semibold ${getStatusBadgeClassName(game.status)}`}
-                          >
-                            {getGameStatusLabel(game.status)}
-                          </span>
-                          <span className="text-slate-500">{startDateLabel}</span>
-                        </div>
-                        <p className="mt-1 text-xs text-slate-400">
-                          {getNounTeams(game.teamsCount)} · Обновлено {relativeUpdatedAt}
-                        </p>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
+              <div className="space-y-6">
+                {upcomingGames.length > 0 && (
+                  <div>
+                    <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Активные и запланированные
+                    </h3>
+                    <ul className="mt-2 space-y-3">
+                      {upcomingGames.map((game) => renderGameListItem(game))}
+                    </ul>
+                  </div>
+                )}
+                {pastGames.length > 0 && (
+                  <div>
+                    <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Завершённые и отменённые
+                    </h3>
+                    <ul className="mt-2 space-y-3">
+                      {pastGames.map((game) => renderGameListItem(game))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 Для выбранного города пока нет игр. Создайте сценарий в телеграм-боте, чтобы он появился здесь.
@@ -1632,10 +2024,118 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
                       </div>
                     )}
                   </dl>
-                  {selectedGame.description && (
-                    <p className="mt-4 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
-                      {selectedGame.description}
+                </section>
+
+                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <h3 className="text-lg font-semibold text-primary">Модераторы игры</h3>
+                    {selectedGameModerators.length > 0 && (
+                      <span className="text-xs text-slate-500">
+                        Назначено: {selectedGameModerators.length}
+                      </span>
+                    )}
+                  </div>
+
+                  {selectedGameModerators.length > 0 ? (
+                    <ul className="space-y-3">
+                      {selectedGameModerators.map((moderator) => {
+                        const moderatorId =
+                          typeof moderator === 'string' ? moderator : moderator?.id
+                        if (!moderatorId) {
+                          return null
+                        }
+
+                        const fallback = availableModeratorsMap.get(moderatorId) ?? null
+                        const name =
+                          typeof moderator === 'string'
+                            ? fallback?.name ?? 'Без имени'
+                            : moderator.name || 'Без имени'
+                        const username =
+                          typeof moderator === 'string'
+                            ? fallback?.username ?? ''
+                            : moderator.username || ''
+                        const telegramId =
+                          typeof moderator === 'string'
+                            ? fallback?.telegramId ?? ''
+                            : moderator.telegramId || ''
+
+                        return (
+                          <li
+                            key={moderatorId}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/80"
+                          >
+                            <div>
+                              <p className="text-sm font-semibold text-primary">{name}</p>
+                              {username && (
+                                <p className="text-xs text-slate-500">@{username}</p>
+                              )}
+                              {telegramId && (
+                                <p className="text-xs text-slate-400">ID: {telegramId}</p>
+                              )}
+                            </div>
+                            {canEditSelectedGame && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveModerator(moderatorId)}
+                                className="inline-flex items-center rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-400/40 dark:text-rose-200 dark:hover:bg-rose-500/10"
+                              >
+                                Удалить
+                              </button>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      Модераторы пока не назначены.
                     </p>
+                  )}
+
+                  {canEditSelectedGame && (
+                    <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-slate-700">
+                      <label htmlFor="game-moderator-to-add" className="text-sm font-semibold text-primary">
+                        Добавить модератора
+                      </label>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <select
+                          id="game-moderator-to-add"
+                          value={selectedModeratorToAdd}
+                          onChange={(event) => setSelectedModeratorToAdd(event.target.value)}
+                          className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                        >
+                          <option value="">Выберите модератора</option>
+                          {availableModeratorsForSelect.map((moderator) => {
+                            const labelParts = [moderator.name || 'Без имени']
+                            if (moderator.username) {
+                              labelParts.push(`@${moderator.username}`)
+                            }
+                            if (moderator.telegramId) {
+                              labelParts.push(`ID: ${moderator.telegramId}`)
+                            }
+
+                            return (
+                              <option key={moderator.id} value={moderator.id}>
+                                {labelParts.join(' · ')}
+                              </option>
+                            )
+                          })}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={handleAddModerator}
+                          disabled={!selectedModeratorToAdd}
+                          className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
+                        >
+                          Добавить
+                        </button>
+                      </div>
+                      {availableModeratorsForSelect.length === 0 && (
+                        <p className="text-xs text-slate-500">
+                          Все доступные модераторы уже назначены на эту игру.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </section>
 
@@ -3280,6 +3780,21 @@ const GamesPage = ({ initialGames, initialLocation, session: initialSession }) =
             )}
           </div>
         </section>
+        <Modal
+          isOpen={descriptionModalData.isOpen}
+          title={`Описание — ${descriptionModalData.title || 'Без названия'}`}
+          onClose={closeDescriptionModal}
+        >
+          {descriptionModalData.description ? (
+            <p className="whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
+              {descriptionModalData.description}
+            </p>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Описание для этой игры не заполнено.
+            </p>
+          )}
+        </Modal>
       </CabinetLayout>
     </>
   )
@@ -3334,6 +3849,13 @@ const coordinatesShape = PropTypes.shape({
   latitude: PropTypes.number,
   longitude: PropTypes.number,
   radius: PropTypes.number,
+})
+
+const moderatorShape = PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  name: PropTypes.string,
+  username: PropTypes.string,
+  telegramId: PropTypes.string,
 })
 
 GamesPage.propTypes = {
@@ -3393,16 +3915,19 @@ GamesPage.propTypes = {
       }),
       updatedAt: PropTypes.string,
       createdAt: PropTypes.string,
+      moderators: PropTypes.arrayOf(moderatorShape),
     })
   ),
   initialLocation: PropTypes.string,
   session: PropTypes.object,
+  availableModerators: PropTypes.arrayOf(moderatorShape),
 }
 
 GamesPage.defaultProps = {
   initialGames: [],
   initialLocation: null,
   session: null,
+  availableModerators: [],
 }
 
 export async function getServerSideProps(context) {
@@ -3429,6 +3954,7 @@ export async function getServerSideProps(context) {
     ? numericTelegramId
     : null
   let initialGames = []
+  let availableGameModerators = []
 
   if (location) {
     try {
@@ -3437,6 +3963,7 @@ export async function getServerSideProps(context) {
       if (db) {
         const GamesModel = db.model('Games')
         const GamesTeamsModel = db.model('GamesTeams')
+        const UsersModel = db.model('Users')
 
         const canLoadAllGames = userRole === 'admin' || userRole === 'dev'
         const canLoadOwnGames = userRole === 'moder' && creatorTelegramId !== null
@@ -3479,6 +4006,11 @@ export async function getServerSideProps(context) {
               updatedAt: 1,
               createdAt: 1,
               creatorTelegramId: 1,
+              moderators: 1,
+            })
+            .populate({
+              path: 'moderators',
+              select: { _id: 1, name: 1, username: 1, telegramId: 1 },
             })
             .lean()
 
@@ -3511,6 +4043,31 @@ export async function getServerSideProps(context) {
             })
           )
         }
+
+        const moderatorsDocs = await UsersModel.find({ role: 'moder' })
+          .sort({ name: 1, username: 1 })
+          .select({ _id: 1, name: 1, username: 1, telegramId: 1 })
+          .lean()
+
+        availableGameModerators = moderatorsDocs.map((moderator) => {
+          const id = moderator?._id ? moderator._id.toString() : null
+
+          if (!id) {
+            return null
+          }
+
+          const telegramId =
+            typeof moderator.telegramId === 'number'
+              ? moderator.telegramId.toString()
+              : moderator.telegramId
+
+          return {
+            id,
+            name: moderator.name ?? '',
+            username: moderator.username ?? '',
+            telegramId: telegramId ? String(telegramId) : '',
+          }
+        }).filter(Boolean)
       }
     } catch (error) {
       console.error('Failed to load games for cabinet', error)
@@ -3522,6 +4079,7 @@ export async function getServerSideProps(context) {
       session,
       initialGames,
       initialLocation: location,
+      availableModerators: availableGameModerators,
     },
   }
 }
