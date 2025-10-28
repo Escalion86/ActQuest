@@ -96,6 +96,11 @@ const TeamsPage = ({
   const [isJoiningTeam, setIsJoiningTeam] = useState(false)
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const copyTimeoutRef = useRef(null)
+  const [teamDescriptionModal, setTeamDescriptionModal] = useState({
+    isOpen: false,
+    title: '',
+    description: '',
+  })
 
   useEffect(() => {
     setTeams(initialTeams)
@@ -124,6 +129,10 @@ const TeamsPage = ({
       }
     }
   }, [isEditModalOpen])
+
+  const closeTeamDescriptionModal = useCallback(() => {
+    setTeamDescriptionModal({ isOpen: false, title: '', description: '' })
+  }, [])
 
   useEffect(() => () => {
     if (copyTimeoutRef.current) {
@@ -316,8 +325,9 @@ const TeamsPage = ({
     }
 
     setFeedback(null)
+    closeTeamDescriptionModal()
     setIsEditModalOpen(true)
-  }, [canManageSelectedTeam])
+  }, [canManageSelectedTeam, closeTeamDescriptionModal])
 
   const handleCloseEditModal = useCallback(() => {
     if (isSaving) {
@@ -933,6 +943,29 @@ const TeamsPage = ({
     })
   }, [teams])
 
+  const handleTeamCardClick = useCallback(
+    (team) => {
+      if (!team) {
+        return
+      }
+
+      setSelectedTeamId(team.id)
+      const fullTeam = teams.find((item) => item.id === team.id) ?? null
+      const description =
+        typeof fullTeam?.description === 'string'
+          ? fullTeam.description.trim()
+          : ''
+      const title = fullTeam?.name || team.name || 'Без названия'
+
+      setTeamDescriptionModal({
+        isOpen: true,
+        title,
+        description,
+      })
+    },
+    [teams]
+  )
+
   return (
     <>
       <Head>
@@ -1001,15 +1034,15 @@ const TeamsPage = ({
               <ul className="space-y-3">
                 {teamsForList.map((team) => (
                   <li key={team.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedTeamId(team.id)}
-                        className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10 ${
-                          selectedTeamId === team.id
-                            ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
-                        }`}
-                      >
+                    <button
+                      type="button"
+                      onClick={() => handleTeamCardClick(team)}
+                      className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10 ${
+                        selectedTeamId === team.id
+                          ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
+                      }`}
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-primary">
                           {team.name}
@@ -1153,15 +1186,9 @@ const TeamsPage = ({
                       </dd>
                     </div>
                   </dl>
-                  {selectedTeam.description ? (
-                    <p className="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
-                      {selectedTeam.description}
-                    </p>
-                  ) : (
-                    <p className="mt-3 text-sm text-slate-500">
-                      Описание команды пока не заполнено.
-                    </p>
-                  )}
+                  <p className="mt-3 text-sm text-slate-500 dark:text-slate-300">
+                    Описание команды отображается в карточке при выборе в списке.
+                  </p>
                 </section>
 
                 <section className="p-6 space-y-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
@@ -1685,6 +1712,21 @@ const TeamsPage = ({
               </div>
             ) : null}
           </fieldset>
+        </Modal>
+        <Modal
+          isOpen={teamDescriptionModal.isOpen}
+          title={`Описание команды — ${teamDescriptionModal.title || 'Без названия'}`}
+          onClose={closeTeamDescriptionModal}
+        >
+          {teamDescriptionModal.description ? (
+            <p className="whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
+              {teamDescriptionModal.description}
+            </p>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Капитан ещё не добавил описание команды.
+            </p>
+          )}
         </Modal>
       </CabinetLayout>
     </>
