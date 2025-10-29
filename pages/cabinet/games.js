@@ -11,7 +11,7 @@ import formatDateTime from '@helpers/formatDateTime'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
-import { getNounBonusTasks, getNounTasks, getNounTeams } from '@helpers/getNoun'
+import { getNounTeams } from '@helpers/getNoun'
 import dbConnect from '@utils/dbConnect'
 
 const GAME_STATUS_OPTIONS = ['active', 'started', 'finished', 'canceled'].map((value) => ({
@@ -473,6 +473,7 @@ const GamesPage = ({
   const loadRegisterTeams = useCallback(async () => {
     if (!location || !Number.isFinite(currentUserTelegramIdNumber)) {
       setRegisterTeams([])
+      setRegisterTeamId('')
       return
     }
 
@@ -492,6 +493,16 @@ const GamesPage = ({
       const membershipsJson = await membershipsResponse.json()
 
       if (!membershipsResponse.ok || membershipsJson?.success === false) {
+        if (
+          membershipsResponse.status === 404 ||
+          membershipsResponse.status === 204 ||
+          membershipsJson?.errorCode === 'not_found'
+        ) {
+          setRegisterTeams([])
+          setRegisterTeamId('')
+          return
+        }
+
         throw new Error(
           extractErrorMessage(membershipsJson?.error) ||
             'Не удалось загрузить список команд'
@@ -533,6 +544,7 @@ const GamesPage = ({
 
       if (teamIds.length === 0) {
         setRegisterTeams([])
+        setRegisterTeamId('')
         return
       }
 
@@ -547,6 +559,16 @@ const GamesPage = ({
       const teamsJson = await teamsResponse.json()
 
       if (!teamsResponse.ok || teamsJson?.success === false) {
+        if (
+          teamsResponse.status === 404 ||
+          teamsResponse.status === 204 ||
+          teamsJson?.errorCode === 'not_found'
+        ) {
+          setRegisterTeams([])
+          setRegisterTeamId('')
+          return
+        }
+
         throw new Error(
           extractErrorMessage(teamsJson?.error) ||
             'Не удалось загрузить данные команд'
@@ -931,7 +953,6 @@ const GamesPage = ({
     [availableModerators]
   )
 
-  const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
   const currencyFormatter = useMemo(
     () =>
       new Intl.NumberFormat('ru-RU', {
@@ -1578,7 +1599,7 @@ const GamesPage = ({
 
     setIsDescriptionModalOpen(false)
     setIsTeamsModalOpen(true)
-  }, [canManageTeams, closeDescriptionModal])
+  }, [canManageTeams])
 
   const handleCloseTeamsModal = useCallback(() => {
     setIsTeamsModalOpen(false)
@@ -1900,7 +1921,7 @@ const GamesPage = ({
 
     setIsDescriptionModalOpen(false)
     setIsEditModalOpen(true)
-  }, [canEditSelectedGame, closeDescriptionModal])
+  }, [canEditSelectedGame])
 
   const handleCloseEditModal = useCallback(() => {
     if (isSaving) {
@@ -2008,27 +2029,38 @@ const GamesPage = ({
       return (
         <li key={game.id}>
           <div
-            className={`rounded-2xl border p-4 transition focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 ${
+            role="button"
+            tabIndex={0}
+            onClick={() => handleSelectGameCard(game)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                handleSelectGameCard(game)
+              }
+            }}
+            className={`rounded-2xl border p-4 transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
               isActive
                 ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
                 : 'border-slate-200 bg-white hover:border-primary hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900/80 dark:hover:bg-violet-500/10'
             }`}
+            aria-pressed={isActive}
+            aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
+            title={game.name || 'Без названия'}
           >
             <div className="flex items-start justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => handleSelectGameCard(game)}
-                className="flex-1 text-left"
-              >
+              <div className="flex-1">
                 <p className="text-sm font-semibold text-primary">
                   {game.name || 'Без названия'}
                 </p>
-              </button>
+              </div>
               {canManageThisGame && (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleEditGameFromList(game)}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      handleEditGameFromList(game)
+                    }}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
                     aria-label="Редактировать игру"
                     title="Редактировать игру"
@@ -2057,7 +2089,10 @@ const GamesPage = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleManageTeamsFromList(game)}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      handleManageTeamsFromList(game)
+                    }}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
                     aria-label="Управление командами"
                     title="Управление командами"
@@ -2110,7 +2145,9 @@ const GamesPage = ({
               <span className="text-slate-500">{startDateLabel}</span>
             </div>
             <p className="mt-1 text-xs text-slate-400">
-              {getNounTeams(game.teamsCount)} · Обновлено {relativeUpdatedAt}
+              {canManageThisGame
+                ? `${getNounTeams(game.teamsCount)} · Обновлено ${relativeUpdatedAt}`
+                : getNounTeams(game.teamsCount)}
             </p>
           </div>
         </li>
@@ -2118,22 +2155,6 @@ const GamesPage = ({
     },
     [canManageGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleSelectGameCard, selectedGameId]
   )
-
-  const tasksSummary = useMemo(() => {
-    if (!selectedGame?.tasksStats) {
-      return null
-    }
-
-    const { total, bonus, canceled } = selectedGame.tasksStats
-    return {
-      total,
-      bonus,
-      canceled,
-      totalLabel: getNounTasks(total),
-      bonusLabel: bonus > 0 ? getNounBonusTasks(bonus) : null,
-      canceledLabel: canceled > 0 ? `${canceled} отменено` : null,
-    }
-  }, [selectedGame])
 
   const gameTypeLabel = useMemo(() => {
     if (!selectedGame) {
@@ -2176,38 +2197,6 @@ const GamesPage = ({
     const minutes = toMinutes(selectedGame.cluesDuration)
     return minutes > 0 ? `${minutes} мин` : 'Подсказки отключены'
   }, [selectedGame])
-
-  const selectedGameModerators = useMemo(() => {
-    if (!selectedGame) {
-      return []
-    }
-
-    return (selectedGame.moderators ?? []).filter(Boolean)
-  }, [selectedGame])
-
-  const availableModeratorsForSelect = useMemo(() => {
-    if (!selectedGame) {
-      return []
-    }
-
-    const existingIds = new Set(
-      selectedGameModerators
-        .map((moderator) => {
-          if (!moderator) {
-            return null
-          }
-
-          if (typeof moderator === 'string') {
-            return moderator
-          }
-
-          return moderator.id
-        })
-        .filter(Boolean)
-    )
-
-    return availableModerators.filter((moderator) => !existingIds.has(moderator.id))
-  }, [availableModerators, selectedGame, selectedGameModerators])
 
   const selectedGameModerators = useMemo(() => {
     if (!selectedGame) {
@@ -2341,7 +2330,7 @@ const GamesPage = ({
         activePage="games"
       >
         <section className="grid gap-6 md:grid-cols-5">
-          <div className="md:col-span-2 space-y-4">
+          <div className="md:col-span-5 space-y-4 md:max-w-4xl">
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
@@ -2375,6 +2364,30 @@ const GamesPage = ({
               </div>
             </div>
 
+            {selectedGame && !location && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                Не удалось определить площадку пользователя. Сохранение изменений недоступно.
+              </div>
+            )}
+
+            {feedback && (
+              <div
+                className={`rounded-2xl border p-4 text-sm ${
+                  feedback.type === 'success'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    : 'bg-rose-50 border-rose-200 text-rose-700'
+                }`}
+              >
+                {feedback.message}
+              </div>
+            )}
+
+            {selectedGame && editRestrictionMessage && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                {editRestrictionMessage}
+              </div>
+            )}
+
             {games.length > 0 ? (
               <div className="space-y-6">
                 {upcomingGames.length > 0 && (
@@ -2405,102 +2418,9 @@ const GamesPage = ({
             )}
           </div>
 
-          <div className="md:col-span-3">
-            {selectedGame ? (
+          {selectedGame && (
+            <div className="md:col-span-5">
               <div className="space-y-6">
-                <div className="p-5 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(selectedGame.status)}`}
-                        >
-                          {getGameStatusLabel(selectedGame.status)}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          Команд: {numberFormatter.format(selectedGame.teamsCount ?? 0)}
-                        </span>
-                        {selectedGame.updatedAt && (
-                          <span className="text-xs text-slate-500">
-                            Обновлено {formatRelativeTimeFromNow(selectedGame.updatedAt)}
-                          </span>
-                        )}
-                      </div>
-                      <h2 className="mt-4 text-xl font-semibold text-primary">
-                        {selectedGame.name || 'Без названия'}
-                      </h2>
-                      {tasksSummary && (
-                        <p className="mt-3 text-sm text-slate-600">
-                          {tasksSummary.totalLabel}
-                          {tasksSummary.bonusLabel ? ` · ${tasksSummary.bonusLabel}` : ''}
-                          {tasksSummary.canceledLabel ? ` · ${tasksSummary.canceledLabel}` : ''}
-                        </p>
-                      )}
-                    </div>
-                    {(canManageTeams || canEditSelectedGame) && (
-                      <div className="flex flex-wrap justify-start gap-3 md:justify-end">
-                        {canManageTeams && (
-                          <button
-                            type="button"
-                            onClick={handleOpenTeamsModal}
-                            className="inline-flex justify-center rounded-xl border border-primary px-5 py-3 text-sm font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-violet-500/10"
-                          >
-                            Управление командами
-                          </button>
-                        )}
-                        {canEditSelectedGame && (
-                          <button
-                            type="button"
-                            onClick={handleOpenEditModal}
-                            className="inline-flex justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-                          >
-                            Редактировать игру
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {!location && (
-                  <div className="p-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl">
-                    Не удалось определить площадку пользователя. Сохранение изменений недоступно.
-                  </div>
-                )}
-
-                {feedback && (
-                  <div
-                    className={`p-4 text-sm border rounded-2xl ${
-                      feedback.type === 'success'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                        : 'bg-rose-50 border-rose-200 text-rose-700'
-                    }`}
-                  >
-                    {feedback.message}
-                  </div>
-                )}
-
-                {editRestrictionMessage && (
-                  <div className="p-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl">
-                    {editRestrictionMessage}
-                  </div>
-                )}
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-                  <h3 className="text-lg font-semibold text-primary">Описание и параметры</h3>
-                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                    Подробная информация об игре, список модераторов, настройки проведения и финансовые данные доступны в отдельном окне.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setIsDescriptionModalOpen(true)}
-                    className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                  >
-                    Открыть описание игры
-                  </button>
-                </div>
-
-
                 <Modal
                   isOpen={isEditModalOpen}
                   title={`Редактирование игры «${selectedGame.name || 'Без названия'}»`}
@@ -3965,12 +3885,8 @@ const GamesPage = ({
                   </div>
                 </Modal>
               </div>
-            ) : (
-              <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/80">
-                <p>Выберите игру из списка слева, чтобы просмотреть детали.</p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </section>
         <Modal
           isOpen={isRegisterModalOpen}
