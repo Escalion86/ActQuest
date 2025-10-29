@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import Modal from '@components/Modal'
 import getSessionSafe from '@helpers/getSessionSafe'
+import formatDate from '@helpers/formatDate'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { getNounUsers } from '@helpers/getNoun'
@@ -96,6 +97,7 @@ const TeamsPage = ({
   const [isJoiningTeam, setIsJoiningTeam] = useState(false)
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const copyTimeoutRef = useRef(null)
+  const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] = useState(false)
 
   useEffect(() => {
     setTeams(initialTeams)
@@ -125,6 +127,10 @@ const TeamsPage = ({
     }
   }, [isEditModalOpen])
 
+  const closeTeamDescriptionModal = useCallback(() => {
+    setIsTeamDescriptionModalOpen(false)
+  }, [])
+
   useEffect(() => () => {
     if (copyTimeoutRef.current) {
       clearTimeout(copyTimeoutRef.current)
@@ -136,6 +142,12 @@ const TeamsPage = ({
     () => teams.find((team) => team.id === selectedTeamId) ?? null,
     [teams, selectedTeamId]
   )
+
+  useEffect(() => {
+    if (!selectedTeam) {
+      setIsTeamDescriptionModalOpen(false)
+    }
+  }, [selectedTeam])
 
   const persistedSelectedTeam = useMemo(
     () => persistedTeams.find((team) => team.id === selectedTeamId) ?? null,
@@ -316,8 +328,9 @@ const TeamsPage = ({
     }
 
     setFeedback(null)
+    closeTeamDescriptionModal()
     setIsEditModalOpen(true)
-  }, [canManageSelectedTeam])
+  }, [canManageSelectedTeam, closeTeamDescriptionModal])
 
   const handleCloseEditModal = useCallback(() => {
     if (isSaving) {
@@ -933,6 +946,15 @@ const TeamsPage = ({
     })
   }, [teams])
 
+  const handleTeamCardClick = useCallback((team) => {
+    if (!team) {
+      return
+    }
+
+    setSelectedTeamId(team.id)
+    setIsTeamDescriptionModalOpen(true)
+  }, [])
+
   return (
     <>
       <Head>
@@ -1001,15 +1023,15 @@ const TeamsPage = ({
               <ul className="space-y-3">
                 {teamsForList.map((team) => (
                   <li key={team.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedTeamId(team.id)}
-                        className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10 ${
-                          selectedTeamId === team.id
-                            ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
-                        }`}
-                      >
+                    <button
+                      type="button"
+                      onClick={() => handleTeamCardClick(team)}
+                      className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10 ${
+                        selectedTeamId === team.id
+                          ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
+                      }`}
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-primary">
                           {team.name}
@@ -1114,146 +1136,20 @@ const TeamsPage = ({
                   </div>
                 )}
 
-                <section className="p-6 space-y-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
-                  <h3 className="text-lg font-semibold text-primary">Информация о команде</h3>
-                  <dl className="mt-3 grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Статус набора
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                        {selectedTeam.open ? 'Открыта для заявок' : 'Закрытый состав'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Участников
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                        {selectedTeam.membersCount ?? 0}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Участие в играх
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                        {selectedTeam.gamesCount ?? 0}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Капитан
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                        {selectedTeam.captain?.name || 'Не назначен'}
-                        {selectedTeam.captain?.username
-                          ? ` (@${selectedTeam.captain.username})`
-                          : ''}
-                      </dd>
-                    </div>
-                  </dl>
-                  {selectedTeam.description ? (
-                    <p className="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
-                      {selectedTeam.description}
-                    </p>
-                  ) : (
-                    <p className="mt-3 text-sm text-slate-500">
-                      Описание команды пока не заполнено.
-                    </p>
-                  )}
-                </section>
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                  <h3 className="text-lg font-semibold text-primary">Сведения о команде</h3>
+                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                    Подробности о составе, играх и капитанах доступны в отдельном окне описания команды.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsTeamDescriptionModalOpen(true)}
+                    className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  >
+                    Открыть карточку команды
+                  </button>
+                </div>
 
-                <section className="p-6 space-y-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-primary">Состав команды</h3>
-                    {selectedTeam.captain && (
-                      <span className="text-xs text-slate-500">
-                        Капитан: {selectedTeam.captain.name || 'не указан'}
-                      </span>
-                    )}
-                  </div>
-                  {selectedTeam.members?.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedTeam.members.map((member) => {
-                        const phoneLink = normalizePhoneLink(member.phone)
-
-                        return (
-                          <div
-                            key={member.id}
-                            className="p-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl"
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-semibold text-primary">
-                                  {member.name || 'Без имени'}
-                                  {member.isCaptain ? ' · Капитан' : ''}
-                                </p>
-                                {member.username && (
-                                  <p className="mt-1 text-xs text-slate-500">@{member.username}</p>
-                                )}
-                                {member.userRole && (
-                                  <p className="mt-1 text-xs text-slate-400">
-                                    Роль в системе: {member.userRole}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                {member.phone && (
-                                  <a
-                                    href={phoneLink ? `tel:${phoneLink}` : undefined}
-                                    className="block text-xs text-primary hover:underline"
-                                  >
-                                    {member.phone}
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-500">
-                      Пока нет участников. Пригласите игроков через телеграм-бота, чтобы они появились здесь.
-                    </p>
-                  )}
-                </section>
-
-                <section className="p-6 space-y-4 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
-                  <h3 className="text-lg font-semibold text-primary">Игры команды</h3>
-                  {selectedTeam.games?.length > 0 ? (
-                    <ul className="space-y-3">
-                      {selectedTeam.games.map((game) => (
-                        <li
-                          key={game.id}
-                          className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-800/80"
-                        >
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <p className="text-sm font-semibold text-primary">
-                              {game.name || 'Без названия'}
-                            </p>
-                            <span className="text-xs text-slate-500">
-                              {getGameStatusLabel(game.status)}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-xs text-slate-500">
-                            {game.dateStart
-                              ? new Date(game.dateStart).toLocaleString('ru-RU', {
-                                  dateStyle: 'short',
-                                  timeStyle: 'short',
-                                })
-                              : 'Дата не назначена'}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-slate-500">
-                      Команда пока не участвовала в играх.
-                    </p>
-                  )}
-                </section>
 
                 <Modal
                   isOpen={isEditModalOpen}
@@ -1685,6 +1581,133 @@ const TeamsPage = ({
               </div>
             ) : null}
           </fieldset>
+        </Modal>
+        <Modal
+          isOpen={isTeamDescriptionModalOpen}
+          title={`Команда — ${selectedTeam?.name || 'Без названия'}`}
+          onClose={closeTeamDescriptionModal}
+        >
+          {selectedTeam ? (
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
+                <h4 className="text-base font-semibold text-primary">Описание</h4>
+                {selectedTeam.description ? (
+                  <p className="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
+                    {selectedTeam.description}
+                  </p>
+                ) : (
+                  <p className="mt-3 text-sm text-slate-500">
+                    Капитан ещё не добавил описание команды.
+                  </p>
+                )}
+              </div>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <h4 className="text-base font-semibold text-primary">Информация</h4>
+                <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Статус набора</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                      {selectedTeam.open ? 'Открыта для заявок' : 'Закрытый состав'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Участников</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{selectedTeam.membersCount ?? 0}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Участие в играх</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{selectedTeam.gamesCount ?? 0}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Капитан</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                      {selectedTeam.captain?.name || 'Не назначен'}
+                      {selectedTeam.captain?.username ? ` (@${selectedTeam.captain.username})` : ''}
+                    </dd>
+                  </div>
+                  {selectedTeam.updatedAt && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Обновлено</dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {formatRelativeTimeFromNow(selectedTeam.updatedAt)}
+                      </dd>
+                    </div>
+                  )}
+                  {selectedTeam.createdAt && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Создана</dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {formatDate(selectedTeam.createdAt)}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <h4 className="text-base font-semibold text-primary">Состав команды</h4>
+                {selectedTeam.members?.length > 0 ? (
+                  <ul className="mt-4 space-y-3">
+                    {selectedTeam.members.map((member) => (
+                      <li
+                        key={member.id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
+                      >
+                        <p className="font-semibold text-primary">
+                          {member.name || 'Без имени'}
+                          {member.isCaptain ? ' · Капитан' : ''}
+                        </p>
+                        {member.username && (
+                          <p className="mt-1 text-xs text-slate-500">@{member.username}</p>
+                        )}
+                        {member.userRole && (
+                          <p className="mt-1 text-xs text-slate-400">Роль в системе: {member.userRole}</p>
+                        )}
+                        {member.phone && (
+                          <p className="mt-2 text-xs text-slate-500">Телефон: {member.phone}</p>
+                        )}
+                        {member.telegramId && (
+                          <p className="mt-1 text-xs text-slate-400">Telegram ID: {member.telegramId}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm text-slate-500">
+                    Пока нет участников. Пригласите игроков через телеграм-бота, чтобы они появились здесь.
+                  </p>
+                )}
+              </section>
+
+              {selectedTeam.games?.length > 0 && (
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                  <h4 className="text-base font-semibold text-primary">Участие в играх</h4>
+                  <ul className="mt-4 space-y-3">
+                    {selectedTeam.games.map((game) => (
+                      <li
+                        key={game.id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
+                      >
+                        <p className="font-semibold text-primary">{game.name || 'Без названия'}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Статус: {getGameStatusLabel(game.status)}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {game.dateStart ? formatDate(game.dateStart) : 'Дата не назначена'}
+                        </p>
+                        {game.hidden && (
+                          <p className="mt-1 text-xs text-slate-400">Игра скрыта из публичного списка</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">Выберите команду из списка слева, чтобы просмотреть детали.</p>
+          )}
         </Modal>
       </CabinetLayout>
     </>
