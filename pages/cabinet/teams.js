@@ -12,6 +12,7 @@ import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { getNounUsers } from '@helpers/getNoun'
 import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
+import useSnackbar from '@helpers/useSnackbar'
 import dbConnect from '@utils/dbConnect'
 
 const serializeTeamForComparison = (team) => {
@@ -84,20 +85,18 @@ const TeamsPage = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
-  const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
   const [newTeamName, setNewTeamName] = useState('')
   const [newTeamDescription, setNewTeamDescription] = useState('')
   const [newTeamOpen, setNewTeamOpen] = useState(true)
-  const [createFeedback, setCreateFeedback] = useState(null)
   const [isCreatingTeam, setIsCreatingTeam] = useState(false)
   const [joinTeamId, setJoinTeamId] = useState('')
-  const [joinFeedback, setJoinFeedback] = useState(null)
   const [isJoiningTeam, setIsJoiningTeam] = useState(false)
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const copyTimeoutRef = useRef(null)
   const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] = useState(false)
+  const snackbar = useSnackbar()
 
   useEffect(() => {
     setTeams(initialTeams)
@@ -112,7 +111,6 @@ const TeamsPage = ({
   }, [initialTeams])
 
   useEffect(() => {
-    setFeedback(null)
     setMemberActionId(null)
     setIsEditModalOpen(false)
   }, [selectedTeamId])
@@ -264,7 +262,6 @@ const TeamsPage = ({
         return
       }
 
-      setFeedback(null)
       updateSelectedTeam({ [field]: value })
     },
     [canManageSelectedTeam, updateSelectedTeam]
@@ -287,11 +284,9 @@ const TeamsPage = ({
         return original ? { ...original } : team
       })
     )
-    setFeedback(null)
   }, [canManageSelectedTeam, persistedTeams, selectedTeamId])
 
   const handleOpenCreateModal = useCallback(() => {
-    setCreateFeedback(null)
     setIsCreateModalOpen(true)
   }, [])
 
@@ -301,14 +296,12 @@ const TeamsPage = ({
     }
 
     setIsCreateModalOpen(false)
-    setCreateFeedback(null)
     setNewTeamName('')
     setNewTeamDescription('')
     setNewTeamOpen(true)
   }, [isCreatingTeam])
 
   const handleOpenJoinModal = useCallback(() => {
-    setJoinFeedback(null)
     setIsJoinModalOpen(true)
   }, [])
 
@@ -318,7 +311,6 @@ const TeamsPage = ({
     }
 
     setIsJoinModalOpen(false)
-    setJoinFeedback(null)
     setJoinTeamId('')
   }, [isJoiningTeam])
 
@@ -384,33 +376,25 @@ const TeamsPage = ({
     const trimmedDescription = newTeamDescription.trim()
 
     if (!trimmedName) {
-      setCreateFeedback({
-        type: 'error',
-        message: 'Введите название команды',
-      })
+      snackbar.error('Введите название команды')
       return
     }
 
     if (!location) {
-      setCreateFeedback({
-        type: 'error',
-        message:
-          'Не удалось определить площадку пользователя. Создание команды недоступно.',
-      })
+      snackbar.error(
+        'Не удалось определить площадку пользователя. Создание команды недоступно.'
+      )
       return
     }
 
     if (!Number.isFinite(currentTelegramIdNumber)) {
-      setCreateFeedback({
-        type: 'error',
-        message:
-          'Чтобы управлять командами, привяжите Telegram-аккаунт в профиле.',
-      })
+      snackbar.error(
+        'Чтобы управлять командами, привяжите Telegram-аккаунт в профиле.'
+      )
       return
     }
 
     setIsCreatingTeam(true)
-    setCreateFeedback(null)
 
     try {
       const createPayload = buildTeamUpdatePayload({
@@ -498,16 +482,12 @@ const TeamsPage = ({
       setNewTeamName('')
       setNewTeamDescription('')
       setNewTeamOpen(true)
-      setFeedback({
-        type: 'success',
-        message: `Команда «${freshTeam.name || trimmedName}» создана. Вы назначены капитаном.`,
-      })
+      snackbar.success(
+        `Команда «${freshTeam.name || trimmedName}» создана. Вы назначены капитаном.`
+      )
     } catch (error) {
       console.error('Failed to create team', error)
-      setCreateFeedback({
-        type: 'error',
-        message: error?.message || 'Не удалось создать команду',
-      })
+      snackbar.error(error?.message || 'Не удалось создать команду')
     } finally {
       setIsCreatingTeam(false)
     }
@@ -518,6 +498,7 @@ const TeamsPage = ({
     newTeamDescription,
     newTeamName,
     newTeamOpen,
+    snackbar,
     sortTeamsByUpdatedAt,
   ])
 
@@ -525,41 +506,30 @@ const TeamsPage = ({
     const trimmedTeamId = joinTeamId.trim()
 
     if (!trimmedTeamId) {
-      setJoinFeedback({
-        type: 'error',
-        message: 'Введите идентификатор команды',
-      })
+      snackbar.error('Введите идентификатор команды')
       return
     }
 
     if (!location) {
-      setJoinFeedback({
-        type: 'error',
-        message:
-          'Не удалось определить площадку пользователя. Вступление в команду недоступно.',
-      })
+      snackbar.error(
+        'Не удалось определить площадку пользователя. Вступление в команду недоступно.'
+      )
       return
     }
 
     if (!Number.isFinite(currentTelegramIdNumber)) {
-      setJoinFeedback({
-        type: 'error',
-        message:
-          'Чтобы присоединяться к командам, привяжите Telegram-аккаунт в профиле.',
-      })
+      snackbar.error(
+        'Чтобы присоединяться к командам, привяжите Telegram-аккаунт в профиле.'
+      )
       return
     }
 
     if (teams.some((team) => team.id === trimmedTeamId)) {
-      setJoinFeedback({
-        type: 'error',
-        message: 'Вы уже состоите в этой команде',
-      })
+      snackbar.error('Вы уже состоите в этой команде')
       return
     }
 
     setIsJoiningTeam(true)
-    setJoinFeedback(null)
 
     try {
       const teamResponse = await fetch(
@@ -633,16 +603,12 @@ const TeamsPage = ({
 
       setIsJoinModalOpen(false)
       setJoinTeamId('')
-      setFeedback({
-        type: 'success',
-        message: `Вы присоединились к команде «${freshTeam.name || 'без названия'}».`,
-      })
+      snackbar.success(
+        `Вы присоединились к команде «${freshTeam.name || 'без названия'}».`
+      )
     } catch (error) {
       console.error('Failed to join team', error)
-      setJoinFeedback({
-        type: 'error',
-        message: error?.message || 'Не удалось присоединиться к команде',
-      })
+      snackbar.error(error?.message || 'Не удалось присоединиться к команде')
     } finally {
       setIsJoiningTeam(false)
     }
@@ -651,6 +617,7 @@ const TeamsPage = ({
     fetchTeamsSnapshot,
     location,
     joinTeamId,
+    snackbar,
     sortTeamsByUpdatedAt,
     teams,
   ])
@@ -661,7 +628,6 @@ const TeamsPage = ({
     }
 
     setIsSaving(true)
-    setFeedback(null)
 
     try {
       const response = await fetch(
@@ -701,18 +667,21 @@ const TeamsPage = ({
           team.id === selectedTeamId ? updatedTeam : team
         )
       )
-      setFeedback({ type: 'success', message: 'Изменения сохранены' })
+      snackbar.success('Изменения сохранены')
       setIsEditModalOpen(false)
     } catch (error) {
       console.error('Failed to update team', error)
-      setFeedback({
-        type: 'error',
-        message: error?.message || 'Не удалось сохранить команду',
-      })
+      snackbar.error(error?.message || 'Не удалось сохранить команду')
     } finally {
       setIsSaving(false)
     }
-  }, [canManageSelectedTeam, location, selectedTeam, selectedTeamId])
+  }, [
+    canManageSelectedTeam,
+    location,
+    selectedTeam,
+    selectedTeamId,
+    snackbar,
+  ])
 
   const handleModalPrimaryAction = useCallback(() => {
     if (isSaving) {
@@ -738,16 +707,13 @@ const TeamsPage = ({
       }
 
       if (member.isCaptain) {
-        setFeedback({
-          type: 'error',
-          message:
-            'Нельзя удалить капитана команды. Назначьте нового капитана и повторите действие.',
-        })
+        snackbar.error(
+          'Нельзя удалить капитана команды. Назначьте нового капитана и повторите действие.'
+        )
         return
       }
 
       setMemberActionId(memberId)
-      setFeedback(null)
 
       try {
         const response = await fetch(
@@ -785,21 +751,23 @@ const TeamsPage = ({
           )
         )
 
-        setFeedback({
-          type: 'success',
-          message: `Участник «${member.name || 'Без имени'}» удалён из команды`,
-        })
+        snackbar.success(
+          `Участник «${member.name || 'Без имени'}» удалён из команды`
+        )
       } catch (error) {
         console.error('Failed to remove team member', error)
-        setFeedback({
-          type: 'error',
-          message: error?.message || 'Не удалось удалить участника',
-        })
+        snackbar.error(error?.message || 'Не удалось удалить участника')
       } finally {
         setMemberActionId(null)
       }
     },
-    [canManageSelectedTeam, location, selectedTeam, selectedTeamId]
+    [
+      canManageSelectedTeam,
+      location,
+      selectedTeam,
+      selectedTeamId,
+      snackbar,
+    ]
   )
 
   const handleSetCaptain = useCallback(
@@ -816,7 +784,6 @@ const TeamsPage = ({
       const currentCaptain = selectedTeam.members.find((item) => item.isCaptain)
 
       setMemberActionId(memberId)
-      setFeedback(null)
 
       try {
         const requests = [
@@ -877,21 +844,23 @@ const TeamsPage = ({
           )
         )
 
-        setFeedback({
-          type: 'success',
-          message: `«${member.name || 'Участник'}» назначен капитаном команды`,
-        })
+        snackbar.success(
+          `«${member.name || 'Участник'}» назначен капитаном команды`
+        )
       } catch (error) {
         console.error('Failed to promote team member', error)
-        setFeedback({
-          type: 'error',
-          message: error?.message || 'Не удалось изменить роль участника',
-        })
+        snackbar.error(error?.message || 'Не удалось изменить роль участника')
       } finally {
         setMemberActionId(null)
       }
     },
-    [canManageSelectedTeam, location, selectedTeam, selectedTeamId]
+    [
+      canManageSelectedTeam,
+      location,
+      selectedTeam,
+      selectedTeamId,
+      snackbar,
+    ]
   )
 
   const teamRestrictionMessage = useMemo(() => {
@@ -975,7 +944,6 @@ const TeamsPage = ({
       }
 
       setSelectedTeamId(teamId)
-      setFeedback(null)
       closeTeamDescriptionModal()
       setIsEditModalOpen(true)
     },
@@ -1157,18 +1125,6 @@ const TeamsPage = ({
                   </div>
                 )}
 
-                {feedback && !isEditModalOpen && (
-                  <div
-                    className={`p-4 text-sm border rounded-2xl ${
-                      feedback.type === 'success'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                        : 'bg-rose-50 border-rose-200 text-rose-700'
-                    }`}
-                  >
-                    {feedback.message}
-                  </div>
-                )}
-
                 {teamRestrictionMessage && (
                   <div className="p-4 text-sm border text-amber-700 bg-amber-50 border-amber-200 rounded-2xl">
                     {teamRestrictionMessage}
@@ -1182,17 +1138,6 @@ const TeamsPage = ({
                   onClose={handleCloseEditModal}
                 >
                 <>
-                  {feedback && (
-                    <div
-                      className={`mb-6 rounded-2xl border p-4 text-sm ${
-                        feedback.type === 'success'
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                          : 'bg-rose-50 border-rose-200 text-rose-700'
-                      }`}
-                    >
-                      {feedback.message}
-                    </div>
-                  )}
                 <fieldset
                   disabled={!canManageSelectedTeam || isSaving}
                   className="p-0 m-0 space-y-6 border-0"
@@ -1468,17 +1413,6 @@ const TeamsPage = ({
             <p className="text-sm text-slate-600 dark:text-slate-300">
               Название команды можно изменить позже. Вы автоматически станете капитаном созданной команды.
             </p>
-            {createFeedback ? (
-              <div
-                className={`rounded-2xl border p-4 text-sm ${
-                  createFeedback.type === 'error'
-                    ? 'border-rose-200 bg-rose-50 text-rose-700'
-                    : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                }`}
-              >
-                {createFeedback.message}
-              </div>
-            ) : null}
             <div className="space-y-2">
               <label
                 htmlFor="new-team-name"
@@ -1573,17 +1507,6 @@ const TeamsPage = ({
             <p className="text-sm text-slate-600 dark:text-slate-300">
               Введите идентификатор команды. Его можно получить у капитана, если в настройках команды разрешено присоединение по id.
             </p>
-            {joinFeedback ? (
-              <div
-                className={`rounded-2xl border p-4 text-sm ${
-                  joinFeedback.type === 'error'
-                    ? 'border-rose-200 bg-rose-50 text-rose-700'
-                    : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                }`}
-              >
-                {joinFeedback.message}
-              </div>
-            ) : null}
             <div className="space-y-2">
               <label
                 htmlFor="join-team-id"
