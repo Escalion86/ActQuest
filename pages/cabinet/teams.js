@@ -322,16 +322,6 @@ const TeamsPage = ({
     setJoinTeamId('')
   }, [isJoiningTeam])
 
-  const handleOpenEditModal = useCallback(() => {
-    if (!canManageSelectedTeam) {
-      return
-    }
-
-    setFeedback(null)
-    closeTeamDescriptionModal()
-    setIsEditModalOpen(true)
-  }, [canManageSelectedTeam, closeTeamDescriptionModal])
-
   const handleCloseEditModal = useCallback(() => {
     if (isSaving) {
       return
@@ -935,6 +925,14 @@ const TeamsPage = ({
         ? formatRelativeTimeFromNow(team.updatedAt)
         : '—'
 
+      const canManageTeam =
+        isAdmin ||
+        (team.members ?? []).some(
+          (member) =>
+            member.isCaptain &&
+            member.telegramId === (currentTelegramIdString ?? '')
+        )
+
       return {
         id: team.id,
         name: team.name || 'Без названия',
@@ -942,9 +940,10 @@ const TeamsPage = ({
         gamesCount: team.gamesCount ?? 0,
         updatedLabel,
         open: Boolean(team.open),
+        canManage: canManageTeam,
       }
     })
-  }, [teams])
+  }, [currentTelegramIdString, isAdmin, teams])
 
   const handleTeamCardClick = useCallback((team) => {
     if (!team) {
@@ -954,6 +953,39 @@ const TeamsPage = ({
     setSelectedTeamId(team.id)
     setIsTeamDescriptionModalOpen(true)
   }, [])
+
+  const handleEditTeamFromList = useCallback(
+    (teamId) => {
+      const team = teams.find((item) => item.id === teamId)
+
+      if (!team) {
+        return
+      }
+
+      const canManageTeam =
+        isAdmin ||
+        (team.members ?? []).some(
+          (member) =>
+            member.isCaptain &&
+            member.telegramId === (currentTelegramIdString ?? '')
+        )
+
+      if (!canManageTeam) {
+        return
+      }
+
+      setSelectedTeamId(teamId)
+      setFeedback(null)
+      closeTeamDescriptionModal()
+      setIsEditModalOpen(true)
+    },
+    [
+      closeTeamDescriptionModal,
+      currentTelegramIdString,
+      isAdmin,
+      teams,
+    ]
+  )
 
   return (
     <>
@@ -1021,42 +1053,92 @@ const TeamsPage = ({
 
             {teamsForList.length > 0 ? (
               <ul className="space-y-3">
-                {teamsForList.map((team) => (
-                  <li key={team.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleTeamCardClick(team)}
-                      className={`w-full text-left p-4 border rounded-2xl transition hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10 ${
-                        selectedTeamId === team.id
-                          ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
-                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-primary">
-                          {team.name}
+                {teamsForList.map((team) => {
+                  const isActive = selectedTeamId === team.id
+
+                  return (
+                    <li key={team.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleTeamCardClick(team)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            handleTeamCardClick(team)
+                          }
+                        }}
+                        className={`w-full text-left p-4 border rounded-2xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 cursor-pointer ${
+                          isActive
+                            ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
+                            : 'border-slate-200 dark:border-slate-700 bg-white hover:border-primary hover:bg-blue-50 dark:bg-slate-900/80 dark:hover:bg-violet-500/10'
+                        }`}
+                        aria-pressed={isActive}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-primary">
+                              {team.name}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                team.open
+                                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                                  : 'bg-slate-100 text-slate-600 border border-slate-200 dark:border-slate-700'
+                              }`}
+                            >
+                              {team.open ? 'Открыта' : 'Закрыта'}
+                            </span>
+                            {team.canManage && (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleEditTeamFromList(team.id)
+                                }}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
+                                aria-label="Редактировать команду"
+                                title="Редактировать команду"
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  viewBox="0 0 20 20"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M4 13.5V16h2.5L15 7.5l-2.5-2.5L4 13.5z"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                  <path
+                                    d="M12.5 5.5l2-2a1.5 1.5 0 112.121 2.121l-2 2"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {team.membersCount}
                         </p>
-                        <span
-                          className={`text-xs font-medium px-2 py-1 rounded-full ${
-                            team.open
-                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 border border-slate-200 dark:border-slate-700'
-                          }`}
-                        >
-                          {team.open ? 'Открыта' : 'Закрыта'}
-                        </span>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {team.gamesCount > 0
+                            ? `Игр: ${team.gamesCount} · Обновлено ${team.updatedLabel}`
+                            : `Обновлено ${team.updatedLabel}`}
+                        </p>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {team.membersCount}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {team.gamesCount > 0
-                          ? `Игр: ${team.gamesCount} · Обновлено ${team.updatedLabel}`
-                          : `Обновлено ${team.updatedLabel}`}
-                      </p>
-                    </button>
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ul>
             ) : (
               <div className="p-6 text-sm text-center bg-white dark:bg-slate-900/80 border shadow-sm text-slate-500 dark:text-slate-300 border-slate-200 dark:border-slate-700 rounded-2xl">
@@ -1068,49 +1150,6 @@ const TeamsPage = ({
           <div className="md:col-span-3">
             {selectedTeam ? (
               <div className="space-y-6">
-                <div className="p-5 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
-                            selectedTeam.open
-                              ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
-                              : 'text-slate-600 bg-slate-100 border-slate-200 dark:border-slate-700'
-                          }`}
-                        >
-                          {selectedTeam.open
-                            ? 'Открыта для заявок'
-                            : 'Закрытый состав'}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          Участников: {selectedTeam.membersCount ?? 0}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          Участвует в играх: {selectedTeam.gamesCount ?? 0}
-                        </span>
-                        {selectedTeam.updatedAt && (
-                          <span className="text-xs text-slate-500">
-                            Обновлено {formatRelativeTimeFromNow(selectedTeam.updatedAt)}
-                          </span>
-                        )}
-                      </div>
-                      <h2 className="mt-4 text-xl font-semibold text-primary">
-                        {selectedTeam.name || 'Без названия'}
-                      </h2>
-                    </div>
-                    {canManageSelectedTeam && (
-                      <button
-                        type="button"
-                        onClick={handleOpenEditModal}
-                        className="inline-flex justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-                      >
-                        Редактировать команду
-                      </button>
-                    )}
-                  </div>
-                </div>
-
                 {!location && (
                   <div className="p-4 text-sm border text-amber-700 bg-amber-50 border-amber-200 rounded-2xl">
                     Не удалось определить площадку пользователя. Сохранение
@@ -1135,20 +1174,6 @@ const TeamsPage = ({
                     {teamRestrictionMessage}
                   </div>
                 )}
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-                  <h3 className="text-lg font-semibold text-primary">Сведения о команде</h3>
-                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                    Подробности о составе, играх и капитанах доступны в отдельном окне описания команды.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setIsTeamDescriptionModalOpen(true)}
-                    className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                  >
-                    Открыть карточку команды
-                  </button>
-                </div>
 
 
                 <Modal
