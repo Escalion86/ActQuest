@@ -2,6 +2,7 @@ import Head from 'next/head'
 import { useEffect } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import { Provider as JotaiProvider } from 'jotai'
+import { SnackbarProvider } from 'notistack'
 
 import '../styles/global.css'
 
@@ -73,9 +74,15 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <SessionProvider session={session} refetchInterval={5 * 60}>
-        <JotaiProvider>
-          <Component {...pageProps} />
-        </JotaiProvider>
+        <SnackbarProvider
+          maxSnack={4}
+          autoHideDuration={4000}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <JotaiProvider>
+            <Component {...pageProps} />
+          </JotaiProvider>
+        </SnackbarProvider>
       </SessionProvider>
     </>
   )
