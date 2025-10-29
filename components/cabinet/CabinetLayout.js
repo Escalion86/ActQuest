@@ -145,49 +145,51 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
     <div className={isDarkTheme ? 'dark' : ''}>
       <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950">
         <div
-          className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 transition-all duration-200 md:static md:translate-x-0 md:w-64 ${
+          className={`fixed inset-y-0 left-0 z-40 flex bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 transition-all duration-200 md:static md:translate-x-0 md:w-64 ${
             isSidebarExpanded ? 'w-64 translate-x-0 shadow-xl' : 'w-16 -translate-x-full md:translate-x-0'
           }`}
         >
-          <div className="flex items-center justify-center h-16 border-b border-slate-200 dark:border-slate-800">
-            <span className="text-lg font-semibold text-primary dark:text-slate-100">ActQuest</span>
-          </div>
-          <nav className="flex-1 py-4 space-y-1 overflow-y-auto">
-            {menuItems.map((item) => {
-              const isActive = activePage === item.id || router.pathname === item.href
+          <div className="flex h-full w-full flex-col overflow-hidden">
+            <div className="flex h-16 items-center justify-center border-b border-slate-200 dark:border-slate-800">
+              <span className="text-lg font-semibold text-primary dark:text-slate-100">ActQuest</span>
+            </div>
+            <nav className="flex-1 space-y-1 overflow-y-auto py-4 min-h-0">
+              {menuItems.map((item) => {
+                const isActive = activePage === item.id || router.pathname === item.href
 
-              return (
-                <Link key={item.id} href={item.href} legacyBehavior>
-                  <a
-                    className={`flex items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
-                      isActive
-                        ? 'text-primary dark:text-blue-200 bg-blue-50 dark:bg-blue-500/10 border-r-4 border-primary dark:border-blue-400'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-500/10'
-                    } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
-                    onClick={closeSidebarOnMobile}
-                  >
-                    <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
-                    <span
-                      className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
+                return (
+                  <Link key={item.id} href={item.href} legacyBehavior>
+                    <a
+                      className={`flex items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
+                        isActive
+                          ? 'text-primary dark:text-blue-200 bg-blue-50 dark:bg-blue-500/10 border-r-4 border-primary dark:border-blue-400'
+                          : 'text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                      } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
+                      onClick={closeSidebarOnMobile}
                     >
-                      {item.label}
-                    </span>
-                  </a>
-                </Link>
-              )
-            })}
-          </nav>
-          <div className="px-4 py-4 border-t border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="flex items-center w-full gap-3 px-3 py-2 text-sm font-medium text-slate-500 transition-colors duration-150 bg-slate-100 rounded-xl hover:text-primary hover:bg-blue-100 dark:text-slate-300 dark:bg-slate-800 dark:hover:text-blue-200 dark:hover:bg-blue-500/20"
-            >
-              <FontAwesomeIcon icon={faRightFromBracket} className="w-4 h-4" />
-              <span className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}>
-                Выйти
-              </span>
-            </button>
+                      <FontAwesomeIcon icon={item.icon} className="h-5 w-5" />
+                      <span
+                        className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
+                      >
+                        {item.label}
+                      </span>
+                    </a>
+                  </Link>
+                )
+              })}
+            </nav>
+            <div className="sticky bottom-0 mt-auto border-t border-slate-200 bg-white/95 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="flex w-full items-center gap-3 rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-500 transition-colors duration-150 hover:bg-blue-100 hover:text-primary dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-blue-500/20 dark:hover:text-blue-200"
+              >
+                <FontAwesomeIcon icon={faRightFromBracket} className="h-4 w-4" />
+                <span className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}>
+                  Выйти
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 

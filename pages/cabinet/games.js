@@ -351,6 +351,12 @@ const GamesPage = ({
     currentUserTelegramId === null || currentUserTelegramId === undefined
       ? null
       : String(currentUserTelegramId)
+  const currentUserTelegramIdNumber =
+    currentUserTelegramId === null || currentUserTelegramId === undefined
+      ? null
+      : Number(currentUserTelegramId)
+  const canEditAllGames = userRole === 'admin' || userRole === 'dev'
+  const canEditOwnGames = userRole === 'moder'
   const currentUserDbId =
     activeSession?.user?._id === null || activeSession?.user?._id === undefined
       ? null
@@ -374,11 +380,18 @@ const GamesPage = ({
   const [isAddingTeam, setIsAddingTeam] = useState(false)
   const [removingTeamIds, setRemovingTeamIds] = useState([])
   const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
-  const [descriptionModalData, setDescriptionModalData] = useState({
-    isOpen: false,
-    title: '',
-    description: '',
-  })
+  const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
+  const [registerGameId, setRegisterGameId] = useState('')
+  const [registerTeamId, setRegisterTeamId] = useState('')
+  const [registerTeams, setRegisterTeams] = useState([])
+  const [isRegisterTeamsLoading, setIsRegisterTeamsLoading] = useState(false)
+  const [registerFeedback, setRegisterFeedback] = useState(null)
+  const [isRegisterSubmitting, setIsRegisterSubmitting] = useState(false)
+  const [isCreateGameModalOpen, setIsCreateGameModalOpen] = useState(false)
+  const [newGameName, setNewGameName] = useState('')
+  const [createGameFeedback, setCreateGameFeedback] = useState(null)
+  const [isCreatingGame, setIsCreatingGame] = useState(false)
 
   useEffect(() => {
     setGames(initialGames)
@@ -412,6 +425,495 @@ const GamesPage = ({
     setRemovingTeamIds([])
     setSelectedModeratorToAdd('')
   }, [selectedGameId])
+
+  const sortGamesByUpdatedAt = useCallback((items) => {
+    if (!Array.isArray(items)) {
+      return []
+    }
+
+    return [...items].sort((first, second) => {
+      const firstTime = first?.updatedAt ? new Date(first.updatedAt).getTime() : 0
+      const secondTime = second?.updatedAt
+        ? new Date(second.updatedAt).getTime()
+        : 0
+
+      if (Number.isNaN(secondTime) && Number.isNaN(firstTime)) {
+        return 0
+      }
+
+      if (Number.isNaN(secondTime)) {
+        return -1
+      }
+
+      if (Number.isNaN(firstTime)) {
+        return 1
+      }
+
+      return secondTime - firstTime
+    })
+  }, [])
+
+  const resetRegisterForm = useCallback(() => {
+    setRegisterGameId('')
+    setRegisterTeamId('')
+    setRegisterFeedback(null)
+  }, [])
+
+  const handleCloseRegisterModal = useCallback(() => {
+    if (isRegisterSubmitting) {
+      return
+    }
+
+    setIsRegisterModalOpen(false)
+    setRegisterTeams([])
+    setIsRegisterTeamsLoading(false)
+    resetRegisterForm()
+  }, [isRegisterSubmitting, resetRegisterForm])
+
+  const loadRegisterTeams = useCallback(async () => {
+    if (!location || !Number.isFinite(currentUserTelegramIdNumber)) {
+      setRegisterTeams([])
+      return
+    }
+
+    setIsRegisterTeamsLoading(true)
+
+    try {
+      const membershipsParams = new URLSearchParams({
+        collection: 'teamsusers',
+        userTelegramId: String(currentUserTelegramIdNumber),
+        role: 'capitan',
+        limit: '200',
+      })
+
+      const membershipsResponse = await fetch(
+        `/api/${location}/custom?${membershipsParams.toString()}`
+      )
+      const membershipsJson = await membershipsResponse.json()
+
+      if (!membershipsResponse.ok || membershipsJson?.success === false) {
+        throw new Error(
+          extractErrorMessage(membershipsJson?.error) ||
+            'Не удалось загрузить список команд'
+        )
+      }
+
+      const memberships = Array.isArray(membershipsJson?.data)
+        ? membershipsJson.data
+        : []
+
+      const toStringId = (value) => {
+        if (!value) {
+          return null
+        }
+
+        if (typeof value === 'string') {
+          return value
+        }
+
+        if (typeof value === 'object' && typeof value.toString === 'function') {
+          const stringValue = value.toString()
+          return stringValue === '[object Object]' ? null : stringValue
+        }
+
+        if (typeof value === 'number') {
+          return value.toString()
+        }
+
+        return null
+      }
+
+      const teamIds = Array.from(
+        new Set(
+          memberships
+            .map((membership) => toStringId(membership?.teamId))
+            .filter((teamId) => typeof teamId === 'string' && teamId.length > 0)
+        )
+      )
+
+      if (teamIds.length === 0) {
+        setRegisterTeams([])
+        return
+      }
+
+      const teamsParams = new URLSearchParams({
+        location,
+        teamIds: teamIds.join(','),
+      })
+
+      const teamsResponse = await fetch(
+        `/api/cabinet/teams?${teamsParams.toString()}`
+      )
+      const teamsJson = await teamsResponse.json()
+
+      if (!teamsResponse.ok || teamsJson?.success === false) {
+        throw new Error(
+          extractErrorMessage(teamsJson?.error) ||
+            'Не удалось загрузить данные команд'
+        )
+      }
+
+      const teamsList = Array.isArray(teamsJson?.data)
+        ? teamsJson.data.filter(Boolean)
+        : []
+
+      teamsList.sort((first, second) => {
+        const firstName = (first?.name ?? '').toLowerCase()
+        const secondName = (second?.name ?? '').toLowerCase()
+        return firstName.localeCompare(secondName, 'ru')
+      })
+
+      setRegisterTeams(teamsList)
+
+      if (teamsList.length === 1) {
+        setRegisterTeamId(teamsList[0].id)
+      }
+    } catch (error) {
+      console.error('Failed to load register teams', error)
+      setRegisterFeedback({
+        type: 'error',
+        message:
+          extractErrorMessage(error) || 'Не удалось загрузить список команд',
+      })
+      setRegisterTeams([])
+    } finally {
+      setIsRegisterTeamsLoading(false)
+    }
+  }, [currentUserTelegramIdNumber, location])
+
+  useEffect(() => {
+    if (isRegisterModalOpen) {
+      resetRegisterForm()
+      loadRegisterTeams()
+    } else {
+      setIsRegisterSubmitting(false)
+    }
+  }, [isRegisterModalOpen, loadRegisterTeams, resetRegisterForm])
+
+  const handleSubmitRegister = useCallback(async () => {
+    const trimmedGameId = registerGameId.trim()
+
+    if (!trimmedGameId) {
+      setRegisterFeedback({
+        type: 'error',
+        message: 'Введите идентификатор игры',
+      })
+      return
+    }
+
+    if (!registerTeamId) {
+      setRegisterFeedback({
+        type: 'error',
+        message: 'Выберите команду, которую хотите зарегистрировать',
+      })
+      return
+    }
+
+    if (!location) {
+      setRegisterFeedback({
+        type: 'error',
+        message: 'Не удалось определить площадку пользователя',
+      })
+      return
+    }
+
+    if (!Number.isFinite(currentUserTelegramIdNumber)) {
+      setRegisterFeedback({
+        type: 'error',
+        message: 'Привяжите Telegram-аккаунт в профиле, чтобы регистрировать команды',
+      })
+      return
+    }
+
+    const selectedTeam = registerTeams.find((team) => team.id === registerTeamId)
+
+    if (!selectedTeam) {
+      setRegisterFeedback({
+        type: 'error',
+        message: 'Выбранная команда недоступна для регистрации',
+      })
+      return
+    }
+
+    setIsRegisterSubmitting(true)
+    setRegisterFeedback(null)
+
+    try {
+      const gameResponse = await fetch(
+        `/api/${location}/custom?collection=games&id=${encodeURIComponent(
+          trimmedGameId
+        )}`
+      )
+      const gameJson = await gameResponse.json()
+
+      if (!gameResponse.ok || gameJson?.success === false) {
+        throw new Error(
+          extractErrorMessage(gameJson?.error) || 'Игра не найдена'
+        )
+      }
+
+      const gameData = gameJson?.data ?? null
+      const gameStatus = (gameData?.status ?? '').toString().toLowerCase()
+
+      if (gameStatus && gameStatus !== 'active') {
+        throw new Error('Запись на эту игру закрыта')
+      }
+
+      const existingParams = new URLSearchParams({
+        collection: 'gamesteams',
+        teamId: registerTeamId,
+        gameId: trimmedGameId,
+        limit: '1',
+      })
+
+      const existingResponse = await fetch(
+        `/api/${location}/custom?${existingParams.toString()}`
+      )
+      const existingJson = await existingResponse.json()
+
+      if (
+        existingResponse.ok &&
+        Array.isArray(existingJson?.data) &&
+        existingJson.data.length > 0
+      ) {
+        throw new Error('Команда уже зарегистрирована на эту игру')
+      }
+
+      const registerResponse = await fetch(
+        `/api/${location}/custom?collection=gamesteams`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: {
+              teamId: registerTeamId,
+              gameId: trimmedGameId,
+            },
+          }),
+        }
+      )
+      const registerJson = await registerResponse.json()
+
+      if (!registerResponse.ok || registerJson?.success === false) {
+        throw new Error(
+          extractErrorMessage(registerJson?.error) ||
+            'Не удалось зарегистрироваться на игру'
+        )
+      }
+
+      setRegisterFeedback({
+        type: 'success',
+        message: `Команда «${selectedTeam.name || 'без названия'}» зарегистрирована на игру`,
+      })
+      setRegisterGameId('')
+
+      setGames((prev) =>
+        prev.map((game) => {
+          if (game.id !== trimmedGameId) {
+            return game
+          }
+
+          return {
+            ...game,
+            teamsCount: (game.teamsCount ?? 0) + 1,
+          }
+        })
+      )
+
+      setPersistedGames((prev) =>
+        prev.map((game) => {
+          if (game.id !== trimmedGameId) {
+            return game
+          }
+
+          return {
+            ...game,
+            teamsCount: (game.teamsCount ?? 0) + 1,
+          }
+        })
+      )
+    } catch (error) {
+      console.error('Failed to register team to game', error)
+      setRegisterFeedback({
+        type: 'error',
+        message:
+          extractErrorMessage(error) ||
+          'Не удалось зарегистрироваться на игру',
+      })
+    } finally {
+      setIsRegisterSubmitting(false)
+    }
+  }, [
+    currentUserTelegramIdNumber,
+    location,
+    registerGameId,
+    registerTeamId,
+    registerTeams,
+    setGames,
+    setPersistedGames,
+  ])
+
+  const handleOpenRegisterModal = useCallback(() => {
+    setIsRegisterModalOpen(true)
+  }, [])
+
+  const handleOpenCreateGameModal = useCallback(() => {
+    setCreateGameFeedback(null)
+    setNewGameName('')
+    setIsCreateGameModalOpen(true)
+  }, [])
+
+  const handleCloseCreateGameModal = useCallback(() => {
+    if (isCreatingGame) {
+      return
+    }
+
+    setIsCreateGameModalOpen(false)
+    setNewGameName('')
+    setCreateGameFeedback(null)
+  }, [isCreatingGame])
+
+  const handleCreateGame = useCallback(async () => {
+    const trimmedName = newGameName.trim()
+
+    if (!trimmedName) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Введите название игры',
+      })
+      return
+    }
+
+    if (!location) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Не удалось определить площадку пользователя',
+      })
+      return
+    }
+
+    if (!canEditAllGames) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Недостаточно прав для создания игры',
+      })
+      return
+    }
+
+    if (!Number.isFinite(currentUserTelegramIdNumber)) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Привяжите Telegram-аккаунт в профиле, чтобы создавать игры',
+      })
+      return
+    }
+
+    setIsCreatingGame(true)
+    setCreateGameFeedback(null)
+
+    try {
+      const payload = {
+        ...buildUpdatePayload({
+          name: trimmedName,
+          status: 'active',
+          dateStart: null,
+          type: 'classic',
+          description: '',
+          image: null,
+          startingPlace: '',
+          finishingPlace: '',
+          taskDuration: 3600,
+          cluesDuration: 1200,
+          clueEarlyAccessMode: 'time',
+          clueEarlyPenalty: 0,
+          allowCaptainForceClue: true,
+          allowCaptainFailTask: true,
+          allowCaptainFinishBreak: true,
+          breakDuration: 0,
+          taskFailurePenalty: 0,
+          manyCodesPenalty: [0, 0],
+          individualStart: false,
+          hidden: true,
+          showCreator: true,
+          showTasks: false,
+          hideResult: false,
+          prices: [],
+          finances: [],
+          tasks: [],
+          moderators: [],
+        }),
+        creatorTelegramId: currentUserTelegramIdNumber,
+      }
+
+      const response = await fetch(
+        `/api/${location}/custom?collection=games`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: payload }),
+        }
+      )
+
+      const json = await response.json()
+
+      if (!response.ok || json?.success === false) {
+        throw new Error(
+          extractErrorMessage(json?.error) || 'Не удалось создать игру'
+        )
+      }
+
+      const createdGame = normalizeGameForCabinet({
+        ...json.data,
+        teamsCount: 0,
+      })
+
+      if (!createdGame) {
+        throw new Error('Не удалось обработать данные созданной игры')
+      }
+
+      setGames((prev) =>
+        sortGamesByUpdatedAt([
+          createdGame,
+          ...prev.filter((game) => game.id !== createdGame.id),
+        ])
+      )
+      setPersistedGames((prev) =>
+        sortGamesByUpdatedAt([
+          createdGame,
+          ...prev.filter((game) => game.id !== createdGame.id),
+        ])
+      )
+      setSelectedGameId(createdGame.id)
+
+      setFeedback({
+        type: 'success',
+        message: `Игра «${createdGame.name || 'Без названия'}» создана`,
+      })
+
+      setIsCreateGameModalOpen(false)
+      setIsEditModalOpen(true)
+    } catch (error) {
+      console.error('Failed to create game', error)
+      setCreateGameFeedback({
+        type: 'error',
+        message:
+          extractErrorMessage(error) || 'Не удалось создать игру',
+      })
+    } finally {
+      setIsCreatingGame(false)
+    }
+  }, [
+    buildUpdatePayload,
+    canEditAllGames,
+    currentUserTelegramIdNumber,
+    location,
+    newGameName,
+    setFeedback,
+    setGames,
+    setPersistedGames,
+    setSelectedGameId,
+    sortGamesByUpdatedAt,
+  ])
 
   const availableModerators = useMemo(
     () =>
@@ -465,6 +967,12 @@ const GamesPage = ({
 
   useEffect(() => {
     if (!selectedGame) {
+      setIsDescriptionModalOpen(false)
+    }
+  }, [selectedGame])
+
+  useEffect(() => {
+    if (!selectedGame) {
       setExpandedTaskIds([])
       return
     }
@@ -509,9 +1017,6 @@ const GamesPage = ({
       serializeGameForComparison(persistedSelectedGame)
     )
   }, [persistedSelectedGame, selectedGame])
-
-  const canEditAllGames = userRole === 'admin' || userRole === 'dev'
-  const canEditOwnGames = userRole === 'moder'
 
   const canEditSelectedGame = useMemo(() => {
     if (!selectedGame) {
@@ -1071,7 +1576,7 @@ const GamesPage = ({
       return
     }
 
-    closeDescriptionModal()
+    setIsDescriptionModalOpen(false)
     setIsTeamsModalOpen(true)
   }, [canManageTeams, closeDescriptionModal])
 
@@ -1353,23 +1858,13 @@ const GamesPage = ({
     }
   }, [isTeamsModalOpen, loadTeamsModalData])
 
-  const closeDescriptionModal = useCallback(() => {
-    setDescriptionModalData({ isOpen: false, title: '', description: '' })
-  }, [])
-
   const handleSelectGameCard = useCallback((game) => {
     if (!game) {
       return
     }
 
     setSelectedGameId(game.id)
-    const description =
-      typeof game.description === 'string' ? game.description.trim() : ''
-    setDescriptionModalData({
-      isOpen: true,
-      title: game.name || 'Без названия',
-      description,
-    })
+    setIsDescriptionModalOpen(true)
   }, [])
 
   const handleEditGameFromList = useCallback(
@@ -1379,10 +1874,10 @@ const GamesPage = ({
       }
 
       setSelectedGameId(game.id)
-      closeDescriptionModal()
+      setIsDescriptionModalOpen(false)
       setIsEditModalOpen(true)
     },
-    [canManageGame, closeDescriptionModal]
+    [canManageGame]
   )
 
   const handleManageTeamsFromList = useCallback(
@@ -1392,10 +1887,10 @@ const GamesPage = ({
       }
 
       setSelectedGameId(game.id)
-      closeDescriptionModal()
+      setIsDescriptionModalOpen(false)
       setIsTeamsModalOpen(true)
     },
-    [canManageGame, closeDescriptionModal]
+    [canManageGame]
   )
 
   const handleOpenEditModal = useCallback(() => {
@@ -1403,7 +1898,7 @@ const GamesPage = ({
       return
     }
 
-    closeDescriptionModal()
+    setIsDescriptionModalOpen(false)
     setIsEditModalOpen(true)
   }, [canEditSelectedGame, closeDescriptionModal])
 
@@ -1714,6 +2209,38 @@ const GamesPage = ({
     return availableModerators.filter((moderator) => !existingIds.has(moderator.id))
   }, [availableModerators, selectedGame, selectedGameModerators])
 
+  const selectedGameModerators = useMemo(() => {
+    if (!selectedGame) {
+      return []
+    }
+
+    return (selectedGame.moderators ?? []).filter(Boolean)
+  }, [selectedGame])
+
+  const availableModeratorsForSelect = useMemo(() => {
+    if (!selectedGame) {
+      return []
+    }
+
+    const existingIds = new Set(
+      selectedGameModerators
+        .map((moderator) => {
+          if (!moderator) {
+            return null
+          }
+
+          if (typeof moderator === 'string') {
+            return moderator
+          }
+
+          return moderator.id
+        })
+        .filter(Boolean)
+    )
+
+    return availableModerators.filter((moderator) => !existingIds.has(moderator.id))
+  }, [availableModerators, selectedGame, selectedGameModerators])
+
   const clueModeDetails = useMemo(() => {
     if (!selectedGame) {
       return { modeLabel: '—', valueLabel: '—' }
@@ -1815,6 +2342,24 @@ const GamesPage = ({
       >
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-2 space-y-4">
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleOpenRegisterModal}
+                className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              >
+                Зарегистрироваться на игру по id
+              </button>
+              {canEditAllGames && (
+                <button
+                  type="button"
+                  onClick={handleOpenCreateGameModal}
+                  className="inline-flex items-center justify-center rounded-xl border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:hover:bg-violet-500/10"
+                >
+                  Создать игру
+                </button>
+              )}
+            </div>
             <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-100 shadow-sm rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
               <span
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-violet-600 font-semibold shadow-sm dark:bg-violet-500/40 dark:text-violet-100"
@@ -1941,373 +2486,20 @@ const GamesPage = ({
                   </div>
                 )}
 
-                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                  <h3 className="text-lg font-semibold text-primary">Общая информация</h3>
-                  {selectedGame.image && (
-                    <img
-                      src={selectedGame.image}
-                      alt="Обложка игры"
-                      className="mt-4 h-48 w-full rounded-xl object-cover"
-                    />
-                  )}
-                  <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Тип игры
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{gameTypeLabel}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Плановое начало
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                        {plannedStartLabel}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Место старта
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                        {selectedGame.startingPlace || 'Не указано'}
-                      </dd>
-                    </div>
-                    {canViewRestrictedGameInfo && (
-                      <div>
-                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Финиш
-                        </dt>
-                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                          {selectedGame.finishingPlace || 'Не указан'}
-                        </dd>
-                      </div>
-                    )}
-                    {canViewRestrictedGameInfo && (
-                      <div>
-                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Индивидуальный старт
-                        </dt>
-                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                          {selectedGame.individualStart ? 'Да' : 'Нет'}
-                        </dd>
-                      </div>
-                    )}
-                    {canViewRestrictedGameInfo && (
-                      <div>
-                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Показывать организатора
-                        </dt>
-                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                          {selectedGame.showCreator ? 'Да' : 'Нет'}
-                        </dd>
-                      </div>
-                    )}
-                    {canViewRestrictedGameInfo && (
-                      <div>
-                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Публиковать задания в кабинете
-                        </dt>
-                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                          {selectedGame.showTasks ? 'Да' : 'Нет'}
-                        </dd>
-                      </div>
-                    )}
-                    {canViewRestrictedGameInfo && (
-                      <div>
-                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Скрывать результаты
-                        </dt>
-                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                          {selectedGame.hideResult ? 'Да' : 'Нет'}
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-                </section>
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                  <h3 className="text-lg font-semibold text-primary">Описание и параметры</h3>
+                  <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                    Подробная информация об игре, список модераторов, настройки проведения и финансовые данные доступны в отдельном окне.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsDescriptionModalOpen(true)}
+                    className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  >
+                    Открыть описание игры
+                  </button>
+                </div>
 
-                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <h3 className="text-lg font-semibold text-primary">Модераторы игры</h3>
-                    {selectedGameModerators.length > 0 && (
-                      <span className="text-xs text-slate-500">
-                        Назначено: {selectedGameModerators.length}
-                      </span>
-                    )}
-                  </div>
-
-                  {selectedGameModerators.length > 0 ? (
-                    <ul className="space-y-3">
-                      {selectedGameModerators.map((moderator) => {
-                        const moderatorId =
-                          typeof moderator === 'string' ? moderator : moderator?.id
-                        if (!moderatorId) {
-                          return null
-                        }
-
-                        const fallback = availableModeratorsMap.get(moderatorId) ?? null
-                        const name =
-                          typeof moderator === 'string'
-                            ? fallback?.name ?? 'Без имени'
-                            : moderator.name || 'Без имени'
-                        const username =
-                          typeof moderator === 'string'
-                            ? fallback?.username ?? ''
-                            : moderator.username || ''
-                        const telegramId =
-                          typeof moderator === 'string'
-                            ? fallback?.telegramId ?? ''
-                            : moderator.telegramId || ''
-
-                        return (
-                          <li
-                            key={moderatorId}
-                            className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/80"
-                          >
-                            <div>
-                              <p className="text-sm font-semibold text-primary">{name}</p>
-                              {username && (
-                                <p className="text-xs text-slate-500">@{username}</p>
-                              )}
-                              {telegramId && (
-                                <p className="text-xs text-slate-400">ID: {telegramId}</p>
-                              )}
-                            </div>
-                            {canEditSelectedGame && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveModerator(moderatorId)}
-                                className="inline-flex items-center rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-400/40 dark:text-rose-200 dark:hover:bg-rose-500/10"
-                              >
-                                Удалить
-                              </button>
-                            )}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-slate-500">
-                      Модераторы пока не назначены.
-                    </p>
-                  )}
-
-                  {canEditSelectedGame && (
-                    <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-slate-700">
-                      <label htmlFor="game-moderator-to-add" className="text-sm font-semibold text-primary">
-                        Добавить модератора
-                      </label>
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <select
-                          id="game-moderator-to-add"
-                          value={selectedModeratorToAdd}
-                          onChange={(event) => setSelectedModeratorToAdd(event.target.value)}
-                          className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
-                        >
-                          <option value="">Выберите модератора</option>
-                          {availableModeratorsForSelect.map((moderator) => {
-                            const labelParts = [moderator.name || 'Без имени']
-                            if (moderator.username) {
-                              labelParts.push(`@${moderator.username}`)
-                            }
-                            if (moderator.telegramId) {
-                              labelParts.push(`ID: ${moderator.telegramId}`)
-                            }
-
-                            return (
-                              <option key={moderator.id} value={moderator.id}>
-                                {labelParts.join(' · ')}
-                              </option>
-                            )
-                          })}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={handleAddModerator}
-                          disabled={!selectedModeratorToAdd}
-                          className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
-                        >
-                          Добавить
-                        </button>
-                      </div>
-                      {availableModeratorsForSelect.length === 0 && (
-                        <p className="text-xs text-slate-500">
-                          Все доступные модераторы уже назначены на эту игру.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </section>
-
-                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                  <h3 className="text-lg font-semibold text-primary">Параметры проведения</h3>
-                  <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Длительность задания
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{taskDurationLabel}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Интервал подсказок
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{cluesDurationLabel}</dd>
-                    </div>
-                    {canViewRestrictedGameInfo && (
-                      <div>
-                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Режим досрочной подсказки
-                        </dt>
-                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                          {clueModeDetails.modeLabel}
-                          <br />
-                          <span className="text-xs text-slate-500">{clueModeDetails.valueLabel}</span>
-                        </dd>
-                      </div>
-                    )}
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Перерыв между заданиями
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{breakDurationLabel}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Штраф за невыполненное задание
-                      </dt>
-                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                        {taskFailurePenaltyLabel}
-                      </dd>
-                    </div>
-                    {canViewRestrictedGameInfo && manyCodesLimitLabel && (
-                      <div>
-                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Лимит неверных кодов
-                        </dt>
-                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                          {manyCodesLimitLabel}
-                        </dd>
-                      </div>
-                    )}
-                    {canViewRestrictedGameInfo && manyCodesPenaltyLabel && (
-                      <div>
-                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Штраф за превышение лимита
-                        </dt>
-                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                          {manyCodesPenaltyLabel}
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-                </section>
-
-                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                  <h3 className="text-lg font-semibold text-primary">Опции для капитана</h3>
-                  <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                    <li className="flex items-center gap-2">
-                      <span
-                        className={`h-2 w-2 rounded-full ${selectedGame.allowCaptainForceClue ? 'bg-emerald-500' : 'bg-slate-400'}`}
-                        aria-hidden="true"
-                      />
-                      <span>
-                        Капитан {selectedGame.allowCaptainForceClue ? 'может' : 'не может'} запрашивать подсказку
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span
-                        className={`h-2 w-2 rounded-full ${selectedGame.allowCaptainFailTask ? 'bg-emerald-500' : 'bg-slate-400'}`}
-                        aria-hidden="true"
-                      />
-                      <span>
-                        Капитан {selectedGame.allowCaptainFailTask ? 'может' : 'не может'} провалить задание
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span
-                        className={`h-2 w-2 rounded-full ${selectedGame.allowCaptainFinishBreak ? 'bg-emerald-500' : 'bg-slate-400'}`}
-                        aria-hidden="true"
-                      />
-                      <span>
-                        Капитан {selectedGame.allowCaptainFinishBreak ? 'может' : 'не может'} завершать перерыв
-                      </span>
-                    </li>
-                  </ul>
-                </section>
-
-                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                  <h3 className="text-lg font-semibold text-primary">Стоимость участия</h3>
-                  {selectedGame.prices?.length > 0 ? (
-                    <ul className="mt-4 space-y-3">
-                      {selectedGame.prices.map((price) => (
-                        <li
-                          key={price.id}
-                          className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
-                        >
-                          <span className="text-slate-600 dark:text-slate-200">
-                            {price.name || 'Без названия'}
-                          </span>
-                          <span className="font-semibold text-primary">
-                            {currencyFormatter.format(Number(price.price) || 0)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-4 text-sm text-slate-500">Стоимость участия не указана.</p>
-                  )}
-                </section>
-
-                {canViewRestrictedGameInfo && (
-                  <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                    <h3 className="text-lg font-semibold text-primary">Финансы</h3>
-                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
-                      <p>
-                        Доходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.income)}</span>
-                      </p>
-                      <p className="mt-1">
-                        Расходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.expense)}</span>
-                      </p>
-                      <p className={`mt-1 font-semibold ${balanceClass}`}>
-                        Баланс: {currencyFormatter.format(financesSummary.balance)}
-                      </p>
-                    </div>
-                    {selectedGame.finances?.length > 0 ? (
-                      <ul className="mt-4 space-y-3">
-                        {selectedGame.finances.map((entry) => (
-                          <li
-                            key={entry.id}
-                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <span
-                                className={`text-xs font-semibold ${
-                                  entry.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
-                                }`}
-                              >
-                                {entry.type === 'expense' ? 'Расход' : 'Доход'}
-                              </span>
-                              <span className="text-sm font-semibold text-primary">
-                                {currencyFormatter.format(Number(entry.sum) || 0)}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-xs text-slate-500">
-                              {entry.date ? formatDate(entry.date) : 'Дата не указана'}
-                            </p>
-                            {entry.description ? (
-                              <p className="mt-2 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
-                                {entry.description}
-                              </p>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-4 text-sm text-slate-500">Финансовые записи отсутствуют.</p>
-                    )}
-                  </section>
-                )}
 
                 <Modal
                   isOpen={isEditModalOpen}
@@ -3781,18 +3973,496 @@ const GamesPage = ({
           </div>
         </section>
         <Modal
-          isOpen={descriptionModalData.isOpen}
-          title={`Описание — ${descriptionModalData.title || 'Без названия'}`}
-          onClose={closeDescriptionModal}
+          isOpen={isRegisterModalOpen}
+          title="Регистрация команды по ID игры"
+          onClose={handleCloseRegisterModal}
+          footer={(
+            <>
+              <button
+                type="button"
+                onClick={handleCloseRegisterModal}
+                disabled={isRegisterSubmitting}
+                className={`inline-flex justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                  isRegisterSubmitting
+                    ? 'cursor-not-allowed border-slate-200 text-slate-400 dark:border-slate-700 dark:text-slate-500'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitRegister}
+                disabled={
+                  isRegisterSubmitting ||
+                  !registerTeamId ||
+                  registerGameId.trim().length === 0 ||
+                  !location ||
+                  !Number.isFinite(currentUserTelegramIdNumber)
+                }
+                className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
+                  isRegisterSubmitting ||
+                  !registerTeamId ||
+                  registerGameId.trim().length === 0 ||
+                  !location ||
+                  !Number.isFinite(currentUserTelegramIdNumber)
+                    ? 'bg-slate-400 cursor-not-allowed'
+                    : 'bg-primary hover:bg-blue-700'
+                }`}
+              >
+                {isRegisterSubmitting ? 'Регистрация…' : 'Зарегистрироваться'}
+              </button>
+            </>
+          )}
         >
-          {descriptionModalData.description ? (
-            <p className="whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
-              {descriptionModalData.description}
+          <fieldset disabled={isRegisterSubmitting} className="m-0 space-y-5 border-0 p-0">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Укажите игру и команду, чтобы зарегистрировать её на участие. Команда должна принадлежать вам как капитану.
             </p>
+            {registerFeedback && (
+              <div
+                className={`rounded-2xl border p-4 text-sm ${
+                  registerFeedback.type === 'success'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-rose-200 bg-rose-50 text-rose-700'
+                }`}
+              >
+                {registerFeedback.message}
+              </div>
+            )}
+            {(!location || !Number.isFinite(currentUserTelegramIdNumber)) && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                Укажите площадку и привяжите Telegram в профиле, чтобы регистрироваться на игры.
+              </div>
+            )}
+            <div className="space-y-2">
+              <label htmlFor="register-team-select" className="text-sm font-semibold text-primary">
+                Ваша команда
+              </label>
+              {isRegisterTeamsLoading ? (
+                <p className="text-sm text-slate-500">Загружаем список команд…</p>
+              ) : registerTeams.length > 0 ? (
+                <select
+                  id="register-team-select"
+                  value={registerTeamId}
+                  onChange={(event) => setRegisterTeamId(event.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                >
+                  <option value="">Выберите команду</option>
+                  {registerTeams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name || 'Без названия'}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-sm text-slate-500">
+                  У вас пока нет команд, где вы являетесь капитаном. Создайте команду или запросите права капитана.
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="register-game-id" className="text-sm font-semibold text-primary">
+                ID игры
+              </label>
+              <input
+                id="register-game-id"
+                type="text"
+                value={registerGameId}
+                onChange={(event) => setRegisterGameId(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm uppercase tracking-wide focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                placeholder="Например, 64ff0c2e12"
+              />
+            </div>
+          </fieldset>
+        </Modal>
+        <Modal
+          isOpen={isCreateGameModalOpen}
+          title="Создать игру"
+          onClose={handleCloseCreateGameModal}
+          footer={(
+            <>
+              <button
+                type="button"
+                onClick={handleCloseCreateGameModal}
+                disabled={isCreatingGame}
+                className={`inline-flex justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                  isCreatingGame
+                    ? 'cursor-not-allowed border-slate-200 text-slate-400 dark:border-slate-700 dark:text-slate-500'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateGame}
+                disabled={isCreatingGame || newGameName.trim().length === 0}
+                className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
+                  isCreatingGame || newGameName.trim().length === 0
+                    ? 'bg-slate-400 cursor-not-allowed'
+                    : 'bg-primary hover:bg-blue-700'
+                }`}
+              >
+                {isCreatingGame ? 'Создание…' : 'Создать'}
+              </button>
+            </>
+          )}
+        >
+          <fieldset disabled={isCreatingGame} className="m-0 space-y-5 border-0 p-0">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Будет создана пустая игра со стандартными настройками. После создания вы сможете настроить сценарий и задания.
+            </p>
+            {createGameFeedback && (
+              <div
+                className={`rounded-2xl border p-4 text-sm ${
+                  createGameFeedback.type === 'success'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-rose-200 bg-rose-50 text-rose-700'
+                }`}
+              >
+                {createGameFeedback.message}
+              </div>
+            )}
+            <div className="space-y-2">
+              <label htmlFor="new-game-name" className="text-sm font-semibold text-primary">
+                Название игры
+              </label>
+              <input
+                id="new-game-name"
+                type="text"
+                value={newGameName}
+                onChange={(event) => setNewGameName(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                placeholder="Например, Ночной квест"
+              />
+            </div>
+          </fieldset>
+        </Modal>
+        <Modal
+          isOpen={isDescriptionModalOpen}
+          title={`Игра — ${selectedGame?.name || 'Без названия'}`}
+          onClose={() => setIsDescriptionModalOpen(false)}
+        >
+          {selectedGame ? (
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
+                <h4 className="text-base font-semibold text-primary">Описание</h4>
+                {selectedGame.description ? (
+                  <p className="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
+                    {selectedGame.description}
+                  </p>
+                ) : (
+                  <p className="mt-3 text-sm text-slate-500">
+                    Описание для этой игры не заполнено.
+                  </p>
+                )}
+              </div>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <h4 className="text-base font-semibold text-primary">Общая информация</h4>
+                {selectedGame.image && (
+                  <img
+                    src={selectedGame.image}
+                    alt="Обложка игры"
+                    className="mt-4 h-48 w-full rounded-xl object-cover"
+                  />
+                )}
+                <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Тип игры</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{gameTypeLabel}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Плановое начало</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{plannedStartLabel}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Место старта</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                      {selectedGame.startingPlace || 'Не указано'}
+                    </dd>
+                  </div>
+                  {canViewRestrictedGameInfo && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Финиш</dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.finishingPlace || 'Не указан'}
+                      </dd>
+                    </div>
+                  )}
+                  {canViewRestrictedGameInfo && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Индивидуальный старт</dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.individualStart ? 'Да' : 'Нет'}
+                      </dd>
+                    </div>
+                  )}
+                  {canViewRestrictedGameInfo && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Показывать организатора</dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.showCreator ? 'Да' : 'Нет'}
+                      </dd>
+                    </div>
+                  )}
+                  {canViewRestrictedGameInfo && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Публиковать задания в кабинете</dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.showTasks ? 'Да' : 'Нет'}
+                      </dd>
+                    </div>
+                  )}
+                  {canViewRestrictedGameInfo && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Скрывать результаты</dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {selectedGame.hideResult ? 'Да' : 'Нет'}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <h4 className="text-base font-semibold text-primary">Модераторы игры</h4>
+                {selectedGameModerators.length > 0 ? (
+                  <ul className="mt-4 space-y-3">
+                    {selectedGameModerators.map((moderator) => {
+                      const moderatorId = typeof moderator === 'string' ? moderator : moderator.id
+                      const fallback =
+                        typeof moderator === 'string' ? availableModeratorsMap.get(moderator) : null
+                      const name =
+                        typeof moderator === 'string' ? fallback?.name ?? 'Без имени' : moderator.name || 'Без имени'
+                      const username =
+                        typeof moderator === 'string' ? fallback?.username ?? '' : moderator.username || ''
+                      const telegramId =
+                        typeof moderator === 'string' ? fallback?.telegramId ?? '' : moderator.telegramId || ''
+
+                      return (
+                        <li
+                          key={moderatorId}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/80"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-primary">{name}</p>
+                            {username && <p className="text-xs text-slate-500">@{username}</p>}
+                            {telegramId && <p className="text-xs text-slate-400">ID: {telegramId}</p>}
+                          </div>
+                          {canEditSelectedGame && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveModerator(moderatorId)}
+                              className="inline-flex items-center rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-400/40 dark:text-rose-200 dark:hover:bg-rose-500/10"
+                            >
+                              Удалить
+                            </button>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm text-slate-500">Модераторы пока не назначены.</p>
+                )}
+
+                {canEditSelectedGame && (
+                  <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-slate-700">
+                    <label htmlFor="modal-game-moderator" className="text-sm font-semibold text-primary">
+                      Добавить модератора
+                    </label>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <select
+                        id="modal-game-moderator"
+                        value={selectedModeratorToAdd}
+                        onChange={(event) => setSelectedModeratorToAdd(event.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                      >
+                        <option value="">Выберите модератора</option>
+                        {availableModeratorsForSelect.map((moderator) => {
+                          const labelParts = [moderator.name || 'Без имени']
+                          if (moderator.username) {
+                            labelParts.push(`@${moderator.username}`)
+                          }
+                          if (moderator.telegramId) {
+                            labelParts.push(`ID: ${moderator.telegramId}`)
+                          }
+
+                          return (
+                            <option key={moderator.id} value={moderator.id}>
+                              {labelParts.join(' · ')}
+                            </option>
+                          )
+                        })}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleAddModerator}
+                        disabled={!selectedModeratorToAdd}
+                        className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
+                      >
+                        Добавить
+                      </button>
+                    </div>
+                    {availableModeratorsForSelect.length === 0 && (
+                      <p className="text-xs text-slate-500">Все доступные модераторы уже назначены на эту игру.</p>
+                    )}
+                  </div>
+                )}
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <h4 className="text-base font-semibold text-primary">Параметры проведения</h4>
+                <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Длительность задания</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{taskDurationLabel}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Интервал подсказок</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{cluesDurationLabel}</dd>
+                  </div>
+                  {canViewRestrictedGameInfo && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Режим досрочной подсказки</dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                        {clueModeDetails.modeLabel}
+                        <br />
+                        <span className="text-xs text-slate-500">{clueModeDetails.valueLabel}</span>
+                      </dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Перерыв между заданиями</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{breakDurationLabel}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Штраф за невыполненное задание</dt>
+                    <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{taskFailurePenaltyLabel}</dd>
+                  </div>
+                  {canViewRestrictedGameInfo && manyCodesLimitLabel && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Лимит неверных кодов</dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{manyCodesLimitLabel}</dd>
+                    </div>
+                  )}
+                  {canViewRestrictedGameInfo && manyCodesPenaltyLabel && (
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Штраф за превышение лимита</dt>
+                      <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{manyCodesPenaltyLabel}</dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <h4 className="text-base font-semibold text-primary">Опции для капитана</h4>
+                <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                  <li className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${selectedGame.allowCaptainForceClue ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Капитан {selectedGame.allowCaptainForceClue ? 'может' : 'не может'} запрашивать подсказку
+                    </span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${selectedGame.allowCaptainFailTask ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Капитан {selectedGame.allowCaptainFailTask ? 'может' : 'не может'} провалить задание
+                    </span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${selectedGame.allowCaptainFinishBreak ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Капитан {selectedGame.allowCaptainFinishBreak ? 'может' : 'не может'} завершать перерыв
+                    </span>
+                  </li>
+                </ul>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <h4 className="text-base font-semibold text-primary">Стоимость участия</h4>
+                {selectedGame.prices?.length > 0 ? (
+                  <ul className="mt-4 space-y-3">
+                    {selectedGame.prices.map((price) => (
+                      <li
+                        key={price.id}
+                        className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
+                      >
+                        <span className="text-slate-600 dark:text-slate-200">{price.name || 'Без названия'}</span>
+                        <span className="font-semibold text-primary">
+                          {currencyFormatter.format(Number(price.price) || 0)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm text-slate-500">Стоимость участия не указана.</p>
+                )}
+              </section>
+
+              {canViewRestrictedGameInfo && (
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                  <h4 className="text-base font-semibold text-primary">Финансы</h4>
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
+                    <p>
+                      Доходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.income)}</span>
+                    </p>
+                    <p className="mt-1">
+                      Расходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.expense)}</span>
+                    </p>
+                    <p className={`mt-1 font-semibold ${balanceClass}`}>
+                      Баланс: {currencyFormatter.format(financesSummary.balance)}
+                    </p>
+                  </div>
+                  {selectedGame.finances?.length > 0 ? (
+                    <ul className="mt-4 space-y-3">
+                      {selectedGame.finances.map((entry) => (
+                        <li
+                          key={entry.id}
+                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <span
+                              className={`text-xs font-semibold ${
+                                entry.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
+                              }`}
+                            >
+                              {entry.type === 'expense' ? 'Расход' : 'Доход'}
+                            </span>
+                            <span className="text-sm font-semibold text-primary">
+                              {currencyFormatter.format(Number(entry.sum) || 0)}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs text-slate-500">
+                            {entry.date ? formatDate(entry.date) : 'Дата не указана'}
+                          </p>
+                          {entry.description ? (
+                            <p className="mt-2 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
+                              {entry.description}
+                            </p>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-4 text-sm text-slate-500">Финансовые записи отсутствуют.</p>
+                  )}
+                </section>
+              )}
+            </div>
           ) : (
-            <p className="text-sm text-slate-500">
-              Описание для этой игры не заполнено.
-            </p>
+            <p className="text-sm text-slate-500">Выберите игру из списка слева, чтобы просмотреть детали.</p>
           )}
         </Modal>
       </CabinetLayout>
