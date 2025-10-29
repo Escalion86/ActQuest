@@ -1578,7 +1578,7 @@ const GamesPage = ({
 
     setIsDescriptionModalOpen(false)
     setIsTeamsModalOpen(true)
-  }, [canManageTeams])
+  }, [canManageTeams, closeDescriptionModal])
 
   const handleCloseTeamsModal = useCallback(() => {
     setIsTeamsModalOpen(false)
@@ -1900,7 +1900,7 @@ const GamesPage = ({
 
     setIsDescriptionModalOpen(false)
     setIsEditModalOpen(true)
-  }, [canEditSelectedGame])
+  }, [canEditSelectedGame, closeDescriptionModal])
 
   const handleCloseEditModal = useCallback(() => {
     if (isSaving) {
@@ -2176,6 +2176,38 @@ const GamesPage = ({
     const minutes = toMinutes(selectedGame.cluesDuration)
     return minutes > 0 ? `${minutes} мин` : 'Подсказки отключены'
   }, [selectedGame])
+
+  const selectedGameModerators = useMemo(() => {
+    if (!selectedGame) {
+      return []
+    }
+
+    return (selectedGame.moderators ?? []).filter(Boolean)
+  }, [selectedGame])
+
+  const availableModeratorsForSelect = useMemo(() => {
+    if (!selectedGame) {
+      return []
+    }
+
+    const existingIds = new Set(
+      selectedGameModerators
+        .map((moderator) => {
+          if (!moderator) {
+            return null
+          }
+
+          if (typeof moderator === 'string') {
+            return moderator
+          }
+
+          return moderator.id
+        })
+        .filter(Boolean)
+    )
+
+    return availableModerators.filter((moderator) => !existingIds.has(moderator.id))
+  }, [availableModerators, selectedGame, selectedGameModerators])
 
   const selectedGameModerators = useMemo(() => {
     if (!selectedGame) {
