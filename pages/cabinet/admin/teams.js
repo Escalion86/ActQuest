@@ -4,6 +4,7 @@ import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import Modal from '@components/Modal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { getNounUsers } from '@helpers/getNoun'
@@ -57,6 +58,11 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
+  const [teamDescriptionModal, setTeamDescriptionModal] = useState({
+    isOpen: false,
+    title: '',
+    description: '',
+  })
 
   useEffect(() => {
     setTeams(initialTeams)
@@ -113,6 +119,29 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
     })
   }, [filteredTeams])
 
+  const handleTeamCardClick = useCallback(
+    (team) => {
+      if (!team) {
+        return
+      }
+
+      setSelectedTeamId(team.id)
+      const fullTeam = teams.find((item) => item.id === team.id) ?? null
+      const description =
+        typeof fullTeam?.description === 'string'
+          ? fullTeam.description.trim()
+          : ''
+      const title = fullTeam?.name || team.name || 'Без названия'
+
+      setTeamDescriptionModal({
+        isOpen: true,
+        title,
+        description,
+      })
+    },
+    [teams]
+  )
+
   const selectedTeam = useMemo(
     () => teams.find((team) => team.id === selectedTeamId) ?? null,
     [selectedTeamId, teams]
@@ -127,6 +156,10 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
     setFeedback(null)
     setMemberActionId(null)
   }, [selectedTeamId])
+
+  const closeTeamDescriptionModal = useCallback(() => {
+    setTeamDescriptionModal({ isOpen: false, title: '', description: '' })
+  }, [])
 
   const isDirty = useMemo(() => {
     if (!selectedTeam || !persistedSelectedTeam) {
@@ -498,7 +531,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                   <li key={team.id}>
                     <button
                       type="button"
-                      onClick={() => setSelectedTeamId(team.id)}
+                      onClick={() => handleTeamCardClick(team)}
                       className={`w-full text-left p-4 border rounded-2xl transition ${
                         selectedTeamId === team.id
                           ? 'border-primary bg-blue-50 shadow-sm'
@@ -786,6 +819,21 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
             )}
           </div>
         </section>
+        <Modal
+          isOpen={teamDescriptionModal.isOpen}
+          onClose={closeTeamDescriptionModal}
+          title={`Описание команды — ${teamDescriptionModal.title || 'Без названия'}`}
+        >
+          {teamDescriptionModal.description ? (
+            <p className="whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
+              {teamDescriptionModal.description}
+            </p>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Описание для этой команды пока не заполнено.
+            </p>
+          )}
+        </Modal>
       </CabinetLayout>
     </>
   )
