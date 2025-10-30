@@ -2,7 +2,7 @@ import Head from 'next/head'
 import { useEffect } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import { Provider as JotaiProvider } from 'jotai'
-import { SnackbarProvider } from 'notistack'
+import { SnackbarProvider } from 'lib/notistack'
 
 import '../styles/global.css'
 
