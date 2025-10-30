@@ -1,6 +1,6 @@
 import { faTimes } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useSnackbar as notistackUseSnackbar } from 'notistack'
+import { useSnackbar as notistackUseSnackbar } from 'lib/notistack'
 
 const useSnackbar = () => {
   const { enqueueSnackbar, closeSnackbar } = notistackUseSnackbar()
