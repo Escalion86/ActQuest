@@ -409,12 +409,7 @@ const GamesPage = ({
   }, [selectedGameId])
 
   useEffect(() => {
-    setIsEditModalOpen(false)
-  }, [selectedGameId])
-
-  useEffect(() => {
     setExpandedTaskIds([])
-    setIsTeamsModalOpen(false)
     setTeamsModalState({
       isLoading: false,
       error: null,
@@ -985,6 +980,8 @@ const GamesPage = ({
     () => games.find((game) => game.id === selectedGameId) ?? null,
     [games, selectedGameId]
   )
+
+  const isPhotoGame = selectedGame?.type === 'photo'
 
   useEffect(() => {
     if (!selectedGame) {
@@ -1885,6 +1882,8 @@ const GamesPage = ({
     }
 
     setSelectedGameId(game.id)
+    setIsTeamsModalOpen(false)
+    setIsEditModalOpen(false)
     setIsDescriptionModalOpen(true)
   }, [])
 
@@ -1895,6 +1894,7 @@ const GamesPage = ({
       }
 
       setSelectedGameId(game.id)
+      setIsTeamsModalOpen(false)
       setIsDescriptionModalOpen(false)
       setIsEditModalOpen(true)
     },
@@ -2023,7 +2023,6 @@ const GamesPage = ({
         ? formatRelativeTimeFromNow(game.updatedAt)
         : '—'
 
-      const isActive = selectedGameId === game.id
       const canManageThisGame = canManageGame(game)
 
       return (
@@ -2038,12 +2037,8 @@ const GamesPage = ({
                 handleSelectGameCard(game)
               }
             }}
-            className={`rounded-2xl border p-4 transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
-              isActive
-                ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
-                : 'border-slate-200 bg-white hover:border-primary hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900/80 dark:hover:bg-violet-500/10'
-            }`}
-            aria-pressed={isActive}
+            className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-primary hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900/80 dark:hover:bg-violet-500/10"
+            aria-pressed={selectedGameId === game.id}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
@@ -3246,106 +3241,108 @@ const GamesPage = ({
                                   )}
                                 </div>
 
-                                <div>
-                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                    <h4 className="text-sm font-semibold text-primary">Подзадания</h4>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleAddSubTask(task.id)}
-                                      className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-violet-500/10"
-                                    >
-                                      Добавить подзадание
-                                    </button>
-                                  </div>
-                                  {task.subTasks?.length > 0 ? (
-                                    <div className="mt-3 space-y-4">
-                                      {task.subTasks.map((subTask, subIndex) => (
-                                        <div
-                                          key={subTask.id}
-                                          className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
-                                        >
-                                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                            <p className="text-sm font-semibold text-primary">
-                                              Подзадание {subIndex + 1}
-                                            </p>
-                                            <button
-                                              type="button"
-                                              onClick={() => handleRemoveSubTask(task.id, subTask.id)}
-                                              className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
-                                            >
-                                              Удалить подзадание
-                                            </button>
-                                          </div>
-                                          <div className="grid gap-4 md:grid-cols-2">
-                                            <div>
-                                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-subtask-name-${subTask.id}`}>
-                                                Название
-                                              </label>
-                                              <input
-                                                id={`task-subtask-name-${subTask.id}`}
-                                                type="text"
-                                                value={subTask.name}
-                                                onChange={(event) =>
-                                                  handleSubTaskChange(
-                                                    task.id,
-                                                    subTask.id,
-                                                    'name',
-                                                    event.target.value
-                                                  )
-                                                }
-                                                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
-                                              />
-                                            </div>
-                                            <div>
-                                              <label
-                                                className="text-xs font-semibold uppercase tracking-wide text-slate-500"
-                                                htmlFor={`task-subtask-bonus-${subTask.id}`}
-                                              >
-                                                Бонус
-                                              </label>
-                                              <input
-                                                id={`task-subtask-bonus-${subTask.id}`}
-                                                type="number"
-                                                min="0"
-                                                value={subTask.bonus ?? 0}
-                                                onChange={(event) =>
-                                                  handleSubTaskChange(
-                                                    task.id,
-                                                    subTask.id,
-                                                    'bonus',
-                                                    event.target.value
-                                                  )
-                                                }
-                                                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
-                                              />
-                                            </div>
-                                          </div>
-                                          <div>
-                                            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-subtask-text-${subTask.id}`}>
-                                              Описание
-                                            </label>
-                                            <textarea
-                                              id={`task-subtask-text-${subTask.id}`}
-                                              rows={3}
-                                              value={subTask.task}
-                                              onChange={(event) =>
-                                                handleSubTaskChange(
-                                                  task.id,
-                                                  subTask.id,
-                                                  'task',
-                                                  event.target.value
-                                                )
-                                              }
-                                              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
-                                            />
-                                          </div>
-                                        </div>
-                                      ))}
+                                {isPhotoGame && (
+                                  <div>
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                      <h4 className="text-sm font-semibold text-primary">Подзадания</h4>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleAddSubTask(task.id)}
+                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-violet-500/10"
+                                      >
+                                        Добавить подзадание
+                                      </button>
                                     </div>
-                                  ) : (
-                                    <p className="mt-3 text-sm text-slate-500">Подзаданий пока нет.</p>
-                                  )}
-                                </div>
+                                    {task.subTasks?.length > 0 ? (
+                                      <div className="mt-3 space-y-4">
+                                        {task.subTasks.map((subTask, subIndex) => (
+                                          <div
+                                            key={subTask.id}
+                                            className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                                          >
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                              <p className="text-sm font-semibold text-primary">
+                                                Подзадание {subIndex + 1}
+                                              </p>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleRemoveSubTask(task.id, subTask.id)}
+                                                className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                                              >
+                                                Удалить подзадание
+                                              </button>
+                                            </div>
+                                            <div className="grid gap-4 md:grid-cols-2">
+                                              <div>
+                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-subtask-name-${subTask.id}`}>
+                                                  Название
+                                                </label>
+                                                <input
+                                                  id={`task-subtask-name-${subTask.id}`}
+                                                  type="text"
+                                                  value={subTask.name}
+                                                  onChange={(event) =>
+                                                    handleSubTaskChange(
+                                                      task.id,
+                                                      subTask.id,
+                                                      'name',
+                                                      event.target.value
+                                                    )
+                                                  }
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                />
+                                              </div>
+                                              <div>
+                                                <label
+                                                  className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                                  htmlFor={`task-subtask-bonus-${subTask.id}`}
+                                                >
+                                                  Бонус
+                                                </label>
+                                                <input
+                                                  id={`task-subtask-bonus-${subTask.id}`}
+                                                  type="number"
+                                                  min="0"
+                                                  value={subTask.bonus ?? 0}
+                                                  onChange={(event) =>
+                                                    handleSubTaskChange(
+                                                      task.id,
+                                                      subTask.id,
+                                                      'bonus',
+                                                      event.target.value
+                                                    )
+                                                  }
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                />
+                                              </div>
+                                            </div>
+                                            <div>
+                                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-subtask-text-${subTask.id}`}>
+                                                Описание
+                                              </label>
+                                              <textarea
+                                                id={`task-subtask-text-${subTask.id}`}
+                                                rows={3}
+                                                value={subTask.task}
+                                                onChange={(event) =>
+                                                  handleSubTaskChange(
+                                                    task.id,
+                                                    subTask.id,
+                                                    'task',
+                                                    event.target.value
+                                                  )
+                                                }
+                                                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                              />
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="mt-3 text-sm text-slate-500">Подзаданий пока нет.</p>
+                                    )}
+                                  </div>
+                                )}
 
                                 <div>
                                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
