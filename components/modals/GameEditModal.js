@@ -74,8 +74,11 @@ const GameEditModal = ({
   taskFailurePenaltyLabel,
   manyCodesLimitLabel,
   manyCodesPenaltyLabel,
-}) => (
-  <Modal
+}) => {
+  const isPhotoGame = selectedGame?.type === 'photo'
+
+  return (
+    <Modal
                     isOpen={isEditModalOpen}
                     title={`Редактирование игры «${selectedGame.name || 'Без названия'}»`}
                     onClose={handleCloseEditModal}
@@ -1441,7 +1444,8 @@ const GameEditModal = ({
                     </div>
                   </fieldset>
                   </Modal>
-)
+  )
+}
 
 GameEditModal.propTypes = {
   selectedGame: PropTypes.shape({ id: PropTypes.string }).isRequired,
