@@ -4,6 +4,7 @@
     "paths": {
       "@components/*": ["components/*"],
       "@helpers/*": ["helpers/*"],
+      "notistack": ["lib/notistack"],
       "@pages/*": ["pages/*"],
       "@models/*": ["models/*"],
       "@utils/*": ["utils/*"],
