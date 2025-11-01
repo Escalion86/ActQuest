@@ -410,7 +410,6 @@ const GamesPage = ({
 
   useEffect(() => {
     setExpandedTaskIds([])
-    setIsTeamsModalOpen(false)
     setTeamsModalState({
       isLoading: false,
       error: null,
@@ -1883,6 +1882,7 @@ const GamesPage = ({
     }
 
     setSelectedGameId(game.id)
+    setIsTeamsModalOpen(false)
     setIsEditModalOpen(false)
     setIsDescriptionModalOpen(true)
   }, [])
@@ -1894,6 +1894,7 @@ const GamesPage = ({
       }
 
       setSelectedGameId(game.id)
+      setIsTeamsModalOpen(false)
       setIsDescriptionModalOpen(false)
       setIsEditModalOpen(true)
     },
