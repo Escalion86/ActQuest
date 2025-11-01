@@ -104,7 +104,6 @@ const TeamsPage = ({
 
   useEffect(() => {
     setMemberActionId(null)
-    setIsEditModalOpen(false)
   }, [selectedTeamId])
 
   useEffect(() => {
@@ -912,6 +911,7 @@ const TeamsPage = ({
     }
 
     setSelectedTeamId(team.id)
+    setIsEditModalOpen(false)
     setIsTeamDescriptionModalOpen(true)
   }, [])
 
@@ -1031,8 +1031,6 @@ const TeamsPage = ({
             {teamsForList.length > 0 ? (
               <ul className="space-y-3">
                 {teamsForList.map((team) => {
-                  const isActive = selectedTeamId === team.id
-
                   return (
                     <li key={team.id}>
                       <div
@@ -1045,12 +1043,7 @@ const TeamsPage = ({
                             handleTeamCardClick(team)
                           }
                         }}
-                        className={`w-full text-left p-4 border rounded-2xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 cursor-pointer ${
-                          isActive
-                            ? 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/20'
-                            : 'border-slate-200 dark:border-slate-700 bg-white hover:border-primary hover:bg-blue-50 dark:bg-slate-900/80 dark:hover:bg-violet-500/10'
-                        }`}
-                        aria-pressed={isActive}
+                        className="w-full text-left p-4 border border-slate-200 dark:border-slate-700 rounded-2xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 cursor-pointer bg-white hover:border-primary hover:bg-blue-50 dark:bg-slate-900/80 dark:hover:bg-violet-500/10"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
