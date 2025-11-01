@@ -1,0 +1,155 @@
+import { memo } from 'react'
+import PropTypes from 'prop-types'
+
+import Modal from '@components/Modal'
+
+const GameTeamsModal = ({
+  selectedGame,
+  isTeamsModalOpen,
+  handleCloseTeamsModal,
+  teamsModalState,
+  removingTeamIds,
+  selectedTeamToAdd,
+  setSelectedTeamToAdd,
+  handleAddTeamToGame,
+  isAddingTeam,
+  handleRemoveTeamFromGame,
+}) => (
+  <Modal
+                    isOpen={isTeamsModalOpen}
+                    title={`Команды игры «${selectedGame.name || 'Без названия'}»`}
+                    onClose={handleCloseTeamsModal}
+                  >
+                    <div className="space-y-5">
+                      {teamsModalState.error && (
+                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                          {teamsModalState.error}
+                        </div>
+                      )}
+
+                      <div className="space-y-4">
+                        <h3 className="text-base font-semibold text-primary">Зарегистрированные команды</h3>
+                        {teamsModalState.isLoading ? (
+                          <p className="text-sm text-slate-500">Загружаем список команд…</p>
+                        ) : teamsModalState.gameTeams.length > 0 ? (
+                          <ul className="space-y-3">
+                            {teamsModalState.gameTeams.map((team) => {
+                              const isRemoving = removingTeamIds.includes(team.id)
+                              return (
+                                <li
+                                  key={team.id}
+                                  className="rounded-2xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-700 dark:bg-slate-900/60"
+                                >
+                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                      <p className="font-semibold text-primary">{team.teamName}</p>
+                                      {team.teamDescription ? (
+                                        <p className="mt-1 text-xs text-slate-500">{team.teamDescription}</p>
+                                      ) : null}
+                                      <p className="mt-1 text-xs text-slate-400">ID команды: {team.teamId || '—'}</p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveTeamFromGame(team.id)}
+                                      disabled={isRemoving || teamsModalState.isLoading}
+                                      className={`inline-flex justify-center rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                                        isRemoving || teamsModalState.isLoading
+                                          ? 'cursor-not-allowed border-slate-200 text-slate-400'
+                                          : 'border-rose-200 text-rose-600 hover:bg-rose-50'
+                                      }`}
+                                    >
+                                      {isRemoving ? 'Удаление…' : 'Удалить'}
+                                    </button>
+                                  </div>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        ) : (
+                          <p className="text-sm text-slate-500">Пока ни одна команда не зарегистрирована на эту игру.</p>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                        <h3 className="text-sm font-semibold text-primary">Добавить команду</h3>
+                        {teamsModalState.availableTeams.length > 0 ? (
+                          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <select
+                              value={selectedTeamToAdd}
+                              onChange={(event) => setSelectedTeamToAdd(event.target.value)}
+                              className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                            >
+                              {teamsModalState.availableTeams.map((team) => {
+                                const membersCount = Number.isFinite(team?.membersCount)
+                                  ? team.membersCount
+                                  : Array.isArray(team?.members)
+                                  ? team.members.length
+                                  : 0
+
+                                return (
+                                  <option key={team.id} value={team.id}>
+                                    {`${team.name} (${membersCount})`}
+                                  </option>
+                                )
+                              })}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={handleAddTeamToGame}
+                              disabled={!selectedTeamToAdd || isAddingTeam || teamsModalState.isLoading}
+                              className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
+                                !selectedTeamToAdd || isAddingTeam || teamsModalState.isLoading
+                                  ? 'bg-slate-400 cursor-not-allowed'
+                                  : 'bg-primary hover:bg-blue-700'
+                              }`}
+                            >
+                              {isAddingTeam ? 'Добавление…' : 'Добавить'}
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="mt-3 text-sm text-slate-500">
+                            Свободных команд не найдено. Создайте команду или освободите её от участия в игре.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </Modal>
+)
+
+const teamShape = PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  teamName: PropTypes.string,
+  teamDescription: PropTypes.string,
+  teamId: PropTypes.string,
+})
+
+const availableTeamShape = PropTypes.shape({
+  id: PropTypes.string.isRequired,
+  name: PropTypes.string,
+  members: PropTypes.array,
+  membersCount: PropTypes.number,
+})
+
+GameTeamsModal.propTypes = {
+  selectedGame: PropTypes.shape({ name: PropTypes.string }).isRequired,
+  isTeamsModalOpen: PropTypes.bool.isRequired,
+  handleCloseTeamsModal: PropTypes.func.isRequired,
+  teamsModalState: PropTypes.shape({
+    isLoading: PropTypes.bool.isRequired,
+    error: PropTypes.string,
+    gameTeams: PropTypes.arrayOf(teamShape).isRequired,
+    availableTeams: PropTypes.arrayOf(availableTeamShape).isRequired,
+  }).isRequired,
+  removingTeamIds: PropTypes.arrayOf(PropTypes.string).isRequired,
+  selectedTeamToAdd: PropTypes.string,
+  setSelectedTeamToAdd: PropTypes.func.isRequired,
+  handleAddTeamToGame: PropTypes.func.isRequired,
+  isAddingTeam: PropTypes.bool.isRequired,
+  handleRemoveTeamFromGame: PropTypes.func.isRequired,
+}
+
+GameTeamsModal.defaultProps = {
+  selectedTeamToAdd: '',
+}
+
+export default memo(GameTeamsModal)

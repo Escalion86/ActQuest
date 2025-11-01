@@ -4,7 +4,10 @@ import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
-import TeamsModals from '@components/cabinet/teams/TeamsModals'
+import TeamCreateModal from '@components/modals/TeamCreateModal'
+import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
+import TeamEditModal from '@components/modals/TeamEditModal'
+import TeamJoinModal from '@components/modals/TeamJoinModal'
 import getSessionSafe from '@helpers/getSessionSafe'
 import formatDate from '@helpers/formatDate'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
@@ -1117,10 +1120,10 @@ const TeamsPage = ({
             )}
           </div>
         </section>
-        <TeamsModals
+        <TeamEditModal
           selectedTeam={selectedTeam}
-          isEditModalOpen={isEditModalOpen}
-          onCloseEditModal={handleCloseEditModal}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
           canManageSelectedTeam={canManageSelectedTeam}
           isSaving={isSaving}
           onTeamFieldChange={handleTeamFieldChange}
@@ -1133,8 +1136,10 @@ const TeamsPage = ({
           onSetCaptain={handleSetCaptain}
           onRemoveMember={handleRemoveMember}
           location={location}
-          isCreateModalOpen={isCreateModalOpen}
-          onCloseCreateModal={handleCloseCreateModal}
+        />
+        <TeamCreateModal
+          isOpen={isCreateModalOpen}
+          onClose={handleCloseCreateModal}
           isCreatingTeam={isCreatingTeam}
           isCreateActionDisabled={isCreateActionDisabled}
           newTeamName={newTeamName}
@@ -1144,16 +1149,21 @@ const TeamsPage = ({
           newTeamOpen={newTeamOpen}
           onChangeNewTeamOpen={setNewTeamOpen}
           onCreateTeam={handleCreateTeam}
-          isJoinModalOpen={isJoinModalOpen}
-          onCloseJoinModal={handleCloseJoinModal}
+        />
+        <TeamJoinModal
+          isOpen={isJoinModalOpen}
+          onClose={handleCloseJoinModal}
           isJoiningTeam={isJoiningTeam}
           isJoinActionDisabled={isJoinActionDisabled}
           joinTeamId={joinTeamId}
           onChangeJoinTeamId={setJoinTeamId}
           onJoinTeam={handleJoinTeam}
           canUseSelfServiceTeams={canUseSelfServiceTeams}
-          isTeamDescriptionModalOpen={isTeamDescriptionModalOpen}
-          onCloseTeamDescriptionModal={closeTeamDescriptionModal}
+        />
+        <TeamDescriptionModal
+          isOpen={isTeamDescriptionModalOpen}
+          onClose={closeTeamDescriptionModal}
+          selectedTeam={selectedTeam}
         />
       </CabinetLayout>
     </>
