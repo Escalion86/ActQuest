@@ -1,16 +1,6 @@
 import { getData } from '@helpers/CRUD'
 import Head from 'next/head'
-import { useEffect, useMemo, useState } from 'react'
-
-import {
-  YMaps,
-  Map,
-  Placemark,
-  FullscreenControl,
-  ZoomControl,
-  Circle,
-} from '@pbe/react-yandex-maps'
-import { useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { PASTEL_COLORS } from '@helpers/constants'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import cn from 'classnames'
@@ -42,6 +32,40 @@ const islands = [
   'islands#violetClusterIcons',
 ]
 
+const YMAPS_SCRIPT_ID = 'yandex-maps-2-script'
+const YMAPS_SCRIPT_SRC = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU'
+
+const loadYMapsScript = () =>
+  new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      reject(new Error('Yandex Maps доступен только в браузере'))
+      return
+    }
+
+    if (window.ymaps) {
+      resolve(window.ymaps)
+      return
+    }
+
+    const existingScript = document.getElementById(YMAPS_SCRIPT_ID)
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(window.ymaps))
+      existingScript.addEventListener('error', () =>
+        reject(new Error('Не удалось загрузить Yandex Maps')),
+      )
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = YMAPS_SCRIPT_ID
+    script.src = YMAPS_SCRIPT_SRC
+    script.async = true
+    script.onload = () => resolve(window.ymaps)
+    script.onerror = () =>
+      reject(new Error('Не удалось загрузить Yandex Maps'))
+    document.body.appendChild(script)
+  })
+
 const GameMap = ({
   defaultMapState,
   usersWithLocation,
@@ -52,19 +76,143 @@ const GameMap = ({
 }) => {
   const [index, setIndex] = useState(0)
   const [info, setInfo] = useState(null)
-  const ref = useRef()
-  const defaultState = {
-    center: defaultMapState,
-    zoom: 12,
-  }
+  const mapContainerRef = useRef(null)
+  const mapRef = useRef(null)
+  const ymapsRef = useRef(null)
   const tasks = game?.tasks
 
-  // var dateNow = new Date()
+  useEffect(() => {
+    let active = true
 
-  useEffect(() => ref?.current?.enterFullscreen(), [ref?.current])
+    const setupMap = async () => {
+      if (!mapContainerRef.current) return
+      const ymaps = await loadYMapsScript()
+      if (!active || !ymaps) return
+
+      ymaps.ready(() => {
+        if (!active || mapRef.current || !mapContainerRef.current) return
+
+        ymapsRef.current = ymaps
+        mapRef.current = new ymaps.Map(
+          mapContainerRef.current,
+          {
+            center: defaultMapState,
+            zoom: 12,
+            controls: [],
+          },
+          { suppressMapOpenBlock: true },
+        )
+
+        mapRef.current.controls.add(
+          new ymaps.control.FullscreenControl({ float: 'right' }),
+        )
+        mapRef.current.controls.add(
+          new ymaps.control.ZoomControl({ size: 'large', float: 'right' }),
+        )
+        mapRef.current.events.add('click', () => setInfo(null))
+      })
+    }
+
+    setupMap().catch((error) => {
+      console.error('Failed to initialize Yandex map', error)
+    })
+
+    return () => {
+      active = false
+      if (mapRef.current) {
+        mapRef.current.destroy()
+        mapRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const ymaps = ymapsRef.current
+    if (!map || !ymaps || !game) return
+
+    map.geoObjects.removeAll()
+    map.setCenter(defaultMapState)
+
+    if (showTasks && Array.isArray(tasks)) {
+      tasks.forEach(({ coordinates, title }, taskIndex) => {
+        const longitude = coordinates?.longitude
+        const latitude = coordinates?.latitude
+        const radius = coordinates?.radius
+        if (!longitude || !latitude) return
+
+        const circle = new ymaps.Circle(
+          [[latitude, longitude], radius || 5],
+          {},
+          { fillOpacity: 0.12, strokeWidth: 2 },
+        )
+        map.geoObjects.add(circle)
+
+        const placemark = new ymaps.Placemark(
+          [latitude, longitude],
+          {
+            iconCaption: `№${taskIndex + 1} "${title}"`,
+          },
+          {
+            preset: 'islands#blueCircleDotIcon',
+          },
+        )
+
+        placemark.events.add('click', () => {
+          setInfo(
+            <div>
+              Задание №{taskIndex + 1} - "{title}"
+            </div>,
+          )
+        })
+        map.geoObjects.add(placemark)
+      })
+    }
+
+    if (showTeams) {
+      usersWithLocation.forEach(({ team, location }, num) => {
+        const latitude = location?.latitude
+        const longitude = location?.longitude
+        if (!latitude || !longitude) return
+
+        const dataActualitySeconds = getSecondsBetween(location.date)
+        const preset =
+          dataActualitySeconds < 60
+            ? islands[index]
+            : 'islands#blueAttentionIcon'
+        const iconColor =
+          dataActualitySeconds < 60
+            ? teamsColors?.[num]
+            : dataActualitySeconds < 300
+              ? 'yellow'
+              : 'red'
+
+        const placemark = new ymaps.Placemark(
+          [latitude, longitude],
+          {
+            iconCaption: team?.name || 'Команда',
+          },
+          {
+            preset,
+            iconColor,
+          },
+        )
+        map.geoObjects.add(placemark)
+      })
+    }
+  }, [
+    defaultMapState,
+    game,
+    index,
+    showTasks,
+    showTeams,
+    tasks,
+    teamsColors,
+    usersWithLocation,
+  ])
 
   if (!game) return null
-  // {/* <button onClick={() => setIndex(index + 1)}>{islands[index]}</button> */}
+  // <button onClick={() => setIndex((prev) => (prev + 1) % islands.length)}>{islands[index]}</button>
 
   return (
     <>
@@ -76,90 +224,7 @@ const GameMap = ({
       >
         {info}
       </div>
-      <YMaps ref={ref} width="100%" height="100%">
-        <Map
-          width="100%"
-          height="100%"
-          defaultState={defaultState}
-          controls={[]}
-          onClick={() => setInfo(null)}
-        >
-          {showTasks &&
-            tasks.map(({ coordinates, title }, index) => {
-              const longitude = coordinates?.longitude
-              const latitude = coordinates?.latitude
-              const radius = coordinates?.radius
-              if (!longitude || !latitude) return null
-              return (
-                <>
-                  <Circle geometry={[[latitude, longitude], radius || 5]} />
-                  <Placemark
-                    onClick={() => {
-                      console.log('1 :>> ', 1)
-                      setInfo(
-                        <div>
-                          Задание №{index + 1} - "{title}"
-                        </div>
-                      )
-                    }}
-                    geometry={[latitude, longitude]}
-                    properties={{
-                      // balloonContent: () => (
-                      //   <span onClick={() => console.log(location)}>
-                      //     №{index + 1} "{title}"
-                      //   </span>
-                      // ),
-                      iconCaption: `№${index + 1} "${title}"`,
-                    }}
-                    options={{
-                      // islands#violetStretchyIcon islands#violetIcon
-                      preset: 'islands#blueCircleDotIcon', //'islands#greenDotIconWithCaption',
-                      // iconColor:
-                      //   dataActualitySeconds < 60
-                      //     ? teamsColors[num]
-                      //     : dataActualitySeconds < 300
-                      //     ? 'yellow'
-                      //     : 'red',
-                      controls: [],
-                    }}
-                  />
-                </>
-              )
-            })}
-          {showTeams
-            ? usersWithLocation.map(({ name, team, location }, num) => {
-                const dataActualitySeconds = getSecondsBetween(location.date)
-                return (
-                  <Placemark
-                    geometry={[location.latitude, location.longitude]}
-                    properties={{
-                      // balloonContent: () => (
-                      //   <span onClick={() => console.log(location)}>{name}</span>
-                      // ),
-                      iconCaption: team.name,
-                    }}
-                    options={{
-                      // islands#violetStretchyIcon islands#violetIcon
-                      preset:
-                        dataActualitySeconds < 60
-                          ? islands[index]
-                          : 'islands#blueAttentionIcon', //'islands#greenDotIconWithCaption',
-                      iconColor:
-                        dataActualitySeconds < 60
-                          ? teamsColors[num]
-                          : dataActualitySeconds < 300
-                          ? 'yellow'
-                          : 'red',
-                      controls: [],
-                    }}
-                  />
-                )
-              })
-            : null}
-          <FullscreenControl />
-          <ZoomControl options={{ size: 'large' }} />
-        </Map>
-      </YMaps>
+      <div ref={mapContainerRef} className="w-full h-full" />
     </>
   )
 }
@@ -221,7 +286,7 @@ function EventPage(props) {
       const teamsIds = result.data.teams.map(({ _id }) => _id)
       const teamsColorsToSet = {}
       for (let i = 0; i < teamsIds.length; i++) {
-        teamsColorsToSet[teamsIds[i]] = PASTEL_COLORS[i] % PASTEL_COLORS.length
+        teamsColorsToSet[i] = PASTEL_COLORS[i % PASTEL_COLORS.length]
       }
       setResult(result.data)
       setTeamsColors(teamsColorsToSet)
@@ -243,25 +308,6 @@ function EventPage(props) {
       setGame(result.data)
     }
     if (gameId) getGameEffect(gameId)
-  }, [])
-
-  useEffect(() => {
-    //   const copyrights = document.getElementsByClassName(
-    //     'ymaps-2-1-79-copyrights-pane'
-    //   )
-    //   while(copyrights.length > 0){
-    //     elements[0].parentNode.removeChild(copyrights[0]);
-    // }
-
-    setTimeout(
-      () =>
-        document
-          .querySelectorAll('.ymaps-2-1-79-copyrights-pane')
-          .forEach((el) => el.remove()),
-      1000
-    )
-    // console.log('copyrights :>> ', copyrights)
-    // copyrights[0].remove()
   }, [])
 
   return (

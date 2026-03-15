@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "NODE_OPTIONS='--max-old-space-size=2048' next build",
     "start": "next start",
-    "migrate:teamsusers:user-id": "node scripts/migrateTeamsUsersUserId.js"
+    "migrate:teamsusers:user-id": "node scripts/migrateTeamsUsersUserId.js",
+    "audit:users:global-merge": "node scripts/auditGlobalUsersMerge.js"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
@@ -14,7 +15,6 @@
     "@fortawesome/free-regular-svg-icons": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.2.0",
-    "@pbe/react-yandex-maps": "^1.2.5",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/postcss": "^4.2.1",
     "classnames": "^2.5.1",
