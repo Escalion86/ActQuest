@@ -2598,6 +2598,7 @@ GamesPage.propTypes = {
       status: PropTypes.string,
       dateStart: PropTypes.string,
       type: PropTypes.string,
+      location: PropTypes.string,
       description: PropTypes.string,
       image: PropTypes.string,
       startingPlace: PropTypes.string,

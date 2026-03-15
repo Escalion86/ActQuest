@@ -1,4 +1,6 @@
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
+import upsertGlobalUser from '@helpers/upsertGlobalUser'
+import syncLegacyUserByLocation from '@helpers/syncLegacyUserByLocation'
 
 const errorResponse = (code, message, details = null) => ({
   success: false,
@@ -121,11 +123,11 @@ const authenticateVkUser = async ({ location, rawData }) => {
 
   const resolvedPhotoUrl = photoUrl || verifiedUser.photo_200 || null
 
-  const db = await dbConnect(resolvedLocation)
-  if (!db) {
+  const globalDb = await dbConnectGlobal()
+  if (!globalDb) {
     return errorResponse(
-      'DB_CONNECTION_FAILED',
-      'Не удалось подключиться к базе данных выбранного региона. Попробуйте позже.',
+      'GLOBAL_DB_CONNECTION_FAILED',
+      'Не удалось подключиться к глобальной базе пользователей. Попробуйте позже.',
     )
   }
 
@@ -136,20 +138,15 @@ const authenticateVkUser = async ({ location, rawData }) => {
       photoUrl: resolvedPhotoUrl,
       languageCode: null,
       isPremium: false,
-      authMethod: 'vk',
+      currentLocation: resolvedLocation,
     }
 
-    const user = await db
-      .model('Users')
-      .findOneAndUpdate(
-        { vkId: vkUserId },
-        {
-          $set: updates,
-          $setOnInsert: { location: null, role: 'client', telegramId: null },
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true },
-      )
-      .lean()
+    const user = await upsertGlobalUser({
+      vkId: vkUserId,
+      updates,
+      authMethod: 'vk',
+      setOnInsert: { accountLocation: resolvedLocation },
+    })
 
     if (!user) {
       return errorResponse(
@@ -158,12 +155,24 @@ const authenticateVkUser = async ({ location, rawData }) => {
       )
     }
 
+    await syncLegacyUserByLocation({
+      location: resolvedLocation,
+      findQuery: { vkId: vkUserId },
+      updates: {
+        ...updates,
+        authMethod: 'vk',
+        globalUserId: user._id.toString(),
+      },
+    })
+
     return {
       success: true,
       user: {
         id: user._id.toString(),
+        globalUserId: user._id.toString(),
         vkId: user.vkId,
         telegramId: user.telegramId,
+        phone: user.phone,
         location: resolvedLocation,
         name: user.name,
         username: user.username,

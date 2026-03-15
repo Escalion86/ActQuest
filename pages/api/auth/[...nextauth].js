@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 import authenticateTelegramUser from '@helpers/authenticateTelegramUser'
 import authenticateVkUser from '@helpers/authenticateVkUser'
 import authenticatePhoneUser from '@helpers/authenticatePhoneUser'
@@ -22,6 +23,10 @@ const normalizeUserForSession = (user, fallback = {}) => {
 
   const normalizedUser = {
     ...fallbackData,
+    globalUserId:
+      user?.globalUserId ??
+      fallbackData.globalUserId ??
+      ensureSerializableId(user?._id ?? user?.id ?? fallbackUserId ?? null),
     telegramId: user?.telegramId ?? fallbackData.telegramId ?? null,
     vkId: user?.vkId ?? fallbackData.vkId ?? null,
     phone: user?.phone ?? fallbackData.phone ?? null,
@@ -145,9 +150,13 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.userId = ensureSerializableId(user.id ?? user._id ?? null)
+        const resolvedGlobalUserId = ensureSerializableId(
+          user.globalUserId ?? user.id ?? user._id ?? null,
+        )
+        token.globalUserId = resolvedGlobalUserId
+        token.userId = resolvedGlobalUserId
         token.telegramId = user.telegramId
         token.vkId = user.vkId
         token.phone = user.phone ?? null
@@ -162,6 +171,17 @@ export const authOptions = {
         token.isTestAuth = Boolean(user.isTestAuth)
       }
 
+      if (trigger === 'update') {
+        const nextLocation =
+          session?.location ??
+          session?.user?.location ??
+          null
+
+        if (typeof nextLocation === 'string' && nextLocation.trim().length > 0) {
+          token.location = nextLocation.trim()
+        }
+      }
+
       return token
     },
     async session({ session, token }) {
@@ -169,10 +189,12 @@ export const authOptions = {
 
       if (token?.location) {
         const fallbackUser = {
-          _id: token.userId ?? null,
-          id: token.userId ?? null,
-          userId: token.userId ?? null,
+          _id: token.globalUserId ?? token.userId ?? null,
+          id: token.globalUserId ?? token.userId ?? null,
+          userId: token.globalUserId ?? token.userId ?? null,
+          globalUserId: token.globalUserId ?? token.userId ?? null,
           telegramId: token.telegramId,
+          vkId: token.vkId,
           phone: token.phone,
           name: token.name,
           username: token.username,
@@ -183,13 +205,16 @@ export const authOptions = {
         }
 
         try {
-          const db = await dbConnect(token.location)
-          if (db) {
-            let user = null
+          let user = null
 
-            if (token.userId) {
+          const globalDb = await dbConnectGlobal()
+          if (globalDb) {
+            if (token.globalUserId || token.userId) {
               try {
-                user = await db.model('Users').findById(token.userId).lean()
+                user = await globalDb
+                  .model('Users')
+                  .findById(token.globalUserId || token.userId)
+                  .lean()
               } catch (idError) {
                 // ignore
               }
@@ -200,21 +225,14 @@ export const authOptions = {
               typeof token.telegramId !== 'undefined' &&
               token.telegramId !== null
             ) {
-              user = await db
+              user = await globalDb
                 .model('Users')
                 .findOne({ telegramId: token.telegramId })
                 .lean()
             }
 
-            if (
-              !user &&
-              typeof token.vkId !== 'undefined' &&
-              token.vkId !== null
-            ) {
-              user = await db
-                .model('Users')
-                .findOne({ vkId: token.vkId })
-                .lean()
+            if (!user && typeof token.vkId !== 'undefined' && token.vkId !== null) {
+              user = await globalDb.model('Users').findOne({ vkId: token.vkId }).lean()
             }
 
             if (
@@ -222,21 +240,58 @@ export const authOptions = {
               typeof token.phone !== 'undefined' &&
               token.phone !== null
             ) {
-              user = await db
-                .model('Users')
-                .findOne({ phone: token.phone })
-                .lean()
+              user = await globalDb.model('Users').findOne({ phone: token.phone }).lean()
             }
-
-            session.user = normalizeUserForSession(user, fallbackUser)
-          } else {
-            session.user = normalizeUserForSession(null, fallbackUser)
           }
+
+          if (!user) {
+            const legacyDb = await dbConnect(token.location)
+            if (legacyDb) {
+              if (token.userId) {
+                try {
+                  user = await legacyDb.model('Users').findById(token.userId).lean()
+                } catch (idError) {
+                  // ignore
+                }
+              }
+
+              if (
+                !user &&
+                typeof token.telegramId !== 'undefined' &&
+                token.telegramId !== null
+              ) {
+                user = await legacyDb
+                  .model('Users')
+                  .findOne({ telegramId: token.telegramId })
+                  .lean()
+              }
+
+              if (!user && typeof token.vkId !== 'undefined' && token.vkId !== null) {
+                user = await legacyDb.model('Users').findOne({ vkId: token.vkId }).lean()
+              }
+
+              if (
+                !user &&
+                typeof token.phone !== 'undefined' &&
+                token.phone !== null
+              ) {
+                user = await legacyDb.model('Users').findOne({ phone: token.phone }).lean()
+              }
+            }
+          }
+
+          session.user = normalizeUserForSession(user, fallbackUser)
         } catch (error) {
           console.error('Session callback error', error)
           session.user = normalizeUserForSession(null, fallbackUser)
         }
 
+        session.user.globalUserId =
+          session.user.globalUserId ??
+          session.user._id ??
+          token.globalUserId ??
+          token.userId ??
+          null
         session.user.location = token.location
         session.user.isTestAuth = Boolean(token.isTestAuth)
       }

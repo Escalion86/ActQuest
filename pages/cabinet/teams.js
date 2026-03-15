@@ -1237,6 +1237,7 @@ const teamMemberShape = PropTypes.shape({
   role: PropTypes.string,
   isCaptain: PropTypes.bool,
   userRole: PropTypes.string,
+  hasLinkedUser: PropTypes.bool,
 })
 
 const teamGameShape = PropTypes.shape({

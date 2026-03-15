@@ -1,5 +1,6 @@
 import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
+import upsertGlobalUser from '@helpers/upsertGlobalUser'
 
 const checkContactRecive = async (message, location, db) => {
   if (!message?.contact) return true
@@ -16,6 +17,18 @@ const checkContactRecive = async (message, location, db) => {
     }
 
     const name = (first_name + (last_name ? ' ' + last_name : '')).trim()
+
+    const globalUser = await upsertGlobalUser({
+      telegramId: from.id,
+      updates: {
+        name,
+        phone: Number(phone_number),
+        currentLocation: location,
+      },
+      authMethod: 'telegram',
+      setOnInsert: { accountLocation: location },
+    })
+
     const user = await db.model('Users').findOneAndUpdate(
       {
         telegramId: from.id,
@@ -23,6 +36,7 @@ const checkContactRecive = async (message, location, db) => {
       {
         name,
         phone: Number(phone_number),
+        ...(globalUser?._id ? { globalUserId: globalUser._id.toString() } : {}),
       },
       { upsert: true }
     )

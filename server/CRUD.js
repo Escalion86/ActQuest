@@ -206,6 +206,9 @@ export default async function handler(Schema, req, res, params = null) {
         } else {
           const clearedBody = { ...body.data }
           delete clearedBody._id
+          if (Schema === 'Games') {
+            clearedBody.location = location
+          }
           data = await db.model(Schema).create(clearedBody)
           if (!data) {
             return res?.status(400).json({ success: false })
@@ -241,7 +244,12 @@ export default async function handler(Schema, req, res, params = null) {
 
           const afterUpdateNeedToNotificate = false
 
-          data = await db.model(Schema).findByIdAndUpdate(id, body.data, {
+          const payload = { ...body.data }
+          if (Schema === 'Games') {
+            payload.location = location
+          }
+
+          data = await db.model(Schema).findByIdAndUpdate(id, payload, {
             new: true,
             runValidators: true,
           })

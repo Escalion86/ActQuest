@@ -133,6 +133,7 @@ const normalizeUserForAdmin = ({
 
   return {
     ...baseProfile,
+    globalUserId: userDoc?.globalUserId ? String(userDoc.globalUserId) : null,
     telegramId,
     role: ensureRole(userDoc?.role),
     createdAt: ensureDateISOString(userDoc?.createdAt),
@@ -445,7 +446,9 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: selectedUser.id }),
+        body: JSON.stringify({
+          userId: selectedUser.globalUserId || selectedUser.id,
+        }),
       })
 
       const json = await response.json().catch(() => null)
@@ -820,6 +823,7 @@ const userTeamShape = PropTypes.shape({
 
 const userShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
+  globalUserId: PropTypes.string,
   telegramId: PropTypes.string,
   name: PropTypes.string,
   username: PropTypes.string,

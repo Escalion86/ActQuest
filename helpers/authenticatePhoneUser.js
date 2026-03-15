@@ -1,4 +1,6 @@
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
+import upsertGlobalUser from '@helpers/upsertGlobalUser'
+import syncLegacyUserByLocation from '@helpers/syncLegacyUserByLocation'
 
 const errorResponse = (code, message, details = null) => ({
   success: false,
@@ -66,17 +68,16 @@ const authenticatePhoneUser = async ({ location, rawData }) => {
   }
 
   const providedName = normalizeName(payload.name)
-
-  const db = await dbConnect(resolvedLocation)
-  if (!db) {
+  const globalDb = await dbConnectGlobal()
+  if (!globalDb) {
     return errorResponse(
-      'DB_CONNECTION_FAILED',
-      'Не удалось подключиться к базе данных выбранного региона. Попробуйте позже.',
+      'GLOBAL_DB_CONNECTION_FAILED',
+      'Не удалось подключиться к глобальной базе пользователей. Попробуйте позже.',
     )
   }
 
   try {
-    const existingUser = await db.model('Users').findOne({ phone }).lean()
+    const existingUser = await globalDb.model('Users').findOne({ phone }).lean()
     const fallbackName = existingUser?.name?.trim()?.length
       ? existingUser.name
       : `Пользователь ${String(phone)}`
@@ -84,20 +85,15 @@ const authenticatePhoneUser = async ({ location, rawData }) => {
     const updates = {
       phone,
       name: providedName || fallbackName,
-      authMethod: 'phone',
+      currentLocation: resolvedLocation,
     }
 
-    const user = await db
-      .model('Users')
-      .findOneAndUpdate(
-        { phone },
-        {
-          $set: updates,
-          $setOnInsert: { location: null, role: 'client', telegramId: null, vkId: null },
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true },
-      )
-      .lean()
+    const user = await upsertGlobalUser({
+      phone,
+      updates,
+      authMethod: 'phone',
+      setOnInsert: { accountLocation: resolvedLocation },
+    })
 
     if (!user) {
       return errorResponse(
@@ -106,10 +102,21 @@ const authenticatePhoneUser = async ({ location, rawData }) => {
       )
     }
 
+    await syncLegacyUserByLocation({
+      location: resolvedLocation,
+      findQuery: { phone },
+      updates: {
+        ...updates,
+        authMethod: 'phone',
+        globalUserId: user._id.toString(),
+      },
+    })
+
     return {
       success: true,
       user: {
         id: user._id.toString(),
+        globalUserId: user._id.toString(),
         telegramId: user.telegramId,
         vkId: user.vkId,
         phone: user.phone,

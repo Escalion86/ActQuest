@@ -1,18 +1,18 @@
 import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 import getTelegramTokenByLocation from '@utils/telegram/getTelegramTokenByLocation'
 import verifyTelegramAuthPayload from '@helpers/verifyTelegramAuthPayload'
+import upsertGlobalUser from '@helpers/upsertGlobalUser'
+import syncLegacyUserByLocation from '@helpers/syncLegacyUserByLocation'
 
 const parseBooleanFlag = (value) => {
   if (typeof value === 'boolean') return value
   if (typeof value === 'number') return value === 1
   if (typeof value === 'string') {
     const normalized = value.trim().toLowerCase()
-
     if (!normalized) return false
-
     return ['1', 'true', 'yes', 'on'].includes(normalized)
   }
-
   return false
 }
 
@@ -32,31 +32,9 @@ const buildUserName = (payload) => {
 }
 
 const normalizeTelegramId = (value) => {
-  if (value === null || typeof value === 'undefined') {
-    return null
-  }
-
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null
-  }
-
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-
-    if (!trimmed) {
-      return null
-    }
-
-    const parsed = Number(trimmed)
-
-    if (Number.isFinite(parsed)) {
-      return parsed
-    }
-
-    return null
-  }
-
-  return null
+  if (value === null || typeof value === 'undefined') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 const errorResponse = (code, message, details = null) => ({
@@ -72,11 +50,8 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
   }
 
   let payload = rawData
-
   try {
-    if (typeof rawData === 'string') {
-      payload = JSON.parse(rawData)
-    }
+    if (typeof rawData === 'string') payload = JSON.parse(rawData)
   } catch (error) {
     return errorResponse('INVALID_PAYLOAD', 'Не удалось разобрать данные авторизации Telegram.', {
       message: error.message,
@@ -87,28 +62,17 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
     return errorResponse('INVALID_PAYLOAD_TYPE', 'Некорректный формат данных авторизации Telegram.')
   }
 
-  const currentMode =
-    process.env.MODE ?? process.env.NODE_ENV ?? 'production'
-
-  const isTestAuthAllowed =
-    currentMode !== 'production' || isExplicitTestAuthEnabled
-
+  const currentMode = process.env.MODE ?? process.env.NODE_ENV ?? 'production'
+  const isTestAuthAllowed = currentMode !== 'production' || isExplicitTestAuthEnabled
   const isTestAuth = Boolean(payload?.__isTestAuth) && isTestAuthAllowed
 
   const resolveLocation = () => {
-    if (location) {
-      return String(location)
-    }
-
-    if (payload?.__testLocation) {
-      return String(payload.__testLocation)
-    }
-
+    if (location) return String(location)
+    if (payload?.__testLocation) return String(payload.__testLocation)
     return null
   }
 
   const resolvedLocation = resolveLocation()
-
   if (!resolvedLocation && !isTestAuth) {
     return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации Telegram.')
   }
@@ -116,43 +80,50 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
   if (isTestAuth) {
     const sanitizedPayload = { ...payload }
     delete sanitizedPayload.__isTestAuth
-    if (sanitizedPayload.__testLocation) {
-      delete sanitizedPayload.__testLocation
-    }
+    delete sanitizedPayload.__testLocation
 
     const userLocation = resolvedLocation || 'test'
-    const rawPayloadTelegramId =
-      sanitizedPayload?.id ?? sanitizedPayload?.telegramId ?? null
+    const rawPayloadTelegramId = sanitizedPayload?.id ?? sanitizedPayload?.telegramId ?? null
     const normalizedTelegramId = normalizeTelegramId(rawPayloadTelegramId)
 
     let dbUser = null
 
-    if (resolvedLocation && normalizedTelegramId !== null) {
+    if (normalizedTelegramId !== null) {
       try {
-        const db = await dbConnect(resolvedLocation)
-        if (db) {
-          dbUser = await db
-            .model('Users')
-            .findOne({ telegramId: normalizedTelegramId })
-            .lean()
+        const globalDb = await dbConnectGlobal()
+        if (globalDb) {
+          dbUser = await globalDb.model('Users').findOne({ telegramId: normalizedTelegramId }).lean()
         }
       } catch (lookupError) {
-        console.error('Test auth user lookup error', lookupError)
+        console.error('Test auth global user lookup error', lookupError)
+      }
+    }
+
+    if (!dbUser && resolvedLocation && normalizedTelegramId !== null) {
+      try {
+        const legacyDb = await dbConnect(resolvedLocation)
+        if (legacyDb) {
+          dbUser = await legacyDb.model('Users').findOne({ telegramId: normalizedTelegramId }).lean()
+        }
+      } catch (lookupError) {
+        console.error('Test auth legacy user lookup error', lookupError)
       }
     }
 
     const fallbackTelegramId = dbUser?.telegramId ?? normalizedTelegramId ?? null
-
     const fallbackUserId = dbUser?._id
       ? dbUser._id.toString()
       : `test-${String(rawPayloadTelegramId ?? fallbackTelegramId ?? 'user')}`
 
     const resultUser = {
       id: fallbackUserId,
+      globalUserId: dbUser?._id ? dbUser._id.toString() : fallbackUserId,
       telegramId:
         fallbackTelegramId !== null
           ? fallbackTelegramId
           : normalizeTelegramId(rawPayloadTelegramId),
+      vkId: dbUser?.vkId ?? null,
+      phone: dbUser?.phone ?? null,
       location: userLocation,
       name: dbUser?.name ?? buildUserName(sanitizedPayload),
       username: dbUser?.username ?? sanitizedPayload?.username ?? null,
@@ -165,9 +136,7 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
       isTestAuth: true,
     }
 
-    if (dbUser?.role) {
-      resultUser.role = dbUser.role
-    }
+    if (dbUser?.role) resultUser.role = dbUser.role
 
     return {
       success: true,
@@ -182,26 +151,23 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
   }
 
   const token = getTelegramTokenByLocation(resolvedLocation)
-
   if (!token) {
     return errorResponse('MISSING_TELEGRAM_TOKEN', 'Для выбранного региона не настроен бот Telegram.')
   }
 
   const isPayloadValid = verifyTelegramAuthPayload(payload, token)
-
   if (!isPayloadValid) {
     return errorResponse(
       'INVALID_SIGNATURE',
-      'Подпись данных авторизации Telegram не прошла проверку. Попробуйте обновить страницу и выполнить вход заново.'
+      'Подпись данных авторизации Telegram не прошла проверку. Попробуйте обновить страницу и выполнить вход заново.',
     )
   }
 
-  const db = await dbConnect(resolvedLocation)
-
-  if (!db) {
+  const globalDb = await dbConnectGlobal()
+  if (!globalDb) {
     return errorResponse(
-      'DB_CONNECTION_FAILED',
-      'Не удалось подключиться к базе данных выбранного региона. Попробуйте позже или обратитесь к администратору.'
+      'GLOBAL_DB_CONNECTION_FAILED',
+      'Не удалось подключиться к глобальной базе пользователей. Попробуйте позже или обратитесь к администратору.',
     )
   }
 
@@ -212,31 +178,39 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
     photoUrl: payload?.photo_url ?? null,
     languageCode: payload?.language_code ?? null,
     isPremium: Boolean(payload?.is_premium),
+    currentLocation: resolvedLocation,
   }
 
   try {
-    const user = await db
-      .model('Users')
-      .findOneAndUpdate(
-        { telegramId: payload.id },
-        { $set: updates },
-        {
-          upsert: true,
-          new: true,
-          setDefaultsOnInsert: true,
-        }
-      )
-      .lean()
+    const user = await upsertGlobalUser({
+      telegramId: payload.id,
+      updates,
+      authMethod: 'telegram',
+      setOnInsert: { accountLocation: resolvedLocation },
+    })
 
     if (!user) {
       return errorResponse('USER_NOT_CREATED', 'Не удалось создать или обновить профиль пользователя Telegram.')
     }
 
+    await syncLegacyUserByLocation({
+      location: resolvedLocation,
+      findQuery: { telegramId: payload.id },
+      updates: {
+        ...updates,
+        authMethod: 'telegram',
+        globalUserId: user._id.toString(),
+      },
+    })
+
     return {
       success: true,
       user: {
         id: user._id.toString(),
+        globalUserId: user._id.toString(),
         telegramId: user.telegramId,
+        vkId: user.vkId,
+        phone: user.phone,
         location: resolvedLocation,
         name: user.name,
         username: user.username,

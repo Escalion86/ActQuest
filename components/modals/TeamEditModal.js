@@ -145,6 +145,11 @@ const TeamEditModal = ({
                             Роль в системе: {member.userRole}
                           </p>
                         )}
+                        {!member.hasLinkedUser && (
+                          <p className="mt-1 text-xs text-amber-600">
+                            Профиль пользователя не найден в глобальной базе.
+                          </p>
+                        )}
                       </div>
                       <div className="text-right">
                         {member.phone && (
@@ -254,6 +259,7 @@ TeamEditModal.propTypes = {
         username: PropTypes.string,
         phone: PropTypes.string,
         userRole: PropTypes.string,
+        hasLinkedUser: PropTypes.bool,
         isCaptain: PropTypes.bool,
       })
     ),

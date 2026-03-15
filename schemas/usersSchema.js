@@ -45,6 +45,21 @@ const usersSchema = {
     type: Number,
     default: null,
   },
+  globalUserId: {
+    type: String,
+    default: null,
+    trim: true,
+  },
+  accountLocation: {
+    type: String,
+    default: null,
+    trim: true,
+  },
+  currentLocation: {
+    type: String,
+    default: null,
+    trim: true,
+  },
   about: {
     type: String,
     default: '',

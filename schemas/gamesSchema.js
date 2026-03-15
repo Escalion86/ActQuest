@@ -31,6 +31,11 @@ const gamesSchema = {
     type: Date,
     default: null,
   },
+  location: {
+    type: String,
+    default: null,
+    trim: true,
+  },
   image: {
     type: String,
     default: null,

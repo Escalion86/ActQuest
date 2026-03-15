@@ -255,6 +255,7 @@ const normalizeGameForCabinet = (game) => {
     dateStart: ensureDateISOString(game.dateStart),
     dateStartFact: ensureDateISOString(game.dateStartFact),
     dateEndFact: ensureDateISOString(game.dateEndFact),
+    location: ensureString(game.location, ''),
     type: game?.type === 'photo' ? 'photo' : 'classic',
     description: ensureString(game.description, ''),
     image: ensureString(game.image, ''),

@@ -75,6 +75,11 @@ const normalizeMembers = (members = []) => {
       member?.userId ??
       user?._id ??
       null
+    const hasLinkedUser = Boolean(user && Object.keys(user).length > 0)
+    const fallbackName = ensureString(
+      user?.username ? `@${user.username}` : rawTelegramId ? `Участник ${rawTelegramId}` : '',
+      'Участник без профиля'
+    )
 
     return {
       id: ensureString(member?.membershipId ?? member?._id ?? member?.id, `member-${index}`),
@@ -82,10 +87,11 @@ const normalizeMembers = (members = []) => {
       telegramId: ensureString(rawTelegramId, ''),
       role,
       isCaptain: role === 'capitan',
-      name: ensureString(user?.name, ''),
+      name: ensureString(user?.name, fallbackName),
       username: ensureString(user?.username, ''),
       phone: ensurePhone(user?.phone),
       userRole: ensureString(user?.role, ''),
+      hasLinkedUser,
     }
   })
 

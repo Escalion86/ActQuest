@@ -699,6 +699,11 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                                       Роль в системе: {member.userRole}
                                     </p>
                                   )}
+                                  {!member.hasLinkedUser && (
+                                    <p className="mt-1 text-xs text-amber-600">
+                                      Профиль пользователя не найден в глобальной базе.
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="text-right">
                                   {member.phone && (
@@ -848,6 +853,7 @@ const teamMemberShape = PropTypes.shape({
   role: PropTypes.string,
   isCaptain: PropTypes.bool,
   userRole: PropTypes.string,
+  hasLinkedUser: PropTypes.bool,
 })
 
 const teamGameShape = PropTypes.shape({

@@ -72,11 +72,12 @@ const getInitials = (name, fallback) => {
 
 const CabinetLayout = ({ children, title, description, activePage }) => {
   const router = useRouter()
-  const { data: session } = useSession()
+  const { data: session, update } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false)
   const [theme, setTheme] = useState('light')
   const [isThemeInitialized, setIsThemeInitialized] = useState(false)
+  const [isLocationSaving, setIsLocationSaving] = useState(false)
 
   const role = session?.user?.role ?? null
   const userName = session?.user?.name || session?.user?.username || 'Пользователь'
@@ -84,6 +85,17 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   const locationKey = session?.user?.location ?? null
   const locationName = normalizeLocationName(locationKey)
   const isDarkTheme = theme === 'dark'
+  const availableLocations = useMemo(
+    () =>
+      Object.entries(LOCATIONS)
+        .filter(([, value]) => !value.hidden)
+        .map(([key, value]) => ({
+          key,
+          label: normalizeLocationName(key),
+          townRu: value.townRu,
+        })),
+    [],
+  )
 
   const menuItems = useMemo(() => {
     if (isUserAdmin({ role })) {
@@ -154,6 +166,40 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   const handleSignOut = async () => {
     await signOut({ redirect: true, callbackUrl: '/' })
   }
+
+  const handleLocationChange = useCallback(
+    async (event) => {
+      const nextLocation = event.target.value
+      if (!nextLocation || nextLocation === locationKey || isLocationSaving) {
+        return
+      }
+
+      try {
+        setIsLocationSaving(true)
+        const response = await fetch('/api/cabinet/users/location', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ location: nextLocation }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Не удалось обновить город')
+        }
+
+        if (typeof update === 'function') {
+          await update({ location: nextLocation })
+        }
+      } catch (error) {
+        console.error('Failed to change active location', error)
+      } finally {
+        setIsLocationSaving(false)
+      }
+    },
+    [isLocationSaving, locationKey, update],
+  )
 
   return (
     <div className={isDarkTheme ? 'dark' : ''}>
@@ -294,6 +340,23 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                 </div>
               </div>
               <div className="flex items-center gap-3 md:gap-4">
+                <select
+                  value={locationKey ?? ''}
+                  onChange={handleLocationChange}
+                  disabled={isLocationSaving}
+                  className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-600 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 max-w-[120px] md:max-w-none"
+                >
+                  {!locationKey ? (
+                    <option value="" disabled>
+                      Выберите город
+                    </option>
+                  ) : null}
+                  {availableLocations.map((item) => (
+                    <option key={item.key} value={item.key}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="button"
                   onClick={toggleTheme}

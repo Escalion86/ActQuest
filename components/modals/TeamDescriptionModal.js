@@ -93,6 +93,11 @@ const TeamDescriptionModal = ({
                   {member.userRole && (
                     <p className="mt-1 text-xs text-slate-400">Роль в системе: {member.userRole}</p>
                   )}
+                  {!member.hasLinkedUser && (
+                    <p className="mt-1 text-xs text-amber-600">
+                      Профиль пользователя не найден в глобальной базе.
+                    </p>
+                  )}
                   {member.phone && (
                     <p className="mt-2 text-xs text-slate-500">Телефон: {member.phone}</p>
                   )}
@@ -164,6 +169,7 @@ TeamDescriptionModal.propTypes = {
         name: PropTypes.string,
         username: PropTypes.string,
         userRole: PropTypes.string,
+        hasLinkedUser: PropTypes.bool,
         phone: PropTypes.string,
         telegramId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
         isCaptain: PropTypes.bool,
