@@ -52,13 +52,11 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const [authError, setAuthError] = useState(null)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [isClient, setIsClient] = useState(false)
-  const [isVkReady, setIsVkReady] = useState(false)
   const [isVkIdReady, setIsVkIdReady] = useState(false)
   const [vkError, setVkError] = useState(null)
   const [phoneInput, setPhoneInput] = useState('')
   const [passwordInput, setPasswordInput] = useState('')
   const vkIdWidgetContainerRef = useRef(null)
-  const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID
   const vkidAppId =
     process.env.NEXT_PUBLIC_VKID_ONETAP_APP_ID ||
     process.env.NEXT_PUBLIC_VK_APP_ID
@@ -320,47 +318,6 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   )
 
   useEffect(() => {
-    if (!isClient || !vkAppId) return undefined
-
-    const existingScript = document.querySelector('script[data-vk-sdk]')
-    if (existingScript) {
-      if (window.VK) {
-        setIsVkReady(true)
-      }
-      return undefined
-    }
-
-    const script = document.createElement('script')
-    script.src = 'https://vk.com/js/api/openapi.js?169'
-    script.async = true
-    script.setAttribute('data-vk-sdk', 'true')
-
-    script.onload = () => {
-      if (window.VK) {
-        try {
-          window.VK.init({ apiId: Number(vkAppId) })
-          setIsVkReady(true)
-        } catch (initError) {
-          console.error('VK init failed', initError)
-          setVkError('Не удалось инициализировать VK SDK. Проверьте VK_APP_ID.')
-        }
-      }
-    }
-
-    script.onerror = () => {
-      setVkError('Не удалось загрузить VK SDK. Попробуйте обновить страницу.')
-    }
-
-    document.body.appendChild(script)
-
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script)
-      }
-    }
-  }, [isClient, vkAppId])
-
-  useEffect(() => {
     if (!isClient || !vkidAppId || !vkIdWidgetContainerRef.current)
       return undefined
 
@@ -620,65 +577,6 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                     </Link>
                   </form>
 
-                  {vkAppId ? (
-                    <button
-                      type="button"
-                      disabled={isAuthenticating || !isVkReady}
-                      onClick={() => {
-                        if (
-                          typeof window === 'undefined' ||
-                          !window.VK ||
-                          !window.VK.Auth
-                        ) {
-                          setVkError('VK SDK не загружен. Обновите страницу.')
-                          return
-                        }
-
-                        window.VK.Auth.login((response) => {
-                          if (
-                            response &&
-                            response.session &&
-                            response.session.user
-                          ) {
-                            const token =
-                              response.session?.access_token ||
-                              response.session?.accessToken ||
-                              response.session?.sig ||
-                              null
-                            if (!token) {
-                              setVkError(
-                                'Не удалось получить токен VK. Проверьте настройки приложения.',
-                              )
-                              return
-                            }
-
-                            handleVkAuth({
-                              accessToken: token,
-                              vkId: response.session.user.id,
-                              firstName: response.session.user.first_name,
-                              lastName: response.session.user.last_name,
-                              photoUrl: response.session.user.photo,
-                            })
-                          } else {
-                            setVkError(
-                              'Не удалось получить данные от VK. Попробуйте снова.',
-                            )
-                          }
-                        })
-                      }}
-                      className="w-full px-4 py-3 text-sm font-semibold text-white transition bg-blue-600 rounded-xl hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Войти через VK
-                    </button>
-                  ) : (
-                    <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
-                      Укажите{' '}
-                      <code className="px-1 bg-white dark:bg-slate-900/80 rounded">
-                        NEXT_PUBLIC_VK_APP_ID
-                      </code>{' '}
-                      для входа через VK.
-                    </div>
-                  )}
                   {vkidAppId ? (
                     <div className="w-full mt-3">
                       <div className="mb-2 text-xs font-medium text-slate-600">
@@ -695,7 +593,15 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                         ) : null}
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
+                      Укажите{' '}
+                      <code className="px-1 bg-white dark:bg-slate-900/80 rounded">
+                        NEXT_PUBLIC_VKID_ONETAP_APP_ID
+                      </code>{' '}
+                      для входа через VK One Tap.
+                    </div>
+                  )}
                   {vkError ? (
                     <p className="w-full px-3 py-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
                       {vkError}
