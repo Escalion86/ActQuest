@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import { signIn, useSession } from 'next-auth/react'
 
 import getSessionSafe from '@helpers/getSessionSafe'
@@ -21,6 +22,27 @@ const normalizePhoneInput = (value) => {
   return value.replace(/[^\d+]/g, '')
 }
 
+const getVkIdSdk = () => {
+  const root = window.VKIDSDK || window.VKID || null
+  if (!root) return null
+  return root.VKID || root
+}
+
+const resolveVkIdCallbackUrl = (explicitCallbackUrl) => {
+  if (typeof window === 'undefined') return ''
+
+  const fallback = `${window.location.origin}/api/vk-id/callback`
+  if (!explicitCallbackUrl || typeof explicitCallbackUrl !== 'string') {
+    return fallback
+  }
+
+  try {
+    return new URL(explicitCallbackUrl, window.location.origin).toString()
+  } catch (error) {
+    return fallback
+  }
+}
+
 const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const { data: session, status, update } = useSession()
   const router = useRouter()
@@ -34,11 +56,16 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const [isVkIdReady, setIsVkIdReady] = useState(false)
   const [vkError, setVkError] = useState(null)
   const [phoneInput, setPhoneInput] = useState('')
+  const [passwordInput, setPasswordInput] = useState('')
   const vkIdWidgetContainerRef = useRef(null)
   const vkAppId = process.env.NEXT_PUBLIC_VK_APP_ID
   const vkidAppId =
     process.env.NEXT_PUBLIC_VKID_ONETAP_APP_ID ||
     process.env.NEXT_PUBLIC_VK_APP_ID
+  const vkidCallbackUrl = process.env.NEXT_PUBLIC_VKID_CALLBACK_URL
+  const vkidSdkUrl =
+    process.env.NEXT_PUBLIC_VKID_SDK_URL ||
+    'https://unpkg.com/@vkid/sdk@2.0.0/dist-sdk/umd/index.js'
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
 
   useEffect(() => {
@@ -190,6 +217,10 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
         setAuthError('Введите корректный номер телефона.')
         return
       }
+      if (!passwordInput) {
+        setAuthError('Введите пароль.')
+        return
+      }
 
       try {
         setAuthError(null)
@@ -197,6 +228,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
 
         const payload = JSON.stringify({
           phone: digitsOnly,
+          password: passwordInput,
         })
 
         let absoluteCallbackUrl = effectiveCallbackUrl
@@ -215,7 +247,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
           }
         }
 
-        const result = await signIn('phone', {
+        const result = await signIn('password', {
           redirect: false,
           callbackUrl: absoluteCallbackUrl,
           data: payload,
@@ -266,10 +298,10 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
           }
         }
       } catch (authError) {
-        console.error('Phone auth error', authError)
+        console.error('Password auth error', authError)
         setAuthError(
           authError.message ||
-            'Не удалось авторизоваться по номеру телефона. Попробуйте ещё раз.',
+            'Не удалось авторизоваться по номеру телефона и паролю. Попробуйте ещё раз.',
         )
       } finally {
         setIsAuthenticating(false)
@@ -281,6 +313,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       isClient,
       location,
       phoneInput,
+      passwordInput,
       router,
       updateSession,
     ],
@@ -337,21 +370,21 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
     }
 
     const script = document.createElement('script')
-    script.src = 'https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js'
+    script.src = vkidSdkUrl
     script.async = true
-    script.setAttribute('nonce', 'csp_nonce')
 
     script.onload = () => {
-      if (!window.VKIDSDK || !window.VKIDSDK.VKID) {
+      const VKID = getVkIdSdk()
+      if (!VKID) {
         setVkError('VK One Tap SDK недоступен. Проверьте подключение.')
         return
       }
 
       try {
-        const { VKID } = window.VKIDSDK
+        const callbackUrl = resolveVkIdCallbackUrl(vkidCallbackUrl)
         VKID.Config.init({
           app: Number(vkidAppId),
-          redirectUrl: `${window.location.origin}/api/vk-id/callback`,
+          redirectUrl: callbackUrl,
           responseMode: VKID.ConfigResponseMode.Callback,
           source: VKID.ConfigSource.LOWCODE,
           scope: '',
@@ -447,7 +480,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
         }
       }
     }
-  }, [isClient, vkidAppId, handleVkAuth])
+  }, [isClient, vkidAppId, vkidCallbackUrl, vkidSdkUrl, handleVkAuth])
 
   const callbackDescription =
     effectiveCallbackUrl && effectiveCallbackUrl !== '/cabinet'
@@ -541,7 +574,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                     onSubmit={handlePhoneAuthSubmit}
                   >
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                      Вход по номеру телефона
+                      Вход по номеру телефона и паролю
                     </p>
                     <input
                       type="tel"
@@ -553,16 +586,30 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                       disabled={isAuthenticating}
                       className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                     />
+                    <input
+                      type="password"
+                      value={passwordInput}
+                      onChange={(event) => setPasswordInput(event.target.value)}
+                      placeholder="Пароль"
+                      disabled={isAuthenticating}
+                      className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                    />
                     <button
                       type="submit"
                       disabled={isAuthenticating}
                       className="w-full px-4 py-3 text-sm font-semibold text-white transition bg-emerald-600 rounded-xl hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Войти по телефону
+                      Войти
                     </button>
                     <p className="text-xs text-slate-500">
-                      Если аккаунта нет, он будет создан автоматически.
+                      Нет аккаунта? Перейдите на регистрацию или используйте VK.
                     </p>
+                    <Link
+                      href={`/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
+                      className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-semibold border rounded-xl border-primary text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                    >
+                      Открыть регистрацию
+                    </Link>
                   </form>
 
                   {vkAppId ? (

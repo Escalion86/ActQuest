@@ -48,16 +48,25 @@ const upsertGlobalUser = async ({
     phone: normalizeNumber(phone),
   }
 
+  // Mongo не позволяет обновлять один и тот же путь одновременно в $set и $setOnInsert.
+  const setOnInsertPayload = {
+    ...identityDefaults,
+    location: null,
+    role: 'client',
+    ...setOnInsert,
+  }
+
+  Object.keys(updatePayload).forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(setOnInsertPayload, key)) {
+      delete setOnInsertPayload[key]
+    }
+  })
+
   const user = await Users.findOneAndUpdate(
     existingUser ? { _id: existingUser._id } : filters[0] || { _id: null },
     {
       $set: updatePayload,
-      $setOnInsert: {
-        ...identityDefaults,
-        location: null,
-        role: 'client',
-        ...setOnInsert,
-      },
+      $setOnInsert: setOnInsertPayload,
     },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   ).lean()

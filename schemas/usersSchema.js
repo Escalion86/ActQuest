@@ -45,6 +45,10 @@ const usersSchema = {
     type: Number,
     default: null,
   },
+  passwordHash: {
+    type: String,
+    default: null,
+  },
   globalUserId: {
     type: String,
     default: null,

@@ -4,7 +4,7 @@ import dbConnect from '@utils/dbConnect'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import authenticateTelegramUser from '@helpers/authenticateTelegramUser'
 import authenticateVkUser from '@helpers/authenticateVkUser'
-import authenticatePhoneUser from '@helpers/authenticatePhoneUser'
+import authenticatePasswordUser from '@helpers/authenticatePasswordUser'
 
 const ensureSerializableId = (value) => {
   if (value === null || value === undefined) return null
@@ -78,7 +78,9 @@ export const authOptions = {
               errorCode: result.errorCode,
               errorMessage: result.errorMessage,
             })
-            throw new Error(result.errorCode || 'TELEGRAM_AUTH_FAILED')
+            throw new Error(
+              result.errorMessage || result.errorCode || 'TELEGRAM_AUTH_FAILED',
+            )
           }
 
           return { ...result.user, isTestAuth: Boolean(result.isTestAuth) }
@@ -108,7 +110,7 @@ export const authOptions = {
               errorCode: result.errorCode,
               errorMessage: result.errorMessage,
             })
-            throw new Error(result.errorCode || 'VK_AUTH_FAILED')
+            throw new Error(result.errorMessage || result.errorCode || 'VK_AUTH_FAILED')
           }
 
           return { ...result.user, authMethod: 'vk' }
@@ -119,10 +121,10 @@ export const authOptions = {
       },
     }),
     CredentialsProvider({
-      id: 'phone',
-      name: 'Phone',
+      id: 'password',
+      name: 'Password',
       credentials: {
-        data: { label: 'Phone auth data', type: 'text' },
+        data: { label: 'Password auth data', type: 'text' },
         location: { label: 'Location', type: 'text' },
       },
       authorize: async (credentials) => {
@@ -130,20 +132,22 @@ export const authOptions = {
         const rawData = credentials?.data
 
         try {
-          const result = await authenticatePhoneUser({ location, rawData })
+          const result = await authenticatePasswordUser({ location, rawData })
 
           if (!result.success) {
-            console.error('Phone authorize error', {
+            console.error('Password authorize error', {
               location,
               errorCode: result.errorCode,
               errorMessage: result.errorMessage,
             })
-            throw new Error(result.errorCode || 'PHONE_AUTH_FAILED')
+            throw new Error(
+              result.errorMessage || result.errorCode || 'PASSWORD_AUTH_FAILED',
+            )
           }
 
           return { ...result.user, authMethod: 'phone' }
         } catch (error) {
-          console.error('Phone authorize unexpected error', error)
+          console.error('Password authorize unexpected error', error)
           throw error
         }
       },

@@ -1,7 +1,8 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
-import upsertGlobalUser from '@helpers/upsertGlobalUser'
 import syncLegacyUserByLocation from '@helpers/syncLegacyUserByLocation'
+import upsertGlobalUser from '@helpers/upsertGlobalUser'
 import normalizeAuthPhone from '@helpers/normalizeAuthPhone'
+import { createPasswordHash, validatePassword } from '@helpers/passwordHash'
 
 const errorResponse = (code, message, details = null) => ({
   success: false,
@@ -20,9 +21,9 @@ const normalizeName = (value) => {
   return value.trim()
 }
 
-const authenticatePhoneUser = async ({ location, rawData }) => {
+const registerPhoneUser = async ({ location, rawData }) => {
   if (!rawData) {
-    return errorResponse('MISSING_PAYLOAD', 'Не получены данные авторизации по номеру телефона.')
+    return errorResponse('MISSING_PAYLOAD', 'Не получены данные регистрации.')
   }
 
   let payload = rawData
@@ -33,26 +34,31 @@ const authenticatePhoneUser = async ({ location, rawData }) => {
   } catch (error) {
     return errorResponse(
       'INVALID_PAYLOAD',
-      'Не удалось разобрать данные авторизации по номеру телефона.',
+      'Не удалось разобрать данные регистрации.',
       { message: error.message },
     )
   }
 
   if (!payload || typeof payload !== 'object') {
-    return errorResponse(
-      'INVALID_PAYLOAD_TYPE',
-      'Некорректный формат данных авторизации по номеру телефона.',
-    )
+    return errorResponse('INVALID_PAYLOAD_TYPE', 'Некорректный формат данных регистрации.')
   }
 
   const resolvedLocation = normalizeLocation(location)
   if (!resolvedLocation) {
-    return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации.')
+    return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для регистрации.')
   }
 
   const phone = normalizeAuthPhone(payload.phone)
   if (phone === null) {
     return errorResponse('INVALID_PHONE', 'Укажите корректный номер телефона.')
+  }
+
+  const password = typeof payload.password === 'string' ? payload.password : ''
+  if (!validatePassword(password)) {
+    return errorResponse(
+      'WEAK_PASSWORD',
+      'Пароль должен содержать минимум 8 символов.',
+    )
   }
 
   const providedName = normalizeName(payload.name)
@@ -66,13 +72,24 @@ const authenticatePhoneUser = async ({ location, rawData }) => {
 
   try {
     const existingUser = await globalDb.model('Users').findOne({ phone }).lean()
-    const fallbackName = existingUser?.name?.trim()?.length
-      ? existingUser.name
-      : `Пользователь ${String(phone)}`
+    if (existingUser?.passwordHash) {
+      return errorResponse(
+        'ACCOUNT_ALREADY_REGISTERED',
+        'Аккаунт с таким номером уже зарегистрирован. Войдите по паролю или через VK.',
+      )
+    }
+
+    const passwordHash = createPasswordHash(password)
+    const fallbackName =
+      providedName ||
+      existingUser?.name ||
+      `Пользователь ${String(phone)}`
 
     const updates = {
       phone,
-      name: providedName || fallbackName,
+      name: fallbackName,
+      passwordHash,
+      authMethod: 'phone',
       currentLocation: resolvedLocation,
     }
 
@@ -84,10 +101,7 @@ const authenticatePhoneUser = async ({ location, rawData }) => {
     })
 
     if (!user) {
-      return errorResponse(
-        'USER_NOT_CREATED',
-        'Не удалось создать или обновить профиль пользователя по номеру телефона.',
-      )
+      return errorResponse('USER_NOT_CREATED', 'Не удалось завершить регистрацию пользователя.')
     }
 
     await syncLegacyUserByLocation({
@@ -95,7 +109,6 @@ const authenticatePhoneUser = async ({ location, rawData }) => {
       findQuery: { phone },
       updates: {
         ...updates,
-        authMethod: 'phone',
         globalUserId: user._id.toString(),
       },
     })
@@ -116,15 +129,12 @@ const authenticatePhoneUser = async ({ location, rawData }) => {
         isPremium: user.isPremium,
         authMethod: 'phone',
       },
-      payload,
     }
   } catch (error) {
-    return errorResponse(
-      'USER_UPDATE_FAILED',
-      'Ошибка при сохранении профиля пользователя по номеру телефона.',
-      { message: error.message },
-    )
+    return errorResponse('USER_UPDATE_FAILED', 'Ошибка при регистрации пользователя.', {
+      message: error.message,
+    })
   }
 }
 
-export default authenticatePhoneUser
+export default registerPhoneUser
