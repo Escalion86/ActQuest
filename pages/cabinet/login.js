@@ -377,26 +377,27 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
         const widgetErrorEvent = resolveVkIdConfigValue(
           VKID.WidgetEvents,
           'ERROR',
-          null,
+          'error',
         )
         const oneTapSuccessEvent = resolveVkIdConfigValue(
           VKID.OneTapInternalEvents,
           'LOGIN_SUCCESS',
-          null,
+          'login_success',
         )
 
-        if (!widgetErrorEvent || !oneTapSuccessEvent) {
+        const renderedWidget = oneTap.render({
+          container,
+          showAlternativeLogin: true,
+        })
+
+        if (!renderedWidget || typeof renderedWidget.on !== 'function') {
           setVkError(
-            'Текущая версия VKID SDK не поддерживает ожидаемые события One Tap.',
+            'Текущая версия VKID SDK не поддерживает API событий One Tap.',
           )
           return
         }
 
-        oneTap
-          .render({
-            container,
-            showAlternativeLogin: true,
-          })
+        renderedWidget
           .on(widgetErrorEvent, (error) => {
             console.error('VK OneTap error', error)
             setVkError('Ошибка VK One Tap. Попробуйте другой способ входа.')
