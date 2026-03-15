@@ -73,7 +73,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const vkidCallbackUrl = process.env.NEXT_PUBLIC_VKID_CALLBACK_URL
   const vkidSdkUrl =
     process.env.NEXT_PUBLIC_VKID_SDK_URL ||
-    'https://unpkg.com/@vkid/sdk@2.0.0/dist-sdk/umd/index.js'
+    'https://unpkg.com/@vkid/sdk/dist-sdk/umd/index.js'
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
 
   useEffect(() => {
@@ -332,6 +332,15 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       return undefined
 
     const container = vkIdWidgetContainerRef.current
+    const onUnhandledRejection = (event) => {
+      const reasonText = String(event?.reason?.message || event?.reason || '')
+      if (reasonText.toLowerCase().includes('failed to fetch')) {
+        event.preventDefault()
+      }
+    }
+
+    window.addEventListener('unhandledrejection', onUnhandledRejection)
+
     const originalFetch =
       typeof window !== 'undefined' && typeof window.fetch === 'function'
         ? window.fetch.bind(window)
@@ -358,9 +367,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       }
     }
 
-    while (container.firstChild) {
-      container.removeChild(container.firstChild)
-    }
+    container.textContent = ''
 
     const script = document.createElement('script')
     script.src = vkidSdkUrl
@@ -505,14 +512,14 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
         window.fetch = originalFetch
       }
 
+      window.removeEventListener('unhandledrejection', onUnhandledRejection)
+
       if (script.parentNode) {
         script.parentNode.removeChild(script)
       }
 
       if (container) {
-        while (container.firstChild) {
-          container.removeChild(container.firstChild)
-        }
+        container.textContent = ''
       }
     }
   }, [isClient, vkidAppId, vkidCallbackUrl, vkidSdkUrl, handleVkAuth])
@@ -618,6 +625,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                         setPhoneInput(normalizePhoneInput(event.target.value))
                       }
                       placeholder="+7 900 000-00-00"
+                      autoComplete="tel"
                       disabled={isAuthenticating}
                       className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                     />
@@ -626,6 +634,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                       value={passwordInput}
                       onChange={(event) => setPasswordInput(event.target.value)}
                       placeholder="Пароль"
+                      autoComplete="current-password"
                       disabled={isAuthenticating}
                       className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                     />
