@@ -22,10 +22,24 @@ const normalizePhoneInput = (value) => {
   return value.replace(/[^\d+]/g, '')
 }
 
-const getVkIdSdk = () => {
-  const root = window.VKIDSDK || window.VKID || null
-  if (!root) return null
-  return root.VKID || root
+const VK_SDK_URL = 'https://unpkg.com/@vkid/sdk@2.6.5/dist-sdk/umd/index.js'
+let vkSdkLoadPromise = null
+
+const loadVkSdk = () => {
+  if (typeof window === 'undefined') return Promise.resolve(false)
+  if (window.VKIDSDK) return Promise.resolve(true)
+  if (vkSdkLoadPromise) return vkSdkLoadPromise
+
+  vkSdkLoadPromise = new Promise((resolve) => {
+    const script = document.createElement('script')
+    script.src = VK_SDK_URL
+    script.async = true
+    script.onload = () => resolve(Boolean(window.VKIDSDK))
+    script.onerror = () => resolve(false)
+    document.head.appendChild(script)
+  })
+
+  return vkSdkLoadPromise
 }
 
 const resolveVkIdCallbackUrl = (explicitCallbackUrl) => {
@@ -43,30 +57,6 @@ const resolveVkIdCallbackUrl = (explicitCallbackUrl) => {
   }
 }
 
-const resolveVkIdConfigValue = (enumObject, key, fallback) => {
-  if (enumObject && typeof enumObject === 'object' && enumObject[key]) {
-    return enumObject[key]
-  }
-  return fallback
-}
-
-const isVkIdTelemetryUrl = (url) =>
-  typeof url === 'string' && url.includes('id.vk.com/stat_events_vkid_sdk')
-
-const isVkDomainUrl = (url) =>
-  typeof url === 'string' && url.includes('id.vk.com/')
-
-const extractRequestUrl = (requestLike) => {
-  if (!requestLike) return ''
-  if (typeof requestLike === 'string') return requestLike
-  if (typeof requestLike?.url === 'string') return requestLike.url
-  if (typeof requestLike?.toString === 'function') {
-    const maybeString = requestLike.toString()
-    return typeof maybeString === 'string' ? maybeString : ''
-  }
-  return ''
-}
-
 const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const { data: session, status, update } = useSession()
   const router = useRouter()
@@ -81,13 +71,18 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const [phoneInput, setPhoneInput] = useState('')
   const [passwordInput, setPasswordInput] = useState('')
   const vkIdWidgetContainerRef = useRef(null)
-  const vkidAppId =
-    process.env.NEXT_PUBLIC_VKID_ONETAP_APP_ID ||
-    process.env.NEXT_PUBLIC_VK_APP_ID
-  const vkidCallbackUrl = process.env.NEXT_PUBLIC_VKID_CALLBACK_URL
-  const vkidSdkUrl =
-    process.env.NEXT_PUBLIC_VKID_SDK_URL ||
-    'https://unpkg.com/@vkid/sdk/dist-sdk/umd/index.js'
+  const vkidAppId = Number.parseInt(
+    String(
+      process.env.NEXT_PUBLIC_VK_ID_APP_ID ||
+        process.env.NEXT_PUBLIC_VKID_ONETAP_APP_ID ||
+        process.env.NEXT_PUBLIC_VK_APP_ID ||
+        '',
+    ),
+    10,
+  )
+  const vkidCallbackUrl =
+    process.env.NEXT_PUBLIC_VK_ID_REDIRECT_URI ||
+    process.env.NEXT_PUBLIC_VKID_CALLBACK_URL
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
 
   useEffect(() => {
@@ -342,208 +337,125 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   )
 
   useEffect(() => {
-    if (!isClient || !vkidAppId || !vkIdWidgetContainerRef.current)
+    if (!isClient || !Number.isFinite(vkidAppId) || !vkIdWidgetContainerRef.current) {
       return undefined
+    }
 
     const container = vkIdWidgetContainerRef.current
-    const onUnhandledRejection = (event) => {
-      const reasonText = String(event?.reason?.message || event?.reason || '')
-      if (reasonText.toLowerCase().includes('failed to fetch')) {
-        event.preventDefault()
-      }
-    }
+    let isMounted = true
 
-    window.addEventListener('unhandledrejection', onUnhandledRejection)
-
-    const originalFetch =
-      typeof window !== 'undefined' && typeof window.fetch === 'function'
-        ? window.fetch.bind(window)
-        : null
-
-    // VK ID SDK шлёт telemetry-запросы, которые могут блокироваться CORS/браузером.
-    // Подменяем только этот URL локальным успешным ответом, чтобы One Tap не падал.
-    if (originalFetch) {
-      window.fetch = async (...args) => {
-        const requestUrl = extractRequestUrl(args[0])
-
-        if (isVkIdTelemetryUrl(requestUrl)) {
-          return new Response('', {
-            status: 200,
-            statusText: 'OK',
-          })
+    const init = async () => {
+      const loaded = await loadVkSdk()
+      if (!loaded || !isMounted || !container) {
+        if (isMounted) {
+          setVkError('VK One Tap SDK недоступен. Проверьте подключение.')
         }
-
-        try {
-          return await originalFetch(...args)
-        } catch (error) {
-          if (isVkDomainUrl(requestUrl) || !requestUrl) {
-            return new Response('', {
-              status: 200,
-              statusText: 'OK',
-            })
-          }
-          return new Response('', {
-            status: 200,
-            statusText: 'OK',
-          })
-        }
-      }
-    }
-
-    const script = document.createElement('script')
-    script.src = vkidSdkUrl
-    script.async = true
-
-    script.onload = () => {
-      const VKID = getVkIdSdk()
-      if (!VKID) {
-        setVkError('VK One Tap SDK недоступен. Проверьте подключение.')
         return
       }
 
+      const VKID = window.VKIDSDK
+
       try {
-        const callbackUrl = resolveVkIdCallbackUrl(vkidCallbackUrl)
-        const numericVkIdApp = Number(vkidAppId)
-        if (!Number.isFinite(numericVkIdApp) || numericVkIdApp <= 0) {
-          setVkError(
-            'Не задан корректный NEXT_PUBLIC_VKID_ONETAP_APP_ID для VK One Tap.',
-          )
-          return
-        }
-
-        const responseMode = resolveVkIdConfigValue(
-          VKID.ConfigResponseMode,
-          'Callback',
-          'callback',
-        )
-        const sourceMode = resolveVkIdConfigValue(
-          VKID.ConfigSource,
-          'LOWCODE',
-          'lowcode',
-        )
-
         VKID.Config.init({
-          app: numericVkIdApp,
-          redirectUrl: callbackUrl,
-          responseMode,
-          source: sourceMode,
+          app: vkidAppId,
+          redirectUrl: resolveVkIdCallbackUrl(vkidCallbackUrl),
+          responseMode: VKID.ConfigResponseMode.Callback,
+          source: VKID.ConfigSource.LOWCODE,
           scope: '',
         })
+      } catch (error) {
+        // может быть уже инициализировано
+      }
 
-        const oneTap = new VKID.OneTap()
-        const widgetErrorEvent = resolveVkIdConfigValue(
-          VKID.WidgetEvents,
-          'ERROR',
-          'common: error',
-        )
-        const oneTapSuccessEvent = resolveVkIdConfigValue(
-          VKID.OneTapInternalEvents,
-          'LOGIN_SUCCESS',
-          'onetap: success login',
-        )
-
-        const renderedWidget = oneTap.render({
+      const oneTap = new VKID.OneTap()
+      oneTap
+        .render({
           container,
           showAlternativeLogin: true,
         })
-
-        if (!renderedWidget || typeof renderedWidget.on !== 'function') {
+        .on(VKID.WidgetEvents.ERROR, (error) => {
+          if (!isMounted) return
+          const vkWidgetError = error?.type || error?.code || error?.message
           setVkError(
-            'Текущая версия VKID SDK не поддерживает API событий One Tap.',
+            vkWidgetError
+              ? `Ошибка виджета VK ID (${vkWidgetError}). Попробуйте вход по паролю.`
+              : 'Ошибка виджета VK ID. Попробуйте вход по паролю.',
           )
-          return
-        }
+        })
+        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload) => {
+          if (!isMounted) return
 
-        renderedWidget
-          .on(widgetErrorEvent, (error) => {
-            console.error('VK OneTap error', error)
-            setVkError('Ошибка VK One Tap. Попробуйте другой способ входа.')
-          })
-          .on(oneTapSuccessEvent, (payload) => {
-            const code = payload.code
-            const deviceId = payload.device_id
+          const code = payload?.code
+          const deviceId = payload?.device_id
+          const codeVerifier =
+            payload?.code_verifier ||
+            payload?.codeVerifier ||
+            payload?.verifier
 
-            if (!code || !deviceId) {
-              setVkError('Не удалось получить данные авторизации VK One Tap.')
+          if (!code || !deviceId) {
+            setVkError('VK ID не вернул код авторизации.')
+            return
+          }
+
+          try {
+            const exchangeResult = codeVerifier
+              ? await VKID.Auth.exchangeCode(code, deviceId, codeVerifier)
+              : await VKID.Auth.exchangeCode(code, deviceId)
+            const accessToken =
+              exchangeResult?.access_token || exchangeResult?.accessToken || null
+            const vkId =
+              exchangeResult?.user?.id ||
+              exchangeResult?.id ||
+              exchangeResult?.userId ||
+              exchangeResult?.vkId ||
+              null
+            const firstName =
+              exchangeResult?.user?.first_name ||
+              exchangeResult?.user?.firstName ||
+              exchangeResult?.firstName ||
+              ''
+            const lastName =
+              exchangeResult?.user?.last_name ||
+              exchangeResult?.user?.lastName ||
+              exchangeResult?.lastName ||
+              ''
+            const photoUrl =
+              exchangeResult?.user?.photo ||
+              exchangeResult?.user?.photo_200 ||
+              exchangeResult?.photoUrl ||
+              null
+
+            if (!accessToken || !vkId) {
+              setVkError('Не удалось получить данные VK после авторизации.')
               return
             }
 
-            VKID.Auth.exchangeCode(code, deviceId)
-              .then((data) => {
-                const accessToken =
-                  data.access_token || data.accessToken || null
-                const vkId =
-                  data.user?.id || data.id || data.userId || data.vkId || null
-                const firstName =
-                  data.user?.first_name ||
-                  data.user?.firstName ||
-                  data.firstName ||
-                  ''
-                const lastName =
-                  data.user?.last_name ||
-                  data.user?.lastName ||
-                  data.lastName ||
-                  ''
-                const photoUrl =
-                  data.user?.photo ||
-                  data.user?.photo_200 ||
-                  data.photoUrl ||
-                  null
+            await handleVkAuth({
+              accessToken,
+              vkId,
+              firstName,
+              lastName,
+              photoUrl,
+            })
+          } catch (error) {
+            console.error('VK OneTap exchange error', error)
+            setVkError(
+              'VK ID временно недоступен. Попробуйте позже или войдите по паролю.',
+            )
+          }
+        })
 
-                if (!accessToken || !vkId) {
-                  setVkError('Не удалось получить VK access token из One Tap.')
-                  return
-                }
-
-                handleVkAuth({
-                  accessToken,
-                  vkId,
-                  firstName,
-                  lastName,
-                  photoUrl,
-                })
-              })
-              .catch((error) => {
-                console.error('Ошибка обмена кода VK OneTap', error)
-                setVkError(
-                  'Не удалось обменять код VK One Tap. Попробуйте снова.',
-                )
-              })
-          })
-
-        setIsVkIdReady(true)
-      } catch (initError) {
-        console.error('VK OneTap init error', initError)
-        setVkError(
-          `Ошибка инициализации VK One Tap: ${initError?.message || 'проверьте настройки приложения.'}`,
-        )
-      }
+      setIsVkIdReady(true)
     }
 
-    script.onerror = () => {
-      setVkError(
-        'Не удалось загрузить VK One Tap SDK. Попробуйте обновить страницу.',
-      )
-    }
-
-    document.body.appendChild(script)
+    init()
 
     return () => {
-      if (originalFetch) {
-        window.fetch = originalFetch
-      }
-
-      window.removeEventListener('unhandledrejection', onUnhandledRejection)
-
-      if (script.parentNode) {
-        script.parentNode.removeChild(script)
-      }
-
-      if (container) {
-        container.replaceChildren()
-      }
+      isMounted = false
+      setIsVkIdReady(false)
+      if (container) container.innerHTML = ''
     }
-  }, [isClient, vkidAppId, vkidCallbackUrl, vkidSdkUrl, handleVkAuth])
+  }, [isClient, vkidAppId, vkidCallbackUrl, handleVkAuth])
 
   const callbackDescription =
     effectiveCallbackUrl && effectiveCallbackUrl !== '/cabinet'
@@ -696,7 +608,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                     <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
                       Укажите{' '}
                       <code className="px-1 bg-white dark:bg-slate-900/80 rounded">
-                        NEXT_PUBLIC_VKID_ONETAP_APP_ID
+                        NEXT_PUBLIC_VK_ID_APP_ID
                       </code>{' '}
                       для входа через VK One Tap.
                     </div>
