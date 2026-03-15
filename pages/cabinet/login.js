@@ -53,6 +53,20 @@ const resolveVkIdConfigValue = (enumObject, key, fallback) => {
 const isVkIdTelemetryUrl = (url) =>
   typeof url === 'string' && url.includes('id.vk.com/stat_events_vkid_sdk')
 
+const isVkDomainUrl = (url) =>
+  typeof url === 'string' && url.includes('id.vk.com/')
+
+const extractRequestUrl = (requestLike) => {
+  if (!requestLike) return ''
+  if (typeof requestLike === 'string') return requestLike
+  if (typeof requestLike?.url === 'string') return requestLike.url
+  if (typeof requestLike?.toString === 'function') {
+    const maybeString = requestLike.toString()
+    return typeof maybeString === 'string' ? maybeString : ''
+  }
+  return ''
+}
+
 const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const { data: session, status, update } = useSession()
   const router = useRouter()
@@ -350,11 +364,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
     // Подменяем только этот URL локальным успешным ответом, чтобы One Tap не падал.
     if (originalFetch) {
       window.fetch = async (...args) => {
-        const firstArg = args[0]
-        const requestUrl =
-          typeof firstArg === 'string'
-            ? firstArg
-            : firstArg?.url || ''
+        const requestUrl = extractRequestUrl(args[0])
 
         if (isVkIdTelemetryUrl(requestUrl)) {
           return new Response('', {
@@ -363,11 +373,22 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
           })
         }
 
-        return originalFetch(...args)
+        try {
+          return await originalFetch(...args)
+        } catch (error) {
+          if (isVkDomainUrl(requestUrl) || !requestUrl) {
+            return new Response('', {
+              status: 200,
+              statusText: 'OK',
+            })
+          }
+          return new Response('', {
+            status: 200,
+            statusText: 'OK',
+          })
+        }
       }
     }
-
-    container.textContent = ''
 
     const script = document.createElement('script')
     script.src = vkidSdkUrl
@@ -519,7 +540,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       }
 
       if (container) {
-        container.textContent = ''
+        container.replaceChildren()
       }
     }
   }, [isClient, vkidAppId, vkidCallbackUrl, vkidSdkUrl, handleVkAuth])
@@ -664,13 +685,12 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                       <div
                         ref={vkIdWidgetContainerRef}
                         className="w-full h-14 border border-dashed rounded-xl border-slate-300"
-                      >
-                        {!isVkIdReady ? (
-                          <div className="flex h-full items-center justify-center text-xs text-slate-500">
-                            Загрузка VK One Tap...
-                          </div>
-                        ) : null}
-                      </div>
+                      />
+                      {!isVkIdReady ? (
+                        <div className="mt-2 flex h-6 items-center justify-center text-xs text-slate-500">
+                          Загрузка VK One Tap...
+                        </div>
+                      ) : null}
                     </div>
                   ) : (
                     <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
