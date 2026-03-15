@@ -16,7 +16,7 @@ const features = [
   {
     title: 'Гибкое администрирование',
     description:
-      'Все инструменты Telegram-бота доступны в удобной панели: сообщения, подсказки, штрафы и статистика.',
+      'Все ключевые инструменты доступны в удобной панели: сообщения, подсказки, штрафы и статистика.',
   },
 ]
 
@@ -27,14 +27,14 @@ const steps = [
       'ActQuest поддерживает несколько городов. Работайте с теми играми и командами, которые вам нужны.',
   },
   {
-    title: 'Авторизуйтесь через Telegram',
+    title: 'Войдите или зарегистрируйтесь',
     description:
-      'Используйте официальный виджет Telegram, чтобы безопасно войти в систему и синхронизировать данные с ботом.',
+      'Используйте удобный способ авторизации. Если аккаунта ещё нет, регистрация создастся автоматически.',
   },
   {
     title: 'Работайте в личном кабинете',
     description:
-      'Вы получаете все функции бота с преимуществами веб-интерфейса: быстрый поиск, история действий и большие экраны.',
+      'Управляйте играми, командами и участниками через веб-интерфейс: быстрый поиск, история действий и большие экраны.',
   },
 ]
 
@@ -53,19 +53,15 @@ const Home = () => {
           <div className="flex items-center justify-between max-w-6xl px-4 py-5 mx-auto">
             <span className="text-2xl font-bold text-primary">ActQuest</span>
             <nav className="flex items-center gap-6 text-sm font-semibold text-gray-600">
-              <Link href="/cabinet" className="transition hover:text-primary">
-                Личный кабинет
+              <Link href="/cabinet/login" className="transition hover:text-primary">
+                Войти
               </Link>
-              {/**
-               * <a
-               *   href="https://t.me/ActQuest_bot"
-               *   className="transition hover:text-primary"
-               *   target="_blank"
-               *   rel="noreferrer"
-               * >
-               *   Бот в Telegram
-               * </a>
-               */}
+              <Link
+                href="/cabinet/login?mode=register"
+                className="transition hover:text-primary"
+              >
+                Регистрация
+              </Link>
             </nav>
           </div>
         </header>
@@ -74,28 +70,26 @@ const Home = () => {
           <section className="flex flex-col max-w-6xl gap-10 py-16 mx-auto lg:flex-row lg:items-center">
             <div className="lg:w-1/2">
               <h1 className="text-4xl font-bold text-primary md:text-5xl">
-                Активные квесты в Telegram и на веб-платформе
+                Активные квесты на современной веб-платформе
               </h1>
               <p className="mt-6 text-lg text-gray-600">
                 ActQuest объединяет участников и организаторов квестов.
                 Управляйте командами, играми и заданиями через удобный
-                веб-интерфейс, полностью синхронизированный с Telegram-ботом.
+                веб-интерфейс, созданный для быстрого запуска и контроля событий.
               </p>
               <div className="flex flex-col gap-4 mt-8 sm:flex-row">
                 <Link
-                  href="/cabinet"
+                  href="/cabinet/login"
                   className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white transition bg-blue-600 shadow-lg rounded-2xl hover:bg-blue-700"
                 >
-                  Перейти в личный кабинет
+                  Авторизация
                 </Link>
-                <a
-                  href="https://t.me/ActQuest_bot"
+                <Link
+                  href="/cabinet/login?mode=register"
                   className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-blue-700 transition border border-blue-200 rounded-2xl bg-blue-50 hover:bg-blue-100"
-                  target="_blank"
-                  rel="noreferrer"
                 >
-                  Открыть Telegram-бота
-                </a>
+                  Регистрация
+                </Link>
               </div>
             </div>
             <div className="lg:w-1/2">
@@ -206,15 +200,15 @@ const Home = () => {
                 <div>
                   <h3 className="text-xl font-semibold">Готовы попробовать?</h3>
                   <p className="mt-1 text-sm">
-                    Войдите в личный кабинет и управляйте играми, командами и
-                    участниками без ограничений.
+                    Войдите в систему и управляйте играми, командами и
+                    участниками в личном кабинете.
                   </p>
                 </div>
                 <Link
-                  href="/cabinet"
+                  href="/cabinet/login"
                   className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white transition bg-blue-600 shadow-lg rounded-2xl hover:bg-blue-700"
                 >
-                  Перейти в личный кабинет
+                  Войти
                 </Link>
               </div>
             </div>
@@ -229,14 +223,6 @@ const Home = () => {
             <div className="flex flex-wrap gap-4">
               <a href="mailto:info@actquest.ru" className="hover:text-primary">
                 info@actquest.ru
-              </a>
-              <a
-                href="https://t.me/escalion"
-                className="hover:text-primary"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Поддержка в Telegram
               </a>
             </div>
           </div>
