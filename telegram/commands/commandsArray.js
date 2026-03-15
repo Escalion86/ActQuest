@@ -151,6 +151,7 @@ import settings from './settings'
 import settingsSetChatUrl from './settingsSetChatUrl'
 import userRoleChange from './userRoleChange'
 import cluesSettings from './cluesSettings'
+import requestUsersPhones from './requestUsersPhones'
 
 export const numToCommand = {}
 export const commandToNum = {}
@@ -309,6 +310,7 @@ const commandsArray = {
   settings,
   settingsSetChatUrl,
   userRoleChange,
+  requestUsersPhones,
 }
 
 var i = 0

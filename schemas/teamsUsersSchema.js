@@ -3,9 +3,15 @@ const teamsUsersSchema = {
     type: String,
     required: [true, 'Необходимо выбрать команду'],
   },
+  userId: {
+    type: String,
+    required: false,
+    default: null,
+  },
   userTelegramId: {
     type: Number,
-    required: [true, 'Необходимо указать телеграм id пользователя'],
+    required: false,
+    default: null,
   },
   role: {
     type: String,

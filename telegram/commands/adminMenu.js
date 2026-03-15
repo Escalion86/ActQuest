@@ -38,6 +38,11 @@ const adminMenu = async ({ telegramId, user }) => {
         hide: !isAdmin,
       },
       {
+        c: 'requestUsersPhones',
+        text: '\u{1F4F1} Запросить телефоны (у кого пусто)',
+        hide: !isAdmin,
+      },
+      {
         c: 'settings',
         text: '\u{2699}\u{FE0F} Настройки движка',
         hide: !isAdmin,

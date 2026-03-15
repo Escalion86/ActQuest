@@ -2,6 +2,8 @@ import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import dbConnect from '@utils/dbConnect'
 import authenticateTelegramUser from '@helpers/authenticateTelegramUser'
+import authenticateVkUser from '@helpers/authenticateVkUser'
+import authenticatePhoneUser from '@helpers/authenticatePhoneUser'
 
 const ensureSerializableId = (value) => {
   if (value === null || value === undefined) return null
@@ -21,6 +23,9 @@ const normalizeUserForSession = (user, fallback = {}) => {
   const normalizedUser = {
     ...fallbackData,
     telegramId: user?.telegramId ?? fallbackData.telegramId ?? null,
+    vkId: user?.vkId ?? fallbackData.vkId ?? null,
+    phone: user?.phone ?? fallbackData.phone ?? null,
+    authMethod: user?.authMethod ?? fallbackData.authMethod ?? 'telegram',
     name: user?.name ?? fallbackData.name ?? null,
     username: user?.username ?? fallbackData.username ?? null,
     photoUrl: user?.photoUrl ?? fallbackData.photoUrl ?? null,
@@ -78,12 +83,76 @@ export const authOptions = {
         }
       },
     }),
+    CredentialsProvider({
+      id: 'vk',
+      name: 'VK',
+      credentials: {
+        data: { label: 'VK auth data', type: 'text' },
+        location: { label: 'Location', type: 'text' },
+      },
+      authorize: async (credentials) => {
+        const location = credentials?.location
+        const rawData = credentials?.data
+
+        try {
+          const result = await authenticateVkUser({ location, rawData })
+
+          if (!result.success) {
+            console.error('VK authorize error', {
+              location,
+              errorCode: result.errorCode,
+              errorMessage: result.errorMessage,
+            })
+            throw new Error(result.errorCode || 'VK_AUTH_FAILED')
+          }
+
+          return { ...result.user, authMethod: 'vk' }
+        } catch (error) {
+          console.error('VK authorize unexpected error', error)
+          throw error
+        }
+      },
+    }),
+    CredentialsProvider({
+      id: 'phone',
+      name: 'Phone',
+      credentials: {
+        data: { label: 'Phone auth data', type: 'text' },
+        location: { label: 'Location', type: 'text' },
+      },
+      authorize: async (credentials) => {
+        const location = credentials?.location
+        const rawData = credentials?.data
+
+        try {
+          const result = await authenticatePhoneUser({ location, rawData })
+
+          if (!result.success) {
+            console.error('Phone authorize error', {
+              location,
+              errorCode: result.errorCode,
+              errorMessage: result.errorMessage,
+            })
+            throw new Error(result.errorCode || 'PHONE_AUTH_FAILED')
+          }
+
+          return { ...result.user, authMethod: 'phone' }
+        } catch (error) {
+          console.error('Phone authorize unexpected error', error)
+          throw error
+        }
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.userId = ensureSerializableId(user.id ?? user._id ?? null)
         token.telegramId = user.telegramId
+        token.vkId = user.vkId
+        token.phone = user.phone ?? null
+        token.authMethod =
+          user.authMethod ?? (user.vkId ? 'vk' : user.phone ? 'phone' : 'telegram')
         token.location = user.location
         token.name = user.name
         token.username = user.username
@@ -104,6 +173,7 @@ export const authOptions = {
           id: token.userId ?? null,
           userId: token.userId ?? null,
           telegramId: token.telegramId,
+          phone: token.phone,
           name: token.name,
           username: token.username,
           photoUrl: token.photoUrl,
@@ -112,24 +182,58 @@ export const authOptions = {
           location: token.location,
         }
 
-        if (typeof token.telegramId !== 'undefined' && token.telegramId !== null) {
-          try {
-            const db = await dbConnect(token.location)
-            if (db) {
-              const user = await db
+        try {
+          const db = await dbConnect(token.location)
+          if (db) {
+            let user = null
+
+            if (token.userId) {
+              try {
+                user = await db.model('Users').findById(token.userId).lean()
+              } catch (idError) {
+                // ignore
+              }
+            }
+
+            if (
+              !user &&
+              typeof token.telegramId !== 'undefined' &&
+              token.telegramId !== null
+            ) {
+              user = await db
                 .model('Users')
                 .findOne({ telegramId: token.telegramId })
                 .lean()
-
-              session.user = normalizeUserForSession(user, fallbackUser)
-            } else {
-              session.user = normalizeUserForSession(null, fallbackUser)
             }
-          } catch (error) {
-            console.error('Session callback error', error)
+
+            if (
+              !user &&
+              typeof token.vkId !== 'undefined' &&
+              token.vkId !== null
+            ) {
+              user = await db
+                .model('Users')
+                .findOne({ vkId: token.vkId })
+                .lean()
+            }
+
+            if (
+              !user &&
+              typeof token.phone !== 'undefined' &&
+              token.phone !== null
+            ) {
+              user = await db
+                .model('Users')
+                .findOne({ phone: token.phone })
+                .lean()
+            }
+
+            session.user = normalizeUserForSession(user, fallbackUser)
+          } else {
             session.user = normalizeUserForSession(null, fallbackUser)
           }
-        } else {
+        } catch (error) {
+          console.error('Session callback error', error)
           session.user = normalizeUserForSession(null, fallbackUser)
         }
 

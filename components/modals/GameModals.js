@@ -82,7 +82,7 @@ const GameModals = ({
   registerFeedback,
   isRegisterTeamsLoading,
   registerTeams,
-  currentUserTelegramIdNumber,
+  currentUserId,
   isCreateGameModalOpen,
   handleCloseCreateGameModal,
   isCreatingGame,
@@ -208,7 +208,7 @@ const GameModals = ({
       isRegisterTeamsLoading={isRegisterTeamsLoading}
       registerTeams={registerTeams}
       location={location}
-      currentUserTelegramIdNumber={currentUserTelegramIdNumber}
+      currentUserId={currentUserId}
     />
 
     <GameCreateModal
@@ -292,7 +292,10 @@ GameModals.propTypes = {
   handleCloseEditModal: PropTypes.func.isRequired,
   canEditSelectedGame: PropTypes.bool.isRequired,
   isSaving: PropTypes.bool.isRequired,
-  location: PropTypes.shape({ city: PropTypes.string }),
+  location: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({ city: PropTypes.string }),
+  ]),
   isDirty: PropTypes.bool.isRequired,
   handleModalPrimaryAction: PropTypes.func.isRequired,
   handleResetChanges: PropTypes.func.isRequired,
@@ -372,7 +375,7 @@ GameModals.propTypes = {
   registerTeams: PropTypes.arrayOf(
     PropTypes.shape({ id: PropTypes.string.isRequired })
   ).isRequired,
-  currentUserTelegramIdNumber: PropTypes.number,
+  currentUserId: PropTypes.string,
   isCreateGameModalOpen: PropTypes.bool.isRequired,
   handleCloseCreateGameModal: PropTypes.func.isRequired,
   isCreatingGame: PropTypes.bool.isRequired,
@@ -408,7 +411,7 @@ GameModals.defaultProps = {
   selectedGame: null,
   location: null,
   registerFeedback: null,
-  currentUserTelegramIdNumber: null,
+  currentUserId: null,
   selectedTeamToAdd: '',
   createGameFeedback: null,
   manyCodesLimitLabel: null,

@@ -4,6 +4,7 @@ import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import SelectableCard from '@components/cabinet/SelectableCard'
 import GameModals from '@components/modals/GameModals'
 import getSessionSafe from '@helpers/getSessionSafe'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
@@ -464,7 +465,7 @@ const GamesPage = ({
   }, [isRegisterSubmitting, resetRegisterForm])
 
   const loadRegisterTeams = useCallback(async () => {
-    if (!location || !Number.isFinite(currentUserTelegramIdNumber)) {
+    if (!location || !currentUserDbId) {
       setRegisterTeams([])
       setRegisterTeamId('')
       return
@@ -475,7 +476,7 @@ const GamesPage = ({
     try {
       const membershipsParams = new URLSearchParams({
         collection: 'teamsusers',
-        userTelegramId: String(currentUserTelegramIdNumber),
+        userId: currentUserDbId,
         role: 'capitan',
         limit: '200',
       })
@@ -594,7 +595,7 @@ const GamesPage = ({
     } finally {
       setIsRegisterTeamsLoading(false)
     }
-  }, [currentUserTelegramIdNumber, location])
+  }, [currentUserDbId, location])
 
   useEffect(() => {
     if (isRegisterModalOpen) {
@@ -632,10 +633,10 @@ const GamesPage = ({
       return
     }
 
-    if (!Number.isFinite(currentUserTelegramIdNumber)) {
+    if (!currentUserDbId) {
       setRegisterFeedback({
         type: 'error',
-        message: 'Привяжите Telegram-аккаунт в профиле, чтобы регистрировать команды',
+        message: 'Не удалось определить пользователя. Перезайдите в кабинет.',
       })
       return
     }
@@ -759,7 +760,7 @@ const GamesPage = ({
       setIsRegisterSubmitting(false)
     }
   }, [
-    currentUserTelegramIdNumber,
+    currentUserDbId,
     location,
     registerGameId,
     registerTeamId,
@@ -2029,7 +2030,7 @@ const GamesPage = ({
 
       return (
         <li key={game.id}>
-          <div
+          <SelectableCard
             role="button"
             tabIndex={0}
             onClick={() => handleSelectGameCard(game)}
@@ -2039,7 +2040,8 @@ const GamesPage = ({
                 handleSelectGameCard(game)
               }
             }}
-            className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-primary hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900/80 dark:hover:bg-violet-500/10"
+            isActive={selectedGameId === game.id}
+            className="cursor-pointer"
             aria-pressed={selectedGameId === game.id}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
@@ -2146,7 +2148,7 @@ const GamesPage = ({
                 ? `${getNounTeams(game.teamsCount)} · Обновлено ${relativeUpdatedAt}`
                 : getNounTeams(game.teamsCount)}
             </p>
-          </div>
+          </SelectableCard>
         </li>
       )
     },
@@ -2493,7 +2495,7 @@ const GamesPage = ({
                   registerFeedback={registerFeedback}
                   isRegisterTeamsLoading={isRegisterTeamsLoading}
                   registerTeams={registerTeams}
-                  currentUserTelegramIdNumber={currentUserTelegramIdNumber}
+                  currentUserId={currentUserDbId}
                   isCreateGameModalOpen={isCreateGameModalOpen}
                   handleCloseCreateGameModal={handleCloseCreateGameModal}
                   isCreatingGame={isCreatingGame}

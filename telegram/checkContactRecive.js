@@ -6,6 +6,15 @@ const checkContactRecive = async (message, location, db) => {
   const { contact, from } = message
   if (contact) {
     const { phone_number, first_name, last_name, user_id } = contact
+    if (Number(user_id) !== Number(from?.id)) {
+      await sendMessage({
+        chat_id: from?.id,
+        text: 'Нужно отправить именно ваш контакт из Telegram.',
+        location,
+      })
+      return false
+    }
+
     const name = (first_name + (last_name ? ' ' + last_name : '')).trim()
     const user = await db.model('Users').findOneAndUpdate(
       {

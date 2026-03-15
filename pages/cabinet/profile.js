@@ -310,6 +310,7 @@ export async function getServerSideProps(context) {
   }
 
   const location = session?.user?.location ?? null
+  const userId = session?.user?._id ? String(session.user._id) : null
   const rawTelegramId = session?.user?.telegramId
   const numericTelegramId =
     rawTelegramId === null || rawTelegramId === undefined ? null : Number(rawTelegramId)
@@ -317,13 +318,15 @@ export async function getServerSideProps(context) {
 
   let initialProfile = normalizeUserProfile()
 
-  if (location && telegramId !== null) {
+  if (location && (userId || telegramId !== null)) {
     try {
       const db = await dbConnect(location)
 
       if (db) {
         const UsersModel = db.model('Users')
-        const profileDoc = await UsersModel.findOne({ telegramId }).lean()
+        const profileDoc = userId
+          ? await UsersModel.findById(userId).lean()
+          : await UsersModel.findOne({ telegramId }).lean()
 
         if (profileDoc) {
           initialProfile = normalizeUserProfile(profileDoc)

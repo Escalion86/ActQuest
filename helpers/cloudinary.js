@@ -30,43 +30,96 @@ export const sendImage = async (
   callback,
   folder = null,
   imageName = null,
-  project = 'polovinka_uspeha'
+  project = 'actquest',
+  onError = null
 ) => {
   if (isObject(image)) {
     const formData = new FormData()
-    // console.log('folder', folder)
-    formData.append('project', project)
-    formData.append('folder', folder)
-    // formData.append('password', 'cloudtest')
-    formData.append('files', image)
+    const normalizedProject =
+      typeof project === 'string' ? project.trim() : String(project || '').trim()
+    const normalizedFolder =
+      typeof folder === 'string' ? folder.trim() : String(folder || '').trim()
+    const directoryPath = `${normalizedProject || 'actquest'}/${normalizedFolder || 'temp'}`
 
-    return await fetch(
-      // 'https://api.cloudinary.com/v1_1/escalion-ru/image/upload',
-      'https://api.escalioncloud.ru/api',
-      {
+    formData.append('directory', directoryPath)
+    formData.append('files', image)
+    if (imageName) formData.append('fileName', imageName)
+
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 45000)
+
+      const response = await fetch('/api/escalioncloud', {
         method: 'POST',
         body: formData,
-        //  JSON.stringify({
-        //   file: image,
-        //   fileName: imageName ?? 'test.jpg',
-        //   folder: 'events',
-        // })
-        // dataType: 'json',
-        // headers: {
-        //   'Content-Type': 'application/json',
-        // 'Content-Type': "multipart/form-data"
-        // },
-      }
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        console.log('data', data)
-        // if (data.secure_url !== '') {
-        // if (callback) callback(data.secure_url)
-        // return data.secure_url
-        // }
-        if (callback) callback(data)
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+        },
       })
-      .catch((err) => console.error('ERROR', err))
+      clearTimeout(timeoutId)
+
+      const rawResponse = await response.text()
+      let responseJson = null
+      try {
+        responseJson = rawResponse ? JSON.parse(rawResponse) : null
+      } catch {
+        responseJson = null
+      }
+
+      if (!responseJson) {
+        const contentType = response.headers.get('content-type') || ''
+        const trimmedResponse = rawResponse?.trim?.() || ''
+        console.error('Upload returned non-JSON response', {
+          status: response.status,
+          ok: response.ok,
+          contentType,
+          preview: trimmedResponse.slice(0, 200),
+        })
+        const isHtmlResponse =
+          contentType.includes('text/html') ||
+          trimmedResponse.startsWith('<!doctype') ||
+          trimmedResponse.startsWith('<html') ||
+          trimmedResponse.startsWith('<')
+
+        if (isHtmlResponse) {
+          if (response.status === 413) {
+            if (onError) {
+              onError(
+                'Файл слишком большой для загрузки. Попробуйте фото меньшего размера.'
+              )
+            }
+            return null
+          }
+          if (onError) {
+            onError(`Сервер вернул HTML вместо JSON (status ${response.status}).`)
+          }
+          return null
+        }
+
+        if (onError) onError('Сервер вернул некорректный ответ при загрузке файла.')
+        return null
+      }
+
+      if (!response.ok || !responseJson?.success) {
+        const error =
+          responseJson?.data?.error?.message || `Upload failed: ${response.status}`
+        if (onError) onError(error)
+        return null
+      }
+
+      const data = responseJson.data
+      if (callback) callback(data)
+      return data
+    } catch (err) {
+      const message =
+        err?.name === 'AbortError' ? 'Upload timeout' : err?.message || 'Upload failed'
+      console.error('ERROR', err)
+      if (onError) onError(message)
+      return null
+    }
   }
+
+  if (onError) onError('Image is invalid')
+  return null
 }

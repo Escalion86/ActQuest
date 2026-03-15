@@ -71,9 +71,14 @@ const normalizeMembers = (members = []) => {
       member?.telegramId ??
       user?.telegramId ??
       null
+    const rawUserId =
+      member?.userId ??
+      user?._id ??
+      null
 
     return {
       id: ensureString(member?.membershipId ?? member?._id ?? member?.id, `member-${index}`),
+      userId: ensureString(rawUserId, ''),
       telegramId: ensureString(rawTelegramId, ''),
       role,
       isCaptain: role === 'capitan',

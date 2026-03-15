@@ -13,6 +13,7 @@ import {
   faUsers,
   faGaugeHigh,
   faSliders,
+  faChevronDown,
   faMoon,
   faSun,
 } from '@fortawesome/free-solid-svg-icons'
@@ -42,6 +43,12 @@ const adminMenuItems = [
   { id: 'settings', label: 'Настройки сайта', href: '/cabinet/settings', icon: faSliders },
 ]
 
+const adminSubmenuItems = [
+  { id: 'admin-users', label: 'Управление пользователями', href: '/cabinet/admin/users' },
+  { id: 'admin-teams', label: 'Управление командами', href: '/cabinet/admin/teams' },
+  { id: 'admin-reports', label: 'Статистика и отчёты', href: '/cabinet/admin/reports' },
+]
+
 const getInitials = (name, fallback) => {
   if (name) {
     const parts = name.split(' ').filter(Boolean)
@@ -67,6 +74,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   const router = useRouter()
   const { data: session } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false)
   const [theme, setTheme] = useState('light')
   const [isThemeInitialized, setIsThemeInitialized] = useState(false)
 
@@ -107,6 +115,12 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   }, [closeSidebarOnMobile, router])
 
   useEffect(() => {
+    if (router.pathname.startsWith('/cabinet/admin')) {
+      setIsAdminMenuOpen(true)
+    }
+  }, [router.pathname])
+
+  useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
@@ -145,7 +159,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
     <div className={isDarkTheme ? 'dark' : ''}>
       <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950">
         <div
-          className={`fixed inset-y-0 left-0 z-40 flex bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 transition-all duration-200 md:static md:translate-x-0 md:w-64 ${
+          className={`fixed inset-y-0 left-0 z-40 flex bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 transition-all duration-200 md:sticky md:top-0 md:inset-y-auto md:h-screen md:self-start md:translate-x-0 md:w-64 ${
             isSidebarExpanded ? 'w-64 translate-x-0 shadow-xl' : 'w-16 -translate-x-full md:translate-x-0'
           }`}
         >
@@ -155,6 +169,67 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
             </div>
             <nav className="flex-1 space-y-1 overflow-y-auto py-4 min-h-0">
               {menuItems.map((item) => {
+                if (item.id === 'admin') {
+                  const isAdminSectionActive = router.pathname.startsWith('/cabinet/admin')
+
+                  return (
+                    <div key={item.id} className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsAdminMenuOpen((prev) => !prev)}
+                        className={`flex w-full items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
+                          isAdminSectionActive
+                            ? 'text-primary dark:text-blue-200 bg-blue-50 dark:bg-blue-500/10 border-r-4 border-primary dark:border-blue-400'
+                            : 'text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                        } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
+                      >
+                        <FontAwesomeIcon icon={item.icon} className="h-5 w-5 shrink-0" />
+                        <span
+                          className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
+                        >
+                          {item.label}
+                        </span>
+                        <FontAwesomeIcon
+                          icon={faChevronDown}
+                          className={`ml-auto h-3 w-3 shrink-0 transition-transform duration-150 ${
+                            isAdminMenuOpen ? 'rotate-180' : ''
+                          } ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'}`}
+                        />
+                      </button>
+
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ease-out ${
+                          isAdminMenuOpen
+                            ? 'max-h-48 opacity-100 translate-y-0'
+                            : 'max-h-0 opacity-0 -translate-y-1'
+                        }`}
+                        aria-hidden={!isAdminMenuOpen}
+                      >
+                        <div className="space-y-1 pb-1 pl-11 pr-3 pt-1">
+                          {adminSubmenuItems.map((subItem) => {
+                            const isSubActive = router.pathname === subItem.href
+
+                            return (
+                              <Link key={subItem.id} href={subItem.href} legacyBehavior>
+                                <a
+                                  className={`block rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
+                                    isSubActive
+                                      ? 'bg-blue-50 text-primary dark:bg-blue-500/10 dark:text-blue-200'
+                                      : 'text-slate-500 hover:bg-blue-50 hover:text-primary dark:text-slate-300 dark:hover:bg-blue-500/10 dark:hover:text-blue-200'
+                                  }`}
+                                  onClick={closeSidebarOnMobile}
+                                >
+                                  {subItem.label}
+                                </a>
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
                 const isActive = activePage === item.id || router.pathname === item.href
 
                 return (

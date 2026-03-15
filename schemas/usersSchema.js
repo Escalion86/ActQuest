@@ -1,8 +1,19 @@
 const usersSchema = {
   telegramId: {
     type: Number,
-    required: [true, 'Введите telegramId'],
+    required: false,
     default: null,
+  },
+  vkId: {
+    type: Number,
+    required: false,
+    default: null,
+  },
+  authMethod: {
+    type: String,
+    required: false,
+    default: 'telegram',
+    trim: true,
   },
   name: {
     type: String,

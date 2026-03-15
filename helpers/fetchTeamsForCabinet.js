@@ -65,6 +65,13 @@ const fetchTeamsForCabinet = async ({ db, teamIds = null }) => {
   }
 
   const teamMembersDocs = await TeamsUsersModel.find({ teamId: { $in: normalizedTeamIds } }).lean()
+  const memberUserIds = Array.from(
+    new Set(
+      ensureArray(teamMembersDocs)
+        .map((doc) => toStringId(doc?.userId))
+        .filter((userId) => typeof userId === 'string' && userId.length > 0)
+    )
+  )
   const memberTelegramIds = Array.from(
     new Set(
       ensureArray(teamMembersDocs)
@@ -73,13 +80,29 @@ const fetchTeamsForCabinet = async ({ db, teamIds = null }) => {
     )
   )
 
-  const usersDocs = memberTelegramIds.length
-    ? await UsersModel.find({ telegramId: { $in: memberTelegramIds } })
-        .select({ telegramId: 1, name: 1, username: 1, phone: 1, role: 1 })
+  const usersByIdDocs = memberUserIds.length
+    ? await UsersModel.find({ _id: { $in: memberUserIds } })
+        .select({ _id: 1, telegramId: 1, name: 1, username: 1, phone: 1, role: 1 })
         .lean()
     : []
 
-  const usersMap = ensureArray(usersDocs).reduce((acc, user) => {
+  const usersByTelegramDocs = memberTelegramIds.length
+    ? await UsersModel.find({ telegramId: { $in: memberTelegramIds } })
+        .select({ _id: 1, telegramId: 1, name: 1, username: 1, phone: 1, role: 1 })
+        .lean()
+    : []
+
+  const usersByIdMap = ensureArray(usersByIdDocs).reduce((acc, user) => {
+    const userId = toStringId(user?._id)
+
+    if (userId) {
+      acc[userId] = user
+    }
+
+    return acc
+  }, {})
+
+  const usersByTelegramMap = ensureArray(usersByTelegramDocs).reduce((acc, user) => {
     const telegramId = Number.isFinite(user?.telegramId) ? user.telegramId : null
 
     if (telegramId !== null) {
@@ -91,6 +114,7 @@ const fetchTeamsForCabinet = async ({ db, teamIds = null }) => {
 
   const membersByTeam = ensureArray(teamMembersDocs).reduce((acc, membership) => {
     const teamId = toStringId(membership?.teamId)
+    const userId = toStringId(membership?.userId)
 
     if (!teamId) {
       return acc
@@ -100,11 +124,17 @@ const fetchTeamsForCabinet = async ({ db, teamIds = null }) => {
       acc[teamId] = []
     }
 
+    const linkedUser =
+      (userId ? usersByIdMap[userId] ?? null : null) ??
+      usersByTelegramMap[membership?.userTelegramId] ??
+      null
+
     acc[teamId].push({
       membershipId: membership?._id,
+      userId: userId ?? null,
       userTelegramId: membership?.userTelegramId ?? null,
       role: membership?.role,
-      user: usersMap[membership?.userTelegramId] ?? null,
+      user: linkedUser,
     })
 
     return acc

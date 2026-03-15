@@ -16,7 +16,7 @@ const GameRegisterModal = ({
   isRegisterTeamsLoading,
   registerTeams,
   location,
-  currentUserTelegramIdNumber,
+  currentUserId,
 }) => (
   <Modal
             isOpen={isRegisterModalOpen}
@@ -44,14 +44,14 @@ const GameRegisterModal = ({
                     !registerTeamId ||
                     registerGameId.trim().length === 0 ||
                     !location ||
-                    !Number.isFinite(currentUserTelegramIdNumber)
+                    !currentUserId
                   }
                   className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
                     isRegisterSubmitting ||
                     !registerTeamId ||
                     registerGameId.trim().length === 0 ||
                     !location ||
-                    !Number.isFinite(currentUserTelegramIdNumber)
+                    !currentUserId
                       ? 'bg-slate-400 cursor-not-allowed'
                       : 'bg-primary hover:bg-blue-700'
                   }`}
@@ -76,9 +76,9 @@ const GameRegisterModal = ({
                   {registerFeedback.message}
                 </div>
               )}
-              {(!location || !Number.isFinite(currentUserTelegramIdNumber)) && (
+              {(!location || !currentUserId) && (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-                  Укажите площадку и привяжите Telegram в профиле, чтобы регистрироваться на игры.
+                  Не удалось определить пользователя или площадку для регистрации.
                 </div>
               )}
               <div className="space-y-2">
@@ -145,13 +145,13 @@ GameRegisterModal.propTypes = {
   isRegisterTeamsLoading: PropTypes.bool.isRequired,
   registerTeams: PropTypes.arrayOf(registerTeamShape).isRequired,
   location: PropTypes.shape({ city: PropTypes.string }),
-  currentUserTelegramIdNumber: PropTypes.number,
+  currentUserId: PropTypes.string,
 }
 
 GameRegisterModal.defaultProps = {
   registerFeedback: null,
   location: null,
-  currentUserTelegramIdNumber: null,
+  currentUserId: null,
 }
 
 export default memo(GameRegisterModal)

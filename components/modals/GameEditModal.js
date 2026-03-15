@@ -2,6 +2,7 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import ImagesInput from '@components/cabinet/ImagesInput'
 import formatDate from '@helpers/formatDate'
 import formatDateTime from '@helpers/formatDateTime'
 
@@ -97,7 +98,7 @@ const GameEditModal = ({
                           onChange={(event) =>
                             updateSelectedGame({ name: event.target.value })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -110,7 +111,7 @@ const GameEditModal = ({
                           onChange={(event) =>
                             updateSelectedGame({ status: event.target.value })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         >
                           {GAME_STATUS_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -132,7 +133,7 @@ const GameEditModal = ({
                           onChange={(event) =>
                             updateSelectedGame({ type: event.target.value })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         >
                           {GAME_TYPE_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -160,7 +161,7 @@ const GameEditModal = ({
                                 : null,
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -175,7 +176,7 @@ const GameEditModal = ({
                         }
                         className="w-4 h-4 text-primary border-slate-300 rounded"
                       />
-                      <label htmlFor="game-individual-start" className="text-sm text-slate-600">
+                      <label htmlFor="game-individual-start" className="text-sm text-slate-600 dark:text-slate-300">
                         Индивидуальный старт для команд
                       </label>
                     </div>
@@ -192,7 +193,7 @@ const GameEditModal = ({
                           onChange={(event) =>
                             updateSelectedGame({ startingPlace: event.target.value })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -206,7 +207,7 @@ const GameEditModal = ({
                           onChange={(event) =>
                             updateSelectedGame({ finishingPlace: event.target.value })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -222,31 +223,20 @@ const GameEditModal = ({
                           updateSelectedGame({ description: event.target.value })
                         }
                         rows={5}
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
 
-                    <div>
-                      <label htmlFor="game-image" className="text-sm font-semibold text-primary">
-                        Ссылка на обложку
-                      </label>
-                      <input
-                        id="game-image"
-                        type="text"
-                        value={selectedGame.image}
-                        onChange={(event) =>
-                          updateSelectedGame({ image: event.target.value })
-                        }
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
-                      />
-                      {selectedGame.image && (
-                        <img
-                          src={selectedGame.image}
-                          alt={selectedGame.name || 'Обложка игры'}
-                          className="object-cover w-full h-40 mt-3 rounded-xl border border-slate-200 dark:border-slate-700"
-                        />
-                      )}
-                    </div>
+                    <ImagesInput
+                      label="Обложка игры"
+                      images={selectedGame.image ? [selectedGame.image] : []}
+                      onChange={(nextImages) =>
+                        updateSelectedGame({ image: nextImages?.[0] ?? null })
+                      }
+                      directory={`${String(location || 'common')}/games/${selectedGame.id || 'draft'}/cover`}
+                      disabled={!canEditSelectedGame || isSaving}
+                      maxImages={1}
+                    />
                     </section>
 
                     <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
@@ -266,7 +256,7 @@ const GameEditModal = ({
                               taskDuration: toSeconds(event.target.value),
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -283,7 +273,7 @@ const GameEditModal = ({
                               cluesDuration: toSeconds(event.target.value),
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         />
                         <p className="mt-1 text-xs text-slate-500">
                           Укажите 0, чтобы отключить автоматическую выдачу подсказок.
@@ -304,7 +294,7 @@ const GameEditModal = ({
                               clueEarlyAccessMode: event.target.value,
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         >
                           {CLUE_EARLY_MODE_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -329,7 +319,7 @@ const GameEditModal = ({
                               clueEarlyPenalty: toSeconds(event.target.value),
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -349,7 +339,7 @@ const GameEditModal = ({
                               breakDuration: toSeconds(event.target.value),
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
@@ -375,7 +365,7 @@ const GameEditModal = ({
                                   : toSeconds(event.target.value),
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -399,7 +389,7 @@ const GameEditModal = ({
                                 ],
                               })
                             }
-                            className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                            className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                           />
                         </div>
                         <div>
@@ -419,14 +409,14 @@ const GameEditModal = ({
                                 ],
                               })
                             }
-                            className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                            className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                           />
                         </div>
                       </div>
                     )}
 
                     <div className="grid gap-3 md:grid-cols-3">
-                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.allowCaptainForceClue)}
@@ -439,7 +429,7 @@ const GameEditModal = ({
                         />
                         Досрочные подсказки капитанам
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.allowCaptainFailTask)}
@@ -452,7 +442,7 @@ const GameEditModal = ({
                         />
                         Слив задания капитаном
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.allowCaptainFinishBreak)}
@@ -494,7 +484,7 @@ const GameEditModal = ({
                               <button
                                 type="button"
                                 onClick={() => toggleTaskExpansion(task.id)}
-                                className="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-primary transition hover:bg-blue-50 dark:bg-slate-800/70 dark:hover:bg-violet-500/10"
+                                className="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-primary transition hover:bg-blue-50 dark:bg-slate-800/70 dark:hover:bg-sky-500/10"
                               >
                                 <div>
                                   <p>
@@ -530,7 +520,7 @@ const GameEditModal = ({
                                         onChange={(event) =>
                                           handleTaskFieldChange(task.id, 'title', event.target.value)
                                         }
-                                        className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                       />
                                     </div>
                                     <div className="flex flex-col gap-2 md:items-start">
@@ -578,7 +568,7 @@ const GameEditModal = ({
                                       onChange={(event) =>
                                         handleTaskFieldChange(task.id, 'task', event.target.value)
                                       }
-                                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                     />
                                   </div>
 
@@ -599,7 +589,7 @@ const GameEditModal = ({
                                             event.target.value
                                           )
                                         }
-                                        className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                       />
                                     </div>
                                     <div>
@@ -618,7 +608,7 @@ const GameEditModal = ({
                                             event.target.value
                                           )
                                         }
-                                        className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                       />
                                       <p className="mt-1 text-xs text-slate-500">
                                         Оставьте пустым, чтобы требовались все коды.
@@ -637,7 +627,7 @@ const GameEditModal = ({
                                       onChange={(event) =>
                                         handleTaskFieldChange(task.id, 'postMessage', event.target.value)
                                       }
-                                      className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                     />
                                   </div>
 
@@ -660,7 +650,7 @@ const GameEditModal = ({
                                               event.target.value
                                             )
                                           }
-                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                         />
                                       </div>
                                       <div>
@@ -679,7 +669,7 @@ const GameEditModal = ({
                                               event.target.value
                                             )
                                           }
-                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                         />
                                       </div>
                                       <div>
@@ -698,7 +688,7 @@ const GameEditModal = ({
                                               event.target.value
                                             )
                                           }
-                                          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                         />
                                       </div>
                                     </div>
@@ -710,7 +700,7 @@ const GameEditModal = ({
                                       <button
                                         type="button"
                                         onClick={() => handleAddTaskCode(task.id)}
-                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-violet-500/10"
+                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
                                       >
                                         Добавить код
                                       </button>
@@ -733,12 +723,12 @@ const GameEditModal = ({
                                                 )
                                               }
                                               placeholder="Код"
-                                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                             />
                                             <button
                                               type="button"
                                               onClick={() => handleRemoveTaskCode(task.id, codeIndex)}
-                                              className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                                              className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
                                             >
                                               Удалить
                                             </button>
@@ -751,49 +741,16 @@ const GameEditModal = ({
                                   </div>
 
                                   <div>
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                      <h4 className="text-sm font-semibold text-primary">Изображения задания</h4>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleAddTaskImage(task.id)}
-                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-violet-500/10"
-                                      >
-                                        Добавить изображение
-                                      </button>
-                                    </div>
-                                    {task.images?.length > 0 ? (
-                                      <div className="mt-3 space-y-3">
-                                        {task.images.map((imageValue, imageIndex) => (
-                                          <div
-                                            key={`${task.id}-image-${imageIndex}`}
-                                            className="flex flex-col gap-2 sm:flex-row sm:items-center"
-                                          >
-                                            <input
-                                              type="text"
-                                              value={imageValue}
-                                              onChange={(event) =>
-                                                handleTaskImageChange(
-                                                  task.id,
-                                                  imageIndex,
-                                                  event.target.value
-                                                )
-                                              }
-                                              placeholder="Ссылка на изображение"
-                                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={() => handleRemoveTaskImage(task.id, imageIndex)}
-                                              className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
-                                            >
-                                              Удалить
-                                            </button>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className="mt-3 text-sm text-slate-500">Изображений пока нет.</p>
-                                    )}
+                                    <ImagesInput
+                                      label="Изображения задания"
+                                      images={task.images ?? []}
+                                      onChange={(nextImages) =>
+                                        handleTaskFieldChange(task.id, 'images', nextImages)
+                                      }
+                                      directory={`${String(location || 'common')}/games/${selectedGame.id || 'draft'}/tasks/${task.id}`}
+                                      disabled={!canEditSelectedGame || isSaving}
+                                      maxImages={12}
+                                    />
                                   </div>
 
                                   <div>
@@ -802,7 +759,7 @@ const GameEditModal = ({
                                       <button
                                         type="button"
                                         onClick={() => handleAddClue(task.id)}
-                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-violet-500/10"
+                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
                                       >
                                         Добавить подсказку
                                       </button>
@@ -821,7 +778,7 @@ const GameEditModal = ({
                                               <button
                                                 type="button"
                                                 onClick={() => handleRemoveClue(task.id, clue.id)}
-                                                className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                                                className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
                                               >
                                                 Удалить подсказку
                                               </button>
@@ -842,58 +799,25 @@ const GameEditModal = ({
                                                     event.target.value
                                                   )
                                                 }
-                                                className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                               />
                                             </div>
                                             <div>
-                                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                                <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                                  Изображения подсказки
-                                                </h5>
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleAddClueImage(task.id, clue.id)}
-                                                  className="inline-flex justify-center rounded-xl border border-primary px-3 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-violet-500/10"
-                                                >
-                                                  Добавить ссылку
-                                                </button>
-                                              </div>
-                                              {clue.images?.length > 0 ? (
-                                                <div className="mt-3 space-y-3">
-                                                  {clue.images.map((imageValue, imageIndex) => (
-                                                    <div
-                                                      key={`${clue.id}-image-${imageIndex}`}
-                                                      className="flex flex-col gap-2 sm:flex-row sm:items-center"
-                                                    >
-                                                      <input
-                                                        type="text"
-                                                        value={imageValue}
-                                                        onChange={(event) =>
-                                                          handleClueImageChange(
-                                                            task.id,
-                                                            clue.id,
-                                                            imageIndex,
-                                                            event.target.value
-                                                          )
-                                                        }
-                                                        placeholder="Ссылка на изображение"
-                                                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
-                                                      />
-                                                      <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                          handleRemoveClueImage(task.id, clue.id, imageIndex)
-                                                        }
-                                                        className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
-                                                      >
-                                                        Удалить
-                                                      </button>
-                                                    </div>
-                                                  ))}
-                                                </div>
-                                              ) : (
-                                                <p className="mt-3 text-sm text-slate-500">Изображения отсутствуют.</p>
-                                              )}
+                                              <ImagesInput
+                                                label="Изображения подсказки"
+                                                images={clue.images ?? []}
+                                                onChange={(nextImages) =>
+                                                  handleTaskClueChange(
+                                                    task.id,
+                                                    clue.id,
+                                                    'images',
+                                                    nextImages
+                                                  )
+                                                }
+                                                directory={`${String(location || 'common')}/games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}`}
+                                                disabled={!canEditSelectedGame || isSaving}
+                                                maxImages={8}
+                                              />
                                             </div>
                                           </div>
                                         ))}
@@ -910,7 +834,7 @@ const GameEditModal = ({
                                         <button
                                           type="button"
                                           onClick={() => handleAddSubTask(task.id)}
-                                          className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-violet-500/10"
+                                          className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
                                         >
                                           Добавить подзадание
                                         </button>
@@ -929,7 +853,7 @@ const GameEditModal = ({
                                                 <button
                                                   type="button"
                                                   onClick={() => handleRemoveSubTask(task.id, subTask.id)}
-                                                  className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                                                  className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
                                                 >
                                                   Удалить подзадание
                                                 </button>
@@ -951,7 +875,7 @@ const GameEditModal = ({
                                                         event.target.value
                                                       )
                                                     }
-                                                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                                   />
                                                 </div>
                                                 <div>
@@ -974,7 +898,7 @@ const GameEditModal = ({
                                                         event.target.value
                                                       )
                                                     }
-                                                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                                   />
                                                 </div>
                                               </div>
@@ -994,7 +918,7 @@ const GameEditModal = ({
                                                       event.target.value
                                                     )
                                                   }
-                                                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                                 />
                                               </div>
                                             </div>
@@ -1012,7 +936,7 @@ const GameEditModal = ({
                                       <button
                                         type="button"
                                         onClick={() => handleAddPenaltyCode(task.id)}
-                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-violet-500/10"
+                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
                                       >
                                         Добавить штраф
                                       </button>
@@ -1041,7 +965,7 @@ const GameEditModal = ({
                                                       event.target.value
                                                     )
                                                   }
-                                                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                                 />
                                               </div>
                                               <div>
@@ -1061,7 +985,7 @@ const GameEditModal = ({
                                                       event.target.value
                                                     )
                                                   }
-                                                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                                 />
                                               </div>
                                             </div>
@@ -1081,14 +1005,14 @@ const GameEditModal = ({
                                                     event.target.value
                                                   )
                                                 }
-                                                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                               />
                                             </div>
                                             <div className="flex justify-end">
                                               <button
                                                 type="button"
                                                 onClick={() => handleRemovePenaltyCode(task.id, penalty.id)}
-                                                className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                                                className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
                                               >
                                                 Удалить штраф
                                               </button>
@@ -1107,7 +1031,7 @@ const GameEditModal = ({
                                       <button
                                         type="button"
                                         onClick={() => handleAddBonusCode(task.id)}
-                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-violet-500/10"
+                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
                                       >
                                         Добавить бонус
                                       </button>
@@ -1136,7 +1060,7 @@ const GameEditModal = ({
                                                       event.target.value
                                                     )
                                                   }
-                                                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                                 />
                                               </div>
                                               <div>
@@ -1156,7 +1080,7 @@ const GameEditModal = ({
                                                       event.target.value
                                                     )
                                                   }
-                                                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                                 />
                                               </div>
                                             </div>
@@ -1176,14 +1100,14 @@ const GameEditModal = ({
                                                     event.target.value
                                                   )
                                                 }
-                                                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                                                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
                                               />
                                             </div>
                                             <div className="flex justify-end">
                                               <button
                                                 type="button"
                                                 onClick={() => handleRemoveBonusCode(task.id, bonus.id)}
-                                                className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                                                className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
                                               >
                                                 Удалить бонус
                                               </button>
@@ -1200,7 +1124,7 @@ const GameEditModal = ({
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveTask(task.id)}
-                                      className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                                      className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
                                     >
                                       Удалить задание
                                     </button>
@@ -1221,7 +1145,7 @@ const GameEditModal = ({
                     <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                     <h2 className="text-lg font-semibold text-primary">Публикация и результаты</h2>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.hidden)}
@@ -1232,7 +1156,7 @@ const GameEditModal = ({
                         />
                         Игра скрыта из общего списка
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.showCreator)}
@@ -1243,7 +1167,7 @@ const GameEditModal = ({
                         />
                         Показывать организатора игрокам
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.showTasks)}
@@ -1254,7 +1178,7 @@ const GameEditModal = ({
                         />
                         Открыть задания после завершения
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.hideResult)}
@@ -1285,7 +1209,7 @@ const GameEditModal = ({
                         {selectedGame.prices.map((price) => (
                           <div
                             key={price.id}
-                            className="grid gap-3 md:grid-cols-[2fr_1fr_auto] items-center p-4 border border-slate-200 dark:border-slate-700 rounded-2xl"
+                            className="grid gap-3 md:grid-cols-[2fr_1fr_auto] items-center p-4 border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/50 rounded-2xl"
                           >
                             <input
                               type="text"
@@ -1294,7 +1218,7 @@ const GameEditModal = ({
                                 handlePriceChange(price.id, 'name', event.target.value)
                               }
                               placeholder="Название тарифа"
-                              className="w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-4 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                             />
                             <input
                               type="number"
@@ -1304,12 +1228,12 @@ const GameEditModal = ({
                                 handlePriceChange(price.id, 'price', event.target.value)
                               }
                               placeholder="Стоимость"
-                              className="w-full px-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-4 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                             />
                             <button
                               type="button"
                               onClick={() => handleRemovePrice(price.id)}
-                              className="px-3 py-2 text-xs font-semibold text-rose-600 border border-rose-200 rounded-xl hover:bg-rose-50"
+                              className="px-3 py-2 text-xs font-semibold text-rose-600 border border-rose-200 rounded-xl hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
                             >
                               Удалить
                             </button>
@@ -1340,14 +1264,14 @@ const GameEditModal = ({
                         {selectedGame.finances.map((entry) => (
                           <div
                             key={entry.id}
-                            className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto] items-center p-4 border border-slate-200 dark:border-slate-700 rounded-2xl"
+                            className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto] items-center p-4 border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/50 rounded-2xl"
                           >
                             <select
                               value={entry.type}
                               onChange={(event) =>
                                 handleFinanceChange(entry.id, 'type', event.target.value)
                               }
-                              className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                             >
                               <option value="income">Доход</option>
                               <option value="expense">Расход</option>
@@ -1360,7 +1284,7 @@ const GameEditModal = ({
                                 handleFinanceChange(entry.id, 'sum', event.target.value)
                               }
                               placeholder="Сумма"
-                              className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                             />
                             <input
                               type="date"
@@ -1368,12 +1292,12 @@ const GameEditModal = ({
                               onChange={(event) =>
                                 handleFinanceChange(entry.id, 'date', event.target.value)
                               }
-                              className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                             />
                             <button
                               type="button"
                               onClick={() => handleRemoveFinance(entry.id)}
-                              className="px-3 py-2 text-xs font-semibold text-rose-600 border border-rose-200 rounded-xl hover:bg-rose-50"
+                              className="px-3 py-2 text-xs font-semibold text-rose-600 border border-rose-200 rounded-xl hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
                             >
                               Удалить
                             </button>
@@ -1385,7 +1309,7 @@ const GameEditModal = ({
                                   handleFinanceChange(entry.id, 'description', event.target.value)
                                 }
                                 placeholder="Комментарий"
-                                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                                className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
                               />
                             </div>
                           </div>
@@ -1397,11 +1321,11 @@ const GameEditModal = ({
                       </p>
                     )}
 
-                    <div className="p-4 bg-slate-50 border border-slate-200 dark:border-slate-700 rounded-2xl">
-                      <p className="text-sm text-slate-600">
+                    <div className="p-4 bg-slate-50 border border-slate-200 dark:border-slate-700 dark:bg-slate-800/60 rounded-2xl">
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
                         Доходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.income)}</span>
                       </p>
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                         Расходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.expense)}</span>
                       </p>
                       <p className={`mt-1 text-sm font-semibold ${balanceClass}`}>
@@ -1436,7 +1360,7 @@ const GameEditModal = ({
                         className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
                           !canEditSelectedGame || !isDirty
                             ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                            : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-violet-500/10'
+                            : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-sky-500/10'
                         }`}
                       >
                         Отменить изменения
@@ -1453,7 +1377,10 @@ GameEditModal.propTypes = {
   handleCloseEditModal: PropTypes.func.isRequired,
   canEditSelectedGame: PropTypes.bool.isRequired,
   isSaving: PropTypes.bool.isRequired,
-  location: PropTypes.shape({ city: PropTypes.string }),
+  location: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({ city: PropTypes.string }),
+  ]),
   isDirty: PropTypes.bool.isRequired,
   handleModalPrimaryAction: PropTypes.func.isRequired,
   handleResetChanges: PropTypes.func.isRequired,
@@ -1532,3 +1459,5 @@ GameEditModal.defaultProps = {
 }
 
 export default memo(GameEditModal)
+
+

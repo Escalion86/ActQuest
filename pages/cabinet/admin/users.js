@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import SelectableCard from '@components/cabinet/SelectableCard'
 import Modal from '@components/Modal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getSessionSafe from '@helpers/getSessionSafe'
@@ -142,6 +144,7 @@ const normalizeUserForAdmin = ({
 }
 
 const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSession }) => {
+  const router = useRouter()
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
@@ -154,11 +157,8 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
   const [roleFilter, setRoleFilter] = useState('all')
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [userAboutModal, setUserAboutModal] = useState({
-    isOpen: false,
-    name: '',
-    about: '',
-  })
+  const [isRequestingPhone, setIsRequestingPhone] = useState(false)
+  const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false)
 
   useEffect(() => {
     setUsers(initialUsers)
@@ -172,9 +172,37 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
     })
   }, [initialUsers])
 
-  const closeUserAboutModal = useCallback(() => {
-    setUserAboutModal({ isOpen: false, name: '', about: '' })
-  }, [])
+  const setUserIdQuery = useCallback(
+    (nextUserId) => {
+      if (!router.isReady) {
+        return
+      }
+
+      const nextQuery = { ...router.query }
+      if (nextUserId) {
+        nextQuery.userId = nextUserId
+      } else {
+        delete nextQuery.userId
+      }
+
+      router
+        .replace(
+          {
+            pathname: router.pathname,
+            query: nextQuery,
+          },
+          undefined,
+          { shallow: true, scroll: false }
+        )
+        .catch(() => {})
+    },
+    [router]
+  )
+
+  const closeUserEditModal = useCallback(() => {
+    setIsUserEditModalOpen(false)
+    setUserIdQuery(null)
+  }, [setUserIdQuery])
 
   const roleOptions = useMemo(() => {
     const baseOptions = USERS_ROLES.map(({ value, name }) => ({ value, name }))
@@ -218,6 +246,8 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
   useEffect(() => {
     if (filteredUsers.length === 0) {
       setSelectedUserId(null)
+      setIsUserEditModalOpen(false)
+      setUserIdQuery(null)
       return
     }
 
@@ -228,7 +258,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
 
       return filteredUsers[0]?.id ?? null
     })
-  }, [filteredUsers])
+  }, [filteredUsers, setUserIdQuery])
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -251,19 +281,34 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
       }
 
       setSelectedUserId(user.id)
-      const fullUser = users.find((item) => item.id === user.id) ?? null
-      const about =
-        typeof fullUser?.about === 'string' ? fullUser.about.trim() : ''
-      const name = fullUser?.name || user.name || 'Без имени'
-
-      setUserAboutModal({
-        isOpen: true,
-        name,
-        about,
-      })
+      setIsUserEditModalOpen(true)
+      setUserIdQuery(user.id)
     },
-    [users]
+    [setUserIdQuery]
   )
+
+  useEffect(() => {
+    if (!router.isReady) {
+      return
+    }
+
+    const rawUserId = router.query?.userId
+    const userIdFromQuery = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId
+
+    if (!userIdFromQuery || typeof userIdFromQuery !== 'string') {
+      setIsUserEditModalOpen(false)
+      return
+    }
+
+    const exists = users.some((user) => user.id === userIdFromQuery)
+    if (!exists) {
+      setIsUserEditModalOpen(false)
+      return
+    }
+
+    setSelectedUserId(userIdFromQuery)
+    setIsUserEditModalOpen(true)
+  }, [router.isReady, router.query?.userId, users])
 
   const isDirty = useMemo(() => {
     if (!selectedUser || !persistedSelectedUser) {
@@ -377,6 +422,59 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
     }
   }, [location, persistedSelectedUser, selectedUser])
 
+  const handleRequestPhoneViaTelegram = useCallback(async () => {
+    if (!selectedUser || !location || isRequestingPhone) {
+      return
+    }
+
+    if (!selectedUser.telegramId) {
+      setFeedback({
+        type: 'error',
+        message: 'У выбранного пользователя не указан Telegram ID',
+      })
+      return
+    }
+
+    setIsRequestingPhone(true)
+    setFeedback(null)
+
+    try {
+      const response = await fetch('/api/cabinet/users/request-phone', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: selectedUser.id }),
+      })
+
+      const json = await response.json().catch(() => null)
+
+      if (!response.ok || !json?.success) {
+        throw new Error(
+          (json && (json.error || json.message)) ||
+            'Не удалось отправить запрос номера через Telegram',
+        )
+      }
+
+      setFeedback({
+        type: 'success',
+        message:
+          'Запрос номера отправлен пользователю в Telegram. Ожидаем отправку контакта.',
+      })
+    } catch (error) {
+      console.error('Failed to request phone via Telegram', error)
+      setFeedback({
+        type: 'error',
+        message:
+          error?.message ||
+          'Не удалось отправить запрос номера через Telegram',
+      })
+    } finally {
+      setIsRequestingPhone(false)
+    }
+  }, [isRequestingPhone, location, selectedUser])
+
   const filterOptions = useMemo(
     () => [
       { value: 'all', name: 'Все роли' },
@@ -418,7 +516,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
         activePage="admin"
       >
         <section className="grid gap-6 md:grid-cols-5">
-          <div className="md:col-span-2 space-y-4">
+          <div className="md:col-span-5 space-y-4">
             <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
               <p className="text-sm font-semibold text-primary">Все пользователи</p>
               <p className="mt-1 text-xs text-slate-500">
@@ -470,14 +568,13 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
 
                   return (
                     <li key={user.id}>
-                      <button
-                        type="button"
+                      <SelectableCard
+                        as="button"
                         onClick={() => handleUserCardClick(user)}
-                        className={`w-full text-left p-4 border rounded-2xl transition ${
-                          isActive
-                            ? 'border-primary bg-blue-50 shadow-sm'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50'
-                        }`}
+                        type="button"
+                        isActive={isActive}
+                        className="w-full text-left"
+                        aria-pressed={isActive}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -498,7 +595,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                           <span>Игры: {user.gamesCount}</span>
                           <span>Обновлён {lastUpdateLabel}</span>
                         </div>
-                      </button>
+                      </SelectableCard>
                     </li>
                   )
                 })}
@@ -510,199 +607,202 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
             )}
           </div>
 
-          <div className="md:col-span-3">
-            {selectedUser ? (
-              <div className="space-y-6">
-                {!location && (
-                  <div className="p-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl">
-                    Не удалось определить площадку пользователя. Сохранение изменений недоступно.
-                  </div>
-                )}
-
-                {feedback && (
-                  <div
-                    className={`p-4 text-sm border rounded-2xl ${
-                      feedback.type === 'success'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                        : 'bg-rose-50 border-rose-200 text-rose-700'
-                    }`}
-                  >
-                    {feedback.message}
-                  </div>
-                )}
-
-                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-6">
-                  <div>
-                    <h2 className="text-lg font-semibold text-primary">
-                      {selectedUser.name || 'Без имени'}
-                    </h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {selectedUser.username ? `@${selectedUser.username}` : 'Ник не указан'} · Telegram ID:{' '}
-                      {selectedUser.telegramId || '—'}
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                      <p className="text-xs text-blue-600">Команд</p>
-                      <p className="mt-1 text-xl font-semibold text-primary">{selectedUser.teamsCount}</p>
-                    </div>
-                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                      <p className="text-xs text-emerald-600">Игры</p>
-                      <p className="mt-1 text-xl font-semibold text-emerald-700">{selectedUser.gamesCount}</p>
-                    </div>
-                    <div className="p-4 bg-slate-50 border border-slate-200 dark:border-slate-700 rounded-xl">
-                      <p className="text-xs text-slate-600">Последнее обновление</p>
-                      <p className="mt-1 text-sm text-slate-700">
-                        {selectedUser.updatedAt
-                          ? formatRelativeTimeFromNow(selectedUser.updatedAt)
-                          : 'Неизвестно'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="user-role" className="text-sm font-semibold text-primary">
-                      Роль в системе
-                    </label>
-                    <select
-                      id="user-role"
-                      value={selectedUser.role}
-                      onChange={(event) => handleRoleChange(event.target.value)}
-                      className="w-full px-4 py-3 mt-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-                    >
-                      {roleOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={!location || !isDirty || isSaving}
-                      className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-                        !location || !isDirty || isSaving
-                          ? 'bg-slate-400 cursor-not-allowed'
-                          : 'bg-primary hover:bg-blue-700'
-                      }`}
-                    >
-                      {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleReset}
-                      disabled={!isDirty}
-                      className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
-                        !isDirty
-                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                          : 'border-primary text-primary hover:bg-blue-50'
-                      }`}
-                    >
-                      Отменить
-                    </button>
-                  </div>
-                </section>
-
-                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-                  <h3 className="text-base font-semibold text-primary">Команды пользователя</h3>
-
-                  {selectedUser.teams.length > 0 ? (
-                    <ul className="space-y-3">
-                      {selectedUser.teams.map((team) => (
-                        <li
-                          key={team.id}
-                          className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
-                        >
-                          <div>
-                            <p className="text-sm font-semibold text-primary">{team.name || 'Без названия'}</p>
-                            <p className="text-xs text-slate-500">
-                              {team.isCaptain ? 'Капитан' : 'Участник'} · Игр: {team.gamesCount}
-                            </p>
-                          </div>
-                          <p className="text-xs text-slate-400">
-                            {team.updatedAt
-                              ? `Обновлено ${formatRelativeTimeFromNow(team.updatedAt)}`
-                              : 'Дата обновления неизвестна'}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-slate-500">
-                      Пользователь ещё не вступил ни в одну команду.
-                    </p>
-                  )}
-                </section>
-
-                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-                  <h3 className="text-base font-semibold text-primary">Дополнительная информация</h3>
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
-                      <p className="text-xs text-slate-500">Телефон</p>
-                      <p className="mt-1 text-sm text-slate-700">
-                        {selectedUser.phone || 'Не указан'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500">Создан</p>
-                      <p className="mt-1 text-sm text-slate-700">
-                        {selectedUser.createdAt
-                          ? formatRelativeTimeFromNow(selectedUser.createdAt)
-                          : 'Неизвестно'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {selectedUser.preferences && selectedUser.preferences.length > 0 && (
-                    <div>
-                      <p className="text-xs text-slate-500">Предпочтения</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {selectedUser.preferences.map((preference) => (
-                          <span
-                            key={preference}
-                            className="px-3 py-1 text-xs font-medium text-primary bg-blue-50 border border-blue-200 rounded-full"
-                          >
-                            {preference}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <p className="text-xs text-slate-500">О себе</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Описание профиля отображается в карточке пользователя.
-                    </p>
-                  </div>
-                </section>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full p-6 bg-white dark:bg-slate-900/80 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
-                <p className="text-sm text-slate-500">Выберите пользователя из списка слева, чтобы просмотреть детали.</p>
-              </div>
-            )}
-          </div>
         </section>
         <Modal
-          isOpen={userAboutModal.isOpen}
-          onClose={closeUserAboutModal}
-          title={`О пользователе — ${userAboutModal.name || 'Без имени'}`}
+          isOpen={isUserEditModalOpen && Boolean(selectedUser)}
+          onClose={closeUserEditModal}
+          title={`Пользователь — ${selectedUser?.name || 'Без имени'}`}
         >
-          {userAboutModal.about ? (
-            <p className="whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
-              {userAboutModal.about}
-            </p>
-          ) : (
-            <p className="text-sm text-slate-500">
-              Пользователь пока не добавил описание профиля.
-            </p>
-          )}
+          {selectedUser ? (
+            <div className="space-y-6">
+              {!location && (
+                <div className="p-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
+                  Не удалось определить площадку пользователя. Сохранение изменений недоступно.
+                </div>
+              )}
+
+              {feedback && (
+                <div
+                  className={`p-4 text-sm border rounded-2xl ${
+                    feedback.type === 'success'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-200'
+                      : 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-500/10 dark:border-rose-500/30 dark:text-rose-200'
+                  }`}
+                >
+                  {feedback.message}
+                </div>
+              )}
+
+              <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-primary">
+                    {selectedUser.name || 'Без имени'}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {selectedUser.username ? `@${selectedUser.username}` : 'Ник не указан'} · Telegram ID:{' '}
+                    {selectedUser.telegramId || '—'}
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl dark:bg-sky-500/10 dark:border-sky-500/30">
+                    <p className="text-xs text-blue-600 dark:text-sky-300">Команд</p>
+                    <p className="mt-1 text-xl font-semibold text-primary dark:text-sky-100">{selectedUser.teamsCount}</p>
+                  </div>
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl dark:bg-emerald-500/10 dark:border-emerald-500/30">
+                    <p className="text-xs text-emerald-600 dark:text-emerald-300">Игры</p>
+                    <p className="mt-1 text-xl font-semibold text-emerald-700 dark:text-emerald-100">{selectedUser.gamesCount}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 border border-slate-200 dark:bg-slate-800/70 dark:border-slate-700 rounded-xl">
+                    <p className="text-xs text-slate-600 dark:text-slate-300">Последнее обновление</p>
+                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
+                      {selectedUser.updatedAt
+                        ? formatRelativeTimeFromNow(selectedUser.updatedAt)
+                        : 'Неизвестно'}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="user-role" className="text-sm font-semibold text-primary">
+                    Роль в системе
+                  </label>
+                  <select
+                    id="user-role"
+                    value={selectedUser.role}
+                    onChange={(event) => handleRoleChange(event.target.value)}
+                    className="w-full px-4 py-3 mt-2 text-sm border rounded-xl border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary"
+                  >
+                    {roleOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!location || !isDirty || isSaving}
+                    className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
+                      !location || !isDirty || isSaving
+                        ? 'bg-slate-400 cursor-not-allowed'
+                        : 'bg-primary hover:bg-blue-700'
+                    }`}
+                  >
+                    {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    disabled={!isDirty}
+                    className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
+                      !isDirty
+                        ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
+                        : 'border-primary text-primary hover:bg-blue-50 dark:text-sky-200 dark:hover:bg-sky-500/10'
+                    }`}
+                  >
+                    Отменить
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRequestPhoneViaTelegram}
+                    disabled={
+                      !location ||
+                      !selectedUser.telegramId ||
+                      isRequestingPhone
+                    }
+                    className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
+                      !location || !selectedUser.telegramId || isRequestingPhone
+                        ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
+                        : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-500/10'
+                    }`}
+                  >
+                    {isRequestingPhone
+                      ? 'Отправка...'
+                      : 'Запросить номер телефона через Telegram'}
+                  </button>
+                </div>
+              </section>
+
+              <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
+                <h3 className="text-base font-semibold text-primary">Команды пользователя</h3>
+
+                {selectedUser.teams.length > 0 ? (
+                  <ul className="space-y-3">
+                    {selectedUser.teams.map((team) => (
+                      <li
+                        key={team.id}
+                        className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-primary">{team.name || 'Без названия'}</p>
+                          <p className="text-xs text-slate-500">
+                            {team.isCaptain ? 'Капитан' : 'Участник'} · Игр: {team.gamesCount}
+                          </p>
+                        </div>
+                        <p className="text-xs text-slate-400">
+                          {team.updatedAt
+                            ? `Обновлено ${formatRelativeTimeFromNow(team.updatedAt)}`
+                            : 'Дата обновления неизвестна'}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    Пользователь ещё не вступил ни в одну команду.
+                  </p>
+                )}
+              </section>
+
+              <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
+                <h3 className="text-base font-semibold text-primary">Дополнительная информация</h3>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <p className="text-xs text-slate-500">Телефон</p>
+                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
+                      {selectedUser.phone || 'Не указан'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Создан</p>
+                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
+                      {selectedUser.createdAt
+                        ? formatRelativeTimeFromNow(selectedUser.createdAt)
+                        : 'Неизвестно'}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedUser.preferences && selectedUser.preferences.length > 0 && (
+                  <div>
+                    <p className="text-xs text-slate-500">Предпочтения</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedUser.preferences.map((preference) => (
+                        <span
+                          key={preference}
+                          className="px-3 py-1 text-xs font-medium text-primary bg-blue-50 border border-blue-200 rounded-full dark:bg-sky-500/10 dark:border-sky-500/30 dark:text-sky-200"
+                        >
+                          {preference}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs text-slate-500">О себе</p>
+                  <p className="mt-1 text-sm text-slate-500 whitespace-pre-line">
+                    {selectedUser.about?.trim() || 'Пользователь пока не добавил описание профиля.'}
+                  </p>
+                </div>
+              </section>
+            </div>
+          ) : null}
         </Modal>
       </CabinetLayout>
     </>

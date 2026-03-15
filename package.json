@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "NODE_OPTIONS='--max-old-space-size=2048' next build",
-    "start": "next start"
+    "start": "next start",
+    "migrate:teamsusers:user-id": "node scripts/migrateTeamsUsersUserId.js"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.2.1",
