@@ -5,20 +5,11 @@ const normalizeAuthPhone = (value) => {
   if (!raw) return null
 
   const digits = raw.replace(/\D/g, '')
-  if (!digits) return null
-
-  let normalizedDigits = digits
-  if (normalizedDigits.length === 10) {
-    normalizedDigits = `7${normalizedDigits}`
-  } else if (normalizedDigits.length === 11 && normalizedDigits.startsWith('8')) {
-    normalizedDigits = `7${normalizedDigits.slice(1)}`
-  }
-
-  if (normalizedDigits.length !== 11 || !normalizedDigits.startsWith('7')) {
+  if (digits.length !== 11 || !digits.startsWith('7')) {
     return null
   }
 
-  const asNumber = Number(normalizedDigits)
+  const asNumber = Number(digits)
   return Number.isFinite(asNumber) ? asNumber : null
 }
 

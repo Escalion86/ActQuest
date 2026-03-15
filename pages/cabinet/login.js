@@ -9,6 +9,7 @@ import {
   extractRelativePath,
   resolveCabinetCallback,
 } from '@helpers/cabinetAuth'
+import { formatPhoneInput, normalizePhoneForSubmit } from '@helpers/phoneInputMask'
 import { LOCATIONS } from '@server/serverConstants'
 
 const availableLocations = Object.entries(LOCATIONS)
@@ -16,11 +17,6 @@ const availableLocations = Object.entries(LOCATIONS)
   .map(([key, value]) => ({ key, ...value }))
 
 const defaultLocation = availableLocations[0]?.key ?? 'dev'
-
-const normalizePhoneInput = (value) => {
-  if (typeof value !== 'string') return ''
-  return value.replace(/[^\d+]/g, '')
-}
 
 const VK_SDK_URL = 'https://unpkg.com/@vkid/sdk@2.6.5/dist-sdk/umd/index.js'
 let vkSdkLoadPromise = null
@@ -229,8 +225,8 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       event.preventDefault()
       if (isAuthenticating) return
 
-      const digitsOnly = phoneInput.replace(/\D/g, '')
-      if (!digitsOnly || digitsOnly.length < 10) {
+      const digitsOnly = normalizePhoneForSubmit(phoneInput)
+      if (!digitsOnly || digitsOnly.length < 11) {
         setAuthError('Введите корректный номер телефона.')
         return
       }
@@ -337,7 +333,11 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   )
 
   useEffect(() => {
-    if (!isClient || !Number.isFinite(vkidAppId) || !vkIdWidgetContainerRef.current) {
+    if (
+      !isClient ||
+      !Number.isFinite(vkidAppId) ||
+      !vkIdWidgetContainerRef.current
+    ) {
       return undefined
     }
 
@@ -388,9 +388,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
           const code = payload?.code
           const deviceId = payload?.device_id
           const codeVerifier =
-            payload?.code_verifier ||
-            payload?.codeVerifier ||
-            payload?.verifier
+            payload?.code_verifier || payload?.codeVerifier || payload?.verifier
 
           if (!code || !deviceId) {
             setVkError('VK ID не вернул код авторизации.')
@@ -402,7 +400,9 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
               ? await VKID.Auth.exchangeCode(code, deviceId, codeVerifier)
               : await VKID.Auth.exchangeCode(code, deviceId)
             const accessToken =
-              exchangeResult?.access_token || exchangeResult?.accessToken || null
+              exchangeResult?.access_token ||
+              exchangeResult?.accessToken ||
+              null
             const vkId =
               exchangeResult?.user?.id ||
               exchangeResult?.id ||
@@ -457,76 +457,66 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
     }
   }, [isClient, vkidAppId, vkidCallbackUrl, handleVkAuth])
 
-  const callbackDescription =
-    effectiveCallbackUrl && effectiveCallbackUrl !== '/cabinet'
-      ? 'После входа мы автоматически перенаправим вас на исходную страницу.'
-      : 'После входа откроется панель управления ActQuest.'
-
   return (
     <>
       <Head>
         <title>ActQuest — вход в кабинет</title>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="px-4 py-16 mx-auto max-w-6xl">
+        <div className="max-w-6xl px-4 py-16 mx-auto">
           <div className="grid gap-10 md:grid-cols-[1.05fr_0.95fr] items-start">
             <div className="space-y-6 text-white">
               <p className="inline-flex items-center px-4 py-2 text-xs font-semibold tracking-widest uppercase rounded-full bg-white/10">
                 Личный кабинет ActQuest
               </p>
               <h1 className="text-3xl font-semibold md:text-4xl">
-                Управляйте играми и командами в едином центре управления
+                Открывайте городские игры и проводите время с друзьями
               </h1>
               <p className="text-base text-slate-200 md:text-lg">
-                Собирайте команды, планируйте игры, контролируйте статистику и
-                настройки проекта в одном интерфейсе.
-                Всё, что нужно организатору, — в одном кабинете.
+                В кабинете вы выбираете игру, собираете команду и отслеживаете
+                участие в одном месте. Подходит и для новых игроков, и для тех,
+                кто уже регулярно выходит на квесты.
               </p>
               <ul className="space-y-3 text-sm text-slate-200 md:text-base">
                 <li className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900/80 rounded-full">
+                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold bg-white rounded-full text-slate-900 dark:text-slate-100 dark:bg-slate-900/80">
                     1
                   </span>
                   <span>
-                    Выберите игровой регион, чтобы подключить нужную базу данных
-                    ActQuest.
+                    Выберите город, чтобы увидеть актуальные игры и события.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900/80 rounded-full">
+                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold bg-white rounded-full text-slate-900 dark:text-slate-100 dark:bg-slate-900/80">
                     2
                   </span>
                   <span>
-                    Выполните вход любым удобным способом и получите рабочую
-                    сессию.
+                    Войдите через VK ID или по номеру телефона и паролю.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900/80 rounded-full">
+                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold bg-white rounded-full text-slate-900 dark:text-slate-100 dark:bg-slate-900/80">
                     3
                   </span>
                   <span>
-                    Вернём вас в нужный раздел кабинета и подгрузим все
-                    связанные данные.
+                    Переходите в кабинет: выбирайте игру, собирайте друзей и
+                    выходите на маршрут.
                   </span>
                 </li>
               </ul>
             </div>
 
-            <div className="p-8 bg-white dark:bg-slate-900/80 rounded-3xl shadow-2xl">
-              <h2 className="text-2xl font-semibold text-primary">
-                Войти в кабинет
+            <div className="p-8 bg-white shadow-2xl dark:bg-slate-900/80 rounded-3xl">
+              <h2 className="text-2xl font-semibold text-center text-primary">
+                Авторизация
               </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                {callbackDescription}
-              </p>
               {authCallbackSource ? (
-                <p className="mt-1 text-xs text-slate-400 break-words">
+                <p className="mt-2 text-xs text-center break-words text-slate-400">
                   Запрошенный адрес: {authCallbackSource}
                 </p>
               ) : null}
 
-              <div className="mt-6 space-y-5">
+              <div className="mt-6 space-y-4">
                 <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
                   Игровой регион
                   <select
@@ -543,30 +533,59 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                   </select>
                 </label>
 
-                <div className="flex flex-col items-center gap-3">
+                <div className="flex flex-col items-center gap-4">
+                  {vkidAppId ? (
+                    <div className="w-full">
+                      <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        Войти через VK ID
+                      </div>
+                      <div ref={vkIdWidgetContainerRef} className="w-full" />
+                      {!isVkIdReady ? (
+                        <div className="flex items-center justify-center h-6 mt-2 text-xs text-slate-500">
+                          Загрузка VK One Tap...
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
+                      Укажите{' '}
+                      <code className="px-1 bg-white rounded dark:bg-slate-900/80">
+                        NEXT_PUBLIC_VK_ID_APP_ID
+                      </code>{' '}
+                      для входа через VK One Tap.
+                    </div>
+                  )}
+
+                  <div className="w-full text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    или войдите по номеру телефона
+                  </div>
+
                   <form
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3"
+                    className="w-full p-4 space-y-3 border rounded-xl border-slate-200 dark:border-slate-700"
                     onSubmit={handlePhoneAuthSubmit}
                   >
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                      Вход по номеру телефона и паролю
-                    </p>
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                      Телефон
+                    </label>
                     <input
                       type="tel"
                       value={phoneInput}
                       onChange={(event) =>
-                        setPhoneInput(normalizePhoneInput(event.target.value))
+                        setPhoneInput(formatPhoneInput(event.target.value))
                       }
                       placeholder="+7 900 000-00-00"
                       autoComplete="tel"
                       disabled={isAuthenticating}
                       className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                     />
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                      Пароль
+                    </label>
                     <input
                       type="password"
                       value={passwordInput}
                       onChange={(event) => setPasswordInput(event.target.value)}
-                      placeholder="Пароль"
+                      placeholder="Введите пароль"
                       autoComplete="current-password"
                       disabled={isAuthenticating}
                       className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
@@ -578,48 +597,39 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                     >
                       Войти
                     </button>
-                    <p className="text-xs text-slate-500">
-                      Нет аккаунта? Перейдите на регистрацию или используйте VK.
-                    </p>
+                  </form>
+                  <Link
+                    href={`/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
+                    className="inline-flex items-center justify-center w-full px-4 py-3 text-sm font-semibold border rounded-xl border-primary text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                  >
+                    Я не зарегистрирован
+                  </Link>
+
+                  <div className="w-full text-sm text-center text-slate-500">
+                    Забыли пароль?{' '}
                     <Link
                       href={`/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
-                      className="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-semibold border rounded-xl border-primary text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                      className="font-semibold text-primary hover:underline"
                     >
-                      Открыть регистрацию
+                      Восстановить
                     </Link>
-                  </form>
+                  </div>
+                  <div className="w-full text-sm text-center">
+                    <Link
+                      href="/"
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      Перейти на главную страницу
+                    </Link>
+                  </div>
 
-                  {vkidAppId ? (
-                    <div className="w-full mt-3">
-                      <div className="mb-2 text-xs font-medium text-slate-600">
-                        VK One Tap
-                      </div>
-                      <div
-                        ref={vkIdWidgetContainerRef}
-                        className="w-full h-14 border border-dashed rounded-xl border-slate-300"
-                      />
-                      {!isVkIdReady ? (
-                        <div className="mt-2 flex h-6 items-center justify-center text-xs text-slate-500">
-                          Загрузка VK One Tap...
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
-                      Укажите{' '}
-                      <code className="px-1 bg-white dark:bg-slate-900/80 rounded">
-                        NEXT_PUBLIC_VK_ID_APP_ID
-                      </code>{' '}
-                      для входа через VK One Tap.
-                    </div>
-                  )}
                   {vkError ? (
-                    <p className="w-full px-3 py-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="w-full px-3 py-2 text-sm text-red-600 border border-red-200 bg-red-50 rounded-xl">
                       {vkError}
                     </p>
                   ) : null}
                   {authError ? (
-                    <p className="w-full px-3 py-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="w-full px-3 py-2 text-sm text-red-600 border border-red-200 bg-red-50 rounded-xl">
                       {authError}
                     </p>
                   ) : null}

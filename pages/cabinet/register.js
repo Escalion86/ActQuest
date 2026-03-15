@@ -6,6 +6,7 @@ import { signIn, useSession } from 'next-auth/react'
 
 import getSessionSafe from '@helpers/getSessionSafe'
 import { extractRelativePath, resolveCabinetCallback } from '@helpers/cabinetAuth'
+import { formatPhoneInput, normalizePhoneForSubmit } from '@helpers/phoneInputMask'
 import { LOCATIONS } from '@server/serverConstants'
 
 const availableLocations = Object.entries(LOCATIONS)
@@ -13,11 +14,6 @@ const availableLocations = Object.entries(LOCATIONS)
   .map(([key, value]) => ({ key, ...value }))
 
 const defaultLocation = availableLocations[0]?.key ?? 'dev'
-
-const normalizePhoneInput = (value) => {
-  if (typeof value !== 'string') return ''
-  return value.replace(/[^\d+]/g, '')
-}
 
 const CabinetRegisterPage = ({ authCallbackUrl }) => {
   const { data: session, status, update } = useSession()
@@ -72,8 +68,8 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
       event.preventDefault()
       if (isSubmitting) return
 
-      const digitsOnly = phoneInput.replace(/\D/g, '')
-      if (!digitsOnly || digitsOnly.length < 10) {
+      const digitsOnly = normalizePhoneForSubmit(phoneInput)
+      if (!digitsOnly || digitsOnly.length < 11) {
         setAuthError('Введите корректный номер телефона.')
         return
       }
@@ -215,7 +211,7 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
                 type="tel"
                 value={phoneInput}
                 onChange={(event) =>
-                  setPhoneInput(normalizePhoneInput(event.target.value))
+                  setPhoneInput(formatPhoneInput(event.target.value))
                 }
                 placeholder="+7 900 000-00-00"
                 disabled={isSubmitting}
