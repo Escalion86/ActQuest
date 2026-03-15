@@ -382,8 +382,16 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
 
       try {
         const callbackUrl = resolveVkIdCallbackUrl(vkidCallbackUrl)
+        const numericVkIdApp = Number(vkidAppId)
+        if (!Number.isFinite(numericVkIdApp) || numericVkIdApp <= 0) {
+          setVkError(
+            'Не задан корректный NEXT_PUBLIC_VKID_ONETAP_APP_ID для VK One Tap.',
+          )
+          return
+        }
+
         VKID.Config.init({
-          app: Number(vkidAppId),
+          app: numericVkIdApp,
           redirectUrl: callbackUrl,
           responseMode: VKID.ConfigResponseMode.Callback,
           source: VKID.ConfigSource.LOWCODE,
@@ -456,7 +464,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       } catch (initError) {
         console.error('VK OneTap init error', initError)
         setVkError(
-          'Ошибка инициализации VK One Tap. Проверьте настройки приложения.',
+          `Ошибка инициализации VK One Tap: ${initError?.message || 'проверьте настройки приложения.'}`,
         )
       }
     }
