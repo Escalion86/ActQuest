@@ -43,6 +43,13 @@ const resolveVkIdCallbackUrl = (explicitCallbackUrl) => {
   }
 }
 
+const resolveVkIdConfigValue = (enumObject, key, fallback) => {
+  if (enumObject && typeof enumObject === 'object' && enumObject[key]) {
+    return enumObject[key]
+  }
+  return fallback
+}
+
 const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const { data: session, status, update } = useSession()
   const router = useRouter()
@@ -347,25 +354,54 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
           return
         }
 
+        const responseMode = resolveVkIdConfigValue(
+          VKID.ConfigResponseMode,
+          'Callback',
+          'callback',
+        )
+        const sourceMode = resolveVkIdConfigValue(
+          VKID.ConfigSource,
+          'LOWCODE',
+          'lowcode',
+        )
+
         VKID.Config.init({
           app: numericVkIdApp,
           redirectUrl: callbackUrl,
-          responseMode: VKID.ConfigResponseMode.Callback,
-          source: VKID.ConfigSource.LOWCODE,
+          responseMode,
+          source: sourceMode,
           scope: '',
         })
 
         const oneTap = new VKID.OneTap()
+        const widgetErrorEvent = resolveVkIdConfigValue(
+          VKID.WidgetEvents,
+          'ERROR',
+          null,
+        )
+        const oneTapSuccessEvent = resolveVkIdConfigValue(
+          VKID.OneTapInternalEvents,
+          'LOGIN_SUCCESS',
+          null,
+        )
+
+        if (!widgetErrorEvent || !oneTapSuccessEvent) {
+          setVkError(
+            'Текущая версия VKID SDK не поддерживает ожидаемые события One Tap.',
+          )
+          return
+        }
+
         oneTap
           .render({
             container,
             showAlternativeLogin: true,
           })
-          .on(VKID.WidgetEvents.ERROR, (error) => {
+          .on(widgetErrorEvent, (error) => {
             console.error('VK OneTap error', error)
             setVkError('Ошибка VK One Tap. Попробуйте другой способ входа.')
           })
-          .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, (payload) => {
+          .on(oneTapSuccessEvent, (payload) => {
             const code = payload.code
             const deviceId = payload.device_id
 
