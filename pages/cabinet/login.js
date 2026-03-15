@@ -50,6 +50,9 @@ const resolveVkIdConfigValue = (enumObject, key, fallback) => {
   return fallback
 }
 
+const isVkIdTelemetryUrl = (url) =>
+  typeof url === 'string' && url.includes('id.vk.com/stat_events_vkid_sdk')
+
 const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const { data: session, status, update } = useSession()
   const router = useRouter()
@@ -329,6 +332,32 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       return undefined
 
     const container = vkIdWidgetContainerRef.current
+    const originalFetch =
+      typeof window !== 'undefined' && typeof window.fetch === 'function'
+        ? window.fetch.bind(window)
+        : null
+
+    // VK ID SDK шлёт telemetry-запросы, которые могут блокироваться CORS/браузером.
+    // Подменяем только этот URL локальным успешным ответом, чтобы One Tap не падал.
+    if (originalFetch) {
+      window.fetch = async (...args) => {
+        const firstArg = args[0]
+        const requestUrl =
+          typeof firstArg === 'string'
+            ? firstArg
+            : firstArg?.url || ''
+
+        if (isVkIdTelemetryUrl(requestUrl)) {
+          return new Response('', {
+            status: 200,
+            statusText: 'OK',
+          })
+        }
+
+        return originalFetch(...args)
+      }
+    }
+
     while (container.firstChild) {
       container.removeChild(container.firstChild)
     }
@@ -377,12 +406,12 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
         const widgetErrorEvent = resolveVkIdConfigValue(
           VKID.WidgetEvents,
           'ERROR',
-          'error',
+          'common: error',
         )
         const oneTapSuccessEvent = resolveVkIdConfigValue(
           VKID.OneTapInternalEvents,
           'LOGIN_SUCCESS',
-          'login_success',
+          'onetap: success login',
         )
 
         const renderedWidget = oneTap.render({
@@ -472,6 +501,10 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
     document.body.appendChild(script)
 
     return () => {
+      if (originalFetch) {
+        window.fetch = originalFetch
+      }
+
       if (script.parentNode) {
         script.parentNode.removeChild(script)
       }
