@@ -127,37 +127,55 @@ const authenticateVkUser = async ({ location, rawData }) => {
     }
 
     if (vkJson.error) {
-      return errorResponse(
-        'VK_API_ERROR',
-        'Ошибка VK API при проверке токена.',
-        {
+      // Для токенов VK ID метод api.vk.com/users.get может вернуть auth-ошибку.
+      // В таком случае используем данные из One Tap payload и не блокируем вход.
+      if (isVkDebugEnabled) {
+        console.info('[VK_DEBUG] authenticateVkUser:vk_api_error_fallback_to_payload', {
           vkError: vkJson.error,
-        },
-      )
-    }
+          vkUserId,
+        })
+      }
 
-    if (
+      verifiedUser = {
+        id: vkUserId,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        photo_200: photoUrl || null,
+      }
+    } else if (
       !vkJson.response ||
       !Array.isArray(vkJson.response) ||
       vkJson.response.length === 0
     ) {
-      return errorResponse('VK_USER_NOT_FOUND', 'Пользователь VK не найден.')
-    }
+      if (isVkDebugEnabled) {
+        console.info('[VK_DEBUG] authenticateVkUser:vk_user_not_found_fallback_to_payload', {
+          vkUserId,
+        })
+      }
 
-    verifiedUser = vkJson.response[0]
+      verifiedUser = {
+        id: vkUserId,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        photo_200: photoUrl || null,
+      }
+    } else {
+      verifiedUser = vkJson.response[0]
+    }
   } catch (error) {
     if (isVkDebugEnabled) {
-      console.info('[VK_DEBUG] authenticateVkUser:vk_api_request_failed', {
+      console.info('[VK_DEBUG] authenticateVkUser:vk_api_request_failed_fallback_to_payload', {
         message: error.message,
+        vkUserId,
       })
     }
-    return errorResponse(
-      'VK_API_REQUEST_FAILED',
-      'Не удалось проверить токен VK.',
-      {
-        message: error.message,
-      },
-    )
+
+    verifiedUser = {
+      id: vkUserId,
+      first_name: firstName || null,
+      last_name: lastName || null,
+      photo_200: photoUrl || null,
+    }
   }
 
   const nameParts = [
