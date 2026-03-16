@@ -6,6 +6,14 @@ const toStringOrEmpty = (value) => {
   return String(value)
 }
 
+const toBooleanOrDefault = (value, fallback) => {
+  if (typeof value === 'boolean') {
+    return value
+  }
+
+  return fallback
+}
+
 const normalizeSiteSettings = (doc = null) => {
   const settings = doc ?? {}
 
@@ -14,6 +22,9 @@ const normalizeSiteSettings = (doc = null) => {
     supportPhone: toStringOrEmpty(settings.supportPhone),
     announcement: toStringOrEmpty(settings.announcement),
     chatUrl: toStringOrEmpty(settings.chatUrl),
+    allowSiteAuth: toBooleanOrDefault(settings.allowSiteAuth, true),
+    allowSiteRegistration: toBooleanOrDefault(settings.allowSiteRegistration, true),
+    enableVkOneTap: toBooleanOrDefault(settings.enableVkOneTap, true),
   }
 }
 

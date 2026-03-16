@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { signIn, useSession } from 'next-auth/react'
+import NoticeBanner from '@components/NoticeBanner'
 
 import getSessionSafe from '@helpers/getSessionSafe'
 import { extractRelativePath, resolveCabinetCallback } from '@helpers/cabinetAuth'
@@ -14,6 +15,11 @@ const availableLocations = Object.entries(LOCATIONS)
   .map(([key, value]) => ({ key, ...value }))
 
 const defaultLocation = availableLocations[0]?.key ?? 'dev'
+const defaultSiteAccess = {
+  allowSiteAuth: true,
+  allowSiteRegistration: true,
+  enableVkOneTap: true,
+}
 
 const CabinetRegisterPage = ({ authCallbackUrl }) => {
   const { data: session, status, update } = useSession()
@@ -28,6 +34,8 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
   const [authError, setAuthError] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isClient, setIsClient] = useState(false)
+  const [siteAccess, setSiteAccess] = useState(defaultSiteAccess)
+  const [isSiteAccessLoading, setIsSiteAccessLoading] = useState(false)
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
 
   useEffect(() => {
@@ -39,6 +47,48 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
       setLocation(session.user.location)
     }
   }, [session?.user?.location])
+
+  useEffect(() => {
+    if (!isClient || !location) {
+      return undefined
+    }
+
+    let cancelled = false
+
+    const fetchSiteAccess = async () => {
+      setIsSiteAccessLoading(true)
+      try {
+        const response = await fetch(
+          `/api/public/site-access?location=${encodeURIComponent(location)}`,
+        )
+        const json = await response.json()
+        if (!cancelled && response.ok && json?.success && json?.data) {
+          setSiteAccess({
+            allowSiteAuth: Boolean(json.data.allowSiteAuth),
+            allowSiteRegistration: Boolean(json.data.allowSiteRegistration),
+            enableVkOneTap: Boolean(json.data.enableVkOneTap),
+          })
+          return
+        }
+      } catch (error) {
+        console.error('Failed to load site access controls on register', error)
+      } finally {
+        if (!cancelled) {
+          setIsSiteAccessLoading(false)
+        }
+      }
+
+      if (!cancelled) {
+        setSiteAccess(defaultSiteAccess)
+      }
+    }
+
+    fetchSiteAccess()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isClient, location])
 
   useEffect(() => {
     if (status !== 'authenticated' || !session) {
@@ -67,6 +117,10 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
     async (event) => {
       event.preventDefault()
       if (isSubmitting) return
+      if (!siteAccess.allowSiteRegistration) {
+        setAuthError('Регистрация в этом регионе временно отключена.')
+        return
+      }
 
       const digitsOnly = normalizePhoneForSubmit(phoneInput)
       if (!digitsOnly || digitsOnly.length < 11) {
@@ -164,6 +218,7 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
       passwordRepeatInput,
       phoneInput,
       router,
+      siteAccess.allowSiteRegistration,
       updateSession,
     ],
   )
@@ -180,6 +235,16 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
             <p className="mt-2 text-sm text-slate-500">
               Создайте пароль для входа в личный кабинет по номеру телефона.
             </p>
+            {!siteAccess.allowSiteRegistration ? (
+              <NoticeBanner tone="warning" className="mt-4">
+                Регистрация временно отключена, ведутся работы.
+              </NoticeBanner>
+            ) : null}
+            {isSiteAccessLoading ? (
+              <NoticeBanner className="mt-4 text-xs">
+                Загружаем настройки доступа...
+              </NoticeBanner>
+            ) : null}
 
             <form className="mt-6 space-y-4" onSubmit={handleRegister}>
               <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
@@ -188,7 +253,7 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
                   className="px-4 py-3 text-base transition border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
                   value={location}
                   onChange={(event) => setLocation(event.target.value)}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isSiteAccessLoading}
                 >
                   {availableLocations.map((item) => (
                     <option key={item.key} value={item.key}>
@@ -203,7 +268,7 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
                 value={nameInput}
                 onChange={(event) => setNameInput(event.target.value)}
                 placeholder="Имя (необязательно)"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !siteAccess.allowSiteRegistration}
                 className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
               />
 
@@ -214,7 +279,7 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
                   setPhoneInput(formatPhoneInput(event.target.value))
                 }
                 placeholder="+7 900 000-00-00"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !siteAccess.allowSiteRegistration}
                 className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
               />
 
@@ -223,7 +288,7 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
                 value={passwordInput}
                 onChange={(event) => setPasswordInput(event.target.value)}
                 placeholder="Пароль (минимум 8 символов)"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !siteAccess.allowSiteRegistration}
                 className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
               />
 
@@ -232,13 +297,13 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
                 value={passwordRepeatInput}
                 onChange={(event) => setPasswordRepeatInput(event.target.value)}
                 placeholder="Повторите пароль"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !siteAccess.allowSiteRegistration}
                 className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
               />
 
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !siteAccess.allowSiteRegistration}
                 className="w-full px-4 py-3 text-sm font-semibold text-white transition bg-emerald-600 rounded-xl hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? 'Регистрация…' : 'Зарегистрироваться'}
@@ -246,18 +311,20 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
             </form>
 
             {authError ? (
-              <p className="mt-4 w-full px-3 py-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
+              <NoticeBanner tone="error" className="mt-4">
                 {authError}
-              </p>
+              </NoticeBanner>
             ) : null}
 
             <div className="mt-6 flex flex-col gap-2 text-sm">
               <Link href={`/cabinet/login?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`} className="text-primary hover:underline">
                 Уже есть аккаунт? Войти
               </Link>
-              <Link href="/cabinet/login" className="text-slate-500 hover:underline">
-                Войти через VK
-              </Link>
+              {siteAccess.allowSiteAuth && siteAccess.enableVkOneTap ? (
+                <Link href="/cabinet/login" className="text-slate-500 hover:underline">
+                  Войти через VK
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>

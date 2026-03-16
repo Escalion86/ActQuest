@@ -5,6 +5,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import authenticateTelegramUser from '@helpers/authenticateTelegramUser'
 import authenticateVkUser from '@helpers/authenticateVkUser'
 import authenticatePasswordUser from '@helpers/authenticatePasswordUser'
+import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
 
 const ensureSerializableId = (value) => {
   if (value === null || value === undefined) return null
@@ -50,6 +51,12 @@ const normalizeUserForSession = (user, fallback = {}) => {
   normalizedUser._id = ensureSerializableId(rawId)
 
   return normalizedUser
+}
+
+const normalizeLocation = (value) => {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim().toLowerCase()
+  return trimmed || null
 }
 
 export const authOptions = {
@@ -98,10 +105,18 @@ export const authOptions = {
         location: { label: 'Location', type: 'text' },
       },
       authorize: async (credentials) => {
-        const location = credentials?.location
+        const location = normalizeLocation(credentials?.location)
         const rawData = credentials?.data
 
         try {
+          const controls = await getSiteAccessControlsByLocation(location)
+          if (!controls.allowSiteAuth) {
+            throw new Error('AUTH_DISABLED')
+          }
+          if (!controls.enableVkOneTap) {
+            throw new Error('VK_ONETAP_DISABLED')
+          }
+
           const result = await authenticateVkUser({ location, rawData })
 
           if (!result.success) {
@@ -128,10 +143,15 @@ export const authOptions = {
         location: { label: 'Location', type: 'text' },
       },
       authorize: async (credentials) => {
-        const location = credentials?.location
+        const location = normalizeLocation(credentials?.location)
         const rawData = credentials?.data
 
         try {
+          const controls = await getSiteAccessControlsByLocation(location)
+          if (!controls.allowSiteAuth) {
+            throw new Error('AUTH_DISABLED')
+          }
+
           const result = await authenticatePasswordUser({ location, rawData })
 
           if (!result.success) {

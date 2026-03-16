@@ -54,6 +54,9 @@ const SettingsPage = ({ initialSiteSettings }) => {
           ? siteSettings.announcement.trim()
           : '',
       chatUrl: normalizeField(siteSettings.chatUrl),
+      allowSiteAuth: Boolean(siteSettings.allowSiteAuth),
+      allowSiteRegistration: Boolean(siteSettings.allowSiteRegistration),
+      enableVkOneTap: Boolean(siteSettings.enableVkOneTap),
     }
 
     const baseUrl = `/api/${location}/custom?collection=sitesettings`
@@ -99,10 +102,10 @@ const SettingsPage = ({ initialSiteSettings }) => {
     return (
       <>
         <Head>
-          <title>ActQuest — Настройки сайта</title>
+          <title>ActQuest — Управление сайтом</title>
         </Head>
         <CabinetLayout
-          title="Настройки сайта"
+          title="Управление сайтом"
           description="Обновление публичной информации доступно только администраторам."
           activePage="settings"
         >
@@ -119,11 +122,11 @@ const SettingsPage = ({ initialSiteSettings }) => {
   return (
     <>
       <Head>
-        <title>ActQuest — Настройки сайта</title>
+        <title>ActQuest — Управление сайтом</title>
       </Head>
       <CabinetLayout
-        title="Настройки сайта"
-        description="Настройте основные контакты, уведомления и режимы доступа."
+        title="Управление сайтом"
+        description="Настройте контакты, тексты и доступ к авторизации на сайте."
         activePage="settings"
       >
         <section className="p-6 space-y-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
@@ -169,6 +172,61 @@ const SettingsPage = ({ initialSiteSettings }) => {
             />
           </div>
 
+          <div className="p-4 space-y-4 border border-slate-200 dark:border-slate-700 rounded-xl">
+            <h3 className="text-sm font-semibold text-primary">Доступ к сайту</h3>
+
+            <label className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  Включить авторизацию на сайте
+                </p>
+                <p className="text-xs text-slate-500">
+                  Отключение заблокирует вход по телефону и через VK.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={Boolean(siteSettings.allowSiteAuth)}
+                onChange={(event) => handleSettingsChange('allowSiteAuth', event.target.checked)}
+                className="w-5 h-5 mt-1 rounded text-primary focus:ring-primary/40"
+              />
+            </label>
+
+            <label className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  Включить регистрацию на сайте
+                </p>
+                <p className="text-xs text-slate-500">
+                  Если отключено, новые аккаунты по телефону нельзя создать.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={Boolean(siteSettings.allowSiteRegistration)}
+                onChange={(event) => handleSettingsChange('allowSiteRegistration', event.target.checked)}
+                className="w-5 h-5 mt-1 rounded text-primary focus:ring-primary/40"
+              />
+            </label>
+
+            <label className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  Включить VK One Tap кнопку
+                </p>
+                <p className="text-xs text-slate-500">
+                  Управляет отображением и доступностью входа через VK One Tap.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={Boolean(siteSettings.enableVkOneTap)}
+                onChange={(event) => handleSettingsChange('enableVkOneTap', event.target.checked)}
+                className="w-5 h-5 mt-1 rounded text-primary focus:ring-primary/40"
+              />
+            </label>
+          </div>
+
           {saveState.error ? (
             <div className="px-4 py-3 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl">
               {saveState.error}
@@ -212,6 +270,9 @@ SettingsPage.propTypes = {
     supportPhone: PropTypes.string,
     announcement: PropTypes.string,
     chatUrl: PropTypes.string,
+    allowSiteAuth: PropTypes.bool,
+    allowSiteRegistration: PropTypes.bool,
+    enableVkOneTap: PropTypes.bool,
   }),
 }
 

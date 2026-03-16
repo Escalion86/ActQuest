@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { signIn, useSession } from 'next-auth/react'
+import NoticeBanner from '@components/NoticeBanner'
 
 import getSessionSafe from '@helpers/getSessionSafe'
 import {
@@ -17,6 +18,11 @@ const availableLocations = Object.entries(LOCATIONS)
   .map(([key, value]) => ({ key, ...value }))
 
 const defaultLocation = availableLocations[0]?.key ?? 'dev'
+const defaultSiteAccess = {
+  allowSiteAuth: true,
+  allowSiteRegistration: true,
+  enableVkOneTap: true,
+}
 
 const VK_SDK_URL = 'https://unpkg.com/@vkid/sdk@2.6.5/dist-sdk/umd/index.js'
 let vkSdkLoadPromise = null
@@ -66,6 +72,8 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const [vkError, setVkError] = useState(null)
   const [phoneInput, setPhoneInput] = useState('')
   const [passwordInput, setPasswordInput] = useState('')
+  const [siteAccess, setSiteAccess] = useState(defaultSiteAccess)
+  const [isSiteAccessLoading, setIsSiteAccessLoading] = useState(false)
   const vkIdWidgetContainerRef = useRef(null)
   const vkidAppId = Number.parseInt(
     String(
@@ -90,6 +98,48 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       setLocation(session.user.location)
     }
   }, [session?.user?.location])
+
+  useEffect(() => {
+    if (!isClient || !location) {
+      return undefined
+    }
+
+    let cancelled = false
+
+    const fetchSiteAccess = async () => {
+      setIsSiteAccessLoading(true)
+      try {
+        const response = await fetch(
+          `/api/public/site-access?location=${encodeURIComponent(location)}`,
+        )
+        const json = await response.json()
+        if (!cancelled && response.ok && json?.success && json?.data) {
+          setSiteAccess({
+            allowSiteAuth: Boolean(json.data.allowSiteAuth),
+            allowSiteRegistration: Boolean(json.data.allowSiteRegistration),
+            enableVkOneTap: Boolean(json.data.enableVkOneTap),
+          })
+          return
+        }
+      } catch (error) {
+        console.error('Failed to load site access controls', error)
+      } finally {
+        if (!cancelled) {
+          setIsSiteAccessLoading(false)
+        }
+      }
+
+      if (!cancelled) {
+        setSiteAccess(defaultSiteAccess)
+      }
+    }
+
+    fetchSiteAccess()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isClient, location])
 
   useEffect(() => {
     if (status !== 'authenticated' || !session) {
@@ -117,6 +167,10 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const handleVkAuth = useCallback(
     async ({ accessToken, vkId, firstName, lastName, photoUrl }) => {
       if (!accessToken || !vkId || isAuthenticating) return
+      if (!siteAccess.allowSiteAuth || !siteAccess.enableVkOneTap) {
+        setVkError('Вход через VK One Tap отключён для выбранного региона.')
+        return
+      }
 
       try {
         setAuthError(null)
@@ -216,6 +270,8 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       isClient,
       location,
       router,
+      siteAccess.allowSiteAuth,
+      siteAccess.enableVkOneTap,
       updateSession,
     ],
   )
@@ -224,6 +280,11 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
     async (event) => {
       event.preventDefault()
       if (isAuthenticating) return
+
+      if (!siteAccess.allowSiteAuth) {
+        setAuthError('Авторизация на сайте временно отключена для выбранного региона.')
+        return
+      }
 
       const digitsOnly = normalizePhoneForSubmit(phoneInput)
       if (!digitsOnly || digitsOnly.length < 11) {
@@ -328,6 +389,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       phoneInput,
       passwordInput,
       router,
+      siteAccess.allowSiteAuth,
       updateSession,
     ],
   )
@@ -335,6 +397,8 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   useEffect(() => {
     if (
       !isClient ||
+      !siteAccess.allowSiteAuth ||
+      !siteAccess.enableVkOneTap ||
       !Number.isFinite(vkidAppId) ||
       !vkIdWidgetContainerRef.current
     ) {
@@ -455,7 +519,14 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       setIsVkIdReady(false)
       if (container) container.innerHTML = ''
     }
-  }, [isClient, vkidAppId, vkidCallbackUrl, handleVkAuth])
+  }, [
+    isClient,
+    vkidAppId,
+    vkidCallbackUrl,
+    handleVkAuth,
+    siteAccess.allowSiteAuth,
+    siteAccess.enableVkOneTap,
+  ])
 
   return (
     <>
@@ -534,7 +605,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                 </label>
 
                 <div className="flex flex-col items-center gap-4">
-                  {vkidAppId ? (
+                  {siteAccess.allowSiteAuth && siteAccess.enableVkOneTap && vkidAppId ? (
                     <div className="w-full">
                       <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                         Войти через VK ID
@@ -546,7 +617,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                         </div>
                       ) : null}
                     </div>
-                  ) : (
+                  ) : siteAccess.allowSiteAuth && siteAccess.enableVkOneTap ? (
                     <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
                       Укажите{' '}
                       <code className="px-1 bg-white rounded dark:bg-slate-900/80">
@@ -554,7 +625,19 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                       </code>{' '}
                       для входа через VK One Tap.
                     </div>
-                  )}
+                  ) : null}
+
+                  {!siteAccess.allowSiteAuth ? (
+                    <NoticeBanner tone="warning">
+                      Авторизация временно отключена, ведутся работы.
+                    </NoticeBanner>
+                  ) : null}
+
+                  {isSiteAccessLoading ? (
+                    <NoticeBanner className="text-xs" centered>
+                      Загружаем настройки доступа...
+                    </NoticeBanner>
+                  ) : null}
 
                   <div className="w-full text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                     или войдите по номеру телефона
@@ -575,7 +658,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                       }
                       placeholder="+7 900 000-00-00"
                       autoComplete="tel"
-                      disabled={isAuthenticating}
+                      disabled={isAuthenticating || !siteAccess.allowSiteAuth}
                       className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                     />
                     <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -587,29 +670,44 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                       onChange={(event) => setPasswordInput(event.target.value)}
                       placeholder="Введите пароль"
                       autoComplete="current-password"
-                      disabled={isAuthenticating}
+                      disabled={isAuthenticating || !siteAccess.allowSiteAuth}
                       className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                     />
                     <button
                       type="submit"
-                      disabled={isAuthenticating}
+                      disabled={isAuthenticating || !siteAccess.allowSiteAuth}
                       className="w-full px-4 py-3 text-sm font-semibold text-white transition bg-emerald-600 rounded-xl hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Войти
                     </button>
                   </form>
-                  <Link
-                    href={`/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
-                    className="inline-flex items-center justify-center w-full px-4 py-3 text-sm font-semibold border rounded-xl border-primary text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10"
-                  >
-                    Я не зарегистрирован
-                  </Link>
+
+                  {siteAccess.allowSiteRegistration ? (
+                    <Link
+                      href={`/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
+                      className="inline-flex items-center justify-center w-full px-4 py-3 text-sm font-semibold border rounded-xl border-primary text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                    >
+                      Я не зарегистрирован
+                    </Link>
+                  ) : (
+                    <NoticeBanner centered>
+                      Регистрация временно отключена, ведутся работы.
+                    </NoticeBanner>
+                  )}
 
                   <div className="w-full text-sm text-center text-slate-500">
                     Забыли пароль?{' '}
                     <Link
-                      href={`/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
-                      className="font-semibold text-primary hover:underline"
+                      href={
+                        siteAccess.allowSiteRegistration
+                          ? `/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`
+                          : '/cabinet/login'
+                      }
+                      className={`font-semibold ${
+                        siteAccess.allowSiteRegistration
+                          ? 'text-primary hover:underline'
+                          : 'text-slate-400 cursor-default pointer-events-none'
+                      }`}
                     >
                       Восстановить
                     </Link>
@@ -624,14 +722,14 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                   </div>
 
                   {vkError ? (
-                    <p className="w-full px-3 py-2 text-sm text-red-600 border border-red-200 bg-red-50 rounded-xl">
+                    <NoticeBanner tone="error">
                       {vkError}
-                    </p>
+                    </NoticeBanner>
                   ) : null}
                   {authError ? (
-                    <p className="w-full px-3 py-2 text-sm text-red-600 border border-red-200 bg-red-50 rounded-xl">
+                    <NoticeBanner tone="error">
                       {authError}
-                    </p>
+                    </NoticeBanner>
                   ) : null}
                 </div>
               </div>

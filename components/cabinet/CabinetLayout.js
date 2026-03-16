@@ -40,7 +40,7 @@ const baseMenuItems = [
 
 const adminMenuItems = [
   { id: 'admin', label: 'Администрирование', href: '/cabinet/admin', icon: faLayerGroup },
-  { id: 'settings', label: 'Настройки сайта', href: '/cabinet/settings', icon: faSliders },
+  { id: 'settings', label: 'Управление сайтом', href: '/cabinet/settings', icon: faSliders },
 ]
 
 const adminSubmenuItems = [

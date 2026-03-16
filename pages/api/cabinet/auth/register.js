@@ -1,4 +1,5 @@
 import registerPhoneUser from '@helpers/registerPhoneUser'
+import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,10 +8,23 @@ export default async function handler(req, res) {
   }
 
   const { location, data } = req.body || {}
+  const normalizedLocation =
+    typeof location === 'string' && location.trim().length > 0
+      ? location.trim().toLowerCase()
+      : null
 
   try {
+    const controls = await getSiteAccessControlsByLocation(normalizedLocation)
+    if (!controls.allowSiteRegistration) {
+      return res.status(403).json({
+        success: false,
+        errorCode: 'REGISTRATION_DISABLED',
+        error: 'Регистрация на сайте временно отключена для выбранного региона.',
+      })
+    }
+
     const result = await registerPhoneUser({
-      location,
+      location: normalizedLocation,
       rawData: data,
     })
 
