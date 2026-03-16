@@ -2,7 +2,9 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import upsertGlobalUser from '@helpers/upsertGlobalUser'
 import syncLegacyUserByLocation from '@helpers/syncLegacyUserByLocation'
 
-const isVkDebugEnabled = process.env.VK_AUTH_DEBUG === 'true'
+const isVkDebugEnabled =
+  process.env.VK_AUTH_DEBUG === 'true' ||
+  process.env.VK_DEBUG_LOGS === 'true'
 
 const maskToken = (token) => {
   if (!token || typeof token !== 'string') return null

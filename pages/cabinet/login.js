@@ -23,13 +23,28 @@ const defaultSiteAccess = {
   allowSiteRegistration: true,
   enableVkOneTap: true,
 }
-const isVkDebugEnabled = process.env.NEXT_PUBLIC_VK_AUTH_DEBUG === 'true'
+const isVkDebugEnabled =
+  process.env.NEXT_PUBLIC_VK_AUTH_DEBUG === 'true' ||
+  process.env.NEXT_PUBLIC_VK_DEBUG_LOGS === 'true'
 
-const maskToken = (token) => {
-  if (!token || typeof token !== 'string') return null
-  if (token.length <= 10) return '***'
-  return `${token.slice(0, 4)}...${token.slice(-4)}`
+const VK_SIGNIN_ERROR_MESSAGES = {
+  VK_BAD_REQUEST: 'Неполные данные для входа через VK ID. Обновите страницу.',
+  VK_AUTH_DISABLED: 'Вход через VK ID временно отключен для выбранного региона.',
+  VK_EXCHANGE_FAILED:
+    'VK ID временно недоступен. Попробуйте позже или войдите по номеру телефона.',
+  VK_USERINFO_FAILED:
+    'Не удалось получить профиль VK. Попробуйте позже или войдите по номеру телефона.',
+  VK_PROFILE_INVALID: 'Профиль VK ID передан некорректно.',
+  VK_SERVER_UNAVAILABLE: 'Сервис авторизации временно недоступен.',
+  VK_ACCOUNT_NOT_FOUND:
+    'Аккаунт не найден. Зарегистрируйтесь по номеру телефона или через VK позже.',
+  CredentialsSignin:
+    'Не удалось завершить вход через VK ID. Попробуйте снова или войдите по номеру телефона.',
 }
+
+const mapVkSignInError = (errorCode) =>
+  VK_SIGNIN_ERROR_MESSAGES[errorCode] ||
+  'Не удалось выполнить вход через VK ID. Попробуйте позже.'
 
 const VK_SDK_URL = 'https://unpkg.com/@vkid/sdk@2.6.5/dist-sdk/umd/index.js'
 let vkSdkLoadPromise = null
@@ -96,6 +111,10 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const vkidCallbackUrl =
     process.env.NEXT_PUBLIC_VK_ID_REDIRECT_URI ||
     process.env.NEXT_PUBLIC_VKID_CALLBACK_URL
+  const vkidScope =
+    process.env.NEXT_PUBLIC_VK_ID_SCOPE ||
+    process.env.NEXT_PUBLIC_VK_SCOPE ||
+    'phone email'
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
 
   useEffect(() => {
@@ -178,8 +197,15 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   }, [update])
 
   const handleVkAuth = useCallback(
-    async ({ accessToken, vkId, firstName, lastName, photoUrl }) => {
-      if (!accessToken || !vkId || isAuthenticatingRef.current || vkAuthInFlightRef.current) return
+    async ({ code, deviceId, codeVerifier, state }) => {
+      if (
+        !code ||
+        !deviceId ||
+        isAuthenticatingRef.current ||
+        vkAuthInFlightRef.current
+      ) {
+        return
+      }
       if (!siteAccess.allowSiteAuth || !siteAccess.enableVkOneTap) {
         setVkError('Вход через VK One Tap отключён для выбранного региона.')
         return
@@ -190,14 +216,6 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
         setAuthError(null)
         setVkError(null)
         setIsAuthenticating(true)
-
-        const payload = JSON.stringify({
-          accessToken,
-          vkId,
-          firstName,
-          lastName,
-          photoUrl,
-        })
 
         let absoluteCallbackUrl = effectiveCallbackUrl
 
@@ -219,8 +237,12 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
         const result = await signIn('vk', {
           redirect: false,
           callbackUrl: absoluteCallbackUrl,
-          data: payload,
           location,
+          mode: 'login',
+          code,
+          deviceId,
+          codeVerifier,
+          state,
         })
 
         if (result?.error) {
@@ -270,10 +292,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
         }
       } catch (authError) {
         console.error('VK auth error', authError)
-        setVkError(
-          authError.message ||
-            'Не удалось авторизоваться через VK. Попробуйте ещё раз.',
-        )
+        setVkError(mapVkSignInError(authError.message))
       } finally {
         vkAuthInFlightRef.current = false
         setIsAuthenticating(false)
@@ -439,7 +458,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
           redirectUrl: resolveVkIdCallbackUrl(vkidCallbackUrl),
           responseMode: VKID.ConfigResponseMode.Callback,
           source: VKID.ConfigSource.LOWCODE,
-          scope: '',
+          scope: vkidScope,
         })
       } catch (error) {
         // может быть уже инициализировано
@@ -481,6 +500,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
           const deviceId = payload?.device_id
           const codeVerifier =
             payload?.code_verifier || payload?.codeVerifier || payload?.verifier
+          const state = payload?.state || null
 
           if (!code || !deviceId) {
             setVkError('VK ID не вернул код авторизации.')
@@ -488,80 +508,25 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
           }
 
           try {
-            const exchangeResult = codeVerifier
-              ? await VKID.Auth.exchangeCode(code, deviceId, codeVerifier)
-              : await VKID.Auth.exchangeCode(code, deviceId)
-
             if (isVkDebugEnabled) {
-              console.info('[VK_DEBUG][client] exchange_code_result', {
-                resultKeys:
-                  exchangeResult && typeof exchangeResult === 'object'
-                    ? Object.keys(exchangeResult).sort()
-                    : [],
-                userKeys:
-                  exchangeResult?.user && typeof exchangeResult.user === 'object'
-                    ? Object.keys(exchangeResult.user).sort()
-                    : [],
+              console.info('[VK_DEBUG][client] server_exchange_auth_params', {
+                hasCode: Boolean(code),
+                hasDeviceId: Boolean(deviceId),
+                hasCodeVerifier: Boolean(codeVerifier),
+                hasState: Boolean(state),
               })
             }
 
-            const accessToken =
-              exchangeResult?.access_token ||
-              exchangeResult?.accessToken ||
-              null
-            const vkId =
-              exchangeResult?.user?.id ||
-              exchangeResult?.user_id ||
-              exchangeResult?.id ||
-              exchangeResult?.userId ||
-              exchangeResult?.vkId ||
-              null
-            const firstName =
-              exchangeResult?.user?.first_name ||
-              exchangeResult?.user?.firstName ||
-              exchangeResult?.firstName ||
-              ''
-            const lastName =
-              exchangeResult?.user?.last_name ||
-              exchangeResult?.user?.lastName ||
-              exchangeResult?.lastName ||
-              ''
-            const photoUrl =
-              exchangeResult?.user?.photo ||
-              exchangeResult?.user?.photo_200 ||
-              exchangeResult?.photoUrl ||
-              null
-
-            if (!accessToken || !vkId) {
-              if (isVkDebugEnabled) {
-                console.info('[VK_DEBUG][client] missing_vk_data_after_exchange', {
-                  accessTokenMasked: maskToken(accessToken),
-                  vkId: vkId ?? null,
-                  exchangeResultPreview: {
-                    hasUser: Boolean(exchangeResult?.user),
-                    id: exchangeResult?.id ?? null,
-                    user_id: exchangeResult?.user_id ?? null,
-                    userId: exchangeResult?.userId ?? null,
-                    vkId: exchangeResult?.vkId ?? null,
-                    userIdNested: exchangeResult?.user?.id ?? null,
-                  },
-                })
-              }
-              setVkError('Не удалось получить данные VK после авторизации.')
-              return
-            }
-
             await handleVkAuth({
-              accessToken,
-              vkId,
-              firstName,
-              lastName,
-              photoUrl,
+              code,
+              deviceId,
+              codeVerifier,
+              state,
             })
           } catch (error) {
-            console.error('VK OneTap exchange error', error)
+            console.error('VK OneTap auth error', error)
             if (isVkDebugEnabled) {
-              console.info('[VK_DEBUG][client] exchange_code_error', {
+              console.info('[VK_DEBUG][client] server_exchange_auth_error', {
                 message: error?.message ?? null,
                 name: error?.name ?? null,
                 stack: error?.stack ?? null,
@@ -587,6 +552,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
     isClient,
     vkidAppId,
     vkidCallbackUrl,
+    vkidScope,
     handleVkAuth,
     siteAccess.allowSiteAuth,
     siteAccess.enableVkOneTap,

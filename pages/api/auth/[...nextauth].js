@@ -6,8 +6,11 @@ import authenticateTelegramUser from '@helpers/authenticateTelegramUser'
 import authenticateVkUser from '@helpers/authenticateVkUser'
 import authenticatePasswordUser from '@helpers/authenticatePasswordUser'
 import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
+import { exchangeVkCode, fetchVkUserInfo } from '@helpers/vkIdAuth'
 
-const isVkDebugEnabled = process.env.VK_AUTH_DEBUG === 'true'
+const isVkDebugEnabled =
+  process.env.VK_AUTH_DEBUG === 'true' ||
+  process.env.VK_DEBUG_LOGS === 'true'
 
 const ensureSerializableId = (value) => {
   if (value === null || value === undefined) return null
@@ -105,10 +108,21 @@ export const authOptions = {
       credentials: {
         data: { label: 'VK auth data', type: 'text' },
         location: { label: 'Location', type: 'text' },
+        code: { label: 'Code', type: 'text' },
+        deviceId: { label: 'DeviceId', type: 'text' },
+        state: { label: 'State', type: 'text' },
+        codeVerifier: { label: 'CodeVerifier', type: 'text' },
+        mode: { label: 'Mode', type: 'text' },
       },
       authorize: async (credentials) => {
         const location = normalizeLocation(credentials?.location)
         const rawData = credentials?.data
+        const code = credentials?.code ? String(credentials.code) : null
+        const deviceId = credentials?.deviceId ? String(credentials.deviceId) : null
+        const state = credentials?.state ? String(credentials.state) : null
+        const codeVerifier = credentials?.codeVerifier
+          ? String(credentials.codeVerifier)
+          : null
 
         try {
           const controls = await getSiteAccessControlsByLocation(location)
@@ -119,7 +133,71 @@ export const authOptions = {
             throw new Error('VK_ONETAP_DISABLED')
           }
 
-          const result = await authenticateVkUser({ location, rawData })
+          let result = null
+
+          if (code && deviceId) {
+            const exchangeResult = await exchangeVkCode({
+              code,
+              deviceId,
+              codeVerifier,
+              state,
+            })
+
+            if (!exchangeResult?.success) {
+              if (isVkDebugEnabled) {
+                console.info('[VK_DEBUG] nextauth_vk_exchange_failed', {
+                  location,
+                  error: exchangeResult?.data?.error || null,
+                })
+              }
+              throw new Error('VK_EXCHANGE_FAILED')
+            }
+
+            const accessToken = exchangeResult?.data?.access_token
+            if (!accessToken) {
+              throw new Error('VK_EXCHANGE_FAILED')
+            }
+
+            const userInfoResult = await fetchVkUserInfo({ accessToken })
+            if (!userInfoResult?.success) {
+              if (isVkDebugEnabled) {
+                console.info('[VK_DEBUG] nextauth_vk_userinfo_failed', {
+                  location,
+                  error: userInfoResult?.data?.error || null,
+                })
+              }
+              throw new Error('VK_USERINFO_FAILED')
+            }
+
+            const vkUser = userInfoResult?.data?.user || {}
+            const vkId =
+              vkUser?.user_id ||
+              exchangeResult?.data?.user_id ||
+              null
+
+            if (!vkId) {
+              throw new Error('VK_PROFILE_INVALID')
+            }
+
+            const normalizedPayload = JSON.stringify({
+              accessToken,
+              vkId,
+              firstName: vkUser?.first_name || '',
+              lastName: vkUser?.last_name || '',
+              photoUrl: vkUser?.avatar || vkUser?.photo_200 || null,
+            })
+
+            result = await authenticateVkUser({
+              location,
+              rawData: normalizedPayload,
+            })
+          } else {
+            if (!rawData) {
+              throw new Error('VK_BAD_REQUEST')
+            }
+            // fallback для старого клиентского flow
+            result = await authenticateVkUser({ location, rawData })
+          }
 
           if (!result.success) {
             console.error('VK authorize error', {
