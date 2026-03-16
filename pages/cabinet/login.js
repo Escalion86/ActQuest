@@ -512,11 +512,22 @@ const CabinetLoginPage = ({
         })
         .on(VKID.WidgetEvents.ERROR, (error) => {
           if (!isMounted) return
-          const vkWidgetError = error?.type || error?.code || error?.message
+          const vkWidgetErrorCode = error?.code ?? error?.type ?? null
+          const vkWidgetErrorText =
+            error?.text ||
+            error?.message ||
+            error?.details?.error_description ||
+            error?.details?.error ||
+            null
+          console.error('VK widget error', error)
           setVkError(
-            vkWidgetError
-              ? `Ошибка виджета VK ID (${vkWidgetError}). Попробуйте вход по паролю.`
-              : 'Ошибка виджета VK ID. Попробуйте вход по паролю.',
+            vkWidgetErrorText && vkWidgetErrorCode !== null
+              ? `Ошибка виджета VK ID (${vkWidgetErrorCode}): ${vkWidgetErrorText}. Попробуйте вход по паролю.`
+              : vkWidgetErrorText
+                ? `Ошибка виджета VK ID: ${vkWidgetErrorText}. Попробуйте вход по паролю.`
+                : vkWidgetErrorCode !== null
+                  ? `Ошибка виджета VK ID (${vkWidgetErrorCode}). Попробуйте вход по паролю.`
+                  : 'Ошибка виджета VK ID. Попробуйте вход по паролю.',
           )
         })
         .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload) => {
