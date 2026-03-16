@@ -81,10 +81,29 @@ const resolveVkIdCallbackUrl = (explicitCallbackUrl) => {
   }
 }
 
+const parseVkAppId = (value) => {
+  const raw = String(value || '').trim().replace(/^['"]|['"]$/g, '')
+  const parsed = Number.parseInt(raw, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
+const normalizeEnvUrl = (value) => {
+  const raw = String(value || '').trim().replace(/^['"]|['"]$/g, '')
+  if (!raw) return ''
+  try {
+    return new URL(raw).toString()
+  } catch {
+    return ''
+  }
+}
+
 const CabinetLoginPage = ({
   authCallbackUrl,
   authCallbackSource,
   isVkAuthVisible,
+  vkidAppId,
+  vkidCallbackUrl,
+  vkidScope,
 }) => {
   const { data: session, status, update } = useSession()
   const router = useRouter()
@@ -103,22 +122,6 @@ const CabinetLoginPage = ({
   const vkIdWidgetContainerRef = useRef(null)
   const isAuthenticatingRef = useRef(false)
   const vkAuthInFlightRef = useRef(false)
-  const vkidAppId = Number.parseInt(
-    String(
-      process.env.NEXT_PUBLIC_VK_ID_APP_ID ||
-        process.env.NEXT_PUBLIC_VKID_ONETAP_APP_ID ||
-        process.env.NEXT_PUBLIC_VK_APP_ID ||
-        '',
-    ),
-    10,
-  )
-  const vkidCallbackUrl =
-    process.env.NEXT_PUBLIC_VK_ID_REDIRECT_URI ||
-    process.env.NEXT_PUBLIC_VKID_CALLBACK_URL
-  const vkidScope =
-    process.env.NEXT_PUBLIC_VK_ID_SCOPE ||
-    process.env.NEXT_PUBLIC_VK_SCOPE ||
-    'phone email'
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
   const isVkSignInEnabled =
     isVkAuthVisible && siteAccess.allowSiteAuth && siteAccess.enableVkOneTap
@@ -654,11 +657,11 @@ const CabinetLoginPage = ({
                     </div>
                   ) : isVkSignInEnabled ? (
                     <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
-                      Укажите{' '}
+                      Проверьте переменную{' '}
                       <code className="px-1 bg-white rounded dark:bg-slate-900/80">
-                        NEXT_PUBLIC_VK_ID_APP_ID
+                        VK_ID_APP_ID
                       </code>{' '}
-                      для входа через VK One Tap.
+                      на сервере для входа через VK One Tap.
                     </div>
                   ) : null}
 
@@ -786,6 +789,13 @@ export async function getServerSideProps(context) {
     process.env.MODE ?? process.env.NODE_ENV ?? 'production',
   ).toLowerCase()
   const isVkAuthVisible = currentMode !== 'development'
+  const vkidAppId = parseVkAppId(process.env.VK_ID_APP_ID)
+  const vkidCallbackUrl =
+    normalizeEnvUrl(process.env.VK_ID_REDIRECT_URI) ||
+    normalizeEnvUrl(
+      process.env.DOMAIN ? `${process.env.DOMAIN}/api/vk-id/callback` : '',
+    )
+  const vkidScope = process.env.VK_ID_SCOPE || 'phone email'
 
   if (session) {
     const destination =
@@ -805,6 +815,9 @@ export async function getServerSideProps(context) {
         isSafe && relativeCallback ? relativeCallback : '/cabinet',
       authCallbackSource: decodedCallback || null,
       isVkAuthVisible,
+      vkidAppId,
+      vkidCallbackUrl,
+      vkidScope,
     },
   }
 }

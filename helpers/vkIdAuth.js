@@ -1,7 +1,13 @@
 const VK_ID_DOMAIN_DEFAULT = 'id.vk.ru'
 
 const getVkClientId = () => {
-  const raw = process.env.VK_ID_APP_ID || process.env.NEXT_PUBLIC_VK_ID_APP_ID
+  const raw =
+    process.env.VK_ID_APP_ID ||
+    process.env.VKID_ONETAP_APP_ID ||
+    process.env.VK_APP_ID ||
+    process.env.NEXT_PUBLIC_VK_ID_APP_ID ||
+    process.env.NEXT_PUBLIC_VKID_ONETAP_APP_ID ||
+    process.env.NEXT_PUBLIC_VK_APP_ID
   const parsed = Number.parseInt(String(raw || ''), 10)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null
 }
