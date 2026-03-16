@@ -23,6 +23,13 @@ const defaultSiteAccess = {
   allowSiteRegistration: true,
   enableVkOneTap: true,
 }
+const isVkDebugEnabled = process.env.NEXT_PUBLIC_VK_AUTH_DEBUG === 'true'
+
+const maskToken = (token) => {
+  if (!token || typeof token !== 'string') return null
+  if (token.length <= 10) return '***'
+  return `${token.slice(0, 4)}...${token.slice(-4)}`
+}
 
 const VK_SDK_URL = 'https://unpkg.com/@vkid/sdk@2.6.5/dist-sdk/umd/index.js'
 let vkSdkLoadPromise = null
@@ -449,6 +456,20 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
         .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload) => {
           if (!isMounted) return
 
+          if (isVkDebugEnabled) {
+            console.info('[VK_DEBUG][client] one_tap_login_success', {
+              payloadKeys:
+                payload && typeof payload === 'object'
+                  ? Object.keys(payload).sort()
+                  : [],
+              hasCode: Boolean(payload?.code),
+              hasDeviceId: Boolean(payload?.device_id),
+              hasCodeVerifier: Boolean(
+                payload?.code_verifier || payload?.codeVerifier || payload?.verifier,
+              ),
+            })
+          }
+
           const code = payload?.code
           const deviceId = payload?.device_id
           const codeVerifier =
@@ -463,6 +484,20 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
             const exchangeResult = codeVerifier
               ? await VKID.Auth.exchangeCode(code, deviceId, codeVerifier)
               : await VKID.Auth.exchangeCode(code, deviceId)
+
+            if (isVkDebugEnabled) {
+              console.info('[VK_DEBUG][client] exchange_code_result', {
+                resultKeys:
+                  exchangeResult && typeof exchangeResult === 'object'
+                    ? Object.keys(exchangeResult).sort()
+                    : [],
+                userKeys:
+                  exchangeResult?.user && typeof exchangeResult.user === 'object'
+                    ? Object.keys(exchangeResult.user).sort()
+                    : [],
+              })
+            }
+
             const accessToken =
               exchangeResult?.access_token ||
               exchangeResult?.accessToken ||
@@ -490,6 +525,19 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
               null
 
             if (!accessToken || !vkId) {
+              if (isVkDebugEnabled) {
+                console.info('[VK_DEBUG][client] missing_vk_data_after_exchange', {
+                  accessTokenMasked: maskToken(accessToken),
+                  vkId: vkId ?? null,
+                  exchangeResultPreview: {
+                    hasUser: Boolean(exchangeResult?.user),
+                    id: exchangeResult?.id ?? null,
+                    userId: exchangeResult?.userId ?? null,
+                    vkId: exchangeResult?.vkId ?? null,
+                    userIdNested: exchangeResult?.user?.id ?? null,
+                  },
+                })
+              }
               setVkError('Не удалось получить данные VK после авторизации.')
               return
             }
@@ -503,6 +551,13 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
             })
           } catch (error) {
             console.error('VK OneTap exchange error', error)
+            if (isVkDebugEnabled) {
+              console.info('[VK_DEBUG][client] exchange_code_error', {
+                message: error?.message ?? null,
+                name: error?.name ?? null,
+                stack: error?.stack ?? null,
+              })
+            }
             setVkError(
               'VK ID временно недоступен. Попробуйте позже или войдите по паролю.',
             )

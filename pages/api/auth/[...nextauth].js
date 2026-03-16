@@ -7,6 +7,8 @@ import authenticateVkUser from '@helpers/authenticateVkUser'
 import authenticatePasswordUser from '@helpers/authenticatePasswordUser'
 import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
 
+const isVkDebugEnabled = process.env.VK_AUTH_DEBUG === 'true'
+
 const ensureSerializableId = (value) => {
   if (value === null || value === undefined) return null
   if (typeof value === 'string') return value
@@ -125,12 +127,30 @@ export const authOptions = {
               errorCode: result.errorCode,
               errorMessage: result.errorMessage,
             })
+            if (isVkDebugEnabled) {
+              console.info('[VK_DEBUG] nextauth_vk_authorize_failed', {
+                location,
+                errorCode: result.errorCode,
+                details: result.details ?? null,
+                payloadKeys:
+                  result?.payload && typeof result.payload === 'object'
+                    ? Object.keys(result.payload).sort()
+                    : [],
+              })
+            }
             throw new Error(result.errorMessage || result.errorCode || 'VK_AUTH_FAILED')
           }
 
           return { ...result.user, authMethod: 'vk' }
         } catch (error) {
           console.error('VK authorize unexpected error', error)
+          if (isVkDebugEnabled) {
+            console.info('[VK_DEBUG] nextauth_vk_authorize_exception', {
+              location,
+              message: error?.message ?? null,
+              stack: error?.stack ?? null,
+            })
+          }
           throw error
         }
       },

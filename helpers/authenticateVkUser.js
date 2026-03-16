@@ -2,6 +2,17 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import upsertGlobalUser from '@helpers/upsertGlobalUser'
 import syncLegacyUserByLocation from '@helpers/syncLegacyUserByLocation'
 
+const isVkDebugEnabled = process.env.VK_AUTH_DEBUG === 'true'
+
+const maskToken = (token) => {
+  if (!token || typeof token !== 'string') return null
+  if (token.length <= 10) return '***'
+  return `${token.slice(0, 4)}...${token.slice(-4)}`
+}
+
+const safeKeys = (obj) =>
+  obj && typeof obj === 'object' ? Object.keys(obj).sort() : []
+
 const errorResponse = (code, message, details = null) => ({
   success: false,
   errorCode: code,
@@ -15,6 +26,14 @@ const normalizeLocation = (location) => {
 }
 
 const authenticateVkUser = async ({ location, rawData }) => {
+  if (isVkDebugEnabled) {
+    console.info('[VK_DEBUG] authenticateVkUser:start', {
+      location,
+      rawDataType: typeof rawData,
+      rawDataLength: typeof rawData === 'string' ? rawData.length : null,
+    })
+  }
+
   if (!rawData) {
     return errorResponse(
       'MISSING_PAYLOAD',
@@ -28,6 +47,11 @@ const authenticateVkUser = async ({ location, rawData }) => {
       payload = JSON.parse(rawData)
     }
   } catch (error) {
+    if (isVkDebugEnabled) {
+      console.info('[VK_DEBUG] authenticateVkUser:invalid_json', {
+        message: error.message,
+      })
+    }
     return errorResponse(
       'INVALID_PAYLOAD',
       'Не удалось разобрать данные авторизации VK.',
@@ -60,6 +84,15 @@ const authenticateVkUser = async ({ location, rawData }) => {
     payload.lastName || payload.last_name || payload.user?.last_name
   const photoUrl = payload.photoUrl || payload.photo_url || payload.user?.photo
 
+  if (isVkDebugEnabled) {
+    console.info('[VK_DEBUG] authenticateVkUser:payload_parsed', {
+      payloadKeys: safeKeys(payload),
+      userKeys: safeKeys(payload?.user),
+      vkIdRaw: payload.vkId ?? payload.userId ?? payload.user?.id ?? null,
+      accessTokenMasked: maskToken(accessToken),
+    })
+  }
+
   if (!accessToken || !vkId) {
     return errorResponse(
       'INVALID_VK_DATA',
@@ -84,6 +117,15 @@ const authenticateVkUser = async ({ location, rawData }) => {
     )
     const vkJson = await vkResponse.json()
 
+    if (isVkDebugEnabled) {
+      console.info('[VK_DEBUG] authenticateVkUser:vk_users_get', {
+        httpStatus: vkResponse.status,
+        vkErrorCode: vkJson?.error?.error_code ?? null,
+        hasResponseArray: Array.isArray(vkJson?.response),
+        responseLength: Array.isArray(vkJson?.response) ? vkJson.response.length : null,
+      })
+    }
+
     if (vkJson.error) {
       return errorResponse(
         'VK_API_ERROR',
@@ -104,6 +146,11 @@ const authenticateVkUser = async ({ location, rawData }) => {
 
     verifiedUser = vkJson.response[0]
   } catch (error) {
+    if (isVkDebugEnabled) {
+      console.info('[VK_DEBUG] authenticateVkUser:vk_api_request_failed', {
+        message: error.message,
+      })
+    }
     return errorResponse(
       'VK_API_REQUEST_FAILED',
       'Не удалось проверить токен VK.',
@@ -165,6 +212,14 @@ const authenticateVkUser = async ({ location, rawData }) => {
       },
     })
 
+    if (isVkDebugEnabled) {
+      console.info('[VK_DEBUG] authenticateVkUser:success', {
+        location: resolvedLocation,
+        globalUserId: user?._id ? String(user._id) : null,
+        vkUserId,
+      })
+    }
+
     return {
       success: true,
       user: {
@@ -183,6 +238,11 @@ const authenticateVkUser = async ({ location, rawData }) => {
       payload,
     }
   } catch (error) {
+    if (isVkDebugEnabled) {
+      console.info('[VK_DEBUG] authenticateVkUser:user_update_failed', {
+        message: error.message,
+      })
+    }
     return errorResponse(
       'USER_UPDATE_FAILED',
       'Ошибка при сохранении профиля пользователя VK.',
