@@ -16,12 +16,30 @@ export default function handler(req, res) {
     <script>
       (function () {
         try {
+          var params = new URLSearchParams(window.location.search || '')
+          var payload = {}
+
+          params.forEach(function (value, key) {
+            payload[key] = value
+          })
+
           if (window.opener && !window.opener.closed) {
+            var state = payload.state || ''
+            var action = 'oauth2_authorize_response' + state
+            window.opener.postMessage(
+              {
+                action: action,
+                payload: payload,
+              },
+              window.location.origin,
+            )
+
             window.close()
             return
           }
         } catch (error) {}
-        window.location.replace('/cabinet/login')
+        var query = window.location.search || ''
+        window.location.replace('/cabinet/login' + query)
       })()
     </script>
   </body>
