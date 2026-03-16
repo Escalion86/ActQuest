@@ -81,25 +81,6 @@ const resolveVkIdCallbackUrl = (explicitCallbackUrl) => {
   }
 }
 
-const createRandomPkceValue = (length = 64) => {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
-  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
-    const bytes = new Uint8Array(length)
-    window.crypto.getRandomValues(bytes)
-    let result = ''
-    for (let index = 0; index < bytes.length; index += 1) {
-      result += alphabet[bytes[index] % alphabet.length]
-    }
-    return result
-  }
-
-  let fallback = ''
-  for (let index = 0; index < length; index += 1) {
-    fallback += alphabet[Math.floor(Math.random() * alphabet.length)]
-  }
-  return fallback
-}
-
 const parseVkAppId = (value) => {
   const raw = String(value || '').trim().replace(/^['"]|['"]$/g, '')
   const parsed = Number.parseInt(raw, 10)
@@ -144,7 +125,6 @@ const CabinetLoginPage = ({
   const handleVkAuthRef = useRef(null)
   const vkWidgetInstanceRef = useRef(null)
   const vkWidgetConfigKeyRef = useRef('')
-  const vkCodeVerifierRef = useRef(null)
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
   const isVkSignInEnabled =
     isVkAuthVisible && siteAccess.allowSiteAuth && siteAccess.enableVkOneTap
@@ -152,13 +132,6 @@ const CabinetLoginPage = ({
   useEffect(() => {
     setIsClient(true)
   }, [])
-
-  useEffect(() => {
-    if (!isClient) return
-    if (!vkCodeVerifierRef.current) {
-      vkCodeVerifierRef.current = createRandomPkceValue(64)
-    }
-  }, [isClient])
 
   useEffect(() => {
     if (session?.user?.location) {
@@ -236,7 +209,7 @@ const CabinetLoginPage = ({
   }, [update])
 
   const handleVkAuth = useCallback(
-    async ({ code, deviceId, codeVerifier, state }) => {
+    async ({ code, deviceId, codeVerifier, state, accessToken }) => {
       if (
         !code ||
         !deviceId ||
@@ -280,7 +253,8 @@ const CabinetLoginPage = ({
           mode: 'login',
           code,
           deviceId,
-          codeVerifier: codeVerifier || vkCodeVerifierRef.current || undefined,
+          accessToken,
+          codeVerifier: codeVerifier || undefined,
           state: state || undefined,
         })
 
@@ -512,7 +486,6 @@ const CabinetLoginPage = ({
           redirectUrl: resolveVkIdCallbackUrl(vkidCallbackUrl),
           responseMode: VKID.ConfigResponseMode.Callback,
           source: VKID.ConfigSource.LOWCODE,
-          codeVerifier: vkCodeVerifierRef.current || undefined,
           scope: vkidScope,
         })
       } catch (error) {
@@ -575,19 +548,34 @@ const CabinetLoginPage = ({
           }
 
           try {
+            let accessToken = null
+            if (!codeVerifier && VKID?.Auth?.exchangeCode) {
+              try {
+                const exchangeResult = await VKID.Auth.exchangeCode(code, deviceId)
+                accessToken = exchangeResult?.access_token || null
+              } catch (clientExchangeError) {
+                setVkError(
+                  'VK ID временно недоступен. Попробуйте позже или войдите по паролю.',
+                )
+                return
+              }
+            }
+
             if (isVkDebugEnabled) {
               console.info('[VK_DEBUG][client] server_exchange_auth_params', {
                 hasCode: Boolean(code),
                 hasDeviceId: Boolean(deviceId),
                 hasCodeVerifier: Boolean(codeVerifier),
                 hasState: Boolean(state),
+                hasAccessToken: Boolean(accessToken),
               })
             }
 
             await handleVkAuthRef.current?.({
               code,
               deviceId,
-              codeVerifier: codeVerifier || vkCodeVerifierRef.current || null,
+              accessToken,
+              codeVerifier: codeVerifier || null,
               state: state || null,
             })
           } catch (error) {

@@ -5,6 +5,7 @@ export default function handler(req, res) {
   }
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store')
   return res.status(200).send(`<!doctype html>
 <html lang="ru">
   <head>
@@ -15,31 +16,7 @@ export default function handler(req, res) {
   <body>
     <script>
       (function () {
-        try {
-          var params = new URLSearchParams(window.location.search || '')
-          var payload = {}
-
-          params.forEach(function (value, key) {
-            payload[key] = value
-          })
-
-          if (window.opener && !window.opener.closed) {
-            var state = payload.state || ''
-            var action = 'oauth2_authorize_response' + state
-            window.opener.postMessage(
-              {
-                action: action,
-                payload: payload,
-              },
-              window.location.origin,
-            )
-
-            window.close()
-            return
-          }
-        } catch (error) {}
-        var query = window.location.search || ''
-        window.location.replace('/cabinet/login' + query)
+        window.close()
       })()
     </script>
   </body>

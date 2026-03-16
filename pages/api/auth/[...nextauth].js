@@ -110,6 +110,7 @@ export const authOptions = {
         location: { label: 'Location', type: 'text' },
         code: { label: 'Code', type: 'text' },
         deviceId: { label: 'DeviceId', type: 'text' },
+        accessToken: { label: 'AccessToken', type: 'text' },
         state: { label: 'State', type: 'text' },
         codeVerifier: { label: 'CodeVerifier', type: 'text' },
         mode: { label: 'Mode', type: 'text' },
@@ -119,6 +120,9 @@ export const authOptions = {
         const rawData = credentials?.data
         const code = credentials?.code ? String(credentials.code) : null
         const deviceId = credentials?.deviceId ? String(credentials.deviceId) : null
+        const accessTokenFromClient = credentials?.accessToken
+          ? String(credentials.accessToken)
+          : null
         const state = credentials?.state ? String(credentials.state) : null
         const codeVerifier = credentials?.codeVerifier
           ? String(credentials.codeVerifier)
@@ -135,30 +139,39 @@ export const authOptions = {
 
           let result = null
 
-          if (code && deviceId) {
-            const exchangeResult = await exchangeVkCode({
-              code,
-              deviceId,
-              codeVerifier,
-              state,
-            })
+          if ((code && deviceId) || accessTokenFromClient) {
+            let exchangeResult = null
+            const accessToken = accessTokenFromClient || null
+            let resolvedAccessToken = accessToken
 
-            if (!exchangeResult?.success) {
-              if (isVkDebugEnabled) {
-                console.info('[VK_DEBUG] nextauth_vk_exchange_failed', {
-                  location,
-                  error: exchangeResult?.data?.error || null,
-                })
+            if (!resolvedAccessToken) {
+              exchangeResult = await exchangeVkCode({
+                code,
+                deviceId,
+                codeVerifier,
+                state,
+              })
+
+              if (!exchangeResult?.success) {
+                if (isVkDebugEnabled) {
+                  console.info('[VK_DEBUG] nextauth_vk_exchange_failed', {
+                    location,
+                    error: exchangeResult?.data?.error || null,
+                  })
+                }
+                throw new Error('VK_EXCHANGE_FAILED')
               }
+
+              resolvedAccessToken = exchangeResult?.data?.access_token
+            }
+
+            if (!resolvedAccessToken) {
               throw new Error('VK_EXCHANGE_FAILED')
             }
 
-            const accessToken = exchangeResult?.data?.access_token
-            if (!accessToken) {
-              throw new Error('VK_EXCHANGE_FAILED')
-            }
-
-            const userInfoResult = await fetchVkUserInfo({ accessToken })
+            const userInfoResult = await fetchVkUserInfo({
+              accessToken: resolvedAccessToken,
+            })
             if (!userInfoResult?.success) {
               if (isVkDebugEnabled) {
                 console.info('[VK_DEBUG] nextauth_vk_userinfo_failed', {
@@ -180,7 +193,7 @@ export const authOptions = {
             }
 
             const normalizedPayload = JSON.stringify({
-              accessToken,
+              accessToken: resolvedAccessToken,
               vkId,
               firstName: vkUser?.first_name || '',
               lastName: vkUser?.last_name || '',
