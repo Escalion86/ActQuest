@@ -82,6 +82,8 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   const [siteAccess, setSiteAccess] = useState(defaultSiteAccess)
   const [isSiteAccessLoading, setIsSiteAccessLoading] = useState(false)
   const vkIdWidgetContainerRef = useRef(null)
+  const isAuthenticatingRef = useRef(false)
+  const vkAuthInFlightRef = useRef(false)
   const vkidAppId = Number.parseInt(
     String(
       process.env.NEXT_PUBLIC_VK_ID_APP_ID ||
@@ -105,6 +107,10 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       setLocation(session.user.location)
     }
   }, [session?.user?.location])
+
+  useEffect(() => {
+    isAuthenticatingRef.current = isAuthenticating
+  }, [isAuthenticating])
 
   useEffect(() => {
     if (!isClient || !location) {
@@ -173,13 +179,14 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
 
   const handleVkAuth = useCallback(
     async ({ accessToken, vkId, firstName, lastName, photoUrl }) => {
-      if (!accessToken || !vkId || isAuthenticating) return
+      if (!accessToken || !vkId || isAuthenticatingRef.current || vkAuthInFlightRef.current) return
       if (!siteAccess.allowSiteAuth || !siteAccess.enableVkOneTap) {
         setVkError('Вход через VK One Tap отключён для выбранного региона.')
         return
       }
 
       try {
+        vkAuthInFlightRef.current = true
         setAuthError(null)
         setVkError(null)
         setIsAuthenticating(true)
@@ -268,12 +275,12 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
             'Не удалось авторизоваться через VK. Попробуйте ещё раз.',
         )
       } finally {
+        vkAuthInFlightRef.current = false
         setIsAuthenticating(false)
       }
     },
     [
       effectiveCallbackUrl,
-      isAuthenticating,
       isClient,
       location,
       router,
