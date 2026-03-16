@@ -504,6 +504,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
               null
             const vkId =
               exchangeResult?.user?.id ||
+              exchangeResult?.user_id ||
               exchangeResult?.id ||
               exchangeResult?.userId ||
               exchangeResult?.vkId ||
@@ -532,6 +533,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                   exchangeResultPreview: {
                     hasUser: Boolean(exchangeResult?.user),
                     id: exchangeResult?.id ?? null,
+                    user_id: exchangeResult?.user_id ?? null,
                     userId: exchangeResult?.userId ?? null,
                     vkId: exchangeResult?.vkId ?? null,
                     userIdNested: exchangeResult?.user?.id ?? null,
