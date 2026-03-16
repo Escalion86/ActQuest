@@ -81,7 +81,11 @@ const resolveVkIdCallbackUrl = (explicitCallbackUrl) => {
   }
 }
 
-const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
+const CabinetLoginPage = ({
+  authCallbackUrl,
+  authCallbackSource,
+  isVkAuthVisible,
+}) => {
   const { data: session, status, update } = useSession()
   const router = useRouter()
   const [location, setLocation] = useState(
@@ -116,6 +120,8 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
     process.env.NEXT_PUBLIC_VK_SCOPE ||
     'phone email'
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
+  const isVkSignInEnabled =
+    isVkAuthVisible && siteAccess.allowSiteAuth && siteAccess.enableVkOneTap
 
   useEffect(() => {
     setIsClient(true)
@@ -206,7 +212,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
       ) {
         return
       }
-      if (!siteAccess.allowSiteAuth || !siteAccess.enableVkOneTap) {
+      if (!isVkSignInEnabled) {
         setVkError('Вход через VK One Tap отключён для выбранного региона.')
         return
       }
@@ -301,10 +307,9 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
     [
       effectiveCallbackUrl,
       isClient,
+      isVkSignInEnabled,
       location,
       router,
-      siteAccess.allowSiteAuth,
-      siteAccess.enableVkOneTap,
       updateSession,
     ],
   )
@@ -430,8 +435,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
   useEffect(() => {
     if (
       !isClient ||
-      !siteAccess.allowSiteAuth ||
-      !siteAccess.enableVkOneTap ||
+      !isVkSignInEnabled ||
       !Number.isFinite(vkidAppId) ||
       !vkIdWidgetContainerRef.current
     ) {
@@ -554,8 +558,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
     vkidCallbackUrl,
     vkidScope,
     handleVkAuth,
-    siteAccess.allowSiteAuth,
-    siteAccess.enableVkOneTap,
+    isVkSignInEnabled,
   ])
 
   return (
@@ -592,7 +595,9 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                     2
                   </span>
                   <span>
-                    Войдите через VK ID или по номеру телефона и паролю.
+                    {isVkAuthVisible
+                      ? 'Войдите через VK ID или по номеру телефона и паролю.'
+                      : 'Войдите по номеру телефона и паролю.'}
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
@@ -635,7 +640,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                 </label>
 
                 <div className="flex flex-col items-center gap-4">
-                  {siteAccess.allowSiteAuth && siteAccess.enableVkOneTap && vkidAppId ? (
+                  {isVkSignInEnabled && vkidAppId ? (
                     <div className="w-full">
                       <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                         Войти через VK ID
@@ -647,7 +652,7 @@ const CabinetLoginPage = ({ authCallbackUrl, authCallbackSource }) => {
                         </div>
                       ) : null}
                     </div>
-                  ) : siteAccess.allowSiteAuth && siteAccess.enableVkOneTap ? (
+                  ) : isVkSignInEnabled ? (
                     <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
                       Укажите{' '}
                       <code className="px-1 bg-white rounded dark:bg-slate-900/80">
@@ -777,6 +782,10 @@ export async function getServerSideProps(context) {
     context?.query?.callbackUrl,
     context?.req,
   )
+  const currentMode = String(
+    process.env.MODE ?? process.env.NODE_ENV ?? 'production',
+  ).toLowerCase()
+  const isVkAuthVisible = currentMode !== 'development'
 
   if (session) {
     const destination =
@@ -795,6 +804,7 @@ export async function getServerSideProps(context) {
       authCallbackUrl:
         isSafe && relativeCallback ? relativeCallback : '/cabinet',
       authCallbackSource: decodedCallback || null,
+      isVkAuthVisible,
     },
   }
 }

@@ -21,7 +21,7 @@ const defaultSiteAccess = {
   enableVkOneTap: true,
 }
 
-const CabinetRegisterPage = ({ authCallbackUrl }) => {
+const CabinetRegisterPage = ({ authCallbackUrl, isVkAuthVisible }) => {
   const { data: session, status, update } = useSession()
   const router = useRouter()
   const [location, setLocation] = useState(
@@ -320,7 +320,9 @@ const CabinetRegisterPage = ({ authCallbackUrl }) => {
               <Link href={`/cabinet/login?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`} className="text-primary hover:underline">
                 Уже есть аккаунт? Войти
               </Link>
-              {siteAccess.allowSiteAuth && siteAccess.enableVkOneTap ? (
+              {isVkAuthVisible &&
+              siteAccess.allowSiteAuth &&
+              siteAccess.enableVkOneTap ? (
                 <Link href="/cabinet/login" className="text-slate-500 hover:underline">
                   Войти через VK
                 </Link>
@@ -339,6 +341,10 @@ export async function getServerSideProps(context) {
     context?.query?.callbackUrl,
     context?.req,
   )
+  const currentMode = String(
+    process.env.MODE ?? process.env.NODE_ENV ?? 'production',
+  ).toLowerCase()
+  const isVkAuthVisible = currentMode !== 'development'
 
   if (session) {
     const destination = isSafe && relativeCallback ? relativeCallback : '/cabinet'
@@ -353,6 +359,7 @@ export async function getServerSideProps(context) {
   return {
     props: {
       authCallbackUrl: isSafe && relativeCallback ? relativeCallback : '/cabinet',
+      isVkAuthVisible,
     },
   }
 }
