@@ -141,6 +141,9 @@ const CabinetLoginPage = ({
   const vkIdWidgetContainerRef = useRef(null)
   const isAuthenticatingRef = useRef(false)
   const vkAuthInFlightRef = useRef(false)
+  const handleVkAuthRef = useRef(null)
+  const vkWidgetInstanceRef = useRef(null)
+  const vkWidgetConfigKeyRef = useRef('')
   const vkCodeVerifierRef = useRef(null)
   const vkStateRef = useRef(null)
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
@@ -348,6 +351,10 @@ const CabinetLoginPage = ({
     ],
   )
 
+  useEffect(() => {
+    handleVkAuthRef.current = handleVkAuth
+  }, [handleVkAuth])
+
   const handlePhoneAuthSubmit = useCallback(
     async (event) => {
       event.preventDefault()
@@ -477,6 +484,19 @@ const CabinetLoginPage = ({
     }
 
     const container = vkIdWidgetContainerRef.current
+    const configKey = [
+      vkidAppId,
+      vkidCallbackUrl || '',
+      vkidScope || '',
+      location || '',
+      Number(isVkSignInEnabled),
+    ].join('|')
+
+    if (vkWidgetConfigKeyRef.current === configKey && vkWidgetInstanceRef.current) {
+      return undefined
+    }
+    vkWidgetConfigKeyRef.current = configKey
+
     let isMounted = true
 
     const init = async () => {
@@ -505,6 +525,7 @@ const CabinetLoginPage = ({
       }
 
       const oneTap = new VKID.OneTap()
+      vkWidgetInstanceRef.current = oneTap
       oneTap
         .render({
           container,
@@ -568,7 +589,7 @@ const CabinetLoginPage = ({
               })
             }
 
-            await handleVkAuth({
+            await handleVkAuthRef.current?.({
               code,
               deviceId,
               codeVerifier: codeVerifier || vkCodeVerifierRef.current || null,
@@ -597,6 +618,7 @@ const CabinetLoginPage = ({
     return () => {
       isMounted = false
       setIsVkIdReady(false)
+      vkWidgetInstanceRef.current = null
       if (container) container.innerHTML = ''
     }
   }, [
@@ -604,7 +626,7 @@ const CabinetLoginPage = ({
     vkidAppId,
     vkidCallbackUrl,
     vkidScope,
-    handleVkAuth,
+    location,
     isVkSignInEnabled,
   ])
 
