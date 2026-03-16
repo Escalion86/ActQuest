@@ -145,7 +145,6 @@ const CabinetLoginPage = ({
   const vkWidgetInstanceRef = useRef(null)
   const vkWidgetConfigKeyRef = useRef('')
   const vkCodeVerifierRef = useRef(null)
-  const vkStateRef = useRef(null)
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
   const isVkSignInEnabled =
     isVkAuthVisible && siteAccess.allowSiteAuth && siteAccess.enableVkOneTap
@@ -158,9 +157,6 @@ const CabinetLoginPage = ({
     if (!isClient) return
     if (!vkCodeVerifierRef.current) {
       vkCodeVerifierRef.current = createRandomPkceValue(64)
-    }
-    if (!vkStateRef.current) {
-      vkStateRef.current = createRandomPkceValue(48)
     }
   }, [isClient])
 
@@ -285,7 +281,7 @@ const CabinetLoginPage = ({
           code,
           deviceId,
           codeVerifier: codeVerifier || vkCodeVerifierRef.current || undefined,
-          state: state || vkStateRef.current || undefined,
+          state: state || undefined,
         })
 
         if (result?.error) {
@@ -516,7 +512,6 @@ const CabinetLoginPage = ({
           redirectUrl: resolveVkIdCallbackUrl(vkidCallbackUrl),
           responseMode: VKID.ConfigResponseMode.Callback,
           source: VKID.ConfigSource.LOWCODE,
-          state: vkStateRef.current || undefined,
           codeVerifier: vkCodeVerifierRef.current || undefined,
           scope: vkidScope,
         })
@@ -593,7 +588,7 @@ const CabinetLoginPage = ({
               code,
               deviceId,
               codeVerifier: codeVerifier || vkCodeVerifierRef.current || null,
-              state: state || vkStateRef.current || null,
+              state: state || null,
             })
           } catch (error) {
             console.error('VK OneTap auth error', error)
