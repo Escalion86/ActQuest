@@ -7,7 +7,7 @@ import CabinetLayout from '@components/cabinet/CabinetLayout'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const roleLabels = {
   client: 'Пользователь',
@@ -350,7 +350,7 @@ export async function getServerSideProps(context) {
 
   if (location) {
     try {
-      const db = await dbConnect(location)
+      const db = await dbConnectGlobal()
 
       if (db) {
         const UsersModel = db.model('Users')

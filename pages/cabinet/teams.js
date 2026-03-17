@@ -17,7 +17,7 @@ import { getNounUsers } from '@helpers/getNoun'
 import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import useSnackbar from '@helpers/useSnackbar'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const serializeTeamForComparison = (team) => {
   if (!team) {
@@ -1301,7 +1301,7 @@ export async function getServerSideProps(context) {
 
   if (location) {
     try {
-      const db = await dbConnect(location)
+      const db = await dbConnectGlobal()
 
       if (db) {
         const TeamsUsersModel = db.model('TeamsUsers')

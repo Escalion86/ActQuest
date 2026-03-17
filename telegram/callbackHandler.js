@@ -1,6 +1,6 @@
 import checkContactRecive from './checkContactRecive'
-import checkUserData from './checkUserData'
-import commandHandler from './commandHandler'
+import sendMessage from './sendMessage'
+import { TELEGRAM_FALLBACK_TEXT } from './constants'
 
 // const test_callback = {
 //   update_id: 173172137,
@@ -30,7 +30,7 @@ import commandHandler from './commandHandler'
 
 const callbackHandler = async (body, location, db) => {
   const { callback_query } = body
-  const { id, from, message, data, chat_instance } = callback_query
+  const { from } = callback_query
   // console.log('callback_query :>> ', callback_query)
   // await postData(
   //   `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/answerCallbackQuery`,
@@ -75,33 +75,16 @@ const callbackHandler = async (body, location, db) => {
   //   null,
   //   true
   // )
-  if (await checkContactRecive(body?.message, location, db)) {
-    const user = await checkUserData(from.id, undefined, location, db)
-    if (user)
-      return await commandHandler(
-        {
-          userTelegramId: from.id,
-          message: data,
-          messageId: message.message_id,
-          callback_query,
-          // photo,
-          location,
-          // location,
-          // date,
-          user,
-          db,
-        }
-        // from.id,
-        // data,
-        // message.message_id,
-        // callback_query,
-        // undefined,
-        // location,
-        // undefined,
-        // undefined,
-        // user
-      )
-  }
+  const handledContact = await checkContactRecive(body?.message, location, db)
+  if (handledContact) return
+
+  await sendMessage({
+    chat_id: from.id,
+    text: TELEGRAM_FALLBACK_TEXT,
+    callback_query,
+    remove_keyboard: true,
+    location,
+  })
 }
 
 export default callbackHandler

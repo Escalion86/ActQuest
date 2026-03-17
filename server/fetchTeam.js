@@ -1,10 +1,9 @@
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const fetchTeam = async (location, teamId) => {
   if (!teamId || !location) return {}
   try {
-    // const isAdmin = isUserAdmin(user)
-    const db = await dbConnect(location)
+    const db = await dbConnectGlobal()
     if (!db) return {}
 
     const fetchResult = await db.model('Teams').findById(teamId).lean()

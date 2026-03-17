@@ -10,7 +10,7 @@ import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { getNounUsers } from '@helpers/getNoun'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 
 const serializeTeamForComparison = (team) => {
@@ -917,7 +917,7 @@ export async function getServerSideProps(context) {
 
   if (location) {
     try {
-      const db = await dbConnect(location)
+      const db = await dbConnectGlobal()
 
       if (db) {
         initialTeams = await fetchTeamsForCabinet({ db })

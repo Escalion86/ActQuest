@@ -415,7 +415,6 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
     ) {
       // ПЕРЕРЫВ
       // const endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
-      // await dbConnect()
       // await db.model('GamesTeams').findByIdAndUpdate(jsonCommand?.gameTeamId, {
       //   // findedCodes: newAllFindedCodes,
       //   // startTime: startTimeTemp,

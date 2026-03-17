@@ -1,7 +1,7 @@
 // import Users from '@models/Users'
 
-import checkUserData from './checkUserData'
-import commandHandler from './commandHandler'
+import sendMessage from './sendMessage'
+import { TELEGRAM_FALLBACK_TEXT } from './constants'
 // import sendMessage from './sendMessage'
 
 // const test_message = {
@@ -37,31 +37,12 @@ const locationHandler = async (
   locationDb,
   db
 ) => {
-  const user = await checkUserData(from.id, undefined, locationDb, db)
-  if (user)
-    return await commandHandler(
-      {
-        userTelegramId: from.id,
-        // message,
-        messageId: message_id,
-        // callback_query,
-        // photo,
-        userLocation: location,
-        location: locationDb,
-        date: edit_date ? edit_date : date,
-        user,
-        db,
-      }
-      // from.id,
-      // undefined,
-      // message_id,
-      // undefined,
-      // undefined,
-      // location,
-      // location,
-      // edit_date ? edit_date : date,
-      // user
-    )
+  await sendMessage({
+    chat_id: from.id,
+    text: TELEGRAM_FALLBACK_TEXT,
+    remove_keyboard: true,
+    location: locationDb,
+  })
 }
 
 export default locationHandler

@@ -1,4 +1,4 @@
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 import callbackHandler from 'telegram/callbackHandler'
 import locationHandler from 'telegram/locationHandler'
 import messageHandler from 'telegram/messageHandler'
@@ -153,7 +153,7 @@ export default async function telegramCRUD(req, res, location) {
   // }
   if (method === 'POST') {
     try {
-      const db = await dbConnect(location)
+      const db = await dbConnectGlobal()
       if (body?.callback_query) {
         // Принимаем команду
         // console.log('callback_body :>> ', body)

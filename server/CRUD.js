@@ -5,7 +5,7 @@ import isUserAdmin from '@helpers/isUserAdmin'
 // import isUserQuestionnaireFilled from '@helpers/isUserQuestionnaireFilled'
 // import Histories from '@models/Histories'
 // import Users from '@models/Users'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 function transformQuery(query) {
   const processSingleValue = (key, value) => {
@@ -114,7 +114,7 @@ export default async function handler(Schema, req, res, params = null) {
   delete query.limit
   delete query.countReturn
 
-  const db = await dbConnect(location)
+  const db = await dbConnectGlobal()
 
   let data
 

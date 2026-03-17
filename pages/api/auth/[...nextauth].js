@@ -1,6 +1,5 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import dbConnect from '@utils/dbConnect'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import authenticateTelegramUser from '@helpers/authenticateTelegramUser'
 import authenticateVkUser from '@helpers/authenticateVkUser'
@@ -323,84 +322,61 @@ export const authOptions = {
     async session({ session, token }) {
       if (!session?.user) session.user = {}
 
-      if (token?.location) {
-        const fallbackUser = {
-          _id: token.globalUserId ?? token.userId ?? null,
-          id: token.globalUserId ?? token.userId ?? null,
-          userId: token.globalUserId ?? token.userId ?? null,
-          globalUserId: token.globalUserId ?? token.userId ?? null,
-          telegramId: token.telegramId,
-          vkId: token.vkId,
-          phone: token.phone,
-          name: token.name,
-          username: token.username,
-          photoUrl: token.photoUrl,
-          languageCode: token.languageCode,
-          isPremium: token.isPremium,
-          location: token.location,
-        }
-
-        try {
-          let user = null
-
-          const globalDb = await dbConnectGlobal()
-          if (globalDb) {
-            if (token.globalUserId || token.userId) {
-              try {
-                user = await globalDb
-                  .model('Users')
-                  .findById(token.globalUserId || token.userId)
-                  .lean()
-              } catch (idError) {
-                // ignore
-              }
-            }
-
-            if (
-              !user &&
-              typeof token.phone !== 'undefined' &&
-              token.phone !== null
-            ) {
-              user = await globalDb.model('Users').findOne({ phone: token.phone }).lean()
-            }
-          }
-
-          if (!user) {
-            const legacyDb = await dbConnect(token.location)
-            if (legacyDb) {
-              if (token.userId) {
-                try {
-                  user = await legacyDb.model('Users').findById(token.userId).lean()
-                } catch (idError) {
-                  // ignore
-                }
-              }
-
-              if (
-                !user &&
-                typeof token.phone !== 'undefined' &&
-                token.phone !== null
-              ) {
-                user = await legacyDb.model('Users').findOne({ phone: token.phone }).lean()
-              }
-            }
-          }
-
-          session.user = normalizeUserForSession(user, fallbackUser)
-        } catch (error) {
-          console.error('Session callback error', error)
-          session.user = normalizeUserForSession(null, fallbackUser)
-        }
-
-        session.user.globalUserId =
-          session.user.globalUserId ??
-          session.user._id ??
-          token.globalUserId ??
-          token.userId ??
-          null
-        session.user.location = token.location
-        session.user.isTestAuth = Boolean(token.isTestAuth)
+      const fallbackUser = {
+        _id: token.globalUserId ?? token.userId ?? null,
+        id: token.globalUserId ?? token.userId ?? null,
+        userId: token.globalUserId ?? token.userId ?? null,
+        globalUserId: token.globalUserId ?? token.userId ?? null,
+        telegramId: token.telegramId,
+        vkId: token.vkId,
+        phone: token.phone,
+        name: token.name,
+        username: token.username,
+        photoUrl: token.photoUrl,
+        languageCode: token.languageCode,
+        isPremium: token.isPremium,
+        location: token.location ?? null,
       }
+
+      try {
+        let user = null
+
+        const globalDb = await dbConnectGlobal()
+        if (globalDb) {
+          if (token.globalUserId || token.userId) {
+            try {
+              user = await globalDb
+                .model('Users')
+                .findById(token.globalUserId || token.userId)
+                .lean()
+            } catch (idError) {
+              // ignore
+            }
+          }
+
+          if (
+            !user &&
+            typeof token.phone !== 'undefined' &&
+            token.phone !== null
+          ) {
+            user = await globalDb.model('Users').findOne({ phone: token.phone }).lean()
+          }
+        }
+
+        session.user = normalizeUserForSession(user, fallbackUser)
+      } catch (error) {
+        console.error('Session callback error', error)
+        session.user = normalizeUserForSession(null, fallbackUser)
+      }
+
+      session.user.globalUserId =
+        session.user.globalUserId ??
+        session.user._id ??
+        token.globalUserId ??
+        token.userId ??
+        null
+      session.user.location = token.location ?? session.user.location ?? null
+      session.user.isTestAuth = Boolean(token.isTestAuth)
 
       return session
     },

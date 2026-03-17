@@ -1,8 +1,8 @@
 // import Users from '@models/Users'
 
 import checkContactRecive from './checkContactRecive'
-import checkUserData from './checkUserData'
-import commandHandler from './commandHandler'
+import sendMessage from './sendMessage'
+import { TELEGRAM_FALLBACK_TEXT } from './constants'
 // import sendMessage from './sendMessage'
 
 // const test_message = {
@@ -34,49 +34,27 @@ import commandHandler from './commandHandler'
 // }
 
 const messageHandler = async (body, location, db) => {
-  const { update_id, message } = body
+  const { message } = body
   const {
-    message_id,
     from,
-    chat,
-    date,
     text,
-    entities,
-    contact,
-    reply_to_message,
-    document,
-    photo, // Если было отправлено фото
-    video, // Если было отправлено видео
   } = message
 
-  if (await checkContactRecive(body?.message, location, db)) {
-    const user = await checkUserData(from.id, undefined, location, db)
-    if (user)
-      return await commandHandler(
-        {
-          userTelegramId: from.id,
-          message: text,
-          messageId: message_id,
-          // callback_query,
-          photo,
-          location,
-          // location,
-          // date,
-          user,
-          video,
-          document,
-          db,
-        }
-        // from.id,
-        // text,
-        // message_id,
-        // undefined,
-        // photo,
-        // location,
-        // undefined,
-        // undefined,
-        // user
-      )
+  const handledContact = await checkContactRecive(body?.message, location, db)
+  if (handledContact) return
+
+  await sendMessage({
+    chat_id: from.id,
+    text: TELEGRAM_FALLBACK_TEXT,
+    remove_keyboard: true,
+    location,
+  })
+
+  if (text) {
+    return {
+      success: true,
+      message: text,
+    }
   }
 }
 

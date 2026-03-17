@@ -1,4 +1,4 @@
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 export default async function UsersInGame(req, res) {
   const { query, method } = req
@@ -9,11 +9,20 @@ export default async function UsersInGame(req, res) {
   switch (method) {
     case 'GET':
       try {
-        const db = await dbConnect(location)
+        const db = await dbConnectGlobal()
         if (!db)
           return res?.status(400).json({ success: false, error: 'db error' })
 
-        const game = await db.model('Games').findById(id).lean()
+        const game = await db
+          .model('Games')
+          .findOne({
+            _id: id,
+            location: String(location || '').trim().toLowerCase(),
+          })
+          .lean()
+        if (!game) {
+          return res?.status(404).json({ success: false, error: 'Игра не найдена' })
+        }
         const gameTeams = await db
           .model('GamesTeams')
           .find({ gameId: id })

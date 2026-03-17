@@ -6,7 +6,7 @@ import CabinetLayout from '@components/cabinet/CabinetLayout'
 import isUserAdmin from '@helpers/isUserAdmin'
 import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const SettingsPage = ({ initialSiteSettings }) => {
   const { data: session } = useSession()
@@ -298,7 +298,7 @@ export async function getServerSideProps(context) {
 
   if (location) {
     try {
-      const db = await dbConnect(location)
+      const db = await dbConnectGlobal()
 
       if (db) {
         const SiteSettingsModel = db.model('SiteSettings')

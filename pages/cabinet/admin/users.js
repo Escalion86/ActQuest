@@ -12,7 +12,7 @@ import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import { USERS_ROLES } from '@helpers/constants'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const roleLabels = {
   client: 'Пользователь',
@@ -877,7 +877,7 @@ export async function getServerSideProps(context) {
 
   if (location) {
     try {
-      const db = await dbConnect(location)
+      const db = await dbConnectGlobal()
 
       if (db) {
         const UsersModel = db.model('Users')

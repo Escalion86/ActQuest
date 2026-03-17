@@ -1,5 +1,5 @@
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const collectTeamIds = (query) => {
   const rawIds = []
@@ -38,12 +38,6 @@ export default async function handler(req, res) {
 
   const { location } = req.query
 
-  if (!location || typeof location !== 'string') {
-    return res
-      .status(400)
-      .json({ success: false, error: 'Не передана площадка' })
-  }
-
   const teamIds = collectTeamIds(req.query)
 
   if (teamIds.length === 0) {
@@ -53,7 +47,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const db = await dbConnect(location)
+    const db = await dbConnectGlobal()
 
     if (!db) {
       throw new Error('Соединение с базой данных не установлено')
@@ -61,7 +55,11 @@ export default async function handler(req, res) {
 
     const teams = await fetchTeamsForCabinet({ db, teamIds })
 
-    return res.status(200).json({ success: true, data: teams })
+    return res.status(200).json({
+      success: true,
+      data: teams,
+      meta: { location: typeof location === 'string' ? location : null },
+    })
   } catch (error) {
     console.error('Failed to load cabinet teams via API', error)
     return res

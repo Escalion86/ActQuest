@@ -1,7 +1,7 @@
 import fetchGame from '@server/fetchGame'
 import fetchTeam from '@server/fetchTeam'
 import webGameProcess from '@server/webGameProcess'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 import taskText from 'telegram/func/taskText'
 
 const ensureDateValue = (value) => {
@@ -420,7 +420,7 @@ const getTeamGameTaskState = async ({
     const isGameStarted = status === 'started'
     const isGameFinished = status === 'finished'
 
-    const db = await dbConnect(location)
+    const db = await dbConnectGlobal()
 
     if (!db) {
       return buildError(GAME_TASK_ERRORS.DB_CONNECTION_FAILED, {

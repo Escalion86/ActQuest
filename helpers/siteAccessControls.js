@@ -1,4 +1,4 @@
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 export const SITE_ACCESS_DEFAULTS = {
   allowSiteAuth: true,
@@ -32,7 +32,7 @@ export const getSiteAccessControlsByLocation = async (location) => {
   }
 
   try {
-    const db = await dbConnect(location)
+    const db = await dbConnectGlobal()
     if (!db) return SITE_ACCESS_DEFAULTS
 
     const settings = await db

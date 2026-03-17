@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import { getServerSession } from 'next-auth/next'
 
 import fetchGame from '@server/fetchGame'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 import { authOptions } from '@pages/api/auth/[...nextauth]'
 
@@ -368,7 +368,7 @@ export const getServerSideProps = async (context) => {
     const isGameStarted = status === 'started'
     const isGameFinished = status === 'finished'
 
-    const db = await dbConnect(locationParam)
+    const db = await dbConnectGlobal()
 
     if (!db) {
       return {

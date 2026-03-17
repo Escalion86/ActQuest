@@ -1,5 +1,5 @@
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const toStringId = (value) => {
   if (value === null || value === undefined) {
@@ -62,10 +62,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    const db = await dbConnect(location)
+    const db = await dbConnectGlobal()
 
     if (!db) {
       throw new Error('Соединение с базой данных не установлено')
+    }
+
+    const game = await db
+      .model('Games')
+      .findById(normalizedGameId)
+      .select({ _id: 1, location: 1 })
+      .lean()
+
+    if (!game) {
+      return res
+        .status(404)
+        .json({ success: false, error: 'Игра не найдена' })
+    }
+
+    const gameLocation =
+      typeof game.location === 'string' ? game.location.trim().toLowerCase() : null
+    const requestedLocation = location.trim().toLowerCase()
+    if (gameLocation && requestedLocation && gameLocation !== requestedLocation) {
+      return res
+        .status(403)
+        .json({ success: false, error: 'Игра недоступна для выбранной площадки' })
     }
 
     const GamesTeamsModel = db.model('GamesTeams')

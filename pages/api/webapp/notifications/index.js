@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 import { getServerSession } from 'next-auth/next'
 
 import { authOptions } from '../../auth/[...nextauth]'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const toIsoString = (value) => {
   if (!value) return null
@@ -55,12 +55,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const db = await dbConnect(location)
+    const db = await dbConnectGlobal()
 
     if (!db) {
       return res
-        .status(400)
-        .json({ success: false, error: 'Указан неизвестный регион для уведомлений.' })
+        .status(503)
+        .json({ success: false, error: 'Глобальная база недоступна для уведомлений.' })
     }
 
     const Notifications = db.model('Notifications')
@@ -72,6 +72,7 @@ export default async function handler(req, res) {
 
       const notifications = await Notifications.find({
         userTelegramId: telegramId,
+        location,
       })
         .sort({ createdAt: -1 })
         .limit(limit)
@@ -114,6 +115,7 @@ export default async function handler(req, res) {
         {
           _id: { $in: objectIds },
           userTelegramId: telegramId,
+          location,
           readAt: { $exists: true, $eq: null },
         },
         {

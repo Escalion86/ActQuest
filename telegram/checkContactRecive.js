@@ -1,10 +1,10 @@
-import executeCommand from './func/executeCommand'
 import sendMessage from './sendMessage'
-import upsertGlobalUser from '@helpers/upsertGlobalUser'
+import { TELEGRAM_FALLBACK_TEXT } from './constants'
 
 const checkContactRecive = async (message, location, db) => {
-  if (!message?.contact) return true
+  if (!message?.contact) return false
   const { contact, from } = message
+
   if (contact) {
     const { phone_number, first_name, last_name, user_id } = contact
     if (Number(user_id) !== Number(from?.id)) {
@@ -13,59 +13,41 @@ const checkContactRecive = async (message, location, db) => {
         text: 'Нужно отправить именно ваш контакт из Telegram.',
         location,
       })
-      return false
+      return true
     }
 
     const name = (first_name + (last_name ? ' ' + last_name : '')).trim()
+    const phone = Number(phone_number)
 
-    const globalUser = await upsertGlobalUser({
-      telegramId: from.id,
-      updates: {
-        name,
-        phone: Number(phone_number),
-        currentLocation: location,
+    const existingUser = await db.model('Users').findOne({ telegramId: from.id }).lean()
+
+    if (!existingUser?._id) {
+      await sendMessage({
+        chat_id: user_id,
+        text: TELEGRAM_FALLBACK_TEXT,
+        remove_keyboard: true,
+        location,
+      })
+      return true
+    }
+
+    await db.model('Users').findByIdAndUpdate(existingUser._id, {
+      $set: {
+        phone,
+        ...(name ? { name } : {}),
       },
-      authMethod: 'telegram',
-      setOnInsert: { accountLocation: location },
     })
-
-    const user = await db.model('Users').findOneAndUpdate(
-      {
-        telegramId: from.id,
-      },
-      {
-        name,
-        phone: Number(phone_number),
-        ...(globalUser?._id ? { globalUserId: globalUser._id.toString() } : {}),
-      },
-      { upsert: true }
-    )
 
     await sendMessage({
       chat_id: user_id,
-      text: `Регистрация успешна! Ваши данные:\n - Имя: ${name}\n - Телефон: ${phone_number}`,
-      // keyboard: {
-      //   keyboard: [],
-      //   inline_keyboard: [
-      //     [{ text: 'Изменить имя', callback_data: `/setUserName` }],
-      //     [{ text: '\u{1F3E0} Главное меню', callback_data: `/mainMenu` }],
-      //   ],
-      // },
+      text: `${TELEGRAM_FALLBACK_TEXT}\n\nВаш номер телефона обновлен.`,
       remove_keyboard: true,
       location,
     })
 
-    await executeCommand({
-      userTelegramId: user_id,
-      jsonCommand: { c: 'mainMenu' },
-      location,
-      user,
-      db,
-    })
-
-    return false
+    return true
   }
-  return true
+  return false
 }
 
 export default checkContactRecive

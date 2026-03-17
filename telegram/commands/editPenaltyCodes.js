@@ -68,7 +68,6 @@ const editPenaltyCodes = async ({ telegramId, jsonCommand, location, db }) => {
   }
   // }
 
-  // await dbConnect()
   // const game = await db.model('Games').findById(jsonCommand.gameId)
   // const tasks = [...game.tasks]
   // // const task = tasks[jsonCommand.i]

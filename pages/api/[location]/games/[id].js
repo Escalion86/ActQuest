@@ -1,5 +1,5 @@
 import CRUD from '@server/CRUD'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const buildResetPayload = () => ({
   activeNum: 0,
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const db = await dbConnect(location)
+    const db = await dbConnectGlobal()
 
     if (!db) {
       return res
@@ -53,6 +53,16 @@ export default async function handler(req, res) {
 
     if (!existingGame) {
       return res.status(404).json({ success: false, error: 'Игра не найдена' })
+    }
+
+    const existingGameLocation =
+      typeof existingGame.location === 'string'
+        ? existingGame.location.trim().toLowerCase()
+        : null
+    if (existingGameLocation && existingGameLocation !== String(location).trim().toLowerCase()) {
+      return res
+        .status(403)
+        .json({ success: false, error: 'Игра недоступна для выбранной площадки' })
     }
 
     const nextStatus = updatePayload.status ?? existingGame.status

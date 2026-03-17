@@ -4,7 +4,7 @@ import commandsArray, {
 } from 'telegram/commands/commandsArray'
 import mainMenuButton from 'telegram/commands/menuItems/mainMenuButton'
 // import sendMessage from 'telegram/sendMessage'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 import keyboardFormer from 'telegram/func/keyboardFormer'
 
 const lastCommandHandler = async (
@@ -68,7 +68,7 @@ const executeCommand = async ({
   source = 'web',
 }) => {
   let actualDb = db
-  if (!db) actualDb = await dbConnect(location)
+  if (!db) actualDb = await dbConnectGlobal()
 
   const result = await lastCommandHandler(
     userTelegramId,

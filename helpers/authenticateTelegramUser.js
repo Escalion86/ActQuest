@@ -1,4 +1,3 @@
-import dbConnect from '@utils/dbConnect'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import getTelegramTokenByLocation from '@utils/telegram/getTelegramTokenByLocation'
 import verifyTelegramAuthPayload from '@helpers/verifyTelegramAuthPayload'
@@ -96,17 +95,6 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
         }
       } catch (lookupError) {
         console.error('Test auth global user lookup error', lookupError)
-      }
-    }
-
-    if (!dbUser && resolvedLocation && normalizedTelegramId !== null) {
-      try {
-        const legacyDb = await dbConnect(resolvedLocation)
-        if (legacyDb) {
-          dbUser = await legacyDb.model('Users').findOne({ telegramId: normalizedTelegramId }).lean()
-        }
-      } catch (lookupError) {
-        console.error('Test auth legacy user lookup error', lookupError)
       }
     }
 

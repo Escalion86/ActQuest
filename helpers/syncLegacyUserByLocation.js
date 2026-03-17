@@ -1,4 +1,4 @@
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const syncLegacyUserByLocation = async ({
   location,
@@ -9,7 +9,7 @@ const syncLegacyUserByLocation = async ({
   if (!location || !findQuery || !updates) return null
 
   try {
-    const db = await dbConnect(location)
+    const db = await dbConnectGlobal()
     if (!db) return null
 
     const user = await db

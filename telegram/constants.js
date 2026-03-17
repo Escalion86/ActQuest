@@ -9,3 +9,6 @@ export const USERS_ROLES_NAMES = {
   ban: 'Бан',
   moder: 'Модератор',
 }
+
+export const TELEGRAM_FALLBACK_TEXT =
+  'К сожалению мы вынуждены были полностью уйти от Telegram, поэтому просим вас авторизироваться на сайте https://ActQuest.ru - теперь мы базируемся там!'

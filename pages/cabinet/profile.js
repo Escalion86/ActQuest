@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const preferenceOptions = [
   'Городские квесты',
@@ -17,15 +17,19 @@ const preferenceOptions = [
 
 const ProfilePage = ({ initialProfile }) => {
   const { data: session } = useSession()
-  const [formState, setFormState] = useState(() => initialProfile)
-  const [lastSavedState, setLastSavedState] = useState(() => initialProfile)
+  const normalizedInitialProfile = useMemo(
+    () => normalizeUserProfile(initialProfile),
+    [initialProfile],
+  )
+  const [formState, setFormState] = useState(() => normalizedInitialProfile)
+  const [lastSavedState, setLastSavedState] = useState(() => normalizedInitialProfile)
   const [saveState, setSaveState] = useState({ isSaving: false, isSaved: false, error: null })
 
   useEffect(() => {
-    setFormState(initialProfile)
-    setLastSavedState(initialProfile)
+    setFormState(normalizedInitialProfile)
+    setLastSavedState(normalizedInitialProfile)
     setSaveState({ isSaving: false, isSaved: false, error: null })
-  }, [initialProfile])
+  }, [normalizedInitialProfile])
 
   const hasChanges = useMemo(() => {
     try {
@@ -37,32 +41,32 @@ const ProfilePage = ({ initialProfile }) => {
   }, [formState, lastSavedState])
 
   const handleChange = useCallback((field, value) => {
-    setFormState((prevState) => ({ ...prevState, [field]: value }))
+    setFormState((prevState) => ({ ...normalizeUserProfile(prevState), [field]: value }))
     setSaveState((prevState) => ({ ...prevState, isSaved: false, error: null }))
   }, [])
 
   const togglePreference = useCallback((preference) => {
     setFormState((prevState) => {
-      const hasPreference = prevState.preferences.includes(preference)
+      const normalizedState = normalizeUserProfile(prevState)
+      const hasPreference = normalizedState.preferences.includes(preference)
 
       return {
-        ...prevState,
+        ...normalizedState,
         preferences: hasPreference
-          ? prevState.preferences.filter((item) => item !== preference)
-          : [...prevState.preferences, preference],
+          ? normalizedState.preferences.filter((item) => item !== preference)
+          : [...normalizedState.preferences, preference],
       }
     })
     setSaveState((prevState) => ({ ...prevState, isSaved: false, error: null }))
   }, [])
 
+  const safeFormState = useMemo(() => normalizeUserProfile(formState), [formState])
+
   const handleSubmit = useCallback(
     async (event) => {
       event.preventDefault()
 
-      const location = session?.user?.location ?? null
-      const profileId = formState.id ?? null
-
-      if (!location || !profileId) {
+      if (!safeFormState.id) {
         setSaveState({
           isSaving: false,
           isSaved: false,
@@ -88,14 +92,14 @@ const ProfilePage = ({ initialProfile }) => {
       }
 
       const payload = {
-        name: normalizeText(formState.name),
-        username: normalizeNullable(formState.username),
-        phone: normalizePhone(formState.phone),
-        about: normalizeText(formState.about),
-        preferences: Array.isArray(formState.preferences)
+        name: normalizeText(safeFormState.name),
+        username: normalizeNullable(safeFormState.username),
+        phone: normalizePhone(safeFormState.phone),
+        about: normalizeText(safeFormState.about),
+        preferences: Array.isArray(safeFormState.preferences)
           ? Array.from(
               new Set(
-                formState.preferences
+                safeFormState.preferences
                   .map((item) => normalizeText(item))
                   .filter((item) => item.length > 0)
               )
@@ -104,17 +108,14 @@ const ProfilePage = ({ initialProfile }) => {
       }
 
       try {
-        const response = await fetch(
-          `/api/${location}/custom?collection=users&id=${profileId}`,
-          {
-            method: 'PUT',
-            headers: {
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ data: payload }),
-          }
-        )
+        const response = await fetch('/api/cabinet/users/profile', {
+          method: 'PUT',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        })
 
         if (!response.ok) {
           const errorText = await response.text()
@@ -141,7 +142,7 @@ const ProfilePage = ({ initialProfile }) => {
         })
       }
     },
-    [formState, session]
+    [safeFormState, session]
   )
 
   const submitButtonClasses = useMemo(() => {
@@ -176,7 +177,7 @@ const ProfilePage = ({ initialProfile }) => {
                 <input
                   id="profile-name"
                   type="text"
-                  value={formState.name}
+                  value={safeFormState.name}
                   onChange={(event) => handleChange('name', event.target.value)}
                   className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                 />
@@ -189,7 +190,7 @@ const ProfilePage = ({ initialProfile }) => {
                 <input
                   id="profile-username"
                   type="text"
-                  value={formState.username ?? ''}
+                  value={safeFormState.username ?? ''}
                   onChange={(event) => handleChange('username', event.target.value)}
                   className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                   placeholder="Например, quest_master"
@@ -204,7 +205,7 @@ const ProfilePage = ({ initialProfile }) => {
               <input
                 id="profile-phone"
                 type="tel"
-                value={formState.phone}
+                value={safeFormState.phone}
                 onChange={(event) => handleChange('phone', event.target.value)}
                 className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                 placeholder="+7 900 000-00-00"
@@ -217,7 +218,7 @@ const ProfilePage = ({ initialProfile }) => {
               </label>
               <textarea
                 id="profile-about"
-                value={formState.about}
+                value={safeFormState.about}
                 onChange={(event) => handleChange('about', event.target.value)}
                 rows={5}
                 className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
@@ -229,7 +230,7 @@ const ProfilePage = ({ initialProfile }) => {
               <p className="text-sm font-semibold text-primary">Предпочитаемые форматы</p>
               <div className="flex flex-wrap gap-3 mt-3">
                 {preferenceOptions.map((preference) => {
-                  const isActive = formState.preferences.includes(preference)
+                  const isActive = safeFormState.preferences.includes(preference)
 
                   return (
                     <button
@@ -309,24 +310,35 @@ export async function getServerSideProps(context) {
     }
   }
 
-  const location = session?.user?.location ?? null
-  const userId = session?.user?._id ? String(session.user._id) : null
+  const userId = session?.user?.globalUserId || session?.user?._id
   const rawTelegramId = session?.user?.telegramId
   const numericTelegramId =
     rawTelegramId === null || rawTelegramId === undefined ? null : Number(rawTelegramId)
   const telegramId = Number.isFinite(numericTelegramId) ? numericTelegramId : null
+  const rawPhone = session?.user?.phone
+  const numericPhone = rawPhone === null || rawPhone === undefined ? null : Number(rawPhone)
+  const phone = Number.isFinite(numericPhone) ? numericPhone : null
+  const rawVkId = session?.user?.vkId
+  const numericVkId = rawVkId === null || rawVkId === undefined ? null : Number(rawVkId)
+  const vkId = Number.isFinite(numericVkId) ? numericVkId : null
 
   let initialProfile = normalizeUserProfile()
 
-  if (location && (userId || telegramId !== null)) {
+  if (userId || phone !== null || telegramId !== null || vkId !== null) {
     try {
-      const db = await dbConnect(location)
+      const db = await dbConnectGlobal()
 
       if (db) {
         const UsersModel = db.model('Users')
         const profileDoc = userId
           ? await UsersModel.findById(userId).lean()
-          : await UsersModel.findOne({ telegramId }).lean()
+          : phone !== null
+            ? await UsersModel.findOne({ phone }).lean()
+            : telegramId !== null
+              ? await UsersModel.findOne({ telegramId }).lean()
+              : vkId !== null
+                ? await UsersModel.findOne({ vkId }).lean()
+                : null
 
         if (profileDoc) {
           initialProfile = normalizeUserProfile(profileDoc)

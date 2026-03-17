@@ -4,7 +4,7 @@ import executeCommand from '@server/executeCommand'
 // import fetchTeam from '@server/fetchTeam'
 // import gameProcess from '@server/gameProcess'
 // import gameStart from '@server/gameStart'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
@@ -253,7 +253,7 @@ export const getServerSideProps = async (context) => {
 
   // const game = await fetchGame(location, id)
 
-  const db = await dbConnect(location)
+  const db = await dbConnectGlobal()
   if (!db) return {}
 
   // const result = await gameStart({ jsonCommand, location, db })

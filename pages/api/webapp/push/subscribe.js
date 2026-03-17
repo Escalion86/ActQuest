@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth/next'
 
 import { authOptions } from '../../auth/[...nextauth]'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const normalizeUserAgent = (value) => {
   if (!value || typeof value !== 'string') return null
@@ -26,6 +26,7 @@ const ensureUser = async ({ db, session }) => {
     languageCode: session.user?.languageCode ?? null,
     isPremium: session.user?.isPremium ?? false,
     role: session.user?.role ?? 'client',
+    currentLocation: session.user?.location ?? null,
   })
 
   return user
@@ -71,12 +72,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const db = await dbConnect(location)
+    const db = await dbConnectGlobal()
 
     if (!db) {
       return res
-        .status(400)
-        .json({ success: false, error: 'Указан неизвестный регион для уведомлений.' })
+        .status(503)
+        .json({ success: false, error: 'Глобальная база недоступна для уведомлений.' })
     }
 
     const Users = db.model('Users')

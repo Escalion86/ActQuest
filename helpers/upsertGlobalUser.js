@@ -32,20 +32,33 @@ const upsertGlobalUser = async ({
   if (!db) return null
 
   const Users = db.model('Users')
-  const filters = buildIdentityFilters({ telegramId, vkId, phone })
+  const normalizedTelegramId = normalizeNumber(telegramId)
+  const normalizedVkId = normalizeNumber(vkId)
+  const normalizedPhone = normalizeNumber(phone)
+
+  const filters = buildIdentityFilters({
+    telegramId: normalizedTelegramId,
+    vkId: normalizedVkId,
+    phone: normalizedPhone,
+  })
 
   let existingUser = null
   if (filters.length > 0) {
     existingUser = await Users.findOne({ $or: filters }).lean()
   }
 
-  const updatePayload = { ...updates }
+  const identityUpdates = {}
+  if (normalizedTelegramId !== null) identityUpdates.telegramId = normalizedTelegramId
+  if (normalizedVkId !== null) identityUpdates.vkId = normalizedVkId
+  if (normalizedPhone !== null) identityUpdates.phone = normalizedPhone
+
+  const updatePayload = { ...updates, ...identityUpdates }
   if (authMethod) updatePayload.authMethod = authMethod
 
   const identityDefaults = {
-    telegramId: normalizeNumber(telegramId),
-    vkId: normalizeNumber(vkId),
-    phone: normalizeNumber(phone),
+    telegramId: normalizedTelegramId,
+    vkId: normalizedVkId,
+    phone: normalizedPhone,
   }
 
   // Mongo не позволяет обновлять один и тот же путь одновременно в $set и $setOnInsert.

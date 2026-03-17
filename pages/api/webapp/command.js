@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../auth/[...nextauth]'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 import executeCommand from '@server/executeCommand'
 import { decodeCommandKeys } from 'telegram/func/commandShortcuts'
 import { numToCommand } from 'telegram/commands/commandsArray'
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const db = await dbConnect(targetLocation)
+    const db = await dbConnectGlobal()
     if (!db) {
       return res
         .status(400)
@@ -93,6 +93,7 @@ export default async function handler(req, res) {
         photoUrl: session.user?.photoUrl ?? null,
         languageCode: session.user?.languageCode ?? null,
         isPremium: session.user?.isPremium ?? false,
+        currentLocation: targetLocation,
       })
     } else {
       const updates = {}
@@ -110,6 +111,13 @@ export default async function handler(req, res) {
       }
       if (typeof session.user?.isPremium === 'boolean' && session.user.isPremium !== user.isPremium) {
         updates.isPremium = session.user.isPremium
+      }
+      if (
+        typeof targetLocation === 'string' &&
+        targetLocation.trim().length > 0 &&
+        targetLocation !== user.currentLocation
+      ) {
+        updates.currentLocation = targetLocation
       }
 
       if (Object.keys(updates).length > 0) {

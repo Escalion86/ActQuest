@@ -2,7 +2,6 @@ import { getServerSession } from 'next-auth/next'
 
 import { authOptions } from '@pages/api/auth/[...nextauth]'
 import isUserAdmin from '@helpers/isUserAdmin'
-import dbConnect from '@utils/dbConnect'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import sendMessage from 'telegram/sendMessage'
 
@@ -44,35 +43,10 @@ export default async function handler(req, res) {
     }
 
     const globalUsers = globalDb.model('Users')
-    let user = await globalUsers
+    const user = await globalUsers
       .findById(requestedUserId)
       .select({ _id: 1, telegramId: 1, phone: 1, name: 1 })
       .lean()
-
-    if (!user) {
-      const legacyDb = await dbConnect(location)
-      if (legacyDb) {
-        const legacyUser = await legacyDb
-          .model('Users')
-          .findById(requestedUserId)
-          .select({ _id: 1, telegramId: 1, phone: 1, globalUserId: 1 })
-          .lean()
-
-        if (legacyUser?.globalUserId) {
-          user = await globalUsers
-            .findById(String(legacyUser.globalUserId))
-            .select({ _id: 1, telegramId: 1, phone: 1, name: 1 })
-            .lean()
-        }
-
-        if (!user && Number.isFinite(Number(legacyUser?.telegramId))) {
-          user = await globalUsers
-            .findOne({ telegramId: Number(legacyUser.telegramId) })
-            .select({ _id: 1, telegramId: 1, phone: 1, name: 1 })
-            .lean()
-        }
-      }
-    }
 
     if (!user) {
       return res

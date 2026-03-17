@@ -9,7 +9,7 @@ import { resolveCabinetCallback } from '@helpers/cabinetAuth'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { getNounTeams, getNounUsers } from '@helpers/getNoun'
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const quickActions = [
   {
@@ -317,7 +317,7 @@ export async function getServerSideProps(context) {
 
   if (location) {
     try {
-      const db = await dbConnect(location)
+      const db = await dbConnectGlobal()
 
       if (db) {
         const GamesModel = db.model('Games')

@@ -1,4 +1,4 @@
-import dbConnect from '@utils/dbConnect'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 import gameProcess from 'telegram/commands/gameProcess'
 
 export default async function handler(req, res) {
@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     case 'GET':
       try {
         if (id) {
-          const db = await dbConnect(location)
+          const db = await dbConnectGlobal()
           if (!db) return {}
 
           const data = await db.model('GamesTeams').findById(id).lean()
