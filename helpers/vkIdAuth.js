@@ -1,4 +1,30 @@
 const VK_ID_DOMAIN_DEFAULT = 'id.vk.ru'
+const isVkDebugEnabled =
+  process.env.VK_AUTH_DEBUG === 'true' ||
+  process.env.VK_DEBUG_LOGS === 'true'
+
+const redactValue = (key, value) => {
+  const lowered = String(key || '').toLowerCase()
+  if (
+    lowered.includes('token') ||
+    lowered.includes('secret') ||
+    lowered === 'code' ||
+    lowered.includes('verifier')
+  ) {
+    return value ? '[redacted]' : value
+  }
+  return value
+}
+
+const redactObject = (source = {}) =>
+  Object.fromEntries(
+    Object.entries(source).map(([key, value]) => [key, redactValue(key, value)]),
+  )
+
+const logVkDebug = (label, payload) => {
+  if (!isVkDebugEnabled) return
+  console.info(`[VK_DEBUG][vkIdAuth] ${label}`, payload)
+}
 
 const getVkClientId = () => {
   const raw =
@@ -88,11 +114,32 @@ const vkOAuthRequest = async ({
   }
 
   const url = `https://${domain}${path}?${queryParams.toString()}`
+  logVkDebug('oauth_request', {
+    path,
+    method,
+    query: redactObject(
+      Object.fromEntries(
+        Object.entries(query || {}).filter(([, value]) => value !== undefined),
+      ),
+    ),
+    body: redactObject(requestBody),
+    hasClientSecret: Boolean(clientSecret),
+  })
+
   const response = await fetch(url, {
     method,
     body: toFormBody(requestBody),
   })
   const data = await safeJson(response)
+  logVkDebug('oauth_response', {
+    path,
+    method,
+    httpStatus: response.status,
+    ok: response.ok,
+    hasJson: Boolean(data),
+    vkError: data?.error || data?.error_description || null,
+    keys: data && typeof data === 'object' ? Object.keys(data).sort() : [],
+  })
 
   if (!response.ok) {
     return {
@@ -127,6 +174,12 @@ const vkOAuthRequest = async ({
 }
 
 const exchangeVkCode = async ({ code, deviceId, codeVerifier, state }) => {
+  logVkDebug('exchange_code_start', {
+    hasCode: Boolean(code),
+    hasDeviceId: Boolean(deviceId),
+    hasCodeVerifier: Boolean(codeVerifier),
+    hasState: Boolean(state),
+  })
   const redirectUri = getVkRedirectUrl()
   if (!redirectUri) {
     return {

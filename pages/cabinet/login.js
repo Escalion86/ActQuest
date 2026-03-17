@@ -46,6 +46,26 @@ const mapVkSignInError = (errorCode) =>
   VK_SIGNIN_ERROR_MESSAGES[errorCode] ||
   'Не удалось выполнить вход через VK ID. Попробуйте позже.'
 
+const summarizeVkMessageData = (data) => {
+  if (!data || typeof data !== 'object') {
+    return { type: typeof data }
+  }
+
+  return {
+    action: data.action ?? null,
+    event: data.event ?? null,
+    handler: data.handler ?? null,
+    type: data.type ?? null,
+    code: data.code ?? null,
+    hasPayload: Boolean(data.payload && typeof data.payload === 'object'),
+    payloadKeys:
+      data.payload && typeof data.payload === 'object'
+        ? Object.keys(data.payload).sort()
+        : [],
+    keys: Object.keys(data).sort(),
+  }
+}
+
 const VK_SDK_URL = 'https://unpkg.com/@vkid/sdk@2.6.5/dist-sdk/umd/index.js'
 let vkSdkLoadPromise = null
 
@@ -119,6 +139,7 @@ const CabinetLoginPage = ({
   const [passwordInput, setPasswordInput] = useState('')
   const [siteAccess, setSiteAccess] = useState(defaultSiteAccess)
   const [isSiteAccessLoading, setIsSiteAccessLoading] = useState(false)
+  const [authDebugEvents, setAuthDebugEvents] = useState([])
   const vkIdWidgetContainerRef = useRef(null)
   const isAuthenticatingRef = useRef(false)
   const vkAuthInFlightRef = useRef(false)
@@ -129,6 +150,17 @@ const CabinetLoginPage = ({
   const isVkSignInEnabled =
     isVkAuthVisible && siteAccess.allowSiteAuth && siteAccess.enableVkOneTap
 
+  const appendAuthDebug = useCallback((stage, payload = null) => {
+    if (!isVkDebugEnabled) return
+    const event = {
+      time: new Date().toISOString(),
+      stage,
+      payload,
+    }
+    setAuthDebugEvents((prev) => [event, ...prev].slice(0, 60))
+    console.info('[VK_FLOW_DEBUG]', stage, payload)
+  }, [])
+
   useEffect(() => {
     setIsClient(true)
   }, [])
@@ -138,6 +170,14 @@ const CabinetLoginPage = ({
       setLocation(session.user.location)
     }
   }, [session?.user?.location])
+
+  useEffect(() => {
+    appendAuthDebug('session_status_changed', {
+      status,
+      hasSession: Boolean(session),
+      location: session?.user?.location ?? null,
+    })
+  }, [appendAuthDebug, session, status])
 
   useEffect(() => {
     isAuthenticatingRef.current = isAuthenticating
@@ -151,12 +191,19 @@ const CabinetLoginPage = ({
     let cancelled = false
 
     const fetchSiteAccess = async () => {
+      appendAuthDebug('site_access_fetch_start', { location })
       setIsSiteAccessLoading(true)
       try {
         const response = await fetch(
           `/api/public/site-access?location=${encodeURIComponent(location)}`,
         )
         const json = await response.json()
+        appendAuthDebug('site_access_fetch_response', {
+          location,
+          ok: response.ok,
+          success: json?.success ?? null,
+          data: json?.data ?? null,
+        })
         if (!cancelled && response.ok && json?.success && json?.data) {
           setSiteAccess({
             allowSiteAuth: Boolean(json.data.allowSiteAuth),
@@ -175,6 +222,7 @@ const CabinetLoginPage = ({
 
       if (!cancelled) {
         setSiteAccess(defaultSiteAccess)
+        appendAuthDebug('site_access_fallback_default', { location })
       }
     }
 
@@ -184,6 +232,27 @@ const CabinetLoginPage = ({
       cancelled = true
     }
   }, [isClient, location])
+
+  useEffect(() => {
+    if (!isClient || !isVkDebugEnabled) return undefined
+
+    const onMessage = (event) => {
+      const origin = String(event?.origin || '')
+      if (!origin.endsWith('.vk.ru') && !origin.endsWith('.vk.com')) return
+
+      appendAuthDebug('vk_message_in', {
+        origin,
+        data: summarizeVkMessageData(event?.data),
+      })
+    }
+
+    window.addEventListener('message', onMessage)
+    appendAuthDebug('vk_message_listener_attached')
+    return () => {
+      window.removeEventListener('message', onMessage)
+      appendAuthDebug('vk_message_listener_detached')
+    }
+  }, [appendAuthDebug, isClient])
 
   useEffect(() => {
     if (status !== 'authenticated' || !session) {
@@ -210,6 +279,14 @@ const CabinetLoginPage = ({
 
   const handleVkAuth = useCallback(
     async ({ code, deviceId, codeVerifier, state, accessToken }) => {
+      appendAuthDebug('vk_auth_start', {
+        hasCode: Boolean(code),
+        hasDeviceId: Boolean(deviceId),
+        hasCodeVerifier: Boolean(codeVerifier),
+        hasState: Boolean(state),
+        hasAccessToken: Boolean(accessToken),
+        location,
+      })
       if (
         !code ||
         !deviceId ||
@@ -256,6 +333,11 @@ const CabinetLoginPage = ({
           accessToken,
           codeVerifier: codeVerifier || undefined,
           state: state || undefined,
+        })
+        appendAuthDebug('vk_signin_result', {
+          hasError: Boolean(result?.error),
+          hasUrl: Boolean(result?.url),
+          error: result?.error ?? null,
         })
 
         if (result?.error) {
@@ -305,10 +387,15 @@ const CabinetLoginPage = ({
         }
       } catch (authError) {
         console.error('VK auth error', authError)
+        appendAuthDebug('vk_auth_error', {
+          message: authError?.message ?? null,
+          name: authError?.name ?? null,
+        })
         setVkError(mapVkSignInError(authError.message))
       } finally {
         vkAuthInFlightRef.current = false
         setIsAuthenticating(false)
+        appendAuthDebug('vk_auth_finish')
       }
     },
     [
@@ -463,6 +550,7 @@ const CabinetLoginPage = ({
     ].join('|')
 
     if (vkWidgetConfigKeyRef.current === configKey && vkWidgetInstanceRef.current) {
+      appendAuthDebug('vk_widget_init_skipped_same_config', { configKey })
       return undefined
     }
     vkWidgetConfigKeyRef.current = configKey
@@ -470,10 +558,22 @@ const CabinetLoginPage = ({
     let isMounted = true
 
     const init = async () => {
+      appendAuthDebug('vk_widget_init_start', {
+        configKey,
+        vkidAppId,
+        vkidCallbackUrl,
+        vkidScope,
+        location,
+      })
       const loaded = await loadVkSdk()
       if (!loaded || !isMounted || !container) {
         if (isMounted) {
           setVkError('VK One Tap SDK недоступен. Проверьте подключение.')
+          appendAuthDebug('vk_sdk_load_failed', {
+            loaded,
+            isMounted,
+            hasContainer: Boolean(container),
+          })
         }
         return
       }
@@ -488,8 +588,15 @@ const CabinetLoginPage = ({
           source: VKID.ConfigSource.LOWCODE,
           scope: vkidScope,
         })
+        appendAuthDebug('vk_config_init_ok', {
+          responseMode: 'callback',
+          source: 'lowcode',
+        })
       } catch (error) {
         // может быть уже инициализировано
+        appendAuthDebug('vk_config_init_skip_or_error', {
+          message: error?.message ?? null,
+        })
       }
 
       const oneTap = new VKID.OneTap()
@@ -509,6 +616,11 @@ const CabinetLoginPage = ({
             error?.details?.error ||
             null
           console.error('VK widget error', error)
+          appendAuthDebug('vk_widget_error', {
+            code: vkWidgetErrorCode,
+            text: vkWidgetErrorText,
+            raw: summarizeVkMessageData(error),
+          })
           setVkError(
             vkWidgetErrorText && vkWidgetErrorCode !== null
               ? `Ошибка виджета VK ID (${vkWidgetErrorCode}): ${vkWidgetErrorText}. Попробуйте вход по паролю.`
@@ -541,6 +653,16 @@ const CabinetLoginPage = ({
           const codeVerifier =
             payload?.code_verifier || payload?.codeVerifier || payload?.verifier
           const state = payload?.state || null
+          appendAuthDebug('vk_login_success_payload', {
+            hasCode: Boolean(code),
+            hasDeviceId: Boolean(deviceId),
+            hasCodeVerifier: Boolean(codeVerifier),
+            hasState: Boolean(state),
+            payloadKeys:
+              payload && typeof payload === 'object'
+                ? Object.keys(payload).sort()
+                : [],
+          })
 
           if (!code || !deviceId) {
             setVkError('VK ID не вернул код авторизации.')
@@ -551,9 +673,17 @@ const CabinetLoginPage = ({
             let accessToken = null
             if (!codeVerifier && VKID?.Auth?.exchangeCode) {
               try {
+                appendAuthDebug('vk_client_exchange_start')
                 const exchangeResult = await VKID.Auth.exchangeCode(code, deviceId)
                 accessToken = exchangeResult?.access_token || null
+                appendAuthDebug('vk_client_exchange_result', {
+                  hasAccessToken: Boolean(accessToken),
+                })
               } catch (clientExchangeError) {
+                appendAuthDebug('vk_client_exchange_error', {
+                  message: clientExchangeError?.message ?? null,
+                  name: clientExchangeError?.name ?? null,
+                })
                 setVkError(
                   'VK ID временно недоступен. Попробуйте позже или войдите по паролю.',
                 )
@@ -594,6 +724,7 @@ const CabinetLoginPage = ({
         })
 
       setIsVkIdReady(true)
+      appendAuthDebug('vk_widget_ready')
     }
 
     init()
@@ -603,8 +734,10 @@ const CabinetLoginPage = ({
       setIsVkIdReady(false)
       vkWidgetInstanceRef.current = null
       if (container) container.innerHTML = ''
+      appendAuthDebug('vk_widget_cleanup')
     }
   }, [
+    appendAuthDebug,
     isClient,
     vkidAppId,
     vkidCallbackUrl,
@@ -817,6 +950,29 @@ const CabinetLoginPage = ({
                     <NoticeBanner tone="error">
                       {authError}
                     </NoticeBanner>
+                  ) : null}
+                  {isVkDebugEnabled ? (
+                    <div className="w-full p-3 text-xs border rounded-xl border-slate-300 bg-slate-50 text-slate-700 max-h-64 overflow-auto">
+                      <div className="font-semibold mb-2">
+                        VK/Auth Debug
+                      </div>
+                      <div className="mb-2">
+                        status={status}; isAuthenticating={String(isAuthenticating)};
+                        vkReady={String(isVkIdReady)};
+                        vkEnabled={String(isVkSignInEnabled)};
+                        location={location}
+                      </div>
+                      {authDebugEvents.length === 0 ? (
+                        <div>События пока не получены</div>
+                      ) : (
+                        authDebugEvents.map((item, index) => (
+                          <pre key={`${item.time}-${item.stage}-${index}`} className="mb-2 whitespace-pre-wrap break-words">
+                            [{item.time}] {item.stage}
+                            {item.payload ? `\n${JSON.stringify(item.payload)}` : ''}
+                          </pre>
+                        ))
+                      )}
+                    </div>
                   ) : null}
                 </div>
               </div>
