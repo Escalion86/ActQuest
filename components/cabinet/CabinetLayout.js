@@ -213,7 +213,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
             <div className="flex h-16 items-center justify-center border-b border-slate-200 dark:border-slate-800">
               <span className="text-lg font-semibold text-primary dark:text-slate-100">ActQuest</span>
             </div>
-            <nav className="flex-1 space-y-1 overflow-y-auto py-4 min-h-0">
+            <nav className="flex-1 space-y-1 overflow-y-auto py-4 min-h-0 select-none">
               {menuItems.map((item) => {
                 if (item.id === 'admin') {
                   const isAdminSectionActive = router.pathname.startsWith('/cabinet/admin')
@@ -223,7 +223,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                       <button
                         type="button"
                         onClick={() => setIsAdminMenuOpen((prev) => !prev)}
-                        className={`flex w-full items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
+                        className={`flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
                           isAdminSectionActive
                             ? 'text-primary dark:text-blue-200 bg-blue-50 dark:bg-blue-500/10 border-r-4 border-primary dark:border-blue-400'
                             : 'text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-500/10'
@@ -258,7 +258,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                             return (
                               <Link key={subItem.id} href={subItem.href} legacyBehavior>
                                 <a
-                                  className={`block rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
+                                  className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
                                     isSubActive
                                       ? 'bg-blue-50 text-primary dark:bg-blue-500/10 dark:text-blue-200'
                                       : 'text-slate-500 hover:bg-blue-50 hover:text-primary dark:text-slate-300 dark:hover:bg-blue-500/10 dark:hover:text-blue-200'
@@ -281,7 +281,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                 return (
                   <Link key={item.id} href={item.href} legacyBehavior>
                     <a
-                      className={`flex items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
+                      className={`flex cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
                         isActive
                           ? 'text-primary dark:text-blue-200 bg-blue-50 dark:bg-blue-500/10 border-r-4 border-primary dark:border-blue-400'
                           : 'text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-500/10'
@@ -328,7 +328,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  className="flex items-center justify-center w-10 h-10 text-slate-600 transition-colors duration-150 bg-slate-100 rounded-xl md:hidden hover:text-primary hover:bg-blue-100 dark:text-slate-300 dark:bg-slate-800 dark:hover:text-blue-200 dark:hover:bg-blue-500/20"
+                  className="flex cursor-pointer items-center justify-center w-10 h-10 text-slate-600 transition-colors duration-150 bg-slate-100 rounded-xl md:hidden hover:text-primary hover:bg-blue-100 dark:text-slate-300 dark:bg-slate-800 dark:hover:text-blue-200 dark:hover:bg-blue-500/20"
                   onClick={() => setIsSidebarExpanded((prev) => !prev)}
                   aria-label="Открыть меню"
                 >

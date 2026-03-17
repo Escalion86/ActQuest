@@ -1,6 +1,7 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import upsertGlobalUser from '@helpers/upsertGlobalUser'
 import syncLegacyUserByLocation from '@helpers/syncLegacyUserByLocation'
+import normalizeAuthPhone from '@helpers/normalizeAuthPhone'
 
 const isVkDebugEnabled =
   process.env.VK_AUTH_DEBUG === 'true' ||
@@ -25,6 +26,41 @@ const errorResponse = (code, message, details = null) => ({
 const normalizeLocation = (location) => {
   if (!location) return null
   return String(location)
+}
+
+const normalizeVkPhone = (value) => {
+  if (value === null || typeof value === 'undefined') return null
+
+  const raw = String(value).trim()
+  if (!raw) return null
+
+  const direct = normalizeAuthPhone(raw)
+  if (direct !== null) return direct
+
+  const digits = raw.replace(/\D/g, '')
+  if (!digits) return null
+
+  if (digits.length === 10) {
+    return normalizeAuthPhone(`7${digits}`)
+  }
+
+  if (digits.length === 11) {
+    if (digits.startsWith('8')) {
+      return normalizeAuthPhone(`7${digits.slice(1)}`)
+    }
+    return normalizeAuthPhone(digits)
+  }
+
+  if (digits.length > 11) {
+    if (digits.startsWith('7')) {
+      return normalizeAuthPhone(digits.slice(0, 11))
+    }
+    if (digits.startsWith('8')) {
+      return normalizeAuthPhone(`7${digits.slice(1, 11)}`)
+    }
+  }
+
+  return null
 }
 
 const authenticateVkUser = async ({ location, rawData }) => {
@@ -80,6 +116,9 @@ const authenticateVkUser = async ({ location, rawData }) => {
 
   const accessToken = payload.accessToken || payload.access_token
   const vkId = payload.vkId || payload.userId || payload.user?.id
+  const phone = normalizeVkPhone(
+    payload.phone || payload.user?.phone || payload.user?.phone_number,
+  )
   const firstName =
     payload.firstName || payload.first_name || payload.user?.first_name
   const lastName =
@@ -91,6 +130,7 @@ const authenticateVkUser = async ({ location, rawData }) => {
       payloadKeys: safeKeys(payload),
       userKeys: safeKeys(payload?.user),
       vkIdRaw: payload.vkId ?? payload.userId ?? payload.user?.id ?? null,
+      hasPhone: phone !== null,
       accessTokenMasked: maskToken(accessToken),
     })
   }
@@ -99,6 +139,13 @@ const authenticateVkUser = async ({ location, rawData }) => {
     return errorResponse(
       'INVALID_VK_DATA',
       'Отсутствуют необходимые данные VK авторизации (access token или user id).',
+    )
+  }
+
+  if (phone === null) {
+    return errorResponse(
+      'VK_PHONE_REQUIRED',
+      'VK не передал номер телефона. Вход возможен только по подтвержденному номеру телефона.',
     )
   }
 
@@ -206,10 +253,11 @@ const authenticateVkUser = async ({ location, rawData }) => {
       languageCode: null,
       isPremium: false,
       currentLocation: resolvedLocation,
+      ...(phone !== null ? { phone } : {}),
     }
 
     const user = await upsertGlobalUser({
-      vkId: vkUserId,
+      phone,
       updates,
       authMethod: 'vk',
       setOnInsert: { accountLocation: resolvedLocation },
@@ -224,7 +272,7 @@ const authenticateVkUser = async ({ location, rawData }) => {
 
     await syncLegacyUserByLocation({
       location: resolvedLocation,
-      findQuery: { vkId: vkUserId },
+      findQuery: { phone },
       updates: {
         ...updates,
         authMethod: 'vk',

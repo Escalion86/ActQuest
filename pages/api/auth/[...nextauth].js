@@ -195,6 +195,7 @@ export const authOptions = {
             const normalizedPayload = JSON.stringify({
               accessToken: resolvedAccessToken,
               vkId,
+              phone: vkUser?.phone || null,
               firstName: vkUser?.first_name || '',
               lastName: vkUser?.last_name || '',
               photoUrl: vkUser?.avatar || vkUser?.photo_200 || null,
@@ -229,7 +230,7 @@ export const authOptions = {
                     : [],
               })
             }
-            throw new Error(result.errorMessage || result.errorCode || 'VK_AUTH_FAILED')
+            throw new Error(result.errorCode || result.errorMessage || 'VK_AUTH_FAILED')
           }
 
           return { ...result.user, authMethod: 'vk' }
@@ -357,21 +358,6 @@ export const authOptions = {
 
             if (
               !user &&
-              typeof token.telegramId !== 'undefined' &&
-              token.telegramId !== null
-            ) {
-              user = await globalDb
-                .model('Users')
-                .findOne({ telegramId: token.telegramId })
-                .lean()
-            }
-
-            if (!user && typeof token.vkId !== 'undefined' && token.vkId !== null) {
-              user = await globalDb.model('Users').findOne({ vkId: token.vkId }).lean()
-            }
-
-            if (
-              !user &&
               typeof token.phone !== 'undefined' &&
               token.phone !== null
             ) {
@@ -388,21 +374,6 @@ export const authOptions = {
                 } catch (idError) {
                   // ignore
                 }
-              }
-
-              if (
-                !user &&
-                typeof token.telegramId !== 'undefined' &&
-                token.telegramId !== null
-              ) {
-                user = await legacyDb
-                  .model('Users')
-                  .findOne({ telegramId: token.telegramId })
-                  .lean()
-              }
-
-              if (!user && typeof token.vkId !== 'undefined' && token.vkId !== null) {
-                user = await legacyDb.model('Users').findOne({ vkId: token.vkId }).lean()
               }
 
               if (

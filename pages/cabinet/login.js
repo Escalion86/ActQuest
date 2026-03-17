@@ -4,6 +4,8 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { signIn, useSession } from 'next-auth/react'
 import NoticeBanner from '@components/NoticeBanner'
+import AuthSplitLayout from '@components/cabinet/auth/AuthSplitLayout'
+import AuthLocationSelect from '@components/cabinet/auth/AuthLocationSelect'
 
 import getSessionSafe from '@helpers/getSessionSafe'
 import {
@@ -36,6 +38,8 @@ const VK_SIGNIN_ERROR_MESSAGES = {
     'Не удалось получить профиль VK. Попробуйте позже или войдите по номеру телефона.',
   VK_PROFILE_INVALID: 'Профиль VK ID передан некорректно.',
   VK_SERVER_UNAVAILABLE: 'Сервис авторизации временно недоступен.',
+  VK_PHONE_REQUIRED:
+    'Произошла ошибка VK ID: не удалось получить номер телефона. Попробуйте зарегистрироваться по номеру телефона.',
   VK_ACCOUNT_NOT_FOUND:
     'Аккаунт не найден. Зарегистрируйтесь по номеру телефона или через VK позже.',
   CredentialsSignin:
@@ -754,117 +758,72 @@ const CabinetLoginPage = ({
       <Head>
         <title>ActQuest — вход в кабинет</title>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="max-w-6xl px-4 py-16 mx-auto">
-          <div className="grid gap-10 md:grid-cols-[1.05fr_0.95fr] items-start">
-            <div className="space-y-6 text-white">
-              <p className="inline-flex items-center px-4 py-2 text-xs font-semibold tracking-widest uppercase rounded-full bg-white/10">
-                Личный кабинет ActQuest
-              </p>
-              <h1 className="text-3xl font-semibold md:text-4xl">
-                Открывайте городские игры и проводите время с друзьями
-              </h1>
-              <p className="text-base text-slate-200 md:text-lg">
-                В кабинете вы выбираете игру, собираете команду и отслеживаете
-                участие в одном месте. Подходит и для новых игроков, и для тех,
-                кто уже регулярно выходит на квесты.
-              </p>
-              <ul className="space-y-3 text-sm text-slate-200 md:text-base">
-                <li className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold bg-white rounded-full text-slate-900 dark:text-slate-100 dark:bg-slate-900/80">
-                    1
-                  </span>
-                  <span>
-                    Выберите город, чтобы увидеть актуальные игры и события.
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold bg-white rounded-full text-slate-900 dark:text-slate-100 dark:bg-slate-900/80">
-                    2
-                  </span>
-                  <span>
-                    {isVkAuthVisible
-                      ? 'Войдите через VK ID или по номеру телефона и паролю.'
-                      : 'Войдите по номеру телефона и паролю.'}
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="inline-flex items-center justify-center flex-none w-8 h-8 text-sm font-semibold bg-white rounded-full text-slate-900 dark:text-slate-100 dark:bg-slate-900/80">
-                    3
-                  </span>
-                  <span>
-                    Переходите в кабинет: выбирайте игру, собирайте друзей и
-                    выходите на маршрут.
-                  </span>
-                </li>
-              </ul>
-            </div>
+      <AuthSplitLayout
+        title="Открывайте городские игры и проводите время с друзьями"
+        description="В кабинете вы выбираете игру, собираете команду и отслеживаете участие в одном месте. Подходит и для новых игроков, и для тех, кто уже регулярно выходит на квесты."
+        stepTexts={[
+          'Выберите город, чтобы увидеть актуальные игры и события.',
+          isVkAuthVisible
+            ? 'Войдите через VK ID или по номеру телефона и паролю.'
+            : 'Войдите по номеру телефона и паролю.',
+          'Переходите в кабинет: выбирайте игру, собирайте друзей и выходите на маршрут.',
+        ]}
+      >
+        <h2 className="text-2xl font-semibold text-center text-primary">
+          Авторизация
+        </h2>
+        {authCallbackSource ? (
+          <p className="mt-2 text-xs text-center break-words text-slate-400">
+            Запрошенный адрес: {authCallbackSource}
+          </p>
+        ) : null}
 
-            <div className="p-8 bg-white shadow-2xl dark:bg-slate-900/80 rounded-3xl">
-              <h2 className="text-2xl font-semibold text-center text-primary">
-                Авторизация
-              </h2>
-              {authCallbackSource ? (
-                <p className="mt-2 text-xs text-center break-words text-slate-400">
-                  Запрошенный адрес: {authCallbackSource}
-                </p>
-              ) : null}
+        <div className="mt-6 space-y-4">
+          <AuthLocationSelect
+            location={location}
+            onChange={(event) => setLocation(event.target.value)}
+            disabled={isAuthenticating}
+            availableLocations={availableLocations}
+          />
 
-              <div className="mt-6 space-y-4">
-                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-                  Игровой регион
-                  <select
-                    className="px-4 py-3 text-base transition border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    value={location}
-                    onChange={(event) => setLocation(event.target.value)}
-                    disabled={isAuthenticating}
-                  >
-                    {availableLocations.map((item) => (
-                      <option key={item.key} value={item.key}>
-                        {item.townRu[0].toUpperCase() + item.townRu.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <div className="flex flex-col items-center gap-4">
-                  {isAuthResolvedAsGuest && isVkSignInEnabled && vkidAppId ? (
-                    <div className="w-full">
-                      <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                        Войти через VK ID
-                      </div>
-                      <div ref={vkIdWidgetContainerRef} className="w-full" />
-                      {!isVkIdReady ? (
-                        <div className="flex items-center justify-center h-6 mt-2 text-xs text-slate-500">
-                          Загрузка VK One Tap...
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : isAuthResolvedAsGuest && isVkSignInEnabled ? (
-                    <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
-                      Проверьте переменную{' '}
-                      <code className="px-1 bg-white rounded dark:bg-slate-900/80">
-                        VK_ID_APP_ID
-                      </code>{' '}
-                      на сервере для входа через VK One Tap.
-                    </div>
-                  ) : null}
-
-                  {!siteAccess.allowSiteAuth ? (
-                    <NoticeBanner tone="warning">
-                      Авторизация временно отключена, ведутся работы.
-                    </NoticeBanner>
-                  ) : null}
-
-                  {isSiteAccessLoading ? (
-                    <NoticeBanner className="text-xs" centered>
-                      Загружаем настройки доступа...
-                    </NoticeBanner>
-                  ) : null}
-
-                  <div className="w-full text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                    или войдите по номеру телефона
+          <div className="flex flex-col items-center gap-4">
+            {isAuthResolvedAsGuest && isVkSignInEnabled && vkidAppId ? (
+              <div className="w-full">
+                <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Войти через VK ID
+                </div>
+                <div ref={vkIdWidgetContainerRef} className="w-full" />
+                {!isVkIdReady ? (
+                  <div className="flex items-center justify-center h-6 mt-2 text-xs text-slate-500">
+                    Загрузка VK One Tap...
                   </div>
+                ) : null}
+              </div>
+            ) : isAuthResolvedAsGuest && isVkSignInEnabled ? (
+              <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
+                Проверьте переменную{' '}
+                <code className="px-1 bg-white rounded dark:bg-slate-900/80">
+                  VK_ID_APP_ID
+                </code>{' '}
+                на сервере для входа через VK One Tap.
+              </div>
+            ) : null}
+
+            {!siteAccess.allowSiteAuth ? (
+              <NoticeBanner tone="warning">
+                Авторизация временно отключена, ведутся работы.
+              </NoticeBanner>
+            ) : null}
+
+            {isSiteAccessLoading ? (
+              <NoticeBanner className="text-xs" centered>
+                Загружаем настройки доступа...
+              </NoticeBanner>
+            ) : null}
+
+            <div className="w-full text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+              или войдите по номеру телефона
+            </div>
 
                   <form
                     className="w-full p-4 space-y-3 border rounded-xl border-slate-200 dark:border-slate-700"
@@ -979,11 +938,8 @@ const CabinetLoginPage = ({
                     </div>
                   ) : null}
                 </div>
-              </div>
-            </div>
           </div>
-        </div>
-      </div>
+      </AuthSplitLayout>
     </>
   )
 }

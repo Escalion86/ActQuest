@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 
 import usersSchema from '@schemas/usersSchema'
+import phoneVerificationsSchema from '@schemas/phoneVerificationsSchema'
 
 let globalConnections = global.mongooseGlobal
 
@@ -36,6 +37,10 @@ async function dbConnectGlobal() {
     globalConnections.global.model(
       'Users',
       mongoose.Schema(usersSchema, { timestamps: true }),
+    )
+    globalConnections.global.model(
+      'PhoneVerifications',
+      mongoose.Schema(phoneVerificationsSchema, { timestamps: true }),
     )
   }
 
