@@ -84,11 +84,14 @@ const GameEditModal = ({
                     title={`Редактирование игры «${selectedGame.name || 'Без названия'}»`}
                     onClose={handleCloseEditModal}
                   >
-                  <fieldset disabled={!canEditSelectedGame || isSaving} className="space-y-6 border-0 p-0 m-0">
+                  <fieldset
+                    disabled={!canEditSelectedGame || isSaving}
+                    className="space-y-6 border-0 p-0 m-0 [&_button]:cursor-pointer [&_select]:cursor-pointer [&_input[type='checkbox']]:cursor-pointer"
+                  >
                     <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label htmlFor="game-title" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-title" className="text-sm font-semibold text-slate-700 dark:text-white">
                           Название игры
                         </label>
                         <input
@@ -98,11 +101,11 @@ const GameEditModal = ({
                           onChange={(event) =>
                             updateSelectedGame({ name: event.target.value })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label htmlFor="game-status" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-status" className="text-sm font-semibold text-slate-700 dark:text-white">
                           Статус
                         </label>
                         <select
@@ -111,7 +114,7 @@ const GameEditModal = ({
                           onChange={(event) =>
                             updateSelectedGame({ status: event.target.value })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         >
                           {GAME_STATUS_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -124,7 +127,7 @@ const GameEditModal = ({
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label htmlFor="game-type" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-type" className="text-sm font-semibold text-slate-700 dark:text-white">
                           Тип игры
                         </label>
                         <select
@@ -133,7 +136,7 @@ const GameEditModal = ({
                           onChange={(event) =>
                             updateSelectedGame({ type: event.target.value })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         >
                           {GAME_TYPE_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -143,7 +146,7 @@ const GameEditModal = ({
                         </select>
                       </div>
                       <div>
-                        <label htmlFor="game-date" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-date" className="text-sm font-semibold text-slate-700 dark:text-white">
                           Плановое начало
                         </label>
                         <input
@@ -161,7 +164,7 @@ const GameEditModal = ({
                                 : null,
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -176,14 +179,14 @@ const GameEditModal = ({
                         }
                         className="w-4 h-4 text-primary border-slate-300 rounded"
                       />
-                      <label htmlFor="game-individual-start" className="text-sm text-slate-600 dark:text-slate-300">
+                      <label htmlFor="game-individual-start" className="text-sm text-slate-600 dark:text-slate-200">
                         Индивидуальный старт для команд
                       </label>
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label htmlFor="game-starting-place" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-starting-place" className="text-sm font-semibold text-slate-700 dark:text-white">
                           Место сбора
                         </label>
                         <input
@@ -193,11 +196,11 @@ const GameEditModal = ({
                           onChange={(event) =>
                             updateSelectedGame({ startingPlace: event.target.value })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label htmlFor="game-finishing-place" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-finishing-place" className="text-sm font-semibold text-slate-700 dark:text-white">
                           Место окончания
                         </label>
                         <input
@@ -207,13 +210,13 @@ const GameEditModal = ({
                           onChange={(event) =>
                             updateSelectedGame({ finishingPlace: event.target.value })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label htmlFor="game-description" className="text-sm font-semibold text-primary">
+                      <label htmlFor="game-description" className="text-sm font-semibold text-slate-700 dark:text-white">
                         Описание
                       </label>
                       <textarea
@@ -223,7 +226,7 @@ const GameEditModal = ({
                           updateSelectedGame({ description: event.target.value })
                         }
                         rows={5}
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                       />
                     </div>
 
@@ -240,10 +243,10 @@ const GameEditModal = ({
                     </section>
 
                     <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
-                    <h2 className="text-lg font-semibold text-primary">Настройки заданий и подсказок</h2>
+                    <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Настройки заданий и подсказок</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label htmlFor="game-task-duration" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-task-duration" className="text-sm font-semibold text-slate-700 dark:text-white">
                           Продолжительность задания (мин)
                         </label>
                         <input
@@ -256,11 +259,11 @@ const GameEditModal = ({
                               taskDuration: toSeconds(event.target.value),
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label htmlFor="game-clues-duration" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-clues-duration" className="text-sm font-semibold text-slate-700 dark:text-white">
                           Время до подсказки (мин)
                         </label>
                         <input
@@ -273,9 +276,9 @@ const GameEditModal = ({
                               cluesDuration: toSeconds(event.target.value),
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         />
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
                           Укажите 0, чтобы отключить автоматическую выдачу подсказок.
                         </p>
                       </div>
@@ -283,7 +286,7 @@ const GameEditModal = ({
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label htmlFor="game-clue-mode" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-clue-mode" className="text-sm font-semibold text-slate-700 dark:text-white">
                           Режим досрочной подсказки
                         </label>
                         <select
@@ -294,7 +297,7 @@ const GameEditModal = ({
                               clueEarlyAccessMode: event.target.value,
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         >
                           {CLUE_EARLY_MODE_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -304,7 +307,7 @@ const GameEditModal = ({
                         </select>
                       </div>
                       <div>
-                        <label htmlFor="game-clue-penalty" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-clue-penalty" className="text-sm font-semibold text-slate-700 dark:text-white">
                           {selectedGame.clueEarlyAccessMode === 'penalty'
                             ? 'Штраф за досрочную подсказку (мин)'
                             : 'Дополнительное время после подсказки (мин)'}
@@ -319,14 +322,14 @@ const GameEditModal = ({
                               clueEarlyPenalty: toSeconds(event.target.value),
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label htmlFor="game-break-duration" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-break-duration" className="text-sm font-semibold text-slate-700 dark:text-white">
                           Перерыв между заданиями (мин)
                         </label>
                         <input
@@ -339,11 +342,11 @@ const GameEditModal = ({
                               breakDuration: toSeconds(event.target.value),
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label htmlFor="game-task-penalty" className="text-sm font-semibold text-primary">
+                        <label htmlFor="game-task-penalty" className="text-sm font-semibold text-slate-700 dark:text-white">
                           {selectedGame.type === 'photo'
                             ? 'Штраф за невыполненное задание (баллы)'
                             : 'Штраф за невыполненное задание (мин)'}
@@ -365,7 +368,7 @@ const GameEditModal = ({
                                   : toSeconds(event.target.value),
                             })
                           }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                         />
                       </div>
                     </div>
@@ -373,7 +376,7 @@ const GameEditModal = ({
                     {selectedGame.type !== 'photo' && (
                       <div className="grid gap-4 md:grid-cols-2">
                         <div>
-                          <label htmlFor="game-many-codes-limit" className="text-sm font-semibold text-primary">
+                          <label htmlFor="game-many-codes-limit" className="text-sm font-semibold text-slate-700 dark:text-white">
                             Лимит неверных кодов для штрафа
                           </label>
                           <input
@@ -389,11 +392,11 @@ const GameEditModal = ({
                                 ],
                               })
                             }
-                            className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                            className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                           />
                         </div>
                         <div>
-                          <label htmlFor="game-many-codes-penalty" className="text-sm font-semibold text-primary">
+                          <label htmlFor="game-many-codes-penalty" className="text-sm font-semibold text-slate-700 dark:text-white">
                             Штраф за превышение лимита (мин)
                           </label>
                           <input
@@ -409,14 +412,14 @@ const GameEditModal = ({
                                 ],
                               })
                             }
-                            className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                            className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                           />
                         </div>
                       </div>
                     )}
 
                     <div className="grid gap-3 md:grid-cols-3">
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.allowCaptainForceClue)}
@@ -429,7 +432,7 @@ const GameEditModal = ({
                         />
                         Досрочные подсказки капитанам
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.allowCaptainFailTask)}
@@ -442,7 +445,7 @@ const GameEditModal = ({
                         />
                         Слив задания капитаном
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.allowCaptainFinishBreak)}
@@ -461,7 +464,7 @@ const GameEditModal = ({
 
                     <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <h2 className="text-lg font-semibold text-primary">Задания</h2>
+                      <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Задания</h2>
                       <button
                         type="button"
                         onClick={handleAddTask}
@@ -484,13 +487,13 @@ const GameEditModal = ({
                               <button
                                 type="button"
                                 onClick={() => toggleTaskExpansion(task.id)}
-                                className="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-primary transition hover:bg-blue-50 dark:bg-slate-800/70 dark:hover:bg-sky-500/10"
+                                className="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-white transition hover:bg-blue-50 dark:bg-slate-800/70 dark:hover:bg-sky-500/10"
                               >
                                 <div>
                                   <p>
                                     {index + 1}. {task.title || 'Без названия'}
                                   </p>
-                                  <p className="mt-1 text-xs text-slate-500">
+                                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
                                     {task.isBonusTask ? 'Бонусное задание' : 'Основное задание'}
                                     {task.canceled ? ' · Отменено' : ''}
                                     {task.codes?.length
@@ -510,7 +513,7 @@ const GameEditModal = ({
                                 <div className="space-y-5 px-4 py-5">
                                   <div className="grid gap-4 md:grid-cols-2">
                                     <div>
-                                      <label className="text-sm font-semibold text-primary" htmlFor={`task-title-${task.id}`}>
+                                      <label className="text-sm font-semibold text-slate-700 dark:text-white" htmlFor={`task-title-${task.id}`}>
                                         Название задания
                                       </label>
                                       <input
@@ -520,11 +523,11 @@ const GameEditModal = ({
                                         onChange={(event) =>
                                           handleTaskFieldChange(task.id, 'title', event.target.value)
                                         }
-                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                       />
                                     </div>
                                     <div className="flex flex-col gap-2 md:items-start">
-                                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
                                         <input
                                           type="checkbox"
                                           checked={Boolean(task.isBonusTask)}
@@ -539,7 +542,7 @@ const GameEditModal = ({
                                         />
                                         Бонусное задание
                                       </label>
-                                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
                                         <input
                                           type="checkbox"
                                           checked={Boolean(task.canceled)}
@@ -558,7 +561,7 @@ const GameEditModal = ({
                                   </div>
 
                                   <div>
-                                    <label className="text-sm font-semibold text-primary" htmlFor={`task-text-${task.id}`}>
+                                    <label className="text-sm font-semibold text-slate-700 dark:text-white" htmlFor={`task-text-${task.id}`}>
                                       Описание задания
                                     </label>
                                     <textarea
@@ -568,13 +571,13 @@ const GameEditModal = ({
                                       onChange={(event) =>
                                         handleTaskFieldChange(task.id, 'task', event.target.value)
                                       }
-                                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                     />
                                   </div>
 
                                   <div className="grid gap-4 md:grid-cols-2">
                                     <div>
-                                      <label className="text-sm font-semibold text-primary" htmlFor={`task-bonus-${task.id}`}>
+                                      <label className="text-sm font-semibold text-slate-700 dark:text-white" htmlFor={`task-bonus-${task.id}`}>
                                         Бонус за выполнение
                                       </label>
                                       <input
@@ -589,11 +592,11 @@ const GameEditModal = ({
                                             event.target.value
                                           )
                                         }
-                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-sm font-semibold text-primary" htmlFor={`task-codes-required-${task.id}`}>
+                                      <label className="text-sm font-semibold text-slate-700 dark:text-white" htmlFor={`task-codes-required-${task.id}`}>
                                         Кодов для выполнения
                                       </label>
                                       <input
@@ -608,16 +611,16 @@ const GameEditModal = ({
                                             event.target.value
                                           )
                                         }
-                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                       />
-                                      <p className="mt-1 text-xs text-slate-500">
+                                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
                                         Оставьте пустым, чтобы требовались все коды.
                                       </p>
                                     </div>
                                   </div>
 
                                   <div>
-                                    <label className="text-sm font-semibold text-primary" htmlFor={`task-post-message-${task.id}`}>
+                                    <label className="text-sm font-semibold text-slate-700 dark:text-white" htmlFor={`task-post-message-${task.id}`}>
                                       Сообщение после выполнения
                                     </label>
                                     <textarea
@@ -627,15 +630,15 @@ const GameEditModal = ({
                                       onChange={(event) =>
                                         handleTaskFieldChange(task.id, 'postMessage', event.target.value)
                                       }
-                                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                     />
                                   </div>
 
                                   <div>
-                                    <h4 className="text-sm font-semibold text-primary">Координаты</h4>
+                                    <h4 className="text-sm font-semibold text-slate-700 dark:text-white">Координаты</h4>
                                     <div className="mt-2 grid gap-4 sm:grid-cols-3">
                                       <div>
-                                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-lat-${task.id}`}>
+                                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-lat-${task.id}`}>
                                           Широта
                                         </label>
                                         <input
@@ -650,11 +653,11 @@ const GameEditModal = ({
                                               event.target.value
                                             )
                                           }
-                                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                         />
                                       </div>
                                       <div>
-                                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-lng-${task.id}`}>
+                                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-lng-${task.id}`}>
                                           Долгота
                                         </label>
                                         <input
@@ -669,11 +672,11 @@ const GameEditModal = ({
                                               event.target.value
                                             )
                                           }
-                                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                         />
                                       </div>
                                       <div>
-                                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-radius-${task.id}`}>
+                                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-radius-${task.id}`}>
                                           Радиус (м)
                                         </label>
                                         <input
@@ -688,7 +691,7 @@ const GameEditModal = ({
                                               event.target.value
                                             )
                                           }
-                                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                         />
                                       </div>
                                     </div>
@@ -696,7 +699,7 @@ const GameEditModal = ({
 
                                   <div>
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                      <h4 className="text-sm font-semibold text-primary">Коды для задания</h4>
+                                      <h4 className="text-sm font-semibold text-slate-700 dark:text-white">Коды для задания</h4>
                                       <button
                                         type="button"
                                         onClick={() => handleAddTaskCode(task.id)}
@@ -723,7 +726,7 @@ const GameEditModal = ({
                                                 )
                                               }
                                               placeholder="Код"
-                                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                             />
                                             <button
                                               type="button"
@@ -736,7 +739,7 @@ const GameEditModal = ({
                                         ))}
                                       </div>
                                     ) : (
-                                      <p className="mt-3 text-sm text-slate-500">Кодов пока нет.</p>
+                                      <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">Кодов пока нет.</p>
                                     )}
                                   </div>
 
@@ -755,7 +758,7 @@ const GameEditModal = ({
 
                                   <div>
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                      <h4 className="text-sm font-semibold text-primary">Подсказки</h4>
+                                      <h4 className="text-sm font-semibold text-slate-700 dark:text-white">Подсказки</h4>
                                       <button
                                         type="button"
                                         onClick={() => handleAddClue(task.id)}
@@ -772,7 +775,7 @@ const GameEditModal = ({
                                             className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
                                           >
                                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                              <p className="text-sm font-semibold text-primary">
+                                              <p className="text-sm font-semibold text-slate-700 dark:text-white">
                                                 Подсказка {clueIndex + 1}
                                               </p>
                                               <button
@@ -784,7 +787,7 @@ const GameEditModal = ({
                                               </button>
                                             </div>
                                             <div>
-                                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-clue-${clue.id}`}>
+                                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-clue-${clue.id}`}>
                                                 Текст подсказки
                                               </label>
                                               <textarea
@@ -799,7 +802,7 @@ const GameEditModal = ({
                                                     event.target.value
                                                   )
                                                 }
-                                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                               />
                                             </div>
                                             <div>
@@ -823,14 +826,14 @@ const GameEditModal = ({
                                         ))}
                                       </div>
                                     ) : (
-                                      <p className="mt-3 text-sm text-slate-500">Подсказок пока нет.</p>
+                                      <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">Подсказок пока нет.</p>
                                     )}
                                   </div>
 
                                   {isPhotoGame && (
                                     <div>
                                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                        <h4 className="text-sm font-semibold text-primary">Подзадания</h4>
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-white">Подзадания</h4>
                                         <button
                                           type="button"
                                           onClick={() => handleAddSubTask(task.id)}
@@ -847,7 +850,7 @@ const GameEditModal = ({
                                               className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
                                             >
                                               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                                <p className="text-sm font-semibold text-primary">
+                                                <p className="text-sm font-semibold text-slate-700 dark:text-white">
                                                   Подзадание {subIndex + 1}
                                                 </p>
                                                 <button
@@ -860,7 +863,7 @@ const GameEditModal = ({
                                               </div>
                                               <div className="grid gap-4 md:grid-cols-2">
                                                 <div>
-                                                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-subtask-name-${subTask.id}`}>
+                                                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-subtask-name-${subTask.id}`}>
                                                     Название
                                                   </label>
                                                   <input
@@ -875,12 +878,12 @@ const GameEditModal = ({
                                                         event.target.value
                                                       )
                                                     }
-                                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                                   />
                                                 </div>
                                                 <div>
                                                   <label
-                                                    className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                                    className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200"
                                                     htmlFor={`task-subtask-bonus-${subTask.id}`}
                                                   >
                                                     Бонус
@@ -898,12 +901,12 @@ const GameEditModal = ({
                                                         event.target.value
                                                       )
                                                     }
-                                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                                   />
                                                 </div>
                                               </div>
                                               <div>
-                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-subtask-text-${subTask.id}`}>
+                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-subtask-text-${subTask.id}`}>
                                                   Описание
                                                 </label>
                                                 <textarea
@@ -918,21 +921,21 @@ const GameEditModal = ({
                                                       event.target.value
                                                     )
                                                   }
-                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                                 />
                                               </div>
                                             </div>
                                           ))}
                                         </div>
                                       ) : (
-                                        <p className="mt-3 text-sm text-slate-500">Подзаданий пока нет.</p>
+                                        <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">Подзаданий пока нет.</p>
                                       )}
                                     </div>
                                   )}
 
                                   <div>
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                      <h4 className="text-sm font-semibold text-primary">Штрафные коды</h4>
+                                      <h4 className="text-sm font-semibold text-slate-700 dark:text-white">Штрафные коды</h4>
                                       <button
                                         type="button"
                                         onClick={() => handleAddPenaltyCode(task.id)}
@@ -950,7 +953,7 @@ const GameEditModal = ({
                                           >
                                             <div className="grid gap-3 md:grid-cols-4">
                                               <div className="md:col-span-2">
-                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-penalty-code-${penalty.id}`}>
+                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-penalty-code-${penalty.id}`}>
                                                   Код
                                                 </label>
                                                 <input
@@ -965,11 +968,11 @@ const GameEditModal = ({
                                                       event.target.value
                                                     )
                                                   }
-                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                                 />
                                               </div>
                                               <div>
-                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-penalty-value-${penalty.id}`}>
+                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-penalty-value-${penalty.id}`}>
                                                   Штраф
                                                 </label>
                                                 <input
@@ -985,12 +988,12 @@ const GameEditModal = ({
                                                       event.target.value
                                                     )
                                                   }
-                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                                 />
                                               </div>
                                             </div>
                                             <div>
-                                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-penalty-description-${penalty.id}`}>
+                                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-penalty-description-${penalty.id}`}>
                                                 Комментарий
                                               </label>
                                               <input
@@ -1005,7 +1008,7 @@ const GameEditModal = ({
                                                     event.target.value
                                                   )
                                                 }
-                                                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                               />
                                             </div>
                                             <div className="flex justify-end">
@@ -1021,13 +1024,13 @@ const GameEditModal = ({
                                         ))}
                                       </div>
                                     ) : (
-                                      <p className="mt-3 text-sm text-slate-500">Штрафных кодов пока нет.</p>
+                                      <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">Штрафных кодов пока нет.</p>
                                     )}
                                   </div>
 
                                   <div>
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                      <h4 className="text-sm font-semibold text-primary">Бонусные коды</h4>
+                                      <h4 className="text-sm font-semibold text-slate-700 dark:text-white">Бонусные коды</h4>
                                       <button
                                         type="button"
                                         onClick={() => handleAddBonusCode(task.id)}
@@ -1045,7 +1048,7 @@ const GameEditModal = ({
                                           >
                                             <div className="grid gap-3 md:grid-cols-4">
                                               <div className="md:col-span-2">
-                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-bonus-code-${bonus.id}`}>
+                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-bonus-code-${bonus.id}`}>
                                                   Код
                                                 </label>
                                                 <input
@@ -1060,11 +1063,11 @@ const GameEditModal = ({
                                                       event.target.value
                                                     )
                                                   }
-                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                                 />
                                               </div>
                                               <div>
-                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-bonus-value-${bonus.id}`}>
+                                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-bonus-value-${bonus.id}`}>
                                                   Бонус
                                                 </label>
                                                 <input
@@ -1080,12 +1083,12 @@ const GameEditModal = ({
                                                       event.target.value
                                                     )
                                                   }
-                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                                 />
                                               </div>
                                             </div>
                                             <div>
-                                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`task-bonus-description-${bonus.id}`}>
+                                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200" htmlFor={`task-bonus-description-${bonus.id}`}>
                                                 Комментарий
                                               </label>
                                               <input
@@ -1100,7 +1103,7 @@ const GameEditModal = ({
                                                     event.target.value
                                                   )
                                                 }
-                                                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                                                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
                                               />
                                             </div>
                                             <div className="flex justify-end">
@@ -1116,7 +1119,7 @@ const GameEditModal = ({
                                         ))}
                                       </div>
                                     ) : (
-                                      <p className="mt-3 text-sm text-slate-500">Бонусных кодов пока нет.</p>
+                                      <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">Бонусных кодов пока нет.</p>
                                     )}
                                   </div>
 
@@ -1136,16 +1139,16 @@ const GameEditModal = ({
                         })}
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-slate-500 dark:text-slate-200">
                         Пока нет заданий. Добавьте первое, чтобы начать.
                       </p>
                     )}
                     </section>
 
                     <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
-                    <h2 className="text-lg font-semibold text-primary">Публикация и результаты</h2>
+                    <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Публикация и результаты</h2>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.hidden)}
@@ -1156,7 +1159,7 @@ const GameEditModal = ({
                         />
                         Игра скрыта из общего списка
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.showCreator)}
@@ -1167,7 +1170,7 @@ const GameEditModal = ({
                         />
                         Показывать организатора игрокам
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.showTasks)}
@@ -1178,7 +1181,7 @@ const GameEditModal = ({
                         />
                         Открыть задания после завершения
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
                         <input
                           type="checkbox"
                           checked={Boolean(selectedGame.hideResult)}
@@ -1194,7 +1197,7 @@ const GameEditModal = ({
 
                     <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-primary">Стоимость участия</h2>
+                      <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Стоимость участия</h2>
                       <button
                         type="button"
                         onClick={handleAddPrice}
@@ -1218,7 +1221,7 @@ const GameEditModal = ({
                                 handlePriceChange(price.id, 'name', event.target.value)
                               }
                               placeholder="Название тарифа"
-                              className="w-full px-4 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-4 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                             />
                             <input
                               type="number"
@@ -1228,7 +1231,7 @@ const GameEditModal = ({
                                 handlePriceChange(price.id, 'price', event.target.value)
                               }
                               placeholder="Стоимость"
-                              className="w-full px-4 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-4 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                             />
                             <button
                               type="button"
@@ -1241,7 +1244,7 @@ const GameEditModal = ({
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-slate-500 dark:text-slate-200">
                         Добавьте тариф, чтобы задать стоимость участия для команд.
                       </p>
                     )}
@@ -1249,7 +1252,7 @@ const GameEditModal = ({
 
                   <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h2 className="text-lg font-semibold text-primary">Финансы игры</h2>
+                      <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Финансы игры</h2>
                       <button
                         type="button"
                         onClick={handleAddFinance}
@@ -1271,7 +1274,7 @@ const GameEditModal = ({
                               onChange={(event) =>
                                 handleFinanceChange(entry.id, 'type', event.target.value)
                               }
-                              className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                             >
                               <option value="income">Доход</option>
                               <option value="expense">Расход</option>
@@ -1284,7 +1287,7 @@ const GameEditModal = ({
                                 handleFinanceChange(entry.id, 'sum', event.target.value)
                               }
                               placeholder="Сумма"
-                              className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                             />
                             <input
                               type="date"
@@ -1292,7 +1295,7 @@ const GameEditModal = ({
                               onChange={(event) =>
                                 handleFinanceChange(entry.id, 'date', event.target.value)
                               }
-                              className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                              className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                             />
                             <button
                               type="button"
@@ -1309,23 +1312,23 @@ const GameEditModal = ({
                                   handleFinanceChange(entry.id, 'description', event.target.value)
                                 }
                                 placeholder="Комментарий"
-                                className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 rounded-xl focus:border-primary focus:outline-none"
+                                className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                               />
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-slate-500 dark:text-slate-200">
                         Пока нет финансовых записей по этой игре. Добавьте доходы и расходы, чтобы контролировать бюджет.
                       </p>
                     )}
 
                     <div className="p-4 bg-slate-50 border border-slate-200 dark:border-slate-700 dark:bg-slate-800/60 rounded-2xl">
-                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                      <p className="text-sm text-slate-600 dark:text-slate-200">
                         Доходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.income)}</span>
                       </p>
-                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-200">
                         Расходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.expense)}</span>
                       </p>
                       <p className={`mt-1 text-sm font-semibold ${balanceClass}`}>
@@ -1459,5 +1462,7 @@ GameEditModal.defaultProps = {
 }
 
 export default memo(GameEditModal)
+
+
 
 

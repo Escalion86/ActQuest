@@ -43,7 +43,7 @@ const Modal = ({
         className="relative z-10 flex h-full w-full flex-col overflow-y-auto bg-white shadow-xl dark:bg-slate-900/95 md:h-auto md:max-h-[90vh] md:max-w-5xl md:rounded-2xl"
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-700/60">
-          <h2 className="text-lg font-semibold text-primary">{title}</h2>
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">{title}</h2>
           <button
             type="button"
             onClick={() => onClose?.()}
@@ -78,3 +78,4 @@ Modal.defaultProps = {
 }
 
 export default Modal
+

@@ -859,6 +859,7 @@ const GamesPage = ({
           tasks: [],
           moderators: [],
         }),
+        location: typeof location === 'string' ? location.trim().toLowerCase() : location,
         creatorTelegramId: currentUserTelegramIdNumber,
       }
 
@@ -2049,7 +2050,7 @@ const GamesPage = ({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
-                <p className="text-sm font-semibold text-primary">
+                <p className="text-sm font-semibold text-primary dark:text-slate-100">
                   {game.name || 'Без названия'}
                 </p>
               </div>
@@ -2061,7 +2062,7 @@ const GamesPage = ({
                       event.stopPropagation()
                       handleEditGameFromList(game)
                     }}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
+                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
                     aria-label="Редактировать игру"
                     title="Редактировать игру"
                   >
@@ -2093,7 +2094,7 @@ const GamesPage = ({
                       event.stopPropagation()
                       handleManageTeamsFromList(game)
                     }}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
+                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
                     aria-label="Управление командами"
                     title="Управление командами"
                   >
@@ -2343,7 +2344,7 @@ const GamesPage = ({
                 <button
                   type="button"
                   onClick={handleOpenCreateGameModal}
-                  className="inline-flex items-center justify-center rounded-xl border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:hover:bg-violet-500/10"
+                  className="inline-flex items-center justify-center rounded-xl border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:border-slate-400 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:bg-slate-700"
                 >
                   Создать игру
                 </button>
@@ -2703,7 +2704,15 @@ export async function getServerSideProps(context) {
         const canLoadOwnGames = userRole === 'moder' && creatorTelegramId !== null
 
         if (canLoadAllGames || canLoadOwnGames) {
-          const query = canLoadAllGames ? {} : { creatorTelegramId }
+          const normalizedLocation =
+            typeof location === 'string' ? location.trim().toLowerCase() : null
+
+          const query = canLoadAllGames
+            ? { ...(normalizedLocation ? { location: normalizedLocation } : {}) }
+            : {
+                creatorTelegramId,
+                ...(normalizedLocation ? { location: normalizedLocation } : {}),
+              }
 
           const gamesDocs = await GamesModel.find(query)
             .sort({ updatedAt: -1 })
