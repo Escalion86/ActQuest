@@ -2,10 +2,10 @@ import PropTypes from 'prop-types'
 import cn from 'classnames'
 
 const SelectableCard = ({
-  as: Component,
-  isActive,
-  className,
-  children,
+  as: Component = 'div',
+  isActive = false,
+  className = '',
+  children = null,
   ...props
 }) => {
   return (
@@ -30,13 +30,6 @@ SelectableCard.propTypes = {
   isActive: PropTypes.bool,
   className: PropTypes.string,
   children: PropTypes.node,
-}
-
-SelectableCard.defaultProps = {
-  as: 'div',
-  isActive: false,
-  className: '',
-  children: null,
 }
 
 export default SelectableCard
