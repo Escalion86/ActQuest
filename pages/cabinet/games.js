@@ -356,14 +356,15 @@ const GamesPage = ({
       : Number(currentUserTelegramId)
   const canEditAllGames = userRole === 'admin' || userRole === 'dev'
   const canEditOwnGames = userRole === 'moder'
+  const safeInitialGames = Array.isArray(initialGames) ? initialGames : []
   const currentUserDbId =
     activeSession?.user?._id === null || activeSession?.user?._id === undefined
       ? null
       : String(activeSession.user._id)
 
-  const [games, setGames] = useState(initialGames)
-  const [persistedGames, setPersistedGames] = useState(initialGames)
-  const [selectedGameId, setSelectedGameId] = useState(initialGames[0]?.id ?? null)
+  const [games, setGames] = useState(safeInitialGames)
+  const [persistedGames, setPersistedGames] = useState(safeInitialGames)
+  const [selectedGameId, setSelectedGameId] = useState(safeInitialGames[0]?.id ?? null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [feedback, setFeedback] = useState(null)
@@ -393,15 +394,15 @@ const GamesPage = ({
   const [isCreatingGame, setIsCreatingGame] = useState(false)
 
   useEffect(() => {
-    setGames(initialGames)
-    setPersistedGames(initialGames)
+    setGames(safeInitialGames)
+    setPersistedGames(safeInitialGames)
     setSelectedGameId((prev) => {
-      if (prev && initialGames.some((game) => game.id === prev)) {
+      if (prev && safeInitialGames.some((game) => game.id === prev)) {
         return prev
       }
-      return initialGames[0]?.id ?? null
+      return safeInitialGames[0]?.id ?? null
     })
-  }, [initialGames])
+  }, [safeInitialGames])
 
   useEffect(() => {
     setFeedback(null)

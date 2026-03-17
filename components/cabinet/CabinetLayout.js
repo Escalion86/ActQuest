@@ -303,7 +303,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="flex w-full items-center gap-3 rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-500 transition-colors duration-150 hover:bg-blue-100 hover:text-primary dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-blue-500/20 dark:hover:text-blue-200"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-500 transition-colors duration-150 hover:bg-blue-100 hover:text-primary dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-blue-500/20 dark:hover:text-blue-200"
               >
                 <FontAwesomeIcon icon={faRightFromBracket} className="h-4 w-4" />
                 <span className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}>
@@ -360,7 +360,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className="flex items-center justify-center w-10 h-10 text-slate-600 transition-colors duration-150 bg-slate-100 rounded-xl hover:text-primary hover:bg-blue-100 dark:text-slate-300 dark:bg-slate-800 dark:hover:text-blue-200 dark:hover:bg-blue-500/20"
+                  className="flex cursor-pointer items-center justify-center w-10 h-10 text-slate-600 transition-colors duration-150 bg-slate-100 rounded-xl hover:text-primary hover:bg-blue-100 dark:text-slate-300 dark:bg-slate-800 dark:hover:text-blue-200 dark:hover:bg-blue-500/20"
                   aria-label={isDarkTheme ? 'Включить светлую тему' : 'Включить тёмную тему'}
                 >
                   <FontAwesomeIcon icon={isDarkTheme ? faSun : faMoon} className="w-4 h-4" />
