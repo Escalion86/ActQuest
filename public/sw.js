@@ -55,13 +55,26 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((networkResponse) => {
-          if (networkResponse && networkResponse.ok) {
+          // For navigation requests return network response even for non-2xx
+          // statuses; otherwise SW may end up returning undefined.
+          if (networkResponse) {
             return networkResponse
           }
 
           return caches.match(request)
         })
         .catch(() => caches.match(request))
+        .then(async (response) => {
+          if (response) return response
+          const shellResponse = await caches.match('/')
+          if (shellResponse) return shellResponse
+
+          return new Response('Offline', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          })
+        })
     )
     return
   }
@@ -91,7 +104,10 @@ self.addEventListener('fetch', (event) => {
 
           return networkResponse
         })
-        .catch(() => cachedResponse)
+        .catch(() => {
+          if (cachedResponse) return cachedResponse
+          return new Response('', { status: 504, statusText: 'Gateway Timeout' })
+        })
     }),
   )
 })
