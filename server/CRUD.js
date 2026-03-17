@@ -136,6 +136,9 @@ export default async function handler(Schema, req, res, params = null) {
             // if (value === 'true') preparedQuery[key] = true
             // if (value === 'false') preparedQuery[key] = false
           }
+          if (Schema === 'Games') {
+            preparedQuery.location = location
+          }
           // console.log('querySort :>> ', querySort)
           data = isCountReturn
             ? (
@@ -157,17 +160,19 @@ export default async function handler(Schema, req, res, params = null) {
           }
           return res?.status(200).json({ success: true, data })
         } else if (params) {
+          const preparedParams =
+            Schema === 'Games' ? { ...params, location } : params
           data = isCountReturn
             ? (
                 await db
                   .model(Schema)
-                  .find(params)
+                  .find(preparedParams)
                   .select({ _id: 1 })
                   .limit(queryLimit)
               ).length
             : await db
                 .model(Schema)
-                .find(params)
+                .find(preparedParams)
                 .select(selectOpts)
                 .limit(queryLimit)
                 .sort(querySort)
@@ -176,17 +181,18 @@ export default async function handler(Schema, req, res, params = null) {
           }
           return res?.status(200).json({ success: true, data })
         } else {
+          const defaultFindQuery = Schema === 'Games' ? { location } : {}
           data = isCountReturn
             ? (
                 await db
                   .model(Schema)
-                  .find()
+                  .find(defaultFindQuery)
                   .select({ _id: 1 })
                   .limit(queryLimit)
               ).length
             : await db
                 .model(Schema)
-                .find()
+                .find(defaultFindQuery)
                 .select(selectOpts)
                 .limit(queryLimit)
                 .sort(querySort)

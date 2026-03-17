@@ -8,19 +8,31 @@ import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
+const ensureSiteSettings = (value) => {
+  const fallback = normalizeSiteSettings()
+  if (!value || typeof value !== 'object') {
+    return fallback
+  }
+
+  return {
+    ...fallback,
+    ...value,
+  }
+}
+
 const SettingsPage = ({ initialSiteSettings }) => {
   const { data: session } = useSession()
   const isAdmin = isUserAdmin({ role: session?.user?.role })
-  const [siteSettings, setSiteSettings] = useState(() => initialSiteSettings)
+  const [siteSettings, setSiteSettings] = useState(() => ensureSiteSettings(initialSiteSettings))
   const [saveState, setSaveState] = useState({ isSaving: false, isSaved: false, error: null })
 
   useEffect(() => {
-    setSiteSettings(initialSiteSettings)
+    setSiteSettings(ensureSiteSettings(initialSiteSettings))
     setSaveState({ isSaving: false, isSaved: false, error: null })
   }, [initialSiteSettings])
 
   const handleSettingsChange = useCallback((field, value) => {
-    setSiteSettings((prevState) => ({ ...prevState, [field]: value }))
+    setSiteSettings((prevState) => ({ ...ensureSiteSettings(prevState), [field]: value }))
     setSaveState((prevState) => ({ ...prevState, isSaved: false, error: null }))
   }, [])
 
@@ -48,20 +60,20 @@ const SettingsPage = ({ initialSiteSettings }) => {
     }
 
     const payload = {
-      supportPhone: normalizeField(siteSettings.supportPhone),
+      supportPhone: normalizeField(siteSettings?.supportPhone),
       announcement:
-        typeof siteSettings.announcement === 'string'
+        typeof siteSettings?.announcement === 'string'
           ? siteSettings.announcement.trim()
           : '',
-      chatUrl: normalizeField(siteSettings.chatUrl),
-      allowSiteAuth: Boolean(siteSettings.allowSiteAuth),
-      allowSiteRegistration: Boolean(siteSettings.allowSiteRegistration),
-      enableVkOneTap: Boolean(siteSettings.enableVkOneTap),
+      chatUrl: normalizeField(siteSettings?.chatUrl),
+      allowSiteAuth: Boolean(siteSettings?.allowSiteAuth),
+      allowSiteRegistration: Boolean(siteSettings?.allowSiteRegistration),
+      enableVkOneTap: Boolean(siteSettings?.enableVkOneTap),
     }
 
     const baseUrl = `/api/${location}/custom?collection=sitesettings`
-    const requestUrl = siteSettings.id ? `${baseUrl}&id=${siteSettings.id}` : baseUrl
-    const method = siteSettings.id ? 'PUT' : 'POST'
+    const requestUrl = siteSettings?.id ? `${baseUrl}&id=${siteSettings.id}` : baseUrl
+    const method = siteSettings?.id ? 'PUT' : 'POST'
 
     try {
       const response = await fetch(requestUrl, {
@@ -86,7 +98,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
 
       const normalized = normalizeSiteSettings(json.data)
 
-      setSiteSettings(normalized)
+      setSiteSettings(ensureSiteSettings(normalized))
       setSaveState({ isSaving: false, isSaved: true, error: null })
     } catch (error) {
       console.error('Failed to save site settings', error)
@@ -138,7 +150,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
               <input
                 id="settings-support-phone"
                 type="tel"
-                value={siteSettings.supportPhone}
+                value={siteSettings?.supportPhone ?? ''}
                 onChange={(event) => handleSettingsChange('supportPhone', event.target.value)}
                 className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                 placeholder="Например, +7 (900) 000-00-00"
@@ -151,7 +163,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
               <input
                 id="settings-chat-url"
                 type="url"
-                value={siteSettings.chatUrl}
+                value={siteSettings?.chatUrl ?? ''}
                 onChange={(event) => handleSettingsChange('chatUrl', event.target.value)}
                 className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
                 placeholder="https://t.me/actquest"
@@ -165,7 +177,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
             </label>
             <textarea
               id="settings-announcement"
-              value={siteSettings.announcement}
+              value={siteSettings?.announcement ?? ''}
               onChange={(event) => handleSettingsChange('announcement', event.target.value)}
               rows={5}
               className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"

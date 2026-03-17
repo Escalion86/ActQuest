@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
@@ -341,6 +342,7 @@ const GamesPage = ({
   session: initialSession,
   availableModerators: initialAvailableModerators,
 }) => {
+  const router = useRouter()
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
@@ -420,6 +422,43 @@ const GamesPage = ({
     setRemovingTeamIds([])
     setSelectedModeratorToAdd('')
   }, [selectedGameId])
+
+  useEffect(() => {
+    if (!router.isReady) {
+      return
+    }
+
+    const rawGameId = router.query?.gameId
+    const requestedGameId = Array.isArray(rawGameId) ? rawGameId[0] : rawGameId
+
+    if (!requestedGameId || typeof requestedGameId !== 'string') {
+      return
+    }
+
+    const targetGame = games.find((game) => game?.id === requestedGameId)
+    if (!targetGame) {
+      return
+    }
+
+    setSelectedGameId(targetGame.id)
+    setIsDescriptionModalOpen(true)
+    setIsEditModalOpen(false)
+    setIsTeamsModalOpen(false)
+
+    const nextQuery = { ...router.query }
+    delete nextQuery.gameId
+
+    router
+      .replace(
+        {
+          pathname: router.pathname,
+          query: nextQuery,
+        },
+        undefined,
+        { shallow: true }
+      )
+      .catch(() => {})
+  }, [games, router])
 
   const sortGamesByUpdatedAt = useCallback((items) => {
     if (!Array.isArray(items)) {
