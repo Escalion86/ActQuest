@@ -121,6 +121,7 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
         photoUrl: source.photoUrl,
         languageCode: source.languageCode,
         isPremium: source.isPremium,
+        role: source.role ?? 'client',
         authMethod: 'phone',
       },
       payload,

@@ -205,6 +205,7 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
         photoUrl: user.photoUrl,
         languageCode: user.languageCode,
         isPremium: user.isPremium,
+        role: user.role ?? 'client',
       },
       payload,
     }

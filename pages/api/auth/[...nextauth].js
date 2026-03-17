@@ -290,11 +290,33 @@ export const authOptions = {
         const resolvedGlobalUserId = ensureSerializableId(
           user.globalUserId ?? user.id ?? user._id ?? null,
         )
+        let resolvedRole = user.role ?? null
+
+        if (!resolvedRole && resolvedGlobalUserId) {
+          try {
+            const globalDb = await dbConnectGlobal()
+            if (globalDb) {
+              const dbUser = await globalDb
+                .model('Users')
+                .findById(resolvedGlobalUserId)
+                .select({ role: 1 })
+                .lean()
+
+              if (typeof dbUser?.role === 'string' && dbUser.role.trim()) {
+                resolvedRole = dbUser.role
+              }
+            }
+          } catch (roleResolveError) {
+            console.error('JWT role resolve error', roleResolveError)
+          }
+        }
+
         token.globalUserId = resolvedGlobalUserId
         token.userId = resolvedGlobalUserId
         token.telegramId = user.telegramId
         token.vkId = user.vkId
         token.phone = user.phone ?? null
+        token.role = resolvedRole ?? token.role ?? 'client'
         token.authMethod =
           user.authMethod ?? (user.vkId ? 'vk' : user.phone ? 'phone' : 'telegram')
         token.location = user.location
@@ -336,6 +358,7 @@ export const authOptions = {
         languageCode: token.languageCode,
         isPremium: token.isPremium,
         location: token.location ?? null,
+        role: token.role ?? 'client',
       }
 
       try {
@@ -376,6 +399,7 @@ export const authOptions = {
         token.userId ??
         null
       session.user.location = token.location ?? session.user.location ?? null
+      session.user.role = session.user.role ?? token.role ?? 'client'
       session.user.isTestAuth = Boolean(token.isTestAuth)
 
       return session
