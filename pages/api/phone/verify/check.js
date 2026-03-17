@@ -15,8 +15,6 @@ const errorJson = (res, status, type, message) =>
   })
 
 const resolveStatusFromProvider = (providerData = {}) => {
-  if (providerData?.success === true) return 'ok'
-
   const rawStatus = String(
     providerData?.data?.status ||
       providerData?.status ||
@@ -94,19 +92,20 @@ export default async function handler(req, res) {
 
     const provider = await checkTelefonipReverseCall(callId)
     const providerData = provider?.data || {}
-    const providerStatus = resolveStatusFromProvider(providerData)
+    const providerStatusRaw = resolveStatusFromProvider(providerData)
 
     let confirmed = false
-    if (providerStatus === 'ok') {
+    if (providerStatusRaw === 'ok') {
       const providerPhone = normalizeAuthPhone7(providerData?.data?.phone)
       confirmed = providerPhone !== null && providerPhone === phone
     }
+    const providerStatus = confirmed ? 'ok' : providerStatusRaw
 
     await PhoneVerifications.findOneAndUpdate(
       { _id: verification._id },
       {
         $set: {
-          providerStatus: confirmed ? 'ok' : providerStatus,
+          providerStatus,
           confirmed,
           meta: {
             ...(verification.meta || {}),
@@ -119,7 +118,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       data: {
-        status: confirmed ? 'ok' : providerStatus,
+        status: providerStatus,
       },
     })
   } catch (error) {

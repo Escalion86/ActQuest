@@ -41,6 +41,13 @@ const mapVkSignInError = (errorCode) =>
   VK_SIGNIN_ERROR_MESSAGES[errorCode] ||
   'Не удалось выполнить вход через VK ID. Попробуйте позже.'
 
+const mapPhoneVerifyStatusLabel = (status) => {
+  const normalized = String(status || '').trim().toLowerCase()
+  if (normalized === 'ok') return 'Номер подтвержден'
+  if (normalized === 'expired') return 'Время подтверждения истекло'
+  return 'Ожидаем звонок'
+}
+
 const VK_SDK_URL = 'https://unpkg.com/@vkid/sdk@2.6.5/dist-sdk/umd/index.js'
 let vkSdkLoadPromise = null
 
@@ -134,6 +141,8 @@ const CabinetRegisterPage = ({
     siteAccess.allowSiteAuth &&
     siteAccess.enableVkOneTap
   const isPhoneStep = registerStep === 'phone'
+  const isVkRegisterOptionVisible =
+    isPhoneStep && isVkSignInEnabled && Boolean(vkidAppId)
   const isPhoneConfirmed = Boolean(confirmedPhone && phoneVerifyStatus === 'ok')
 
   useEffect(() => {
@@ -145,6 +154,14 @@ const CabinetRegisterPage = ({
       setLocation(session.user.location)
     }
   }, [session?.user?.location])
+
+  const resetPhoneVerification = useCallback(() => {
+    setPhoneVerifyCallId(null)
+    setPhoneVerifyAuthPhone(null)
+    setPhoneVerifyImageUrl(null)
+    setPhoneVerifyStatus('idle')
+    setConfirmedPhone('')
+  }, [])
 
   const previousLocationRef = useRef(location)
   useEffect(() => {
@@ -218,14 +235,6 @@ const CabinetRegisterPage = ({
 
     return Promise.resolve()
   }, [update])
-
-  const resetPhoneVerification = useCallback(() => {
-    setPhoneVerifyCallId(null)
-    setPhoneVerifyAuthPhone(null)
-    setPhoneVerifyImageUrl(null)
-    setPhoneVerifyStatus('idle')
-    setConfirmedPhone('')
-  }, [])
 
   const startPhoneVerification = useCallback(
     async (digitsOnly) => {
@@ -737,6 +746,9 @@ const CabinetRegisterPage = ({
         <title>ActQuest — регистрация</title>
       </Head>
       <AuthSplitLayout
+        variant="neon"
+        showLabel={false}
+        hideIntroOnMobile
         title="Создайте аккаунт и начните участие в городских квестах"
         description="Регистрация состоит из двух шагов: сначала номер телефона, затем установка пароля. Вход через VK One Tap также доступен и работает как регистрация/авторизация по номеру."
         stepTexts={[
@@ -745,12 +757,14 @@ const CabinetRegisterPage = ({
           'Задайте пароль и переходите в личный кабинет.',
         ]}
       >
-        <h2 className="text-2xl font-semibold text-center text-primary">
+        <h2 className="text-2xl font-semibold text-center text-white">
           Регистрация
         </h2>
-        <p className="mt-2 text-sm text-center text-slate-500">
+        <p className="mt-2 text-sm text-center text-slate-400">
           {isPhoneStep
-            ? 'Шаг 1: укажите номер телефона или выберите VK ID.'
+            ? isVkRegisterOptionVisible
+              ? 'Шаг 1: укажите номер телефона или выберите VK ID.'
+              : 'Шаг 1: Выберите игровой регион и укажите ваш номер телефона.'
             : 'Шаг 2: придумайте пароль для входа по номеру телефона.'}
         </p>
 
@@ -759,23 +773,24 @@ const CabinetRegisterPage = ({
             location={location}
             onChange={(event) => setLocation(event.target.value)}
             disabled={isSubmitting || isSiteAccessLoading}
+            variant="neon"
             availableLocations={availableLocations}
           />
 
           {!siteAccess.allowSiteRegistration ? (
-            <NoticeBanner tone="warning">
+            <NoticeBanner tone="warning" variant="neon">
               Регистрация временно отключена, ведутся работы.
             </NoticeBanner>
           ) : null}
 
           {isSiteAccessLoading ? (
-            <NoticeBanner className="text-xs" centered>
+            <NoticeBanner className="text-xs" centered variant="neon">
               Загружаем настройки доступа...
             </NoticeBanner>
           ) : null}
 
           <div className="flex flex-col items-center gap-4">
-            {isPhoneStep && isVkSignInEnabled && vkidAppId ? (
+            {isVkRegisterOptionVisible ? (
               <div className="w-full">
                 <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                   Регистрация / вход через VK ID
@@ -789,17 +804,19 @@ const CabinetRegisterPage = ({
               </div>
             ) : null}
 
-            <div className="w-full text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            <div className="w-full text-center text-xs font-semibold uppercase tracking-[0.12em] text-[#9fd9ff]">
               {isPhoneStep
-                ? 'или продолжите по номеру телефона'
+                ? isVkRegisterOptionVisible
+                  ? 'или продолжите по номеру телефона'
+                  : 'продолжите по номеру телефона'
                 : 'создайте пароль для входа по номеру телефона'}
             </div>
 
             <form
-              className="w-full p-4 space-y-3 border rounded-xl border-slate-200 dark:border-slate-700"
+              className="w-full p-4 space-y-3 border rounded-xl border-[#00D1FF]/30 bg-[#090018]/70"
               onSubmit={handleRegister}
             >
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <label className="block text-sm font-semibold text-[#bfeeff]">
                 Телефон
               </label>
               <input
@@ -816,27 +833,56 @@ const CabinetRegisterPage = ({
                   !isPhoneStep ||
                   Boolean(phoneVerifyCallId)
                 }
-                className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                className="w-full px-4 py-3 text-sm text-white border rounded-xl border-[#00D1FF]/35 bg-[#080017]/80 focus:border-[#00D1FF] focus:outline-none"
               />
 
               {isPhoneStep && phoneVerifyCallId ? (
-                <div className="p-3 text-xs border rounded-xl border-slate-200 bg-slate-50 text-slate-700 space-y-2">
+                <div className="p-3 text-xs border rounded-xl border-[#00D1FF]/25 bg-[#050012]/70 text-[#bfeeff] space-y-2">
                   <div>
-                    Статус подтверждения: <span className="font-semibold">{phoneVerifyStatus}</span>
+                    Позвоните по номеру телефона ниже, для подтверждения Вашего
+                    номера телефона
                   </div>
                   {phoneVerifyAuthPhone ? (
-                    <div>
-                      Номер для входящего звонка:{' '}
-                      <span className="font-semibold">{phoneVerifyAuthPhone}</span>
+                    <div className="flex flex-col items-center">
+                      {(() => {
+                        const rawPhone = String(phoneVerifyAuthPhone || '')
+                          .replace(/[^\d+]/g, '')
+                        const normalizedDisplayPhone = rawPhone.startsWith('+')
+                          ? rawPhone
+                          : `+${rawPhone.replace(/^\++/, '')}`
+                        const telPhone = normalizedDisplayPhone.replace(/\s+/g, '')
+
+                        return (
+                          <>
+                      <p className="mb-1 text-center">Номер для звонка:</p>
+                      <a
+                        href={`tel:${telPhone}`}
+                        className="inline-flex cursor-pointer items-center rounded-lg border border-[#00D1FF]/45 bg-[#00D1FF]/10 px-3 py-1.5 text-lg font-semibold tracking-[0.02em] text-[#baf3ff] transition hover:bg-[#00D1FF]/20"
+                      >
+                        {normalizedDisplayPhone}
+                      </a>
+                      <p className="mt-2 text-[11px] uppercase tracking-[0.1em] text-[#9fd9ff] md:hidden">
+                        Нажми на телефон для звонка
+                      </p>
+                      <p className="mt-1 text-center text-[11px] uppercase tracking-[0.1em] text-[#baf3ff]">
+                        Звонок бесплатный
+                      </p>
+                          </>
+                        )
+                      })()}
                     </div>
                   ) : null}
                   {phoneVerifyImageUrl ? (
-                    <div className="flex justify-center">
+                    <div className="hidden flex-col items-center justify-center gap-2 md:flex">
                       <img
                         src={phoneVerifyImageUrl}
                         alt="QR для подтверждения звонка"
-                        className="w-40 h-40 rounded-lg border border-slate-200"
+                        className="w-40 h-40 rounded-lg border border-[#00D1FF]/35"
                       />
+                      <p className="max-w-[220px] text-center text-[11px] uppercase tracking-[0.1em] text-[#9fd9ff]">
+                        Отсканируйте QR-код телефоном, для быстрого набора
+                        номера
+                      </p>
                     </div>
                   ) : null}
                 </div>
@@ -844,7 +890,7 @@ const CabinetRegisterPage = ({
 
               {!isPhoneStep ? (
                 <>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  <label className="block text-sm font-semibold text-[#bfeeff]">
                     Пароль
                   </label>
                   <input
@@ -854,10 +900,10 @@ const CabinetRegisterPage = ({
                     placeholder="Пароль (минимум 8 символов)"
                     autoComplete="new-password"
                     disabled={isSubmitting || !siteAccess.allowSiteRegistration}
-                    className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                    className="w-full px-4 py-3 text-sm text-white border rounded-xl border-[#00D1FF]/35 bg-[#080017]/80 focus:border-[#00D1FF] focus:outline-none"
                   />
 
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  <label className="block text-sm font-semibold text-[#bfeeff]">
                     Повторите пароль
                   </label>
                   <input
@@ -867,7 +913,7 @@ const CabinetRegisterPage = ({
                     placeholder="Повторите пароль"
                     autoComplete="new-password"
                     disabled={isSubmitting || !siteAccess.allowSiteRegistration}
-                    className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                    className="w-full px-4 py-3 text-sm text-white border rounded-xl border-[#00D1FF]/35 bg-[#080017]/80 focus:border-[#00D1FF] focus:outline-none"
                   />
                 </>
               ) : null}
@@ -875,7 +921,7 @@ const CabinetRegisterPage = ({
               <button
                 type="submit"
                 disabled={isSubmitting || !siteAccess.allowSiteRegistration}
-                className="w-full px-4 py-3 text-sm font-semibold text-white transition bg-emerald-600 rounded-xl hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full cursor-pointer px-4 py-3 text-sm font-semibold transition border rounded-xl border-[#00D1FF]/50 bg-[#00D1FF]/12 text-[#baf3ff] hover:bg-[#00D1FF]/20 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting
                   ? 'Регистрация...'
@@ -898,7 +944,7 @@ const CabinetRegisterPage = ({
                     resetPhoneVerification()
                   }}
                   disabled={isSubmitting}
-                  className="w-full px-4 py-3 text-sm font-semibold border rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full cursor-pointer px-4 py-3 text-sm font-semibold border rounded-xl border-[#7A00FF]/45 text-[#d9c8ff] hover:bg-[#7A00FF]/12 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Изменить номер телефона
                 </button>
@@ -908,18 +954,18 @@ const CabinetRegisterPage = ({
                   type="button"
                   onClick={resetPhoneVerification}
                   disabled={isSubmitting}
-                  className="w-full px-4 py-3 text-sm font-semibold border rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full cursor-pointer px-4 py-3 text-sm font-semibold border rounded-xl border-[#7A00FF]/45 text-[#d9c8ff] hover:bg-[#7A00FF]/12 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Изменить номер телефона
                 </button>
               ) : null}
             </form>
 
-            <div className="w-full text-sm text-center text-slate-500">
+            <div className="w-full text-sm text-center text-slate-400">
               Уже есть аккаунт?{' '}
               <Link
                 href={`/cabinet/login?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
-                className="font-semibold text-primary hover:underline"
+                className="font-semibold text-[#8fdcff] hover:underline"
               >
                 Войти
               </Link>
@@ -927,20 +973,20 @@ const CabinetRegisterPage = ({
             <div className="w-full text-sm text-center">
               <Link
                 href="/"
-                className="font-semibold text-primary hover:underline"
+                className="font-semibold text-[#8fdcff] hover:underline"
               >
                 Перейти на главную страницу
               </Link>
             </div>
 
             {authError ? (
-              <NoticeBanner tone="error">
+              <NoticeBanner tone="error" variant="neon">
                 <div className="space-y-2">
                   <div>{authError}</div>
                   {showLoginCtaForExistingPhone ? (
                     <Link
                       href={`/cabinet/login?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
-                      className="inline-flex items-center justify-center px-3 py-2 text-xs font-semibold border rounded-lg border-red-200 text-red-700 hover:bg-red-50"
+                      className="inline-flex cursor-pointer items-center justify-center px-3 py-2 text-xs font-semibold border rounded-lg border-[#ff4d6d]/45 text-[#ffd4de] hover:bg-[#ff4d6d]/20"
                     >
                       Перейти ко входу
                     </Link>
@@ -949,7 +995,7 @@ const CabinetRegisterPage = ({
               </NoticeBanner>
             ) : null}
             {vkError ? (
-              <NoticeBanner tone="error">{vkError}</NoticeBanner>
+              <NoticeBanner tone="error" variant="neon">{vkError}</NoticeBanner>
             ) : null}
           </div>
         </div>

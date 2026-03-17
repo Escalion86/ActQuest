@@ -78,12 +78,21 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   const [theme, setTheme] = useState('light')
   const [isThemeInitialized, setIsThemeInitialized] = useState(false)
   const [isLocationSaving, setIsLocationSaving] = useState(false)
+  const [locationPromptValue, setLocationPromptValue] = useState('')
+  const [locationPromptError, setLocationPromptError] = useState('')
 
   const role = session?.user?.role ?? null
   const userName = session?.user?.name || session?.user?.username || 'Пользователь'
   const userAvatar = session?.user?.photoUrl ?? null
   const locationKey = session?.user?.location ?? null
   const locationName = normalizeLocationName(locationKey)
+  const hasUserIdentity =
+    Boolean(session?.user?.globalUserId) ||
+    Boolean(session?.user?._id) ||
+    Boolean(session?.user?.vkId) ||
+    Boolean(session?.user?.phone) ||
+    Boolean(session?.user?.telegramId)
+  const shouldForceLocationSelection = hasUserIdentity && !locationKey
   const isDarkTheme = theme === 'dark'
   const availableLocations = useMemo(
     () =>
@@ -159,6 +168,18 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
     }
   }, [isDarkTheme, isThemeInitialized, theme])
 
+  useEffect(() => {
+    if (!shouldForceLocationSelection) {
+      setLocationPromptValue('')
+      setLocationPromptError('')
+      return
+    }
+
+    if (locationPromptValue) return
+    const fallbackLocation = availableLocations[0]?.key ?? ''
+    setLocationPromptValue(fallbackLocation)
+  }, [availableLocations, locationPromptValue, shouldForceLocationSelection])
+
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
   }, [])
@@ -176,6 +197,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
 
       try {
         setIsLocationSaving(true)
+        setLocationPromptError('')
         const response = await fetch('/api/cabinet/users/location', {
           method: 'POST',
           headers: {
@@ -194,6 +216,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
         }
       } catch (error) {
         console.error('Failed to change active location', error)
+        setLocationPromptError('Не удалось сохранить город. Попробуйте снова.')
       } finally {
         setIsLocationSaving(false)
       }
@@ -393,6 +416,51 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
           </main>
         </div>
       </div>
+
+      {shouldForceLocationSelection ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-slate-100">
+              Выберите город для участия
+            </h3>
+            <p className="mt-2 text-sm text-slate-300">
+              Какой город для участия в играх вас интересует?
+            </p>
+            <div className="mt-4 space-y-3">
+              <select
+                value={locationPromptValue}
+                onChange={(event) => setLocationPromptValue(event.target.value)}
+                disabled={isLocationSaving}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                {availableLocations.map((item) => (
+                  <option key={item.key} value={item.key}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={isLocationSaving || !locationPromptValue}
+                onClick={() => {
+                  if (!locationPromptValue) {
+                    setLocationPromptError('Выберите город, чтобы продолжить.')
+                    return
+                  }
+
+                  handleLocationChange({ target: { value: locationPromptValue } })
+                }}
+                className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLocationSaving ? 'Сохраняем...' : 'Продолжить'}
+              </button>
+              {locationPromptError ? (
+                <p className="text-xs text-rose-300">{locationPromptError}</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

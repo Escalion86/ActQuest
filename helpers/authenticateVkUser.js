@@ -25,7 +25,7 @@ const errorResponse = (code, message, details = null) => ({
 
 const normalizeLocation = (location) => {
   if (!location) return null
-  return String(location)
+  return String(location).trim().toLowerCase() || null
 }
 
 const normalizeVkPhone = (value) => {
@@ -107,12 +107,6 @@ const authenticateVkUser = async ({ location, rawData }) => {
   }
 
   const resolvedLocation = normalizeLocation(location)
-  if (!resolvedLocation) {
-    return errorResponse(
-      'MISSING_LOCATION',
-      'Не указан игровой регион для авторизации VK.',
-    )
-  }
 
   const accessToken = payload.accessToken || payload.access_token
   const vkId = payload.vkId || payload.userId || payload.user?.id
@@ -246,14 +240,28 @@ const authenticateVkUser = async ({ location, rawData }) => {
   }
 
   try {
+    const existingUser = await globalDb
+      .model('Users')
+      .findOne({
+        $or: [{ vkId: vkUserId }, ...(phone !== null ? [{ phone }] : [])],
+      })
+      .select({ _id: 1, currentLocation: 1 })
+      .lean()
+
+    const persistedLocation =
+      typeof existingUser?.currentLocation === 'string' &&
+      existingUser.currentLocation.trim()
+        ? existingUser.currentLocation.trim().toLowerCase()
+        : null
+
     const updates = {
       vkId: vkUserId,
       name,
       photoUrl: resolvedPhotoUrl,
       languageCode: null,
       isPremium: false,
-      currentLocation: resolvedLocation,
       ...(phone !== null ? { phone } : {}),
+      ...(persistedLocation ? { currentLocation: persistedLocation } : {}),
     }
 
     const user = await upsertGlobalUser({
@@ -271,7 +279,7 @@ const authenticateVkUser = async ({ location, rawData }) => {
     }
 
     await syncLegacyUserByLocation({
-      location: resolvedLocation,
+      location: persistedLocation || resolvedLocation,
       findQuery: { phone },
       updates: {
         ...updates,
@@ -296,7 +304,7 @@ const authenticateVkUser = async ({ location, rawData }) => {
         vkId: user.vkId,
         telegramId: user.telegramId,
         phone: user.phone,
-        location: resolvedLocation,
+        location: persistedLocation,
         name: user.name,
         username: user.username,
         photoUrl: user.photoUrl,

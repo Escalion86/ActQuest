@@ -5,28 +5,42 @@ const AuthLocationSelect = ({
   onChange,
   disabled,
   availableLocations,
-}) => (
-  <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-    Игровой регион
-    <select
-      className="px-4 py-3 text-base transition border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40"
-      value={location}
-      onChange={onChange}
-      disabled={disabled}
+  variant,
+}) => {
+  const isNeon = variant === 'neon'
+
+  return (
+    <label
+      className={`flex flex-col gap-2 text-sm font-medium ${
+        isNeon ? 'text-[#bfeeff]' : 'text-slate-700'
+      }`}
     >
-      {availableLocations.map((item) => (
-        <option key={item.key} value={item.key}>
-          {item.townRu[0].toUpperCase() + item.townRu.slice(1)}
-        </option>
-      ))}
-    </select>
-  </label>
-)
+      Игровой регион
+      <select
+        className={`px-4 py-3 text-base transition rounded-xl focus:outline-none ${
+          isNeon
+            ? 'cursor-pointer border border-[#00D1FF]/40 bg-[#090018]/80 text-white focus:border-[#00D1FF] focus:ring-2 focus:ring-[#00D1FF]/30 disabled:cursor-not-allowed'
+            : 'cursor-pointer border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed'
+        }`}
+        value={location}
+        onChange={onChange}
+        disabled={disabled}
+      >
+        {availableLocations.map((item) => (
+          <option key={item.key} value={item.key}>
+            {item.townRu[0].toUpperCase() + item.townRu.slice(1)}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
 
 AuthLocationSelect.propTypes = {
   location: PropTypes.string.isRequired,
   onChange: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
+  variant: PropTypes.oneOf(['default', 'neon']),
   availableLocations: PropTypes.arrayOf(
     PropTypes.shape({
       key: PropTypes.string.isRequired,
@@ -37,6 +51,7 @@ AuthLocationSelect.propTypes = {
 
 AuthLocationSelect.defaultProps = {
   disabled: false,
+  variant: 'default',
 }
 
 export default AuthLocationSelect

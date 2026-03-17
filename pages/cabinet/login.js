@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { signIn, useSession } from 'next-auth/react'
 import NoticeBanner from '@components/NoticeBanner'
 import AuthSplitLayout from '@components/cabinet/auth/AuthSplitLayout'
-import AuthLocationSelect from '@components/cabinet/auth/AuthLocationSelect'
 
 import getSessionSafe from '@helpers/getSessionSafe'
 import {
@@ -15,11 +14,8 @@ import {
 import { formatPhoneInput, normalizePhoneForSubmit } from '@helpers/phoneInputMask'
 import { LOCATIONS } from '@server/serverConstants'
 
-const availableLocations = Object.entries(LOCATIONS)
-  .filter(([, value]) => !value.hidden)
-  .map(([key, value]) => ({ key, ...value }))
-
-const defaultLocation = availableLocations[0]?.key ?? 'dev'
+const defaultLocation =
+  Object.entries(LOCATIONS).find(([, value]) => !value.hidden)?.[0] ?? 'dev'
 const defaultSiteAccess = {
   allowSiteAuth: true,
   allowSiteRegistration: true,
@@ -49,6 +45,21 @@ const VK_SIGNIN_ERROR_MESSAGES = {
 const mapVkSignInError = (errorCode) =>
   VK_SIGNIN_ERROR_MESSAGES[errorCode] ||
   'Не удалось выполнить вход через VK ID. Попробуйте позже.'
+
+const mapPasswordSignInError = (errorCode) => {
+  if (!errorCode) {
+    return 'Не удалось авторизоваться по номеру телефона и паролю. Попробуйте ещё раз.'
+  }
+
+  if (errorCode === 'CredentialsSignin') {
+    return 'Не удалось выполнить вход по номеру телефона.'
+  }
+
+  return String(errorCode)
+}
+
+const removeVkHintFromError = (message) =>
+  String(message || '').replace(/\s*или войдите через VK\.?/i, '.')
 
 const summarizeVkMessageData = (data) => {
   if (!data || typeof data !== 'object') {
@@ -131,9 +142,6 @@ const CabinetLoginPage = ({
 }) => {
   const { data: session, status, update } = useSession()
   const router = useRouter()
-  const [location, setLocation] = useState(
-    () => session?.user?.location || defaultLocation,
-  )
   const [authError, setAuthError] = useState(null)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [isClient, setIsClient] = useState(false)
@@ -151,9 +159,18 @@ const CabinetLoginPage = ({
   const vkWidgetInstanceRef = useRef(null)
   const vkWidgetConfigKeyRef = useRef('')
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
+  const authLocation = session?.user?.location || defaultLocation
   const isVkSignInEnabled =
     isVkAuthVisible && siteAccess.allowSiteAuth && siteAccess.enableVkOneTap
   const isAuthResolvedAsGuest = status === 'unauthenticated'
+  const isVkLoginOptionVisible =
+    isAuthResolvedAsGuest && isVkSignInEnabled && Boolean(vkidAppId)
+  const shouldShowRegisterCtaForAuthError = Boolean(
+    authError &&
+      typeof authError === 'string' &&
+      authError.toLowerCase().includes('пароль не задан') &&
+      siteAccess.allowSiteRegistration,
+  )
 
   const appendAuthDebug = useCallback((stage, payload = null) => {
     if (!isVkDebugEnabled) return
@@ -171,40 +188,34 @@ const CabinetLoginPage = ({
   }, [])
 
   useEffect(() => {
-    if (session?.user?.location) {
-      setLocation(session.user.location)
-    }
-  }, [session?.user?.location])
-
-  useEffect(() => {
     appendAuthDebug('session_status_changed', {
       status,
       hasSession: Boolean(session),
-      location: session?.user?.location ?? null,
+      location: session?.user?.location ?? authLocation ?? null,
     })
-  }, [appendAuthDebug, session, status])
+  }, [appendAuthDebug, authLocation, session, status])
 
   useEffect(() => {
     isAuthenticatingRef.current = isAuthenticating
   }, [isAuthenticating])
 
   useEffect(() => {
-    if (!isClient || !location) {
+    if (!isClient || !authLocation) {
       return undefined
     }
 
     let cancelled = false
 
     const fetchSiteAccess = async () => {
-      appendAuthDebug('site_access_fetch_start', { location })
+      appendAuthDebug('site_access_fetch_start', { location: authLocation })
       setIsSiteAccessLoading(true)
       try {
         const response = await fetch(
-          `/api/public/site-access?location=${encodeURIComponent(location)}`,
+          `/api/public/site-access?location=${encodeURIComponent(authLocation)}`,
         )
         const json = await response.json()
         appendAuthDebug('site_access_fetch_response', {
-          location,
+          location: authLocation,
           ok: response.ok,
           success: json?.success ?? null,
           data: json?.data ?? null,
@@ -227,7 +238,7 @@ const CabinetLoginPage = ({
 
       if (!cancelled) {
         setSiteAccess(defaultSiteAccess)
-        appendAuthDebug('site_access_fallback_default', { location })
+        appendAuthDebug('site_access_fallback_default', { location: authLocation })
       }
     }
 
@@ -236,7 +247,7 @@ const CabinetLoginPage = ({
     return () => {
       cancelled = true
     }
-  }, [isClient, location])
+  }, [authLocation, isClient])
 
   useEffect(() => {
     if (!isClient || !isVkDebugEnabled) return undefined
@@ -290,7 +301,7 @@ const CabinetLoginPage = ({
         hasCodeVerifier: Boolean(codeVerifier),
         hasState: Boolean(state),
         hasAccessToken: Boolean(accessToken),
-        location,
+        location: authLocation,
       })
       if (
         !code ||
@@ -331,7 +342,7 @@ const CabinetLoginPage = ({
         const result = await signIn('vk', {
           redirect: false,
           callbackUrl: absoluteCallbackUrl,
-          location,
+          location: authLocation,
           mode: 'login',
           code,
           deviceId,
@@ -407,7 +418,7 @@ const CabinetLoginPage = ({
       effectiveCallbackUrl,
       isClient,
       isVkSignInEnabled,
-      location,
+      authLocation,
       router,
       updateSession,
     ],
@@ -466,14 +477,17 @@ const CabinetLoginPage = ({
           redirect: false,
           callbackUrl: absoluteCallbackUrl,
           data: payload,
-          location,
+          location: authLocation,
         })
 
         if (result?.error) {
-          if (result.error === 'CredentialsSignin') {
-            throw new Error('Не удалось выполнить вход по номеру телефона.')
-          }
-          throw new Error(result.error)
+          const mappedMessage = mapPasswordSignInError(result.error)
+          setAuthError(
+            isVkLoginOptionVisible
+              ? mappedMessage
+              : removeVkHintFromError(mappedMessage),
+          )
+          return
         }
 
         await updateSession()
@@ -514,9 +528,13 @@ const CabinetLoginPage = ({
         }
       } catch (authError) {
         console.error('Password auth error', authError)
-        setAuthError(
+        const fallbackMessage =
           authError.message ||
-            'Не удалось авторизоваться по номеру телефона и паролю. Попробуйте ещё раз.',
+          'Не удалось авторизоваться по номеру телефона и паролю. Попробуйте ещё раз.'
+        setAuthError(
+          isVkLoginOptionVisible
+            ? fallbackMessage
+            : removeVkHintFromError(fallbackMessage),
         )
       } finally {
         setIsAuthenticating(false)
@@ -526,10 +544,11 @@ const CabinetLoginPage = ({
       effectiveCallbackUrl,
       isAuthenticating,
       isClient,
-      location,
+      authLocation,
       phoneInput,
       passwordInput,
       router,
+      isVkLoginOptionVisible,
       siteAccess.allowSiteAuth,
       updateSession,
     ],
@@ -551,7 +570,7 @@ const CabinetLoginPage = ({
       vkidAppId,
       vkidCallbackUrl || '',
       vkidScope || '',
-      location || '',
+      authLocation || '',
       Number(isVkSignInEnabled),
     ].join('|')
 
@@ -569,7 +588,7 @@ const CabinetLoginPage = ({
         vkidAppId,
         vkidCallbackUrl,
         vkidScope,
-        location,
+        location: authLocation,
       })
       const loaded = await loadVkSdk()
       if (!loaded || !isMounted || !container) {
@@ -749,7 +768,7 @@ const CabinetLoginPage = ({
     vkidAppId,
     vkidCallbackUrl,
     vkidScope,
-    location,
+    authLocation,
     isVkSignInEnabled,
   ])
 
@@ -759,17 +778,20 @@ const CabinetLoginPage = ({
         <title>ActQuest — вход в кабинет</title>
       </Head>
       <AuthSplitLayout
+        variant="neon"
+        showLabel={false}
+        hideIntroOnMobile
         title="Открывайте городские игры и проводите время с друзьями"
         description="В кабинете вы выбираете игру, собираете команду и отслеживаете участие в одном месте. Подходит и для новых игроков, и для тех, кто уже регулярно выходит на квесты."
         stepTexts={[
-          'Выберите город, чтобы увидеть актуальные игры и события.',
+          'Авторизуйтесь, чтобы открыть доступ к играм и командам.',
           isVkAuthVisible
             ? 'Войдите через VK ID или по номеру телефона и паролю.'
             : 'Войдите по номеру телефона и паролю.',
           'Переходите в кабинет: выбирайте игру, собирайте друзей и выходите на маршрут.',
         ]}
       >
-        <h2 className="text-2xl font-semibold text-center text-primary">
+        <h2 className="text-2xl font-semibold text-center text-white">
           Авторизация
         </h2>
         {authCallbackSource ? (
@@ -779,15 +801,8 @@ const CabinetLoginPage = ({
         ) : null}
 
         <div className="mt-6 space-y-4">
-          <AuthLocationSelect
-            location={location}
-            onChange={(event) => setLocation(event.target.value)}
-            disabled={isAuthenticating}
-            availableLocations={availableLocations}
-          />
-
           <div className="flex flex-col items-center gap-4">
-            {isAuthResolvedAsGuest && isVkSignInEnabled && vkidAppId ? (
+            {isVkLoginOptionVisible ? (
               <div className="w-full">
                 <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                   Войти через VK ID
@@ -810,26 +825,28 @@ const CabinetLoginPage = ({
             ) : null}
 
             {!siteAccess.allowSiteAuth ? (
-              <NoticeBanner tone="warning">
+              <NoticeBanner tone="warning" variant="neon">
                 Авторизация временно отключена, ведутся работы.
               </NoticeBanner>
             ) : null}
 
             {isSiteAccessLoading ? (
-              <NoticeBanner className="text-xs" centered>
+              <NoticeBanner className="text-xs" centered variant="neon">
                 Загружаем настройки доступа...
               </NoticeBanner>
             ) : null}
 
-            <div className="w-full text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-              или войдите по номеру телефона
+            <div className="w-full text-center text-xs font-semibold uppercase tracking-[0.12em] text-[#9fd9ff]">
+              {isVkLoginOptionVisible
+                ? 'или войдите по номеру телефона'
+                : 'войдите по номеру телефона'}
             </div>
 
                   <form
-                    className="w-full p-4 space-y-3 border rounded-xl border-slate-200 dark:border-slate-700"
+                    className="w-full p-4 space-y-3 border rounded-xl border-[#00D1FF]/30 bg-[#090018]/70"
                     onSubmit={handlePhoneAuthSubmit}
                   >
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <label className="block text-sm font-semibold text-[#bfeeff]">
                       Телефон
                     </label>
                     <input
@@ -841,9 +858,9 @@ const CabinetLoginPage = ({
                       placeholder="+7 900 000-00-00"
                       autoComplete="tel"
                       disabled={isAuthenticating || !siteAccess.allowSiteAuth}
-                      className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                      className="w-full px-4 py-3 text-sm text-white border rounded-xl border-[#00D1FF]/35 bg-[#080017]/80 focus:border-[#00D1FF] focus:outline-none"
                     />
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <label className="block text-sm font-semibold text-[#bfeeff]">
                       Пароль
                     </label>
                     <input
@@ -853,12 +870,12 @@ const CabinetLoginPage = ({
                       placeholder="Введите пароль"
                       autoComplete="current-password"
                       disabled={isAuthenticating || !siteAccess.allowSiteAuth}
-                      className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                      className="w-full px-4 py-3 text-sm text-white border rounded-xl border-[#00D1FF]/35 bg-[#080017]/80 focus:border-[#00D1FF] focus:outline-none"
                     />
                     <button
                       type="submit"
                       disabled={isAuthenticating || !siteAccess.allowSiteAuth}
-                      className="w-full px-4 py-3 text-sm font-semibold text-white transition bg-emerald-600 rounded-xl hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="w-full cursor-pointer px-4 py-3 text-sm font-semibold transition border rounded-xl border-[#00D1FF]/50 bg-[#00D1FF]/12 text-[#baf3ff] hover:bg-[#00D1FF]/20 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Войти
                     </button>
@@ -867,17 +884,17 @@ const CabinetLoginPage = ({
                   {siteAccess.allowSiteRegistration ? (
                     <Link
                       href={`/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
-                      className="inline-flex items-center justify-center w-full px-4 py-3 text-sm font-semibold border rounded-xl border-primary text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                      className="inline-flex items-center justify-center w-full px-4 py-3 text-sm font-semibold border rounded-xl border-[#7A00FF]/45 text-[#d9c8ff] hover:bg-[#7A00FF]/12"
                     >
                       Я не зарегистрирован
                     </Link>
                   ) : (
-                    <NoticeBanner centered>
+                    <NoticeBanner centered variant="neon">
                       Регистрация временно отключена, ведутся работы.
                     </NoticeBanner>
                   )}
 
-                  <div className="w-full text-sm text-center text-slate-500">
+                  <div className="w-full text-sm text-center text-slate-400">
                     Забыли пароль?{' '}
                     <Link
                       href={
@@ -887,7 +904,7 @@ const CabinetLoginPage = ({
                       }
                       className={`font-semibold ${
                         siteAccess.allowSiteRegistration
-                          ? 'text-primary hover:underline'
+                          ? 'text-[#8fdcff] hover:underline'
                           : 'text-slate-400 cursor-default pointer-events-none'
                       }`}
                     >
@@ -897,20 +914,30 @@ const CabinetLoginPage = ({
                   <div className="w-full text-sm text-center">
                     <Link
                       href="/"
-                      className="font-semibold text-primary hover:underline"
+                      className="font-semibold text-[#8fdcff] hover:underline"
                     >
                       Перейти на главную страницу
                     </Link>
                   </div>
 
                   {vkError ? (
-                    <NoticeBanner tone="error">
+                    <NoticeBanner tone="error" variant="neon">
                       {vkError}
                     </NoticeBanner>
                   ) : null}
                   {authError ? (
-                    <NoticeBanner tone="error">
-                      {authError}
+                    <NoticeBanner tone="error" variant="neon">
+                      <div className="space-y-2">
+                        <div>{authError}</div>
+                        {shouldShowRegisterCtaForAuthError ? (
+                          <Link
+                            href={`/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
+                            className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-[#ff4d6d]/45 px-3 py-2 text-xs font-semibold text-[#ffd4de] transition hover:bg-[#ff4d6d]/20"
+                          >
+                            Перейти к регистрации
+                          </Link>
+                        ) : null}
+                      </div>
                     </NoticeBanner>
                   ) : null}
                   {isVkDebugEnabled ? (
@@ -923,7 +950,7 @@ const CabinetLoginPage = ({
                         vkReady={String(isVkIdReady)};
                         vkEnabled={String(isVkSignInEnabled)};
                         vkAllowedBySession={String(isAuthResolvedAsGuest)};
-                        location={location}
+                        location={authLocation}
                       </div>
                       {authDebugEvents.length === 0 ? (
                         <div>События пока не получены</div>

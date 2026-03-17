@@ -2,6 +2,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import syncLegacyUserByLocation from '@helpers/syncLegacyUserByLocation'
 import normalizeAuthPhone from '@helpers/normalizeAuthPhone'
 import { verifyPasswordHash } from '@helpers/passwordHash'
+import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
 
 const errorResponse = (code, message, details = null) => ({
   success: false,
@@ -12,7 +13,7 @@ const errorResponse = (code, message, details = null) => ({
 
 const normalizeLocation = (location) => {
   if (!location) return null
-  return String(location)
+  return String(location).trim().toLowerCase() || null
 }
 
 const normalizePassword = (value) => {
@@ -43,9 +44,6 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
   }
 
   const resolvedLocation = normalizeLocation(location)
-  if (!resolvedLocation) {
-    return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации.')
-  }
 
   const phone = normalizeAuthPhone(payload.phone)
   if (phone === null) {
@@ -75,9 +73,16 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
     }
 
     if (!user.passwordHash) {
+      const controls = await getSiteAccessControlsByLocation(resolvedLocation)
+      const vkAvailable = Boolean(
+        controls?.allowSiteAuth && controls?.enableVkOneTap,
+      )
+
       return errorResponse(
         'PASSWORD_NOT_SET',
-        'Для этого номера пароль не задан. Завершите регистрацию или войдите через VK.',
+        vkAvailable
+          ? 'Для этого номера пароль не задан. Завершите регистрацию или войдите через VK.'
+          : 'Для этого номера пароль не задан. Завершите регистрацию.',
       )
     }
 
@@ -86,9 +91,15 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
       return errorResponse('WRONG_PASSWORD', 'Неверный пароль. Попробуйте снова.')
     }
 
+    const persistedLocation =
+      typeof user?.currentLocation === 'string' && user.currentLocation.trim()
+        ? user.currentLocation.trim().toLowerCase()
+        : null
+    const effectiveLocation = persistedLocation || resolvedLocation || null
+
     const updates = {
-      currentLocation: resolvedLocation,
       authMethod: 'phone',
+      ...(effectiveLocation ? { currentLocation: effectiveLocation } : {}),
     }
 
     const refreshedUser = await globalDb
@@ -97,7 +108,7 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
       .lean()
 
     await syncLegacyUserByLocation({
-      location: resolvedLocation,
+      location: effectiveLocation,
       findQuery: { phone },
       updates: {
         ...updates,
@@ -115,7 +126,7 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
         telegramId: source.telegramId,
         vkId: source.vkId,
         phone: source.phone,
-        location: resolvedLocation,
+        location: effectiveLocation,
         name: source.name,
         username: source.username,
         photoUrl: source.photoUrl,
