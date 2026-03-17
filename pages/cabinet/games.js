@@ -13,6 +13,7 @@ import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import { getNounTeams } from '@helpers/getNoun'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { LOCATIONS } from '@server/serverConstants'
 
 const GAME_STATUS_OPTIONS = ['active', 'started', 'finished', 'canceled'].map((value) => ({
   value,
@@ -20,10 +21,14 @@ const GAME_STATUS_OPTIONS = ['active', 'started', 'finished', 'canceled'].map((v
 }))
 
 const GAME_STATUS_BADGE_STYLES = {
-  active: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100',
-  started: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100',
-  finished: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100',
-  canceled: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-100',
+  active:
+    'border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]',
+  started:
+    'border border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-[#17e6ae]/35 dark:bg-[#17e6ae]/12 dark:text-[#c8ffe9]',
+  finished:
+    'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#e2d5ff]',
+  canceled:
+    'border border-rose-300 bg-rose-100 text-rose-700 dark:border-[#ff4d6d]/35 dark:bg-[#ff4d6d]/12 dark:text-[#ffd1da]',
 }
 
 const getStatusBadgeClassName = (status) => {
@@ -35,7 +40,7 @@ const getStatusBadgeClassName = (status) => {
 
   return (
     GAME_STATUS_BADGE_STYLES[normalized] ??
-    'bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-100'
+    'border border-slate-300 bg-slate-100 text-slate-700 dark:border-white/20 dark:bg-white/10 dark:text-slate-200'
   )
 }
 
@@ -112,6 +117,15 @@ const createBonusCode = () => ({
   bonus: 0,
   description: '',
 })
+
+const gameLocationOptions = Object.entries(LOCATIONS)
+  .filter(([, value]) => !value?.hidden)
+  .map(([key, value]) => ({
+    key,
+    label: value?.townRu
+      ? value.townRu.charAt(0).toUpperCase() + value.townRu.slice(1)
+      : key.toUpperCase(),
+  }))
 
 const extractErrorMessage = (error) => {
   if (!error) {
@@ -394,6 +408,25 @@ const GamesPage = ({
   const [newGameName, setNewGameName] = useState('')
   const [createGameFeedback, setCreateGameFeedback] = useState(null)
   const [isCreatingGame, setIsCreatingGame] = useState(false)
+  const [isLocationFilterLoading, setIsLocationFilterLoading] = useState(false)
+  const [locationFilterError, setLocationFilterError] = useState(null)
+  const rawViewQuery = Array.isArray(router.query?.view)
+    ? router.query.view[0]
+    : router.query?.view
+  const gamesView = rawViewQuery === 'upcoming' || rawViewQuery === 'past' ? rawViewQuery : 'all'
+  const isUpcomingView = gamesView === 'upcoming'
+  const isPastView = gamesView === 'past'
+  const shouldShowLocationFilter = isUpcomingView || isPastView
+  const isFilteredGamesView = rawViewQuery === 'upcoming' || rawViewQuery === 'past'
+  const defaultGamesFilterLocation = useMemo(() => {
+    const byUser = typeof location === 'string' ? location.trim().toLowerCase() : ''
+    if (byUser && gameLocationOptions.some((item) => item.key === byUser)) {
+      return byUser
+    }
+    return gameLocationOptions[0]?.key ?? ''
+  }, [location])
+  const [gamesFilterLocation, setGamesFilterLocation] = useState(defaultGamesFilterLocation)
+  const registerApiLocation = isFilteredGamesView ? gamesFilterLocation : location
 
   useEffect(() => {
     setGames(safeInitialGames)
@@ -407,8 +440,24 @@ const GamesPage = ({
   }, [safeInitialGames])
 
   useEffect(() => {
+    if (!defaultGamesFilterLocation) return
+    setGamesFilterLocation((prev) =>
+      prev && gameLocationOptions.some((item) => item.key === prev)
+        ? prev
+        : defaultGamesFilterLocation
+    )
+  }, [defaultGamesFilterLocation])
+
+  useEffect(() => {
     setFeedback(null)
   }, [selectedGameId])
+
+  const selectedGame = useMemo(
+    () => games.find((game) => game.id === selectedGameId) ?? null,
+    [games, selectedGameId]
+  )
+  const selectedGameApiLocation =
+    selectedGame?.location || (shouldShowLocationFilter ? gamesFilterLocation : location)
 
   useEffect(() => {
     setExpandedTaskIds([])
@@ -487,6 +536,126 @@ const GamesPage = ({
     })
   }, [])
 
+  useEffect(() => {
+    if (!shouldShowLocationFilter) {
+      setLocationFilterError(null)
+      setIsLocationFilterLoading(false)
+      return
+    }
+
+    if (!gamesFilterLocation) {
+      setGames([])
+      setPersistedGames([])
+      setSelectedGameId(null)
+      setLocationFilterError('Выберите город для загрузки игр.')
+      return
+    }
+
+    const canLoadAnyGames = canEditAllGames || canEditOwnGames
+    if (!canLoadAnyGames) {
+      setGames([])
+      setPersistedGames([])
+      setSelectedGameId(null)
+      setLocationFilterError(null)
+      return
+    }
+
+    let cancelled = false
+
+    const fetchGamesByLocation = async () => {
+      setIsLocationFilterLoading(true)
+      setLocationFilterError(null)
+
+      try {
+        const gamesParams = new URLSearchParams({
+          collection: 'games',
+          sort: '-updatedAt',
+          limit: '500',
+        })
+        const gameTeamsParams = new URLSearchParams({
+          collection: 'gamesteams',
+          select: '_id,gameId',
+          limit: '5000',
+        })
+
+        const [gamesResponse, gameTeamsResponse] = await Promise.all([
+          fetch(`/api/${gamesFilterLocation}/custom?${gamesParams.toString()}`),
+          fetch(`/api/${gamesFilterLocation}/custom?${gameTeamsParams.toString()}`),
+        ])
+
+        const gamesJson = await gamesResponse.json()
+        const gameTeamsJson = await gameTeamsResponse.json()
+
+        if (!gamesResponse.ok || gamesJson?.success === false) {
+          throw new Error(
+            extractErrorMessage(gamesJson?.error) || 'Не удалось загрузить игры выбранного города'
+          )
+        }
+
+        const gamesData = Array.isArray(gamesJson?.data) ? gamesJson.data : []
+        const gameTeamsData = Array.isArray(gameTeamsJson?.data) ? gameTeamsJson.data : []
+
+        const teamCountByGameId = gameTeamsData.reduce((acc, entry) => {
+          const gameId = entry?.gameId ? String(entry.gameId) : ''
+          if (!gameId) return acc
+          acc[gameId] = (acc[gameId] ?? 0) + 1
+          return acc
+        }, {})
+
+        const normalizedGames = gamesData
+          .map((game) =>
+            normalizeGameForCabinet({
+              ...game,
+              teamsCount: game?._id ? teamCountByGameId[String(game._id)] ?? 0 : 0,
+            })
+          )
+          .filter((game) => {
+            if (canEditAllGames) return true
+            if (canEditOwnGames) {
+              const creatorId = game?.creatorTelegramId ? String(game.creatorTelegramId) : ''
+              return Boolean(currentUserIdString) && creatorId === currentUserIdString
+            }
+            return false
+          })
+
+        const sorted = sortGamesByUpdatedAt(normalizedGames)
+
+        if (cancelled) return
+
+        setGames(sorted)
+        setPersistedGames(sorted)
+        setSelectedGameId((prev) =>
+          prev && sorted.some((game) => game.id === prev) ? prev : sorted[0]?.id ?? null
+        )
+      } catch (error) {
+        if (cancelled) return
+        setGames([])
+        setPersistedGames([])
+        setSelectedGameId(null)
+        setLocationFilterError(
+          extractErrorMessage(error) || 'Не удалось загрузить игры выбранного города.'
+        )
+      } finally {
+        if (!cancelled) {
+          setIsLocationFilterLoading(false)
+        }
+      }
+    }
+
+    fetchGamesByLocation()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    canEditAllGames,
+    canEditOwnGames,
+    currentUserIdString,
+    gamesFilterLocation,
+    shouldShowLocationFilter,
+    sortGamesByUpdatedAt,
+  ])
+
   const resetRegisterForm = useCallback(() => {
     setRegisterGameId('')
     setRegisterTeamId('')
@@ -505,7 +674,7 @@ const GamesPage = ({
   }, [isRegisterSubmitting, resetRegisterForm])
 
   const loadRegisterTeams = useCallback(async () => {
-    if (!location || !currentUserDbId) {
+    if (!registerApiLocation || !currentUserDbId) {
       setRegisterTeams([])
       setRegisterTeamId('')
       return
@@ -522,7 +691,7 @@ const GamesPage = ({
       })
 
       const membershipsResponse = await fetch(
-        `/api/${location}/custom?${membershipsParams.toString()}`
+        `/api/${registerApiLocation}/custom?${membershipsParams.toString()}`
       )
       const membershipsJson = await membershipsResponse.json()
 
@@ -583,7 +752,7 @@ const GamesPage = ({
       }
 
       const teamsParams = new URLSearchParams({
-        location,
+        location: registerApiLocation,
         teamIds: teamIds.join(','),
       })
 
@@ -635,7 +804,7 @@ const GamesPage = ({
     } finally {
       setIsRegisterTeamsLoading(false)
     }
-  }, [currentUserDbId, location])
+  }, [currentUserDbId, registerApiLocation])
 
   useEffect(() => {
     if (isRegisterModalOpen) {
@@ -665,10 +834,10 @@ const GamesPage = ({
       return
     }
 
-    if (!location) {
+    if (!registerApiLocation) {
       setRegisterFeedback({
         type: 'error',
-        message: 'Не удалось определить площадку пользователя',
+        message: 'Не удалось определить площадку выбранного города',
       })
       return
     }
@@ -696,7 +865,7 @@ const GamesPage = ({
 
     try {
       const gameResponse = await fetch(
-        `/api/${location}/custom?collection=games&id=${encodeURIComponent(
+        `/api/${registerApiLocation}/custom?collection=games&id=${encodeURIComponent(
           trimmedGameId
         )}`
       )
@@ -723,7 +892,7 @@ const GamesPage = ({
       })
 
       const existingResponse = await fetch(
-        `/api/${location}/custom?${existingParams.toString()}`
+        `/api/${registerApiLocation}/custom?${existingParams.toString()}`
       )
       const existingJson = await existingResponse.json()
 
@@ -736,7 +905,7 @@ const GamesPage = ({
       }
 
       const registerResponse = await fetch(
-        `/api/${location}/custom?collection=gamesteams`,
+        `/api/${registerApiLocation}/custom?collection=gamesteams`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -801,7 +970,7 @@ const GamesPage = ({
     }
   }, [
     currentUserDbId,
-    location,
+    registerApiLocation,
     registerGameId,
     registerTeamId,
     registerTeams,
@@ -1015,12 +1184,6 @@ const GamesPage = ({
       }),
     [games]
   )
-
-  const selectedGame = useMemo(
-    () => games.find((game) => game.id === selectedGameId) ?? null,
-    [games, selectedGameId]
-  )
-
   const isPhotoGame = selectedGame?.type === 'photo'
 
   useEffect(() => {
@@ -1203,13 +1366,13 @@ const GamesPage = ({
   }, [persistedGames, selectedGameId])
 
   const handleSaveChanges = useCallback(async () => {
-    if (!selectedGame || !location || !canEditSelectedGame) return
+    if (!selectedGame || !selectedGameApiLocation || !canEditSelectedGame) return
 
     setIsSaving(true)
     setFeedback(null)
 
     try {
-      const response = await fetch(`/api/${location}/games/${selectedGame.id}`, {
+      const response = await fetch(`/api/${selectedGameApiLocation}/games/${selectedGame.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: buildUpdatePayload(selectedGame) }),
@@ -1243,7 +1406,7 @@ const GamesPage = ({
     } finally {
       setIsSaving(false)
     }
-  }, [canEditSelectedGame, location, selectedGame])
+  }, [canEditSelectedGame, selectedGame, selectedGameApiLocation])
 
   const handleAddPrice = useCallback(() => {
     if (!canEditSelectedGame) return
@@ -1643,10 +1806,10 @@ const GamesPage = ({
   }, [])
 
   const loadTeamsModalData = useCallback(async () => {
-    if (!selectedGame || !location) {
+    if (!selectedGame || !selectedGameApiLocation) {
       setTeamsModalState({
         isLoading: false,
-        error: location
+        error: selectedGameApiLocation
           ? 'Не выбрана игра для управления командами'
           : 'Не удалось определить площадку',
         gameTeams: [],
@@ -1659,14 +1822,14 @@ const GamesPage = ({
     setTeamsModalState((prev) => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      const teamsParams = new URLSearchParams({ location })
+      const teamsParams = new URLSearchParams({ location: selectedGameApiLocation })
       const [gameTeamsResponse, teamsResponse] = await Promise.all([
         fetch(
           `/api/cabinet/games/${encodeURIComponent(
             selectedGame.id
           )}/teams?${teamsParams.toString()}`
         ),
-        fetch(`/api/${location}/custom?collection=teams&limit=200&sort=name_lowered`),
+        fetch(`/api/${selectedGameApiLocation}/custom?collection=teams&limit=200&sort=name_lowered`),
       ])
 
       const gameTeamsJson = await gameTeamsResponse.json()
@@ -1710,7 +1873,7 @@ const GamesPage = ({
       let detailedTeamsMap = {}
 
       if (allTeamIds.length > 0) {
-        const detailedParams = new URLSearchParams({ location })
+        const detailedParams = new URLSearchParams({ location: selectedGameApiLocation })
         allTeamIds.forEach((id) => detailedParams.append('teamIds', id))
 
         try {
@@ -1832,10 +1995,10 @@ const GamesPage = ({
       })
       setSelectedTeamToAdd('')
     }
-  }, [location, selectedGame])
+  }, [selectedGame, selectedGameApiLocation])
 
   const handleAddTeamToGame = useCallback(async () => {
-    if (!selectedGame || !location || !selectedTeamToAdd) {
+    if (!selectedGame || !selectedGameApiLocation || !selectedTeamToAdd) {
       return
     }
 
@@ -1843,7 +2006,7 @@ const GamesPage = ({
     setTeamsModalState((prev) => ({ ...prev, error: null }))
 
     try {
-      const response = await fetch(`/api/${location}/gamesteams`, {
+      const response = await fetch(`/api/${selectedGameApiLocation}/gamesteams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1871,11 +2034,11 @@ const GamesPage = ({
     } finally {
       setIsAddingTeam(false)
     }
-  }, [selectedGame, location, selectedTeamToAdd, loadTeamsModalData])
+  }, [loadTeamsModalData, selectedGame, selectedGameApiLocation, selectedTeamToAdd])
 
   const handleRemoveTeamFromGame = useCallback(
     async (gameTeamId) => {
-      if (!gameTeamId || !location) {
+      if (!gameTeamId || !selectedGameApiLocation) {
         return
       }
 
@@ -1885,7 +2048,7 @@ const GamesPage = ({
       setTeamsModalState((prev) => ({ ...prev, error: null }))
 
       try {
-        const response = await fetch(`/api/${location}/gamesteams/${gameTeamId}`, {
+        const response = await fetch(`/api/${selectedGameApiLocation}/gamesteams/${gameTeamId}`, {
           method: 'DELETE',
         })
 
@@ -1907,7 +2070,7 @@ const GamesPage = ({
         setRemovingTeamIds((prev) => prev.filter((id) => id !== gameTeamId))
       }
     },
-    [location, loadTeamsModalData]
+    [loadTeamsModalData, selectedGameApiLocation]
   )
 
   useEffect(() => {
@@ -2101,7 +2264,7 @@ const GamesPage = ({
                       event.stopPropagation()
                       handleEditGameFromList(game)
                     }}
-                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
+                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-cyan-300 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:bg-transparent dark:hover:text-violet-100 dark:focus:ring-primary"
                     aria-label="Редактировать игру"
                     title="Редактировать игру"
                   >
@@ -2133,7 +2296,7 @@ const GamesPage = ({
                       event.stopPropagation()
                       handleManageTeamsFromList(game)
                     }}
-                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
+                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-cyan-300 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:bg-transparent dark:hover:text-violet-100 dark:focus:ring-primary"
                     aria-label="Управление командами"
                     title="Управление командами"
                   >
@@ -2389,20 +2552,47 @@ const GamesPage = ({
                 </button>
               )}
             </div>
-            <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-100 shadow-sm rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-violet-600 font-semibold shadow-sm dark:bg-violet-500/40 dark:text-violet-100"
-                aria-hidden="true"
-              >
-                i
-              </span>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-violet-900 dark:text-violet-50">Ваши игры</p>
-                <p className="text-xs leading-5 text-violet-700 dark:text-violet-200">
-                  Выберите игру, чтобы открыть ключевые настройки, управлять составами и следить за финансами.
-                </p>
+            {shouldShowLocationFilter && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <label
+                  htmlFor="games-city-filter"
+                  className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Город для списка игр
+                </label>
+                <select
+                  id="games-city-filter"
+                  value={gamesFilterLocation}
+                  onChange={(event) => setGamesFilterLocation(event.target.value)}
+                  className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700"
+                >
+                  {gameLocationOptions.map((item) => (
+                    <option key={item.key} value={item.key}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+                {locationFilterError && (
+                  <p className="mt-2 text-xs text-rose-500">{locationFilterError}</p>
+                )}
               </div>
-            </div>
+            )}
+            {!shouldShowLocationFilter && (
+              <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-100 shadow-sm rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-violet-600 font-semibold shadow-sm dark:bg-violet-500/40 dark:text-violet-100"
+                  aria-hidden="true"
+                >
+                  i
+                </span>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-violet-900 dark:text-violet-50">Ваши игры</p>
+                  <p className="text-xs leading-5 text-violet-700 dark:text-violet-200">
+                    Выберите игру, чтобы открыть ключевые настройки, управлять составами и следить за финансами.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {selectedGame && !location && (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
@@ -2428,9 +2618,13 @@ const GamesPage = ({
               </div>
             )}
 
-            {games.length > 0 ? (
+            {isLocationFilterLoading && shouldShowLocationFilter ? (
+              <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                Загружаем игры выбранного города...
+              </div>
+            ) : games.length > 0 ? (
               <div className="space-y-6">
-                {upcomingGames.length > 0 && (
+                {!isPastView && upcomingGames.length > 0 && (
                   <div>
                     <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Активные и запланированные
@@ -2440,7 +2634,7 @@ const GamesPage = ({
                     </ul>
                   </div>
                 )}
-                {pastGames.length > 0 && (
+                {!isUpcomingView && pastGames.length > 0 && (
                   <div>
                     <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Завершённые и отменённые
@@ -2448,6 +2642,14 @@ const GamesPage = ({
                     <ul className="mt-2 space-y-3">
                       {pastGames.map((game) => renderGameListItem(game))}
                     </ul>
+                  </div>
+                )}
+                {((isUpcomingView && upcomingGames.length === 0) ||
+                  (isPastView && pastGames.length === 0)) && (
+                  <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                    {isUpcomingView
+                      ? 'Предстоящих игр пока нет.'
+                      : 'Прошедших игр пока нет.'}
                   </div>
                 )}
               </div>
@@ -2467,7 +2669,7 @@ const GamesPage = ({
                   handleCloseEditModal={handleCloseEditModal}
                   canEditSelectedGame={canEditSelectedGame}
                   isSaving={isSaving}
-                  location={location}
+                  location={selectedGameApiLocation}
                   isDirty={isDirty}
                   handleModalPrimaryAction={handleModalPrimaryAction}
                   handleResetChanges={handleResetChanges}

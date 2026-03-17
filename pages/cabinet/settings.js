@@ -200,7 +200,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
                 type="checkbox"
                 checked={Boolean(siteSettings.allowSiteAuth)}
                 onChange={(event) => handleSettingsChange('allowSiteAuth', event.target.checked)}
-                className="w-5 h-5 mt-1 rounded text-primary focus:ring-primary/40"
+                className="aq-checkbox mt-1 h-5 w-5 cursor-pointer rounded border border-violet-300 bg-white text-[#7A00FF] focus:ring-2 focus:ring-[#7A00FF]/35 dark:bg-[#070015] dark:border-[#00D1FF]/45 dark:text-[#00D1FF] dark:focus:ring-[#00D1FF]/35 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </label>
 
@@ -217,7 +217,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
                 type="checkbox"
                 checked={Boolean(siteSettings.allowSiteRegistration)}
                 onChange={(event) => handleSettingsChange('allowSiteRegistration', event.target.checked)}
-                className="w-5 h-5 mt-1 rounded text-primary focus:ring-primary/40"
+                className="aq-checkbox mt-1 h-5 w-5 cursor-pointer rounded border border-violet-300 bg-white text-[#7A00FF] focus:ring-2 focus:ring-[#7A00FF]/35 dark:bg-[#070015] dark:border-[#00D1FF]/45 dark:text-[#00D1FF] dark:focus:ring-[#00D1FF]/35 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </label>
 
@@ -234,7 +234,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
                 type="checkbox"
                 checked={Boolean(siteSettings.enableVkOneTap)}
                 onChange={(event) => handleSettingsChange('enableVkOneTap', event.target.checked)}
-                className="w-5 h-5 mt-1 rounded text-primary focus:ring-primary/40"
+                className="aq-checkbox mt-1 h-5 w-5 cursor-pointer rounded border border-violet-300 bg-white text-[#7A00FF] focus:ring-2 focus:ring-[#7A00FF]/35 dark:bg-[#070015] dark:border-[#00D1FF]/45 dark:text-[#00D1FF] dark:focus:ring-[#00D1FF]/35 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </label>
           </div>
@@ -262,12 +262,6 @@ const SettingsPage = ({ initialSiteSettings }) => {
               }`}
             >
               {saveState.isSaving ? 'Сохраняем…' : 'Сохранить настройки'}
-            </button>
-            <button
-              type="button"
-              className="inline-flex justify-center px-5 py-3 text-sm font-semibold text-primary border border-primary rounded-xl hover:bg-blue-50"
-            >
-              Предпросмотр объявления
             </button>
           </div>
         </section>

@@ -159,12 +159,12 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
               key={section.id}
               className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4"
             >
-              <h2 className="text-lg font-semibold text-primary">{section.title}</h2>
+              <h2 className="text-lg font-semibold text-primary dark:text-slate-100">{section.title}</h2>
               <ul className="space-y-2">
                 {section.items.map((item) => (
                   <li key={item.label} className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm text-slate-500">{item.label}</span>
-                    <span className="text-base font-semibold text-primary">
+                    <span className="text-sm text-slate-500 dark:text-slate-300">{item.label}</span>
+                    <span className="text-base font-semibold text-primary dark:text-slate-100">
                       {numberFormatter.format(item.value)}
                     </span>
                   </li>
@@ -177,7 +177,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
         <section className="grid gap-6 mt-6 md:grid-cols-2">
           <article className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-primary">Распределение ролей</h2>
+              <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Распределение ролей</h2>
               <span className="text-xs text-slate-500">
                 Всего: {numberFormatter.format(rolesTotal)}
               </span>
@@ -191,8 +191,8 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
                   return (
                     <div key={role.role} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600">{role.label}</span>
-                        <span className="font-semibold text-primary">
+                        <span className="text-slate-600 dark:text-slate-300">{role.label}</span>
+                        <span className="font-semibold text-primary dark:text-slate-100">
                           {numberFormatter.format(role.count)} · {percent}%
                         </span>
                       </div>
@@ -212,7 +212,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
           </article>
 
           <article className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-            <h2 className="text-lg font-semibold text-primary">Топ команд по активности</h2>
+              <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Топ команд по активности</h2>
             {initialReports.topTeams.length > 0 ? (
               <ul className="space-y-3">
                 {initialReports.topTeams.map((team) => (
@@ -221,8 +221,8 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
                     className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
                   >
                     <div>
-                      <p className="text-sm font-semibold text-primary">{team.name}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-sm font-semibold text-primary dark:text-slate-100">{team.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-300">
                         Участников: {numberFormatter.format(team.membersCount)} · Игр: {numberFormatter.format(team.gamesCount)}
                       </p>
                     </div>
@@ -241,7 +241,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
         </section>
 
         <section className="mt-6 p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold text-primary">Недавняя активность</h2>
+          <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Недавняя активность</h2>
           {initialReports.recentActivity.length > 0 ? (
             <ul className="space-y-3">
               {initialReports.recentActivity.map((activity) => (
@@ -250,8 +250,8 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
                   className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-primary">{activity.name}</p>
-                    <p className="text-xs text-slate-500">{activity.description}</p>
+                    <p className="text-sm font-semibold text-primary dark:text-slate-100">{activity.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300">{activity.description}</p>
                   </div>
                   <p className="text-xs text-slate-400">
                     {activity.updatedAt

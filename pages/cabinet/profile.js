@@ -171,7 +171,10 @@ const ProfilePage = ({ initialProfile }) => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label htmlFor="profile-name" className="text-sm font-semibold text-primary">
+                <label
+                  htmlFor="profile-name"
+                  className="text-sm font-semibold text-slate-700 dark:text-slate-100"
+                >
                   Имя и фамилия
                 </label>
                 <input
@@ -179,12 +182,15 @@ const ProfilePage = ({ initialProfile }) => {
                   type="text"
                   value={safeFormState.name}
                   onChange={(event) => handleChange('name', event.target.value)}
-                  className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
                 />
               </div>
 
               <div>
-                <label htmlFor="profile-username" className="text-sm font-semibold text-primary">
+                <label
+                  htmlFor="profile-username"
+                  className="text-sm font-semibold text-slate-700 dark:text-slate-100"
+                >
                   Никнейм в ActQuest
                 </label>
                 <input
@@ -192,14 +198,17 @@ const ProfilePage = ({ initialProfile }) => {
                   type="text"
                   value={safeFormState.username ?? ''}
                   onChange={(event) => handleChange('username', event.target.value)}
-                  className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
                   placeholder="Например, quest_master"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="profile-phone" className="text-sm font-semibold text-primary">
+              <label
+                htmlFor="profile-phone"
+                className="text-sm font-semibold text-slate-700 dark:text-slate-100"
+              >
                 Телефон
               </label>
               <input
@@ -207,13 +216,16 @@ const ProfilePage = ({ initialProfile }) => {
                 type="tel"
                 value={safeFormState.phone}
                 onChange={(event) => handleChange('phone', event.target.value)}
-                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
                 placeholder="+7 900 000-00-00"
               />
             </div>
 
             <div>
-              <label htmlFor="profile-about" className="text-sm font-semibold text-primary">
+              <label
+                htmlFor="profile-about"
+                className="text-sm font-semibold text-slate-700 dark:text-slate-100"
+              >
                 О себе
               </label>
               <textarea
@@ -221,13 +233,15 @@ const ProfilePage = ({ initialProfile }) => {
                 value={safeFormState.about}
                 onChange={(event) => handleChange('about', event.target.value)}
                 rows={5}
-                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
                 placeholder="Расскажите об опыте, любимых форматах и роли в команде."
               />
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-primary">Предпочитаемые форматы</p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+                Предпочитаемые форматы
+              </p>
               <div className="flex flex-wrap gap-3 mt-3">
                 {preferenceOptions.map((preference) => {
                   const isActive = safeFormState.preferences.includes(preference)
@@ -240,7 +254,7 @@ const ProfilePage = ({ initialProfile }) => {
                       className={`px-4 py-2 text-sm font-semibold rounded-xl transition ${
                         isActive
                           ? 'text-white bg-primary shadow-sm'
-                          : 'text-slate-600 border border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary'
+                          : 'text-slate-600 border border-slate-200 hover:border-primary hover:text-primary dark:border-slate-600 dark:bg-slate-800/35 dark:text-slate-200 dark:hover:border-cyan-400 dark:hover:text-cyan-200'
                       }`}
                     >
                       {preference}

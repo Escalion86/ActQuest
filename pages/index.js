@@ -14,6 +14,7 @@ const MAP_GAME_PATH_KEY = 'aq_index2_map_game_path'
 const MAP_GAME_SEGMENTS_KEY = 'aq_index2_map_game_segments'
 const ARCHIVE_IMAGE_KEY = 'aq_index2_archive_image'
 const PROCESS_ORDER_SOLVED_KEY = 'aq_index2_process_order_solved'
+const SCENARIO_FALLBACK_DONE_KEY = 'aq_index2_scenario_fallback_done'
 
 const preludeLines = [
   'подключение...',
@@ -208,6 +209,9 @@ const ScenarioCard = ({
   accessState,
   onAccessClick,
   isAccessGlitch,
+  isFallbackMode,
+  isFallbackConfirmed,
+  onFallbackConfirm,
 }) => {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false)
   const [isLocationModalGlitch, setIsLocationModalGlitch] = useState(false)
@@ -419,6 +423,11 @@ const ScenarioCard = ({
         <div className="p-3 mt-4 border rounded-xl border-white/10 bg-black/20">
           {isLoadingGame ? (
             <p className="text-sm text-slate-300">Поиск ближайшей игры...</p>
+          ) : isFallbackMode ? (
+            <p className="text-sm text-slate-300">
+              В этом цикле активных запусков нет. Зафиксируй город и подтверди
+              готовность.
+            </p>
           ) : nearestGame ? (
             <>
               <p className="text-sm font-semibold text-white">
@@ -435,7 +444,31 @@ const ScenarioCard = ({
           )}
         </div>
 
-        {nearestGame && (
+        {isFallbackMode && (
+          <>
+            <p
+              className={`mt-3 text-xs uppercase tracking-[0.12em] ${
+                isFallbackConfirmed ? 'text-[#9dffd5]' : 'text-[#9dd9ff]'
+              }`}
+            >
+              {isFallbackConfirmed ? 'готовность подтверждена' : 'ожидание подтверждения'}
+            </p>
+            <button
+              type="button"
+              onClick={onFallbackConfirm}
+              disabled={isFallbackConfirmed}
+              className={`mt-3 cursor-pointer rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                isFallbackConfirmed
+                  ? 'border-[#00D1FF]/35 bg-[#00D1FF]/8 text-[#9ccedf] cursor-not-allowed'
+                  : 'border-[#00D1FF]/55 bg-[#00D1FF]/14 text-[#baf3ff] hover:bg-[#00D1FF]/22'
+              }`}
+            >
+              Подтвердить готовность
+            </button>
+          </>
+        )}
+
+        {!isFallbackMode && nearestGame && (
           <>
             <p
               className={`mt-3 text-xs uppercase tracking-[0.12em] ${
@@ -496,10 +529,16 @@ ScenarioCard.propTypes = {
   ]).isRequired,
   onAccessClick: PropTypes.func.isRequired,
   isAccessGlitch: PropTypes.bool.isRequired,
+  isFallbackMode: PropTypes.bool,
+  isFallbackConfirmed: PropTypes.bool,
+  onFallbackConfirm: PropTypes.func,
 }
 
 ScenarioCard.defaultProps = {
   nearestGame: null,
+  isFallbackMode: false,
+  isFallbackConfirmed: false,
+  onFallbackConfirm: undefined,
 }
 
 const Index2Page = () => {
@@ -535,6 +574,9 @@ const Index2Page = () => {
   )
   const [nearestScenarioGame, setNearestScenarioGame] = useState(null)
   const [isNearestScenarioGameLoading, setIsNearestScenarioGameLoading] =
+    useState(false)
+  const [isScenarioFallbackMode, setIsScenarioFallbackMode] = useState(false)
+  const [isScenarioFallbackConfirmed, setIsScenarioFallbackConfirmed] =
     useState(false)
   const [scenarioAccessState, setScenarioAccessState] = useState('idle')
   const [scenarioAccessGlitch, setScenarioAccessGlitch] = useState(false)
@@ -693,6 +735,8 @@ const Index2Page = () => {
     setGameStatus('')
     setNearestScenarioGame(null)
     setIsNearestScenarioGameLoading(false)
+    setIsScenarioFallbackMode(false)
+    setIsScenarioFallbackConfirmed(false)
     setScenarioAccessState('idle')
     setScenarioAccessGlitch(false)
     setProcessRowsState(getShuffledFlowRows())
@@ -841,7 +885,76 @@ const Index2Page = () => {
   }, [isProcessOrderLocked, processRowsState, stage])
 
   useEffect(() => {
+    if (stage !== 'main') return
+
+    let cancelled = false
+    const now = Date.now()
+
+    const checkUpcomingGames = async () => {
+      try {
+        const hasUpcomingByLocation = await Promise.all(
+          scenarioLocations.map(async (locationItem) => {
+            const params = new URLSearchParams({
+              collection: 'games',
+              location: locationItem.key,
+              sort: 'dateStart',
+              limit: '120',
+              select: '_id,dateStart,status,hidden',
+            })
+
+            const response = await fetch(
+              `/api/${locationItem.key}/custom?${params.toString()}`,
+            )
+            const json = await response.json()
+            const list = Array.isArray(json?.data) ? json.data : []
+            if (!response.ok || !list.length) return false
+
+            return list
+              .filter((item) => !item?.hidden)
+              .filter((item) =>
+                ['active', 'started'].includes(
+                  String(item?.status || '').toLowerCase(),
+                ),
+              )
+              .some((item) => {
+                const startTs = item?.dateStart
+                  ? new Date(item.dateStart).getTime()
+                  : 0
+                return Number.isFinite(startTs) && startTs >= now
+              })
+          }),
+        )
+
+        if (cancelled) return
+        const hasUpcoming = hasUpcomingByLocation.some(Boolean)
+        setIsScenarioFallbackMode(!hasUpcoming)
+      } catch {
+        if (!cancelled) {
+          setIsScenarioFallbackMode(false)
+        }
+      }
+    }
+
+    checkUpcomingGames()
+
+    return () => {
+      cancelled = true
+    }
+  }, [stage])
+
+  useEffect(() => {
     if (stage !== 'main' || !selectedScenarioLocation) return
+    if (isScenarioFallbackMode) {
+      setIsNearestScenarioGameLoading(false)
+      setNearestScenarioGame(null)
+      setScenarioAccessGlitch(false)
+      const isDone =
+        typeof window !== 'undefined' &&
+        localStorage.getItem(SCENARIO_FALLBACK_DONE_KEY) === '1'
+      setIsScenarioFallbackConfirmed(isDone)
+      setScenarioAccessState(isDone ? 'allowed' : 'idle')
+      return
+    }
 
     let cancelled = false
     const now = Date.now()
@@ -948,7 +1061,7 @@ const Index2Page = () => {
     return () => {
       cancelled = true
     }
-  }, [selectedScenarioLocation, stage])
+  }, [isScenarioFallbackMode, selectedScenarioLocation, stage])
 
   useEffect(() => {
     if (stage !== 'main') return
@@ -1252,6 +1365,15 @@ const Index2Page = () => {
 
     const callbackUrl = `/cabinet/games?gameId=${encodeURIComponent(nearestScenarioGame.id)}`
     router.push(`/cabinet/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)
+  }
+
+  const handleScenarioFallbackConfirm = () => {
+    if (!isScenarioFallbackMode || isScenarioFallbackConfirmed) return
+    setIsScenarioFallbackConfirmed(true)
+    setScenarioAccessState('allowed')
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(SCENARIO_FALLBACK_DONE_KEY, '1')
+    }
   }
 
   const getRelativeMapPoint = (clientX, clientY) => {
@@ -2361,6 +2483,9 @@ const Index2Page = () => {
                     accessState={scenarioAccessState}
                     onAccessClick={handleScenarioAccessClick}
                     isAccessGlitch={scenarioAccessGlitch}
+                    isFallbackMode={isScenarioFallbackMode}
+                    isFallbackConfirmed={isScenarioFallbackConfirmed}
+                    onFallbackConfirm={handleScenarioFallbackConfirm}
                   />
                 </div>
 

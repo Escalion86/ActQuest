@@ -487,7 +487,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-2 space-y-4">
             <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-              <p className="text-sm font-semibold text-primary">Все команды</p>
+              <p className="text-sm font-semibold text-primary dark:text-slate-100">Все команды</p>
               <p className="mt-1 text-xs text-slate-500">
                 Всего: {summary.total}. Открытых: {summary.open}. Закрытых: {summary.closed}.
               </p>
@@ -532,22 +532,22 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                     <button
                       type="button"
                       onClick={() => handleTeamCardClick(team)}
-                      className={`w-full text-left p-4 border rounded-2xl transition ${
+                      className={`w-full cursor-pointer text-left p-4 border rounded-2xl transition ${
                         selectedTeamId === team.id
-                          ? 'border-primary bg-blue-50 shadow-sm'
-                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50'
+                          ? 'border-primary bg-blue-50 shadow-sm dark:border-[#7A00FF]/60 dark:bg-[#140a2e]'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50 dark:hover:border-[#7A00FF]/60 dark:hover:bg-[#110a24]'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-primary">{team.name}</p>
+                          <p className="text-sm font-semibold text-primary dark:text-slate-100">{team.name}</p>
                           <p className="text-xs text-slate-500">{team.membersLabel}</p>
                         </div>
                         <span
                           className={`text-xs font-medium px-2 py-1 rounded-full ${
                             team.open
-                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 border border-slate-200 dark:border-slate-700'
+                              ? 'border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
+                              : 'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#d9c8ff]'
                           }`}
                         >
                           {team.open ? 'Открыта' : 'Закрыта'}
@@ -591,8 +591,8 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                     <span
                       className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
                         selectedTeam.open
-                          ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
-                          : 'text-slate-600 bg-slate-100 border-slate-200 dark:border-slate-700'
+                          ? 'border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
+                          : 'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#d9c8ff]'
                       }`}
                     >
                       {selectedTeam.open ? 'Открыта для заявок' : 'Закрытый состав'}
@@ -620,7 +620,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                   <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
-                        <label htmlFor="team-name" className="text-sm font-semibold text-primary">
+                        <label htmlFor="team-name" className="text-sm font-semibold text-primary dark:text-slate-100">
                           Название команды
                         </label>
                         <input
@@ -632,7 +632,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-semibold text-primary" htmlFor="team-open">
+                        <label className="text-sm font-semibold text-primary dark:text-slate-100" htmlFor="team-open">
                           Доступность команды
                         </label>
                         <div className="flex items-center gap-3 mt-3">
@@ -651,7 +651,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                     </div>
 
                     <div>
-                      <label htmlFor="team-description" className="text-sm font-semibold text-primary">
+                      <label htmlFor="team-description" className="text-sm font-semibold text-primary dark:text-slate-100">
                         Описание
                       </label>
                       <textarea
@@ -666,7 +666,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
 
                   <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-primary">Состав команды</h2>
+                      <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Состав команды</h2>
                       {selectedTeam.captain && (
                         <span className="text-xs text-slate-500">
                           Капитан: {selectedTeam.captain.name || 'не указан'}
@@ -687,7 +687,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                             >
                               <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                  <p className="text-sm font-semibold text-primary">
+                                  <p className="text-sm font-semibold text-primary dark:text-slate-100">
                                     {member.name || 'Без имени'}
                                     {member.isCaptain ? ' · Капитан' : ''}
                                   </p>
@@ -709,7 +709,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                                   {member.phone && (
                                     <a
                                       href={phoneLink ? `tel:${phoneLink}` : undefined}
-                                      className="block text-xs text-primary hover:underline"
+                                      className="block text-xs text-primary hover:underline dark:text-cyan-300"
                                     >
                                       {member.phone}
                                     </a>
@@ -727,7 +727,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                                       className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
                                         isProcessing
                                           ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                                          : 'border-primary text-primary hover:bg-blue-50'
+                                          : 'border-primary text-primary hover:bg-blue-50 dark:border-[#7A00FF]/60 dark:text-slate-100 dark:hover:bg-[#110a24]'
                                       }`}
                                     >
                                       Назначить капитаном
@@ -780,7 +780,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                       className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
                         !canManageSelectedTeam || !isDirty
                           ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                          : 'border-primary text-primary hover:bg-blue-50'
+                          : 'border-primary text-primary hover:bg-blue-50 dark:border-[#7A00FF]/60 dark:text-slate-100 dark:hover:bg-[#110a24]'
                       }`}
                     >
                       Отменить изменения
@@ -789,7 +789,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                 </fieldset>
 
                 <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-                  <h3 className="text-base font-semibold text-primary">Игры команды</h3>
+                  <h3 className="text-base font-semibold text-primary dark:text-slate-100">Игры команды</h3>
 
                   {selectedTeam.games?.length > 0 ? (
                     <ul className="space-y-3">
@@ -799,7 +799,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
                           className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-1 md:flex-row md:items-center md:justify-between"
                         >
                           <div>
-                            <p className="text-sm font-semibold text-primary">{game.name || 'Без названия'}</p>
+                            <p className="text-sm font-semibold text-primary dark:text-slate-100">{game.name || 'Без названия'}</p>
                             <p className="text-xs text-slate-500">
                               Статус: {getGameStatusLabel(game.status)}
                             </p>

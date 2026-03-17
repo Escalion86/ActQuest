@@ -32,11 +32,47 @@ const TeamEditModal = ({
     return null
   }
 
+  const modalFooter = (
+    <>
+      <button
+        type="button"
+        onClick={onModalPrimaryAction}
+        disabled={
+          isSaving || (isDirty && (!canManageSelectedTeam || !location))
+        }
+        className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
+          isSaving || (isDirty && (!canManageSelectedTeam || !location))
+            ? 'bg-slate-400 cursor-not-allowed'
+            : 'bg-primary hover:bg-blue-700'
+        }`}
+      >
+        {isDirty
+          ? isSaving
+            ? 'Сохранение…'
+            : 'Сохранить и закрыть'
+          : 'Закрыть'}
+      </button>
+      <button
+        type="button"
+        onClick={onResetTeam}
+        disabled={!canManageSelectedTeam || !isDirty}
+        className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
+          !canManageSelectedTeam || !isDirty
+            ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
+            : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-violet-500/10'
+        }`}
+      >
+        Отменить изменения
+      </button>
+    </>
+  )
+
   return (
     <Modal
       isOpen={isOpen}
       title={`Редактирование команды «${selectedTeam.name || 'Без названия'}»`}
       onClose={onClose}
+      footer={modalFooter}
     >
       <fieldset
         disabled={!canManageSelectedTeam || isSaving}
@@ -206,38 +242,6 @@ const TeamEditModal = ({
           )}
         </section>
 
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <button
-            type="button"
-            onClick={onModalPrimaryAction}
-            disabled={
-              isSaving || (isDirty && (!canManageSelectedTeam || !location))
-            }
-            className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-              isSaving || (isDirty && (!canManageSelectedTeam || !location))
-                ? 'bg-slate-400 cursor-not-allowed'
-                : 'bg-primary hover:bg-blue-700'
-            }`}
-          >
-            {isDirty
-              ? isSaving
-                ? 'Сохранение…'
-                : 'Сохранить и закрыть'
-              : 'Закрыть'}
-          </button>
-          <button
-            type="button"
-            onClick={onResetTeam}
-            disabled={!canManageSelectedTeam || !isDirty}
-            className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
-              !canManageSelectedTeam || !isDirty
-                ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-violet-500/10'
-            }`}
-          >
-            Отменить изменения
-          </button>
-        </div>
       </fieldset>
     </Modal>
   )

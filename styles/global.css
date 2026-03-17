@@ -311,3 +311,84 @@ blockquote {
 .MuiSlider-track {
   color: #7a5151;
 }
+
+/* Cabinet neon theme */
+.dark .cabinet-neon [class*='bg-white'] {
+  background-color: rgba(10, 2, 26, 0.82) !important;
+}
+
+.dark .cabinet-neon [class*='bg-slate-50'],
+.dark .cabinet-neon [class*='bg-slate-100'] {
+  background-color: rgba(20, 8, 42, 0.72) !important;
+}
+
+.dark .cabinet-neon [class*='border-slate-200'],
+.dark .cabinet-neon [class*='border-slate-700'],
+.dark .cabinet-neon [class*='border-slate-800'] {
+  border-color: rgba(0, 209, 255, 0.22) !important;
+}
+
+.dark .cabinet-neon .text-slate-500,
+.dark .cabinet-neon .text-slate-600,
+.dark .cabinet-neon .text-slate-700,
+.dark .cabinet-neon [class*='text-slate-500'],
+.dark .cabinet-neon [class*='text-slate-600'],
+.dark .cabinet-neon [class*='text-slate-700'] {
+  color: rgba(198, 232, 255, 0.94) !important;
+}
+
+.dark .cabinet-neon .text-primary,
+.dark .cabinet-neon [class*='text-primary'] {
+  color: #f3ecff !important;
+}
+
+.dark .cabinet-neon [class*='shadow-sm'],
+.dark .cabinet-neon [class*='shadow-md'],
+.dark .cabinet-neon [class*='shadow-lg'] {
+  box-shadow:
+    0 0 0 1px rgba(122, 0, 255, 0.16),
+    0 10px 30px rgba(0, 0, 0, 0.36) !important;
+}
+
+.dark .cabinet-neon input:not([type='checkbox']):not([type='radio']),
+.dark .cabinet-neon textarea,
+.dark .cabinet-neon select {
+  background-color: rgba(7, 0, 21, 0.85) !important;
+  color: #e8f6ff !important;
+  border-color: rgba(0, 209, 255, 0.32) !important;
+}
+
+.dark .cabinet-neon input::placeholder,
+.dark .cabinet-neon textarea::placeholder {
+  color: rgba(159, 217, 255, 0.72) !important;
+}
+
+.cabinet-neon .aq-checkbox {
+  accent-color: #7A00FF !important;
+}
+
+.dark .cabinet-neon .aq-checkbox {
+  accent-color: #00D1FF !important;
+}
+
+/* Unified select arrow position for cabinet and modal forms */
+.cabinet-neon select,
+[role='dialog'] select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 2.5rem !important;
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 0.95rem 0.95rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5l5 5 5-5' stroke='%23547594' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.dark .cabinet-neon select,
+.dark [role='dialog'] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5l5 5 5-5' stroke='%239fd9ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.cabinet-neon select.aq-select-compact {
+  padding-right: 2.9rem !important;
+  background-position: right 0.5rem center;
+}

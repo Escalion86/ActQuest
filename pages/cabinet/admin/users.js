@@ -521,7 +521,9 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-5 space-y-4">
             <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-              <p className="text-sm font-semibold text-primary">Все пользователи</p>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Все пользователи
+              </p>
               <p className="mt-1 text-xs text-slate-500">
                 Всего: {users.length}. Выберите участника, чтобы просмотреть детали и обновить его роль.
               </p>
@@ -581,7 +583,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-primary">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                               {user.name || 'Без имени'}
                             </p>
                             <p className="text-xs text-slate-500">

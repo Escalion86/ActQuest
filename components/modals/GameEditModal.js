@@ -77,12 +77,47 @@ const GameEditModal = ({
   manyCodesPenaltyLabel,
 }) => {
   const isPhotoGame = selectedGame?.type === 'photo'
+  const modalFooter = (
+    <>
+      <button
+        type="button"
+        onClick={handleModalPrimaryAction}
+        disabled={
+          isSaving || (isDirty && (!canEditSelectedGame || !location))
+        }
+        className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
+          isSaving || (isDirty && (!canEditSelectedGame || !location))
+            ? 'bg-slate-400 cursor-not-allowed'
+            : 'bg-primary hover:bg-blue-700'
+        }`}
+      >
+        {isDirty
+          ? isSaving
+            ? 'Сохранение…'
+            : 'Сохранить и закрыть'
+          : 'Закрыть'}
+      </button>
+      <button
+        type="button"
+        onClick={handleResetChanges}
+        disabled={!canEditSelectedGame || !isDirty}
+        className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
+          !canEditSelectedGame || !isDirty
+            ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
+            : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-sky-500/10'
+        }`}
+      >
+        Отменить изменения
+      </button>
+    </>
+  )
 
   return (
     <Modal
                     isOpen={isEditModalOpen}
                     title={`Редактирование игры «${selectedGame.name || 'Без названия'}»`}
                     onClose={handleCloseEditModal}
+                    footer={modalFooter}
                   >
                   <fieldset
                     disabled={!canEditSelectedGame || isSaving}
@@ -1337,38 +1372,6 @@ const GameEditModal = ({
                     </div>
                     </section>
 
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                      <button
-                        type="button"
-                        onClick={handleModalPrimaryAction}
-                        disabled={
-                          isSaving || (isDirty && (!canEditSelectedGame || !location))
-                        }
-                        className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-                          isSaving || (isDirty && (!canEditSelectedGame || !location))
-                            ? 'bg-slate-400 cursor-not-allowed'
-                            : 'bg-primary hover:bg-blue-700'
-                        }`}
-                      >
-                        {isDirty
-                          ? isSaving
-                            ? 'Сохранение…'
-                            : 'Сохранить и закрыть'
-                          : 'Закрыть'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleResetChanges}
-                        disabled={!canEditSelectedGame || !isDirty}
-                        className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
-                          !canEditSelectedGame || !isDirty
-                            ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                            : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-sky-500/10'
-                        }`}
-                      >
-                        Отменить изменения
-                      </button>
-                    </div>
                   </fieldset>
                   </Modal>
   )

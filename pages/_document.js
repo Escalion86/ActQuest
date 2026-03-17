@@ -29,6 +29,22 @@ class MyDocument extends Document {
             href="https://cdn.jsdelivr.net/npm/@tailwindcss/custom-forms@0.2.1/dist/custom-forms.css"
             rel="stylesheet"
           />
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function () {
+                  try {
+                    var saved = localStorage.getItem('cabinet-theme');
+                    var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    var theme = saved === 'dark' || saved === 'light' ? saved : (systemDark ? 'dark' : 'light');
+                    document.documentElement.setAttribute('data-theme', theme);
+                    document.documentElement.classList.toggle('dark', theme === 'dark');
+                    document.documentElement.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+                  } catch (e) {}
+                })();
+              `,
+            }}
+          />
         </Head>
         <body>
           <Main />

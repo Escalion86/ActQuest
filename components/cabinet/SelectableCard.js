@@ -8,6 +8,12 @@ const SelectableCard = ({
   children = null,
   ...props
 }) => {
+  const isClickable =
+    typeof props.onClick === 'function' ||
+    typeof props.onKeyDown === 'function' ||
+    Component === 'button' ||
+    props.role === 'button'
+
   return (
     <Component
       className={cn(
@@ -15,6 +21,7 @@ const SelectableCard = ({
         'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/80',
         'hover:border-primary hover:bg-blue-50 dark:hover:bg-violet-500/10',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+        isClickable && 'cursor-pointer',
         isActive && 'border-primary bg-blue-50 shadow-sm dark:border-violet-400 dark:bg-violet-500/10',
         className
       )}

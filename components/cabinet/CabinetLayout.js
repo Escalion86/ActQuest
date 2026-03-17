@@ -35,18 +35,58 @@ const baseMenuItems = [
   { id: 'dashboard', label: 'Обзор', href: '/cabinet', icon: faGaugeHigh },
   { id: 'games', label: 'Игры', href: '/cabinet/games', icon: faGamepad },
   { id: 'teams', label: 'Мои команды', href: '/cabinet/teams', icon: faUsers },
-  { id: 'profile', label: 'Мой профиль', href: '/cabinet/profile', icon: faUser },
+  {
+    id: 'profile',
+    label: 'Мой профиль',
+    href: '/cabinet/profile',
+    icon: faUser,
+  },
 ]
 
 const adminMenuItems = [
-  { id: 'admin', label: 'Администрирование', href: '/cabinet/admin', icon: faLayerGroup },
-  { id: 'settings', label: 'Управление сайтом', href: '/cabinet/settings', icon: faSliders },
+  {
+    id: 'admin',
+    label: 'Администрирование',
+    href: '/cabinet/admin',
+    icon: faLayerGroup,
+  },
+  {
+    id: 'settings',
+    label: 'Управление сайтом',
+    href: '/cabinet/settings',
+    icon: faSliders,
+  },
 ]
 
 const adminSubmenuItems = [
-  { id: 'admin-users', label: 'Управление пользователями', href: '/cabinet/admin/users' },
-  { id: 'admin-teams', label: 'Управление командами', href: '/cabinet/admin/teams' },
-  { id: 'admin-reports', label: 'Статистика и отчёты', href: '/cabinet/admin/reports' },
+  {
+    id: 'admin-users',
+    label: 'Управление пользователями',
+    href: '/cabinet/admin/users',
+  },
+  {
+    id: 'admin-teams',
+    label: 'Управление командами',
+    href: '/cabinet/admin/teams',
+  },
+  {
+    id: 'admin-reports',
+    label: 'Статистика и отчёты',
+    href: '/cabinet/admin/reports',
+  },
+]
+
+const gamesSubmenuItems = [
+  {
+    id: 'games-upcoming',
+    label: 'Предстоящие игры',
+    href: '/cabinet/games?view=upcoming',
+  },
+  {
+    id: 'games-past',
+    label: 'Прошедшие игры',
+    href: '/cabinet/games?view=past',
+  },
 ]
 
 const getInitials = (name, fallback) => {
@@ -70,22 +110,46 @@ const getInitials = (name, fallback) => {
   return 'AQ'
 }
 
+const resolveInitialTheme = () => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return 'light'
+  }
+
+  const htmlTheme = document.documentElement.getAttribute('data-theme')
+  if (htmlTheme === 'dark' || htmlTheme === 'light') {
+    return htmlTheme
+  }
+
+  const storedTheme = window.localStorage.getItem('cabinet-theme')
+  if (storedTheme === 'dark' || storedTheme === 'light') {
+    return storedTheme
+  }
+
+  if (
+    window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  ) {
+    return 'dark'
+  }
+
+  return 'light'
+}
+
 const CabinetLayout = ({ children, title, description, activePage }) => {
   const router = useRouter()
   const { data: session, update } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false)
-  const [theme, setTheme] = useState('light')
-  const [isThemeInitialized, setIsThemeInitialized] = useState(false)
+  const [theme, setTheme] = useState(resolveInitialTheme)
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
 
   const role = session?.user?.role ?? null
-  const userName = session?.user?.name || session?.user?.username || 'Пользователь'
+  const userName =
+    session?.user?.name || session?.user?.username || 'Пользователь'
   const userAvatar = session?.user?.photoUrl ?? null
   const locationKey = session?.user?.location ?? null
-  const locationName = normalizeLocationName(locationKey)
   const hasUserIdentity =
     Boolean(session?.user?.globalUserId) ||
     Boolean(session?.user?._id) ||
@@ -113,6 +177,10 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
 
     return baseMenuItems
   }, [role])
+  const gamesView =
+    typeof router.query?.view === 'string'
+      ? router.query.view.toLowerCase()
+      : ''
 
   const closeSidebarOnMobile = useCallback(() => {
     if (typeof window === 'undefined') {
@@ -146,27 +214,15 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
       return
     }
 
-    const storedTheme = window.localStorage.getItem('cabinet-theme')
-
-    if (storedTheme === 'dark' || storedTheme === 'light') {
-      setTheme(storedTheme)
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark')
-    }
-
-    setIsThemeInitialized(true)
-  }, [])
-
-  useEffect(() => {
-    if (!isThemeInitialized || typeof window === 'undefined') {
-      return
-    }
-
     window.localStorage.setItem('cabinet-theme', theme)
     if (typeof document !== 'undefined') {
-      document.documentElement.style.colorScheme = isDarkTheme ? 'dark' : 'light'
+      document.documentElement.setAttribute('data-theme', theme)
+      document.documentElement.classList.toggle('dark', isDarkTheme)
+      document.documentElement.style.colorScheme = isDarkTheme
+        ? 'dark'
+        : 'light'
     }
-  }, [isDarkTheme, isThemeInitialized, theme])
+  }, [isDarkTheme, theme])
 
   useEffect(() => {
     if (!shouldForceLocationSelection) {
@@ -224,22 +280,169 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
     [isLocationSaving, locationKey, update],
   )
 
+  const appBgClass = isDarkTheme ? 'bg-[#0B001A]' : 'bg-slate-100'
+  const decorClass = isDarkTheme
+    ? {
+        one: 'bg-[#7A00FF]/20',
+        two: 'bg-[#00D1FF]/12',
+        three: 'bg-[#1A0033]',
+      }
+    : {
+        one: 'bg-blue-200/45',
+        two: 'bg-cyan-200/45',
+        three: 'bg-violet-200/45',
+      }
+  const sidebarClass = isDarkTheme
+    ? 'border-[#7A00FF]/25 bg-[#0b011c]/92'
+    : 'border-slate-200 bg-white/95 shadow-lg shadow-slate-200/50'
+  const sidebarHeaderClass = isDarkTheme
+    ? 'border-[#7A00FF]/25'
+    : 'border-slate-200'
+  const logoTextClass = isDarkTheme ? 'text-[#e6d8ff]' : 'text-slate-800'
+  const navActiveClass = isDarkTheme
+    ? 'border-r-4 border-[#00D1FF] bg-[#00D1FF]/12 text-[#bdf4ff]'
+    : 'border-r-4 border-cyan-500 bg-cyan-100/70 text-violet-700'
+  const navIdleClass = isDarkTheme
+    ? 'text-slate-300 hover:bg-[#00D1FF]/10 hover:text-[#bdf4ff]'
+    : 'text-slate-600 hover:bg-cyan-50 hover:text-violet-700'
+  const subNavActiveClass = isDarkTheme
+    ? 'bg-[#00D1FF]/12 text-[#bdf4ff]'
+    : 'bg-cyan-100/70 text-violet-700'
+  const subNavIdleClass = isDarkTheme
+    ? 'text-slate-300 hover:bg-[#00D1FF]/10 hover:text-[#bdf4ff]'
+    : 'text-slate-500 hover:bg-cyan-50 hover:text-violet-700'
+  const sidebarFooterClass = isDarkTheme
+    ? 'border-[#7A00FF]/25 bg-[#0b011c]/95'
+    : 'border-slate-200 bg-white/95'
+  const signOutClass = isDarkTheme
+    ? 'border-[#7A00FF]/35 bg-[#7A00FF]/10 text-[#d8c8ff] hover:bg-[#7A00FF]/18 hover:text-white'
+    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+  const headerClass = isDarkTheme
+    ? 'border-[#00D1FF]/20 bg-[#090018]/86'
+    : 'border-slate-200 bg-white/92'
+  const mobileMenuBtnClass = isDarkTheme
+    ? 'border-[#00D1FF]/35 bg-[#00D1FF]/10 text-[#bdf4ff] hover:bg-[#00D1FF]/20'
+    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+  const themeBtnClass = isDarkTheme
+    ? 'border-[#7A00FF]/40 bg-[#7A00FF]/12 text-[#d8c8ff] hover:bg-[#7A00FF]/20'
+    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+  const userNameClass = isDarkTheme ? 'text-[#e8dcff]' : 'text-slate-800'
+  const userRoleClass = isDarkTheme ? 'text-[#9fd9ff]' : 'text-slate-500'
+  const mainTextClass = isDarkTheme ? 'text-slate-100' : 'text-slate-900'
+  const pageTitleClass = isDarkTheme ? 'text-[#e8dcff]' : 'text-slate-900'
+  const pageDescriptionClass = isDarkTheme ? 'text-[#9fd9ff]' : 'text-slate-600'
+  const overlayClass = isDarkTheme ? 'bg-[#05000d]/70' : 'bg-slate-900/35'
+  const forceLocationOverlayClass = isDarkTheme
+    ? 'bg-slate-950/80'
+    : 'bg-slate-900/55'
+  const forceLocationCardClass = isDarkTheme
+    ? 'border-slate-700 bg-slate-900'
+    : 'border-slate-200 bg-white'
+  const forceLocationTitleClass = isDarkTheme
+    ? 'text-slate-100'
+    : 'text-slate-900'
+  const forceLocationTextClass = isDarkTheme
+    ? 'text-slate-300'
+    : 'text-slate-600'
+  const forceLocationSelectClass = isDarkTheme
+    ? 'border-slate-700 bg-slate-950 text-slate-100'
+    : 'border-slate-300 bg-white text-slate-700'
+
   return (
-    <div className={isDarkTheme ? 'dark' : ''}>
-      <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950">
+    <div className="cabinet-neon">
+      <div
+        className={`relative flex min-h-screen overflow-hidden ${appBgClass}`}
+      >
+        <div className="absolute inset-0 pointer-events-none">
+          <div
+            className={`absolute -left-24 top-8 h-72 w-72 rounded-full blur-3xl ${decorClass.one}`}
+          />
+          <div
+            className={`absolute right-0 top-1/3 h-80 w-80 rounded-full blur-3xl ${decorClass.two}`}
+          />
+          <div
+            className={`absolute bottom-0 left-1/3 h-80 w-80 rounded-full blur-3xl ${decorClass.three}`}
+          />
+        </div>
         <div
-          className={`fixed inset-y-0 left-0 z-40 flex bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 transition-all duration-200 md:sticky md:top-0 md:inset-y-auto md:h-screen md:self-start md:translate-x-0 md:w-64 ${
-            isSidebarExpanded ? 'w-64 translate-x-0 shadow-xl' : 'w-16 -translate-x-full md:translate-x-0'
+          className={`fixed inset-y-0 left-0 z-40 flex border-r backdrop-blur-xl transition-all duration-200 md:w-64 md:translate-x-0 ${sidebarClass} ${
+            isSidebarExpanded
+              ? 'w-64 translate-x-0 shadow-xl'
+              : 'w-16 -translate-x-full'
           }`}
         >
-          <div className="flex h-full w-full flex-col overflow-hidden">
-            <div className="flex h-16 items-center justify-center border-b border-slate-200 dark:border-slate-800">
-              <span className="text-lg font-semibold text-primary dark:text-slate-100">ActQuest</span>
+          <div className="flex flex-col w-full h-full overflow-hidden">
+            <div
+              className={`flex h-16 items-center justify-center border-b ${sidebarHeaderClass}`}
+            >
+              <span
+                className={`text-lg font-semibold tracking-wide ${logoTextClass}`}
+              >
+                ActQuest
+              </span>
             </div>
-            <nav className="flex-1 space-y-1 overflow-y-auto py-4 min-h-0 select-none">
+            <nav className="flex-1 min-h-0 py-4 space-y-1 overflow-y-auto select-none">
               {menuItems.map((item) => {
+                if (item.id === 'games') {
+                  const isGamesSectionActive =
+                    activePage === item.id || router.pathname === item.href
+
+                  return (
+                    <div key={item.id} className="space-y-1">
+                      <Link href={item.href} legacyBehavior>
+                        <a
+                          className={`flex cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
+                            isGamesSectionActive ? navActiveClass : navIdleClass
+                          } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
+                          onClick={closeSidebarOnMobile}
+                        >
+                          <FontAwesomeIcon
+                            icon={item.icon}
+                            className="w-5 h-5"
+                          />
+                          <span
+                            className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
+                          >
+                            {item.label}
+                          </span>
+                        </a>
+                      </Link>
+                      <div className="pb-1 pr-3 space-y-1 pl-11">
+                        {gamesSubmenuItems.map((subItem) => {
+                          const isSubActive =
+                            router.pathname === '/cabinet/games' &&
+                            ((subItem.id === 'games-upcoming' &&
+                              gamesView === 'upcoming') ||
+                              (subItem.id === 'games-past' &&
+                                gamesView === 'past'))
+
+                          return (
+                            <Link
+                              key={subItem.id}
+                              href={subItem.href}
+                              legacyBehavior
+                            >
+                              <a
+                                className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
+                                  isSubActive
+                                    ? subNavActiveClass
+                                    : subNavIdleClass
+                                }`}
+                                onClick={closeSidebarOnMobile}
+                              >
+                                {subItem.label}
+                              </a>
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                }
+
                 if (item.id === 'admin') {
-                  const isAdminSectionActive = router.pathname.startsWith('/cabinet/admin')
+                  const isAdminSectionActive =
+                    router.pathname.startsWith('/cabinet/admin')
 
                   return (
                     <div key={item.id} className="space-y-1">
@@ -247,12 +450,13 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                         type="button"
                         onClick={() => setIsAdminMenuOpen((prev) => !prev)}
                         className={`flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
-                          isAdminSectionActive
-                            ? 'text-primary dark:text-blue-200 bg-blue-50 dark:bg-blue-500/10 border-r-4 border-primary dark:border-blue-400'
-                            : 'text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                          isAdminSectionActive ? navActiveClass : navIdleClass
                         } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
                       >
-                        <FontAwesomeIcon icon={item.icon} className="h-5 w-5 shrink-0" />
+                        <FontAwesomeIcon
+                          icon={item.icon}
+                          className="w-5 h-5 shrink-0"
+                        />
                         <span
                           className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
                         >
@@ -274,17 +478,21 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                         }`}
                         aria-hidden={!isAdminMenuOpen}
                       >
-                        <div className="space-y-1 pb-1 pl-11 pr-3 pt-1">
+                        <div className="pt-1 pb-1 pr-3 space-y-1 pl-11">
                           {adminSubmenuItems.map((subItem) => {
                             const isSubActive = router.pathname === subItem.href
 
                             return (
-                              <Link key={subItem.id} href={subItem.href} legacyBehavior>
+                              <Link
+                                key={subItem.id}
+                                href={subItem.href}
+                                legacyBehavior
+                              >
                                 <a
                                   className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
                                     isSubActive
-                                      ? 'bg-blue-50 text-primary dark:bg-blue-500/10 dark:text-blue-200'
-                                      : 'text-slate-500 hover:bg-blue-50 hover:text-primary dark:text-slate-300 dark:hover:bg-blue-500/10 dark:hover:text-blue-200'
+                                      ? subNavActiveClass
+                                      : subNavIdleClass
                                   }`}
                                   onClick={closeSidebarOnMobile}
                                 >
@@ -299,19 +507,18 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                   )
                 }
 
-                const isActive = activePage === item.id || router.pathname === item.href
+                const isActive =
+                  activePage === item.id || router.pathname === item.href
 
                 return (
                   <Link key={item.id} href={item.href} legacyBehavior>
                     <a
                       className={`flex cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
-                        isActive
-                          ? 'text-primary dark:text-blue-200 bg-blue-50 dark:bg-blue-500/10 border-r-4 border-primary dark:border-blue-400'
-                          : 'text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                        isActive ? navActiveClass : navIdleClass
                       } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
                       onClick={closeSidebarOnMobile}
                     >
-                      <FontAwesomeIcon icon={item.icon} className="h-5 w-5" />
+                      <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
                       <span
                         className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
                       >
@@ -322,14 +529,21 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                 )
               })}
             </nav>
-            <div className="sticky bottom-0 mt-auto border-t border-slate-200 bg-white/95 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+            <div
+              className={`sticky bottom-0 mt-auto border-t px-4 py-4 backdrop-blur-xl ${sidebarFooterClass}`}
+            >
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="flex w-full cursor-pointer items-center gap-3 rounded-xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-500 transition-colors duration-150 hover:bg-blue-100 hover:text-primary dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-blue-500/20 dark:hover:text-blue-200"
+                className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm font-medium transition-colors duration-150 ${signOutClass}`}
               >
-                <FontAwesomeIcon icon={faRightFromBracket} className="h-4 w-4" />
-                <span className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}>
+                <FontAwesomeIcon
+                  icon={faRightFromBracket}
+                  className="w-4 h-4"
+                />
+                <span
+                  className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
+                >
                   Выйти
                 </span>
               </button>
@@ -339,63 +553,66 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
 
         {isSidebarExpanded && (
           <div
-            className="fixed inset-0 z-30 bg-slate-900/40 md:hidden"
+            className={`fixed inset-0 z-30 md:hidden ${overlayClass}`}
             aria-hidden="true"
             onClick={() => setIsSidebarExpanded(false)}
           />
         )}
 
-        <div className="flex flex-col flex-1 min-h-screen">
-          <header className="sticky top-0 z-20 bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800">
+        <div className="flex flex-col flex-1 min-h-screen md:pl-64">
+          <header
+            className={`sticky top-0 z-20 border-b backdrop-blur-xl ${headerClass}`}
+          >
             <div className="flex items-center justify-between px-4 py-4 md:px-8">
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  className="flex cursor-pointer items-center justify-center w-10 h-10 text-slate-600 transition-colors duration-150 bg-slate-100 rounded-xl md:hidden hover:text-primary hover:bg-blue-100 dark:text-slate-300 dark:bg-slate-800 dark:hover:text-blue-200 dark:hover:bg-blue-500/20"
+                  className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border transition-colors duration-150 md:hidden ${mobileMenuBtnClass}`}
                   onClick={() => setIsSidebarExpanded((prev) => !prev)}
                   aria-label="Открыть меню"
                 >
                   <FontAwesomeIcon icon={faBars} className="w-4 h-4" />
                 </button>
                 <div>
-                  <h1 className="text-xl font-semibold text-primary md:text-2xl dark:text-slate-100">ActQuest</h1>
-                  <p className="text-sm text-slate-500 dark:text-slate-300">{locationName}</p>
+                  <h1
+                    className={`text-xl font-semibold md:text-2xl ${userNameClass}`}
+                  >
+                    ActQuest
+                  </h1>
                 </div>
               </div>
               <div className="flex items-center gap-3 md:gap-4">
-                <select
-                  value={locationKey ?? ''}
-                  onChange={handleLocationChange}
-                  disabled={isLocationSaving}
-                  className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-600 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 max-w-[120px] md:max-w-none"
-                >
-                  {!locationKey ? (
-                    <option value="" disabled>
-                      Выберите город
-                    </option>
-                  ) : null}
-                  {availableLocations.map((item) => (
-                    <option key={item.key} value={item.key}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className="flex cursor-pointer items-center justify-center w-10 h-10 text-slate-600 transition-colors duration-150 bg-slate-100 rounded-xl hover:text-primary hover:bg-blue-100 dark:text-slate-300 dark:bg-slate-800 dark:hover:text-blue-200 dark:hover:bg-blue-500/20"
-                  aria-label={isDarkTheme ? 'Включить светлую тему' : 'Включить тёмную тему'}
+                  className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border transition-colors duration-150 ${themeBtnClass}`}
+                  aria-label={
+                    isDarkTheme
+                      ? 'Включить светлую тему'
+                      : 'Включить тёмную тему'
+                  }
                 >
-                  <FontAwesomeIcon icon={isDarkTheme ? faSun : faMoon} className="w-4 h-4" />
+                  <FontAwesomeIcon
+                    icon={isDarkTheme ? faSun : faMoon}
+                    className="w-4 h-4"
+                  />
                 </button>
                 <div className="hidden text-right md:block">
-                  <p className="text-sm font-semibold text-primary dark:text-slate-100">{userName}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-300">{isUserAdmin({ role }) ? 'Администратор' : 'Участник'}</p>
+                  <p className={`text-sm font-semibold ${userNameClass}`}>
+                    {userName}
+                  </p>
+                  <p className={`text-xs ${userRoleClass}`}>
+                    {isUserAdmin({ role }) ? 'Администратор' : 'Участник'}
+                  </p>
                 </div>
                 {userAvatar ? (
-                  <img src={userAvatar} alt={userName} className="object-cover w-10 h-10 rounded-full shadow-sm" />
+                  <img
+                    src={userAvatar}
+                    alt={userName}
+                    className="object-cover w-10 h-10 rounded-full shadow-sm"
+                  />
                 ) : (
-                  <div className="flex items-center justify-center w-10 h-10 text-sm font-semibold text-white bg-primary rounded-full shadow-sm dark:bg-blue-500">
+                  <div className="flex items-center justify-center w-10 h-10 text-sm font-semibold text-white rounded-full shadow-sm bg-primary dark:bg-blue-500">
                     {getInitials(userName, session?.user?.username)}
                   </div>
                 )}
@@ -403,12 +620,18 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
             </div>
           </header>
 
-          <main className="flex-1 px-4 py-6 md:px-8">
+          <main
+            className={`relative z-10 flex-1 px-4 py-6 md:px-8 ${mainTextClass}`}
+          >
             <div className="max-w-5xl mx-auto">
               <div className="mb-6">
-                <h2 className="text-2xl font-semibold text-primary dark:text-slate-100">{title}</h2>
+                <h2 className={`text-2xl font-semibold ${pageTitleClass}`}>
+                  {title}
+                </h2>
                 {description ? (
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">{description}</p>
+                  <p className={`mt-1 text-sm ${pageDescriptionClass}`}>
+                    {description}
+                  </p>
                 ) : null}
               </div>
               <div className="space-y-6">{children}</div>
@@ -418,12 +641,16 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
       </div>
 
       {shouldForceLocationSelection ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-slate-100">
+        <div
+          className={`fixed inset-0 z-[80] flex items-center justify-center px-4 ${forceLocationOverlayClass}`}
+        >
+          <div
+            className={`w-full max-w-md rounded-2xl border p-6 shadow-2xl ${forceLocationCardClass}`}
+          >
+            <h3 className={`text-lg font-semibold ${forceLocationTitleClass}`}>
               Выберите город для участия
             </h3>
-            <p className="mt-2 text-sm text-slate-300">
+            <p className={`mt-2 text-sm ${forceLocationTextClass}`}>
               Какой город для участия в играх вас интересует?
             </p>
             <div className="mt-4 space-y-3">
@@ -431,7 +658,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                 value={locationPromptValue}
                 onChange={(event) => setLocationPromptValue(event.target.value)}
                 disabled={isLocationSaving}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${forceLocationSelectClass}`}
               >
                 {availableLocations.map((item) => (
                   <option key={item.key} value={item.key}>
@@ -448,9 +675,11 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                     return
                   }
 
-                  handleLocationChange({ target: { value: locationPromptValue } })
+                  handleLocationChange({
+                    target: { value: locationPromptValue },
+                  })
                 }}
-                className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full px-4 py-2 text-sm font-semibold text-white transition rounded-xl bg-primary hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLocationSaving ? 'Сохраняем...' : 'Продолжить'}
               </button>

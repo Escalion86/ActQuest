@@ -1115,8 +1115,8 @@ const TeamsPage = ({
                             <span
                               className={`text-xs font-medium px-2 py-1 rounded-full ${
                                 team.open
-                                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                                  : 'bg-slate-100 text-slate-600 border border-slate-200 dark:border-slate-700'
+                                  ? 'border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
+                                  : 'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#d9c8ff]'
                               }`}
                             >
                               {team.open ? 'Открыта' : 'Закрыта'}
@@ -1128,7 +1128,7 @@ const TeamsPage = ({
                                   event.stopPropagation()
                                   handleEditTeamFromList(team.id)
                                 }}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-100"
+                                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-cyan-300 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-[#00D1FF]/35 dark:text-[#b3ecff] dark:hover:border-[#00D1FF]/65 dark:hover:bg-[#00D1FF]/10 dark:hover:text-[#e1f8ff] dark:focus:ring-[#00D1FF]/40 dark:focus:ring-offset-[#110221]"
                                 aria-label="Редактировать команду"
                                 title="Редактировать команду"
                               >
