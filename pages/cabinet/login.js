@@ -149,6 +149,7 @@ const CabinetLoginPage = ({
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
   const isVkSignInEnabled =
     isVkAuthVisible && siteAccess.allowSiteAuth && siteAccess.enableVkOneTap
+  const isAuthResolvedAsGuest = status === 'unauthenticated'
 
   const appendAuthDebug = useCallback((stage, payload = null) => {
     if (!isVkDebugEnabled) return
@@ -533,6 +534,7 @@ const CabinetLoginPage = ({
   useEffect(() => {
     if (
       !isClient ||
+      !isAuthResolvedAsGuest ||
       !isVkSignInEnabled ||
       !Number.isFinite(vkidAppId) ||
       !vkIdWidgetContainerRef.current
@@ -738,6 +740,7 @@ const CabinetLoginPage = ({
     }
   }, [
     appendAuthDebug,
+    isAuthResolvedAsGuest,
     isClient,
     vkidAppId,
     vkidCallbackUrl,
@@ -825,7 +828,7 @@ const CabinetLoginPage = ({
                 </label>
 
                 <div className="flex flex-col items-center gap-4">
-                  {isVkSignInEnabled && vkidAppId ? (
+                  {isAuthResolvedAsGuest && isVkSignInEnabled && vkidAppId ? (
                     <div className="w-full">
                       <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                         Войти через VK ID
@@ -837,7 +840,7 @@ const CabinetLoginPage = ({
                         </div>
                       ) : null}
                     </div>
-                  ) : isVkSignInEnabled ? (
+                  ) : isAuthResolvedAsGuest && isVkSignInEnabled ? (
                     <div className="px-4 py-3 text-xs text-center text-slate-500 bg-slate-100 rounded-xl">
                       Проверьте переменную{' '}
                       <code className="px-1 bg-white rounded dark:bg-slate-900/80">
@@ -960,6 +963,7 @@ const CabinetLoginPage = ({
                         status={status}; isAuthenticating={String(isAuthenticating)};
                         vkReady={String(isVkIdReady)};
                         vkEnabled={String(isVkSignInEnabled)};
+                        vkAllowedBySession={String(isAuthResolvedAsGuest)};
                         location={location}
                       </div>
                       {authDebugEvents.length === 0 ? (

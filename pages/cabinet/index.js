@@ -297,10 +297,15 @@ export async function getServerSideProps(context) {
     }
   }
 
-  if (isSafe && relativeCallback) {
+  if (
+    isSafe &&
+    relativeCallback &&
+    relativeCallback !== '/cabinet' &&
+    relativeCallback !== '/cabinet/'
+  ) {
     return {
       redirect: {
-        destination: '/',
+        destination: relativeCallback,
         permanent: false,
       },
     }
