@@ -40,7 +40,7 @@ const checkContactRecive = async (message, location, db) => {
 
     await sendMessage({
       chat_id: user_id,
-      text: `${TELEGRAM_FALLBACK_TEXT}\n\nВаш номер телефона обновлен.`,
+      text: 'Спасибо за предоставленные данные. Теперь вы можете пройти регистрацию на сайте https://ActQuest.ru и все ваши данные будут сохранены!',
       remove_keyboard: true,
       location,
     })

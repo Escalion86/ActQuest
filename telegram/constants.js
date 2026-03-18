@@ -11,4 +11,4 @@ export const USERS_ROLES_NAMES = {
 }
 
 export const TELEGRAM_FALLBACK_TEXT =
-  'К сожалению мы вынуждены были полностью уйти от Telegram, поэтому просим вас зарегистрироваться на сайте https://actquest.ru/cabinet/register — теперь мы базируемся там!'
+  'К сожалению мы вынуждены были полностью уйти от Telegram, поэтому просим вас зарегистрироваться на сайте https://ActQuest.ru — теперь мы базируемся там!'

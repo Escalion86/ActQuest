@@ -1,8 +1,7 @@
 // import Users from '@models/Users'
 
 import checkContactRecive from './checkContactRecive'
-import sendMessage from './sendMessage'
-import { TELEGRAM_FALLBACK_TEXT } from './constants'
+import ensureTelegramPhoneGate from './ensureTelegramPhoneGate'
 // import sendMessage from './sendMessage'
 
 // const test_message = {
@@ -43,11 +42,10 @@ const messageHandler = async (body, location, db) => {
   const handledContact = await checkContactRecive(body?.message, location, db)
   if (handledContact) return
 
-  await sendMessage({
-    chat_id: from.id,
-    text: TELEGRAM_FALLBACK_TEXT,
-    remove_keyboard: true,
+  await ensureTelegramPhoneGate({
+    telegramId: from?.id,
     location,
+    db,
   })
 
   if (text) {

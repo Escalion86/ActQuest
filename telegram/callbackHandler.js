@@ -1,6 +1,5 @@
 import checkContactRecive from './checkContactRecive'
-import sendMessage from './sendMessage'
-import { TELEGRAM_FALLBACK_TEXT } from './constants'
+import ensureTelegramPhoneGate from './ensureTelegramPhoneGate'
 
 // const test_callback = {
 //   update_id: 173172137,
@@ -78,12 +77,11 @@ const callbackHandler = async (body, location, db) => {
   const handledContact = await checkContactRecive(body?.message, location, db)
   if (handledContact) return
 
-  await sendMessage({
-    chat_id: from.id,
-    text: TELEGRAM_FALLBACK_TEXT,
-    callback_query,
-    remove_keyboard: true,
+  await ensureTelegramPhoneGate({
+    telegramId: from?.id,
     location,
+    db,
+    callback_query,
   })
 }
 
