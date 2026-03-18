@@ -10,9 +10,6 @@ const buildError = (type, message) => ({
   },
 })
 
-const parseBoolean = (value) =>
-  value === 'true' || value === '1' || value === true
-
 const parseUpstreamResponse = async (response) => {
   const contentType = response.headers.get('content-type') || ''
   if (contentType.includes('application/json')) {
@@ -42,10 +39,7 @@ export default async function handler(req, res) {
 
     if (directory) upstreamSearchParams.set('directory', String(directory))
     if (typeof noFoldersParam !== 'undefined') {
-      upstreamSearchParams.set(
-        'noFolders',
-        parseBoolean(noFoldersParam) ? '1' : '0',
-      )
+      upstreamSearchParams.set('noFolders', String(noFoldersParam))
     }
 
     const queryString = upstreamSearchParams.toString()

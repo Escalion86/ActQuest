@@ -51,9 +51,24 @@ export default async function handler(req, res) {
     const incomingFormData = await webRequest.formData()
     const files = incomingFormData.getAll('files')
     const directoryRaw = incomingFormData.get('directory')
+    const fileNameRaw = incomingFormData.get('fileName')
+    const extensionRaw = incomingFormData.get('extension')
+    const generateNameRaw = incomingFormData.get('generateName')
     const legacyProjectRaw = incomingFormData.get('project')
     const legacyFolderRaw = incomingFormData.get('folder')
     const directoryFromNewContract = normalizePathSegment(directoryRaw)
+    const fileName =
+      typeof fileNameRaw === 'string' && fileNameRaw.trim().length > 0
+        ? fileNameRaw.trim()
+        : null
+    const extension =
+      typeof extensionRaw === 'string' && extensionRaw.trim().length > 0
+        ? extensionRaw.trim()
+        : null
+    const generateName =
+      typeof generateNameRaw === 'string' && generateNameRaw.trim().length > 0
+        ? generateNameRaw.trim()
+        : null
     const legacyProject = normalizePathSegment(legacyProjectRaw)
     const legacyFolder = normalizePathSegment(legacyFolderRaw)
     const directory =
@@ -78,6 +93,15 @@ export default async function handler(req, res) {
     const formData = new FormData()
     files.forEach((file) => formData.append('files', file))
     formData.append('directory', directory)
+    if (fileName) {
+      formData.append('fileName', fileName)
+    }
+    if (extension) {
+      formData.append('extension', extension)
+    }
+    if (generateName) {
+      formData.append('generateName', generateName)
+    }
 
     const upstreamResponse = await fetch(ESCALIONCLOUD_API_URL, {
       method: 'POST',

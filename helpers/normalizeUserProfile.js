@@ -26,6 +26,7 @@ const normalizeUserProfile = (doc = null) => {
     id: profile?._id ? String(profile._id) : null,
     name: sanitizeString(profile.name),
     username: sanitizeString(profile.username),
+    photoUrl: sanitizeString(profile.photoUrl),
     phone,
     about: sanitizeString(profile.about),
     preferences: normalizePreferences(profile.preferences),

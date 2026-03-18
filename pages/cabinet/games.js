@@ -410,6 +410,8 @@ const GamesPage = ({
   const [isCreatingGame, setIsCreatingGame] = useState(false)
   const [isLocationFilterLoading, setIsLocationFilterLoading] = useState(false)
   const [locationFilterError, setLocationFilterError] = useState(null)
+  const [gamesDisplayMode, setGamesDisplayMode] = useState('list')
+  const [showCanceledGames, setShowCanceledGames] = useState(false)
   const rawViewQuery = Array.isArray(router.query?.view)
     ? router.query.view[0]
     : router.query?.view
@@ -451,6 +453,25 @@ const GamesPage = ({
   useEffect(() => {
     setFeedback(null)
   }, [selectedGameId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const saved = window.localStorage.getItem('cabinet_games_display_mode')
+    if (saved === 'list' || saved === 'cards') {
+      setGamesDisplayMode(saved)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.setItem('cabinet_games_display_mode', gamesDisplayMode)
+  }, [gamesDisplayMode])
 
   const selectedGame = useMemo(
     () => games.find((game) => game.id === selectedGameId) ?? null,
@@ -651,6 +672,7 @@ const GamesPage = ({
     canEditAllGames,
     canEditOwnGames,
     currentUserIdString,
+    gamesView,
     gamesFilterLocation,
     shouldShowLocationFilter,
     sortGamesByUpdatedAt,
@@ -1180,9 +1202,15 @@ const GamesPage = ({
     () =>
       games.filter((game) => {
         const status = (game?.status ?? '').toString().toLowerCase()
-        return status === 'finished' || status === 'canceled'
+        if (status === 'finished') {
+          return true
+        }
+        if (status === 'canceled') {
+          return showCanceledGames
+        }
+        return false
       }),
-    [games]
+    [games, showCanceledGames]
   )
   const isPhotoGame = selectedGame?.type === 'photo'
 
@@ -2251,10 +2279,26 @@ const GamesPage = ({
             title={game.name || 'Без названия'}
           >
             <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-primary dark:text-slate-100">
-                  {game.name || 'Без названия'}
-                </p>
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900">
+                  {game.image ? (
+                    <img
+                      src={game.image}
+                      alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400">
+                      Нет фото
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-primary dark:text-slate-100">
+                    {game.name || 'Без названия'}
+                  </p>
+                </div>
               </div>
               {canManageThisGame && (
                 <div className="flex items-center gap-2">
@@ -2352,6 +2396,161 @@ const GamesPage = ({
                 ? `${getNounTeams(game.teamsCount)} · Обновлено ${relativeUpdatedAt}`
                 : getNounTeams(game.teamsCount)}
             </p>
+          </SelectableCard>
+        </li>
+      )
+    },
+    [canManageGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleSelectGameCard, selectedGameId]
+  )
+
+  const renderGameTileItem = useCallback(
+    (game) => {
+      const startDateLabel = game.dateStart
+        ? new Date(game.dateStart).toLocaleString('ru-RU', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+          })
+        : 'Дата не задана'
+
+      const relativeUpdatedAt = game.updatedAt
+        ? formatRelativeTimeFromNow(game.updatedAt)
+        : '—'
+
+      const canManageThisGame = canManageGame(game)
+
+      return (
+        <li key={game.id}>
+          <SelectableCard
+            role="button"
+            tabIndex={0}
+            onClick={() => handleSelectGameCard(game)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                handleSelectGameCard(game)
+              }
+            }}
+            isActive={selectedGameId === game.id}
+            className="cursor-pointer overflow-hidden p-0"
+            aria-pressed={selectedGameId === game.id}
+            aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
+            title={game.name || 'Без названия'}
+          >
+            <div className="relative aspect-square w-full overflow-hidden border-b border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900">
+              {game.image ? (
+                <img
+                  src={game.image}
+                  alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400">
+                  Нет фото
+                </div>
+              )}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(game.status)}`}
+                >
+                  {getGameStatusLabel(game.status)}
+                </span>
+                {canManageThisGame && (
+                  <div className="pointer-events-auto flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleEditGameFromList(game)
+                      }}
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                      aria-label="Редактировать игру"
+                      title="Редактировать игру"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M4 13.5V16h2.5L15 7.5l-2.5-2.5L4 13.5z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M12.5 5.5l2-2a1.5 1.5 0 112.121 2.121l-2 2"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleManageTeamsFromList(game)
+                      }}
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                      aria-label="Управление командами"
+                      title="Управление командами"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M7 10a3 3 0 100-6 3 3 0 000 6z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M13.5 9.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M2.5 15.5a4.5 4.5 0 019 0V17h-9v-1.5z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M13.5 12.5c1.933 0 3.5 1.567 3.5 3.5V17h-5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2 p-4">
+              <p className="text-sm font-semibold text-primary dark:text-slate-100">
+                {game.name || 'Без названия'}
+              </p>
+              <p className="text-xs text-slate-500">{startDateLabel}</p>
+              <p className="text-xs text-slate-400">
+                {canManageThisGame
+                  ? `${getNounTeams(game.teamsCount)} · Обновлено ${relativeUpdatedAt}`
+                  : getNounTeams(game.teamsCount)}
+              </p>
+            </div>
           </SelectableCard>
         </li>
       )
@@ -2522,6 +2721,7 @@ const GamesPage = ({
   }, [selectedGame])
 
   const balanceClass = financesSummary.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'
+  const isCardsDisplay = gamesDisplayMode === 'cards'
   return (
     <>
       <Head>
@@ -2551,6 +2751,39 @@ const GamesPage = ({
                   Создать игру
                 </button>
               )}
+              <div className="ml-auto inline-flex rounded-xl border border-slate-200 p-1 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setGamesDisplayMode('list')}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    gamesDisplayMode === 'list'
+                      ? 'bg-primary text-white'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  Список
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGamesDisplayMode('cards')}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    gamesDisplayMode === 'cards'
+                      ? 'bg-primary text-white'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  Карточки
+                </button>
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                <input
+                  type="checkbox"
+                  checked={showCanceledGames}
+                  onChange={(event) => setShowCanceledGames(event.target.checked)}
+                  className="h-4 w-4 cursor-pointer rounded border-slate-300 text-primary focus:ring-primary dark:border-slate-600"
+                />
+                Отменённые
+              </label>
             </div>
             {shouldShowLocationFilter && (
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
@@ -2629,18 +2862,22 @@ const GamesPage = ({
                     <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Активные и запланированные
                     </h3>
-                    <ul className="mt-2 space-y-3">
-                      {upcomingGames.map((game) => renderGameListItem(game))}
+                    <ul className={isCardsDisplay ? 'mt-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'mt-2 space-y-3'}>
+                      {upcomingGames.map((game) =>
+                        isCardsDisplay ? renderGameTileItem(game) : renderGameListItem(game)
+                      )}
                     </ul>
                   </div>
                 )}
                 {!isUpcomingView && pastGames.length > 0 && (
                   <div>
                     <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Завершённые и отменённые
+                      {showCanceledGames ? 'Завершённые и отменённые' : 'Завершённые'}
                     </h3>
-                    <ul className="mt-2 space-y-3">
-                      {pastGames.map((game) => renderGameListItem(game))}
+                    <ul className={isCardsDisplay ? 'mt-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'mt-2 space-y-3'}>
+                      {pastGames.map((game) =>
+                        isCardsDisplay ? renderGameTileItem(game) : renderGameListItem(game)
+                      )}
                     </ul>
                   </div>
                 )}

@@ -60,6 +60,7 @@ export default async function handler(req, res) {
     const payload = {
       name: sanitizeText(body.name),
       username: sanitizeNullableText(body.username),
+      photoUrl: sanitizeNullableText(body.photoUrl),
       phone: sanitizePhone(body.phone),
       about: sanitizeText(body.about),
       preferences: Array.isArray(body.preferences)

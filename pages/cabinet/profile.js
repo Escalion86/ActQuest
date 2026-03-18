@@ -4,6 +4,7 @@ import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import ImagesInput from '@components/cabinet/ImagesInput'
 import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -94,6 +95,7 @@ const ProfilePage = ({ initialProfile }) => {
       const payload = {
         name: normalizeText(safeFormState.name),
         username: normalizeNullable(safeFormState.username),
+        photoUrl: normalizeNullable(safeFormState.photoUrl),
         phone: normalizePhone(safeFormState.phone),
         about: normalizeText(safeFormState.about),
         preferences: Array.isArray(safeFormState.preferences)
@@ -205,6 +207,19 @@ const ProfilePage = ({ initialProfile }) => {
             </div>
 
             <div>
+              <ImagesInput
+                label="Фото профиля"
+                images={safeFormState.photoUrl ? [safeFormState.photoUrl] : []}
+                onChange={(nextImages) =>
+                  handleChange('photoUrl', nextImages?.[0] ?? '')
+                }
+                directory="users"
+                imageName={safeFormState.id || 'user'}
+                maxImages={1}
+              />
+            </div>
+
+            <div>
               <label
                 htmlFor="profile-phone"
                 className="text-sm font-semibold text-slate-700 dark:text-slate-100"
@@ -301,6 +316,7 @@ ProfilePage.propTypes = {
     id: PropTypes.string,
     name: PropTypes.string,
     username: PropTypes.string,
+    photoUrl: PropTypes.string,
     phone: PropTypes.string,
     about: PropTypes.string,
     preferences: PropTypes.arrayOf(PropTypes.string),

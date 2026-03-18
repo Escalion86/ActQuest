@@ -271,7 +271,8 @@ const GameEditModal = ({
                       onChange={(nextImages) =>
                         updateSelectedGame({ image: nextImages?.[0] ?? null })
                       }
-                      directory={`${String(location || 'common')}/games/${selectedGame.id || 'draft'}/cover`}
+                      directory={`games/${selectedGame.id || 'draft'}`}
+                      imageName="cover"
                       disabled={!canEditSelectedGame || isSaving}
                       maxImages={1}
                     />
@@ -785,7 +786,7 @@ const GameEditModal = ({
                                       onChange={(nextImages) =>
                                         handleTaskFieldChange(task.id, 'images', nextImages)
                                       }
-                                      directory={`${String(location || 'common')}/games/${selectedGame.id || 'draft'}/tasks/${task.id}`}
+                                      directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}`}
                                       disabled={!canEditSelectedGame || isSaving}
                                       maxImages={12}
                                     />
@@ -852,7 +853,7 @@ const GameEditModal = ({
                                                     nextImages
                                                   )
                                                 }
-                                                directory={`${String(location || 'common')}/games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}`}
+                                                directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}`}
                                                 disabled={!canEditSelectedGame || isSaving}
                                                 maxImages={8}
                                               />

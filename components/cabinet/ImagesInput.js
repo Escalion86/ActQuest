@@ -58,6 +58,7 @@ const ImagesInput = ({
   images,
   onChange,
   directory,
+  imageName,
   project,
   label,
   disabled,
@@ -108,7 +109,7 @@ const ImagesInput = ({
       file,
       null,
       directory,
-      null,
+      imageName,
       project,
       (message) => setUploadError(message || 'Ошибка загрузки изображения')
     )
@@ -233,6 +234,7 @@ ImagesInput.propTypes = {
   images: PropTypes.arrayOf(PropTypes.string),
   onChange: PropTypes.func,
   directory: PropTypes.string,
+  imageName: PropTypes.string,
   project: PropTypes.string,
   label: PropTypes.string,
   disabled: PropTypes.bool,
@@ -243,6 +245,7 @@ ImagesInput.defaultProps = {
   images: [],
   onChange: () => {},
   directory: 'temp',
+  imageName: null,
   project: process.env.NEXT_PUBLIC_ESCALIONCLOUD_PROJECT || 'actquest',
   label: null,
   disabled: false,
