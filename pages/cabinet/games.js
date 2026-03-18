@@ -6,11 +6,16 @@ import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
+import CardActionIconButton, {
+  EditCardIcon,
+  TeamCardIcon,
+} from '@components/cabinet/CardActionIconButton'
 import GameModals from '@components/modals/GameModals'
 import getSessionSafe from '@helpers/getSessionSafe'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
+import fetchGamesForCabinet from '@helpers/fetchGamesForCabinet'
 import { getNounTeams } from '@helpers/getNoun'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
@@ -53,6 +58,8 @@ const CLUE_EARLY_MODE_OPTIONS = [
   { value: 'time', label: 'Добавить время до следующей подсказки' },
   { value: 'penalty', label: 'Штраф организатора за подсказку' },
 ]
+
+const GAMES_PAGE_SIZE = 10
 
 const toMinutes = (seconds) => {
   const numeric = Number(seconds)
@@ -352,6 +359,7 @@ const buildUpdatePayload = (game) => {
 
 const GamesPage = ({
   initialGames,
+  initialHasMore,
   initialLocation,
   session: initialSession,
   availableModerators: initialAvailableModerators,
@@ -380,6 +388,8 @@ const GamesPage = ({
 
   const [games, setGames] = useState(safeInitialGames)
   const [persistedGames, setPersistedGames] = useState(safeInitialGames)
+  const [hasMoreGames, setHasMoreGames] = useState(Boolean(initialHasMore))
+  const [isLoadingMoreGames, setIsLoadingMoreGames] = useState(false)
   const [selectedGameId, setSelectedGameId] = useState(safeInitialGames[0]?.id ?? null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -433,13 +443,14 @@ const GamesPage = ({
   useEffect(() => {
     setGames(safeInitialGames)
     setPersistedGames(safeInitialGames)
+    setHasMoreGames(Boolean(initialHasMore))
     setSelectedGameId((prev) => {
       if (prev && safeInitialGames.some((game) => game.id === prev)) {
         return prev
       }
       return safeInitialGames[0]?.id ?? null
     })
-  }, [safeInitialGames])
+  }, [initialHasMore, safeInitialGames])
 
   useEffect(() => {
     if (!defaultGamesFilterLocation) return
@@ -557,6 +568,46 @@ const GamesPage = ({
     })
   }, [])
 
+  const fetchGamesPage = useCallback(
+    async ({ offset, replace, locationValue }) => {
+      const params = new URLSearchParams({
+        offset: String(offset),
+        limit: String(GAMES_PAGE_SIZE),
+        view: gamesView,
+      })
+      if (locationValue) {
+        params.set('location', locationValue)
+      }
+
+      const response = await fetch(`/api/cabinet/games-list?${params.toString()}`)
+      const json = await response.json()
+
+      if (!response.ok || json?.success === false) {
+        throw new Error(
+          extractErrorMessage(json?.error) || 'Не удалось загрузить список игр'
+        )
+      }
+
+      const nextGames = Array.isArray(json?.data) ? json.data : []
+      const nextHasMore = Boolean(json?.meta?.hasMore)
+      const sorted = sortGamesByUpdatedAt(nextGames)
+
+      if (replace) {
+        setGames(sorted)
+        setPersistedGames(sorted)
+        setSelectedGameId((prev) =>
+          prev && sorted.some((game) => game.id === prev) ? prev : sorted[0]?.id ?? null
+        )
+      } else if (sorted.length > 0) {
+        setGames((prev) => sortGamesByUpdatedAt([...prev, ...sorted]))
+        setPersistedGames((prev) => sortGamesByUpdatedAt([...prev, ...sorted]))
+      }
+
+      setHasMoreGames(nextHasMore)
+    },
+    [gamesView, sortGamesByUpdatedAt]
+  )
+
   useEffect(() => {
     if (!shouldShowLocationFilter) {
       setLocationFilterError(null)
@@ -568,6 +619,7 @@ const GamesPage = ({
       setGames([])
       setPersistedGames([])
       setSelectedGameId(null)
+      setHasMoreGames(false)
       setLocationFilterError('Выберите город для загрузки игр.')
       return
     }
@@ -577,82 +629,31 @@ const GamesPage = ({
       setGames([])
       setPersistedGames([])
       setSelectedGameId(null)
+      setHasMoreGames(false)
       setLocationFilterError(null)
       return
     }
 
     let cancelled = false
 
-    const fetchGamesByLocation = async () => {
+    const loadFirstPage = async () => {
       setIsLocationFilterLoading(true)
       setLocationFilterError(null)
 
       try {
-        const gamesParams = new URLSearchParams({
-          collection: 'games',
-          sort: '-updatedAt',
-          limit: '500',
+        await fetchGamesPage({
+          offset: 0,
+          replace: true,
+          locationValue: gamesFilterLocation,
         })
-        const gameTeamsParams = new URLSearchParams({
-          collection: 'gamesteams',
-          select: '_id,gameId',
-          limit: '5000',
-        })
-
-        const [gamesResponse, gameTeamsResponse] = await Promise.all([
-          fetch(`/api/${gamesFilterLocation}/custom?${gamesParams.toString()}`),
-          fetch(`/api/${gamesFilterLocation}/custom?${gameTeamsParams.toString()}`),
-        ])
-
-        const gamesJson = await gamesResponse.json()
-        const gameTeamsJson = await gameTeamsResponse.json()
-
-        if (!gamesResponse.ok || gamesJson?.success === false) {
-          throw new Error(
-            extractErrorMessage(gamesJson?.error) || 'Не удалось загрузить игры выбранного города'
-          )
-        }
-
-        const gamesData = Array.isArray(gamesJson?.data) ? gamesJson.data : []
-        const gameTeamsData = Array.isArray(gameTeamsJson?.data) ? gameTeamsJson.data : []
-
-        const teamCountByGameId = gameTeamsData.reduce((acc, entry) => {
-          const gameId = entry?.gameId ? String(entry.gameId) : ''
-          if (!gameId) return acc
-          acc[gameId] = (acc[gameId] ?? 0) + 1
-          return acc
-        }, {})
-
-        const normalizedGames = gamesData
-          .map((game) =>
-            normalizeGameForCabinet({
-              ...game,
-              teamsCount: game?._id ? teamCountByGameId[String(game._id)] ?? 0 : 0,
-            })
-          )
-          .filter((game) => {
-            if (canEditAllGames) return true
-            if (canEditOwnGames) {
-              const creatorId = game?.creatorTelegramId ? String(game.creatorTelegramId) : ''
-              return Boolean(currentUserIdString) && creatorId === currentUserIdString
-            }
-            return false
-          })
-
-        const sorted = sortGamesByUpdatedAt(normalizedGames)
-
-        if (cancelled) return
-
-        setGames(sorted)
-        setPersistedGames(sorted)
-        setSelectedGameId((prev) =>
-          prev && sorted.some((game) => game.id === prev) ? prev : sorted[0]?.id ?? null
-        )
       } catch (error) {
-        if (cancelled) return
+        if (cancelled) {
+          return
+        }
         setGames([])
         setPersistedGames([])
         setSelectedGameId(null)
+        setHasMoreGames(false)
         setLocationFilterError(
           extractErrorMessage(error) || 'Не удалось загрузить игры выбранного города.'
         )
@@ -663,7 +664,7 @@ const GamesPage = ({
       }
     }
 
-    fetchGamesByLocation()
+    loadFirstPage()
 
     return () => {
       cancelled = true
@@ -671,11 +672,41 @@ const GamesPage = ({
   }, [
     canEditAllGames,
     canEditOwnGames,
-    currentUserIdString,
-    gamesView,
+    fetchGamesPage,
     gamesFilterLocation,
     shouldShowLocationFilter,
-    sortGamesByUpdatedAt,
+  ])
+
+  const handleLoadMoreGames = useCallback(async () => {
+    if (isLoadingMoreGames || !hasMoreGames) {
+      return
+    }
+
+    setIsLoadingMoreGames(true)
+    setFeedback(null)
+
+    try {
+      await fetchGamesPage({
+        offset: games.length,
+        replace: false,
+        locationValue: shouldShowLocationFilter ? gamesFilterLocation : location,
+      })
+    } catch (error) {
+      setFeedback({
+        type: 'error',
+        message: extractErrorMessage(error) || 'Не удалось загрузить дополнительные игры',
+      })
+    } finally {
+      setIsLoadingMoreGames(false)
+    }
+  }, [
+    fetchGamesPage,
+    games.length,
+    gamesFilterLocation,
+    hasMoreGames,
+    isLoadingMoreGames,
+    location,
+    shouldShowLocationFilter,
   ])
 
   const resetRegisterForm = useCallback(() => {
@@ -2302,84 +2333,24 @@ const GamesPage = ({
               </div>
               {canManageThisGame && (
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
+                  <CardActionIconButton
                     onClick={(event) => {
                       event.stopPropagation()
                       handleEditGameFromList(game)
                     }}
-                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-cyan-300 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:bg-transparent dark:hover:text-violet-100 dark:focus:ring-primary"
-                    aria-label="Редактировать игру"
-                    title="Редактировать игру"
+                    label="Редактировать игру"
                   >
-                    <svg
-                      className="h-4 w-4"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M4 13.5V16h2.5L15 7.5l-2.5-2.5L4 13.5z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M12.5 5.5l2-2a1.5 1.5 0 112.121 2.121l-2 2"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
+                    <EditCardIcon />
+                  </CardActionIconButton>
+                  <CardActionIconButton
                     onClick={(event) => {
                       event.stopPropagation()
                       handleManageTeamsFromList(game)
                     }}
-                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-cyan-300 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:bg-transparent dark:hover:text-violet-100 dark:focus:ring-primary"
-                    aria-label="Управление командами"
-                    title="Управление командами"
+                    label="Управление командами"
                   >
-                    <svg
-                      className="h-4 w-4"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M7 10a3 3 0 100-6 3 3 0 000 6z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M13.5 9.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M2.5 15.5a4.5 4.5 0 019 0V17h-9v-1.5z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M13.5 12.5c1.933 0 3.5 1.567 3.5 3.5V17h-5"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
+                    <TeamCardIcon />
+                  </CardActionIconButton>
                 </div>
               )}
             </div>
@@ -2458,84 +2429,26 @@ const GamesPage = ({
                 </span>
                 {canManageThisGame && (
                   <div className="pointer-events-auto flex items-center gap-2">
-                    <button
-                      type="button"
+                    <CardActionIconButton
                       onClick={(event) => {
                         event.stopPropagation()
                         handleEditGameFromList(game)
                       }}
+                      label="Редактировать игру"
                       className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                      aria-label="Редактировать игру"
-                      title="Редактировать игру"
                     >
-                      <svg
-                        className="h-4 w-4"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M4 13.5V16h2.5L15 7.5l-2.5-2.5L4 13.5z"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M12.5 5.5l2-2a1.5 1.5 0 112.121 2.121l-2 2"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
+                      <EditCardIcon />
+                    </CardActionIconButton>
+                    <CardActionIconButton
                       onClick={(event) => {
                         event.stopPropagation()
                         handleManageTeamsFromList(game)
                       }}
+                      label="Управление командами"
                       className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                      aria-label="Управление командами"
-                      title="Управление командами"
                     >
-                      <svg
-                        className="h-4 w-4"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M7 10a3 3 0 100-6 3 3 0 000 6z"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M13.5 9.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M2.5 15.5a4.5 4.5 0 019 0V17h-9v-1.5z"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M13.5 12.5c1.933 0 3.5 1.567 3.5 3.5V17h-5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
+                      <TeamCardIcon />
+                    </CardActionIconButton>
                   </div>
                 )}
               </div>
@@ -2889,6 +2802,20 @@ const GamesPage = ({
                       : 'Прошедших игр пока нет.'}
                   </div>
                 )}
+                {hasMoreGames && (
+                  <button
+                    type="button"
+                    onClick={handleLoadMoreGames}
+                    disabled={isLoadingMoreGames}
+                    className={`w-full rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                      isLoadingMoreGames
+                        ? 'cursor-wait border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500'
+                        : 'cursor-pointer border-cyan-400/60 text-cyan-200 hover:bg-cyan-500/10'
+                    }`}
+                  >
+                    {isLoadingMoreGames ? 'Загружаем…' : 'Загрузить ещё'}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
@@ -3131,6 +3058,7 @@ GamesPage.propTypes = {
       moderators: PropTypes.arrayOf(moderatorShape),
     })
   ),
+  initialHasMore: PropTypes.bool,
   initialLocation: PropTypes.string,
   session: PropTypes.object,
   availableModerators: PropTypes.arrayOf(moderatorShape),
@@ -3138,6 +3066,7 @@ GamesPage.propTypes = {
 
 GamesPage.defaultProps = {
   initialGames: [],
+  initialHasMore: false,
   initialLocation: null,
   session: null,
   availableModerators: [],
@@ -3167,6 +3096,7 @@ export async function getServerSideProps(context) {
     ? numericTelegramId
     : null
   let initialGames = []
+  let initialHasMore = false
   let availableGameModerators = []
 
   if (location) {
@@ -3174,96 +3104,18 @@ export async function getServerSideProps(context) {
       const db = await dbConnectGlobal()
 
       if (db) {
-        const GamesModel = db.model('Games')
-        const GamesTeamsModel = db.model('GamesTeams')
         const UsersModel = db.model('Users')
-
-        const canLoadAllGames = userRole === 'admin' || userRole === 'dev'
-        const canLoadOwnGames = userRole === 'moder' && creatorTelegramId !== null
-
-        if (canLoadAllGames || canLoadOwnGames) {
-          const normalizedLocation =
-            typeof location === 'string' ? location.trim().toLowerCase() : null
-
-          const query = canLoadAllGames
-            ? { ...(normalizedLocation ? { location: normalizedLocation } : {}) }
-            : {
-                creatorTelegramId,
-                ...(normalizedLocation ? { location: normalizedLocation } : {}),
-              }
-
-          const gamesDocs = await GamesModel.find(query)
-            .sort({ updatedAt: -1 })
-            .select({
-              _id: 1,
-              name: 1,
-              status: 1,
-              dateStart: 1,
-              dateStartFact: 1,
-              dateEndFact: 1,
-              type: 1,
-              description: 1,
-              image: 1,
-              startingPlace: 1,
-              finishingPlace: 1,
-              taskDuration: 1,
-              cluesDuration: 1,
-              clueEarlyAccessMode: 1,
-              clueEarlyPenalty: 1,
-              allowCaptainForceClue: 1,
-              allowCaptainFailTask: 1,
-              allowCaptainFinishBreak: 1,
-              breakDuration: 1,
-              taskFailurePenalty: 1,
-              manyCodesPenalty: 1,
-              individualStart: 1,
-              hidden: 1,
-              showCreator: 1,
-              showTasks: 1,
-              hideResult: 1,
-              prices: 1,
-              finances: 1,
-              tasks: 1,
-              updatedAt: 1,
-              createdAt: 1,
-              creatorTelegramId: 1,
-              moderators: 1,
-            })
-            .populate({
-              path: 'moderators',
-              select: { _id: 1, name: 1, username: 1, telegramId: 1 },
-            })
-            .lean()
-
-          const gameIds = gamesDocs
-            .map((game) => (game?._id ? game._id.toString() : null))
-            .filter(Boolean)
-
-          let teamsCountMap = {}
-
-          if (gameIds.length > 0) {
-            const gamesTeams = await GamesTeamsModel.find({ gameId: { $in: gameIds } })
-              .select({ gameId: 1 })
-              .lean()
-
-            teamsCountMap = gamesTeams.reduce((acc, doc) => {
-              if (!doc?.gameId) {
-                return acc
-              }
-
-              const key = doc.gameId
-              acc[key] = (acc[key] ?? 0) + 1
-              return acc
-            }, {})
-          }
-
-          initialGames = gamesDocs.map((game) =>
-            normalizeGameForCabinet({
-              ...game,
-              teamsCount: game?._id ? teamsCountMap[game._id.toString()] ?? 0 : 0,
-            })
-          )
-        }
+        const gamesResult = await fetchGamesForCabinet({
+          db,
+          location,
+          userRole,
+          creatorTelegramId,
+          offset: 0,
+          limit: GAMES_PAGE_SIZE,
+          view: 'all',
+        })
+        initialGames = gamesResult.games
+        initialHasMore = gamesResult.hasMore
 
         const moderatorsDocs = await UsersModel.find({ role: 'moder' })
           .sort({ name: 1, username: 1 })
@@ -3299,6 +3151,7 @@ export async function getServerSideProps(context) {
     props: {
       session,
       initialGames,
+      initialHasMore,
       initialLocation: location,
       availableModerators: availableGameModerators,
     },

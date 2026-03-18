@@ -10,6 +10,41 @@ class MyDocument extends Document {
     return (
       <Html className="scroll-smooth">
         <Head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function () {
+                  try {
+                    var saved = localStorage.getItem('cabinet-theme');
+                    var systemDark =
+                      window.matchMedia &&
+                      window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    var theme =
+                      saved === 'dark' || saved === 'light'
+                        ? saved
+                        : (systemDark ? 'dark' : 'light');
+
+                    var root = document.documentElement;
+                    root.setAttribute('data-theme', theme);
+                    root.classList.toggle('dark', theme === 'dark');
+                    root.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+                    root.setAttribute('data-theme-ready', '1');
+                  } catch (e) {
+                    var root = document.documentElement;
+                    root.setAttribute('data-theme', 'light');
+                    root.classList.remove('dark');
+                    root.style.colorScheme = 'light';
+                    root.setAttribute('data-theme-ready', '1');
+                  }
+                })();
+              `,
+            }}
+          />
+          <style>{`
+            html:not([data-theme-ready='1']) body {
+              visibility: hidden;
+            }
+          `}</style>
           <meta name="application-name" content="ActQuest" />
           <meta name="theme-color" content="#111827" />
           <meta name="mobile-web-app-capable" content="yes" />
@@ -28,22 +63,6 @@ class MyDocument extends Document {
           <link
             href="https://cdn.jsdelivr.net/npm/@tailwindcss/custom-forms@0.2.1/dist/custom-forms.css"
             rel="stylesheet"
-          />
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                (function () {
-                  try {
-                    var saved = localStorage.getItem('cabinet-theme');
-                    var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    var theme = saved === 'dark' || saved === 'light' ? saved : (systemDark ? 'dark' : 'light');
-                    document.documentElement.setAttribute('data-theme', theme);
-                    document.documentElement.classList.toggle('dark', theme === 'dark');
-                    document.documentElement.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
-                  } catch (e) {}
-                })();
-              `,
-            }}
           />
         </Head>
         <body>

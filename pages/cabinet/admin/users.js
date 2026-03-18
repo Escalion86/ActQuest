@@ -6,13 +6,17 @@ import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
+import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
 import Modal from '@components/Modal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
+import fetchAdminUsersForCabinet from '@helpers/fetchAdminUsersForCabinet'
 import { USERS_ROLES } from '@helpers/constants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+
+const USERS_PAGE_SIZE = 10
 
 const roleLabels = {
   client: 'Пользователь',
@@ -20,27 +24,6 @@ const roleLabels = {
   admin: 'Администратор',
   dev: 'Разработчик',
   ban: 'Заблокирован',
-}
-
-const toStringId = (value) => {
-  if (!value && value !== 0) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number') {
-    return value.toString()
-  }
-
-  if (value && typeof value.toString === 'function') {
-    const stringValue = value.toString()
-    return stringValue === '[object Object]' ? null : stringValue
-  }
-
-  return null
 }
 
 const ensureDateISOString = (value) => {
@@ -82,69 +65,12 @@ const cloneUser = (user) => {
   }
 }
 
-const normalizeUserForAdmin = ({
-  userDoc,
-  membershipsByUser,
-  teamsMap,
-  gamesIdsByTeam,
+const ManageUsersPage = ({
+  initialUsers,
+  initialHasMore,
+  initialLocation,
+  session: initialSession,
 }) => {
-  const baseProfile = normalizeUserProfile(userDoc)
-  const numericTelegramId = Number.isFinite(userDoc?.telegramId)
-    ? Number(userDoc.telegramId)
-    : null
-  const telegramId = numericTelegramId !== null ? String(numericTelegramId) : ''
-  const memberships = membershipsByUser[telegramId] ?? []
-
-  const teams = memberships
-    .map((membership) => {
-      const teamId = membership.teamId
-      const team = teamsMap[teamId] ?? null
-
-      if (!team) {
-        return null
-      }
-
-      const role = membership.role === 'capitan' ? 'capitan' : 'participant'
-      const games = gamesIdsByTeam[teamId] ?? []
-
-      return {
-        id: teamId,
-        name: team.name,
-        role,
-        isCaptain: role === 'capitan',
-        gamesCount: games.length,
-        updatedAt: ensureDateISOString(team.updatedAt),
-      }
-    })
-    .filter(Boolean)
-    .sort((a, b) => {
-      if (a.isCaptain === b.isCaptain) {
-        return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })
-      }
-
-      return a.isCaptain ? -1 : 1
-    })
-
-  const uniqueGameIds = new Set()
-  memberships.forEach((membership) => {
-    const ids = gamesIdsByTeam[membership.teamId] ?? []
-    ids.forEach((id) => uniqueGameIds.add(id))
-  })
-
-  return {
-    ...baseProfile,
-    globalUserId: userDoc?.globalUserId ? String(userDoc.globalUserId) : null,
-    telegramId,
-    role: ensureRole(userDoc?.role),
-    createdAt: ensureDateISOString(userDoc?.createdAt),
-    updatedAt: ensureDateISOString(userDoc?.updatedAt),
-    teams,
-    teamsCount: teams.length,
-    gamesCount: uniqueGameIds.size,
-  }
-}
-
-const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSession }) => {
   const router = useRouter()
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
@@ -158,12 +84,15 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
   const [roleFilter, setRoleFilter] = useState('all')
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [hasMoreUsers, setHasMoreUsers] = useState(Boolean(initialHasMore))
+  const [isLoadingMoreUsers, setIsLoadingMoreUsers] = useState(false)
   const [isRequestingPhone, setIsRequestingPhone] = useState(false)
   const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false)
 
   useEffect(() => {
     setUsers(initialUsers)
     setPersistedUsers(initialUsers)
+    setHasMoreUsers(Boolean(initialHasMore))
     setSelectedUserId((prev) => {
       if (prev && initialUsers.some((user) => user.id === prev)) {
         return prev
@@ -171,7 +100,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
 
       return initialUsers[0]?.id ?? null
     })
-  }, [initialUsers])
+  }, [initialHasMore, initialUsers])
 
   const setUserIdQuery = useCallback(
     (nextUserId) => {
@@ -478,6 +407,46 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
     }
   }, [isRequestingPhone, location, selectedUser])
 
+  const handleLoadMoreUsers = useCallback(async () => {
+    if (isLoadingMoreUsers || !hasMoreUsers) {
+      return
+    }
+
+    setIsLoadingMoreUsers(true)
+    setFeedback(null)
+
+    try {
+      const params = new URLSearchParams({
+        offset: String(users.length),
+        limit: String(USERS_PAGE_SIZE),
+      })
+      const response = await fetch(`/api/cabinet/admin/users-list?${params.toString()}`)
+      const json = await response.json()
+
+      if (!response.ok || json?.success === false) {
+        throw new Error(json?.error || 'Не удалось загрузить пользователей')
+      }
+
+      const nextUsers = Array.isArray(json?.data) ? json.data : []
+      const nextHasMore = Boolean(json?.meta?.hasMore)
+
+      if (nextUsers.length > 0) {
+        setUsers((prevUsers) => [...prevUsers, ...nextUsers])
+        setPersistedUsers((prevUsers) => [...prevUsers, ...nextUsers])
+      }
+
+      setHasMoreUsers(nextHasMore)
+    } catch (error) {
+      console.error('Failed to load more users', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось загрузить дополнительных пользователей',
+      })
+    } finally {
+      setIsLoadingMoreUsers(false)
+    }
+  }, [hasMoreUsers, isLoadingMoreUsers, users.length])
+
   const filterOptions = useMemo(
     () => [
       { value: 'all', name: 'Все роли' },
@@ -525,7 +494,7 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
                 Все пользователи
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Всего: {users.length}. Выберите участника, чтобы просмотреть детали и обновить его роль.
+                Загружено: {users.length}. Выберите участника, чтобы просмотреть детали и обновить его роль.
               </p>
             </div>
 
@@ -564,47 +533,75 @@ const ManageUsersPage = ({ initialUsers, initialLocation, session: initialSessio
             </div>
 
             {filteredUsers.length > 0 ? (
-              <ul className="space-y-3">
-                {filteredUsers.map((user) => {
-                  const isActive = user.id === selectedUserId
-                  const lastUpdateLabel = user.updatedAt
-                    ? formatRelativeTimeFromNow(user.updatedAt)
-                    : '—'
+              <div className="space-y-3">
+                <ul className="space-y-3">
+                  {filteredUsers.map((user) => {
+                    const isActive = user.id === selectedUserId
+                    const lastUpdateLabel = user.updatedAt
+                      ? formatRelativeTimeFromNow(user.updatedAt)
+                      : '—'
 
-                  return (
-                    <li key={user.id}>
-                      <SelectableCard
-                        as="button"
-                        onClick={() => handleUserCardClick(user)}
-                        type="button"
-                        isActive={isActive}
-                        className="w-full text-left"
-                        aria-pressed={isActive}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                              {user.name || 'Без имени'}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {user.username ? `@${user.username}` : 'Без ника'} · Телеграм ID:{' '}
-                              {user.telegramId || 'не указан'}
-                            </p>
+                    return (
+                      <li key={user.id}>
+                        <SelectableCard
+                          as="button"
+                          onClick={() => handleUserCardClick(user)}
+                          type="button"
+                          isActive={isActive}
+                          className="w-full text-left"
+                          aria-pressed={isActive}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                {user.name || 'Без имени'}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {user.username ? `@${user.username}` : 'Без ника'} · Телеграм ID:{' '}
+                                {user.telegramId || 'не указан'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-1 text-xs font-semibold text-white bg-primary rounded-full">
+                                {roleLabels[user.role] ?? user.role}
+                              </span>
+                              <CardActionIconButton
+                                as="span"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleUserCardClick(user)
+                                }}
+                                label="Редактировать пользователя"
+                              >
+                                <EditCardIcon />
+                              </CardActionIconButton>
+                            </div>
                           </div>
-                          <span className="px-2 py-1 text-xs font-semibold text-white bg-primary rounded-full">
-                            {roleLabels[user.role] ?? user.role}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-3 mt-3 text-xs text-slate-500">
-                          <span>Команд: {user.teamsCount}</span>
-                          <span>Игры: {user.gamesCount}</span>
-                          <span>Обновлён {lastUpdateLabel}</span>
-                        </div>
-                      </SelectableCard>
-                    </li>
-                  )
-                })}
-              </ul>
+                          <div className="flex flex-wrap gap-3 mt-3 text-xs text-slate-500">
+                            <span>Команд: {user.teamsCount}</span>
+                            <span>Игры: {user.gamesCount}</span>
+                            <span>Обновлён {lastUpdateLabel}</span>
+                          </div>
+                        </SelectableCard>
+                      </li>
+                    )
+                  })}
+                </ul>
+                {hasMoreUsers && (
+                  <button
+                    type="button"
+                    onClick={handleLoadMoreUsers}
+                    disabled={isLoadingMoreUsers}
+                    className={`w-full rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                      isLoadingMoreUsers
+                        ? 'cursor-wait border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500'
+                        : 'cursor-pointer border-cyan-400/60 text-cyan-200 hover:bg-cyan-500/10'
+                    }`}
+                  >
+                    {isLoadingMoreUsers ? 'Загружаем…' : 'Загрузить ещё'}
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 Пользователи не найдены. Измените параметры фильтра или сбросьте поиск.
@@ -842,12 +839,14 @@ const userShape = PropTypes.shape({
 
 ManageUsersPage.propTypes = {
   initialUsers: PropTypes.arrayOf(userShape),
+  initialHasMore: PropTypes.bool,
   initialLocation: PropTypes.string,
   session: PropTypes.object,
 }
 
 ManageUsersPage.defaultProps = {
   initialUsers: [],
+  initialHasMore: false,
   initialLocation: null,
   session: null,
 }
@@ -876,107 +875,20 @@ export async function getServerSideProps(context) {
 
   const location = session?.user?.location ?? null
   let initialUsers = []
+  let initialHasMore = false
 
   if (location) {
     try {
       const db = await dbConnectGlobal()
 
       if (db) {
-        const UsersModel = db.model('Users')
-        const TeamsUsersModel = db.model('TeamsUsers')
-        const TeamsModel = db.model('Teams')
-        const GamesTeamsModel = db.model('GamesTeams')
-
-        const usersDocs = await UsersModel.find({}).sort({ name: 1 }).lean()
-        const membershipsDocs = await TeamsUsersModel.find({})
-          .select({ teamId: 1, userTelegramId: 1, role: 1 })
-          .lean()
-
-        const teamIds = Array.from(
-          new Set(
-            membershipsDocs
-              .map((doc) => toStringId(doc?.teamId))
-              .filter((teamId) => typeof teamId === 'string' && teamId.length > 0)
-          )
-        )
-
-        const teamsDocs = teamIds.length
-          ? await TeamsModel.find({ _id: { $in: teamIds } })
-              .select({ _id: 1, name: 1, updatedAt: 1 })
-              .lean()
-          : []
-
-        const gamesTeamsDocs = teamIds.length
-          ? await GamesTeamsModel.find({ teamId: { $in: teamIds } })
-              .select({ teamId: 1, gameId: 1 })
-              .lean()
-          : []
-
-        const teamsMap = teamsDocs.reduce((acc, team) => {
-          const id = toStringId(team?._id)
-          if (id) {
-            acc[id] = {
-              id,
-              name: typeof team?.name === 'string' ? team.name : '',
-              updatedAt: team?.updatedAt ?? null,
-            }
-          }
-          return acc
-        }, {})
-
-        const membershipsByUser = membershipsDocs.reduce((acc, doc) => {
-          const telegramId = Number.isFinite(doc?.userTelegramId)
-            ? String(doc.userTelegramId)
-            : null
-          const teamId = toStringId(doc?.teamId)
-
-          if (!telegramId || !teamId) {
-            return acc
-          }
-
-          if (!acc[telegramId]) {
-            acc[telegramId] = []
-          }
-
-          acc[telegramId].push({
-            teamId,
-            role: doc?.role === 'capitan' ? 'capitan' : 'participant',
-          })
-
-          return acc
-        }, {})
-
-        const gamesIdsByTeamSet = gamesTeamsDocs.reduce((acc, doc) => {
-          const teamId = toStringId(doc?.teamId)
-          const gameId = toStringId(doc?.gameId)
-
-          if (!teamId || !gameId) {
-            return acc
-          }
-
-          if (!acc[teamId]) {
-            acc[teamId] = new Set()
-          }
-
-          acc[teamId].add(gameId)
-          return acc
-        }, {})
-
-        const gamesIdsByTeam = Object.entries(gamesIdsByTeamSet).reduce((acc, [teamId, ids]) => {
-          acc[teamId] = Array.from(ids)
-          return acc
-        }, {})
-
-        initialUsers = usersDocs
-          .map((userDoc) =>
-            normalizeUserForAdmin({
-              userDoc,
-              membershipsByUser,
-              teamsMap,
-              gamesIdsByTeam,
-            })
-          )
-          .sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }))
+        const result = await fetchAdminUsersForCabinet({
+          db,
+          offset: 0,
+          limit: USERS_PAGE_SIZE,
+        })
+        initialUsers = result.users
+        initialHasMore = result.hasMore
       }
     } catch (error) {
       console.error('Failed to load users for admin cabinet', error)
@@ -987,6 +899,7 @@ export async function getServerSideProps(context) {
     props: {
       session,
       initialUsers,
+      initialHasMore,
       initialLocation: location,
     },
   }

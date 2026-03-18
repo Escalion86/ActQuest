@@ -100,6 +100,7 @@ export default async function handler(Schema, req, res, params = null) {
   const querySelect = query?.select // array
   const querySort = query?.sort
   const queryLimit = query?.limit
+  const querySkip = query?.skip
   const isCountReturn = !!query?.countReturn
 
   if (!location) {
@@ -112,6 +113,7 @@ export default async function handler(Schema, req, res, params = null) {
   delete query.select
   delete query.sort
   delete query.limit
+  delete query.skip
   delete query.countReturn
 
   const db = await dbConnectGlobal()
@@ -152,6 +154,7 @@ export default async function handler(Schema, req, res, params = null) {
                 .model(Schema)
                 .find(preparedQuery)
                 .select(selectOpts)
+                .skip(querySkip)
                 .limit(queryLimit)
                 .sort(querySort)
 
@@ -174,6 +177,7 @@ export default async function handler(Schema, req, res, params = null) {
                 .model(Schema)
                 .find(preparedParams)
                 .select(selectOpts)
+                .skip(querySkip)
                 .limit(queryLimit)
                 .sort(querySort)
           if (!data) {
@@ -194,6 +198,7 @@ export default async function handler(Schema, req, res, params = null) {
                 .model(Schema)
                 .find(defaultFindQuery)
                 .select(selectOpts)
+                .skip(querySkip)
                 .limit(queryLimit)
                 .sort(querySort)
           return res?.status(200).json({ success: true, data })

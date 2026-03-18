@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useMemo, useState, useCallback, useEffect, useLayoutEffect } from 'react'
 import PropTypes from 'prop-types'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -115,14 +115,18 @@ const resolveInitialTheme = () => {
     return 'light'
   }
 
-  const htmlTheme = document.documentElement.getAttribute('data-theme')
-  if (htmlTheme === 'dark' || htmlTheme === 'light') {
-    return htmlTheme
-  }
-
   const storedTheme = window.localStorage.getItem('cabinet-theme')
   if (storedTheme === 'dark' || storedTheme === 'light') {
     return storedTheme
+  }
+
+  if (document.documentElement.classList.contains('dark')) {
+    return 'dark'
+  }
+
+  const htmlTheme = document.documentElement.getAttribute('data-theme')
+  if (htmlTheme === 'dark' || htmlTheme === 'light') {
+    return htmlTheme
   }
 
   if (
@@ -135,12 +139,15 @@ const resolveInitialTheme = () => {
   return 'light'
 }
 
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect
+
 const CabinetLayout = ({ children, title, description, activePage }) => {
   const router = useRouter()
   const { data: session, update } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false)
-  const [theme, setTheme] = useState(resolveInitialTheme)
+  const [theme, setTheme] = useState('light')
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
@@ -181,6 +188,18 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
     typeof router.query?.view === 'string'
       ? router.query.view.toLowerCase()
       : ''
+
+  useIsomorphicLayoutEffect(() => {
+    const initialTheme = resolveInitialTheme()
+    setTheme(initialTheme)
+
+    if (typeof document !== 'undefined') {
+      const isDark = initialTheme === 'dark'
+      document.documentElement.setAttribute('data-theme', initialTheme)
+      document.documentElement.classList.toggle('dark', isDark)
+      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+    }
+  }, [])
 
   const closeSidebarOnMobile = useCallback(() => {
     if (typeof window === 'undefined') {

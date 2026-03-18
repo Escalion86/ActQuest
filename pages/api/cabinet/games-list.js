@@ -1,0 +1,79 @@
+import { getServerSession } from 'next-auth/next'
+
+import { authOptions } from '@pages/api/auth/[...nextauth]'
+import fetchGamesForCabinet from '@helpers/fetchGamesForCabinet'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
+
+const parsePositiveInteger = (value, fallback) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return fallback
+  }
+  return Math.floor(numeric)
+}
+
+const resolveGamesView = (value) => {
+  if (value === 'upcoming' || value === 'past') {
+    return value
+  }
+  return 'all'
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET'])
+    return res.status(405).json({ success: false, error: 'Метод не поддерживается' })
+  }
+
+  const session = await getServerSession(req, res, authOptions)
+  if (!session?.user) {
+    return res.status(401).json({ success: false, error: 'Требуется авторизация' })
+  }
+
+  const userRole = session?.user?.role ?? 'client'
+  const rawTelegramId = session?.user?.telegramId
+  const creatorTelegramId =
+    rawTelegramId === null || rawTelegramId === undefined
+      ? null
+      : Number(rawTelegramId)
+
+  const locationFromQuery =
+    typeof req.query?.location === 'string' ? req.query.location : null
+  const locationFromSession =
+    typeof session?.user?.location === 'string' ? session.user.location : null
+  const location = (locationFromQuery || locationFromSession || '').trim().toLowerCase()
+
+  const offset = parsePositiveInteger(req.query?.offset, 0)
+  const limit = parsePositiveInteger(req.query?.limit, 10)
+  const view = resolveGamesView(req.query?.view)
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) {
+      throw new Error('Не удалось подключиться к базе данных')
+    }
+
+    const { games, hasMore } = await fetchGamesForCabinet({
+      db,
+      location: location || null,
+      userRole,
+      creatorTelegramId: Number.isFinite(creatorTelegramId) ? creatorTelegramId : null,
+      offset,
+      limit,
+      view,
+    })
+
+    return res.status(200).json({
+      success: true,
+      data: games,
+      meta: {
+        offset,
+        limit,
+        hasMore,
+      },
+    })
+  } catch (error) {
+    console.error('Failed to load games list', error)
+    return res.status(500).json({ success: false, error: 'Не удалось загрузить список игр' })
+  }
+}

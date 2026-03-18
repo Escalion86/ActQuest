@@ -23,9 +23,23 @@ const toStringId = (value) => {
 
 const ensureArray = (value) => (Array.isArray(value) ? value : [])
 
-const fetchTeamsForCabinet = async ({ db, teamIds = null }) => {
+const toPositiveInteger = (value, fallback) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return fallback
+  }
+  return Math.floor(numeric)
+}
+
+const fetchTeamsForCabinet = async ({
+  db,
+  teamIds = null,
+  offset = 0,
+  limit = null,
+  returnMeta = false,
+}) => {
   if (!db) {
-    return []
+    return returnMeta ? { teams: [], hasMore: false } : []
   }
 
   const TeamsModel = db.model('Teams')
@@ -45,23 +59,35 @@ const fetchTeamsForCabinet = async ({ db, teamIds = null }) => {
     : null
 
   if (Array.isArray(uniqueTeamIds) && uniqueTeamIds.length === 0) {
-    return []
+    return returnMeta ? { teams: [], hasMore: false } : []
   }
 
   const teamFilter = Array.isArray(uniqueTeamIds) ? { _id: { $in: uniqueTeamIds } } : {}
+  const queryOffset = toPositiveInteger(offset, 0)
+  const queryLimit = limit === null ? null : toPositiveInteger(limit, 0)
+  const shouldPaginate = Number.isFinite(queryLimit) && queryLimit > 0
+  const fetchLimit = shouldPaginate ? queryLimit + 1 : null
 
-  const teamsDocs = await TeamsModel.find(teamFilter).sort({ updatedAt: -1 }).lean()
-
-  if (!teamsDocs || teamsDocs.length === 0) {
-    return []
+  let teamsQuery = TeamsModel.find(teamFilter).sort({ updatedAt: -1 }).skip(queryOffset)
+  if (shouldPaginate) {
+    teamsQuery = teamsQuery.limit(fetchLimit)
   }
 
-  const normalizedTeamIds = teamsDocs
+  const teamsDocs = await teamsQuery.lean()
+
+  if (!teamsDocs || teamsDocs.length === 0) {
+    return returnMeta ? { teams: [], hasMore: false } : []
+  }
+
+  const hasMore = shouldPaginate ? teamsDocs.length > queryLimit : false
+  const teamsSlice = shouldPaginate ? teamsDocs.slice(0, queryLimit) : teamsDocs
+
+  const normalizedTeamIds = teamsSlice
     .map((team) => toStringId(team?._id))
     .filter((teamId) => typeof teamId === 'string' && teamId.length > 0)
 
   if (normalizedTeamIds.length === 0) {
-    return []
+    return returnMeta ? { teams: [], hasMore } : []
   }
 
   const teamMembersDocs = await TeamsUsersModel.find({ teamId: { $in: normalizedTeamIds } }).lean()
@@ -186,7 +212,7 @@ const fetchTeamsForCabinet = async ({ db, teamIds = null }) => {
     return acc
   }, {})
 
-  return teamsDocs
+  const teams = teamsSlice
     .map((team) =>
       normalizeTeamForCabinet({
         team,
@@ -195,6 +221,12 @@ const fetchTeamsForCabinet = async ({ db, teamIds = null }) => {
       })
     )
     .filter(Boolean)
+
+  if (returnMeta) {
+    return { teams, hasMore }
+  }
+
+  return teams
 }
 
 export default fetchTeamsForCabinet

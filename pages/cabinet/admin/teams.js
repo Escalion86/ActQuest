@@ -13,6 +13,8 @@ import isUserAdmin from '@helpers/isUserAdmin'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 
+const TEAMS_PAGE_SIZE = 10
+
 const serializeTeamForComparison = (team) => {
   if (!team) {
     return null
@@ -44,7 +46,12 @@ const normalizePhoneLink = (phone) => {
   return phone.replace(/[^+\d]/g, '')
 }
 
-const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession }) => {
+const AdminTeamsPage = ({
+  initialTeams,
+  initialHasMore,
+  initialLocation,
+  session: initialSession,
+}) => {
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
@@ -57,6 +64,8 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
   const [visibilityFilter, setVisibilityFilter] = useState('all')
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [hasMoreTeams, setHasMoreTeams] = useState(Boolean(initialHasMore))
+  const [isLoadingMoreTeams, setIsLoadingMoreTeams] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
   const [teamDescriptionModal, setTeamDescriptionModal] = useState({
     isOpen: false,
@@ -67,6 +76,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
   useEffect(() => {
     setTeams(initialTeams)
     setPersistedTeams(initialTeams)
+    setHasMoreTeams(Boolean(initialHasMore))
     setSelectedTeamId((prev) => {
       if (prev && initialTeams.some((team) => team.id === prev)) {
         return prev
@@ -74,7 +84,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
 
       return initialTeams[0]?.id ?? null
     })
-  }, [initialTeams])
+  }, [initialHasMore, initialTeams])
 
   const filteredTeams = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase()
@@ -452,6 +462,47 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
     }
   }, [teams])
 
+  const handleLoadMoreTeams = useCallback(async () => {
+    if (isLoadingMoreTeams || !hasMoreTeams) {
+      return
+    }
+
+    setIsLoadingMoreTeams(true)
+    setFeedback(null)
+
+    try {
+      const params = new URLSearchParams({
+        offset: String(teams.length),
+        limit: String(TEAMS_PAGE_SIZE),
+      })
+
+      const response = await fetch(`/api/cabinet/admin/teams-list?${params.toString()}`)
+      const json = await response.json()
+
+      if (!response.ok || json?.success === false) {
+        throw new Error(json?.error || 'Не удалось загрузить команды')
+      }
+
+      const nextTeams = Array.isArray(json?.data) ? json.data : []
+      const nextHasMore = Boolean(json?.meta?.hasMore)
+
+      if (nextTeams.length > 0) {
+        setTeams((prevTeams) => [...prevTeams, ...nextTeams])
+        setPersistedTeams((prevTeams) => [...prevTeams, ...nextTeams])
+      }
+
+      setHasMoreTeams(nextHasMore)
+    } catch (error) {
+      console.error('Failed to load more teams', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось загрузить дополнительные команды',
+      })
+    } finally {
+      setIsLoadingMoreTeams(false)
+    }
+  }, [hasMoreTeams, isLoadingMoreTeams, teams.length])
+
   if (!isAdmin) {
     return (
       <>
@@ -489,7 +540,7 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
             <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
               <p className="text-sm font-semibold text-primary dark:text-slate-100">Все команды</p>
               <p className="mt-1 text-xs text-slate-500">
-                Всего: {summary.total}. Открытых: {summary.open}. Закрытых: {summary.closed}.
+                Загружено: {summary.total}. Открытых: {summary.open}. Закрытых: {summary.closed}.
               </p>
             </div>
 
@@ -526,38 +577,54 @@ const AdminTeamsPage = ({ initialTeams, initialLocation, session: initialSession
             </div>
 
             {teamsForList.length > 0 ? (
-              <ul className="space-y-3">
-                {teamsForList.map((team) => (
-                  <li key={team.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleTeamCardClick(team)}
-                      className={`w-full cursor-pointer text-left p-4 border rounded-2xl transition ${
-                        selectedTeamId === team.id
-                          ? 'border-primary bg-blue-50 shadow-sm dark:border-[#7A00FF]/60 dark:bg-[#140a2e]'
-                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50 dark:hover:border-[#7A00FF]/60 dark:hover:bg-[#110a24]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-primary dark:text-slate-100">{team.name}</p>
-                          <p className="text-xs text-slate-500">{team.membersLabel}</p>
+              <div className="space-y-3">
+                <ul className="space-y-3">
+                  {teamsForList.map((team) => (
+                    <li key={team.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleTeamCardClick(team)}
+                        className={`w-full cursor-pointer text-left p-4 border rounded-2xl transition ${
+                          selectedTeamId === team.id
+                            ? 'border-primary bg-blue-50 shadow-sm dark:border-[#7A00FF]/60 dark:bg-[#140a2e]'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50 dark:hover:border-[#7A00FF]/60 dark:hover:bg-[#110a24]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-primary dark:text-slate-100">{team.name}</p>
+                            <p className="text-xs text-slate-500">{team.membersLabel}</p>
+                          </div>
+                          <span
+                            className={`text-xs font-medium px-2 py-1 rounded-full ${
+                              team.open
+                                ? 'border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
+                                : 'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#d9c8ff]'
+                            }`}
+                          >
+                            {team.open ? 'Открыта' : 'Закрыта'}
+                          </span>
                         </div>
-                        <span
-                          className={`text-xs font-medium px-2 py-1 rounded-full ${
-                            team.open
-                              ? 'border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
-                              : 'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#d9c8ff]'
-                          }`}
-                        >
-                          {team.open ? 'Открыта' : 'Закрыта'}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-xs text-slate-400">Обновлено {team.updatedLabel}</p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                        <p className="mt-2 text-xs text-slate-400">Обновлено {team.updatedLabel}</p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {hasMoreTeams && (
+                  <button
+                    type="button"
+                    onClick={handleLoadMoreTeams}
+                    disabled={isLoadingMoreTeams}
+                    className={`w-full rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                      isLoadingMoreTeams
+                        ? 'cursor-wait border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500'
+                        : 'cursor-pointer border-cyan-400/60 text-cyan-200 hover:bg-cyan-500/10'
+                    }`}
+                  >
+                    {isLoadingMoreTeams ? 'Загружаем…' : 'Загрузить ещё'}
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
                 Команды не найдены. Измените параметры фильтра или сбросьте поиск.
@@ -881,12 +948,14 @@ AdminTeamsPage.propTypes = {
     })
   ),
   initialLocation: PropTypes.string,
+  initialHasMore: PropTypes.bool,
   session: PropTypes.object,
 }
 
 AdminTeamsPage.defaultProps = {
   initialTeams: [],
   initialLocation: null,
+  initialHasMore: false,
   session: null,
 }
 
@@ -914,13 +983,21 @@ export async function getServerSideProps(context) {
 
   const location = session?.user?.location ?? null
   let initialTeams = []
+  let initialHasMore = false
 
   if (location) {
     try {
       const db = await dbConnectGlobal()
 
       if (db) {
-        initialTeams = await fetchTeamsForCabinet({ db })
+        const result = await fetchTeamsForCabinet({
+          db,
+          offset: 0,
+          limit: TEAMS_PAGE_SIZE,
+          returnMeta: true,
+        })
+        initialTeams = result.teams
+        initialHasMore = result.hasMore
       }
     } catch (error) {
       console.error('Failed to load admin teams', error)
@@ -931,6 +1008,7 @@ export async function getServerSideProps(context) {
     props: {
       session,
       initialTeams,
+      initialHasMore,
       initialLocation: location,
     },
   }

@@ -6,10 +6,10 @@ import { sendImage } from '@helpers/cloudinary'
 const INPUT_ACCEPT_TYPES =
   'image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/*'
 
-const toTrimmedString = (value) => (typeof value === 'string' ? value.trim() : '')
-
 const normalizeImages = (images) =>
-  (Array.isArray(images) ? images : []).map(toTrimmedString).filter(Boolean)
+  (Array.isArray(images) ? images : [])
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean)
 
 const moveToFirst = (items, index) => {
   if (!Array.isArray(items) || index <= 0 || index >= items.length) {
@@ -67,7 +67,6 @@ const ImagesInput = ({
   const fileInputRef = useRef(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
-  const [urlValue, setUrlValue] = useState('')
 
   const normalizedImages = useMemo(() => normalizeImages(images), [images])
 
@@ -79,22 +78,6 @@ const ImagesInput = ({
   const handleSetMain = (index) => {
     const next = moveToFirst(normalizedImages, index)
     onChange(next)
-  }
-
-  const handleAddUrl = () => {
-    const nextUrl = toTrimmedString(urlValue)
-    if (!nextUrl) {
-      return
-    }
-
-    if (normalizedImages.includes(nextUrl)) {
-      setUrlValue('')
-      return
-    }
-
-    const next = [...normalizedImages, nextUrl].slice(0, maxImages)
-    onChange(next)
-    setUrlValue('')
   }
 
   const handleUpload = async (file) => {
@@ -121,7 +104,11 @@ const ImagesInput = ({
     }
 
     const uploadedUrls = Array.from(
-      new Set(extractUrlCandidates(uploadResult).map(toTrimmedString).filter(Boolean))
+      new Set(
+        extractUrlCandidates(uploadResult)
+          .map((value) => (typeof value === 'string' ? value.trim() : ''))
+          .filter(Boolean)
+      )
     )
 
     if (uploadedUrls.length === 0) {
@@ -142,59 +129,75 @@ const ImagesInput = ({
           {normalizedImages.map((imageUrl, index) => (
             <div
               key={`${imageUrl}-${index}`}
-              className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
+              className="group overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
             >
-              <img
-                src={imageUrl}
-                alt={`uploaded-${index + 1}`}
-                className="h-28 w-full object-cover"
-              />
-              <div className="space-y-2 p-2">
-                <p className="break-all text-[10px] text-slate-500">{imageUrl}</p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSetMain(index)}
-                    disabled={disabled || index === 0}
-                    className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              <div className="relative">
+                <img
+                  src={imageUrl}
+                  alt={`uploaded-${index + 1}`}
+                  className="h-28 w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemove(index)}
+                  disabled={disabled}
+                  className="absolute right-2 top-2 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-rose-300 bg-rose-50/90 text-rose-600 opacity-0 shadow-sm transition hover:bg-rose-100 focus:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-400/40 dark:bg-slate-900/80 dark:text-rose-300"
+                  title="Удалить изображение"
+                  aria-label="Удалить изображение"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
                   >
-                    {index === 0 ? 'Главная' : 'Сделать главной'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(index)}
-                    disabled={disabled}
-                    className="rounded-lg border border-rose-200 px-2 py-1 text-[11px] font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Удалить
-                  </button>
-                </div>
+                    <path
+                      d="M3.75 5.5h12.5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M7.25 5.5V4.75A1.75 1.75 0 019 3h2a1.75 1.75 0 011.75 1.75v.75"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M6.5 7.5v7a2 2 0 002 2h3a2 2 0 002-2v-7"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M8.75 9.25v4.5M11.25 9.25v4.5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
               </div>
+              {normalizedImages.length > 1 && (
+                <div className="space-y-2 p-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSetMain(index)}
+                      disabled={disabled || index === 0}
+                      className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                    >
+                      {index === 0 ? 'Главная' : 'Сделать главной'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
       ) : (
         <p className="text-sm text-slate-500">Изображения отсутствуют.</p>
       )}
-
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          type="text"
-          value={urlValue}
-          onChange={(event) => setUrlValue(event.target.value)}
-          placeholder="Добавить ссылку на изображение"
-          disabled={disabled || normalizedImages.length >= maxImages}
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 dark:border-slate-700 dark:disabled:bg-slate-800"
-        />
-        <button
-          type="button"
-          onClick={handleAddUrl}
-          disabled={disabled || !toTrimmedString(urlValue) || normalizedImages.length >= maxImages}
-          className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 dark:hover:bg-violet-500/10"
-        >
-          Добавить ссылку
-        </button>
-      </div>
 
       <div className="flex items-center gap-3">
         <input
@@ -208,17 +211,21 @@ const ImagesInput = ({
           }}
           className="hidden"
         />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || isUploading || normalizedImages.length >= maxImages}
-          className="inline-flex justify-center rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-        >
-          {isUploading ? 'Загрузка...' : 'Загрузить фото'}
-        </button>
-        <span className="text-xs text-slate-500">
-          {normalizedImages.length}/{maxImages}
-        </span>
+        {normalizedImages.length < maxImages && (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || isUploading}
+            className="inline-flex cursor-pointer justify-center rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            {isUploading ? 'Загрузка...' : 'Загрузить фото'}
+          </button>
+        )}
+        {maxImages > 1 && (
+          <span className="text-xs text-slate-500">
+            {normalizedImages.length}/{maxImages}
+          </span>
+        )}
       </div>
 
       {uploadError ? (
