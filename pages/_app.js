@@ -154,6 +154,15 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
     }
   }
 
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (audio.readyState >= 2) {
+      setIsAudioReady(true)
+    }
+  }, [router.pathname])
+
   return (
     <>
       <Head>
@@ -175,6 +184,8 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
               loop
               preload="auto"
               onCanPlay={() => setIsAudioReady(true)}
+              onCanPlayThrough={() => setIsAudioReady(true)}
+              onLoadedMetadata={() => setIsAudioReady(true)}
             />
             <Component {...pageProps} />
             {!isCabinetRoute && isAudioReady && (
