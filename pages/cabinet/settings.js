@@ -3,9 +3,11 @@ import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import NoticeBanner from '@components/NoticeBanner'
 import isUserAdmin from '@helpers/isUserAdmin'
 import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
+import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const ensureSiteSettings = (value) => {
@@ -22,7 +24,8 @@ const ensureSiteSettings = (value) => {
 
 const SettingsPage = ({ initialSiteSettings }) => {
   const { data: session } = useSession()
-  const isAdmin = isUserAdmin({ role: session?.user?.role })
+  const { effectiveRole } = useCabinetRolePreview(session?.user?.role ?? 'client')
+  const isAdmin = isUserAdmin({ role: effectiveRole })
   const [siteSettings, setSiteSettings] = useState(() => ensureSiteSettings(initialSiteSettings))
   const [saveState, setSaveState] = useState({ isSaving: false, isSaved: false, error: null })
 
@@ -240,14 +243,14 @@ const SettingsPage = ({ initialSiteSettings }) => {
           </div>
 
           {saveState.error ? (
-            <div className="px-4 py-3 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl">
+            <NoticeBanner tone="error" variant="neon">
               {saveState.error}
-            </div>
+            </NoticeBanner>
           ) : null}
           {saveState.isSaved ? (
-            <div className="px-4 py-3 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <NoticeBanner tone="success" variant="neon">
               Настройки успешно сохранены.
-            </div>
+            </NoticeBanner>
           ) : null}
 
           <div className="flex flex-col gap-3 md:flex-row">

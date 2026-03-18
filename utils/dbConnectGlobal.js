@@ -11,6 +11,7 @@ import lastCommandsSchema from '@schemas/lastCommandsSchema'
 import usersGamesPaymentsSchema from '@schemas/usersGamesPaymentsSchema'
 import notificationsSchema from '@schemas/notificationsSchema'
 import gamesPaymentsSchema from '@schemas/gamesPaymentsSchema'
+import transactionsSchema from '@schemas/transactionsSchema'
 
 let globalConnections = global.mongooseGlobal
 
@@ -86,6 +87,10 @@ async function dbConnectGlobal() {
     globalConnections.global.model(
       'PhoneVerifications',
       mongoose.Schema(phoneVerificationsSchema, { timestamps: true }),
+    )
+    globalConnections.global.model(
+      'Transactions',
+      mongoose.Schema(transactionsSchema, { timestamps: true }),
     )
   }
 

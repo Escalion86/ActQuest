@@ -20,6 +20,8 @@ const collectionCheck = (collection) => {
       return 'TeamsUsers'
     case 'usersgamespayments':
       return 'UsersGamesPayments'
+    case 'transactions':
+      return 'Transactions'
     default:
       return false
   }

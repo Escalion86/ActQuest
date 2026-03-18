@@ -19,6 +19,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { LOCATIONS } from '@server/serverConstants'
 import isUserAdmin from '@helpers/isUserAdmin'
+import canManageTransactions from '@helpers/canManageTransactions'
+import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 
 const normalizeLocationName = (locationKey) => {
   const location = locationKey ? LOCATIONS[locationKey] : null
@@ -74,6 +76,11 @@ const adminSubmenuItems = [
     label: 'Статистика и отчёты',
     href: '/cabinet/admin/reports',
   },
+  {
+    id: 'admin-transactions',
+    label: 'Транзакции',
+    href: '/cabinet/admin/transactions',
+  },
 ]
 
 const gamesSubmenuItems = [
@@ -110,23 +117,29 @@ const getInitials = (name, fallback) => {
   return 'AQ'
 }
 
+const ROLE_PREVIEW_OPTIONS = [
+  { value: 'client', label: 'Пользователь' },
+  { value: 'admin', label: 'Админ' },
+  { value: 'dev', label: 'Разработчик' },
+]
+
 const resolveInitialTheme = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return 'light'
+    return null
   }
 
-  const storedTheme = window.localStorage.getItem('cabinet-theme')
-  if (storedTheme === 'dark' || storedTheme === 'light') {
-    return storedTheme
+  const htmlTheme = document.documentElement.getAttribute('data-theme')
+  if (htmlTheme === 'dark' || htmlTheme === 'light') {
+    return htmlTheme
   }
 
   if (document.documentElement.classList.contains('dark')) {
     return 'dark'
   }
 
-  const htmlTheme = document.documentElement.getAttribute('data-theme')
-  if (htmlTheme === 'dark' || htmlTheme === 'light') {
-    return htmlTheme
+  const storedTheme = window.localStorage.getItem('cabinet-theme')
+  if (storedTheme === 'dark' || storedTheme === 'light') {
+    return storedTheme
   }
 
   if (
@@ -142,7 +155,14 @@ const resolveInitialTheme = () => {
 const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
-const CabinetLayout = ({ children, title, description, activePage }) => {
+const CabinetLayout = ({
+  children,
+  title,
+  description,
+  activePage,
+  headerTitle,
+  showPageTitle,
+}) => {
   const router = useRouter()
   const { data: session, update } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
@@ -152,12 +172,15 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(
     () => router.pathname.startsWith('/cabinet/admin'),
   )
-  const [theme, setTheme] = useState(() => resolveInitialTheme())
+  const [theme, setTheme] = useState(null)
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
 
-  const role = session?.user?.role ?? null
+  const sessionRole = session?.user?.role ?? 'client'
+  const { isDeveloper, effectiveRole, setRolePreview } =
+    useCabinetRolePreview(sessionRole)
+  const role = effectiveRole
   const userName =
     session?.user?.name || session?.user?.username || 'Пользователь'
   const userAvatar = session?.user?.photoUrl ?? null
@@ -195,7 +218,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
       : ''
 
   useIsomorphicLayoutEffect(() => {
-    const initialTheme = resolveInitialTheme()
+    const initialTheme = resolveInitialTheme() ?? 'light'
     setTheme(initialTheme)
 
     if (typeof document !== 'undefined') {
@@ -207,7 +230,7 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   }, [])
 
   const closeSidebarOnMobile = useCallback(() => {
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || !theme) {
       return
     }
 
@@ -360,11 +383,15 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   const themeBtnClass = isDarkTheme
     ? 'border-[#7A00FF]/40 bg-[#7A00FF]/12 text-[#d8c8ff] hover:bg-[#7A00FF]/20'
     : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+  const rolePreviewSelectClass = isDarkTheme
+    ? 'border-[#00D1FF]/35 bg-[#090018]/88 text-[#bdf4ff]'
+    : 'border-slate-300 bg-white text-slate-700'
   const userNameClass = isDarkTheme ? 'text-[#e8dcff]' : 'text-slate-800'
   const userRoleClass = isDarkTheme ? 'text-[#9fd9ff]' : 'text-slate-500'
   const mainTextClass = isDarkTheme ? 'text-slate-100' : 'text-slate-900'
   const pageTitleClass = isDarkTheme ? 'text-[#e8dcff]' : 'text-slate-900'
   const pageDescriptionClass = isDarkTheme ? 'text-[#9fd9ff]' : 'text-slate-600'
+  const resolvedHeaderTitle = headerTitle || title || 'ActQuest'
   const overlayClass = isDarkTheme ? 'bg-[#05000d]/70' : 'bg-slate-900/35'
   const forceLocationOverlayClass = isDarkTheme
     ? 'bg-slate-950/80'
@@ -381,6 +408,12 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   const forceLocationSelectClass = isDarkTheme
     ? 'border-slate-700 bg-slate-950 text-slate-100'
     : 'border-slate-300 bg-white text-slate-700'
+
+  if (!theme) {
+    return (
+      <div className="cabinet-neon min-h-screen bg-transparent" aria-hidden="true" />
+    )
+  }
 
   return (
     <div className="cabinet-neon">
@@ -518,13 +551,20 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                       <div
                         className={`overflow-hidden transition-all duration-300 ease-out ${
                           isAdminMenuOpen
-                            ? 'max-h-48 opacity-100 translate-y-0'
+                            ? 'max-h-64 opacity-100 translate-y-0'
                             : 'max-h-0 opacity-0 -translate-y-1'
                         }`}
                         aria-hidden={!isAdminMenuOpen}
                       >
                         <div className="pt-1 pb-1 pr-3 space-y-1 pl-11">
                           {adminSubmenuItems.map((subItem) => {
+                            if (
+                              subItem.id === 'admin-transactions' &&
+                              !canManageTransactions({ role })
+                            ) {
+                              return null
+                            }
+
                             const isSubActive = router.pathname === subItem.href
 
                             return (
@@ -577,6 +617,42 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
             <div
               className={`sticky bottom-0 mt-auto border-t px-4 py-4 backdrop-blur-xl ${sidebarFooterClass}`}
             >
+              {isDeveloper ? (
+                <div className="mb-3">
+                  <label className="sr-only" htmlFor="cabinet-role-preview">
+                    Режим отображения ролей
+                  </label>
+                  <select
+                    id="cabinet-role-preview"
+                    value={role}
+                    onChange={(event) => setRolePreview(event.target.value)}
+                    className={`h-10 w-full cursor-pointer rounded-xl border px-3 text-xs font-semibold transition-colors duration-150 ${rolePreviewSelectClass}`}
+                    title="Режим отображения интерфейса"
+                  >
+                    {ROLE_PREVIEW_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={`mb-3 flex h-10 w-full cursor-pointer items-center justify-center rounded-xl border text-sm font-medium transition-colors duration-150 ${themeBtnClass}`}
+                aria-label={
+                  isDarkTheme
+                    ? 'Включить светлую тему'
+                    : 'Включить тёмную тему'
+                }
+              >
+                <FontAwesomeIcon
+                  icon={isDarkTheme ? faSun : faMoon}
+                  className="mr-2 h-4 w-4"
+                />
+                {isDarkTheme ? 'Светлая тема' : 'Тёмная тема'}
+              </button>
               <button
                 type="button"
                 onClick={handleSignOut}
@@ -622,32 +698,21 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
                   <h1
                     className={`text-xl font-semibold md:text-2xl ${userNameClass}`}
                   >
-                    ActQuest
+                    {resolvedHeaderTitle}
                   </h1>
                 </div>
               </div>
               <div className="flex items-center gap-3 md:gap-4">
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border transition-colors duration-150 ${themeBtnClass}`}
-                  aria-label={
-                    isDarkTheme
-                      ? 'Включить светлую тему'
-                      : 'Включить тёмную тему'
-                  }
-                >
-                  <FontAwesomeIcon
-                    icon={isDarkTheme ? faSun : faMoon}
-                    className="w-4 h-4"
-                  />
-                </button>
                 <div className="hidden text-right md:block">
                   <p className={`text-sm font-semibold ${userNameClass}`}>
                     {userName}
                   </p>
                   <p className={`text-xs ${userRoleClass}`}>
-                    {isUserAdmin({ role }) ? 'Администратор' : 'Участник'}
+                    {role === 'dev'
+                      ? 'Разработчик'
+                      : isUserAdmin({ role })
+                        ? 'Администратор'
+                        : 'Участник'}
                   </p>
                 </div>
                 {userAvatar ? (
@@ -669,16 +734,18 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
             className={`relative z-10 flex-1 px-4 py-6 md:px-8 ${mainTextClass}`}
           >
             <div className="max-w-5xl mx-auto">
-              <div className="mb-6">
-                <h2 className={`text-2xl font-semibold ${pageTitleClass}`}>
-                  {title}
-                </h2>
-                {description ? (
-                  <p className={`mt-1 text-sm ${pageDescriptionClass}`}>
-                    {description}
-                  </p>
-                ) : null}
-              </div>
+              {showPageTitle ? (
+                <div className="mb-6">
+                  <h2 className={`text-2xl font-semibold ${pageTitleClass}`}>
+                    {title}
+                  </h2>
+                  {description ? (
+                    <p className={`mt-1 text-sm ${pageDescriptionClass}`}>
+                      {description}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="space-y-6">{children}</div>
             </div>
           </main>
@@ -744,10 +811,14 @@ CabinetLayout.propTypes = {
   title: PropTypes.string.isRequired,
   description: PropTypes.string,
   activePage: PropTypes.string.isRequired,
+  headerTitle: PropTypes.string,
+  showPageTitle: PropTypes.bool,
 }
 
 CabinetLayout.defaultProps = {
   description: null,
+  headerTitle: null,
+  showPageTitle: false,
 }
 
 export default CabinetLayout

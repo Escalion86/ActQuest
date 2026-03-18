@@ -21,7 +21,7 @@ const NoticeBanner = ({ children, tone, className, centered, variant }) => {
 
   return (
     <div
-      className={`w-full px-3 py-2 text-sm border rounded-xl ${palette[resolvedTone]} ${alignment} ${className}`.trim()}
+      className={`w-full rounded-2xl border px-4 py-3 text-sm ${palette[resolvedTone]} ${alignment} ${className}`.trim()}
     >
       {children}
     </div>

@@ -1,8 +1,9 @@
 import PropTypes from 'prop-types'
+import cn from 'classnames'
 
 export const EditCardIcon = () => (
   <svg
-    className="h-4 w-4"
+    className="h-5 w-5"
     viewBox="0 0 20 20"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -26,7 +27,7 @@ export const EditCardIcon = () => (
 
 export const TeamCardIcon = () => (
   <svg
-    className="h-4 w-4"
+    className="h-5 w-5"
     viewBox="0 0 20 20"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -70,6 +71,9 @@ const CardActionIconButton = ({
   className,
   children,
 }) => {
+  const baseClassName =
+    'inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-cyan-300/90 bg-cyan-50/80 text-cyan-700 shadow-sm transition-all duration-150 hover:scale-105 hover:border-cyan-600 hover:bg-cyan-200 hover:text-cyan-950 hover:shadow-md active:scale-100 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/10 dark:text-[#bdf4ff] dark:shadow-[0_0_0_1px_rgba(0,209,255,0.18)] dark:hover:border-[#00D1FF]/85 dark:hover:bg-[#00D1FF]/28 dark:hover:text-white dark:hover:shadow-[0_0_0_1px_rgba(0,209,255,0.28),0_0_18px_rgba(0,209,255,0.28)] dark:focus:ring-[#00D1FF]/45'
+
   if (Component === 'span' || Component === 'div') {
     return (
       <Component
@@ -82,7 +86,7 @@ const CardActionIconButton = ({
             onClick(event)
           }
         }}
-        className={className}
+        className={cn(baseClassName, 'h-9 w-9', className)}
         aria-label={label}
         title={title || label}
       >
@@ -95,7 +99,7 @@ const CardActionIconButton = ({
     <button
       type="button"
       onClick={onClick}
-      className={className}
+      className={cn(baseClassName, 'h-9 w-9', className)}
       aria-label={label}
       title={title || label}
     >
@@ -116,8 +120,7 @@ CardActionIconButton.propTypes = {
 CardActionIconButton.defaultProps = {
   as: 'button',
   title: null,
-  className:
-    'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-cyan-300 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-600 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:bg-transparent dark:hover:text-violet-100 dark:focus:ring-primary',
+  className: '',
 }
 
 export default CardActionIconButton

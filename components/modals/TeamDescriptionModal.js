@@ -6,6 +6,9 @@ import formatDate from '@helpers/formatDate'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 
+const sectionHeadingClass = 'aq-modal-section-title text-base font-semibold'
+const itemTitleClass = 'aq-modal-item-title font-semibold'
+
 const TeamDescriptionModal = ({
   isOpen,
   onClose,
@@ -19,7 +22,7 @@ const TeamDescriptionModal = ({
     {selectedTeam ? (
       <div className="space-y-6">
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
-          <h4 className="text-base font-semibold text-primary">Описание</h4>
+          <h4 className={sectionHeadingClass}>Описание</h4>
           {selectedTeam.description ? (
             <p className="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
               {selectedTeam.description}
@@ -32,7 +35,7 @@ const TeamDescriptionModal = ({
         </div>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-          <h4 className="text-base font-semibold text-primary">Информация</h4>
+          <h4 className={sectionHeadingClass}>Информация</h4>
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Статус набора</dt>
@@ -75,7 +78,7 @@ const TeamDescriptionModal = ({
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-          <h4 className="text-base font-semibold text-primary">Состав команды</h4>
+          <h4 className={sectionHeadingClass}>Состав команды</h4>
           {selectedTeam.members?.length > 0 ? (
             <ul className="mt-4 space-y-3">
               {selectedTeam.members.map((member) => (
@@ -83,7 +86,7 @@ const TeamDescriptionModal = ({
                   key={member.id}
                   className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
                 >
-                  <p className="font-semibold text-primary">
+                  <p className={itemTitleClass}>
                     {member.name || 'Без имени'}
                     {member.isCaptain ? ' · Капитан' : ''}
                   </p>
@@ -116,14 +119,14 @@ const TeamDescriptionModal = ({
 
         {selectedTeam.games?.length > 0 && (
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-            <h4 className="text-base font-semibold text-primary">Участие в играх</h4>
+            <h4 className={sectionHeadingClass}>Участие в играх</h4>
             <ul className="mt-4 space-y-3">
               {selectedTeam.games.map((game) => (
                 <li
                   key={game.id}
                   className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
                 >
-                  <p className="font-semibold text-primary">{game.name || 'Без названия'}</p>
+                  <p className={itemTitleClass}>{game.name || 'Без названия'}</p>
                   <p className="mt-1 text-xs text-slate-500">
                     Статус: {getGameStatusLabel(game.status)}
                   </p>

@@ -2,6 +2,7 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import NoticeBanner from '@components/NoticeBanner'
 
 const GameCreateModal = ({
   isCreateGameModalOpen,
@@ -22,11 +23,7 @@ const GameCreateModal = ({
                   type="button"
                   onClick={handleCloseCreateGameModal}
                   disabled={isCreatingGame}
-                  className={`inline-flex justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                    isCreatingGame
-                      ? 'cursor-not-allowed border-slate-200 text-slate-400 dark:border-slate-700 dark:text-slate-500'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
-                  }`}
+                  className="aq-modal-btn aq-modal-btn-secondary"
                 >
                   Отмена
                 </button>
@@ -34,11 +31,7 @@ const GameCreateModal = ({
                   type="button"
                   onClick={handleCreateGame}
                   disabled={isCreatingGame || newGameName.trim().length === 0}
-                  className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
-                    isCreatingGame || newGameName.trim().length === 0
-                      ? 'bg-slate-400 cursor-not-allowed'
-                      : 'bg-primary hover:bg-blue-700'
-                  }`}
+                  className="aq-modal-btn aq-modal-btn-primary"
                 >
                   {isCreatingGame ? 'Создание…' : 'Создать'}
                 </button>
@@ -50,15 +43,12 @@ const GameCreateModal = ({
                 Будет создана пустая игра со стандартными настройками. После создания вы сможете настроить сценарий и задания.
               </p>
               {createGameFeedback && (
-                <div
-                  className={`rounded-2xl border p-4 text-sm ${
-                    createGameFeedback.type === 'success'
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                      : 'border-rose-200 bg-rose-50 text-rose-700'
-                  }`}
+                <NoticeBanner
+                  tone={createGameFeedback.type === 'success' ? 'success' : 'error'}
+                  variant="neon"
                 >
                   {createGameFeedback.message}
-                </div>
+                </NoticeBanner>
               )}
               <div className="space-y-2">
                 <label htmlFor="new-game-name" className="text-sm font-semibold text-primary">

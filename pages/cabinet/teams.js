@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
+import NoticeBanner from '@components/NoticeBanner'
 import TeamCreateModal from '@components/modals/TeamCreateModal'
 import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
 import TeamEditModal from '@components/modals/TeamEditModal'
@@ -17,6 +18,7 @@ import { getNounUsers } from '@helpers/getNoun'
 import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import useSnackbar from '@helpers/useSnackbar'
+import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const serializeTeamForComparison = (team) => {
@@ -78,7 +80,9 @@ const TeamsPage = ({
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
-  const userRole = activeSession?.user?.role ?? 'client'
+  const { effectiveRole: userRole } = useCabinetRolePreview(
+    activeSession?.user?.role ?? 'client',
+  )
   const currentUserId =
     activeSession?.user?._id === null || activeSession?.user?._id === undefined
       ? null
@@ -1018,16 +1022,16 @@ const TeamsPage = ({
         {selectedTeam && (!location || teamRestrictionMessage) ? (
           <div className="mb-6 space-y-4">
             {!location && (
-              <div className="p-4 text-sm border text-amber-700 bg-amber-50 border-amber-200 rounded-2xl">
+              <NoticeBanner tone="warning" variant="neon">
                 Не удалось определить площадку пользователя. Сохранение
                 изменений недоступно.
-              </div>
+              </NoticeBanner>
             )}
 
             {teamRestrictionMessage && (
-              <div className="p-4 text-sm border text-amber-700 bg-amber-50 border-amber-200 rounded-2xl">
+              <NoticeBanner tone="warning" variant="neon">
                 {teamRestrictionMessage}
-              </div>
+              </NoticeBanner>
             )}
           </div>
         ) : null}
@@ -1107,7 +1111,7 @@ const TeamsPage = ({
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-primary">
+                            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                               {team.name}
                             </p>
                           </div>

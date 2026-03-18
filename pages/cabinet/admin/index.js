@@ -3,8 +3,10 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import canManageTransactions from '@helpers/canManageTransactions'
 import isUserAdmin from '@helpers/isUserAdmin'
 import getSessionSafe from '@helpers/getSessionSafe'
+import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 
 const adminTools = [
   {
@@ -31,11 +33,23 @@ const adminTools = [
     action: 'Посмотреть отчёты',
     href: '/cabinet/admin/reports',
   },
+  {
+    id: 'transactions',
+    title: 'Транзакции',
+    description:
+      'Ведите учёт доходов и расходов, выдавайте купоны и контролируйте бонусный баланс пользователей.',
+    action: 'Открыть транзакции',
+    href: '/cabinet/admin/transactions',
+  },
 ]
 
 const AdminPage = () => {
   const { data: session } = useSession()
-  const isAdmin = isUserAdmin({ role: session?.user?.role })
+  const { effectiveRole } = useCabinetRolePreview(session?.user?.role ?? 'client')
+  const isAdmin = isUserAdmin({ role: effectiveRole })
+  const tools = canManageTransactions({ role: effectiveRole })
+    ? adminTools
+    : adminTools.filter((tool) => tool.id !== 'transactions')
 
   if (!isAdmin) {
     return (
@@ -70,7 +84,7 @@ const AdminPage = () => {
         activePage="admin"
       >
         <section className="grid gap-6 md:grid-cols-3">
-          {adminTools.map((tool) => (
+          {tools.map((tool) => (
             <article
               key={tool.id}
               className="flex flex-col justify-between p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm"

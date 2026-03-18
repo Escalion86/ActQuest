@@ -10,12 +10,14 @@ import CardActionIconButton, {
   EditCardIcon,
   TeamCardIcon,
 } from '@components/cabinet/CardActionIconButton'
+import NoticeBanner from '@components/NoticeBanner'
 import GameModals from '@components/modals/GameModals'
 import getSessionSafe from '@helpers/getSessionSafe'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import fetchGamesForCabinet from '@helpers/fetchGamesForCabinet'
+import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import { getNounTeams } from '@helpers/getNoun'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
@@ -368,7 +370,9 @@ const GamesPage = ({
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
-  const userRole = activeSession?.user?.role ?? 'client'
+  const { effectiveRole: userRole } = useCabinetRolePreview(
+    activeSession?.user?.role ?? 'client',
+  )
   const currentUserTelegramId = activeSession?.user?.telegramId ?? null
   const currentUserIdString =
     currentUserTelegramId === null || currentUserTelegramId === undefined
@@ -624,16 +628,6 @@ const GamesPage = ({
       return
     }
 
-    const canLoadAnyGames = canEditAllGames || canEditOwnGames
-    if (!canLoadAnyGames) {
-      setGames([])
-      setPersistedGames([])
-      setSelectedGameId(null)
-      setHasMoreGames(false)
-      setLocationFilterError(null)
-      return
-    }
-
     let cancelled = false
 
     const loadFirstPage = async () => {
@@ -670,8 +664,6 @@ const GamesPage = ({
       cancelled = true
     }
   }, [
-    canEditAllGames,
-    canEditOwnGames,
     fetchGamesPage,
     gamesFilterLocation,
     shouldShowLocationFilter,
@@ -1374,21 +1366,6 @@ const GamesPage = ({
     },
     [canEditAllGames, canEditOwnGames, currentUserDbId, currentUserIdString]
   )
-
-  const editRestrictionMessage = useMemo(() => {
-    if (!selectedGame || canEditSelectedGame) {
-      return null
-    }
-
-    if (canEditOwnGames) {
-      const creatorId = selectedGame?.creatorTelegramId ?? ''
-      if (currentUserIdString && creatorId && creatorId !== currentUserIdString) {
-        return 'Эта игра создана другим организатором. Модераторы могут редактировать только собственные игры.'
-      }
-    }
-
-    return 'Недостаточно прав для редактирования игры. Обратитесь к администратору.'
-  }, [canEditOwnGames, canEditSelectedGame, currentUserIdString, selectedGame])
 
   const updateSelectedGame = useCallback(
     (updater) => {
@@ -2635,14 +2612,23 @@ const GamesPage = ({
 
   const balanceClass = financesSummary.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'
   const isCardsDisplay = gamesDisplayMode === 'cards'
+  const pageTitle = isUpcomingView
+    ? 'Предстоящие игры'
+    : isPastView
+      ? 'Прошедшие игры'
+      : 'Игры'
+  const pageDescription = isUpcomingView || isPastView
+    ? 'Выберите игру из списка и откройте детали.'
+    : 'Редактируйте сценарии, управляйте статусами и готовьте квесты к запуску.'
+
   return (
     <>
       <Head>
         <title>ActQuest — Игры</title>
       </Head>
       <CabinetLayout
-        title="Игры"
-        description="Редактируйте сценарии, управляйте статусами и готовьте квесты к запуску."
+        title={pageTitle}
+        description={pageDescription}
         activePage="games"
       >
         <section className="grid gap-6 md:grid-cols-5">
@@ -2651,7 +2637,7 @@ const GamesPage = ({
               <button
                 type="button"
                 onClick={handleOpenRegisterModal}
-                className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               >
                 Зарегистрироваться на игру по id
               </button>
@@ -2668,7 +2654,7 @@ const GamesPage = ({
                 <button
                   type="button"
                   onClick={() => setGamesDisplayMode('list')}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                     gamesDisplayMode === 'list'
                       ? 'bg-primary text-white'
                       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -2679,7 +2665,7 @@ const GamesPage = ({
                 <button
                   type="button"
                   onClick={() => setGamesDisplayMode('cards')}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                     gamesDisplayMode === 'cards'
                       ? 'bg-primary text-white'
                       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -2741,27 +2727,18 @@ const GamesPage = ({
             )}
 
             {selectedGame && !location && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+              <NoticeBanner tone="warning" variant="neon">
                 Не удалось определить площадку пользователя. Сохранение изменений недоступно.
-              </div>
+              </NoticeBanner>
             )}
 
             {feedback && (
-              <div
-                className={`rounded-2xl border p-4 text-sm ${
-                  feedback.type === 'success'
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                    : 'bg-rose-50 border-rose-200 text-rose-700'
-                }`}
+              <NoticeBanner
+                tone={feedback.type === 'success' ? 'success' : 'error'}
+                variant="neon"
               >
                 {feedback.message}
-              </div>
-            )}
-
-            {selectedGame && editRestrictionMessage && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-                {editRestrictionMessage}
-              </div>
+              </NoticeBanner>
             )}
 
             {isLocationFilterLoading && shouldShowLocationFilter ? (

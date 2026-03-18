@@ -67,7 +67,14 @@ const useErrors = () => {
       payType: (data) =>
         !data
           ? setError({ payType: 'Введите тип оплаты' })
-          : !['card', 'cash', 'remittance', 'coupon'].includes(data)
+          : ![
+              'card',
+              'cash',
+              'remittance',
+              'transfer',
+              'invoice',
+              'coupon',
+            ].includes(data)
           ? setError({ payType: 'Введен некорректный тип оплаты' })
           : null,
       payDirection: (data) =>

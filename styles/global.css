@@ -392,3 +392,91 @@ blockquote {
   padding-right: 2.9rem !important;
   background-position: right 0.5rem center;
 }
+
+/* AmountStepperInput */
+.aq-amount-step-input::-webkit-outer-spin-button,
+.aq-amount-step-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.aq-amount-step-input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+  padding-left: 3rem !important;
+  padding-right: 3rem !important;
+  text-align: center;
+}
+
+/* Unified modal footer buttons */
+.aq-modal-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 2.5rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 180ms ease;
+  cursor: pointer;
+}
+
+.aq-modal-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.aq-modal-btn-secondary {
+  border: 1px solid rgb(203 213 225 / 1);
+  background: rgb(255 255 255 / 1);
+  color: rgb(51 65 85 / 1);
+}
+
+.aq-modal-btn-secondary:hover:not(:disabled) {
+  background: rgb(241 245 249 / 1);
+}
+
+.aq-modal-btn-primary {
+  border: 1px solid rgb(34 211 238 / 0.45);
+  background: rgb(6 182 212 / 0.14);
+  color: rgb(14 116 144 / 1);
+}
+
+.aq-modal-btn-primary:hover:not(:disabled) {
+  background: rgb(6 182 212 / 0.22);
+}
+
+.dark .aq-modal-btn-secondary {
+  border-color: rgb(71 85 105 / 1);
+  background: rgb(2 6 23 / 0.88);
+  color: rgb(226 232 240 / 1);
+}
+
+.dark .aq-modal-btn-secondary:hover:not(:disabled) {
+  background: rgb(15 23 42 / 0.95);
+}
+
+.dark .aq-modal-btn-primary {
+  border-color: rgb(0 209 255 / 0.45);
+  background: rgb(0 209 255 / 0.14);
+  color: rgb(186 230 253 / 1);
+}
+
+.dark .aq-modal-btn-primary:hover:not(:disabled) {
+  background: rgb(0 209 255 / 0.22);
+}
+
+/* Unified readable titles inside view modals */
+.aq-modal-section-title {
+  color: rgb(15 23 42 / 1);
+}
+
+.aq-modal-item-title {
+  color: rgb(15 23 42 / 1);
+}
+
+.dark .aq-modal-section-title,
+.dark .aq-modal-item-title {
+  color: #f3ecff !important;
+}

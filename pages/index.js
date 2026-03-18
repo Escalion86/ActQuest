@@ -69,6 +69,14 @@ const normalize = (value) =>
 const parsePercent = (value) =>
   Number.parseFloat(String(value).replace('%', ''))
 
+const normalizeExternalUrl = (value) => {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
 const orientation = (p, q, r) => {
   const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
   if (Math.abs(val) < 0.0001) return 0
@@ -596,6 +604,7 @@ const Index2Page = () => {
   const [archiveDragActive, setArchiveDragActive] = useState(false)
   const [archiveStatus, setArchiveStatus] = useState('')
   const [isArchiveUploadUnlocked, setIsArchiveUploadUnlocked] = useState(false)
+  const [projectChatUrl, setProjectChatUrl] = useState('')
   const [visibleFlowCount, setVisibleFlowCount] = useState(0)
   const transitionTimeoutRef = useRef(null)
   const inputGlitchTimeoutRef = useRef(null)
@@ -1062,6 +1071,49 @@ const Index2Page = () => {
       cancelled = true
     }
   }, [isScenarioFallbackMode, selectedScenarioLocation, stage])
+
+  useEffect(() => {
+    if (stage !== 'main' || !selectedScenarioLocation) return
+
+    let cancelled = false
+
+    const fetchProjectChatUrl = async () => {
+      try {
+        const params = new URLSearchParams({
+          collection: 'sitesettings',
+          limit: '1',
+          select: 'chatUrl',
+        })
+        const response = await fetch(
+          `/api/${selectedScenarioLocation}/custom?${params.toString()}`,
+        )
+        const json = await response.json()
+
+        if (!response.ok || cancelled) {
+          if (!cancelled) setProjectChatUrl('')
+          return
+        }
+
+        const settingsDoc = Array.isArray(json?.data)
+          ? json.data[0]
+          : json?.data
+        const nextUrl = normalizeExternalUrl(settingsDoc?.chatUrl)
+        if (!cancelled) {
+          setProjectChatUrl(nextUrl)
+        }
+      } catch {
+        if (!cancelled) {
+          setProjectChatUrl('')
+        }
+      }
+    }
+
+    fetchProjectChatUrl()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedScenarioLocation, stage])
 
   useEffect(() => {
     if (stage !== 'main') return
@@ -2522,6 +2574,18 @@ const Index2Page = () => {
                 >
                   Начать игру
                 </Link>
+                {projectChatUrl ? (
+                  <div className="mt-4">
+                    <a
+                      href={projectChatUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex cursor-pointer rounded-xl border border-[#7A00FF]/45 bg-[#7A00FF]/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#d9c7ff] transition hover:bg-[#7A00FF]/20"
+                    >
+                      Чат проекта
+                    </a>
+                  </div>
+                ) : null}
               </div>
             </section>
           </main>

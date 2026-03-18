@@ -26,11 +26,7 @@ const TeamCreateModal = ({
           type="button"
           onClick={onClose}
           disabled={isCreatingTeam}
-          className={`inline-flex justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-            isCreatingTeam
-              ? 'border-slate-200 text-slate-400 dark:border-slate-700 dark:text-slate-500'
-              : 'border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
-          }`}
+          className="aq-modal-btn aq-modal-btn-secondary"
         >
           Отмена
         </button>
@@ -38,11 +34,7 @@ const TeamCreateModal = ({
           type="button"
           onClick={onCreateTeam}
           disabled={isCreateActionDisabled}
-          className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 ${
-            isCreateActionDisabled
-              ? 'bg-slate-400'
-              : 'bg-primary hover:bg-blue-700'
-          }`}
+          className="aq-modal-btn aq-modal-btn-primary"
         >
           {isCreatingTeam ? 'Создание…' : 'Создать команду'}
         </button>

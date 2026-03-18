@@ -24,16 +24,17 @@ const buildGamesQuery = ({
 
   const canLoadAllGames = userRole === 'admin' || userRole === 'dev'
   const canLoadOwnGames = userRole === 'moder' && creatorTelegramId !== null
+  const canLoadPublicGames = !canLoadAllGames && !canLoadOwnGames
 
-  if (!canLoadAllGames && !canLoadOwnGames) {
+  if (!canLoadAllGames && !canLoadOwnGames && !canLoadPublicGames) {
     return null
   }
 
   const query = canLoadAllGames
     ? {}
-    : {
-        creatorTelegramId,
-      }
+    : canLoadOwnGames
+      ? { creatorTelegramId }
+      : { hidden: { $ne: true } }
 
   if (normalizedLocation) {
     query.location = normalizedLocation

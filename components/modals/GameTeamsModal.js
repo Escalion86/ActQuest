@@ -2,6 +2,7 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import NoticeBanner from '@components/NoticeBanner'
 
 const GameTeamsModal = ({
   selectedGame,
@@ -22,9 +23,9 @@ const GameTeamsModal = ({
                   >
                     <div className="space-y-5">
                       {teamsModalState.error && (
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                        <NoticeBanner tone="error" variant="neon">
                           {teamsModalState.error}
-                        </div>
+                        </NoticeBanner>
                       )}
 
                       <div className="space-y-4">

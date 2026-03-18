@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
+import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
+import TeamEditModal from '@components/modals/TeamEditModal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
-import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { getNounUsers } from '@helpers/getNoun'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
+import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 
@@ -38,14 +41,6 @@ const buildTeamUpdatePayload = (team) => {
   }
 }
 
-const normalizePhoneLink = (phone) => {
-  if (!phone) {
-    return ''
-  }
-
-  return phone.replace(/[^+\d]/g, '')
-}
-
 const AdminTeamsPage = ({
   initialTeams,
   initialHasMore,
@@ -56,7 +51,10 @@ const AdminTeamsPage = ({
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
-  const isAdmin = isUserAdmin({ role: activeSession?.user?.role })
+  const { effectiveRole } = useCabinetRolePreview(
+    activeSession?.user?.role ?? 'client',
+  )
+  const isAdmin = isUserAdmin({ role: effectiveRole })
 
   const [teams, setTeams] = useState(safeInitialTeams)
   const [persistedTeams, setPersistedTeams] = useState(safeInitialTeams)
@@ -65,9 +63,12 @@ const AdminTeamsPage = ({
   const [visibilityFilter, setVisibilityFilter] = useState('all')
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [hasMoreTeams, setHasMoreTeams] = useState(Boolean(initialHasMore))
   const [isLoadingMoreTeams, setIsLoadingMoreTeams] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
+  const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
+  const copyTimeoutRef = useRef(null)
   const [teamDescriptionModal, setTeamDescriptionModal] = useState({
     isOpen: false,
     title: '',
@@ -168,9 +169,42 @@ const AdminTeamsPage = ({
     setMemberActionId(null)
   }, [selectedTeamId])
 
+  useEffect(() => {
+    if (!isEditModalOpen) {
+      setIsTeamIdCopied(false)
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+        copyTimeoutRef.current = null
+      }
+    }
+  }, [isEditModalOpen])
+
+  useEffect(() => () => {
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current)
+      copyTimeoutRef.current = null
+    }
+  }, [])
+
   const closeTeamDescriptionModal = useCallback(() => {
     setTeamDescriptionModal({ isOpen: false, title: '', description: '' })
   }, [])
+
+  const handleOpenEditModal = useCallback((teamId) => {
+    if (!teamId) {
+      return
+    }
+    setSelectedTeamId(teamId)
+    setIsEditModalOpen(true)
+    setFeedback(null)
+  }, [])
+
+  const handleCloseEditModal = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+    setIsEditModalOpen(false)
+  }, [isSaving])
 
   const isDirty = useMemo(() => {
     if (!selectedTeam || !persistedSelectedTeam) {
@@ -274,6 +308,7 @@ const AdminTeamsPage = ({
       )
 
       setFeedback({ type: 'success', message: 'Изменения сохранены' })
+      setIsEditModalOpen(false)
     } catch (error) {
       console.error('Failed to update team', error)
       setFeedback({
@@ -284,6 +319,41 @@ const AdminTeamsPage = ({
       setIsSaving(false)
     }
   }, [canManageSelectedTeam, location, selectedTeam, selectedTeamId])
+
+  const handleModalPrimaryAction = useCallback(() => {
+    if (!isDirty) {
+      handleCloseEditModal()
+      return
+    }
+    handleSaveTeam()
+  }, [handleCloseEditModal, handleSaveTeam, isDirty])
+
+  const handleCopyTeamId = useCallback(() => {
+    const value = selectedTeam?.id
+    if (!value || typeof window === 'undefined') {
+      return
+    }
+
+    const copyText = value.toString()
+    const copyPromise = navigator?.clipboard?.writeText
+      ? navigator.clipboard.writeText(copyText)
+      : Promise.reject(new Error('Clipboard API unavailable'))
+
+    copyPromise
+      .then(() => {
+        setIsTeamIdCopied(true)
+        if (copyTimeoutRef.current) {
+          clearTimeout(copyTimeoutRef.current)
+        }
+        copyTimeoutRef.current = setTimeout(() => {
+          setIsTeamIdCopied(false)
+          copyTimeoutRef.current = null
+        }, 2000)
+      })
+      .catch(() => {
+        setIsTeamIdCopied(false)
+      })
+  }, [selectedTeam?.id])
 
   const handleRemoveMember = useCallback(
     async (memberId) => {
@@ -536,66 +606,77 @@ const AdminTeamsPage = ({
         description="Редактируйте составы, управляйте капитанами и следите за активностью команд."
         activePage="admin"
       >
-        <section className="grid gap-6 md:grid-cols-5">
-          <div className="md:col-span-2 space-y-4">
-            <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-              <p className="text-sm font-semibold text-primary dark:text-slate-100">Все команды</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Загружено: {summary.total}. Открытых: {summary.open}. Закрытых: {summary.closed}.
-              </p>
+        <section className="grid gap-6">
+          <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+            <p className="text-sm font-semibold text-primary dark:text-slate-100">Все команды</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Загружено: {summary.total}. Открытых: {summary.open}. Закрытых: {summary.closed}.
+            </p>
+          </div>
+
+          <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-3">
+            <div>
+              <label htmlFor="team-search" className="text-xs font-semibold text-slate-500">
+                Поиск
+              </label>
+              <input
+                id="team-search"
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Введите название команды или участника"
+                className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+              />
             </div>
 
-            <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-3">
-              <div>
-                <label htmlFor="team-search" className="text-xs font-semibold text-slate-500">
-                  Поиск
-                </label>
-                <input
-                  id="team-search"
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Введите название команды или участника"
-                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="team-visibility-filter" className="text-xs font-semibold text-slate-500">
-                  Доступность
-                </label>
-                <select
-                  id="team-visibility-filter"
-                  value={visibilityFilter}
-                  onChange={(event) => setVisibilityFilter(event.target.value)}
-                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-                >
-                  <option value="all">Все команды</option>
-                  <option value="open">Открытые</option>
-                  <option value="closed">Закрытые</option>
-                </select>
-              </div>
+            <div>
+              <label htmlFor="team-visibility-filter" className="text-xs font-semibold text-slate-500">
+                Доступность
+              </label>
+              <select
+                id="team-visibility-filter"
+                value={visibilityFilter}
+                onChange={(event) => setVisibilityFilter(event.target.value)}
+                className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                <option value="all">Все команды</option>
+                <option value="open">Открытые</option>
+                <option value="closed">Закрытые</option>
+              </select>
             </div>
+          </div>
 
-            {teamsForList.length > 0 ? (
-              <div className="space-y-3">
-                <ul className="space-y-3">
-                  {teamsForList.map((team) => (
-                    <li key={team.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleTeamCardClick(team)}
-                        className={`w-full cursor-pointer text-left p-4 border rounded-2xl transition ${
-                          selectedTeamId === team.id
-                            ? 'border-primary bg-blue-50 shadow-sm dark:border-[#7A00FF]/60 dark:bg-[#140a2e]'
-                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50 dark:hover:border-[#7A00FF]/60 dark:hover:bg-[#110a24]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-primary dark:text-slate-100">{team.name}</p>
-                            <p className="text-xs text-slate-500">{team.membersLabel}</p>
-                          </div>
+          {feedback && (
+            <NoticeBanner
+              tone={feedback.type === 'success' ? 'success' : 'error'}
+              variant="neon"
+            >
+              {feedback.message}
+            </NoticeBanner>
+          )}
+
+          {!location && (
+            <NoticeBanner tone="warning" variant="neon">
+              Не удалось определить площадку пользователя. Редактирование команд недоступно.
+            </NoticeBanner>
+          )}
+
+          {teamsForList.length > 0 ? (
+            <div className="space-y-3">
+              <ul className="space-y-3">
+                {teamsForList.map((team) => (
+                  <li key={team.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleTeamCardClick(team)}
+                      className="w-full cursor-pointer text-left p-4 border rounded-2xl transition border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50 dark:hover:border-[#7A00FF]/60 dark:hover:bg-[#110a24]"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-primary dark:text-slate-100">{team.name}</p>
+                          <p className="text-xs text-slate-500">{team.membersLabel}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <span
                             className={`text-xs font-medium px-2 py-1 rounded-full ${
                               team.open
@@ -605,293 +686,62 @@ const AdminTeamsPage = ({
                           >
                             {team.open ? 'Открыта' : 'Закрыта'}
                           </span>
-                        </div>
-                        <p className="mt-2 text-xs text-slate-400">Обновлено {team.updatedLabel}</p>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {hasMoreTeams && (
-                  <button
-                    type="button"
-                    onClick={handleLoadMoreTeams}
-                    disabled={isLoadingMoreTeams}
-                    className={`w-full rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                      isLoadingMoreTeams
-                        ? 'cursor-wait border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500'
-                        : 'cursor-pointer border-cyan-400/60 text-cyan-200 hover:bg-cyan-500/10'
-                    }`}
-                  >
-                    {isLoadingMoreTeams ? 'Загружаем…' : 'Загрузить ещё'}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                Команды не найдены. Измените параметры фильтра или сбросьте поиск.
-              </div>
-            )}
-          </div>
-
-          <div className="md:col-span-3">
-            {selectedTeam ? (
-              <div className="space-y-6">
-                {!location && (
-                  <div className="p-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl">
-                    Не удалось определить площадку пользователя. Сохранение изменений недоступно.
-                  </div>
-                )}
-
-                {feedback && (
-                  <div
-                    className={`p-4 text-sm border rounded-2xl ${
-                      feedback.type === 'success'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                        : 'bg-rose-50 border-rose-200 text-rose-700'
-                    }`}
-                  >
-                    {feedback.message}
-                  </div>
-                )}
-
-                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
-                        selectedTeam.open
-                          ? 'border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
-                          : 'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#d9c8ff]'
-                      }`}
-                    >
-                      {selectedTeam.open ? 'Открыта для заявок' : 'Закрытый состав'}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      Участников: {selectedTeam.membersCount ?? 0}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      Участвует в играх: {selectedTeam.gamesCount ?? 0}
-                    </span>
-                    {selectedTeam.updatedAt && (
-                      <span className="text-xs text-slate-500">
-                        Обновлено {formatRelativeTimeFromNow(selectedTeam.updatedAt)}
-                      </span>
-                    )}
-                    {selectedTeam.createdAt && (
-                      <span className="text-xs text-slate-400">
-                        Создана {formatRelativeTimeFromNow(selectedTeam.createdAt)}
-                      </span>
-                    )}
-                  </div>
-                </section>
-
-                <fieldset disabled={!canManageSelectedTeam} className="space-y-6 border-0 p-0 m-0">
-                  <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label htmlFor="team-name" className="text-sm font-semibold text-primary dark:text-slate-100">
-                          Название команды
-                        </label>
-                        <input
-                          id="team-name"
-                          type="text"
-                          value={selectedTeam.name}
-                          onChange={(event) => handleTeamFieldChange('name', event.target.value)}
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-primary dark:text-slate-100" htmlFor="team-open">
-                          Доступность команды
-                        </label>
-                        <div className="flex items-center gap-3 mt-3">
-                          <input
-                            id="team-open"
-                            type="checkbox"
-                            checked={Boolean(selectedTeam.open)}
-                            onChange={(event) => handleTeamFieldChange('open', event.target.checked)}
-                            className="w-4 h-4 text-primary border-slate-300 rounded"
-                          />
-                          <span className="text-sm text-slate-600">
-                            Разрешить новым участникам подавать заявки
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor="team-description" className="text-sm font-semibold text-primary dark:text-slate-100">
-                        Описание
-                      </label>
-                      <textarea
-                        id="team-description"
-                        value={selectedTeam.description}
-                        onChange={(event) => handleTeamFieldChange('description', event.target.value)}
-                        rows={5}
-                        className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
-                      />
-                    </div>
-                  </section>
-
-                  <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Состав команды</h2>
-                      {selectedTeam.captain && (
-                        <span className="text-xs text-slate-500">
-                          Капитан: {selectedTeam.captain.name || 'не указан'}
-                        </span>
-                      )}
-                    </div>
-
-                    {selectedTeam.members?.length > 0 ? (
-                      <div className="space-y-3">
-                        {selectedTeam.members.map((member) => {
-                          const phoneLink = normalizePhoneLink(member.phone)
-                          const isProcessing = memberActionId === member.id
-
-                          return (
-                            <div
-                              key={member.id}
-                              className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-900/80 shadow-sm"
+                          {canManageSelectedTeam ? (
+                            <CardActionIconButton
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleOpenEditModal(team.id)
+                              }}
+                              label="Редактировать команду"
                             >
-                              <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-primary dark:text-slate-100">
-                                    {member.name || 'Без имени'}
-                                    {member.isCaptain ? ' · Капитан' : ''}
-                                  </p>
-                                  {member.username && (
-                                    <p className="mt-1 text-xs text-slate-500">@{member.username}</p>
-                                  )}
-                                  {member.userRole && (
-                                    <p className="mt-1 text-xs text-slate-400">
-                                      Роль в системе: {member.userRole}
-                                    </p>
-                                  )}
-                                  {!member.hasLinkedUser && (
-                                    <p className="mt-1 text-xs text-amber-600">
-                                      Профиль пользователя не найден в глобальной базе.
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="text-right">
-                                  {member.phone && (
-                                    <a
-                                      href={phoneLink ? `tel:${phoneLink}` : undefined}
-                                      className="block text-xs text-primary hover:underline dark:text-cyan-300"
-                                    >
-                                      {member.phone}
-                                    </a>
-                                  )}
-                                </div>
-                              </div>
-
-                              {canManageSelectedTeam && (
-                                <div className="flex flex-col gap-2 mt-3 md:flex-row">
-                                  {!member.isCaptain && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSetCaptain(member.id)}
-                                      disabled={isProcessing}
-                                      className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
-                                        isProcessing
-                                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                                          : 'border-primary text-primary hover:bg-blue-50 dark:border-[#7A00FF]/60 dark:text-slate-100 dark:hover:bg-[#110a24]'
-                                      }`}
-                                    >
-                                      Назначить капитаном
-                                    </button>
-                                  )}
-                                  {!member.isCaptain && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRemoveMember(member.id)}
-                                      disabled={isProcessing}
-                                      className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
-                                        isProcessing
-                                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                                          : 'border-rose-200 text-rose-600 hover:bg-rose-50'
-                                      }`}
-                                    >
-                                      Удалить из команды
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
+                              <EditCardIcon />
+                            </CardActionIconButton>
+                          ) : null}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-slate-500">
-                        В команде пока нет участников.
-                      </p>
-                    )}
-                  </section>
-
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                    <button
-                      type="button"
-                      onClick={handleSaveTeam}
-                      disabled={!canManageSelectedTeam || !location || !isDirty || isSaving}
-                      className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-                        !canManageSelectedTeam || !location || !isDirty || isSaving
-                          ? 'bg-slate-400 cursor-not-allowed'
-                          : 'bg-primary hover:bg-blue-700'
-                      }`}
-                    >
-                      {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
+                      <p className="mt-2 text-xs text-slate-400">Обновлено {team.updatedLabel}</p>
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleResetTeam}
-                      disabled={!canManageSelectedTeam || !isDirty}
-                      className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
-                        !canManageSelectedTeam || !isDirty
-                          ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                          : 'border-primary text-primary hover:bg-blue-50 dark:border-[#7A00FF]/60 dark:text-slate-100 dark:hover:bg-[#110a24]'
-                      }`}
-                    >
-                      Отменить изменения
-                    </button>
-                  </div>
-                </fieldset>
-
-                <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-                  <h3 className="text-base font-semibold text-primary dark:text-slate-100">Игры команды</h3>
-
-                  {selectedTeam.games?.length > 0 ? (
-                    <ul className="space-y-3">
-                      {selectedTeam.games.map((game) => (
-                        <li
-                          key={game.id}
-                          className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-1 md:flex-row md:items-center md:justify-between"
-                        >
-                          <div>
-                            <p className="text-sm font-semibold text-primary dark:text-slate-100">{game.name || 'Без названия'}</p>
-                            <p className="text-xs text-slate-500">
-                              Статус: {getGameStatusLabel(game.status)}
-                            </p>
-                          </div>
-                          <p className="text-xs text-slate-400">
-                            {game.dateStart
-                              ? `Старт ${formatRelativeTimeFromNow(game.dateStart)}`
-                              : 'Дата старта неизвестна'}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-slate-500">Команда ещё не участвовала в играх.</p>
-                  )}
-                </section>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full p-6 bg-white dark:bg-slate-900/80 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
-                <p className="text-sm text-slate-500">Выберите команду из списка слева, чтобы просмотреть детали.</p>
-              </div>
-            )}
-          </div>
+                  </li>
+                ))}
+              </ul>
+              {hasMoreTeams && (
+                <button
+                  type="button"
+                  onClick={handleLoadMoreTeams}
+                  disabled={isLoadingMoreTeams}
+                  className={`w-full rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                    isLoadingMoreTeams
+                      ? 'cursor-wait border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500'
+                      : 'cursor-pointer border-cyan-400/60 text-cyan-200 hover:bg-cyan-500/10'
+                  }`}
+                >
+                  {isLoadingMoreTeams ? 'Загружаем…' : 'Загрузить ещё'}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+              Команды не найдены. Измените параметры фильтра или сбросьте поиск.
+            </div>
+          )}
         </section>
+        <TeamEditModal
+          selectedTeam={selectedTeam}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          canManageSelectedTeam={canManageSelectedTeam}
+          isSaving={isSaving}
+          onTeamFieldChange={handleTeamFieldChange}
+          onCopyTeamId={handleCopyTeamId}
+          isTeamIdCopied={isTeamIdCopied}
+          onModalPrimaryAction={handleModalPrimaryAction}
+          isDirty={isDirty}
+          onResetTeam={handleResetTeam}
+          memberActionId={memberActionId}
+          onSetCaptain={handleSetCaptain}
+          onRemoveMember={handleRemoveMember}
+          location={location}
+        />
         <Modal
           isOpen={teamDescriptionModal.isOpen}
           onClose={closeTeamDescriptionModal}

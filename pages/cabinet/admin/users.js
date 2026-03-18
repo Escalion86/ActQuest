@@ -7,16 +7,21 @@ import { useSession } from 'next-auth/react'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
+import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import fetchAdminUsersForCabinet from '@helpers/fetchAdminUsersForCabinet'
+import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import { USERS_ROLES } from '@helpers/constants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const USERS_PAGE_SIZE = 10
+const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
+const modalItemTitleClass = 'aq-modal-item-title text-lg font-semibold'
+const modalItemSmallTitleClass = 'aq-modal-item-title text-sm font-semibold'
 
 const roleLabels = {
   client: 'Пользователь',
@@ -76,7 +81,10 @@ const ManageUsersPage = ({
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
-  const isAdmin = isUserAdmin({ role: activeSession?.user?.role })
+  const { effectiveRole } = useCabinetRolePreview(
+    activeSession?.user?.role ?? 'client',
+  )
+  const isAdmin = isUserAdmin({ role: effectiveRole })
 
   const [users, setUsers] = useState(safeInitialUsers)
   const [persistedUsers, setPersistedUsers] = useState(safeInitialUsers)
@@ -619,26 +627,23 @@ const ManageUsersPage = ({
           {selectedUser ? (
             <div className="space-y-6">
               {!location && (
-                <div className="p-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-2xl dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
+                <NoticeBanner tone="warning" variant="neon">
                   Не удалось определить площадку пользователя. Сохранение изменений недоступно.
-                </div>
+                </NoticeBanner>
               )}
 
               {feedback && (
-                <div
-                  className={`p-4 text-sm border rounded-2xl ${
-                    feedback.type === 'success'
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-200'
-                      : 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-500/10 dark:border-rose-500/30 dark:text-rose-200'
-                  }`}
+                <NoticeBanner
+                  tone={feedback.type === 'success' ? 'success' : 'error'}
+                  variant="neon"
                 >
                   {feedback.message}
-                </div>
+                </NoticeBanner>
               )}
 
               <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-6">
                 <div>
-                  <h2 className="text-lg font-semibold text-primary">
+                  <h2 className={modalItemTitleClass}>
                     {selectedUser.name || 'Без имени'}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
@@ -667,7 +672,7 @@ const ManageUsersPage = ({
                 </div>
 
                 <div>
-                  <label htmlFor="user-role" className="text-sm font-semibold text-primary">
+                  <label htmlFor="user-role" className={modalItemSmallTitleClass}>
                     Роль в системе
                   </label>
                   <select
@@ -731,7 +736,7 @@ const ManageUsersPage = ({
               </section>
 
               <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-                <h3 className="text-base font-semibold text-primary">Команды пользователя</h3>
+                <h3 className={modalSectionTitleClass}>Команды пользователя</h3>
 
                 {selectedUser.teams.length > 0 ? (
                   <ul className="space-y-3">
@@ -741,7 +746,7 @@ const ManageUsersPage = ({
                         className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
                       >
                         <div>
-                          <p className="text-sm font-semibold text-primary">{team.name || 'Без названия'}</p>
+                          <p className={modalItemSmallTitleClass}>{team.name || 'Без названия'}</p>
                           <p className="text-xs text-slate-500">
                             {team.isCaptain ? 'Капитан' : 'Участник'} · Игр: {team.gamesCount}
                           </p>
@@ -762,7 +767,7 @@ const ManageUsersPage = ({
               </section>
 
               <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-                <h3 className="text-base font-semibold text-primary">Дополнительная информация</h3>
+                <h3 className={modalSectionTitleClass}>Дополнительная информация</h3>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>

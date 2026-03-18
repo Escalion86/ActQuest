@@ -2,6 +2,7 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import NoticeBanner from '@components/NoticeBanner'
 
 const GameRegisterModal = ({
   isRegisterModalOpen,
@@ -28,11 +29,7 @@ const GameRegisterModal = ({
                   type="button"
                   onClick={handleCloseRegisterModal}
                   disabled={isRegisterSubmitting}
-                  className={`inline-flex justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                    isRegisterSubmitting
-                      ? 'cursor-not-allowed border-slate-200 text-slate-400 dark:border-slate-700 dark:text-slate-500'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
-                  }`}
+                  className="aq-modal-btn aq-modal-btn-secondary"
                 >
                   Отмена
                 </button>
@@ -46,15 +43,7 @@ const GameRegisterModal = ({
                     !location ||
                     !currentUserId
                   }
-                  className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
-                    isRegisterSubmitting ||
-                    !registerTeamId ||
-                    registerGameId.trim().length === 0 ||
-                    !location ||
-                    !currentUserId
-                      ? 'bg-slate-400 cursor-not-allowed'
-                      : 'bg-primary hover:bg-blue-700'
-                  }`}
+                  className="aq-modal-btn aq-modal-btn-primary"
                 >
                   {isRegisterSubmitting ? 'Регистрация…' : 'Зарегистрироваться'}
                 </button>
@@ -66,20 +55,17 @@ const GameRegisterModal = ({
                 Укажите игру и команду, чтобы зарегистрировать её на участие. Команда должна принадлежать вам как капитану.
               </p>
               {registerFeedback && (
-                <div
-                  className={`rounded-2xl border p-4 text-sm ${
-                    registerFeedback.type === 'success'
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                      : 'border-rose-200 bg-rose-50 text-rose-700'
-                  }`}
+                <NoticeBanner
+                  tone={registerFeedback.type === 'success' ? 'success' : 'error'}
+                  variant="neon"
                 >
                   {registerFeedback.message}
-                </div>
+                </NoticeBanner>
               )}
               {(!location || !currentUserId) && (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                <NoticeBanner tone="warning" variant="neon">
                   Не удалось определить пользователя или площадку для регистрации.
-                </div>
+                </NoticeBanner>
               )}
               <div className="space-y-2">
                 <label htmlFor="register-team-select" className="text-sm font-semibold text-primary">

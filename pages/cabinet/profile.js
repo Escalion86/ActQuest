@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import ImagesInput from '@components/cabinet/ImagesInput'
+import NoticeBanner from '@components/NoticeBanner'
 import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -282,14 +283,14 @@ const ProfilePage = ({ initialProfile }) => {
             </div>
 
             {saveState.error ? (
-              <div className="px-4 py-3 text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl">
+              <NoticeBanner tone="error" variant="neon">
                 {saveState.error}
-              </div>
+              </NoticeBanner>
             ) : null}
             {saveState.isSaved ? (
-              <div className="px-4 py-3 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <NoticeBanner tone="success" variant="neon">
                 Профиль обновлён.
-              </div>
+              </NoticeBanner>
             ) : null}
 
             <div className="flex flex-col gap-3 md:flex-row">
@@ -301,7 +302,7 @@ const ProfilePage = ({ initialProfile }) => {
                 {saveState.isSaving ? 'Сохраняем…' : 'Сохранить профиль'}
               </button>
               {saveState.isSaved ? (
-                <span className="inline-flex items-center px-5 py-3 text-sm font-semibold text-emerald-600 bg-emerald-50 rounded-xl">
+                <span className="inline-flex items-center rounded-xl border border-[#1fdc95]/35 bg-[#1fdc95]/12 px-5 py-3 text-sm font-semibold text-emerald-700 dark:text-[#bdf7d8]">
                   Изменения сохранены
                 </span>
               ) : null}

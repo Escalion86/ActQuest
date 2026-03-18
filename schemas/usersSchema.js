@@ -73,6 +73,10 @@ const usersSchema = {
     type: [String],
     default: [],
   },
+  bonusBalance: {
+    type: Number,
+    default: 0,
+  },
   location: {
     type: {
       date: Date,

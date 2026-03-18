@@ -7,6 +7,7 @@ import CabinetLayout from '@components/cabinet/CabinetLayout'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
+import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const roleLabels = {
@@ -75,7 +76,10 @@ const createEmptyReports = () => ({
 const ReportsPage = ({ initialReports, initialLocation, session: initialSession }) => {
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
-  const isAdmin = isUserAdmin({ role: activeSession?.user?.role })
+  const { effectiveRole } = useCabinetRolePreview(
+    activeSession?.user?.role ?? 'client',
+  )
+  const isAdmin = isUserAdmin({ role: effectiveRole })
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
   const summarySections = useMemo(() => {
@@ -115,11 +119,6 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
       },
     ]
   }, [initialReports.summary])
-
-  const rolesTotal = useMemo(
-    () => initialReports.roles.reduce((acc, role) => acc + role.count, 0),
-    [initialReports.roles]
-  )
 
   if (!isAdmin) {
     return (
@@ -174,43 +173,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
           ))}
         </section>
 
-        <section className="grid gap-6 mt-6 md:grid-cols-2">
-          <article className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Распределение ролей</h2>
-              <span className="text-xs text-slate-500">
-                Всего: {numberFormatter.format(rolesTotal)}
-              </span>
-            </div>
-
-            {initialReports.roles.length > 0 ? (
-              <div className="space-y-3">
-                {initialReports.roles.map((role) => {
-                  const percent = rolesTotal > 0 ? Math.round((role.count / rolesTotal) * 100) : 0
-
-                  return (
-                    <div key={role.role} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-600 dark:text-slate-300">{role.label}</span>
-                        <span className="font-semibold text-primary dark:text-slate-100">
-                          {numberFormatter.format(role.count)} · {percent}%
-                        </span>
-                      </div>
-                      <div className="w-full h-2 bg-slate-200 rounded-full">
-                        <div
-                          className="h-2 bg-primary rounded-full"
-                          style={{ width: `${Math.min(percent, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500">Нет данных о ролях пользователей.</p>
-            )}
-          </article>
-
+        <section className="grid gap-6 mt-6 md:grid-cols-1">
           <article className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
               <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Топ команд по активности</h2>
             {initialReports.topTeams.length > 0 ? (

@@ -85,11 +85,7 @@ const GameEditModal = ({
         disabled={
           isSaving || (isDirty && (!canEditSelectedGame || !location))
         }
-        className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-          isSaving || (isDirty && (!canEditSelectedGame || !location))
-            ? 'bg-slate-400 cursor-not-allowed'
-            : 'bg-primary hover:bg-blue-700'
-        }`}
+        className="aq-modal-btn aq-modal-btn-primary"
       >
         {isDirty
           ? isSaving
@@ -101,11 +97,7 @@ const GameEditModal = ({
         type="button"
         onClick={handleResetChanges}
         disabled={!canEditSelectedGame || !isDirty}
-        className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
-          !canEditSelectedGame || !isDirty
-            ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-            : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-sky-500/10'
-        }`}
+        className="aq-modal-btn aq-modal-btn-secondary"
       >
         Отменить изменения
       </button>

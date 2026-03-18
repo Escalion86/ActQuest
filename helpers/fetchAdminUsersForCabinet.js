@@ -116,10 +116,39 @@ const toPositiveInteger = (value, fallback) => {
   return Math.floor(numeric)
 }
 
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const buildUsersQuery = (search) => {
+  const normalizedSearch =
+    typeof search === 'string' ? search.trim() : ''
+
+  if (!normalizedSearch) {
+    return {}
+  }
+
+  const regex = new RegExp(escapeRegExp(normalizedSearch), 'i')
+  const query = {
+    $or: [
+      { name: regex },
+      { username: regex },
+      { phone: regex },
+      { globalUserId: regex },
+    ],
+  }
+
+  const numericSearch = Number(normalizedSearch)
+  if (Number.isFinite(numericSearch)) {
+    query.$or.push({ telegramId: numericSearch })
+  }
+
+  return query
+}
+
 const fetchAdminUsersForCabinet = async ({
   db,
   offset = 0,
   limit = 10,
+  search = '',
 }) => {
   if (!db) {
     return { users: [], hasMore: false }
@@ -134,7 +163,8 @@ const fetchAdminUsersForCabinet = async ({
   const queryLimit = toPositiveInteger(limit, 10)
   const fetchLimit = queryLimit + 1
 
-  const usersDocs = await UsersModel.find({})
+  const usersQuery = buildUsersQuery(search)
+  const usersDocs = await UsersModel.find(usersQuery)
     .sort({ name: 1 })
     .skip(queryOffset)
     .limit(fetchLimit)

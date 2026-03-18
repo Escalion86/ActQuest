@@ -34,6 +34,16 @@ const Modal = ({
     return null
   }
 
+  const resolvedFooter = footer ?? (
+    <button
+      type="button"
+      onClick={() => onClose?.()}
+      className="aq-modal-btn aq-modal-btn-secondary"
+    >
+      Закрыть
+    </button>
+  )
+
   return createPortal(
     <div className="fixed inset-0 z-[120] flex items-stretch justify-center p-0 md:items-center md:px-4 md:py-6">
       <div
@@ -61,11 +71,9 @@ const Modal = ({
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           {children}
         </div>
-        {footer ? (
-          <div className="flex shrink-0 flex-col gap-3 border-t border-slate-200/85 bg-white/95 px-6 py-4 dark:border-[#00D1FF]/25 dark:bg-[#090018]/95 sm:flex-row sm:items-center sm:justify-end">
-            {footer}
-          </div>
-        ) : null}
+        <div className="flex shrink-0 flex-col gap-3 border-t border-slate-200/85 bg-white/95 px-6 py-4 dark:border-[#00D1FF]/25 dark:bg-[#090018]/95 sm:flex-row sm:items-center sm:justify-end">
+          {resolvedFooter}
+        </div>
       </div>
     </div>,
     document.body
