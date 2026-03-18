@@ -158,6 +158,7 @@ const CabinetDashboard = ({
     hasUpcomingRegistration: false,
     profileCompleted: false,
     nearestGame: null,
+    personalProgressGames: [],
     recentActivity: [],
     chatUrl: '',
   }
@@ -177,32 +178,6 @@ const CabinetDashboard = ({
       },
     ]
   }, [isAdmin])
-
-  const checklistItems = useMemo(
-    () => [
-      {
-        id: 'city',
-        label: 'Игровой регион выбран',
-        done: dashboardData.cityName !== 'Город не выбран',
-      },
-      {
-        id: 'team',
-        label: 'Вы состоите в команде',
-        done: dashboardData.hasTeam,
-      },
-      {
-        id: 'upcoming',
-        label: 'Есть регистрация на ближайшую игру',
-        done: dashboardData.hasUpcomingRegistration,
-      },
-      {
-        id: 'profile',
-        label: 'Профиль заполнен',
-        done: dashboardData.profileCompleted,
-      },
-    ],
-    [dashboardData]
-  )
 
   if (!activeSession) {
     if (status === 'loading') {
@@ -263,25 +238,28 @@ const CabinetDashboard = ({
           <div className="space-y-6 md:col-span-3">
             <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
               <h3 className="aq-modal-section-title text-base font-semibold">Личный прогресс</h3>
-              <ul className="mt-4 space-y-3">
-                {checklistItems.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
-                  >
-                    <span className="text-slate-700 dark:text-slate-200">{item.label}</span>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        item.done
-                          ? 'border border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
-                          : 'border border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200'
-                      }`}
+              {dashboardData.personalProgressGames.length > 0 ? (
+                <ul className="mt-4 space-y-3">
+                  {dashboardData.personalProgressGames.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
                     >
-                      {item.done ? 'Готово' : 'Не выполнено'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                      <div className="min-w-0">
+                        <p className="aq-modal-item-title truncate text-sm font-semibold">{item.gameName}</p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{item.dateLabel}</p>
+                      </div>
+                      <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                        {item.place ? `${item.place} место` : 'Без места'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-4 text-sm text-slate-500 dark:text-slate-300">
+                  Завершённых игр с итоговым местом пока нет.
+                </p>
+              )}
             </article>
 
             <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
@@ -392,6 +370,14 @@ CabinetDashboard.propTypes = {
       status: PropTypes.string,
       dateStart: PropTypes.string,
     }),
+    personalProgressGames: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        gameName: PropTypes.string.isRequired,
+        dateLabel: PropTypes.string.isRequired,
+        place: PropTypes.number,
+      })
+    ),
     recentActivity: PropTypes.arrayOf(
       PropTypes.shape({
         id: PropTypes.string.isRequired,
@@ -415,6 +401,7 @@ CabinetDashboard.defaultProps = {
     hasUpcomingRegistration: false,
     profileCompleted: false,
     nearestGame: null,
+    personalProgressGames: [],
     recentActivity: [],
     chatUrl: '',
   },
@@ -464,6 +451,7 @@ export async function getServerSideProps(context) {
     hasUpcomingRegistration: false,
     profileCompleted: false,
     nearestGame: null,
+    personalProgressGames: [],
     recentActivity: [],
     chatUrl: '',
   }
@@ -553,7 +541,17 @@ export async function getServerSideProps(context) {
 
     const gamesDocs = gameIds.length
       ? await GamesModel.find(gamesQuery)
-          .select({ _id: 1, name: 1, status: 1, dateStart: 1, hidden: 1, updatedAt: 1, createdAt: 1 })
+          .select({
+            _id: 1,
+            name: 1,
+            status: 1,
+            dateStart: 1,
+            hidden: 1,
+            updatedAt: 1,
+            createdAt: 1,
+            'result.teamsPlaces': 1,
+            'result.teamsUsers': 1,
+          })
           .lean()
       : []
 
@@ -601,6 +599,46 @@ export async function getServerSideProps(context) {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 6)
 
+    const gameTeamIdsByGameId = gamesTeamsDocs.reduce((acc, link) => {
+      const gameId = toStringId(link?.gameId)
+      const teamId = toStringId(link?.teamId)
+      if (!gameId || !teamId) {
+        return acc
+      }
+      if (!acc[gameId]) {
+        acc[gameId] = new Set()
+      }
+      acc[gameId].add(teamId)
+      return acc
+    }, {})
+
+    const personalProgressGames = [...pastGames]
+      .filter((game) => (game?.status ?? '').toString().toLowerCase() === 'finished')
+      .map((game) => {
+        const gameId = toStringId(game?._id)
+        const teamIdFromResult = resolveUserTeamIdFromResult(game?.result, userId, sessionTelegramId)
+        const teamIdFromLinks =
+          gameId && gameTeamIdsByGameId[gameId] ? [...gameTeamIdsByGameId[gameId]][0] : null
+        const resolvedTeamId = teamIdFromResult || teamIdFromLinks
+        const place = resolveTeamsPlace(game?.result?.teamsPlaces, resolvedTeamId)
+        const gameDate = game?.dateStart ? new Date(game.dateStart) : null
+        const timestamp =
+          gameDate && !Number.isNaN(gameDate.getTime()) ? gameDate.getTime() : 0
+        return {
+          id: gameId || `progress-${Math.random().toString(36).slice(2)}`,
+          gameName: game?.name || 'Без названия',
+          dateLabel:
+            gameDate && !Number.isNaN(gameDate.getTime())
+              ? gameDate.toLocaleString('ru-RU')
+              : 'Дата не указана',
+          place,
+          timestamp,
+        }
+      })
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 12)
+      .map(({ timestamp, ...item }) => item)
+
     const normalizedSiteSettings = normalizeSiteSettings(siteSettingsDoc)
     const hasProfileName = typeof userDoc?.name === 'string' && userDoc.name.trim().length > 0
     const hasProfileAbout = typeof userDoc?.about === 'string' && userDoc.about.trim().length > 0
@@ -622,6 +660,7 @@ export async function getServerSideProps(context) {
             : null,
         }
       : null
+    dashboardData.personalProgressGames = personalProgressGames
     dashboardData.recentActivity = recentActivity
     dashboardData.chatUrl = normalizedSiteSettings.chatUrl || ''
   } catch (error) {
