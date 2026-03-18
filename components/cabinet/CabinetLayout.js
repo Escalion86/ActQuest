@@ -146,8 +146,13 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   const router = useRouter()
   const { data: session, update } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
-  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false)
-  const [theme, setTheme] = useState('light')
+  const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(
+    () => router.pathname === '/cabinet/games',
+  )
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(
+    () => router.pathname.startsWith('/cabinet/admin'),
+  )
+  const [theme, setTheme] = useState(() => resolveInitialTheme())
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
@@ -223,12 +228,6 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
   }, [closeSidebarOnMobile, router])
 
   useEffect(() => {
-    if (router.pathname.startsWith('/cabinet/admin')) {
-      setIsAdminMenuOpen(true)
-    }
-  }, [router.pathname])
-
-  useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
@@ -255,9 +254,25 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
     setLocationPromptValue(fallbackLocation)
   }, [availableLocations, locationPromptValue, shouldForceLocationSelection])
 
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  const applyTheme = useCallback((nextTheme) => {
+    const isDark = nextTheme === 'dark'
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('cabinet-theme', nextTheme)
+    }
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', nextTheme)
+      document.documentElement.classList.toggle('dark', isDark)
+      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+    }
   }, [])
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const nextTheme = prev === 'dark' ? 'light' : 'dark'
+      applyTheme(nextTheme)
+      return nextTheme
+    })
+  }, [applyTheme])
 
   const handleSignOut = async () => {
     await signOut({ redirect: true, callbackUrl: '/' })
@@ -408,52 +423,63 @@ const CabinetLayout = ({ children, title, description, activePage }) => {
 
                   return (
                     <div key={item.id} className="space-y-1">
-                      <Link href={item.href} legacyBehavior>
-                        <a
-                          className={`flex cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
-                            isGamesSectionActive ? navActiveClass : navIdleClass
-                          } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
-                          onClick={closeSidebarOnMobile}
+                      <button
+                        type="button"
+                        onClick={() => setIsGamesMenuOpen((prev) => !prev)}
+                        className={`flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
+                          isGamesSectionActive ? navActiveClass : navIdleClass
+                        } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
+                      >
+                        <FontAwesomeIcon icon={item.icon} className="w-5 h-5 shrink-0" />
+                        <span
+                          className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
                         >
-                          <FontAwesomeIcon
-                            icon={item.icon}
-                            className="w-5 h-5"
-                          />
-                          <span
-                            className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
-                          >
-                            {item.label}
-                          </span>
-                        </a>
-                      </Link>
-                      <div className="pb-1 pr-3 space-y-1 pl-11">
-                        {gamesSubmenuItems.map((subItem) => {
-                          const isSubActive =
-                            router.pathname === '/cabinet/games' &&
-                            ((subItem.id === 'games-upcoming' &&
-                              gamesView === 'upcoming') ||
-                              (subItem.id === 'games-past' &&
-                                gamesView === 'past'))
+                          {item.label}
+                        </span>
+                        <FontAwesomeIcon
+                          icon={faChevronDown}
+                          className={`ml-auto h-3 w-3 shrink-0 transition-transform duration-150 ${
+                            isGamesMenuOpen ? 'rotate-180' : ''
+                          } ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'}`}
+                        />
+                      </button>
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ease-out ${
+                          isGamesMenuOpen
+                            ? 'max-h-40 opacity-100 translate-y-0'
+                            : 'max-h-0 opacity-0 -translate-y-1'
+                        }`}
+                        aria-hidden={!isGamesMenuOpen}
+                      >
+                        <div className="pb-1 pr-3 space-y-1 pl-11">
+                          {gamesSubmenuItems.map((subItem) => {
+                            const isSubActive =
+                              router.pathname === '/cabinet/games' &&
+                              ((subItem.id === 'games-upcoming' &&
+                                gamesView === 'upcoming') ||
+                                (subItem.id === 'games-past' &&
+                                  gamesView === 'past'))
 
-                          return (
-                            <Link
-                              key={subItem.id}
-                              href={subItem.href}
-                              legacyBehavior
-                            >
-                              <a
-                                className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
-                                  isSubActive
-                                    ? subNavActiveClass
-                                    : subNavIdleClass
-                                }`}
-                                onClick={closeSidebarOnMobile}
+                            return (
+                              <Link
+                                key={subItem.id}
+                                href={subItem.href}
+                                legacyBehavior
                               >
-                                {subItem.label}
-                              </a>
-                            </Link>
-                          )
-                        })}
+                                <a
+                                  className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
+                                    isSubActive
+                                      ? subNavActiveClass
+                                      : subNavIdleClass
+                                  }`}
+                                  onClick={closeSidebarOnMobile}
+                                >
+                                  {subItem.label}
+                                </a>
+                              </Link>
+                            )
+                          })}
+                        </div>
                       </div>
                     </div>
                   )

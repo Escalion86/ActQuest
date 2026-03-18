@@ -71,15 +71,16 @@ const ManageUsersPage = ({
   initialLocation,
   session: initialSession,
 }) => {
+  const safeInitialUsers = Array.isArray(initialUsers) ? initialUsers : []
   const router = useRouter()
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
   const isAdmin = isUserAdmin({ role: activeSession?.user?.role })
 
-  const [users, setUsers] = useState(initialUsers)
-  const [persistedUsers, setPersistedUsers] = useState(initialUsers)
-  const [selectedUserId, setSelectedUserId] = useState(initialUsers[0]?.id ?? null)
+  const [users, setUsers] = useState(safeInitialUsers)
+  const [persistedUsers, setPersistedUsers] = useState(safeInitialUsers)
+  const [selectedUserId, setSelectedUserId] = useState(safeInitialUsers[0]?.id ?? null)
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [feedback, setFeedback] = useState(null)
@@ -90,17 +91,17 @@ const ManageUsersPage = ({
   const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false)
 
   useEffect(() => {
-    setUsers(initialUsers)
-    setPersistedUsers(initialUsers)
+    setUsers(safeInitialUsers)
+    setPersistedUsers(safeInitialUsers)
     setHasMoreUsers(Boolean(initialHasMore))
     setSelectedUserId((prev) => {
-      if (prev && initialUsers.some((user) => user.id === prev)) {
+      if (prev && safeInitialUsers.some((user) => user.id === prev)) {
         return prev
       }
 
-      return initialUsers[0]?.id ?? null
+      return safeInitialUsers[0]?.id ?? null
     })
-  }, [initialHasMore, initialUsers])
+  }, [initialHasMore, safeInitialUsers])
 
   const setUserIdQuery = useCallback(
     (nextUserId) => {
@@ -887,8 +888,14 @@ export async function getServerSideProps(context) {
           offset: 0,
           limit: USERS_PAGE_SIZE,
         })
-        initialUsers = result.users
-        initialHasMore = result.hasMore
+        initialUsers = Array.isArray(result)
+          ? result
+          : Array.isArray(result?.users)
+            ? result.users
+            : []
+        initialHasMore = Array.isArray(result)
+          ? result.length === USERS_PAGE_SIZE
+          : Boolean(result?.hasMore)
       }
     } catch (error) {
       console.error('Failed to load users for admin cabinet', error)

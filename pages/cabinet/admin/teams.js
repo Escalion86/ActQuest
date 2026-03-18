@@ -52,14 +52,15 @@ const AdminTeamsPage = ({
   initialLocation,
   session: initialSession,
 }) => {
+  const safeInitialTeams = Array.isArray(initialTeams) ? initialTeams : []
   const { data: session } = useSession()
   const activeSession = session ?? initialSession ?? null
   const location = activeSession?.user?.location ?? initialLocation ?? null
   const isAdmin = isUserAdmin({ role: activeSession?.user?.role })
 
-  const [teams, setTeams] = useState(initialTeams)
-  const [persistedTeams, setPersistedTeams] = useState(initialTeams)
-  const [selectedTeamId, setSelectedTeamId] = useState(initialTeams[0]?.id ?? null)
+  const [teams, setTeams] = useState(safeInitialTeams)
+  const [persistedTeams, setPersistedTeams] = useState(safeInitialTeams)
+  const [selectedTeamId, setSelectedTeamId] = useState(safeInitialTeams[0]?.id ?? null)
   const [searchQuery, setSearchQuery] = useState('')
   const [visibilityFilter, setVisibilityFilter] = useState('all')
   const [feedback, setFeedback] = useState(null)
@@ -74,17 +75,17 @@ const AdminTeamsPage = ({
   })
 
   useEffect(() => {
-    setTeams(initialTeams)
-    setPersistedTeams(initialTeams)
+    setTeams(safeInitialTeams)
+    setPersistedTeams(safeInitialTeams)
     setHasMoreTeams(Boolean(initialHasMore))
     setSelectedTeamId((prev) => {
-      if (prev && initialTeams.some((team) => team.id === prev)) {
+      if (prev && safeInitialTeams.some((team) => team.id === prev)) {
         return prev
       }
 
-      return initialTeams[0]?.id ?? null
+      return safeInitialTeams[0]?.id ?? null
     })
-  }, [initialHasMore, initialTeams])
+  }, [initialHasMore, safeInitialTeams])
 
   const filteredTeams = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase()
@@ -996,8 +997,14 @@ export async function getServerSideProps(context) {
           limit: TEAMS_PAGE_SIZE,
           returnMeta: true,
         })
-        initialTeams = result.teams
-        initialHasMore = result.hasMore
+        initialTeams = Array.isArray(result)
+          ? result
+          : Array.isArray(result?.teams)
+            ? result.teams
+            : []
+        initialHasMore = Array.isArray(result)
+          ? result.length === TEAMS_PAGE_SIZE
+          : Boolean(result?.hasMore)
       }
     } catch (error) {
       console.error('Failed to load admin teams', error)
