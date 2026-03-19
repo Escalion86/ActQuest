@@ -3,8 +3,9 @@ import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
 import formatDate from '@helpers/formatDate'
+import ModalSection from './ModalSection'
 
-const sectionHeadingClass = 'aq-modal-section-title text-base font-semibold'
+const sectionHeadingClass = 'aq-modal-section-title text-base font-semibold text-slate-900 dark:text-slate-100'
 
 const GameDescriptionModal = ({
   selectedGame,
@@ -33,7 +34,7 @@ const GameDescriptionModal = ({
           >
             {selectedGame ? (
               <div className="space-y-6">
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <ModalSection className="p-5">
                   <h4 className={sectionHeadingClass}>Общая информация</h4>
                   {selectedGame.image && (
                     <img
@@ -98,7 +99,7 @@ const GameDescriptionModal = ({
                       </div>
                     )}
                   </dl>
-                </section>
+                </ModalSection>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
                   <h4 className={sectionHeadingClass}>Описание</h4>
@@ -133,7 +134,7 @@ const GameDescriptionModal = ({
                   </section>
                 )}
 
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <ModalSection className="p-5">
                   <h4 className={sectionHeadingClass}>Параметры проведения</h4>
                   <dl className="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
@@ -175,9 +176,9 @@ const GameDescriptionModal = ({
                       </div>
                     )}
                   </dl>
-                </section>
+                </ModalSection>
 
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <ModalSection className="p-5">
                   <h4 className={sectionHeadingClass}>Опции для капитана</h4>
                   <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                     <li className="flex items-center gap-2">
@@ -208,9 +209,9 @@ const GameDescriptionModal = ({
                       </span>
                     </li>
                   </ul>
-                </section>
+                </ModalSection>
 
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <ModalSection className="p-5">
                   <h4 className={sectionHeadingClass}>Стоимость участия</h4>
                   {selectedGame.prices?.length > 0 ? (
                     <ul className="mt-4 space-y-3">
@@ -229,10 +230,10 @@ const GameDescriptionModal = ({
                   ) : (
                     <p className="mt-4 text-sm text-slate-500">Стоимость участия не указана.</p>
                   )}
-                </section>
+                </ModalSection>
 
                 {canViewRestrictedGameInfo && (
-                  <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                  <ModalSection className="p-5">
                     <h4 className={sectionHeadingClass}>Финансы</h4>
                     <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
                       <p>
@@ -278,7 +279,7 @@ const GameDescriptionModal = ({
                     ) : (
                       <p className="mt-4 text-sm text-slate-500">Финансовые записи отсутствуют.</p>
                     )}
-                  </section>
+                  </ModalSection>
                 )}
               </div>
             ) : (

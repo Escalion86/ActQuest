@@ -7,6 +7,7 @@ import ImagesInput from '@components/cabinet/ImagesInput'
 import NeonCheckbox from '@components/NeonCheckbox'
 import formatDate from '@helpers/formatDate'
 import formatDateTime from '@helpers/formatDateTime'
+import ModalSection from './ModalSection'
 
 const GameEditModal = ({
   selectedGame,
@@ -151,7 +152,7 @@ const GameEditModal = ({
                     disabled={isSaving}
                     className="m-0 space-y-6 border-0 p-0 [&_button]:cursor-pointer [&_select]:cursor-pointer"
                   >
-                    <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
+                    <ModalSection>
                     <ImagesInput
                       label="Обложка игры"
                       images={selectedGame.image ? [selectedGame.image] : []}
@@ -406,9 +407,9 @@ const GameEditModal = ({
                       </div>
                     )}
 
-                    </section>
+                    </ModalSection>
 
-                    <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
+                    <ModalSection>
                     <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Настройки заданий и подсказок</h2>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
@@ -625,10 +626,10 @@ const GameEditModal = ({
                         labelClassName="text-sm text-slate-600 dark:text-slate-200"
                       />
                     </div>
-                    </section>
+                    </ModalSection>
 
 
-                    <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
+                    <ModalSection>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Задания</h2>
                       <button
@@ -1323,9 +1324,9 @@ const GameEditModal = ({
                         Пока нет заданий. Добавьте первое, чтобы начать.
                       </p>
                     )}
-                    </section>
+                    </ModalSection>
 
-                    <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
+                    <ModalSection>
                     <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Публикация и результаты</h2>
                     <div className="grid gap-3 md:grid-cols-2">
                       <NeonCheckbox
@@ -1413,9 +1414,9 @@ const GameEditModal = ({
                         </p>
                       )}
                     </div>
-                    </section>
+                    </ModalSection>
 
-                    <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
+                    <ModalSection>
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Стоимость участия</h2>
                       <button
@@ -1469,9 +1470,9 @@ const GameEditModal = ({
                         Добавьте тариф, чтобы задать стоимость участия для команд.
                       </p>
                     )}
-                  </section>
+                  </ModalSection>
 
-                  <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
+                  <ModalSection>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Финансы игры</h2>
                       <button
@@ -1557,7 +1558,7 @@ const GameEditModal = ({
                         Баланс: {currencyFormatter.format(financesSummary.balance)}
                       </p>
                     </div>
-                    </section>
+                    </ModalSection>
 
                   </fieldset>
                   </Modal>
@@ -1644,6 +1645,7 @@ GameEditModal.defaultProps = {
 }
 
 export default memo(GameEditModal)
+
 
 
 

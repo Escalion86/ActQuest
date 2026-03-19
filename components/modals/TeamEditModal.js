@@ -2,6 +2,7 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import ModalSection from '@components/modals/ModalSection'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NeonCheckbox from '@components/NeonCheckbox'
 import ClassicCar from '@components/cars/ClassicCar'
@@ -138,12 +139,12 @@ const TeamEditModal = ({
         disabled={!canManageSelectedTeam || isSaving}
         className="p-0 m-0 space-y-6 border-0"
       >
-        <section className="p-6 space-y-5 bg-white border shadow-sm dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl">
+        <ModalSection>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label
                 htmlFor="team-name"
-                className="text-sm font-semibold text-primary"
+                className="text-sm font-semibold text-slate-900 dark:text-slate-100"
               >
                 Название команды
               </label>
@@ -159,7 +160,7 @@ const TeamEditModal = ({
             </div>
             <div>
               <label
-                className="text-sm font-semibold text-primary"
+                className="text-sm font-semibold text-slate-900 dark:text-slate-100"
                 htmlFor="team-open"
               >
                 Доступность команды
@@ -194,7 +195,7 @@ const TeamEditModal = ({
               <div>
                 <label
                   htmlFor="team-car-skin"
-                  className="text-sm font-semibold text-primary"
+                  className="text-sm font-semibold text-slate-900 dark:text-slate-100"
                 >
                   Вид машинки в интерактивной таблице
                 </label>
@@ -222,7 +223,7 @@ const TeamEditModal = ({
           <div>
             <label
               htmlFor="team-description"
-              className="text-sm font-semibold text-primary"
+              className="text-sm font-semibold text-slate-900 dark:text-slate-100"
             >
               Описание
             </label>
@@ -251,11 +252,11 @@ const TeamEditModal = ({
             maxImages={1}
             disabled={!canManageSelectedTeam || isSaving}
           />
-        </section>
+        </ModalSection>
 
-        <section className="p-6 space-y-5 bg-white border shadow-sm dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl">
+        <ModalSection>
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-primary">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               Состав команды
             </h2>
             {selectedTeam.captain && (
@@ -278,7 +279,7 @@ const TeamEditModal = ({
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-primary">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                           {member.name || 'Без имени'}
                           {member.isCaptain ? ' · Капитан' : ''}
                         </p>
@@ -302,7 +303,7 @@ const TeamEditModal = ({
                         {member.phone && (
                           <a
                             href={phoneLink ? `tel:${phoneLink}` : undefined}
-                            className="block text-xs text-primary hover:underline"
+                            className="block text-xs text-cyan-700 hover:underline dark:text-cyan-200"
                           >
                             {member.phone}
                           </a>
@@ -320,7 +321,7 @@ const TeamEditModal = ({
                             className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
                               isProcessing
                                 ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                                : 'border-primary text-primary hover:bg-blue-50 dark:hover:bg-violet-500/10'
+                                : 'border-primary text-primary hover:bg-blue-50 dark:border-cyan-500/40 dark:text-cyan-200 dark:hover:bg-violet-500/10'
                             }`}
                           >
                             Назначить капитаном
@@ -352,7 +353,7 @@ const TeamEditModal = ({
               они появились здесь.
             </p>
           )}
-        </section>
+        </ModalSection>
       </fieldset>
     </Modal>
   )
