@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { PASTEL_COLORS } from '@helpers/constants'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import cn from 'classnames'
+import NeonCheckbox from '@components/NeonCheckbox'
 
 const townsCenter = {
   krsk: [56.012083, 92.871295],
@@ -319,25 +320,19 @@ function EventPage(props) {
         <Header /> */}
       <div className="flex flex-col items-stretch w-screen h-screen">
         <div>
-          <div className="px-2 flex justify-center py-0.5 items-center">
-            <label>
-              <input
-                type="checkbox"
-                checked={showTasks}
-                onChange={(e) => setShowTasks(e.target.checked)}
-              />
-              Локации
-            </label>
-            <div className="px-2 flex justify-center py-0.5 items-center">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={showTeams}
-                  onChange={(e) => setShowTeams(e.target.checked)}
-                />
-                Команды
-              </label>
-            </div>
+          <div className="flex items-center justify-center gap-4 px-2 py-0.5">
+            <NeonCheckbox
+              id="location-map-show-tasks"
+              checked={showTasks}
+              onChange={(event) => setShowTasks(event.target.checked)}
+              label="Локации"
+            />
+            <NeonCheckbox
+              id="location-map-show-teams"
+              checked={showTeams}
+              onChange={(event) => setShowTeams(event.target.checked)}
+              label="Команды"
+            />
           </div>
         </div>
         <div className="relative flex-1 w-full overflow-hidden">

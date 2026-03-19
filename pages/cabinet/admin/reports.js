@@ -364,7 +364,7 @@ export async function getServerSideProps(context) {
           }).length,
           finishedGames: gamesDocs.filter((game) => {
             const status = typeof game?.status === 'string' ? game.status.toLowerCase() : ''
-            return status === 'finished'
+            return status === 'finished' || status === 'closed'
           }).length,
           canceledGames: gamesDocs.filter((game) => {
             const status = typeof game?.status === 'string' ? game.status.toLowerCase() : ''
@@ -496,6 +496,7 @@ export async function getServerSideProps(context) {
               : status === 'started'
               ? 'Запущена'
               : status === 'finished'
+              || status === 'closed'
               ? 'Завершена'
               : status === 'canceled'
               ? 'Отменена'

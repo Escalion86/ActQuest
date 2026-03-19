@@ -4,6 +4,7 @@ import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import NoticeBanner from '@components/NoticeBanner'
+import NeonCheckbox from '@components/NeonCheckbox'
 import isUserAdmin from '@helpers/isUserAdmin'
 import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
@@ -190,56 +191,59 @@ const SettingsPage = ({ initialSiteSettings }) => {
           <div className="p-4 space-y-4 border border-slate-200 dark:border-slate-700 rounded-xl">
             <h3 className="text-sm font-semibold text-primary">Доступ к сайту</h3>
 
-            <label className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                  Включить авторизацию на сайте
-                </p>
-                <p className="text-xs text-slate-500">
-                  Отключение заблокирует вход по телефону и через VK.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={Boolean(siteSettings.allowSiteAuth)}
-                onChange={(event) => handleSettingsChange('allowSiteAuth', event.target.checked)}
-                className="aq-checkbox mt-1 h-5 w-5 cursor-pointer rounded border border-violet-300 bg-white text-[#7A00FF] focus:ring-2 focus:ring-[#7A00FF]/35 dark:bg-[#070015] dark:border-[#00D1FF]/45 dark:text-[#00D1FF] dark:focus:ring-[#00D1FF]/35 disabled:cursor-not-allowed disabled:opacity-60"
-              />
-            </label>
+            <NeonCheckbox
+              id="settings-allow-site-auth"
+              checked={Boolean(siteSettings.allowSiteAuth)}
+              onChange={(event) => handleSettingsChange('allowSiteAuth', event.target.checked)}
+              className="w-full items-start justify-between gap-4"
+              boxAfter
+              label={(
+                <div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                    Включить авторизацию на сайте
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Отключение заблокирует вход по телефону и через VK.
+                  </p>
+                </div>
+              )}
+            />
 
-            <label className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                  Включить регистрацию на сайте
-                </p>
-                <p className="text-xs text-slate-500">
-                  Если отключено, новые аккаунты по телефону нельзя создать.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={Boolean(siteSettings.allowSiteRegistration)}
-                onChange={(event) => handleSettingsChange('allowSiteRegistration', event.target.checked)}
-                className="aq-checkbox mt-1 h-5 w-5 cursor-pointer rounded border border-violet-300 bg-white text-[#7A00FF] focus:ring-2 focus:ring-[#7A00FF]/35 dark:bg-[#070015] dark:border-[#00D1FF]/45 dark:text-[#00D1FF] dark:focus:ring-[#00D1FF]/35 disabled:cursor-not-allowed disabled:opacity-60"
-              />
-            </label>
+            <NeonCheckbox
+              id="settings-allow-site-registration"
+              checked={Boolean(siteSettings.allowSiteRegistration)}
+              onChange={(event) => handleSettingsChange('allowSiteRegistration', event.target.checked)}
+              className="w-full items-start justify-between gap-4"
+              boxAfter
+              label={(
+                <div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                    Включить регистрацию на сайте
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Если отключено, новые аккаунты по телефону нельзя создать.
+                  </p>
+                </div>
+              )}
+            />
 
-            <label className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                  Включить VK One Tap кнопку
-                </p>
-                <p className="text-xs text-slate-500">
-                  Управляет отображением и доступностью входа через VK One Tap.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={Boolean(siteSettings.enableVkOneTap)}
-                onChange={(event) => handleSettingsChange('enableVkOneTap', event.target.checked)}
-                className="aq-checkbox mt-1 h-5 w-5 cursor-pointer rounded border border-violet-300 bg-white text-[#7A00FF] focus:ring-2 focus:ring-[#7A00FF]/35 dark:bg-[#070015] dark:border-[#00D1FF]/45 dark:text-[#00D1FF] dark:focus:ring-[#00D1FF]/35 disabled:cursor-not-allowed disabled:opacity-60"
-              />
-            </label>
+            <NeonCheckbox
+              id="settings-enable-vk-one-tap"
+              checked={Boolean(siteSettings.enableVkOneTap)}
+              onChange={(event) => handleSettingsChange('enableVkOneTap', event.target.checked)}
+              className="w-full items-start justify-between gap-4"
+              boxAfter
+              label={(
+                <div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                    Включить VK One Tap кнопку
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Управляет отображением и доступностью входа через VK One Tap.
+                  </p>
+                </div>
+              )}
+            />
           </div>
 
           {saveState.error ? (

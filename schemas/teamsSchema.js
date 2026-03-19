@@ -1,3 +1,5 @@
+import { TEAM_CAR_SKIN_VALUES } from '@helpers/teamCarSkins'
+
 const teamsSchema = {
   name: {
     type: String,
@@ -14,9 +16,19 @@ const teamsSchema = {
     default: '',
     trim: true,
   },
+  image: {
+    type: String,
+    default: null,
+    trim: true,
+  },
   open: {
     type: Boolean,
     default: true,
+  },
+  carSkin: {
+    type: String,
+    enum: TEAM_CAR_SKIN_VALUES,
+    default: 'classic',
   },
 }
 

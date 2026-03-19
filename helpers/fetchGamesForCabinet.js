@@ -13,6 +13,47 @@ const toDate = (value) => {
   return date && !Number.isNaN(date.getTime()) ? date : null
 }
 
+const toStringId = (value) => {
+  if (value === null || value === undefined) {
+    return null
+  }
+
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  if (typeof value.toString === 'function') {
+    const stringValue = value.toString()
+    return stringValue && stringValue !== '[object Object]' ? stringValue : null
+  }
+
+  return null
+}
+
+const resolveTeamsPlace = (teamsPlaces, teamId) => {
+  if (!teamsPlaces || !teamId) {
+    return null
+  }
+
+  if (typeof teamsPlaces.get === 'function') {
+    const mapValue = teamsPlaces.get(teamId)
+    const numeric = Number(mapValue)
+    return Number.isFinite(numeric) ? numeric : null
+  }
+
+  if (typeof teamsPlaces === 'object') {
+    const objectValue = teamsPlaces[teamId]
+    const numeric = Number(objectValue)
+    return Number.isFinite(numeric) ? numeric : null
+  }
+
+  return null
+}
+
 const buildGamesQuery = ({
   location,
   userRole,
@@ -23,6 +64,7 @@ const buildGamesQuery = ({
     typeof location === 'string' ? location.trim().toLowerCase() : null
 
   const canLoadAllGames = userRole === 'admin' || userRole === 'dev'
+  const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
   const canLoadOwnGames = userRole === 'moder' && creatorTelegramId !== null
   const canLoadPublicGames = !canLoadAllGames && !canLoadOwnGames
 
@@ -49,11 +91,11 @@ const buildGamesQuery = ({
   } else if (view === 'past') {
     query.$or = [
       { dateStart: { $lt: now } },
-      { status: { $in: ['finished', 'canceled'] } },
+      { status: { $in: ['finished', 'closed', 'canceled'] } },
     ]
   }
 
-  return query
+  return { query, canSeeClosedStatus }
 }
 
 const fetchGamesForCabinet = async ({
@@ -61,6 +103,8 @@ const fetchGamesForCabinet = async ({
   location,
   userRole,
   creatorTelegramId = null,
+  currentUserId = null,
+  currentUserTelegramId = null,
   offset = 0,
   limit = 10,
   view = 'all',
@@ -69,12 +113,15 @@ const fetchGamesForCabinet = async ({
     return { games: [], hasMore: false }
   }
 
-  const query = buildGamesQuery({
+  const queryData = buildGamesQuery({
     location,
     userRole,
     creatorTelegramId,
     view,
   })
+
+  const query = queryData?.query
+  const canSeeClosedStatus = Boolean(queryData?.canSeeClosedStatus)
 
   if (!query) {
     return { games: [], hasMore: false }
@@ -82,6 +129,7 @@ const fetchGamesForCabinet = async ({
 
   const GamesModel = db.model('Games')
   const GamesTeamsModel = db.model('GamesTeams')
+  const TeamsUsersModel = db.model('TeamsUsers')
 
   const queryOffset = toPositiveInteger(offset, 0)
   const queryLimit = toPositiveInteger(limit, 10)
@@ -114,6 +162,7 @@ const fetchGamesForCabinet = async ({
       taskFailurePenalty: 1,
       manyCodesPenalty: 1,
       individualStart: 1,
+      isRated: 1,
       hidden: 1,
       showCreator: 1,
       showTasks: 1,
@@ -126,6 +175,8 @@ const fetchGamesForCabinet = async ({
       creatorTelegramId: 1,
       moderators: 1,
       location: 1,
+      'result.computed': 1,
+      'result.teamsPlaces': 1,
     })
     .populate({
       path: 'moderators',
@@ -159,7 +210,11 @@ const fetchGamesForCabinet = async ({
       if (startDate && startDate < now) {
         return true
       }
-      return game?.status === 'finished' || game?.status === 'canceled'
+      return (
+        game?.status === 'finished' ||
+        game?.status === 'closed' ||
+        game?.status === 'canceled'
+      )
     }
 
     return true
@@ -172,7 +227,7 @@ const fetchGamesForCabinet = async ({
   let teamsCountMap = {}
   if (gameIds.length) {
     const gamesTeams = await GamesTeamsModel.find({ gameId: { $in: gameIds } })
-      .select({ gameId: 1 })
+      .select({ gameId: 1, teamId: 1 })
       .lean()
 
     teamsCountMap = gamesTeams.reduce((acc, doc) => {
@@ -184,14 +239,104 @@ const fetchGamesForCabinet = async ({
       acc[key] = (acc[key] ?? 0) + 1
       return acc
     }, {})
+
+    const currentUserIdString = toStringId(currentUserId)
+    const currentUserTelegramIdNumber = Number(currentUserTelegramId)
+    const hasUserId = Boolean(currentUserIdString)
+    const hasTelegramId = Number.isFinite(currentUserTelegramIdNumber)
+
+    let userTeamPlaceByGameId = {}
+    if (gamesTeams.length > 0 && (hasUserId || hasTelegramId)) {
+      const teamIds = Array.from(
+        new Set(gamesTeams.map((doc) => toStringId(doc?.teamId)).filter(Boolean))
+      )
+
+      const membershipOr = []
+      if (hasUserId) {
+        membershipOr.push({ userId: currentUserIdString })
+      }
+      if (hasTelegramId) {
+        membershipOr.push({ userTelegramId: currentUserTelegramIdNumber })
+      }
+
+      const memberships = teamIds.length && membershipOr.length
+        ? await TeamsUsersModel.find({
+            teamId: { $in: teamIds },
+            $or: membershipOr,
+          })
+            .select({ teamId: 1 })
+            .lean()
+        : []
+
+      const userTeamIdsSet = new Set(
+        memberships.map((doc) => toStringId(doc?.teamId)).filter(Boolean)
+      )
+      const userTeamIdsByGameId = gamesTeams.reduce((acc, doc) => {
+        const gameId = toStringId(doc?.gameId)
+        const teamId = toStringId(doc?.teamId)
+        if (!gameId || !teamId || !userTeamIdsSet.has(teamId)) {
+          return acc
+        }
+
+        if (!acc[gameId]) {
+          acc[gameId] = []
+        }
+        acc[gameId].push(teamId)
+        return acc
+      }, {})
+
+      userTeamPlaceByGameId = gamesFiltered.reduce((acc, game) => {
+        const gameId = toStringId(game?._id)
+        if (!gameId) {
+          return acc
+        }
+
+        const userTeamIds = userTeamIdsByGameId[gameId]
+        if (!Array.isArray(userTeamIds) || userTeamIds.length === 0) {
+          return acc
+        }
+
+        const places = userTeamIds
+          .map((teamId) => resolveTeamsPlace(game?.result?.teamsPlaces, teamId))
+          .filter((place) => Number.isFinite(place))
+          .map(Number)
+
+        if (places.length === 0) {
+          return acc
+        }
+
+        acc[gameId] = Math.min(...places)
+        return acc
+      }, {})
+    }
+
+    const games = gamesFiltered.map((game) => {
+      const normalizedStatus =
+        game?.status === 'closed' && !canSeeClosedStatus ? 'finished' : game?.status
+      const gameId = game?._id ? game._id.toString() : null
+
+      return normalizeGameForCabinet({
+        ...game,
+        status: normalizedStatus,
+        teamsCount: gameId ? teamsCountMap[gameId] ?? 0 : 0,
+        userTeamPlace: gameId ? userTeamPlaceByGameId[gameId] ?? null : null,
+      })
+    })
+
+    return { games, hasMore }
   }
 
-  const games = gamesFiltered.map((game) =>
-    normalizeGameForCabinet({
+  const games = gamesFiltered.map((game) => {
+    const normalizedStatus =
+      game?.status === 'closed' && !canSeeClosedStatus ? 'finished' : game?.status
+
+    return normalizeGameForCabinet({
       ...game,
+      status: normalizedStatus,
       teamsCount: game?._id ? teamsCountMap[game._id.toString()] ?? 0 : 0,
+      userTeamPlace: null,
     })
-  )
+  })
 
   return { games, hasMore }
 }

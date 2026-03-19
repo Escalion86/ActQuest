@@ -14,7 +14,7 @@ const useSnackbar = () => {
         // onClick: () => {
         //   closeSnackbar(key)
         // },
-        className: 'flex flex-nowrap',
+        className: `aq-snackbar aq-snackbar--${variant} flex flex-nowrap`,
         // autoHideDuration: 100000,
         action: (
           // <div className="w-8 -ml-2">
@@ -23,7 +23,7 @@ const useSnackbar = () => {
               closeSnackbar(key)
             }}
             icon={faTimes}
-            className="w-6 h-6 cursor-pointer"
+            className="aq-snackbar__close w-5 h-5 cursor-pointer"
           />
           // </div>
         ),

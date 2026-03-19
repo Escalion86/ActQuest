@@ -10,6 +10,7 @@ import CardActionIconButton, {
   EditCardIcon,
   TeamCardIcon,
 } from '@components/cabinet/CardActionIconButton'
+import FeedbackToast from '@components/FeedbackToast'
 import NoticeBanner from '@components/NoticeBanner'
 import GameModals from '@components/modals/GameModals'
 import getSessionSafe from '@helpers/getSessionSafe'
@@ -19,10 +20,11 @@ import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import fetchGamesForCabinet from '@helpers/fetchGamesForCabinet'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import { getNounTeams } from '@helpers/getNoun'
+import NeonCheckbox from '@components/NeonCheckbox'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
 
-const GAME_STATUS_OPTIONS = ['active', 'started', 'finished', 'canceled'].map((value) => ({
+const ALL_GAME_STATUS_OPTIONS = ['active', 'started', 'finished', 'closed', 'canceled'].map((value) => ({
   value,
   label: getGameStatusLabel(value),
 }))
@@ -34,6 +36,8 @@ const GAME_STATUS_BADGE_STYLES = {
     'border border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-[#17e6ae]/35 dark:bg-[#17e6ae]/12 dark:text-[#c8ffe9]',
   finished:
     'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#e2d5ff]',
+  closed:
+    'border border-indigo-300 bg-indigo-100 text-indigo-700 dark:border-[#8b5cf6]/45 dark:bg-[#8b5cf6]/14 dark:text-[#e9ddff]',
   canceled:
     'border border-rose-300 bg-rose-100 text-rose-700 dark:border-[#ff4d6d]/35 dark:bg-[#ff4d6d]/12 dark:text-[#ffd1da]',
 }
@@ -62,6 +66,8 @@ const CLUE_EARLY_MODE_OPTIONS = [
 ]
 
 const GAMES_PAGE_SIZE = 10
+const GAMES_FILTER_LOCATION_STORAGE_KEY = 'cabinet_games_location_filter'
+const GAMES_DISPLAY_MODE_STORAGE_KEY = 'cabinet_games_display_mode'
 
 const toMinutes = (seconds) => {
   const numeric = Number(seconds)
@@ -87,6 +93,8 @@ const createPrice = () => ({
 
 const createFinanceEntry = () => {
   const now = new Date()
+  const normalizedIsRated = Boolean(game.isRated ?? true)
+
   return {
     id: `finance-${now.getTime()}-${Math.random().toString(36).slice(2, 6)}`,
     type: 'income',
@@ -156,6 +164,16 @@ const extractErrorMessage = (error) => {
   return null
 }
 
+const isClosedStatus = (status) =>
+  (typeof status === 'string' ? status.toLowerCase() : String(status)) === 'closed'
+
+const normalizeVisibleStatus = (status, canSeeClosedStatus) => {
+  if (isClosedStatus(status) && !canSeeClosedStatus) {
+    return 'finished'
+  }
+  return status
+}
+
 const createTask = () => ({
   id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
   mongoId: null,
@@ -188,6 +206,14 @@ const sanitizeStringArray = (values = []) =>
   (Array.isArray(values) ? values : [])
     .map((item) => (typeof item === 'string' ? item.trim() : ''))
     .filter((item) => item !== '')
+
+const cloneGameDraft = (game) => {
+  if (!game || typeof game !== 'object') {
+    return null
+  }
+
+  return JSON.parse(JSON.stringify(game))
+}
 
 const serializeGameForComparison = (game) => {
   if (!game) {
@@ -328,6 +354,8 @@ const buildUpdatePayload = (game) => {
     }
   })
 
+  const normalizedIsRated = Boolean(game.isRated ?? true)
+
   return {
     name: game.name,
     status: game.status,
@@ -348,7 +376,8 @@ const buildUpdatePayload = (game) => {
     taskFailurePenalty: Number(game.taskFailurePenalty) || 0,
     manyCodesPenalty,
     individualStart: Boolean(game.individualStart),
-    hidden: Boolean(game.hidden),
+    isRated: normalizedIsRated,
+    hidden: normalizedIsRated ? false : Boolean(game.hidden),
     showCreator: Boolean(game.showCreator),
     showTasks: Boolean(game.showTasks),
     hideResult: Boolean(game.hideResult),
@@ -383,7 +412,15 @@ const GamesPage = ({
       ? null
       : Number(currentUserTelegramId)
   const canEditAllGames = userRole === 'admin' || userRole === 'dev'
+  const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
   const canEditOwnGames = userRole === 'moder'
+  const GAME_STATUS_OPTIONS = useMemo(
+    () =>
+      canSeeClosedStatus
+        ? ALL_GAME_STATUS_OPTIONS
+        : ALL_GAME_STATUS_OPTIONS.filter((item) => item.value !== 'closed'),
+    [canSeeClosedStatus]
+  )
   const safeInitialGames = Array.isArray(initialGames) ? initialGames : []
   const currentUserDbId =
     activeSession?.user?._id === null || activeSession?.user?._id === undefined
@@ -396,8 +433,10 @@ const GamesPage = ({
   const [isLoadingMoreGames, setIsLoadingMoreGames] = useState(false)
   const [selectedGameId, setSelectedGameId] = useState(safeInitialGames[0]?.id ?? null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingGame, setEditingGame] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [feedback, setFeedback] = useState(null)
+  const [, setFeedback] = useState(null)
+  const [toastEvent, setToastEvent] = useState(null)
   const [expandedTaskIds, setExpandedTaskIds] = useState([])
   const [isTeamsModalOpen, setIsTeamsModalOpen] = useState(false)
   const [teamsModalState, setTeamsModalState] = useState({
@@ -411,6 +450,20 @@ const GamesPage = ({
   const [removingTeamIds, setRemovingTeamIds] = useState([])
   const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
+  const [isResultsModalOpen, setIsResultsModalOpen] = useState(false)
+  const [resultsModalState, setResultsModalState] = useState({
+    isLoading: false,
+    error: null,
+    gameId: null,
+    gameName: '',
+    rows: [],
+    teamsCount: 0,
+    participantsCount: 0,
+    computed: null,
+    interactiveResultsUrl: null,
+  })
+  const [resultsCacheByGameId, setResultsCacheByGameId] = useState({})
+  const [isGeneratingResults, setIsGeneratingResults] = useState(false)
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
   const [registerGameId, setRegisterGameId] = useState('')
   const [registerTeamId, setRegisterTeamId] = useState('')
@@ -420,6 +473,7 @@ const GamesPage = ({
   const [isRegisterSubmitting, setIsRegisterSubmitting] = useState(false)
   const [isCreateGameModalOpen, setIsCreateGameModalOpen] = useState(false)
   const [newGameName, setNewGameName] = useState('')
+  const [newGameIsRated, setNewGameIsRated] = useState(true)
   const [createGameFeedback, setCreateGameFeedback] = useState(null)
   const [isCreatingGame, setIsCreatingGame] = useState(false)
   const [isLocationFilterLoading, setIsLocationFilterLoading] = useState(false)
@@ -466,6 +520,61 @@ const GamesPage = ({
   }, [defaultGamesFilterLocation])
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !shouldShowLocationFilter) {
+      return
+    }
+
+    const savedLocationFromUnifiedKey = window.localStorage.getItem(
+      GAMES_FILTER_LOCATION_STORAGE_KEY
+    )
+    const legacyStorageKey = `cabinet_games_location_filter_${gamesView}`
+    const savedLocationFromLegacyKey = window.localStorage.getItem(
+      legacyStorageKey
+    )
+    const savedLocation = savedLocationFromUnifiedKey || savedLocationFromLegacyKey
+    const isSavedLocationValid =
+      typeof savedLocation === 'string' &&
+      gameLocationOptions.some((item) => item.key === savedLocation)
+
+    const nextLocation = isSavedLocationValid
+      ? savedLocation
+      : defaultGamesFilterLocation
+
+    if (nextLocation) {
+      setGamesFilterLocation((prev) =>
+        prev === nextLocation ? prev : nextLocation
+      )
+    }
+  }, [
+    defaultGamesFilterLocation,
+    gameLocationOptions,
+    gamesView,
+    shouldShowLocationFilter,
+  ])
+
+  useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      !shouldShowLocationFilter ||
+      !gamesFilterLocation
+    ) {
+      return
+    }
+
+    const isCurrentLocationValid = gameLocationOptions.some(
+      (item) => item.key === gamesFilterLocation
+    )
+    if (!isCurrentLocationValid) {
+      return
+    }
+
+    window.localStorage.setItem(
+      GAMES_FILTER_LOCATION_STORAGE_KEY,
+      gamesFilterLocation
+    )
+  }, [gameLocationOptions, gamesFilterLocation, shouldShowLocationFilter])
+
+  useEffect(() => {
     setFeedback(null)
   }, [selectedGameId])
 
@@ -474,18 +583,27 @@ const GamesPage = ({
       return
     }
 
-    const saved = window.localStorage.getItem('cabinet_games_display_mode')
-    if (saved === 'list' || saved === 'cards') {
-      setGamesDisplayMode(saved)
+    const savedModeFromUnifiedKey = window.localStorage.getItem(
+      GAMES_DISPLAY_MODE_STORAGE_KEY
+    )
+    const legacyStorageKey = `cabinet_games_display_mode_${gamesView}`
+    const savedModeFromLegacyKey = window.localStorage.getItem(legacyStorageKey)
+    const savedMode = savedModeFromUnifiedKey || savedModeFromLegacyKey
+
+    if (savedMode === 'list' || savedMode === 'cards') {
+      setGamesDisplayMode(savedMode)
     }
-  }, [])
+  }, [gamesView])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
 
-    window.localStorage.setItem('cabinet_games_display_mode', gamesDisplayMode)
+    window.localStorage.setItem(
+      GAMES_DISPLAY_MODE_STORAGE_KEY,
+      gamesDisplayMode
+    )
   }, [gamesDisplayMode])
 
   const selectedGame = useMemo(
@@ -497,6 +615,7 @@ const GamesPage = ({
 
   useEffect(() => {
     setExpandedTaskIds([])
+    setEditingGame(null)
     setTeamsModalState({
       isLoading: false,
       error: null,
@@ -506,6 +625,7 @@ const GamesPage = ({
     setSelectedTeamToAdd('')
     setRemovingTeamIds([])
     setSelectedModeratorToAdd('')
+    setIsResultsModalOpen(false)
   }, [selectedGameId])
 
   useEffect(() => {
@@ -1030,6 +1150,7 @@ const GamesPage = ({
   const handleOpenCreateGameModal = useCallback(() => {
     setCreateGameFeedback(null)
     setNewGameName('')
+    setNewGameIsRated(true)
     setIsCreateGameModalOpen(true)
   }, [])
 
@@ -1040,6 +1161,7 @@ const GamesPage = ({
 
     setIsCreateGameModalOpen(false)
     setNewGameName('')
+    setNewGameIsRated(true)
     setCreateGameFeedback(null)
   }, [isCreatingGame])
 
@@ -1103,6 +1225,7 @@ const GamesPage = ({
           taskFailurePenalty: 0,
           manyCodesPenalty: [0, 0],
           individualStart: false,
+          isRated: Boolean(newGameIsRated),
           hidden: true,
           showCreator: true,
           showTasks: false,
@@ -1179,6 +1302,7 @@ const GamesPage = ({
     currentUserTelegramIdNumber,
     location,
     newGameName,
+    newGameIsRated,
     setFeedback,
     setGames,
     setPersistedGames,
@@ -1216,7 +1340,7 @@ const GamesPage = ({
     () =>
       games.filter((game) => {
         const status = (game?.status ?? '').toString().toLowerCase()
-        return status !== 'finished' && status !== 'canceled'
+        return status !== 'finished' && status !== 'closed' && status !== 'canceled'
       }),
     [games]
   )
@@ -1225,7 +1349,7 @@ const GamesPage = ({
     () =>
       games.filter((game) => {
         const status = (game?.status ?? '').toString().toLowerCase()
-        if (status === 'finished') {
+        if (status === 'finished' || status === 'closed') {
           return true
         }
         if (status === 'canceled') {
@@ -1280,18 +1404,22 @@ const GamesPage = ({
   }, [currentUserDbId, selectedGame])
 
   const isDirty = useMemo(() => {
-    if (!selectedGame || !persistedSelectedGame) {
+    if (!editingGame || !persistedSelectedGame) {
       return false
     }
 
     return (
-      serializeGameForComparison(selectedGame) !==
+      serializeGameForComparison(editingGame) !==
       serializeGameForComparison(persistedSelectedGame)
     )
-  }, [persistedSelectedGame, selectedGame])
+  }, [editingGame, persistedSelectedGame])
 
   const canEditSelectedGame = useMemo(() => {
     if (!selectedGame) {
+      return false
+    }
+
+    if (isClosedStatus(selectedGame.status)) {
       return false
     }
 
@@ -1326,6 +1454,10 @@ const GamesPage = ({
   const canManageGame = useCallback(
     (game) => {
       if (!game) {
+        return false
+      }
+
+      if (isClosedStatus(game.status)) {
         return false
       }
 
@@ -1369,49 +1501,46 @@ const GamesPage = ({
 
   const updateSelectedGame = useCallback(
     (updater) => {
-      if (!selectedGameId || !canEditSelectedGame) return
+      if (!canEditSelectedGame || !editingGame) return
 
-      setGames((prevGames) =>
-        prevGames.map((game) => {
-          if (game.id !== selectedGameId) {
-            return game
-          }
+      setEditingGame((prevGame) => {
+        if (!prevGame) {
+          return prevGame
+        }
 
-          const patch = typeof updater === 'function' ? updater(game) : updater
-          return { ...game, ...patch }
-        })
-      )
+        const patch = typeof updater === 'function' ? updater(prevGame) : updater
+        const nextGame = { ...prevGame, ...patch }
+        if (Boolean(nextGame.isRated ?? true)) {
+          nextGame.hidden = false
+        }
+        return nextGame
+      })
     },
-    [canEditSelectedGame, selectedGameId]
+    [canEditSelectedGame, editingGame]
   )
 
   const handleResetChanges = useCallback(() => {
-    if (!selectedGameId) return
+    if (!persistedSelectedGame) return
 
-    setGames((prevGames) =>
-      prevGames.map((game) => {
-        if (game.id !== selectedGameId) {
-          return game
-        }
-
-        const original = persistedGames.find((item) => item.id === selectedGameId)
-        return original ? { ...original } : game
-      })
-    )
+    setEditingGame(cloneGameDraft(persistedSelectedGame))
     setFeedback(null)
-  }, [persistedGames, selectedGameId])
+  }, [persistedSelectedGame])
 
   const handleSaveChanges = useCallback(async () => {
-    if (!selectedGame || !selectedGameApiLocation || !canEditSelectedGame) return
+    const gameToSave = editingGame ?? selectedGame
+    const gameApiLocation =
+      gameToSave?.location || (shouldShowLocationFilter ? gamesFilterLocation : location)
+
+    if (!gameToSave || !gameApiLocation || !canEditSelectedGame) return
 
     setIsSaving(true)
     setFeedback(null)
 
     try {
-      const response = await fetch(`/api/${selectedGameApiLocation}/games/${selectedGame.id}`, {
+      const response = await fetch(`/api/${gameApiLocation}/games/${gameToSave.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: buildUpdatePayload(selectedGame) }),
+        body: JSON.stringify({ data: buildUpdatePayload(gameToSave) }),
       })
 
       const json = await response.json()
@@ -1422,7 +1551,7 @@ const GamesPage = ({
 
       const normalizedGame = normalizeGameForCabinet({
         ...json.data,
-        teamsCount: selectedGame.teamsCount,
+        teamsCount: gameToSave.teamsCount,
       })
 
       setGames((prevGames) =>
@@ -1432,6 +1561,7 @@ const GamesPage = ({
         prevGames.map((game) => (game.id === normalizedGame.id ? normalizedGame : game))
       )
       setFeedback({ type: 'success', message: 'Изменения сохранены' })
+      setEditingGame(null)
       setIsEditModalOpen(false)
     } catch (error) {
       console.error('Failed to update game', error)
@@ -1442,7 +1572,14 @@ const GamesPage = ({
     } finally {
       setIsSaving(false)
     }
-  }, [canEditSelectedGame, selectedGame, selectedGameApiLocation])
+  }, [
+    canEditSelectedGame,
+    editingGame,
+    gamesFilterLocation,
+    location,
+    selectedGame,
+    shouldShowLocationFilter,
+  ])
 
   const handleAddPrice = useCallback(() => {
     if (!canEditSelectedGame) return
@@ -2123,6 +2260,7 @@ const GamesPage = ({
     setSelectedGameId(game.id)
     setIsTeamsModalOpen(false)
     setIsEditModalOpen(false)
+    setIsResultsModalOpen(false)
     setIsDescriptionModalOpen(true)
   }, [])
 
@@ -2134,6 +2272,7 @@ const GamesPage = ({
 
       setSelectedGameId(game.id)
       setIsTeamsModalOpen(false)
+      setIsResultsModalOpen(false)
       setIsDescriptionModalOpen(false)
       setIsEditModalOpen(true)
     },
@@ -2147,26 +2286,261 @@ const GamesPage = ({
       }
 
       setSelectedGameId(game.id)
+      setIsResultsModalOpen(false)
       setIsDescriptionModalOpen(false)
       setIsTeamsModalOpen(true)
     },
     [canManageGame]
   )
 
+  const canViewResultsForGame = useCallback((game) => {
+    if (!game || Boolean(game.hideResult)) {
+      return false
+    }
+
+    if (!Boolean(game.isResultGenerated)) {
+      return false
+    }
+
+    const status = typeof game.status === 'string' ? game.status.toLowerCase() : ''
+    return status === 'finished' || status === 'closed'
+  }, [])
+
+  const canGenerateResults = useMemo(() => {
+    if (!canEditSelectedGame || !selectedGame) {
+      return false
+    }
+
+    const status = typeof selectedGame.status === 'string'
+      ? selectedGame.status.toLowerCase()
+      : ''
+
+    return status === 'finished' || status === 'closed'
+  }, [canEditSelectedGame, selectedGame])
+
+  const loadGameResults = useCallback(
+    async (game) => {
+      if (!game?.id) {
+        return
+      }
+
+      const cached = resultsCacheByGameId[game.id]
+      if (cached) {
+        setResultsModalState({
+          isLoading: false,
+          error: null,
+          ...cached,
+        })
+        return
+      }
+
+      const locationForApi =
+        game.location || (shouldShowLocationFilter ? gamesFilterLocation : location) || ''
+
+      setResultsModalState({
+        isLoading: true,
+        error: null,
+        gameId: game.id,
+        gameName: game.name || 'Без названия',
+        rows: [],
+        teamsCount: 0,
+        participantsCount: 0,
+        computed: null,
+        interactiveResultsUrl: null,
+      })
+
+      try {
+        const params = new URLSearchParams()
+        if (locationForApi) {
+          params.set('location', locationForApi)
+        }
+
+        const response = await fetch(
+          `/api/cabinet/games/${encodeURIComponent(game.id)}/result?${params.toString()}`
+        )
+        const json = await response.json()
+
+        if (!response.ok || json?.success === false) {
+          throw new Error(extractErrorMessage(json?.error) || 'Не удалось загрузить результаты игры')
+        }
+
+        const nextData = {
+          gameId: json?.data?.gameId || game.id,
+          gameName: json?.data?.gameName || game.name || 'Без названия',
+          rows: Array.isArray(json?.data?.rows) ? json.data.rows : [],
+          teamsCount: Number(json?.data?.teamsCount) || 0,
+          participantsCount: Number(json?.data?.participantsCount) || 0,
+          computed:
+            json?.data?.computed && typeof json.data.computed === 'object'
+              ? json.data.computed
+              : null,
+          interactiveResultsUrl:
+            typeof json?.data?.interactiveResultsUrl === 'string' && json.data.interactiveResultsUrl.trim().length > 0
+              ? json.data.interactiveResultsUrl.trim()
+              : null,
+        }
+
+        setResultsCacheByGameId((prev) => ({
+          ...prev,
+          [game.id]: nextData,
+        }))
+
+        setResultsModalState({
+          isLoading: false,
+          error: null,
+          ...nextData,
+        })
+      } catch (error) {
+        setResultsModalState({
+          isLoading: false,
+          error: error?.message || 'Не удалось загрузить результаты игры',
+          gameId: game.id,
+          gameName: game.name || 'Без названия',
+          rows: [],
+          teamsCount: 0,
+          participantsCount: 0,
+          computed: null,
+          interactiveResultsUrl: null,
+        })
+      }
+    },
+    [gamesFilterLocation, location, resultsCacheByGameId, shouldShowLocationFilter]
+  )
+
+  const handleOpenResultsFromGame = useCallback(
+    (game) => {
+      if (!game || !canViewResultsForGame(game)) {
+        return
+      }
+
+      setSelectedGameId(game.id)
+      setIsDescriptionModalOpen(false)
+      setIsEditModalOpen(false)
+      setIsTeamsModalOpen(false)
+      setIsResultsModalOpen(true)
+      loadGameResults(game)
+    },
+    [canViewResultsForGame, loadGameResults]
+  )
+
+  const handleCloseResultsModal = useCallback(() => {
+    setIsResultsModalOpen(false)
+  }, [])
+
+  const handleGenerateResults = useCallback(async () => {
+    if (!selectedGame || !canGenerateResults || isGeneratingResults) {
+      return
+    }
+
+    const locationForApi =
+      selectedGame.location || (shouldShowLocationFilter ? gamesFilterLocation : location) || ''
+
+    setIsGeneratingResults(true)
+    setFeedback(null)
+
+    try {
+      const response = await fetch(
+        `/api/cabinet/games/${encodeURIComponent(selectedGame.id)}/result`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ location: locationForApi }),
+        }
+      )
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(extractErrorMessage(json?.error) || 'Не удалось сформировать результаты')
+      }
+
+      const nextData = {
+        gameId: json?.data?.gameId || selectedGame.id,
+        gameName: json?.data?.gameName || selectedGame.name || 'Без названия',
+        rows: Array.isArray(json?.data?.rows) ? json.data.rows : [],
+        teamsCount: Number(json?.data?.teamsCount) || 0,
+        participantsCount: Number(json?.data?.participantsCount) || 0,
+        computed:
+          json?.data?.computed && typeof json.data.computed === 'object'
+            ? json.data.computed
+            : null,
+        interactiveResultsUrl:
+          typeof json?.data?.interactiveResultsUrl === 'string' && json.data.interactiveResultsUrl.trim().length > 0
+            ? json.data.interactiveResultsUrl.trim()
+            : null,
+      }
+
+      setResultsCacheByGameId((prev) => ({
+        ...prev,
+        [selectedGame.id]: nextData,
+      }))
+
+      setGames((prev) =>
+        prev.map((gameItem) =>
+          gameItem.id === selectedGame.id
+            ? { ...gameItem, isResultGenerated: true }
+            : gameItem
+        )
+      )
+      setPersistedGames((prev) =>
+        prev.map((gameItem) =>
+          gameItem.id === selectedGame.id
+            ? { ...gameItem, isResultGenerated: true }
+            : gameItem
+        )
+      )
+
+      setResultsModalState({
+        isLoading: false,
+        error: null,
+        ...nextData,
+      })
+
+      setFeedback({ type: 'success', message: 'Результаты игры сформированы' })
+      setToastEvent({
+        id: `generate-results-success-${Date.now()}`,
+        type: 'success',
+        message: 'Результаты игры сформированы',
+      })
+    } catch (error) {
+      const message = error?.message || 'Не удалось сформировать результаты'
+      setFeedback({
+        type: 'error',
+        message,
+      })
+      setToastEvent({
+        id: `generate-results-error-${Date.now()}`,
+        type: 'error',
+        message,
+      })
+    } finally {
+      setIsGeneratingResults(false)
+    }
+  }, [
+    canGenerateResults,
+    gamesFilterLocation,
+    isGeneratingResults,
+    location,
+    selectedGame,
+    shouldShowLocationFilter,
+  ])
+
   const handleOpenEditModal = useCallback(() => {
     if (!canEditSelectedGame) {
       return
     }
 
+    setEditingGame(cloneGameDraft(selectedGame))
+    setIsResultsModalOpen(false)
     setIsDescriptionModalOpen(false)
     setIsEditModalOpen(true)
-  }, [canEditSelectedGame])
+  }, [canEditSelectedGame, selectedGame])
 
   const handleCloseEditModal = useCallback(() => {
     if (isSaving) {
       return
     }
 
+    setEditingGame(null)
     setIsEditModalOpen(false)
   }, [isSaving])
 
@@ -2267,6 +2641,10 @@ const GamesPage = ({
         : '—'
 
       const canManageThisGame = canManageGame(game)
+      const canViewThisGameResults = canViewResultsForGame(game)
+      const visibleStatus = normalizeVisibleStatus(game.status, canSeeClosedStatus)
+      const userTeamPlace = Number(game.userTeamPlace)
+      const hasUserTeamPlace = Number.isFinite(userTeamPlace) && userTeamPlace > 0
 
       return (
         <li key={game.id}>
@@ -2281,14 +2659,14 @@ const GamesPage = ({
               }
             }}
             isActive={selectedGameId === game.id}
-            className="cursor-pointer"
+            className="relative cursor-pointer"
             aria-pressed={selectedGameId === game.id}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 flex-1 items-start gap-3">
-                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex flex-col items-start justify-between gap-3 pb-0 sm:flex-row sm:pb-12">
+              <div className="flex min-w-0 w-full flex-1 items-start gap-3">
+                <div className="relative hidden h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 sm:block sm:h-[120px] sm:w-[120px] dark:border-slate-700 dark:bg-slate-900">
                   {game.image ? (
                     <img
                       src={game.image}
@@ -2302,14 +2680,27 @@ const GamesPage = ({
                     </div>
                   )}
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-primary dark:text-slate-100">
+                <div className="min-w-0 flex-1">
+                  <span
+                    className={`mb-2 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
+                  >
+                    {getGameStatusLabel(visibleStatus)}
+                  </span>
+                  <p className="aq-line-clamp-2 text-sm font-semibold text-primary dark:text-slate-100">
                     {game.name || 'Без названия'}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-slate-500">{startDateLabel}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {canManageThisGame
+                      ? `${getNounTeams(game.teamsCount)} · Обновлено ${relativeUpdatedAt}`
+                      : getNounTeams(game.teamsCount)}
                   </p>
                 </div>
               </div>
               {canManageThisGame && (
-                <div className="flex items-center gap-2">
+                <div className="absolute right-3 top-3 flex shrink-0 items-center gap-2">
                   <CardActionIconButton
                     onClick={(event) => {
                       event.stopPropagation()
@@ -2331,24 +2722,28 @@ const GamesPage = ({
                 </div>
               )}
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-1 font-semibold ${getStatusBadgeClassName(game.status)}`}
+            {canViewThisGameResults && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  handleOpenResultsFromGame(game)
+                }}
+                className="mt-1 inline-flex cursor-pointer items-center justify-center self-end rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 sm:absolute sm:bottom-3 sm:right-3 sm:mt-0 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
               >
-                {getGameStatusLabel(game.status)}
+                Результаты
+              </button>
+            )}
+            {hasUserTeamPlace && (
+              <span className="pointer-events-none mt-1 inline-flex items-center self-start rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 sm:absolute sm:bottom-3 sm:left-3 sm:mt-0 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
+                Место: {userTeamPlace}
               </span>
-              <span className="text-slate-500">{startDateLabel}</span>
-            </div>
-            <p className="mt-1 text-xs text-slate-400">
-              {canManageThisGame
-                ? `${getNounTeams(game.teamsCount)} · Обновлено ${relativeUpdatedAt}`
-                : getNounTeams(game.teamsCount)}
-            </p>
+            )}
           </SelectableCard>
         </li>
       )
     },
-    [canManageGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleSelectGameCard, selectedGameId]
+    [canManageGame, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleSelectGameCard, selectedGameId]
   )
 
   const renderGameTileItem = useCallback(
@@ -2365,6 +2760,10 @@ const GamesPage = ({
         : '—'
 
       const canManageThisGame = canManageGame(game)
+      const canViewThisGameResults = canViewResultsForGame(game)
+      const visibleStatus = normalizeVisibleStatus(game.status, canSeeClosedStatus)
+      const userTeamPlace = Number(game.userTeamPlace)
+      const hasUserTeamPlace = Number.isFinite(userTeamPlace) && userTeamPlace > 0
 
       return (
         <li key={game.id}>
@@ -2379,12 +2778,12 @@ const GamesPage = ({
               }
             }}
             isActive={selectedGameId === game.id}
-            className="cursor-pointer overflow-hidden p-0"
+            className="relative cursor-pointer overflow-hidden p-0"
             aria-pressed={selectedGameId === game.id}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
-            <div className="relative aspect-square w-full overflow-hidden border-b border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900">
+            <div className="relative mx-auto aspect-square w-full max-w-[240px] overflow-hidden border-b border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900 md:max-w-none md:mx-0">
               {game.image ? (
                 <img
                   src={game.image}
@@ -2398,11 +2797,18 @@ const GamesPage = ({
                 </div>
               )}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
+              <div className="absolute left-2 top-2 md:hidden">
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
+                >
+                  {getGameStatusLabel(visibleStatus)}
+                </span>
+              </div>
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
                 <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(game.status)}`}
+                  className={`hidden items-center rounded-full px-2.5 py-1 text-xs font-semibold md:inline-flex ${getStatusBadgeClassName(visibleStatus)}`}
                 >
-                  {getGameStatusLabel(game.status)}
+                  {getGameStatusLabel(visibleStatus)}
                 </span>
                 {canManageThisGame && (
                   <div className="pointer-events-auto flex items-center gap-2">
@@ -2431,7 +2837,7 @@ const GamesPage = ({
               </div>
             </div>
             <div className="space-y-2 p-4">
-              <p className="text-sm font-semibold text-primary dark:text-slate-100">
+              <p className="aq-line-clamp-2 text-sm font-semibold text-primary dark:text-slate-100">
                 {game.name || 'Без названия'}
               </p>
               <p className="text-xs text-slate-500">{startDateLabel}</p>
@@ -2440,66 +2846,85 @@ const GamesPage = ({
                   ? `${getNounTeams(game.teamsCount)} · Обновлено ${relativeUpdatedAt}`
                   : getNounTeams(game.teamsCount)}
               </p>
+              {canViewThisGameResults && (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    handleOpenResultsFromGame(game)
+                  }}
+                  className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
+                >
+                  Результаты
+                </button>
+              )}
             </div>
+            {hasUserTeamPlace && (
+              <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
+                Место: {userTeamPlace}
+              </span>
+            )}
           </SelectableCard>
         </li>
       )
     },
-    [canManageGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleSelectGameCard, selectedGameId]
+    [canManageGame, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleSelectGameCard, selectedGameId]
   )
 
+  const modalGame = isEditModalOpen && editingGame ? editingGame : selectedGame
+
   const gameTypeLabel = useMemo(() => {
-    if (!selectedGame) {
+    if (!modalGame) {
       return '—'
     }
 
-    const option = GAME_TYPE_OPTIONS.find((item) => item.value === selectedGame.type)
+    const option = GAME_TYPE_OPTIONS.find((item) => item.value === modalGame.type)
     return option?.label ?? '—'
-  }, [selectedGame])
+  }, [modalGame])
 
   const plannedStartLabel = useMemo(() => {
-    if (!selectedGame?.dateStart) {
+    if (!modalGame?.dateStart) {
       return 'Дата не назначена'
     }
 
     try {
-      return new Date(selectedGame.dateStart).toLocaleString('ru-RU', {
+      return new Date(modalGame.dateStart).toLocaleString('ru-RU', {
         dateStyle: 'long',
         timeStyle: 'short',
       })
     } catch (error) {
       return 'Дата не назначена'
     }
-  }, [selectedGame])
+  }, [modalGame])
 
   const taskDurationLabel = useMemo(() => {
-    if (!selectedGame) {
+    if (!modalGame) {
       return '—'
     }
 
-    const minutes = toMinutes(selectedGame.taskDuration)
+    const minutes = toMinutes(modalGame.taskDuration)
     return minutes > 0 ? `${minutes} мин` : 'Не задано'
-  }, [selectedGame])
+  }, [modalGame])
 
   const cluesDurationLabel = useMemo(() => {
-    if (!selectedGame) {
+    if (!modalGame) {
       return '—'
     }
 
-    const minutes = toMinutes(selectedGame.cluesDuration)
+    const minutes = toMinutes(modalGame.cluesDuration)
     return minutes > 0 ? `${minutes} мин` : 'Подсказки отключены'
-  }, [selectedGame])
+  }, [modalGame])
 
   const selectedGameModerators = useMemo(() => {
-    if (!selectedGame) {
+    if (!modalGame) {
       return []
     }
 
-    return (selectedGame.moderators ?? []).filter(Boolean)
-  }, [selectedGame])
+    return (modalGame.moderators ?? []).filter(Boolean)
+  }, [modalGame])
 
   const availableModeratorsForSelect = useMemo(() => {
-    if (!selectedGame) {
+    if (!modalGame) {
       return []
     }
 
@@ -2520,19 +2945,19 @@ const GamesPage = ({
     )
 
     return availableModerators.filter((moderator) => !existingIds.has(moderator.id))
-  }, [availableModerators, selectedGame, selectedGameModerators])
+  }, [availableModerators, modalGame, selectedGameModerators])
 
   const clueModeDetails = useMemo(() => {
-    if (!selectedGame) {
+    if (!modalGame) {
       return { modeLabel: '—', valueLabel: '—' }
     }
 
     const option = CLUE_EARLY_MODE_OPTIONS.find(
-      (item) => item.value === selectedGame.clueEarlyAccessMode
+      (item) => item.value === modalGame.clueEarlyAccessMode
     )
-    const minutes = toMinutes(selectedGame.clueEarlyPenalty)
+    const minutes = toMinutes(modalGame.clueEarlyPenalty)
 
-    if (selectedGame.clueEarlyAccessMode === 'penalty') {
+    if (modalGame.clueEarlyAccessMode === 'penalty') {
       return {
         modeLabel: option?.label ?? '—',
         valueLabel: minutes > 0 ? `Штраф ${minutes} мин` : 'Штраф не применяется',
@@ -2546,56 +2971,61 @@ const GamesPage = ({
           ? `После подсказки добавляется ${minutes} мин ожидания`
           : 'Без дополнительного времени',
     }
-  }, [selectedGame])
+  }, [modalGame])
+
+  const canViewGameResults = useMemo(
+    () => canViewResultsForGame(selectedGame),
+    [canViewResultsForGame, selectedGame]
+  )
 
   const breakDurationLabel = useMemo(() => {
-    if (!selectedGame) {
+    if (!modalGame) {
       return '—'
     }
 
-    const minutes = toMinutes(selectedGame.breakDuration)
+    const minutes = toMinutes(modalGame.breakDuration)
     return minutes > 0 ? `${minutes} мин` : 'Без перерывов'
-  }, [selectedGame])
+  }, [modalGame])
 
   const taskFailurePenaltyLabel = useMemo(() => {
-    if (!selectedGame) {
+    if (!modalGame) {
       return '—'
     }
 
-    if (selectedGame.type === 'photo') {
-      const value = Number(selectedGame.taskFailurePenalty) || 0
+    if (modalGame.type === 'photo') {
+      const value = Number(modalGame.taskFailurePenalty) || 0
       return value > 0 ? `${value} баллов` : 'Штраф отсутствует'
     }
 
-    const minutes = toMinutes(selectedGame.taskFailurePenalty)
+    const minutes = toMinutes(modalGame.taskFailurePenalty)
     return minutes > 0 ? `${minutes} мин` : 'Штраф отсутствует'
-  }, [selectedGame])
+  }, [modalGame])
 
   const manyCodesLimitLabel = useMemo(() => {
-    if (!selectedGame || selectedGame.type === 'photo') {
+    if (!modalGame || modalGame.type === 'photo') {
       return null
     }
 
-    const limit = Number(selectedGame.manyCodesPenalty?.[0]) || 0
+    const limit = Number(modalGame.manyCodesPenalty?.[0]) || 0
     return limit > 0 ? `${limit} попыток` : 'Лимит не задан'
-  }, [selectedGame])
+  }, [modalGame])
 
   const manyCodesPenaltyLabel = useMemo(() => {
-    if (!selectedGame || selectedGame.type === 'photo') {
+    if (!modalGame || modalGame.type === 'photo') {
       return null
     }
 
-    const seconds = Number(selectedGame.manyCodesPenalty?.[1]) || 0
+    const seconds = Number(modalGame.manyCodesPenalty?.[1]) || 0
     const minutes = toMinutes(seconds)
     return minutes > 0 ? `${minutes} мин` : 'Без штрафа'
-  }, [selectedGame])
+  }, [modalGame])
 
   const financesSummary = useMemo(() => {
-    if (!selectedGame?.finances) {
+    if (!modalGame?.finances) {
       return { income: 0, expense: 0, balance: 0 }
     }
 
-    const { income, expense } = selectedGame.finances.reduce(
+    const { income, expense } = modalGame.finances.reduce(
       (acc, entry) => {
         if (entry.type === 'expense') {
           acc.expense += Number(entry.sum) || 0
@@ -2608,7 +3038,7 @@ const GamesPage = ({
     )
 
     return { income, expense, balance: income - expense }
-  }, [selectedGame])
+  }, [modalGame])
 
   const balanceClass = financesSummary.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'
   const isCardsDisplay = gamesDisplayMode === 'cards'
@@ -2631,6 +3061,7 @@ const GamesPage = ({
         description={pageDescription}
         activePage="games"
       >
+        <FeedbackToast event={toastEvent} />
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-5 space-y-4 md:max-w-4xl">
             <div className="flex flex-wrap gap-3">
@@ -2674,15 +3105,14 @@ const GamesPage = ({
                   Карточки
                 </button>
               </div>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                <input
-                  type="checkbox"
-                  checked={showCanceledGames}
-                  onChange={(event) => setShowCanceledGames(event.target.checked)}
-                  className="h-4 w-4 cursor-pointer rounded border-slate-300 text-primary focus:ring-primary dark:border-slate-600"
-                />
-                Отменённые
-              </label>
+              <NeonCheckbox
+                id="games-show-canceled"
+                checked={showCanceledGames}
+                onChange={(event) => setShowCanceledGames(event.target.checked)}
+                className="rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700"
+                label="Отменённые"
+                labelClassName="text-xs font-semibold text-slate-600 dark:text-slate-300"
+              />
             </div>
             {shouldShowLocationFilter && (
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
@@ -2729,15 +3159,6 @@ const GamesPage = ({
             {selectedGame && !location && (
               <NoticeBanner tone="warning" variant="neon">
                 Не удалось определить площадку пользователя. Сохранение изменений недоступно.
-              </NoticeBanner>
-            )}
-
-            {feedback && (
-              <NoticeBanner
-                tone={feedback.type === 'success' ? 'success' : 'error'}
-                variant="neon"
-              >
-                {feedback.message}
               </NoticeBanner>
             )}
 
@@ -2806,6 +3227,7 @@ const GamesPage = ({
               <div className="space-y-6">
                 <GameModals
                   selectedGame={selectedGame}
+                  editGame={editingGame}
                   isEditModalOpen={isEditModalOpen}
                   handleCloseEditModal={handleCloseEditModal}
                   canEditSelectedGame={canEditSelectedGame}
@@ -2854,6 +3276,9 @@ const GamesPage = ({
                   handleAddFinance={handleAddFinance}
                   handleFinanceChange={handleFinanceChange}
                   handleRemoveFinance={handleRemoveFinance}
+                  canGenerateResults={canGenerateResults}
+                  isGeneratingResults={isGeneratingResults}
+                  handleGenerateResults={handleGenerateResults}
                   currencyFormatter={currencyFormatter}
                   financesSummary={financesSummary}
                   balanceClass={balanceClass}
@@ -2886,12 +3311,16 @@ const GamesPage = ({
                   handleCreateGame={handleCreateGame}
                   newGameName={newGameName}
                   setNewGameName={setNewGameName}
+                  newGameIsRated={newGameIsRated}
+                  setNewGameIsRated={setNewGameIsRated}
                   createGameFeedback={createGameFeedback}
                   isDescriptionModalOpen={isDescriptionModalOpen}
                   handleCloseDescriptionModal={handleCloseDescriptionModal}
                   gameTypeLabel={gameTypeLabel}
                   plannedStartLabel={plannedStartLabel}
                   canViewRestrictedGameInfo={canViewRestrictedGameInfo}
+                  canViewGameResults={canViewGameResults}
+                  handleOpenResultsModal={() => handleOpenResultsFromGame(selectedGame)}
                   selectedGameModerators={selectedGameModerators}
                   availableModeratorsForSelect={availableModeratorsForSelect}
                   availableModeratorsMap={availableModeratorsMap}
@@ -2906,6 +3335,9 @@ const GamesPage = ({
                   taskFailurePenaltyLabel={taskFailurePenaltyLabel}
                   manyCodesLimitLabel={manyCodesLimitLabel}
                   manyCodesPenaltyLabel={manyCodesPenaltyLabel}
+                  isResultsModalOpen={isResultsModalOpen}
+                  handleCloseResultsModal={handleCloseResultsModal}
+                  resultsModalState={resultsModalState}
                 />
               </div>
             </div>
@@ -2998,6 +3430,7 @@ GamesPage.propTypes = {
       taskFailurePenalty: PropTypes.number,
       manyCodesPenalty: PropTypes.arrayOf(PropTypes.number),
       individualStart: PropTypes.bool,
+      isRated: PropTypes.bool,
       hidden: PropTypes.bool,
       showCreator: PropTypes.bool,
       showTasks: PropTypes.bool,
@@ -3025,6 +3458,8 @@ GamesPage.propTypes = {
         })
       ),
       teamsCount: PropTypes.number,
+      userTeamPlace: PropTypes.number,
+      isResultGenerated: PropTypes.bool,
       tasksStats: PropTypes.shape({
         total: PropTypes.number,
         bonus: PropTypes.number,
@@ -3072,6 +3507,13 @@ export async function getServerSideProps(context) {
   const creatorTelegramId = Number.isFinite(numericTelegramId)
     ? numericTelegramId
     : null
+  const currentUserId =
+    session?.user?._id === null || session?.user?._id === undefined
+      ? null
+      : String(session.user._id)
+  const currentUserTelegramId = Number.isFinite(numericTelegramId)
+    ? numericTelegramId
+    : null
   let initialGames = []
   let initialHasMore = false
   let availableGameModerators = []
@@ -3087,6 +3529,8 @@ export async function getServerSideProps(context) {
           location,
           userRole,
           creatorTelegramId,
+          currentUserId,
+          currentUserTelegramId,
           offset: 0,
           limit: GAMES_PAGE_SIZE,
           view: 'all',

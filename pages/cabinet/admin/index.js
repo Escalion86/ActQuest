@@ -93,10 +93,11 @@ const AdminPage = () => {
                 <h3 className="text-lg font-semibold text-primary">{tool.title}</h3>
                 <p className="mt-2 text-sm text-slate-500">{tool.description}</p>
               </div>
-              <Link href={tool.href} legacyBehavior>
-                <a className="inline-flex justify-center px-4 py-3 mt-6 text-sm font-semibold text-white bg-primary rounded-xl transition hover:bg-blue-700">
-                  {tool.action}
-                </a>
+              <Link
+                href={tool.href}
+                className="inline-flex justify-center px-4 py-3 mt-6 text-sm font-semibold text-white bg-primary rounded-xl transition hover:bg-blue-700"
+              >
+                {tool.action}
               </Link>
             </article>
           ))}

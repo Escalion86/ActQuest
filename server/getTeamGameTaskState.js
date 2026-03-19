@@ -418,7 +418,7 @@ const getTeamGameTaskState = async ({
 
     const status = game.status || 'active'
     const isGameStarted = status === 'started'
-    const isGameFinished = status === 'finished'
+    const isGameFinished = status === 'finished' || status === 'closed'
 
     const db = await dbConnectGlobal()
 

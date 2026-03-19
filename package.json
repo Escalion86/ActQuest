@@ -3,7 +3,9 @@
   "version": "0.2.2",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
+    "dev:turbo": "next dev",
+    "dev:webpack": "next dev --webpack",
     "build": "NODE_OPTIONS='--max-old-space-size=2048' next build",
     "start": "next start",
     "migrate:teamsusers:user-id": "node scripts/migrateTeamsUsersUserId.js",

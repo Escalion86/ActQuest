@@ -21,6 +21,8 @@ import useSnackbar from '@helpers/useSnackbar'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
+const MAX_TEAMS_PER_USER = 3
+
 const serializeTeamForComparison = (team) => {
   if (!team) {
     return null
@@ -29,6 +31,7 @@ const serializeTeamForComparison = (team) => {
   return JSON.stringify({
     name: team.name ?? '',
     description: team.description ?? '',
+    image: team.image ?? '',
     open: Boolean(team.open),
   })
 }
@@ -40,6 +43,7 @@ const buildTeamUpdatePayload = (team) => {
     name,
     name_lowered: name.toLowerCase(),
     description: team.description ?? '',
+    image: team.image ?? null,
     open: Boolean(team.open),
   }
 }
@@ -101,6 +105,7 @@ const TeamsPage = ({
   const [memberActionId, setMemberActionId] = useState(null)
   const [newTeamName, setNewTeamName] = useState('')
   const [newTeamDescription, setNewTeamDescription] = useState('')
+  const [newTeamImage, setNewTeamImage] = useState('')
   const [newTeamOpen, setNewTeamOpen] = useState(true)
   const [isCreatingTeam, setIsCreatingTeam] = useState(false)
   const [joinTeamId, setJoinTeamId] = useState('')
@@ -231,6 +236,9 @@ const TeamsPage = ({
   const canManageSelectedTeam = isAdmin || isTeamCaptain
   const canUseSelfServiceTeams =
     Boolean(location) && Boolean(currentUserId)
+  const isTeamsLimitReached = visibleTeams.length >= MAX_TEAMS_PER_USER
+  const canUseSelfServiceTeamsActions =
+    canUseSelfServiceTeams && !isTeamsLimitReached
 
   const sortTeamsByUpdatedAt = useCallback((items) => {
     if (!Array.isArray(items)) {
@@ -340,8 +348,12 @@ const TeamsPage = ({
   }, [canManageSelectedTeam, persistedTeams, selectedTeamId])
 
   const handleOpenCreateModal = useCallback(() => {
+    if (!canUseSelfServiceTeamsActions) {
+      return
+    }
+
     setIsCreateModalOpen(true)
-  }, [])
+  }, [canUseSelfServiceTeamsActions])
 
   const handleCloseCreateModal = useCallback(() => {
     if (isCreatingTeam) {
@@ -351,12 +363,17 @@ const TeamsPage = ({
     setIsCreateModalOpen(false)
     setNewTeamName('')
     setNewTeamDescription('')
+    setNewTeamImage('')
     setNewTeamOpen(true)
   }, [isCreatingTeam])
 
   const handleOpenJoinModal = useCallback(() => {
+    if (!canUseSelfServiceTeamsActions) {
+      return
+    }
+
     setIsJoinModalOpen(true)
-  }, [])
+  }, [canUseSelfServiceTeamsActions])
 
   const handleCloseJoinModal = useCallback(() => {
     if (isJoiningTeam) {
@@ -425,6 +442,15 @@ const TeamsPage = ({
   }, [copyTimeoutRef, selectedTeam])
 
   const handleCreateTeam = useCallback(async () => {
+    if (!canUseSelfServiceTeamsActions) {
+      snackbar.error(
+        isTeamsLimitReached
+          ? `Достигнут лимит: не более ${MAX_TEAMS_PER_USER} команд`
+          : 'Создание команды сейчас недоступно'
+      )
+      return
+    }
+
     const trimmedName = newTeamName.trim()
     const trimmedDescription = newTeamDescription.trim()
 
@@ -453,6 +479,7 @@ const TeamsPage = ({
       const createPayload = buildTeamUpdatePayload({
         name: trimmedName,
         description: trimmedDescription,
+        image: newTeamImage || null,
         open: Boolean(newTeamOpen),
       })
 
@@ -534,6 +561,7 @@ const TeamsPage = ({
       setIsCreateModalOpen(false)
       setNewTeamName('')
       setNewTeamDescription('')
+      setNewTeamImage('')
       setNewTeamOpen(true)
       snackbar.success(
         `Команда «${freshTeam.name || trimmedName}» создана. Вы назначены капитаном.`
@@ -545,10 +573,13 @@ const TeamsPage = ({
       setIsCreatingTeam(false)
     }
   }, [
+    canUseSelfServiceTeamsActions,
     currentUserId,
     fetchTeamsSnapshot,
+    isTeamsLimitReached,
     location,
     newTeamDescription,
+    newTeamImage,
     newTeamName,
     newTeamOpen,
     snackbar,
@@ -556,6 +587,15 @@ const TeamsPage = ({
   ])
 
   const handleJoinTeam = useCallback(async () => {
+    if (!canUseSelfServiceTeamsActions) {
+      snackbar.error(
+        isTeamsLimitReached
+          ? `Достигнут лимит: не более ${MAX_TEAMS_PER_USER} команд`
+          : 'Вступление в команду сейчас недоступно'
+      )
+      return
+    }
+
     const trimmedTeamId = joinTeamId.trim()
 
     if (!trimmedTeamId) {
@@ -666,8 +706,10 @@ const TeamsPage = ({
       setIsJoiningTeam(false)
     }
   }, [
+    canUseSelfServiceTeamsActions,
     currentUserId,
     fetchTeamsSnapshot,
+    isTeamsLimitReached,
     location,
     joinTeamId,
     snackbar,
@@ -932,10 +974,10 @@ const TeamsPage = ({
   }, [canManageSelectedTeam, currentUserId, selectedTeam])
 
   const isCreateActionDisabled =
-    isCreatingTeam || !canUseSelfServiceTeams || newTeamName.trim().length === 0
+    isCreatingTeam || !canUseSelfServiceTeamsActions || newTeamName.trim().length === 0
 
   const isJoinActionDisabled =
-    isJoiningTeam || !canUseSelfServiceTeams || joinTeamId.trim().length === 0
+    isJoiningTeam || !canUseSelfServiceTeamsActions || joinTeamId.trim().length === 0
 
   const teamsForList = useMemo(() => {
     if (!Array.isArray(visibleTeams)) {
@@ -958,6 +1000,7 @@ const TeamsPage = ({
       return {
         id: team.id,
         name: team.name || 'Без названия',
+        image: team.image || '',
         membersCount: getNounUsers(team.membersCount ?? 0),
         gamesCount: team.gamesCount ?? 0,
         updatedLabel,
@@ -1038,34 +1081,21 @@ const TeamsPage = ({
 
         <section className="grid gap-6">
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-100 shadow-sm rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-violet-600 font-semibold shadow-sm dark:bg-violet-500/40 dark:text-violet-100"
-                aria-hidden="true"
-              >
-                i
-              </span>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-violet-900 dark:text-violet-50">Ваши команды</p>
-                <p className="text-xs leading-5 text-violet-700 dark:text-violet-200">
-                  Выберите команду, чтобы посмотреть состав, управлять статусом и назначить капитана.
-                </p>
-              </div>
-            </div>
-
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={handleOpenCreateModal}
-                disabled={!canUseSelfServiceTeams}
+                disabled={!canUseSelfServiceTeamsActions}
                 title={
-                  canUseSelfServiceTeams
+                  canUseSelfServiceTeamsActions
                     ? undefined
-                    : 'Функция доступна после авторизации и выбора площадки'
+                    : isTeamsLimitReached
+                      ? `Достигнут лимит: не более ${MAX_TEAMS_PER_USER} команд`
+                      : 'Функция доступна после авторизации и выбора площадки'
                 }
                 className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 ${
-                  canUseSelfServiceTeams
-                    ? 'bg-primary text-white hover:bg-blue-700'
+                  canUseSelfServiceTeamsActions
+                    ? 'cursor-pointer bg-primary text-white hover:bg-blue-700'
                     : 'bg-slate-300 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                 }`}
               >
@@ -1074,21 +1104,28 @@ const TeamsPage = ({
               <button
                 type="button"
                 onClick={handleOpenJoinModal}
-                disabled={!canUseSelfServiceTeams}
+                disabled={!canUseSelfServiceTeamsActions}
                 title={
-                  canUseSelfServiceTeams
+                  canUseSelfServiceTeamsActions
                     ? undefined
-                    : 'Функция доступна после авторизации и выбора площадки'
+                    : isTeamsLimitReached
+                      ? `Достигнут лимит: не более ${MAX_TEAMS_PER_USER} команд`
+                      : 'Функция доступна после авторизации и выбора площадки'
                 }
-                className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-                  canUseSelfServiceTeams
-                    ? 'border border-primary text-primary hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                className={`inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 ${
+                  canUseSelfServiceTeamsActions
+                    ? 'cursor-pointer border-primary bg-white text-primary shadow-sm hover:border-blue-500 hover:bg-blue-50 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-blue-400 dark:hover:bg-blue-500/10'
                     : 'border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'
                 }`}
               >
                 Присоединиться по id
               </button>
             </div>
+            {isTeamsLimitReached && (
+              <NoticeBanner tone="warning" variant="neon">
+                Достигнут лимит команд: один игрок может состоять максимум в {MAX_TEAMS_PER_USER} командах.
+              </NoticeBanner>
+            )}
 
             {teamsForList.length > 0 ? (
               <ul className="space-y-3">
@@ -1105,12 +1142,24 @@ const TeamsPage = ({
                             handleTeamCardClick(team)
                           }
                         }}
-                        isActive={selectedTeamId === team.id}
                         className="w-full text-left cursor-pointer"
-                        aria-pressed={selectedTeamId === team.id}
+                        aria-pressed={false}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex flex-1 items-start gap-3">
+                            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+                              {team.image ? (
+                                <img
+                                  src={team.image}
+                                  alt={`Иконка команды ${team.name}`}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500 dark:text-slate-300">
+                                  {team.name?.[0] ? team.name[0].toUpperCase() : '?'}
+                                </div>
+                              )}
+                            </div>
                             <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                               {team.name}
                             </p>
@@ -1207,6 +1256,8 @@ const TeamsPage = ({
           onChangeNewTeamName={setNewTeamName}
           newTeamDescription={newTeamDescription}
           onChangeNewTeamDescription={setNewTeamDescription}
+          newTeamImage={newTeamImage}
+          onChangeNewTeamImage={setNewTeamImage}
           newTeamOpen={newTeamOpen}
           onChangeNewTeamOpen={setNewTeamOpen}
           onCreateTeam={handleCreateTeam}
@@ -1219,7 +1270,7 @@ const TeamsPage = ({
           joinTeamId={joinTeamId}
           onChangeJoinTeamId={setJoinTeamId}
           onJoinTeam={handleJoinTeam}
-          canUseSelfServiceTeams={canUseSelfServiceTeams}
+          canUseSelfServiceTeams={canUseSelfServiceTeamsActions}
         />
         <TeamDescriptionModal
           isOpen={isTeamDescriptionModalOpen}
@@ -1258,6 +1309,7 @@ TeamsPage.propTypes = {
       id: PropTypes.string.isRequired,
       name: PropTypes.string,
       description: PropTypes.string,
+      image: PropTypes.string,
       open: PropTypes.bool,
       members: PropTypes.arrayOf(teamMemberShape),
       membersCount: PropTypes.number,

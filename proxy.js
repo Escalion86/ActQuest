@@ -8,6 +8,7 @@ const isExcludedPath = (pathname) => {
   if (pathname.startsWith('/api')) return true
   if (pathname.startsWith('/_next')) return true
   if (pathname.startsWith('/cabinet')) return true
+  if (/^\/[^/]+\/game\/result\/[^/]+\/?$/.test(pathname)) return true
   if (pathname.startsWith('/static')) return true
   if (pathname === '/favicon.ico') return true
   if (pathname === '/robots.txt') return true

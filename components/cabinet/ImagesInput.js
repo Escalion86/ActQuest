@@ -63,12 +63,15 @@ const ImagesInput = ({
   label,
   disabled,
   maxImages,
+  previewShape,
 }) => {
   const fileInputRef = useRef(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
 
   const normalizedImages = useMemo(() => normalizeImages(images), [images])
+  const isCirclePreview = previewShape === 'circle'
+  const isSquarePreview = previewShape === 'square'
 
   const handleRemove = (index) => {
     const next = normalizedImages.filter((_, itemIndex) => itemIndex !== index)
@@ -125,17 +128,37 @@ const ImagesInput = ({
       {label ? <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</h5> : null}
 
       {normalizedImages.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div
+          className={
+            isCirclePreview
+              ? 'flex flex-wrap gap-3'
+              : isSquarePreview
+              ? 'flex flex-wrap gap-3'
+              : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4'
+          }
+        >
           {normalizedImages.map((imageUrl, index) => (
             <div
               key={`${imageUrl}-${index}`}
-              className="group overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
+              className={`group overflow-hidden border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 ${
+                isCirclePreview
+                  ? 'rounded-full h-28 w-28'
+                  : isSquarePreview
+                  ? 'rounded-xl h-40 w-40'
+                  : 'rounded-xl'
+              }`}
             >
               <div className="relative">
                 <img
                   src={imageUrl}
                   alt={`uploaded-${index + 1}`}
-                  className="h-28 w-full object-cover"
+                  className={`object-cover ${
+                    isCirclePreview
+                      ? 'h-28 w-28 rounded-full'
+                      : isSquarePreview
+                      ? 'h-40 w-40'
+                      : 'h-28 w-full'
+                  }`}
                 />
                 <button
                   type="button"
@@ -196,7 +219,27 @@ const ImagesInput = ({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-500">Изображения отсутствуют.</p>
+        isCirclePreview ? (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || isUploading}
+            className="inline-flex h-28 w-28 cursor-pointer items-center justify-center rounded-full border border-dashed border-primary/50 bg-slate-50 p-3 text-center text-xs font-semibold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#00D1FF]/70 dark:bg-[#070015]/90 dark:text-[#bdf4ff] dark:shadow-[0_0_0_1px_rgba(0,209,255,0.2)] dark:hover:bg-[#00D1FF]/12 dark:hover:text-[#e9fbff]"
+          >
+            {isUploading ? 'Загрузка…' : 'Загрузить фото'}
+          </button>
+        ) : isSquarePreview ? (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || isUploading}
+            className="inline-flex h-40 w-40 cursor-pointer items-center justify-center rounded-xl border border-dashed border-primary/50 bg-slate-50 p-3 text-center text-xs font-semibold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#00D1FF]/70 dark:bg-[#070015]/90 dark:text-[#bdf4ff] dark:shadow-[0_0_0_1px_rgba(0,209,255,0.2)] dark:hover:bg-[#00D1FF]/12 dark:hover:text-[#e9fbff]"
+          >
+            {isUploading ? 'Загрузка…' : 'Загрузить обложку'}
+          </button>
+        ) : (
+          <p className="text-sm text-slate-500">Изображения отсутствуют.</p>
+        )
       )}
 
       <div className="flex items-center gap-3">
@@ -211,7 +254,7 @@ const ImagesInput = ({
           }}
           className="hidden"
         />
-        {normalizedImages.length < maxImages && (
+        {normalizedImages.length < maxImages && !((isCirclePreview || isSquarePreview) && normalizedImages.length === 0) && (
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -246,6 +289,7 @@ ImagesInput.propTypes = {
   label: PropTypes.string,
   disabled: PropTypes.bool,
   maxImages: PropTypes.number,
+  previewShape: PropTypes.oneOf(['rect', 'circle', 'square']),
 }
 
 ImagesInput.defaultProps = {
@@ -257,6 +301,7 @@ ImagesInput.defaultProps = {
   label: null,
   disabled: false,
   maxImages: 10,
+  previewShape: 'rect',
 }
 
 export default ImagesInput

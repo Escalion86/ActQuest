@@ -1,3 +1,5 @@
+import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
+
 const ensureString = (value, fallback = '') => {
   if (typeof value === 'string') {
     return value
@@ -139,7 +141,9 @@ const normalizeTeamForCabinet = ({ team, members, games }) => {
     id,
     name: ensureString(team?.name, ''),
     description: ensureString(team?.description, ''),
+    image: ensureString(team?.image, ''),
     open: ensureBoolean(team?.open, true),
+    carSkin: normalizeTeamCarSkin(team?.carSkin),
     members: normalizedMembers,
     membersCount: normalizedMembers.length,
     captain,

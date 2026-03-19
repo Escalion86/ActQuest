@@ -1,5 +1,6 @@
 import CRUD from '@server/CRUD'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
 
 const buildResetPayload = () => ({
   activeNum: 0,
@@ -65,9 +66,15 @@ export default async function handler(req, res) {
         .json({ success: false, error: 'Игра недоступна для выбранной площадки' })
     }
 
+    const previousStatus = String(existingGame.status || '').toLowerCase()
     const nextStatus = updatePayload.status ?? existingGame.status
+    const nextStatusNormalized = String(nextStatus || '').toLowerCase()
     const shouldReset =
       existingGame.status === 'finished' && nextStatus === 'active'
+    const shouldCreateResultSnapshot =
+      (nextStatusNormalized === 'finished' || nextStatusNormalized === 'closed') &&
+      previousStatus !== 'finished' &&
+      previousStatus !== 'closed'
 
     const updateData = { ...updatePayload }
 
@@ -75,6 +82,18 @@ export default async function handler(req, res) {
       updateData.dateStartFact = null
       updateData.dateEndFact = null
       updateData.result = null
+    }
+
+    if (shouldCreateResultSnapshot) {
+      const snapshots = await buildGameResultSnapshots({ db, gameId: id })
+      updateData.result = {
+        teams: snapshots.teams,
+        gameTeams: snapshots.gameTeams,
+        teamsUsers: snapshots.teamsUsers,
+        teamsPlaces: {},
+        computed: null,
+        text: '',
+      }
     }
 
     const updatedGame = await Games.findByIdAndUpdate(id, updateData, {

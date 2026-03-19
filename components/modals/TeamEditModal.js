@@ -2,6 +2,12 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import ImagesInput from '@components/cabinet/ImagesInput'
+import NeonCheckbox from '@components/NeonCheckbox'
+import {
+  TEAM_CAR_SKIN_OPTIONS,
+  normalizeTeamCarSkin,
+} from '@helpers/teamCarSkins'
 
 const normalizePhoneLink = (phone) => {
   if (!phone) {
@@ -9,6 +15,68 @@ const normalizePhoneLink = (phone) => {
   }
 
   return phone.replace(/[^+\d]/g, '')
+}
+
+const TeamCarSkinPreview = ({ skin }) => {
+  const resolvedSkin = normalizeTeamCarSkin(skin)
+
+  return (
+    <div className="w-[132px] rounded-xl border border-cyan-300/45 bg-cyan-50/65 p-2 dark:border-cyan-500/30 dark:bg-[#04112a]/85">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="116"
+        height="52"
+        viewBox="0 0 92 46"
+        preserveAspectRatio="xMidYMid meet"
+        className="h-10 w-full"
+        style={{
+          filter: 'drop-shadow(0 0 8px rgba(14,165,233,0.24))',
+        }}
+      >
+        {resolvedSkin === 'classic' && (
+          <>
+            <rect x="12" y="18" width="68" height="14" rx="7" fill="#5dd3ff" stroke="#0f172a" strokeWidth="1.4" />
+            <rect x="25" y="10" width="30" height="12" rx="6" fill="#5dd3ff" stroke="#0f172a" strokeWidth="1.2" />
+            <rect x="29" y="12" width="11" height="7" rx="2" fill="rgba(191,219,254,0.38)" />
+            <rect x="42.5" y="12" width="10" height="7" rx="2" fill="rgba(191,219,254,0.38)" />
+          </>
+        )}
+        {resolvedSkin === 'sport' && (
+          <>
+            <rect x="9" y="20" width="74" height="11" rx="6" fill="#f472b6" stroke="#0f172a" strokeWidth="1.3" />
+            <path d="M26 20 L35 11 H57 L66 20 Z" fill="#f472b6" stroke="#0f172a" strokeWidth="1.2" />
+            <path d="M81 21 L86 21 L84 17 Z" fill="#f472b6" stroke="#0f172a" strokeWidth="1" />
+            <rect x="38" y="13" width="16" height="5.8" rx="2" fill="rgba(191,219,254,0.38)" />
+          </>
+        )}
+        {resolvedSkin === 'suv' && (
+          <>
+            <rect x="11" y="18" width="70" height="15.5" rx="7" fill="#4ade80" stroke="#0f172a" strokeWidth="1.5" />
+            <rect x="22" y="8.5" width="36" height="13" rx="6" fill="#4ade80" stroke="#0f172a" strokeWidth="1.3" />
+            <rect x="24" y="7" width="32" height="2.2" rx="1.1" fill="#0f172a" opacity="0.8" />
+            <rect x="27" y="11" width="11.5" height="8" rx="2.4" fill="rgba(191,219,254,0.38)" />
+            <rect x="41.5" y="11" width="13" height="8" rx="2.4" fill="rgba(191,219,254,0.38)" />
+          </>
+        )}
+        {resolvedSkin === 'van' && (
+          <>
+            <rect x="8" y="16" width="77" height="17" rx="5.5" fill="#fbbf24" stroke="#0f172a" strokeWidth="1.5" />
+            <rect x="16" y="9.5" width="46" height="10.5" rx="3.8" fill="#fbbf24" stroke="#0f172a" strokeWidth="1.2" />
+            <rect x="19" y="12" width="13" height="7" rx="2" fill="rgba(191,219,254,0.38)" />
+            <rect x="34" y="12" width="11.5" height="7" rx="2" fill="rgba(191,219,254,0.38)" />
+            <rect x="47.5" y="12" width="11.5" height="7" rx="2" fill="rgba(191,219,254,0.38)" />
+          </>
+        )}
+        <circle cx="28" cy="33.7" r="5.4" fill="#020617" stroke="#38bdf8" strokeWidth="1.3" />
+        <circle cx="66.2" cy="33.7" r="5.4" fill="#020617" stroke="#38bdf8" strokeWidth="1.3" />
+        <circle cx="28" cy="33.7" r="2.4" fill="#0ea5e9" opacity="0.75" />
+        <circle cx="66.2" cy="33.7" r="2.4" fill="#0ea5e9" opacity="0.75" />
+      </svg>
+      <p className="mt-1 text-center text-[11px] font-medium text-cyan-700 dark:text-cyan-200">
+        Превью
+      </p>
+    </div>
+  )
 }
 
 const TeamEditModal = ({
@@ -27,6 +95,7 @@ const TeamEditModal = ({
   onSetCaptain,
   onRemoveMember,
   location,
+  canEditCarSkin,
 }) => {
   if (!selectedTeam) {
     return null
@@ -94,17 +163,14 @@ const TeamEditModal = ({
               >
                 Доступность команды
               </label>
-              <div className="flex items-center gap-3 mt-3">
-                <input
+              <div className="mt-3">
+                <NeonCheckbox
                   id="team-open"
-                  type="checkbox"
                   checked={Boolean(selectedTeam.open)}
                   onChange={(event) => onTeamFieldChange('open', event.target.checked)}
-                  className="w-4 h-4 rounded text-primary border-slate-300"
+                  label="Разрешить новым участникам присоединяться к команде по id"
+                  labelClassName="text-sm text-slate-600 dark:text-slate-300"
                 />
-                <span className="text-sm text-slate-600 dark:text-slate-300">
-                  Разрешить новым участникам присоединяться к команде по id
-                </span>
               </div>
               {selectedTeam.open ? (
                 <button
@@ -119,6 +185,31 @@ const TeamEditModal = ({
                 </button>
               ) : null}
             </div>
+            {canEditCarSkin && (
+              <div>
+                <label
+                  htmlFor="team-car-skin"
+                  className="text-sm font-semibold text-primary"
+                >
+                  Вид машинки в интерактивной таблице
+                </label>
+                <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <select
+                    id="team-car-skin"
+                    value={selectedTeam.carSkin || 'classic'}
+                    onChange={(event) => onTeamFieldChange('carSkin', event.target.value)}
+                    className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                  >
+                    {TEAM_CAR_SKIN_OPTIONS.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                  <TeamCarSkinPreview skin={selectedTeam.carSkin} />
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -136,6 +227,18 @@ const TeamEditModal = ({
               className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
             />
           </div>
+
+          <ImagesInput
+            images={selectedTeam.image ? [selectedTeam.image] : []}
+            onChange={(next) =>
+              onTeamFieldChange('image', Array.isArray(next) ? next[0] ?? '' : '')
+            }
+            directory="teams"
+            imageName={selectedTeam.id || 'team-avatar'}
+            label="Иконка команды"
+            maxImages={1}
+            disabled={!canManageSelectedTeam || isSaving}
+          />
         </section>
 
         <section className="p-6 space-y-5 bg-white dark:bg-slate-900/80 border shadow-sm border-slate-200 dark:border-slate-700 rounded-2xl">
@@ -244,7 +347,9 @@ TeamEditModal.propTypes = {
     id: PropTypes.string,
     name: PropTypes.string,
     description: PropTypes.string,
+    image: PropTypes.string,
     open: PropTypes.bool,
+    carSkin: PropTypes.string,
     captain: PropTypes.shape({
       name: PropTypes.string,
     }),
@@ -274,12 +379,22 @@ TeamEditModal.propTypes = {
   onSetCaptain: PropTypes.func.isRequired,
   onRemoveMember: PropTypes.func.isRequired,
   location: PropTypes.string,
+  canEditCarSkin: PropTypes.bool,
 }
 
 TeamEditModal.defaultProps = {
   selectedTeam: null,
   memberActionId: null,
   location: null,
+  canEditCarSkin: false,
+}
+
+TeamCarSkinPreview.propTypes = {
+  skin: PropTypes.string,
+}
+
+TeamCarSkinPreview.defaultProps = {
+  skin: 'classic',
 }
 
 export default memo(TeamEditModal)

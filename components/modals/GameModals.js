@@ -6,9 +6,11 @@ import GameTeamsModal from './GameTeamsModal'
 import GameRegisterModal from './GameRegisterModal'
 import GameCreateModal from './GameCreateModal'
 import GameDescriptionModal from './GameDescriptionModal'
+import GameResultsModal from './GameResultsModal'
 
 const GameModals = ({
   selectedGame,
+  editGame,
   isEditModalOpen,
   handleCloseEditModal,
   canEditSelectedGame,
@@ -57,6 +59,9 @@ const GameModals = ({
   handleAddFinance,
   handleFinanceChange,
   handleRemoveFinance,
+  canGenerateResults,
+  isGeneratingResults,
+  handleGenerateResults,
   currencyFormatter,
   financesSummary,
   balanceClass,
@@ -89,12 +94,16 @@ const GameModals = ({
   handleCreateGame,
   newGameName,
   setNewGameName,
+  newGameIsRated,
+  setNewGameIsRated,
   createGameFeedback,
   isDescriptionModalOpen,
   handleCloseDescriptionModal,
   gameTypeLabel,
   plannedStartLabel,
   canViewRestrictedGameInfo,
+  canViewGameResults,
+  handleOpenResultsModal,
   selectedGameModerators,
   availableModeratorsForSelect,
   availableModeratorsMap,
@@ -109,10 +118,13 @@ const GameModals = ({
   taskFailurePenaltyLabel,
   manyCodesLimitLabel,
   manyCodesPenaltyLabel,
+  isResultsModalOpen,
+  handleCloseResultsModal,
+  resultsModalState,
 }) => (
   <>
     <GameEditModal
-      selectedGame={selectedGame}
+      selectedGame={editGame ?? selectedGame}
       isEditModalOpen={isEditModalOpen}
       handleCloseEditModal={handleCloseEditModal}
       canEditSelectedGame={canEditSelectedGame}
@@ -161,6 +173,9 @@ const GameModals = ({
       handleAddFinance={handleAddFinance}
       handleFinanceChange={handleFinanceChange}
       handleRemoveFinance={handleRemoveFinance}
+      canGenerateResults={canGenerateResults}
+      isGeneratingResults={isGeneratingResults}
+      handleGenerateResults={handleGenerateResults}
       currencyFormatter={currencyFormatter}
       financesSummary={financesSummary}
       balanceClass={balanceClass}
@@ -173,13 +188,6 @@ const GameModals = ({
       setSelectedModeratorToAdd={setSelectedModeratorToAdd}
       handleAddModerator={handleAddModerator}
       handleRemoveModerator={handleRemoveModerator}
-      taskDurationLabel={taskDurationLabel}
-      cluesDurationLabel={cluesDurationLabel}
-      clueModeDetails={clueModeDetails}
-      breakDurationLabel={breakDurationLabel}
-      taskFailurePenaltyLabel={taskFailurePenaltyLabel}
-      manyCodesLimitLabel={manyCodesLimitLabel}
-      manyCodesPenaltyLabel={manyCodesPenaltyLabel}
     />
 
     <GameTeamsModal
@@ -218,6 +226,8 @@ const GameModals = ({
       handleCreateGame={handleCreateGame}
       newGameName={newGameName}
       setNewGameName={setNewGameName}
+      newGameIsRated={newGameIsRated}
+      setNewGameIsRated={setNewGameIsRated}
       createGameFeedback={createGameFeedback}
     />
 
@@ -228,14 +238,8 @@ const GameModals = ({
       gameTypeLabel={gameTypeLabel}
       plannedStartLabel={plannedStartLabel}
       canViewRestrictedGameInfo={canViewRestrictedGameInfo}
-      canEditSelectedGame={canEditSelectedGame}
-      selectedGameModerators={selectedGameModerators}
-      availableModeratorsForSelect={availableModeratorsForSelect}
-      availableModeratorsMap={availableModeratorsMap}
-      selectedModeratorToAdd={selectedModeratorToAdd}
-      setSelectedModeratorToAdd={setSelectedModeratorToAdd}
-      handleAddModerator={handleAddModerator}
-      handleRemoveModerator={handleRemoveModerator}
+      canViewGameResults={canViewGameResults}
+      handleOpenResultsModal={handleOpenResultsModal}
       taskDurationLabel={taskDurationLabel}
       cluesDurationLabel={cluesDurationLabel}
       clueModeDetails={clueModeDetails}
@@ -246,6 +250,12 @@ const GameModals = ({
       currencyFormatter={currencyFormatter}
       financesSummary={financesSummary}
       balanceClass={balanceClass}
+    />
+
+    <GameResultsModal
+      isResultsModalOpen={isResultsModalOpen}
+      handleCloseResultsModal={handleCloseResultsModal}
+      resultsModalState={resultsModalState}
     />
   </>
 )
@@ -288,6 +298,7 @@ const moderatorOptionShape = PropTypes.shape({
 
 GameModals.propTypes = {
   selectedGame: PropTypes.shape({ id: PropTypes.string }),
+  editGame: PropTypes.shape({ id: PropTypes.string }),
   isEditModalOpen: PropTypes.bool.isRequired,
   handleCloseEditModal: PropTypes.func.isRequired,
   canEditSelectedGame: PropTypes.bool.isRequired,
@@ -339,6 +350,9 @@ GameModals.propTypes = {
   handleAddFinance: PropTypes.func.isRequired,
   handleFinanceChange: PropTypes.func.isRequired,
   handleRemoveFinance: PropTypes.func.isRequired,
+  canGenerateResults: PropTypes.bool.isRequired,
+  isGeneratingResults: PropTypes.bool.isRequired,
+  handleGenerateResults: PropTypes.func.isRequired,
   currencyFormatter: PropTypes.instanceOf(Intl.NumberFormat).isRequired,
   financesSummary: PropTypes.shape({
     income: PropTypes.number.isRequired,
@@ -382,12 +396,16 @@ GameModals.propTypes = {
   handleCreateGame: PropTypes.func.isRequired,
   newGameName: PropTypes.string.isRequired,
   setNewGameName: PropTypes.func.isRequired,
+  newGameIsRated: PropTypes.bool.isRequired,
+  setNewGameIsRated: PropTypes.func.isRequired,
   createGameFeedback: registerFeedbackShape,
   isDescriptionModalOpen: PropTypes.bool.isRequired,
   handleCloseDescriptionModal: PropTypes.func.isRequired,
   gameTypeLabel: PropTypes.string.isRequired,
   plannedStartLabel: PropTypes.string.isRequired,
   canViewRestrictedGameInfo: PropTypes.bool.isRequired,
+  canViewGameResults: PropTypes.bool.isRequired,
+  handleOpenResultsModal: PropTypes.func.isRequired,
   selectedGameModerators: PropTypes.arrayOf(moderatorShape).isRequired,
   availableModeratorsForSelect: PropTypes.arrayOf(moderatorOptionShape).isRequired,
   availableModeratorsMap: PropTypes.instanceOf(Map).isRequired,
@@ -405,10 +423,24 @@ GameModals.propTypes = {
   taskFailurePenaltyLabel: PropTypes.string.isRequired,
   manyCodesLimitLabel: PropTypes.string,
   manyCodesPenaltyLabel: PropTypes.string,
+  isResultsModalOpen: PropTypes.bool.isRequired,
+  handleCloseResultsModal: PropTypes.func.isRequired,
+  resultsModalState: PropTypes.shape({
+    isLoading: PropTypes.bool.isRequired,
+    error: PropTypes.string,
+    gameId: PropTypes.string,
+    gameName: PropTypes.string,
+    rows: PropTypes.array,
+    teamsCount: PropTypes.number,
+    participantsCount: PropTypes.number,
+    computed: PropTypes.object,
+    interactiveResultsUrl: PropTypes.string,
+  }).isRequired,
 }
 
 GameModals.defaultProps = {
   selectedGame: null,
+  editGame: null,
   location: null,
   registerFeedback: null,
   currentUserId: null,

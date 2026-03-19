@@ -221,7 +221,7 @@ const webGameProcess = async ({
     return { message: 'Игра ещё не началась.' }
   }
 
-  if (resolvedGame.status === 'finished') {
+  if (resolvedGame.status === 'finished' || resolvedGame.status === 'closed') {
     return { message: 'Игра завершена.' }
   }
 

@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
 import NoticeBanner from '@components/NoticeBanner'
+import NeonCheckbox from '@components/NeonCheckbox'
 
 const GameCreateModal = ({
   isCreateGameModalOpen,
@@ -11,6 +12,8 @@ const GameCreateModal = ({
   handleCreateGame,
   newGameName,
   setNewGameName,
+  newGameIsRated,
+  setNewGameIsRated,
   createGameFeedback,
 }) => (
   <Modal
@@ -63,6 +66,13 @@ const GameCreateModal = ({
                   placeholder="Например, Ночной квест"
                 />
               </div>
+              <NeonCheckbox
+                id="new-game-is-rated"
+                checked={Boolean(newGameIsRated)}
+                onChange={(event) => setNewGameIsRated(event.target.checked)}
+                label="Рейтинговая игра"
+                labelClassName="text-sm text-slate-600 dark:text-slate-200"
+              />
             </fieldset>
           </Modal>
 )
@@ -74,6 +84,8 @@ GameCreateModal.propTypes = {
   handleCreateGame: PropTypes.func.isRequired,
   newGameName: PropTypes.string.isRequired,
   setNewGameName: PropTypes.func.isRequired,
+  newGameIsRated: PropTypes.bool.isRequired,
+  setNewGameIsRated: PropTypes.func.isRequired,
   createGameFeedback: PropTypes.shape({
     type: PropTypes.string.isRequired,
     message: PropTypes.string.isRequired,

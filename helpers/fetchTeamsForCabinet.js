@@ -31,9 +31,12 @@ const toPositiveInteger = (value, fallback) => {
   return Math.floor(numeric)
 }
 
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 const fetchTeamsForCabinet = async ({
   db,
   teamIds = null,
+  searchQuery = '',
   offset = 0,
   limit = null,
   returnMeta = false,
@@ -62,7 +65,21 @@ const fetchTeamsForCabinet = async ({
     return returnMeta ? { teams: [], hasMore: false } : []
   }
 
-  const teamFilter = Array.isArray(uniqueTeamIds) ? { _id: { $in: uniqueTeamIds } } : {}
+  const normalizedSearchQuery =
+    typeof searchQuery === 'string' ? searchQuery.trim().toLowerCase().slice(0, 100) : ''
+  const baseFilter = Array.isArray(uniqueTeamIds) ? { _id: { $in: uniqueTeamIds } } : null
+  const searchFilter = normalizedSearchQuery
+    ? {
+        $or: [
+          { name_lowered: { $regex: escapeRegExp(normalizedSearchQuery) } },
+          { name: { $regex: escapeRegExp(normalizedSearchQuery), $options: 'i' } },
+        ],
+      }
+    : null
+  const teamFilter =
+    baseFilter && searchFilter
+      ? { $and: [baseFilter, searchFilter] }
+      : baseFilter || searchFilter || {}
   const queryOffset = toPositiveInteger(offset, 0)
   const queryLimit = limit === null ? null : toPositiveInteger(limit, 0)
   const shouldPaginate = Number.isFinite(queryLimit) && queryLimit > 0

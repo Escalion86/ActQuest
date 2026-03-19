@@ -36,6 +36,11 @@ export default async function handler(req, res) {
     rawTelegramId === null || rawTelegramId === undefined
       ? null
       : Number(rawTelegramId)
+  const currentUserId =
+    session?.user?._id === null || session?.user?._id === undefined
+      ? null
+      : String(session.user._id)
+  const currentUserTelegramId = Number.isFinite(creatorTelegramId) ? creatorTelegramId : null
 
   const locationFromQuery =
     typeof req.query?.location === 'string' ? req.query.location : null
@@ -58,6 +63,8 @@ export default async function handler(req, res) {
       location: location || null,
       userRole,
       creatorTelegramId: Number.isFinite(creatorTelegramId) ? creatorTelegramId : null,
+      currentUserId,
+      currentUserTelegramId,
       offset,
       limit,
       view,

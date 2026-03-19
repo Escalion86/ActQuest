@@ -92,6 +92,18 @@ function transformQuery(query) {
   return result
 }
 
+const isClosedGameStatus = (status) =>
+  (typeof status === 'string' ? status.toLowerCase() : String(status)) === 'closed'
+
+const isGameClosedById = async (db, gameId) => {
+  if (!gameId) {
+    return false
+  }
+
+  const game = await db.model('Games').findById(gameId).select({ status: 1 }).lean()
+  return isClosedGameStatus(game?.status)
+}
+
 export default async function handler(Schema, req, res, params = null) {
   const { query, method, body } = req
 
@@ -220,6 +232,17 @@ export default async function handler(Schema, req, res, params = null) {
           if (Schema === 'Games') {
             clearedBody.location = location
           }
+
+          if (Schema === 'GamesTeams') {
+            const gameId = clearedBody?.gameId
+            if (await isGameClosedById(db, gameId)) {
+              return res?.status(400).json({
+                success: false,
+                error: 'Игра закрыта. Изменение состава участников запрещено.',
+              })
+            }
+          }
+
           data = await db.model(Schema).create(clearedBody)
           if (!data) {
             return res?.status(400).json({ success: false })
@@ -248,6 +271,24 @@ export default async function handler(Schema, req, res, params = null) {
             return res?.status(400).json({ success: false })
           }
 
+          if (Schema === 'Games' && isClosedGameStatus(data?.status)) {
+            return res?.status(400).json({
+              success: false,
+              error:
+                'Игра находится в статусе «Закрыта». Изменение данных запрещено.',
+            })
+          }
+
+          if (Schema === 'GamesTeams') {
+            const gameId = data?.gameId
+            if (await isGameClosedById(db, gameId)) {
+              return res?.status(400).json({
+                success: false,
+                error: 'Игра закрыта. Изменение состава участников запрещено.',
+              })
+            }
+          }
+
           // // Если это пользователь обновляет анкету, то после обновления оповестим о результате через телеграм
           // const afterUpdateNeedToNotificate =
           //   // body.userId === id &&
@@ -258,6 +299,17 @@ export default async function handler(Schema, req, res, params = null) {
           const payload = { ...body.data }
           if (Schema === 'Games') {
             payload.location = location
+
+            const nextStatusRaw = typeof payload?.status === 'string' ? payload.status.toLowerCase() : null
+            const currentStatusRaw = typeof data?.status === 'string' ? data.status.toLowerCase() : null
+
+            if (nextStatusRaw === 'closed' && currentStatusRaw !== 'finished' && currentStatusRaw !== 'closed') {
+              return res?.status(400).json({
+                success: false,
+                error:
+                  'Перевести игру в статус «Закрыта» можно только после статуса «Завершена».',
+              })
+            }
           }
 
           data = await db.model(Schema).findByIdAndUpdate(id, payload, {
@@ -387,6 +439,19 @@ export default async function handler(Schema, req, res, params = null) {
     case 'DELETE':
       try {
         if (params) {
+          if (Schema === 'GamesTeams') {
+            const docsToDelete = await db.model(Schema).find(params).select({ gameId: 1 }).lean()
+            const hasClosedGame = await Promise.all(
+              docsToDelete.map((item) => isGameClosedById(db, item?.gameId))
+            )
+            if (hasClosedGame.some(Boolean)) {
+              return res?.status(400).json({
+                success: false,
+                error: 'Игра закрыта. Изменение состава участников запрещено.',
+              })
+            }
+          }
+
           data = await db.model(Schema).deleteMany(params)
           if (!data) {
             return res?.status(400).json({ success: false })
@@ -403,6 +468,16 @@ export default async function handler(Schema, req, res, params = null) {
           if (!data) {
             return res?.status(400).json({ success: false })
           }
+
+          if (Schema === 'GamesTeams') {
+            if (await isGameClosedById(db, data?.gameId)) {
+              return res?.status(400).json({
+                success: false,
+                error: 'Игра закрыта. Изменение состава участников запрещено.',
+              })
+            }
+          }
+
           data = await db.model(Schema).deleteOne({
             _id: id,
           })
@@ -417,6 +492,23 @@ export default async function handler(Schema, req, res, params = null) {
           // })
           return res?.status(200).json({ success: true, data })
         } else if (body?.params) {
+          if (Schema === 'GamesTeams') {
+            const docsToDelete = await db
+              .model(Schema)
+              .find({ _id: { $in: body.params } })
+              .select({ gameId: 1 })
+              .lean()
+            const hasClosedGame = await Promise.all(
+              docsToDelete.map((item) => isGameClosedById(db, item?.gameId))
+            )
+            if (hasClosedGame.some(Boolean)) {
+              return res?.status(400).json({
+                success: false,
+                error: 'Игра закрыта. Изменение состава участников запрещено.',
+              })
+            }
+          }
+
           data = await db.model(Schema).deleteMany({
             _id: { $in: body.params },
           })

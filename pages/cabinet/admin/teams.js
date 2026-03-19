@@ -15,6 +15,7 @@ import isUserAdmin from '@helpers/isUserAdmin'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
+import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
 
 const TEAMS_PAGE_SIZE = 10
 
@@ -26,7 +27,9 @@ const serializeTeamForComparison = (team) => {
   return JSON.stringify({
     name: team.name ?? '',
     description: team.description ?? '',
+    image: team.image ?? '',
     open: Boolean(team.open),
+    carSkin: normalizeTeamCarSkin(team.carSkin),
   })
 }
 
@@ -37,7 +40,9 @@ const buildTeamUpdatePayload = (team) => {
     name,
     name_lowered: name.toLowerCase(),
     description: team.description ?? '',
+    image: team.image ?? null,
     open: Boolean(team.open),
+    carSkin: normalizeTeamCarSkin(team.carSkin),
   }
 }
 
@@ -59,6 +64,7 @@ const AdminTeamsPage = ({
   const [teams, setTeams] = useState(safeInitialTeams)
   const [persistedTeams, setPersistedTeams] = useState(safeInitialTeams)
   const [selectedTeamId, setSelectedTeamId] = useState(safeInitialTeams[0]?.id ?? null)
+  const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [visibilityFilter, setVisibilityFilter] = useState('all')
   const [feedback, setFeedback] = useState(null)
@@ -66,9 +72,11 @@ const AdminTeamsPage = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [hasMoreTeams, setHasMoreTeams] = useState(Boolean(initialHasMore))
   const [isLoadingMoreTeams, setIsLoadingMoreTeams] = useState(false)
+  const [isSearchingTeams, setIsSearchingTeams] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const copyTimeoutRef = useRef(null)
+  const isFirstSearchRenderRef = useRef(true)
   const [teamDescriptionModal, setTeamDescriptionModal] = useState({
     isOpen: false,
     title: '',
@@ -88,8 +96,17 @@ const AdminTeamsPage = ({
     })
   }, [initialHasMore, safeInitialTeams])
 
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchQuery(searchInput.trim())
+    }, 450)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [searchInput])
+
   const filteredTeams = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase()
 
     return teams.filter((team) => {
       if (visibilityFilter === 'open' && !team.open) {
@@ -99,22 +116,9 @@ const AdminTeamsPage = ({
       if (visibilityFilter === 'closed' && team.open) {
         return false
       }
-
-      if (!normalizedQuery) {
-        return true
-      }
-
-      const memberNames = Array.isArray(team.members)
-        ? team.members.map((member) => member.name || '').join(' ')
-        : ''
-
-      const haystack = [team.name, team.description, team.captain?.name, memberNames]
-        .filter(Boolean)
-        .map((value) => value.toLowerCase())
-
-      return haystack.some((value) => value.includes(normalizedQuery))
+      return true
     })
-  }, [teams, searchQuery, visibilityFilter])
+  }, [teams, visibilityFilter])
 
   useEffect(() => {
     if (filteredTeams.length === 0) {
@@ -516,6 +520,7 @@ const AdminTeamsPage = ({
       return {
         id: team.id,
         name: team.name || 'Без названия',
+        image: team.image || '',
         membersLabel: getNounUsers(team.membersCount ?? 0),
         updatedLabel,
         open: Boolean(team.open),
@@ -546,6 +551,9 @@ const AdminTeamsPage = ({
         offset: String(teams.length),
         limit: String(TEAMS_PAGE_SIZE),
       })
+      if (searchQuery) {
+        params.set('search', searchQuery)
+      }
 
       const response = await fetch(`/api/cabinet/admin/teams-list?${params.toString()}`)
       const json = await response.json()
@@ -572,7 +580,68 @@ const AdminTeamsPage = ({
     } finally {
       setIsLoadingMoreTeams(false)
     }
-  }, [hasMoreTeams, isLoadingMoreTeams, teams.length])
+  }, [hasMoreTeams, isLoadingMoreTeams, searchQuery, teams.length])
+
+  useEffect(() => {
+    if (isFirstSearchRenderRef.current) {
+      isFirstSearchRenderRef.current = false
+      return
+    }
+
+    let isCancelled = false
+
+    const loadTeams = async () => {
+      setIsSearchingTeams(true)
+      setFeedback(null)
+
+      try {
+        const params = new URLSearchParams({
+          offset: '0',
+          limit: String(TEAMS_PAGE_SIZE),
+        })
+        if (searchQuery) {
+          params.set('search', searchQuery)
+        }
+
+        const response = await fetch(`/api/cabinet/admin/teams-list?${params.toString()}`)
+        const json = await response.json()
+
+        if (!response.ok || json?.success === false) {
+          throw new Error(json?.error || 'Не удалось загрузить команды')
+        }
+
+        if (isCancelled) {
+          return
+        }
+
+        const nextTeams = Array.isArray(json?.data) ? json.data : []
+        const nextHasMore = Boolean(json?.meta?.hasMore)
+        setTeams(nextTeams)
+        setPersistedTeams(nextTeams)
+        setHasMoreTeams(nextHasMore)
+      } catch (error) {
+        if (isCancelled) {
+          return
+        }
+
+        console.error('Failed to search teams', error)
+        setFeedback({
+          type: 'error',
+          message: error?.message || 'Не удалось выполнить поиск команд',
+        })
+      } finally {
+        if (!isCancelled) {
+          setIsSearchingTeams(false)
+        }
+      }
+    }
+
+    loadTeams()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [searchQuery])
 
   if (!isAdmin) {
     return (
@@ -622,8 +691,8 @@ const AdminTeamsPage = ({
               <input
                 id="team-search"
                 type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Введите название команды или участника"
                 className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
               />
@@ -672,9 +741,24 @@ const AdminTeamsPage = ({
                       className="w-full cursor-pointer text-left p-4 border rounded-2xl transition border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50 dark:hover:border-[#7A00FF]/60 dark:hover:bg-[#110a24]"
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <div>
+                        <div className="min-w-0 flex items-center gap-3">
+                          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+                            {team.image ? (
+                              <img
+                                src={team.image}
+                                alt={`Иконка команды ${team.name}`}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500 dark:text-slate-300">
+                                {team.name?.[0] ? team.name[0].toUpperCase() : '?'}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
                           <p className="text-sm font-semibold text-primary dark:text-slate-100">{team.name}</p>
                           <p className="text-xs text-slate-500">{team.membersLabel}</p>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <span
@@ -708,14 +792,14 @@ const AdminTeamsPage = ({
                 <button
                   type="button"
                   onClick={handleLoadMoreTeams}
-                  disabled={isLoadingMoreTeams}
+                  disabled={isLoadingMoreTeams || isSearchingTeams}
                   className={`w-full rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                    isLoadingMoreTeams
+                    isLoadingMoreTeams || isSearchingTeams
                       ? 'cursor-wait border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500'
                       : 'cursor-pointer border-cyan-400/60 text-cyan-200 hover:bg-cyan-500/10'
                   }`}
                 >
-                  {isLoadingMoreTeams ? 'Загружаем…' : 'Загрузить ещё'}
+                  {isLoadingMoreTeams || isSearchingTeams ? 'Загружаем…' : 'Загрузить ещё'}
                 </button>
               )}
             </div>
@@ -741,6 +825,7 @@ const AdminTeamsPage = ({
           onSetCaptain={handleSetCaptain}
           onRemoveMember={handleRemoveMember}
           location={location}
+          canEditCarSkin={isAdmin}
         />
         <Modal
           isOpen={teamDescriptionModal.isOpen}
@@ -788,7 +873,9 @@ AdminTeamsPage.propTypes = {
       id: PropTypes.string.isRequired,
       name: PropTypes.string,
       description: PropTypes.string,
+      image: PropTypes.string,
       open: PropTypes.bool,
+      carSkin: PropTypes.string,
       members: PropTypes.arrayOf(teamMemberShape),
       membersCount: PropTypes.number,
       captain: teamMemberShape,

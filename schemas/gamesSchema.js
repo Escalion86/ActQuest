@@ -182,6 +182,7 @@ const gamesSchema = {
   },
   status: {
     type: String,
+    enum: ['active', 'started', 'finished', 'closed', 'canceled'],
     default: 'active',
   },
   hidden: {
@@ -214,6 +215,7 @@ const gamesSchema = {
       gameTeams: [GamesTeamsSchema],
       teamsUsers: [TeamsUsersSchema],
       teamsPlaces: Map,
+      computed: Schema.Types.Mixed,
     },
     default: null,
   },

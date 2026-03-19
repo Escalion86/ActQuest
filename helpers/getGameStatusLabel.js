@@ -2,6 +2,7 @@ const STATUS_LABELS = {
   active: 'Активна',
   started: 'Запущена',
   finished: 'Завершена',
+  closed: 'Закрыта',
   canceled: 'Отменена',
 }
 

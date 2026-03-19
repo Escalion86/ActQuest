@@ -100,7 +100,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
     }
   }
 
-  if (game.status === 'finished') {
+  if (game.status === 'finished' || game.status === 'closed') {
     return {
       message: 'Игра завершена',
       nextCommand: { c: 'game', gameId: gameTeam.gameId },

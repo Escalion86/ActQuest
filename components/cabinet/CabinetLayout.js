@@ -301,6 +301,26 @@ const CabinetLayout = ({
     await signOut({ redirect: true, callbackUrl: '/' })
   }
 
+  const handleToggleGamesMenu = useCallback(() => {
+    setIsGamesMenuOpen((prev) => {
+      const nextValue = !prev
+      if (nextValue) {
+        setIsAdminMenuOpen(false)
+      }
+      return nextValue
+    })
+  }, [])
+
+  const handleToggleAdminMenu = useCallback(() => {
+    setIsAdminMenuOpen((prev) => {
+      const nextValue = !prev
+      if (nextValue) {
+        setIsGamesMenuOpen(false)
+      }
+      return nextValue
+    })
+  }, [])
+
   const handleLocationChange = useCallback(
     async (event) => {
       const nextLocation = event.target.value
@@ -458,7 +478,7 @@ const CabinetLayout = ({
                     <div key={item.id} className="space-y-1">
                       <button
                         type="button"
-                        onClick={() => setIsGamesMenuOpen((prev) => !prev)}
+                        onClick={handleToggleGamesMenu}
                         className={`flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
                           isGamesSectionActive ? navActiveClass : navIdleClass
                         } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
@@ -497,18 +517,14 @@ const CabinetLayout = ({
                               <Link
                                 key={subItem.id}
                                 href={subItem.href}
-                                legacyBehavior
+                                className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
+                                  isSubActive
+                                    ? subNavActiveClass
+                                    : subNavIdleClass
+                                }`}
+                                onClick={closeSidebarOnMobile}
                               >
-                                <a
-                                  className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
-                                    isSubActive
-                                      ? subNavActiveClass
-                                      : subNavIdleClass
-                                  }`}
-                                  onClick={closeSidebarOnMobile}
-                                >
-                                  {subItem.label}
-                                </a>
+                                {subItem.label}
                               </Link>
                             )
                           })}
@@ -526,7 +542,7 @@ const CabinetLayout = ({
                     <div key={item.id} className="space-y-1">
                       <button
                         type="button"
-                        onClick={() => setIsAdminMenuOpen((prev) => !prev)}
+                        onClick={handleToggleAdminMenu}
                         className={`flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
                           isAdminSectionActive ? navActiveClass : navIdleClass
                         } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
@@ -571,18 +587,14 @@ const CabinetLayout = ({
                               <Link
                                 key={subItem.id}
                                 href={subItem.href}
-                                legacyBehavior
+                                className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
+                                  isSubActive
+                                    ? subNavActiveClass
+                                    : subNavIdleClass
+                                }`}
+                                onClick={closeSidebarOnMobile}
                               >
-                                <a
-                                  className={`block cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150 ${
-                                    isSubActive
-                                      ? subNavActiveClass
-                                      : subNavIdleClass
-                                  }`}
-                                  onClick={closeSidebarOnMobile}
-                                >
-                                  {subItem.label}
-                                </a>
+                                {subItem.label}
                               </Link>
                             )
                           })}
@@ -596,20 +608,20 @@ const CabinetLayout = ({
                   activePage === item.id || router.pathname === item.href
 
                 return (
-                  <Link key={item.id} href={item.href} legacyBehavior>
-                    <a
-                      className={`flex cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
-                        isActive ? navActiveClass : navIdleClass
-                      } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
-                      onClick={closeSidebarOnMobile}
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={`flex cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
+                      isActive ? navActiveClass : navIdleClass
+                    } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
+                    onClick={closeSidebarOnMobile}
+                  >
+                    <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
+                    <span
+                      className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
                     >
-                      <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
-                      <span
-                        className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
-                      >
-                        {item.label}
-                      </span>
-                    </a>
+                      {item.label}
+                    </span>
                   </Link>
                 )
               })}

@@ -219,6 +219,7 @@ const ProfilePage = ({ initialProfile }) => {
                 directory="users"
                 imageName={safeFormState.id || 'user'}
                 maxImages={1}
+                previewShape="circle"
               />
             </div>
 

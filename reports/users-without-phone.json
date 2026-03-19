@@ -1,0 +1,15 @@
+{
+  "count": 1,
+  "users": [
+    {
+      "_id": "68ef2a476bdc52552a5c7693",
+      "telegramId": 261102161,
+      "createdAt": "2025-10-15T04:59:51.904Z",
+      "name": "Алексей Белинский Иллюзионист",
+      "phone": null,
+      "role": "client",
+      "updatedAt": "2025-10-15T05:05:53.785Z",
+      "username": "Escalion"
+    }
+  ]
+}

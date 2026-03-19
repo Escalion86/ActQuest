@@ -8,6 +8,13 @@ import getGameStatusLabel from '@helpers/getGameStatusLabel'
 
 const sectionHeadingClass = 'aq-modal-section-title text-base font-semibold'
 const itemTitleClass = 'aq-modal-item-title font-semibold'
+const systemRoleLabels = {
+  client: 'Участник',
+  moder: 'Модератор',
+  admin: 'Администратор',
+  dev: 'Разработчик',
+  ban: 'Заблокирован',
+}
 
 const TeamDescriptionModal = ({
   isOpen,
@@ -21,6 +28,32 @@ const TeamDescriptionModal = ({
   >
     {selectedTeam ? (
       <div className="space-y-6">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+              {selectedTeam.image ? (
+                <img
+                  src={selectedTeam.image}
+                  alt={`Иконка команды ${selectedTeam.name || 'Без названия'}`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-slate-500 dark:text-slate-300">
+                  {selectedTeam.name?.[0] ? selectedTeam.name[0].toUpperCase() : '?'}
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">
+                {selectedTeam.name || 'Без названия'}
+              </p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
+                {selectedTeam.open ? 'Открыта для заявок' : 'Закрытый состав'}
+              </p>
+            </div>
+          </div>
+        </section>
+
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
           <h4 className={sectionHeadingClass}>Описание</h4>
           {selectedTeam.description ? (
@@ -94,7 +127,19 @@ const TeamDescriptionModal = ({
                     <p className="mt-1 text-xs text-slate-500">@{member.username}</p>
                   )}
                   {member.userRole && (
-                    <p className="mt-1 text-xs text-slate-400">Роль в системе: {member.userRole}</p>
+                    (() => {
+                      const normalizedRole = String(member.userRole).toLowerCase()
+                      const roleLabel =
+                        systemRoleLabels[normalizedRole] ?? member.userRole
+                      if (normalizedRole === 'client' || roleLabel === 'Участник') {
+                        return null
+                      }
+                      return (
+                        <p className="mt-1 text-xs text-slate-400">
+                          Роль в системе: {roleLabel}
+                        </p>
+                      )
+                    })()
                   )}
                   {!member.hasLinkedUser && (
                     <p className="mt-1 text-xs text-amber-600">
@@ -103,9 +148,6 @@ const TeamDescriptionModal = ({
                   )}
                   {member.phone && (
                     <p className="mt-2 text-xs text-slate-500">Телефон: {member.phone}</p>
-                  )}
-                  {member.telegramId && (
-                    <p className="mt-1 text-xs text-slate-400">Telegram ID: {member.telegramId}</p>
                   )}
                 </li>
               ))}
@@ -157,6 +199,7 @@ TeamDescriptionModal.propTypes = {
     id: PropTypes.string,
     name: PropTypes.string,
     description: PropTypes.string,
+    image: PropTypes.string,
     open: PropTypes.bool,
     membersCount: PropTypes.number,
     gamesCount: PropTypes.number,

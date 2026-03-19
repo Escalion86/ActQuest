@@ -2,7 +2,9 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import AmountStepperInput from '@components/cabinet/AmountStepperInput'
 import ImagesInput from '@components/cabinet/ImagesInput'
+import NeonCheckbox from '@components/NeonCheckbox'
 import formatDate from '@helpers/formatDate'
 import formatDateTime from '@helpers/formatDateTime'
 
@@ -56,6 +58,9 @@ const GameEditModal = ({
   handleAddFinance,
   handleFinanceChange,
   handleRemoveFinance,
+  canGenerateResults,
+  isGeneratingResults,
+  handleGenerateResults,
   currencyFormatter,
   financesSummary,
   balanceClass,
@@ -68,15 +73,29 @@ const GameEditModal = ({
   setSelectedModeratorToAdd,
   handleAddModerator,
   handleRemoveModerator,
-  taskDurationLabel,
-  cluesDurationLabel,
-  clueModeDetails,
-  breakDurationLabel,
-  taskFailurePenaltyLabel,
-  manyCodesLimitLabel,
-  manyCodesPenaltyLabel,
 }) => {
   const isPhotoGame = selectedGame?.type === 'photo'
+  const amountInputClassName =
+    'aq-amount-step-input h-10 w-full rounded-xl border border-slate-200 bg-white px-12 py-2 text-center text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
+  const getCheckboxChecked = (valueOrEvent) =>
+    typeof valueOrEvent === 'boolean'
+      ? valueOrEvent
+      : Boolean(valueOrEvent?.target?.checked)
+  const debugCheckboxUpdate = (source, checked, payloadFactory) => {
+    try {
+      const payload = typeof payloadFactory === 'function' ? payloadFactory(checked) : payloadFactory
+      updateSelectedGame(payload)
+    } catch (error) {
+      console.error('[GameEditModal] Ошибка обновления чекбокса', {
+        source,
+        checked,
+        gameId: selectedGame?.id ?? null,
+        gameName: selectedGame?.name ?? null,
+        error,
+      })
+    }
+  }
+
   const modalFooter = (
     <>
       <button
@@ -104,18 +123,48 @@ const GameEditModal = ({
     </>
   )
 
+  if (!selectedGame) {
+    console.error('[GameEditModal] Модалка редактирования открыта без selectedGame', {
+      isEditModalOpen,
+    })
+    return (
+      <Modal
+        isOpen={isEditModalOpen}
+        title="Редактирование игры"
+        onClose={handleCloseEditModal}
+      >
+        <p className="text-sm text-slate-500 dark:text-slate-300">
+          Игра не выбрана. Закройте окно и выберите игру снова.
+        </p>
+      </Modal>
+    )
+  }
+
   return (
     <Modal
                     isOpen={isEditModalOpen}
-                    title={`Редактирование игры «${selectedGame.name || 'Без названия'}»`}
+                    title={`Редактирование игры «${selectedGame?.name || 'Без названия'}»`}
                     onClose={handleCloseEditModal}
                     footer={modalFooter}
                   >
                   <fieldset
-                    disabled={!canEditSelectedGame || isSaving}
-                    className="space-y-6 border-0 p-0 m-0 [&_button]:cursor-pointer [&_select]:cursor-pointer [&_input[type='checkbox']]:cursor-pointer"
+                    disabled={isSaving}
+                    className="m-0 space-y-6 border-0 p-0 [&_button]:cursor-pointer [&_select]:cursor-pointer"
                   >
                     <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
+                    <ImagesInput
+                      label="Обложка игры"
+                      images={selectedGame.image ? [selectedGame.image] : []}
+                      onChange={(nextImages) =>
+                        updateSelectedGame({ image: nextImages?.[0] ?? null })
+                      }
+                      directory={`games/${selectedGame.id || 'draft'}`}
+                      imageName="cover"
+                      disabled={!canEditSelectedGame || isSaving}
+                      maxImages={1}
+                      previewShape="square"
+                    />
+
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
                         <label htmlFor="game-title" className="text-sm font-semibold text-slate-700 dark:text-white">
@@ -196,20 +245,19 @@ const GameEditModal = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <input
-                        id="game-individual-start"
-                        type="checkbox"
-                        checked={Boolean(selectedGame.individualStart)}
-                        onChange={(event) =>
-                          updateSelectedGame({ individualStart: event.target.checked })
-                        }
-                        className="w-4 h-4 text-primary border-slate-300 rounded"
-                      />
-                      <label htmlFor="game-individual-start" className="text-sm text-slate-600 dark:text-slate-200">
-                        Индивидуальный старт для команд
-                      </label>
-                    </div>
+                    <NeonCheckbox
+                      id="game-individual-start"
+                      checked={Boolean(selectedGame.individualStart)}
+                      onChange={(eventOrChecked) =>
+                        debugCheckboxUpdate(
+                          'individualStart',
+                          getCheckboxChecked(eventOrChecked),
+                          (checked) => ({ individualStart: checked })
+                        )
+                      }
+                      label="Индивидуальный старт для команд"
+                      labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                    />
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
@@ -257,17 +305,107 @@ const GameEditModal = ({
                       />
                     </div>
 
-                    <ImagesInput
-                      label="Обложка игры"
-                      images={selectedGame.image ? [selectedGame.image] : []}
-                      onChange={(nextImages) =>
-                        updateSelectedGame({ image: nextImages?.[0] ?? null })
-                      }
-                      directory={`games/${selectedGame.id || 'draft'}`}
-                      imageName="cover"
-                      disabled={!canEditSelectedGame || isSaving}
-                      maxImages={1}
-                    />
+                    {(selectedGameModerators.length > 0 || canEditSelectedGame) && (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                        <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Модераторы игры</h3>
+                        {selectedGameModerators.length > 0 ? (
+                          <ul className="mt-3 space-y-2">
+                            {selectedGameModerators.map((moderator) => {
+                              const moderatorId = typeof moderator === 'string' ? moderator : moderator.id
+                              const fallback =
+                                typeof moderator === 'string'
+                                  ? availableModeratorsMap.get(moderator)
+                                  : null
+                              const name =
+                                typeof moderator === 'string'
+                                  ? fallback?.name ?? 'Без имени'
+                                  : moderator.name || 'Без имени'
+                              const username =
+                                typeof moderator === 'string'
+                                  ? fallback?.username ?? ''
+                                  : moderator.username || ''
+                              const telegramId =
+                                typeof moderator === 'string'
+                                  ? fallback?.telegramId ?? ''
+                                  : moderator.telegramId || ''
+
+                              return (
+                                <li
+                                  key={moderatorId}
+                                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900/80"
+                                >
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{name}</p>
+                                    {username && <p className="text-xs text-slate-500">@{username}</p>}
+                                    {telegramId && <p className="text-xs text-slate-500">ID: {telegramId}</p>}
+                                  </div>
+                                  {canEditSelectedGame && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveModerator(moderatorId)}
+                                      className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                    >
+                                      Удалить
+                                    </button>
+                                  )}
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        ) : (
+                          <p className="mt-3 text-sm text-slate-500 dark:text-slate-300">
+                            Модераторы пока не назначены.
+                          </p>
+                        )}
+
+                        {canEditSelectedGame && (
+                          <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+                            <label htmlFor="edit-game-moderator" className="text-sm font-semibold text-slate-700 dark:text-white">
+                              Добавить модератора
+                            </label>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                              <select
+                                id="edit-game-moderator"
+                                value={selectedModeratorToAdd}
+                                onChange={(event) => setSelectedModeratorToAdd(event.target.value)}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
+                              >
+                                <option value="">Выберите модератора</option>
+                                {availableModeratorsForSelect.map((moderator) => {
+                                  const labelParts = [moderator.name || 'Без имени']
+                                  if (moderator.username) {
+                                    labelParts.push(`@${moderator.username}`)
+                                  }
+                                  if (moderator.telegramId) {
+                                    labelParts.push(`ID: ${moderator.telegramId}`)
+                                  }
+
+                                  return (
+                                    <option key={moderator.id} value={moderator.id}>
+                                      {labelParts.join(' · ')}
+                                    </option>
+                                  )
+                                })}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={handleAddModerator}
+                                disabled={!selectedModeratorToAdd}
+                                className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
+                              >
+                                Добавить
+                              </button>
+                            </div>
+                            {availableModeratorsForSelect.length === 0 && (
+                              <p className="text-xs text-slate-500 dark:text-slate-300">
+                                Все доступные модераторы уже назначены на эту игру.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     </section>
 
                     <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
@@ -447,45 +585,45 @@ const GameEditModal = ({
                     )}
 
                     <div className="grid gap-3 md:grid-cols-3">
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(selectedGame.allowCaptainForceClue)}
-                          onChange={(event) =>
-                            updateSelectedGame({
-                              allowCaptainForceClue: event.target.checked,
-                            })
-                          }
-                          className="w-4 h-4 text-primary border-slate-300 rounded"
-                        />
-                        Досрочные подсказки капитанам
-                      </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(selectedGame.allowCaptainFailTask)}
-                          onChange={(event) =>
-                            updateSelectedGame({
-                              allowCaptainFailTask: event.target.checked,
-                            })
-                          }
-                          className="w-4 h-4 text-primary border-slate-300 rounded"
-                        />
-                        Слив задания капитаном
-                      </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(selectedGame.allowCaptainFinishBreak)}
-                          onChange={(event) =>
-                            updateSelectedGame({
-                              allowCaptainFinishBreak: event.target.checked,
-                            })
-                          }
-                          className="w-4 h-4 text-primary border-slate-300 rounded"
-                        />
-                        Досрочное завершение перерыва
-                      </label>
+                      <NeonCheckbox
+                        id="game-allow-force-clue"
+                        checked={Boolean(selectedGame.allowCaptainForceClue)}
+                        onChange={(eventOrChecked) =>
+                          debugCheckboxUpdate(
+                            'allowCaptainForceClue',
+                            getCheckboxChecked(eventOrChecked),
+                            (checked) => ({ allowCaptainForceClue: checked })
+                          )
+                        }
+                        label="Досрочные подсказки капитанам"
+                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                      />
+                      <NeonCheckbox
+                        id="game-allow-fail-task"
+                        checked={Boolean(selectedGame.allowCaptainFailTask)}
+                        onChange={(eventOrChecked) =>
+                          debugCheckboxUpdate(
+                            'allowCaptainFailTask',
+                            getCheckboxChecked(eventOrChecked),
+                            (checked) => ({ allowCaptainFailTask: checked })
+                          )
+                        }
+                        label="Слив задания капитаном"
+                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                      />
+                      <NeonCheckbox
+                        id="game-allow-finish-break"
+                        checked={Boolean(selectedGame.allowCaptainFinishBreak)}
+                        onChange={(eventOrChecked) =>
+                          debugCheckboxUpdate(
+                            'allowCaptainFinishBreak',
+                            getCheckboxChecked(eventOrChecked),
+                            (checked) => ({ allowCaptainFinishBreak: checked })
+                          )
+                        }
+                        label="Досрочное завершение перерыва"
+                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                      />
                     </div>
                     </section>
 
@@ -555,36 +693,50 @@ const GameEditModal = ({
                                       />
                                     </div>
                                     <div className="flex flex-col gap-2 md:items-start">
-                                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
-                                        <input
-                                          type="checkbox"
-                                          checked={Boolean(task.isBonusTask)}
-                                          onChange={(event) =>
-                                            handleTaskCheckboxChange(
-                                              task.id,
-                                              'isBonusTask',
-                                              event.target.checked
-                                            )
-                                          }
-                                          className="h-4 w-4 rounded border-slate-300 text-primary"
-                                        />
-                                        Бонусное задание
-                                      </label>
-                                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
-                                        <input
-                                          type="checkbox"
-                                          checked={Boolean(task.canceled)}
-                                          onChange={(event) =>
-                                            handleTaskCheckboxChange(
-                                              task.id,
-                                              'canceled',
-                                              event.target.checked
-                                            )
-                                          }
-                                          className="h-4 w-4 rounded border-slate-300 text-primary"
-                                        />
-                                        Задание отменено
-                                      </label>
+                                      <NeonCheckbox
+                                        id={`task-is-bonus-${task.id}`}
+                                        checked={Boolean(task.isBonusTask)}
+                                        onChange={(eventOrChecked) =>
+                                          (() => {
+                                            const checked = getCheckboxChecked(eventOrChecked)
+                                            try {
+                                              handleTaskCheckboxChange(task.id, 'isBonusTask', checked)
+                                            } catch (error) {
+                                              console.error('[GameEditModal] Ошибка обновления чекбокса задания', {
+                                                source: 'task.isBonusTask',
+                                                taskId: task.id,
+                                                checked,
+                                                gameId: selectedGame?.id ?? null,
+                                                error,
+                                              })
+                                            }
+                                          })()
+                                        }
+                                        label="Бонусное задание"
+                                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                                      />
+                                      <NeonCheckbox
+                                        id={`task-canceled-${task.id}`}
+                                        checked={Boolean(task.canceled)}
+                                        onChange={(eventOrChecked) =>
+                                          (() => {
+                                            const checked = getCheckboxChecked(eventOrChecked)
+                                            try {
+                                              handleTaskCheckboxChange(task.id, 'canceled', checked)
+                                            } catch (error) {
+                                              console.error('[GameEditModal] Ошибка обновления чекбокса задания', {
+                                                source: 'task.canceled',
+                                                taskId: task.id,
+                                                checked,
+                                                gameId: selectedGame?.id ?? null,
+                                                error,
+                                              })
+                                            }
+                                          })()
+                                        }
+                                        label="Задание отменено"
+                                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                                      />
                                     </div>
                                   </div>
 
@@ -1176,50 +1328,90 @@ const GameEditModal = ({
                     <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-5">
                     <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Публикация и результаты</h2>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(selectedGame.hidden)}
-                          onChange={(event) =>
-                            updateSelectedGame({ hidden: event.target.checked })
-                          }
-                          className="w-4 h-4 text-primary border-slate-300 rounded"
-                        />
-                        Игра скрыта из общего списка
-                      </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(selectedGame.showCreator)}
-                          onChange={(event) =>
-                            updateSelectedGame({ showCreator: event.target.checked })
-                          }
-                          className="w-4 h-4 text-primary border-slate-300 rounded"
-                        />
-                        Показывать организатора игрокам
-                      </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(selectedGame.showTasks)}
-                          onChange={(event) =>
-                            updateSelectedGame({ showTasks: event.target.checked })
-                          }
-                          className="w-4 h-4 text-primary border-slate-300 rounded"
-                        />
-                        Открыть задания после завершения
-                      </label>
-                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(selectedGame.hideResult)}
-                          onChange={(event) =>
-                            updateSelectedGame({ hideResult: event.target.checked })
-                          }
-                          className="w-4 h-4 text-primary border-slate-300 rounded"
-                        />
-                        Скрыть результаты для участников
-                      </label>
+                      <NeonCheckbox
+                        id="game-is-rated"
+                        checked={Boolean(selectedGame.isRated ?? true)}
+                        onChange={(eventOrChecked) =>
+                          debugCheckboxUpdate(
+                            'isRated',
+                            getCheckboxChecked(eventOrChecked),
+                            (checked) =>
+                              checked
+                                ? { isRated: true, hidden: false }
+                                : { isRated: false }
+                          )
+                        }
+                        label="Рейтинговая игра"
+                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                      />
+                      <NeonCheckbox
+                        id="game-hidden"
+                        checked={Boolean(selectedGame.hidden)}
+                        disabled={Boolean(selectedGame.isRated ?? true)}
+                        onChange={(eventOrChecked) =>
+                          debugCheckboxUpdate(
+                            'hidden',
+                            getCheckboxChecked(eventOrChecked),
+                            (checked) => ({ hidden: checked })
+                          )
+                        }
+                        label="Игра скрыта из общего списка"
+                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                      />
+                      <NeonCheckbox
+                        id="game-show-creator"
+                        checked={Boolean(selectedGame.showCreator)}
+                        onChange={(eventOrChecked) =>
+                          debugCheckboxUpdate(
+                            'showCreator',
+                            getCheckboxChecked(eventOrChecked),
+                            (checked) => ({ showCreator: checked })
+                          )
+                        }
+                        label="Показывать организатора игрокам"
+                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                      />
+                      <NeonCheckbox
+                        id="game-show-tasks"
+                        checked={Boolean(selectedGame.showTasks)}
+                        onChange={(eventOrChecked) =>
+                          debugCheckboxUpdate(
+                            'showTasks',
+                            getCheckboxChecked(eventOrChecked),
+                            (checked) => ({ showTasks: checked })
+                          )
+                        }
+                        label="Открыть задания после завершения"
+                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                      />
+                      <NeonCheckbox
+                        id="game-hide-result"
+                        checked={!Boolean(selectedGame.hideResult)}
+                        onChange={(eventOrChecked) =>
+                          debugCheckboxUpdate(
+                            'hideResult',
+                            getCheckboxChecked(eventOrChecked),
+                            (checked) => ({ hideResult: !checked })
+                          )
+                        }
+                        label="Показать результаты"
+                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                      />
+                    </div>
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={handleGenerateResults}
+                        disabled={!canGenerateResults || isGeneratingResults}
+                        className="inline-flex items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
+                      >
+                        {isGeneratingResults ? 'Формируем…' : 'Сформировать результаты'}
+                      </button>
+                      {!canGenerateResults && (
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
+                          Доступно только для завершённых или закрытых игр.
+                        </p>
+                      )}
                     </div>
                     </section>
 
@@ -1251,15 +1443,16 @@ const GameEditModal = ({
                               placeholder="Название тарифа"
                               className="w-full px-4 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
                             />
-                            <input
-                              type="number"
-                              min="0"
+                            <AmountStepperInput
                               value={price.price}
-                              onChange={(event) =>
-                                handlePriceChange(price.id, 'price', event.target.value)
-                              }
+                              min={0}
+                              step={100}
                               placeholder="Стоимость"
-                              className="w-full px-4 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
+                              className="max-w-none"
+                              inputClassName={amountInputClassName}
+                              onChange={(nextValue) =>
+                                handlePriceChange(price.id, 'price', nextValue)
+                              }
                             />
                             <button
                               type="button"
@@ -1307,15 +1500,16 @@ const GameEditModal = ({
                               <option value="income">Доход</option>
                               <option value="expense">Расход</option>
                             </select>
-                            <input
-                              type="number"
-                              min="0"
+                            <AmountStepperInput
                               value={entry.sum}
-                              onChange={(event) =>
-                                handleFinanceChange(entry.id, 'sum', event.target.value)
-                              }
+                              min={0}
+                              step={100}
                               placeholder="Сумма"
-                              className="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
+                              className="max-w-none"
+                              inputClassName={amountInputClassName}
+                              onChange={(nextValue) =>
+                                handleFinanceChange(entry.id, 'sum', nextValue)
+                              }
                             />
                             <input
                               type="date"
@@ -1371,7 +1565,7 @@ const GameEditModal = ({
 }
 
 GameEditModal.propTypes = {
-  selectedGame: PropTypes.shape({ id: PropTypes.string }).isRequired,
+  selectedGame: PropTypes.shape({ id: PropTypes.string }),
   isEditModalOpen: PropTypes.bool.isRequired,
   handleCloseEditModal: PropTypes.func.isRequired,
   canEditSelectedGame: PropTypes.bool.isRequired,
@@ -1423,6 +1617,9 @@ GameEditModal.propTypes = {
   handleAddFinance: PropTypes.func.isRequired,
   handleFinanceChange: PropTypes.func.isRequired,
   handleRemoveFinance: PropTypes.func.isRequired,
+  canGenerateResults: PropTypes.bool.isRequired,
+  isGeneratingResults: PropTypes.bool.isRequired,
+  handleGenerateResults: PropTypes.func.isRequired,
   currencyFormatter: PropTypes.instanceOf(Intl.NumberFormat).isRequired,
   financesSummary: PropTypes.shape({
     income: PropTypes.number.isRequired,
@@ -1439,22 +1636,11 @@ GameEditModal.propTypes = {
   setSelectedModeratorToAdd: PropTypes.func.isRequired,
   handleAddModerator: PropTypes.func.isRequired,
   handleRemoveModerator: PropTypes.func.isRequired,
-  taskDurationLabel: PropTypes.string.isRequired,
-  cluesDurationLabel: PropTypes.string.isRequired,
-  clueModeDetails: PropTypes.shape({
-    modeLabel: PropTypes.string.isRequired,
-    valueLabel: PropTypes.string.isRequired,
-  }).isRequired,
-  breakDurationLabel: PropTypes.string.isRequired,
-  taskFailurePenaltyLabel: PropTypes.string.isRequired,
-  manyCodesLimitLabel: PropTypes.string,
-  manyCodesPenaltyLabel: PropTypes.string,
 }
 
 GameEditModal.defaultProps = {
+  selectedGame: null,
   location: null,
-  manyCodesLimitLabel: null,
-  manyCodesPenaltyLabel: null,
 }
 
 export default memo(GameEditModal)

@@ -19,6 +19,7 @@ const statusLabels = {
   active: 'Ещё не началась',
   started: 'В процессе',
   finished: 'Завершена',
+  closed: 'Завершена',
 }
 
 const formatDateTime = (value, timeZone) => {

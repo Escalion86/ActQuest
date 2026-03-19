@@ -32,11 +32,14 @@ export default async function handler(req, res) {
 
     const offset = parsePositiveInteger(req.query?.offset, 0)
     const limit = parsePositiveInteger(req.query?.limit, 10)
+    const searchQuery =
+      typeof req.query?.search === 'string' ? req.query.search.trim().slice(0, 100) : ''
 
     const { teams, hasMore } = await fetchTeamsForCabinet({
       db,
       offset,
       limit,
+      searchQuery,
       returnMeta: true,
     })
 
@@ -47,6 +50,7 @@ export default async function handler(req, res) {
         offset,
         limit,
         hasMore,
+        search: searchQuery,
       },
     })
   } catch (error) {

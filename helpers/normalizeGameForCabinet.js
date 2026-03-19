@@ -20,6 +20,15 @@ const ensureNumber = (value, fallback = 0) => {
   return Number.isFinite(number) ? number : fallback
 }
 
+const ensureNullableNumber = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
 const ensureBoolean = (value, fallback = false) => {
   if (typeof value === 'boolean') {
     return value
@@ -72,15 +81,6 @@ const normalizeFinances = (finances = []) => {
     date: ensureDateISOString(entry?.date),
     description: ensureString(entry?.description, ''),
   }))
-}
-
-const ensureNullableNumber = (value) => {
-  if (value === null || value === undefined || value === '') {
-    return null
-  }
-
-  const number = Number(value)
-  return Number.isFinite(number) ? number : null
 }
 
 const normalizeManyCodesPenalty = (value) => {
@@ -240,6 +240,14 @@ const computeTasksStats = (tasks = []) => {
   )
 }
 
+const isResultGenerated = (result) => {
+  if (!result || typeof result !== 'object') {
+    return false
+  }
+
+  return Boolean(result.computed && typeof result.computed === 'object')
+}
+
 const normalizeGameForCabinet = (game) => {
   if (!game) {
     return null
@@ -272,6 +280,7 @@ const normalizeGameForCabinet = (game) => {
     taskFailurePenalty: ensureNumber(game.taskFailurePenalty, 0),
     manyCodesPenalty: normalizeManyCodesPenalty(game.manyCodesPenalty),
     individualStart: ensureBoolean(game.individualStart, false),
+    isRated: ensureBoolean(game.isRated, true),
     hidden: ensureBoolean(game.hidden, true),
     showCreator: ensureBoolean(game.showCreator, true),
     showTasks: ensureBoolean(game.showTasks, false),
@@ -280,7 +289,9 @@ const normalizeGameForCabinet = (game) => {
     finances: normalizeFinances(game.finances),
     tasks: normalizeTasks(game.tasks),
     teamsCount: ensureNumber(game.teamsCount, 0),
+    userTeamPlace: ensureNullableNumber(game.userTeamPlace),
     tasksStats,
+    isResultGenerated: isResultGenerated(game.result),
     updatedAt: ensureDateISOString(game.updatedAt),
     createdAt: ensureDateISOString(game.createdAt),
     creatorTelegramId: ensureString(game.creatorTelegramId, ''),

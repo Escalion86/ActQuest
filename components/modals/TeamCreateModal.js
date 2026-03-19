@@ -2,6 +2,8 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import ImagesInput from '@components/cabinet/ImagesInput'
+import NeonCheckbox from '@components/NeonCheckbox'
 
 const TeamCreateModal = ({
   isOpen,
@@ -12,6 +14,8 @@ const TeamCreateModal = ({
   onChangeNewTeamName,
   newTeamDescription,
   onChangeNewTeamDescription,
+  newTeamImage,
+  onChangeNewTeamImage,
   newTeamOpen,
   onChangeNewTeamOpen,
   onCreateTeam,
@@ -71,23 +75,25 @@ const TeamCreateModal = ({
           placeholder="Расскажите, для кого эта команда"
         />
       </div>
-      <div className="flex items-start gap-3">
-        <input
-          id="new-team-open"
-          type="checkbox"
-          checked={newTeamOpen}
-          onChange={(event) => onChangeNewTeamOpen(event.target.checked)}
-          className="mt-1 h-4 w-4 rounded border-slate-300 text-primary"
-        />
-        <div className="space-y-1">
-          <label htmlFor="new-team-open" className="text-sm font-semibold text-primary">
-            Разрешить присоединяться по id
-          </label>
-          <p className="text-xs text-slate-500 dark:text-slate-300">
-            Когда настройка включена, новые участники смогут вступить в команду, введя её id в личном кабинете.
-          </p>
-        </div>
-      </div>
+      <ImagesInput
+        images={newTeamImage ? [newTeamImage] : []}
+        onChange={(next) => onChangeNewTeamImage(Array.isArray(next) ? next[0] ?? '' : '')}
+        directory="teams/draft"
+        imageName="avatar"
+        label="Иконка команды"
+        maxImages={1}
+        disabled={isCreatingTeam}
+      />
+      <NeonCheckbox
+        id="new-team-open"
+        checked={newTeamOpen}
+        onChange={(event) => onChangeNewTeamOpen(event.target.checked)}
+        className="items-start"
+        label="Разрешить присоединяться по id"
+        labelClassName="text-sm font-semibold text-primary"
+        description="Когда настройка включена, новые участники смогут вступить в команду, введя её id в личном кабинете."
+        descriptionClassName="text-xs text-slate-500 dark:text-slate-300"
+      />
     </fieldset>
   </Modal>
 )
@@ -101,6 +107,8 @@ TeamCreateModal.propTypes = {
   onChangeNewTeamName: PropTypes.func.isRequired,
   newTeamDescription: PropTypes.string.isRequired,
   onChangeNewTeamDescription: PropTypes.func.isRequired,
+  newTeamImage: PropTypes.string.isRequired,
+  onChangeNewTeamImage: PropTypes.func.isRequired,
   newTeamOpen: PropTypes.bool.isRequired,
   onChangeNewTeamOpen: PropTypes.func.isRequired,
   onCreateTeam: PropTypes.func.isRequired,

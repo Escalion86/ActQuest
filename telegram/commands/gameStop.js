@@ -5,6 +5,7 @@ import sendMessage from 'telegram/sendMessage'
 import mainMenu from './mainMenu'
 import keyboardFormer from 'telegram/func/keyboardFormer'
 import mainMenuButton from './menuItems/mainMenuButton'
+import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
 
 const gameStop = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -30,24 +31,25 @@ const gameStop = async ({ telegramId, jsonCommand, location, db }) => {
     }
   }
 
-  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
-    status: 'finished',
-    dateEndFact: new Date(),
-  })
-  // Получаем список команд участвующих в игре
-  const gameTeams = await db.model('GamesTeams').find({
+  const snapshots = await buildGameResultSnapshots({
+    db,
     gameId: jsonCommand.gameId,
   })
 
-  const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
-
-  // const teams = await db.model('Teams').find({
-  //   _id: { $in: teamsIds },
-  // })
-
-  const teamsUsers = await db.model('TeamsUsers').find({
-    teamId: { $in: teamsIds },
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
+    status: 'finished',
+    dateEndFact: new Date(),
+    result: {
+      teams: snapshots.teams,
+      gameTeams: snapshots.gameTeams,
+      teamsUsers: snapshots.teamsUsers,
+      teamsPlaces: {},
+      computed: null,
+      text: '',
+    },
   })
+
+  const teamsUsers = Array.isArray(snapshots.teamsUsers) ? snapshots.teamsUsers : []
   // Получаем telegramId всчех участников игры
   const allUsersTelegramIds = teamsUsers.map(
     (teamUser) => teamUser.userTelegramId
