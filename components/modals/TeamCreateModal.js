@@ -50,7 +50,7 @@ const TeamCreateModal = ({
         Название команды можно изменить позже. Вы автоматически станете капитаном созданной команды.
       </p>
       <div className="space-y-2">
-        <label htmlFor="new-team-name" className="text-sm font-semibold text-primary">
+        <label htmlFor="new-team-name" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
           Название команды
         </label>
         <input
@@ -63,7 +63,7 @@ const TeamCreateModal = ({
         />
       </div>
       <div className="space-y-2">
-        <label htmlFor="new-team-description" className="text-sm font-semibold text-primary">
+        <label htmlFor="new-team-description" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
           Краткое описание (по желанию)
         </label>
         <textarea
@@ -90,7 +90,7 @@ const TeamCreateModal = ({
         onChange={(event) => onChangeNewTeamOpen(event.target.checked)}
         className="items-start"
         label="Разрешить присоединяться по id"
-        labelClassName="text-sm font-semibold text-primary"
+        labelClassName="text-sm font-semibold text-slate-700 dark:text-slate-100"
         description="Когда настройка включена, новые участники смогут вступить в команду, введя её id в личном кабинете."
         descriptionClassName="text-xs text-slate-500 dark:text-slate-300"
       />

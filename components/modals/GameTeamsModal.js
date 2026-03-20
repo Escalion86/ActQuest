@@ -79,7 +79,7 @@ const GameTeamsModal = ({
                       </div>
 
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
-                        <h3 className="text-sm font-semibold text-primary">Добавить команду</h3>
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Добавить команду</h3>
                         {teamsModalState.availableTeams.length > 0 ? (
                           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
                             <select

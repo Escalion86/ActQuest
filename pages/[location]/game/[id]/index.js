@@ -65,7 +65,9 @@ function GameEntryPage({
   useEffect(() => {
     if (!isClient) return
 
-    const storedTheme = window.localStorage.getItem('aq-theme')
+    const storedTheme =
+      window.localStorage.getItem('cabinet-theme') ||
+      window.localStorage.getItem('aq-theme')
     if (storedTheme === 'light' || storedTheme === 'dark') {
       setTheme(storedTheme)
       return
@@ -82,6 +84,7 @@ function GameEntryPage({
 
     window.document.documentElement.classList.toggle('dark', theme === 'dark')
     window.document.documentElement.setAttribute('data-theme', theme)
+    window.localStorage.setItem('cabinet-theme', theme)
     window.localStorage.setItem('aq-theme', theme)
   }, [theme, isClient])
 

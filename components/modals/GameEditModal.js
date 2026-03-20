@@ -884,7 +884,7 @@ const GameEditModal = ({
                                       <button
                                         type="button"
                                         onClick={() => handleAddTaskCode(task.id)}
-                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
+                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:text-cyan-200 dark:hover:bg-sky-500/10"
                                       >
                                         Добавить код
                                       </button>
@@ -943,7 +943,7 @@ const GameEditModal = ({
                                       <button
                                         type="button"
                                         onClick={() => handleAddClue(task.id)}
-                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
+                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:text-cyan-200 dark:hover:bg-sky-500/10"
                                       >
                                         Добавить подсказку
                                       </button>
@@ -1018,7 +1018,7 @@ const GameEditModal = ({
                                         <button
                                           type="button"
                                           onClick={() => handleAddSubTask(task.id)}
-                                          className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
+                                          className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:text-cyan-200 dark:hover:bg-sky-500/10"
                                         >
                                           Добавить подзадание
                                         </button>
@@ -1120,7 +1120,7 @@ const GameEditModal = ({
                                       <button
                                         type="button"
                                         onClick={() => handleAddPenaltyCode(task.id)}
-                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
+                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:text-cyan-200 dark:hover:bg-sky-500/10"
                                       >
                                         Добавить штраф
                                       </button>
@@ -1215,7 +1215,7 @@ const GameEditModal = ({
                                       <button
                                         type="button"
                                         onClick={() => handleAddBonusCode(task.id)}
-                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
+                                        className="inline-flex justify-center rounded-xl border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:text-cyan-200 dark:hover:bg-sky-500/10"
                                       >
                                         Добавить бонус
                                       </button>
@@ -1645,6 +1645,7 @@ GameEditModal.defaultProps = {
 }
 
 export default memo(GameEditModal)
+
 
 
 

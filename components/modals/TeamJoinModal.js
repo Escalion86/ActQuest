@@ -44,7 +44,7 @@ const TeamJoinModal = ({
         Введите идентификатор команды. Его можно получить у капитана, если в настройках команды разрешено присоединение по id.
       </p>
       <div className="space-y-2">
-        <label htmlFor="join-team-id" className="text-sm font-semibold text-primary">
+        <label htmlFor="join-team-id" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
           ID команды
         </label>
         <input

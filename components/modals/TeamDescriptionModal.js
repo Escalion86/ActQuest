@@ -5,8 +5,8 @@ import Modal from '@components/Modal'
 import formatDate from '@helpers/formatDate'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
-
-const sectionHeadingClass = 'aq-modal-section-title text-base font-semibold'
+import ModalSection from './ModalSection'
+import ModalSectionTitle from './ModalSectionTitle'
 const itemTitleClass = 'aq-modal-item-title font-semibold'
 const systemRoleLabels = {
   client: 'Участник',
@@ -28,7 +28,7 @@ const TeamDescriptionModal = ({
   >
     {selectedTeam ? (
       <div className="space-y-6">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+        <ModalSection className="p-5">
           <div className="flex items-center gap-4">
             <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
               {selectedTeam.image ? (
@@ -52,10 +52,10 @@ const TeamDescriptionModal = ({
               </p>
             </div>
           </div>
-        </section>
+        </ModalSection>
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
-          <h4 className={sectionHeadingClass}>Описание</h4>
+          <ModalSectionTitle>Описание</ModalSectionTitle>
           {selectedTeam.description ? (
             <p className="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
               {selectedTeam.description}
@@ -67,8 +67,8 @@ const TeamDescriptionModal = ({
           )}
         </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-          <h4 className={sectionHeadingClass}>Информация</h4>
+        <ModalSection className="p-5">
+          <ModalSectionTitle>Информация</ModalSectionTitle>
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Статус набора</dt>
@@ -108,10 +108,10 @@ const TeamDescriptionModal = ({
               </div>
             )}
           </dl>
-        </section>
+        </ModalSection>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-          <h4 className={sectionHeadingClass}>Состав команды</h4>
+        <ModalSection className="p-5">
+          <ModalSectionTitle>Состав команды</ModalSectionTitle>
           {selectedTeam.members?.length > 0 ? (
             <ul className="mt-4 space-y-3">
               {selectedTeam.members.map((member) => (
@@ -157,11 +157,11 @@ const TeamDescriptionModal = ({
               Пока нет участников. Пригласите игроков через телеграм-бота, чтобы они появились здесь.
             </p>
           )}
-        </section>
+        </ModalSection>
 
         {selectedTeam.games?.length > 0 && (
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-            <h4 className={sectionHeadingClass}>Участие в играх</h4>
+          <ModalSection className="p-5">
+            <ModalSectionTitle>Участие в играх</ModalSectionTitle>
             <ul className="mt-4 space-y-3">
               {selectedTeam.games.map((game) => (
                 <li
@@ -181,7 +181,7 @@ const TeamDescriptionModal = ({
                 </li>
               ))}
             </ul>
-          </section>
+          </ModalSection>
         )}
       </div>
     ) : (

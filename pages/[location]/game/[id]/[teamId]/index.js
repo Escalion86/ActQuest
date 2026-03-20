@@ -179,7 +179,9 @@ const resolveThemePreference = () => {
   }
 
   try {
-    const storedTheme = window.localStorage?.getItem('aq-theme')
+    const storedTheme =
+      window.localStorage?.getItem('cabinet-theme') ||
+      window.localStorage?.getItem('aq-theme')
     if (storedTheme === 'light' || storedTheme === 'dark') {
       return storedTheme
     }
@@ -292,6 +294,7 @@ function GameTeamPage({
       setTheme(resolvedTheme)
 
       try {
+        window.localStorage.setItem('cabinet-theme', resolvedTheme)
         window.localStorage.setItem('aq-theme', resolvedTheme)
       } catch {
         // ignore inaccessible storage
@@ -303,6 +306,7 @@ function GameTeamPage({
     applyTheme(theme)
 
     try {
+      window.localStorage.setItem('cabinet-theme', theme)
       window.localStorage.setItem('aq-theme', theme)
     } catch {
       // ignore inaccessible storage

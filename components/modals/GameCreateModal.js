@@ -54,7 +54,7 @@ const GameCreateModal = ({
                 </NoticeBanner>
               )}
               <div className="space-y-2">
-                <label htmlFor="new-game-name" className="text-sm font-semibold text-primary">
+                <label htmlFor="new-game-name" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                   Название игры
                 </label>
                 <input

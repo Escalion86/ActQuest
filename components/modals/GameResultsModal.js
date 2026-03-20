@@ -3,6 +3,8 @@ import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
 import { getNounBonus } from '@helpers/getNoun'
+import ModalSection from './ModalSection'
+import ModalSectionTitle from './ModalSectionTitle'
 
 const formatIsoDateTime = (value) => {
   if (!value) {
@@ -212,8 +214,8 @@ const GameResultsModal = ({
 
         {!resultsModalState?.isLoading && !resultsModalState?.error && (
           <>
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-              <h4 className="aq-modal-section-title text-base font-semibold">Сводка</h4>
+            <ModalSection className="p-4">
+              <ModalSectionTitle>Сводка</ModalSectionTitle>
               <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
                   <p className="text-xs text-slate-500 dark:text-slate-400">Команд</p>
@@ -258,10 +260,10 @@ const GameResultsModal = ({
                   </a>
                 </div>
               )}
-            </section>
+            </ModalSection>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-              <h4 className="aq-modal-section-title text-base font-semibold">Турнирная таблица</h4>
+            <ModalSection className="p-4">
+              <ModalSectionTitle>Турнирная таблица</ModalSectionTitle>
               {rankingRows.length > 0 ? (
                 <div className="mt-4 overflow-x-auto">
                   <table className="min-w-full text-left text-sm">
@@ -292,11 +294,11 @@ const GameResultsModal = ({
                   Для этой игры пока нет сформированных результатов.
                 </p>
               )}
-            </section>
+            </ModalSection>
 
             {highlights && (
-              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-                <h4 className="aq-modal-section-title text-base font-semibold">Ключевые показатели</h4>
+              <ModalSection className="p-4">
+                <ModalSectionTitle>Ключевые показатели</ModalSectionTitle>
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
                   <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/35 dark:bg-emerald-500/10">
                     <p className="text-xs text-emerald-700 dark:text-emerald-200">Самое лёгкое задание</p>
@@ -326,13 +328,13 @@ const GameResultsModal = ({
                     </p>
                   </div>
                 </div>
-              </section>
+              </ModalSection>
             )}
 
             {taskBoards.length > 0 && (
-              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+              <ModalSection className="p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="aq-modal-section-title text-base font-semibold">Время команд по заданиям</h4>
+                  <ModalSectionTitle>Время команд по заданиям</ModalSectionTitle>
                   <button
                     type="button"
                     onClick={handleToggleAllTaskBoards}
@@ -423,13 +425,13 @@ const GameResultsModal = ({
                     Бонусное задание - в таком задании потраченное на него время не учитывается! Учитываются только бонусы и штрафы
                   </p>
                 )}
-              </section>
+              </ModalSection>
             )}
 
             {teamsWithAdjustments.length > 0 && (
-              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+              <ModalSection className="p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="aq-modal-section-title text-base font-semibold">Дополнительные корректировки</h4>
+                  <ModalSectionTitle>Дополнительные корректировки</ModalSectionTitle>
                   <button
                     type="button"
                     onClick={handleToggleAllAdjustmentTeams}
@@ -492,7 +494,7 @@ const GameResultsModal = ({
                     </article>
                   ))}
                 </div>
-              </section>
+              </ModalSection>
             )}
           </>
         )}

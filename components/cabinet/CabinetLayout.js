@@ -128,6 +128,11 @@ const resolveInitialTheme = () => {
     return null
   }
 
+  const storedTheme = window.localStorage.getItem('cabinet-theme')
+  if (storedTheme === 'dark' || storedTheme === 'light') {
+    return storedTheme
+  }
+
   const htmlTheme = document.documentElement.getAttribute('data-theme')
   if (htmlTheme === 'dark' || htmlTheme === 'light') {
     return htmlTheme
@@ -135,11 +140,6 @@ const resolveInitialTheme = () => {
 
   if (document.documentElement.classList.contains('dark')) {
     return 'dark'
-  }
-
-  const storedTheme = window.localStorage.getItem('cabinet-theme')
-  if (storedTheme === 'dark' || storedTheme === 'light') {
-    return storedTheme
   }
 
   if (
@@ -252,6 +252,10 @@ const CabinetLayout = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') {
+      return
+    }
+
+    if (theme !== 'dark' && theme !== 'light') {
       return
     }
 

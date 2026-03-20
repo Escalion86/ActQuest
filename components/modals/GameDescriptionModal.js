@@ -4,8 +4,7 @@ import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import formatDate from '@helpers/formatDate'
 import ModalSection from './ModalSection'
-
-const sectionHeadingClass = 'aq-modal-section-title text-base font-semibold text-slate-900 dark:text-slate-100'
+import ModalSectionTitle from './ModalSectionTitle'
 
 const GameDescriptionModal = ({
   selectedGame,
@@ -35,7 +34,7 @@ const GameDescriptionModal = ({
             {selectedGame ? (
               <div className="space-y-6">
                 <ModalSection className="p-5">
-                  <h4 className={sectionHeadingClass}>Общая информация</h4>
+                  <ModalSectionTitle>Общая информация</ModalSectionTitle>
                   {selectedGame.image && (
                     <img
                       src={selectedGame.image}
@@ -102,7 +101,7 @@ const GameDescriptionModal = ({
                 </ModalSection>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
-                  <h4 className={sectionHeadingClass}>Описание</h4>
+                  <ModalSectionTitle>Описание</ModalSectionTitle>
                   {selectedGame.description ? (
                     <p className="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
                       {selectedGame.description}
@@ -118,7 +117,7 @@ const GameDescriptionModal = ({
                   <section className="rounded-2xl border border-cyan-200 bg-cyan-50 p-5 shadow-sm dark:border-cyan-500/35 dark:bg-cyan-500/10">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <h4 className={sectionHeadingClass}>Результаты игры</h4>
+                        <ModalSectionTitle>Результаты игры</ModalSectionTitle>
                         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                           Игра завершена, можно открыть итоговую таблицу команд.
                         </p>
@@ -135,7 +134,7 @@ const GameDescriptionModal = ({
                 )}
 
                 <ModalSection className="p-5">
-                  <h4 className={sectionHeadingClass}>Параметры проведения</h4>
+                  <ModalSectionTitle>Параметры проведения</ModalSectionTitle>
                   <dl className="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
                       <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Длительность задания</dt>
@@ -179,7 +178,7 @@ const GameDescriptionModal = ({
                 </ModalSection>
 
                 <ModalSection className="p-5">
-                  <h4 className={sectionHeadingClass}>Опции для капитана</h4>
+                  <ModalSectionTitle>Опции для капитана</ModalSectionTitle>
                   <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                     <li className="flex items-center gap-2">
                       <span
@@ -212,7 +211,7 @@ const GameDescriptionModal = ({
                 </ModalSection>
 
                 <ModalSection className="p-5">
-                  <h4 className={sectionHeadingClass}>Стоимость участия</h4>
+                  <ModalSectionTitle>Стоимость участия</ModalSectionTitle>
                   {selectedGame.prices?.length > 0 ? (
                     <ul className="mt-4 space-y-3">
                       {selectedGame.prices.map((price) => (
@@ -234,7 +233,7 @@ const GameDescriptionModal = ({
 
                 {canViewRestrictedGameInfo && (
                   <ModalSection className="p-5">
-                    <h4 className={sectionHeadingClass}>Финансы</h4>
+                    <ModalSectionTitle>Финансы</ModalSectionTitle>
                     <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
                       <p>
                         Доходы: <span className="font-semibold">{currencyFormatter.format(financesSummary.income)}</span>

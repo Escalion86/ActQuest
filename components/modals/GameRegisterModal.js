@@ -68,7 +68,7 @@ const GameRegisterModal = ({
                 </NoticeBanner>
               )}
               <div className="space-y-2">
-                <label htmlFor="register-team-select" className="text-sm font-semibold text-primary">
+                <label htmlFor="register-team-select" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                   Ваша команда
                 </label>
                 {isRegisterTeamsLoading ? (
@@ -94,7 +94,7 @@ const GameRegisterModal = ({
                 )}
               </div>
               <div className="space-y-2">
-                <label htmlFor="register-game-id" className="text-sm font-semibold text-primary">
+                <label htmlFor="register-game-id" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                   ID игры
                 </label>
                 <input
