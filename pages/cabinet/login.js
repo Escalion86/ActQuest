@@ -898,12 +898,12 @@ const CabinetLoginPage = ({
                     Забыли пароль?{' '}
                     <Link
                       href={
-                        siteAccess.allowSiteRegistration
-                          ? `/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`
+                        siteAccess.allowSiteAuth
+                          ? `/cabinet/recovery?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`
                           : '/cabinet/login'
                       }
                       className={`font-semibold ${
-                        siteAccess.allowSiteRegistration
+                        siteAccess.allowSiteAuth
                           ? 'text-[#8fdcff] hover:underline'
                           : 'text-slate-400 cursor-default pointer-events-none'
                       }`}

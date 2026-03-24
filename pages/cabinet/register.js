@@ -101,6 +101,7 @@ const normalizeEnvUrl = (value) => {
 
 const CabinetRegisterPage = ({
   authCallbackUrl,
+  authIntent,
   isVkAuthVisible,
   vkidAppId,
   vkidCallbackUrl,
@@ -129,12 +130,19 @@ const CabinetRegisterPage = ({
   const [phoneVerifyAuthPhone, setPhoneVerifyAuthPhone] = useState(null)
   const [phoneVerifyImageUrl, setPhoneVerifyImageUrl] = useState(null)
   const [phoneVerifyStatus, setPhoneVerifyStatus] = useState('idle')
+  const [showRegisterCtaForMissingPhone, setShowRegisterCtaForMissingPhone] =
+    useState(false)
   const vkIdWidgetContainerRef = useRef(null)
   const vkAuthInFlightRef = useRef(false)
   const vkWidgetInstanceRef = useRef(null)
   const vkWidgetConfigKeyRef = useRef('')
   const phoneCheckInFlightRef = useRef(false)
   const effectiveCallbackUrl = authCallbackUrl || '/cabinet'
+  const flowType = authIntent === 'recovery' ? 'recovery' : 'register'
+  const isRecoveryFlow = flowType === 'recovery'
+  const isFlowAllowed = isRecoveryFlow
+    ? siteAccess.allowSiteAuth
+    : siteAccess.allowSiteRegistration
   const isVkSignInEnabled =
     status === 'unauthenticated' &&
     isVkAuthVisible &&
@@ -243,7 +251,7 @@ const CabinetRegisterPage = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: digitsOnly,
-          flow: 'register',
+          flow: flowType,
           location,
         }),
       })
@@ -258,17 +266,17 @@ const CabinetRegisterPage = ({
       setPhoneVerifyStatus('pending')
       setConfirmedPhone('')
     },
-    [location],
+    [flowType, location],
   )
 
-  const precheckPhoneForRegister = useCallback(
+  const precheckPhoneForFlow = useCallback(
     async (digitsOnly) => {
       const response = await fetch('/api/phone/verify/precheck', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: digitsOnly,
-          flow: 'register',
+          flow: flowType,
           location,
         }),
       })
@@ -279,7 +287,7 @@ const CabinetRegisterPage = ({
 
       return json?.data || { allowed: true, reason: null, message: null }
     },
-    [location],
+    [flowType, location],
   )
 
   const checkPhoneVerification = useCallback(
@@ -294,7 +302,7 @@ const CabinetRegisterPage = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             phone: digitsOnly,
-            flow: 'register',
+            flow: flowType,
             callId,
           }),
         })
@@ -323,7 +331,7 @@ const CabinetRegisterPage = ({
         phoneCheckInFlightRef.current = false
       }
     },
-    [],
+    [flowType],
   )
 
   const handleVkAuth = useCallback(
@@ -440,8 +448,12 @@ const CabinetRegisterPage = ({
     async (event) => {
       event.preventDefault()
       if (isSubmitting) return
-      if (!siteAccess.allowSiteRegistration) {
-        setAuthError('Регистрация в этом регионе временно отключена.')
+      if (!isFlowAllowed) {
+        setAuthError(
+          isRecoveryFlow
+            ? 'Восстановление пароля в этом регионе временно недоступно.'
+            : 'Регистрация в этом регионе временно отключена.',
+        )
         return
       }
 
@@ -455,6 +467,7 @@ const CabinetRegisterPage = ({
         setAuthError(null)
         setVkError(null)
         setShowLoginCtaForExistingPhone(false)
+        setShowRegisterCtaForMissingPhone(false)
 
         if (isPhoneConfirmed && confirmedPhone === digitsOnly) {
           setRegisterStep('password')
@@ -464,12 +477,13 @@ const CabinetRegisterPage = ({
         if (!phoneVerifyCallId) {
           setIsSubmitting(true)
           try {
-            const precheck = await precheckPhoneForRegister(digitsOnly)
+            const precheck = await precheckPhoneForFlow(digitsOnly)
             if (precheck?.allowed === false) {
               setAuthError(precheck.message || 'Проверка номера не пройдена.')
               setShowLoginCtaForExistingPhone(
                 precheck.reason === 'already_registered',
               )
+              setShowRegisterCtaForMissingPhone(precheck.reason === 'not_found')
               return
             }
             await startPhoneVerification(digitsOnly)
@@ -522,7 +536,7 @@ const CabinetRegisterPage = ({
           body: JSON.stringify({
             phone: confirmedPhone,
             password: passwordInput,
-            flow: 'register',
+            flow: flowType,
             location,
           }),
         })
@@ -588,7 +602,10 @@ const CabinetRegisterPage = ({
     },
     [
       effectiveCallbackUrl,
+      flowType,
+      isFlowAllowed,
       isClient,
+      isRecoveryFlow,
       isSubmitting,
       location,
       confirmedPhone,
@@ -599,9 +616,8 @@ const CabinetRegisterPage = ({
       phoneVerifyCallId,
       registerStep,
       phoneInput,
-      precheckPhoneForRegister,
+      precheckPhoneForFlow,
       router,
-      siteAccess.allowSiteRegistration,
       startPhoneVerification,
       updateSession,
     ],
@@ -743,43 +759,65 @@ const CabinetRegisterPage = ({
   return (
     <>
       <Head>
-        <title>ActQuest — регистрация</title>
+        <title>{isRecoveryFlow ? 'ActQuest — восстановление пароля' : 'ActQuest — регистрация'}</title>
       </Head>
       <AuthSplitLayout
         variant="neon"
         showLabel={false}
         hideIntroOnMobile
-        title="Создайте аккаунт и начните участие в городских квестах"
-        description="Регистрация состоит из двух шагов: сначала номер телефона, затем установка пароля. Вход через VK One Tap также доступен и работает как регистрация/авторизация по номеру."
+        title={
+          isRecoveryFlow
+            ? 'Восстановите пароль и вернитесь в личный кабинет'
+            : 'Создайте аккаунт и начните участие в городских квестах'
+        }
+        description={
+          isRecoveryFlow
+            ? 'Восстановление состоит из двух шагов: подтвердите номер телефона и задайте новый пароль.'
+            : 'Регистрация состоит из двух шагов: сначала номер телефона, затем установка пароля. Вход через VK One Tap также доступен и работает как регистрация/авторизация по номеру.'
+        }
         stepTexts={[
-          'Выберите регион, в котором хотите играть.',
-          'Введите номер телефона или продолжите через VK ID.',
-          'Задайте пароль и переходите в личный кабинет.',
+          isRecoveryFlow
+            ? 'Регион будет определен автоматически.'
+            : 'Выберите регион, в котором хотите играть.',
+          isRecoveryFlow
+            ? 'Введите номер телефона, привязанный к вашему аккаунту.'
+            : 'Введите номер телефона или продолжите через VK ID.',
+          isRecoveryFlow
+            ? 'Придумайте новый пароль и продолжите вход.'
+            : 'Задайте пароль и переходите в личный кабинет.',
         ]}
       >
         <h2 className="text-2xl font-semibold text-center text-white">
-          Регистрация
+          {isRecoveryFlow ? 'Восстановление пароля' : 'Регистрация'}
         </h2>
         <p className="mt-2 text-sm text-center text-slate-400">
           {isPhoneStep
-            ? isVkRegisterOptionVisible
+            ? isRecoveryFlow
+              ? 'Шаг 1: подтвердите номер телефона, который привязан к вашему аккаунту.'
+              : isVkRegisterOptionVisible
               ? 'Шаг 1: укажите номер телефона или выберите VK ID.'
               : 'Шаг 1: Выберите игровой регион и укажите ваш номер телефона.'
-            : 'Шаг 2: придумайте пароль для входа по номеру телефона.'}
+            : isRecoveryFlow
+              ? 'Шаг 2: придумайте новый пароль для входа.'
+              : 'Шаг 2: придумайте пароль для входа по номеру телефона.'}
         </p>
 
         <div className="mt-6 space-y-4">
-          <AuthLocationSelect
-            location={location}
-            onChange={(event) => setLocation(event.target.value)}
-            disabled={isSubmitting || isSiteAccessLoading}
-            variant="neon"
-            availableLocations={availableLocations}
-          />
+          {!isRecoveryFlow ? (
+            <AuthLocationSelect
+              location={location}
+              onChange={(event) => setLocation(event.target.value)}
+              disabled={isSubmitting || isSiteAccessLoading}
+              variant="neon"
+              availableLocations={availableLocations}
+            />
+          ) : null}
 
-          {!siteAccess.allowSiteRegistration ? (
+          {!isFlowAllowed ? (
             <NoticeBanner tone="warning" variant="neon">
-              Регистрация временно отключена, ведутся работы.
+              {isRecoveryFlow
+                ? 'Восстановление пароля временно отключено, ведутся работы.'
+                : 'Регистрация временно отключена, ведутся работы.'}
             </NoticeBanner>
           ) : null}
 
@@ -790,7 +828,7 @@ const CabinetRegisterPage = ({
           ) : null}
 
           <div className="flex flex-col items-center gap-4">
-            {isVkRegisterOptionVisible ? (
+            {isVkRegisterOptionVisible && !isRecoveryFlow ? (
               <div className="w-full">
                 <div className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                   Регистрация / вход через VK ID
@@ -819,8 +857,8 @@ const CabinetRegisterPage = ({
               <label className="block text-sm font-semibold text-[#bfeeff]">
                 Телефон
               </label>
-              <input
-                type="tel"
+                <input
+                  type="tel"
                 value={phoneInput}
                 onChange={(event) =>
                   setPhoneInput(formatPhoneInput(event.target.value))
@@ -829,7 +867,7 @@ const CabinetRegisterPage = ({
                 autoComplete="tel"
                 disabled={
                   isSubmitting ||
-                  !siteAccess.allowSiteRegistration ||
+                  !isFlowAllowed ||
                   !isPhoneStep ||
                   Boolean(phoneVerifyCallId)
                 }
@@ -899,7 +937,7 @@ const CabinetRegisterPage = ({
                     onChange={(event) => setPasswordInput(event.target.value)}
                     placeholder="Пароль (минимум 8 символов)"
                     autoComplete="new-password"
-                    disabled={isSubmitting || !siteAccess.allowSiteRegistration}
+                    disabled={isSubmitting || !isFlowAllowed}
                     className="w-full px-4 py-3 text-sm text-white border rounded-xl border-[#00D1FF]/35 bg-[#080017]/80 focus:border-[#00D1FF] focus:outline-none"
                   />
 
@@ -912,7 +950,7 @@ const CabinetRegisterPage = ({
                     onChange={(event) => setPasswordRepeatInput(event.target.value)}
                     placeholder="Повторите пароль"
                     autoComplete="new-password"
-                    disabled={isSubmitting || !siteAccess.allowSiteRegistration}
+                    disabled={isSubmitting || !isFlowAllowed}
                     className="w-full px-4 py-3 text-sm text-white border rounded-xl border-[#00D1FF]/35 bg-[#080017]/80 focus:border-[#00D1FF] focus:outline-none"
                   />
                 </>
@@ -920,16 +958,20 @@ const CabinetRegisterPage = ({
 
               <button
                 type="submit"
-                disabled={isSubmitting || !siteAccess.allowSiteRegistration}
+                disabled={isSubmitting || !isFlowAllowed}
                 className="w-full cursor-pointer px-4 py-3 text-sm font-semibold transition border rounded-xl border-[#00D1FF]/50 bg-[#00D1FF]/12 text-[#baf3ff] hover:bg-[#00D1FF]/20 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting
-                  ? 'Регистрация...'
+                  ? isRecoveryFlow
+                    ? 'Обновление пароля...'
+                    : 'Регистрация...'
                   : isPhoneStep
                     ? phoneVerifyCallId
                       ? 'Проверить подтверждение'
                       : 'Подтвердить номер'
-                    : 'Завершить регистрацию'}
+                    : isRecoveryFlow
+                      ? 'Сохранить новый пароль'
+                      : 'Завершить регистрацию'}
               </button>
 
               {!isPhoneStep ? (
@@ -941,6 +983,7 @@ const CabinetRegisterPage = ({
                     setPasswordRepeatInput('')
                     setAuthError(null)
                     setShowLoginCtaForExistingPhone(false)
+                    setShowRegisterCtaForMissingPhone(false)
                     resetPhoneVerification()
                   }}
                   disabled={isSubmitting}
@@ -962,7 +1005,7 @@ const CabinetRegisterPage = ({
             </form>
 
             <div className="w-full text-sm text-center text-slate-400">
-              Уже есть аккаунт?{' '}
+              {isRecoveryFlow ? 'Вспомнили пароль?' : 'Уже есть аккаунт?'}{' '}
               <Link
                 href={`/cabinet/login?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
                 className="font-semibold text-[#8fdcff] hover:underline"
@@ -989,6 +1032,14 @@ const CabinetRegisterPage = ({
                       className="inline-flex cursor-pointer items-center justify-center px-3 py-2 text-xs font-semibold border rounded-lg border-[#ff4d6d]/45 text-[#ffd4de] hover:bg-[#ff4d6d]/20"
                     >
                       Перейти ко входу
+                    </Link>
+                  ) : null}
+                  {showRegisterCtaForMissingPhone ? (
+                    <Link
+                      href={`/cabinet/register?callbackUrl=${encodeURIComponent(effectiveCallbackUrl)}`}
+                      className="inline-flex cursor-pointer items-center justify-center px-3 py-2 text-xs font-semibold border rounded-lg border-[#ff4d6d]/45 text-[#ffd4de] hover:bg-[#ff4d6d]/20"
+                    >
+                      Перейти к регистрации
                     </Link>
                   ) : null}
                 </div>
@@ -1035,6 +1086,10 @@ export async function getServerSideProps(context) {
   return {
     props: {
       authCallbackUrl: isSafe && relativeCallback ? relativeCallback : '/cabinet',
+      authIntent:
+        String(context?.query?.intent || '').trim().toLowerCase() === 'recovery'
+          ? 'recovery'
+          : 'register',
       isVkAuthVisible,
       vkidAppId,
       vkidCallbackUrl,
