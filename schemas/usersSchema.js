@@ -91,6 +91,14 @@ const usersSchema = {
     type: String,
     default: 'client',
   },
+  rating: {
+    type: Object,
+    default: null,
+  },
+  ratingsByLocation: {
+    type: Object,
+    default: {},
+  },
   pushSubscriptions: {
     type: [
       {

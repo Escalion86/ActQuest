@@ -1,5 +1,6 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import buildGameResultComputed from '@server/buildGameResultComputed'
+import updateParticipantsRatings from '@server/updateParticipantsRatings'
 
 const toStringId = (value) => {
   if (value === null || value === undefined) {
@@ -226,6 +227,20 @@ export default async function handler(req, res) {
         { new: true, runValidators: true }
       ).lean()
 
+      let ratingsUpdateInfo = {
+        usersUpdated: 0,
+        teamsUpdated: 0,
+      }
+
+      try {
+        ratingsUpdateInfo = await updateParticipantsRatings({
+          db,
+          game: updatedGame || { ...game, result: nextResult },
+        })
+      } catch (ratingError) {
+        console.error('Failed to update players/teams ratings', ratingError)
+      }
+
       const updatedResult =
         updatedGame?.result && typeof updatedGame.result === 'object'
           ? updatedGame.result
@@ -240,6 +255,7 @@ export default async function handler(req, res) {
           result: updatedResult,
           rows,
         }),
+        ratingUpdate: ratingsUpdateInfo,
       })
     }
 

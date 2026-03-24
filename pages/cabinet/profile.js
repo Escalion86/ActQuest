@@ -3,7 +3,11 @@ import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
+import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import CabinetFormField from '@components/cabinet/CabinetFormField'
+import CabinetInputField from '@components/cabinet/CabinetInputField'
+import FormSectionCard from '@components/cabinet/FormSectionCard'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NoticeBanner from '@components/NoticeBanner'
 import getSessionSafe from '@helpers/getSessionSafe'
@@ -170,41 +174,23 @@ const ProfilePage = ({ initialProfile }) => {
         description="Обновите контакты, чтобы участники и коллеги могли быстро связаться с вами."
         activePage="profile"
       >
-        <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+        <FormSectionCard>
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="profile-name"
-                  className="text-sm font-semibold text-slate-700 dark:text-slate-100"
-                >
-                  Имя и фамилия
-                </label>
-                <input
-                  id="profile-name"
-                  type="text"
-                  value={safeFormState.name}
-                  onChange={(event) => handleChange('name', event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
-                />
-              </div>
+              <CabinetInputField
+                id="profile-name"
+                label="Имя и фамилия"
+                value={safeFormState.name}
+                onChange={(event) => handleChange('name', event.target.value)}
+              />
 
-              <div>
-                <label
-                  htmlFor="profile-username"
-                  className="text-sm font-semibold text-slate-700 dark:text-slate-100"
-                >
-                  Никнейм в ActQuest
-                </label>
-                <input
-                  id="profile-username"
-                  type="text"
-                  value={safeFormState.username ?? ''}
-                  onChange={(event) => handleChange('username', event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
-                  placeholder="Например, quest_master"
-                />
-              </div>
+              <CabinetInputField
+                id="profile-username"
+                label="Никнейм в ActQuest"
+                value={safeFormState.username ?? ''}
+                onChange={(event) => handleChange('username', event.target.value)}
+                placeholder="Например, quest_master"
+              />
             </div>
 
             <div>
@@ -223,39 +209,26 @@ const ProfilePage = ({ initialProfile }) => {
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="profile-phone"
-                className="text-sm font-semibold text-slate-700 dark:text-slate-100"
-              >
-                Телефон
-              </label>
-              <input
-                id="profile-phone"
-                type="tel"
-                value={safeFormState.phone}
-                disabled
-                className="mt-2 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 opacity-90 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-100 dark:placeholder:text-slate-400"
-                placeholder="+7 900 000-00-00"
-              />
-            </div>
+            <CabinetInputField
+              id="profile-phone"
+              label="Телефон"
+              type="tel"
+              value={safeFormState.phone}
+              disabled
+              placeholder="+7 900 000-00-00"
+              inputClassName="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 opacity-90 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-100 dark:placeholder:text-slate-400"
+            />
 
-            <div>
-              <label
-                htmlFor="profile-about"
-                className="text-sm font-semibold text-slate-700 dark:text-slate-100"
-              >
-                О себе
-              </label>
+            <CabinetFormField id="profile-about" label="О себе">
               <textarea
                 id="profile-about"
                 value={safeFormState.about}
                 onChange={(event) => handleChange('about', event.target.value)}
                 rows={5}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
                 placeholder="Расскажите об опыте, любимых форматах и роли в команде."
               />
-            </div>
+            </CabinetFormField>
 
             <div>
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
@@ -295,13 +268,13 @@ const ProfilePage = ({ initialProfile }) => {
             ) : null}
 
             <div className="flex flex-col gap-3 md:flex-row">
-              <button
+              <CabinetButton
                 type="submit"
                 disabled={saveState.isSaving || !hasChanges}
-                className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl transition ${submitButtonClasses}`}
+                className={submitButtonClasses}
               >
                 {saveState.isSaving ? 'Сохраняем…' : 'Сохранить профиль'}
-              </button>
+              </CabinetButton>
               {saveState.isSaved ? (
                 <span className="inline-flex items-center rounded-xl border border-[#1fdc95]/35 bg-[#1fdc95]/12 px-5 py-3 text-sm font-semibold text-emerald-700 dark:text-[#bdf7d8]">
                   Изменения сохранены
@@ -309,7 +282,7 @@ const ProfilePage = ({ initialProfile }) => {
               ) : null}
             </div>
           </form>
-        </section>
+        </FormSectionCard>
       </CabinetLayout>
     </>
   )

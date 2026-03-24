@@ -155,6 +155,26 @@ const resolveInitialTheme = () => {
 const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
+const normalizePath = (value) => {
+  if (!value || typeof value !== 'string') {
+    return null
+  }
+
+  if (typeof window === 'undefined') {
+    return value
+  }
+
+  try {
+    const url = new URL(value, window.location.origin)
+    if (url.origin !== window.location.origin) {
+      return value
+    }
+    return `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return value
+  }
+}
+
 const CabinetLayout = ({
   children,
   title,
@@ -176,6 +196,7 @@ const CabinetLayout = ({
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
+  const [isRouteLoading, setIsRouteLoading] = useState(false)
 
   const sessionRole = session?.user?.role ?? 'client'
   const { isDeveloper, effectiveRole, setRolePreview } =
@@ -240,13 +261,27 @@ const CabinetLayout = ({
   }, [])
 
   useEffect(() => {
-    const handleRouteChange = () => {
+    const handleRouteChangeStart = () => {
+      setIsRouteLoading(true)
+    }
+
+    const handleRouteChangeComplete = () => {
+      setIsRouteLoading(false)
       closeSidebarOnMobile()
     }
 
-    router.events.on('routeChangeComplete', handleRouteChange)
+    const handleRouteChangeError = () => {
+      setIsRouteLoading(false)
+    }
+
+    router.events.on('routeChangeStart', handleRouteChangeStart)
+    router.events.on('routeChangeComplete', handleRouteChangeComplete)
+    router.events.on('routeChangeError', handleRouteChangeError)
+
     return () => {
-      router.events.off('routeChangeComplete', handleRouteChange)
+      router.events.off('routeChangeStart', handleRouteChangeStart)
+      router.events.off('routeChangeComplete', handleRouteChangeComplete)
+      router.events.off('routeChangeError', handleRouteChangeError)
     }
   }, [closeSidebarOnMobile, router])
 
@@ -324,6 +359,36 @@ const CabinetLayout = ({
       return nextValue
     })
   }, [])
+
+  const handleNavLinkClick = useCallback(
+    (href, event) => {
+      closeSidebarOnMobile()
+
+      if (!event || event.defaultPrevented) {
+        return
+      }
+
+      if (
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        event.button !== 0
+      ) {
+        return
+      }
+
+      const target = normalizePath(href)
+      const current = normalizePath(router.asPath)
+
+      if (!target || !current || target === current) {
+        return
+      }
+
+      setIsRouteLoading(true)
+    },
+    [closeSidebarOnMobile, router.asPath],
+  )
 
   const handleLocationChange = useCallback(
     async (event) => {
@@ -526,7 +591,9 @@ const CabinetLayout = ({
                                     ? subNavActiveClass
                                     : subNavIdleClass
                                 }`}
-                                onClick={closeSidebarOnMobile}
+                                onClick={(event) =>
+                                  handleNavLinkClick(subItem.href, event)
+                                }
                               >
                                 {subItem.label}
                               </Link>
@@ -596,7 +663,9 @@ const CabinetLayout = ({
                                     ? subNavActiveClass
                                     : subNavIdleClass
                                 }`}
-                                onClick={closeSidebarOnMobile}
+                                onClick={(event) =>
+                                  handleNavLinkClick(subItem.href, event)
+                                }
                               >
                                 {subItem.label}
                               </Link>
@@ -618,7 +687,7 @@ const CabinetLayout = ({
                     className={`flex cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
                       isActive ? navActiveClass : navIdleClass
                     } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
-                    onClick={closeSidebarOnMobile}
+                    onClick={(event) => handleNavLinkClick(item.href, event)}
                   >
                     <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
                     <span
@@ -815,6 +884,15 @@ const CabinetLayout = ({
                 <p className="text-xs text-rose-300">{locationPromptError}</p>
               ) : null}
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isRouteLoading ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/45 backdrop-blur-[1px]">
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-300/60 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-800 shadow-xl dark:border-slate-600 dark:bg-slate-900/90 dark:text-slate-100">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+            Загружаем страницу...
           </div>
         </div>
       ) : null}

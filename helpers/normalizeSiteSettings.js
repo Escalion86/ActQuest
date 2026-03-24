@@ -20,7 +20,6 @@ const normalizeSiteSettings = (doc = null) => {
   return {
     id: settings?._id ? String(settings._id) : null,
     supportPhone: toStringOrEmpty(settings.supportPhone),
-    announcement: toStringOrEmpty(settings.announcement),
     chatUrl: toStringOrEmpty(settings.chatUrl),
     allowSiteAuth: toBooleanOrDefault(settings.allowSiteAuth, true),
     allowSiteRegistration: toBooleanOrDefault(settings.allowSiteRegistration, true),

@@ -3,6 +3,9 @@ import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import CabinetButton from '@components/cabinet/CabinetButton'
+import CabinetInputField from '@components/cabinet/CabinetInputField'
+import FormSectionCard from '@components/cabinet/FormSectionCard'
 import NoticeBanner from '@components/NoticeBanner'
 import NeonCheckbox from '@components/NeonCheckbox'
 import isUserAdmin from '@helpers/isUserAdmin'
@@ -65,10 +68,6 @@ const SettingsPage = ({ initialSiteSettings }) => {
 
     const payload = {
       supportPhone: normalizeField(siteSettings?.supportPhone),
-      announcement:
-        typeof siteSettings?.announcement === 'string'
-          ? siteSettings.announcement.trim()
-          : '',
       chatUrl: normalizeField(siteSettings?.chatUrl),
       allowSiteAuth: Boolean(siteSettings?.allowSiteAuth),
       allowSiteRegistration: Boolean(siteSettings?.allowSiteRegistration),
@@ -125,11 +124,11 @@ const SettingsPage = ({ initialSiteSettings }) => {
           description="Обновление публичной информации доступно только администраторам."
           activePage="settings"
         >
-          <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-            <p className="text-sm text-slate-600">
+          <FormSectionCard>
+            <p className="text-sm text-slate-600 dark:text-slate-200">
               У вас нет прав на изменение общих настроек. Свяжитесь с администратором проекта, чтобы получить доступ.
             </p>
-          </section>
+          </FormSectionCard>
         </CabinetLayout>
       </>
     )
@@ -145,64 +144,41 @@ const SettingsPage = ({ initialSiteSettings }) => {
         description="Настройте контакты, тексты и доступ к авторизации на сайте."
         activePage="settings"
       >
-        <section className="p-6 space-y-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+        <FormSectionCard className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label htmlFor="settings-support-phone" className="text-sm font-semibold text-primary">
-                Телефон поддержки
-              </label>
-              <input
-                id="settings-support-phone"
-                type="tel"
-                value={siteSettings?.supportPhone ?? ''}
-                onChange={(event) => handleSettingsChange('supportPhone', event.target.value)}
-                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
-                placeholder="Например, +7 (900) 000-00-00"
-              />
-            </div>
-            <div>
-              <label htmlFor="settings-chat-url" className="text-sm font-semibold text-primary">
-                Ссылка на чат проекта
-              </label>
-              <input
-                id="settings-chat-url"
-                type="url"
-                value={siteSettings?.chatUrl ?? ''}
-                onChange={(event) => handleSettingsChange('chatUrl', event.target.value)}
-                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
-                placeholder="https://t.me/actquest"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="settings-announcement" className="text-sm font-semibold text-primary">
-              Сообщение для участников
-            </label>
-            <textarea
-              id="settings-announcement"
-              value={siteSettings?.announcement ?? ''}
-              onChange={(event) => handleSettingsChange('announcement', event.target.value)}
-              rows={5}
-              className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+            <CabinetInputField
+              id="settings-support-phone"
+              label="Телефон поддержки"
+              type="tel"
+              value={siteSettings?.supportPhone ?? ''}
+              onChange={(event) => handleSettingsChange('supportPhone', event.target.value)}
+              placeholder="Например, +7 (900) 000-00-00"
+            />
+            <CabinetInputField
+              id="settings-chat-url"
+              label="Ссылка на чат проекта"
+              type="url"
+              value={siteSettings?.chatUrl ?? ''}
+              onChange={(event) => handleSettingsChange('chatUrl', event.target.value)}
+              placeholder="https://t.me/actquest"
             />
           </div>
 
-          <div className="p-4 space-y-4 border border-slate-200 dark:border-slate-700 rounded-xl">
-            <h3 className="text-sm font-semibold text-primary">Доступ к сайту</h3>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
+            <h3 className="aq-modal-section-title text-base font-semibold">Доступ к сайту</h3>
 
             <NeonCheckbox
               id="settings-allow-site-auth"
               checked={Boolean(siteSettings.allowSiteAuth)}
               onChange={(event) => handleSettingsChange('allowSiteAuth', event.target.checked)}
-              className="w-full items-start justify-between gap-4"
+              className="mt-4 w-full items-start justify-between gap-4"
               boxAfter
               label={(
                 <div>
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
                     Включить авторизацию на сайте
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
                     Отключение заблокирует вход по телефону и через VK.
                   </p>
                 </div>
@@ -220,7 +196,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
                     Включить регистрацию на сайте
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
                     Если отключено, новые аккаунты по телефону нельзя создать.
                   </p>
                 </div>
@@ -238,7 +214,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
                     Включить VK One Tap кнопку
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
                     Управляет отображением и доступностью входа через VK One Tap.
                   </p>
                 </div>
@@ -258,20 +234,15 @@ const SettingsPage = ({ initialSiteSettings }) => {
           ) : null}
 
           <div className="flex flex-col gap-3 md:flex-row">
-            <button
-              type="button"
+            <CabinetButton
               onClick={handleSave}
               disabled={saveState.isSaving}
-              className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
-                saveState.isSaving
-                  ? 'bg-blue-400 cursor-not-allowed'
-                  : 'bg-primary hover:bg-blue-700'
-              }`}
+              variant="primary"
             >
               {saveState.isSaving ? 'Сохраняем…' : 'Сохранить настройки'}
-            </button>
+            </CabinetButton>
           </div>
-        </section>
+        </FormSectionCard>
       </CabinetLayout>
     </>
   )
@@ -281,7 +252,6 @@ SettingsPage.propTypes = {
   initialSiteSettings: PropTypes.shape({
     id: PropTypes.string,
     supportPhone: PropTypes.string,
-    announcement: PropTypes.string,
     chatUrl: PropTypes.string,
     allowSiteAuth: PropTypes.bool,
     allowSiteRegistration: PropTypes.bool,

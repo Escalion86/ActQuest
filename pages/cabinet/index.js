@@ -353,7 +353,7 @@ const CabinetDashboard = ({
             </article>
 
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Мои команды</p>
+              <h3 className="aq-modal-section-title text-base font-semibold">Мои команды</h3>
               {dashboardData.participantTeams.length > 0 ? (
                 <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {dashboardData.participantTeams.map((team) => (

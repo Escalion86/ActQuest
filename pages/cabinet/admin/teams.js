@@ -3,8 +3,12 @@ import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
+import CabinetButton from '@components/cabinet/CabinetButton'
+import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
+import FormSectionCard from '@components/cabinet/FormSectionCard'
 import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import TeamEditModal from '@components/modals/TeamEditModal'
@@ -654,12 +658,12 @@ const AdminTeamsPage = ({
           description="Доступ ограничен: административные права отсутствуют."
           activePage="admin"
         >
-          <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-            <p className="text-sm text-slate-600">
+          <FormSectionCard>
+            <p className="text-sm text-slate-600 dark:text-slate-200">
               У вас нет доступа к управлению командами. Если вы считаете, что это ошибка, обратитесь к главному
               организатору.
             </p>
-          </section>
+          </FormSectionCard>
         </CabinetLayout>
       </>
     )
@@ -676,44 +680,40 @@ const AdminTeamsPage = ({
         activePage="admin"
       >
         <section className="grid gap-6">
-          <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+          <FormSectionCard className="p-4">
             <p className="text-sm font-semibold text-primary dark:text-slate-100">Все команды</p>
             <p className="mt-1 text-xs text-slate-500">
               Загружено: {summary.total}. Открытых: {summary.open}. Закрытых: {summary.closed}.
             </p>
-          </div>
+          </FormSectionCard>
 
-          <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-3">
-            <div>
-              <label htmlFor="team-search" className="text-xs font-semibold text-slate-500">
-                Поиск
-              </label>
-              <input
-                id="team-search"
-                type="search"
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Введите название команды или участника"
-                className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </div>
+          <FormSectionCard className="p-4 space-y-3">
+            <CabinetInputField
+              id="team-search"
+              label="Поиск"
+              type="search"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Введите название команды или участника"
+              containerClassName="space-y-1"
+              labelClassName="text-xs font-semibold text-slate-500"
+              inputClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+            />
 
-            <div>
-              <label htmlFor="team-visibility-filter" className="text-xs font-semibold text-slate-500">
-                Доступность
-              </label>
-              <select
+            <CabinetSelectField
                 id="team-visibility-filter"
+                label="Доступность"
                 value={visibilityFilter}
                 onChange={(event) => setVisibilityFilter(event.target.value)}
-                className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+                containerClassName="space-y-1"
+                labelClassName="text-xs font-semibold text-slate-500"
+                selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
               >
                 <option value="all">Все команды</option>
                 <option value="open">Открытые</option>
                 <option value="closed">Закрытые</option>
-              </select>
-            </div>
-          </div>
+            </CabinetSelectField>
+          </FormSectionCard>
 
           {feedback && (
             <NoticeBanner
@@ -789,24 +789,24 @@ const AdminTeamsPage = ({
                 ))}
               </ul>
               {hasMoreTeams && (
-                <button
-                  type="button"
+                <CabinetButton
                   onClick={handleLoadMoreTeams}
                   disabled={isLoadingMoreTeams || isSearchingTeams}
-                  className={`w-full rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                  variant="secondary"
+                  className={`w-full ${
                     isLoadingMoreTeams || isSearchingTeams
                       ? 'cursor-wait border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500'
                       : 'cursor-pointer border-cyan-400/60 text-cyan-200 hover:bg-cyan-500/10'
                   }`}
                 >
                   {isLoadingMoreTeams || isSearchingTeams ? 'Загружаем…' : 'Загрузить ещё'}
-                </button>
+                </CabinetButton>
               )}
             </div>
           ) : (
-            <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+            <FormSectionCard className="p-6 text-sm text-center text-slate-500 dark:text-slate-300">
               Команды не найдены. Измените параметры фильтра или сбросьте поиск.
-            </div>
+            </FormSectionCard>
           )}
         </section>
         <TeamEditModal

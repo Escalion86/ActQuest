@@ -2,6 +2,9 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import CabinetButton from '@components/cabinet/CabinetButton'
+import CabinetSelectField from '@components/cabinet/CabinetSelectField'
+import FormSectionCard from '@components/cabinet/FormSectionCard'
 import NoticeBanner from '@components/NoticeBanner'
 
 const GameTeamsModal = ({
@@ -54,10 +57,10 @@ const GameTeamsModal = ({
                                         ID команды: {team.teamId || '—'}
                                       </p>
                                     </div>
-                                    <button
-                                      type="button"
+                                    <CabinetButton
                                       onClick={() => handleRemoveTeamFromGame(team.id)}
                                       disabled={isRemoving || teamsModalState.isLoading}
+                                      variant="secondary"
                                       className={`inline-flex justify-center rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                                         isRemoving || teamsModalState.isLoading
                                           ? 'cursor-not-allowed border-slate-200 text-slate-400'
@@ -65,7 +68,7 @@ const GameTeamsModal = ({
                                       }`}
                                     >
                                       {isRemoving ? 'Удаление…' : 'Удалить'}
-                                    </button>
+                                    </CabinetButton>
                                   </div>
                                 </li>
                               )
@@ -78,14 +81,17 @@ const GameTeamsModal = ({
                         )}
                       </div>
 
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                      <FormSectionCard className="bg-slate-50 p-4 dark:bg-slate-800/60">
                         <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Добавить команду</h3>
                         {teamsModalState.availableTeams.length > 0 ? (
                           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <select
+                            <CabinetSelectField
+                              id="game-team-to-add"
+                              label={null}
                               value={selectedTeamToAdd}
                               onChange={(event) => setSelectedTeamToAdd(event.target.value)}
-                              className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+                              containerClassName="w-full space-y-0"
+                              selectClassName="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
                             >
                               {teamsModalState.availableTeams.map((team) => {
                                 const membersCount = Number.isFinite(team?.membersCount)
@@ -100,11 +106,11 @@ const GameTeamsModal = ({
                                   </option>
                                 )
                               })}
-                            </select>
-                            <button
-                              type="button"
+                            </CabinetSelectField>
+                            <CabinetButton
                               onClick={handleAddTeamToGame}
                               disabled={!selectedTeamToAdd || isAddingTeam || teamsModalState.isLoading}
+                              variant="primary"
                               className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
                                 !selectedTeamToAdd || isAddingTeam || teamsModalState.isLoading
                                   ? 'bg-slate-400 cursor-not-allowed'
@@ -112,14 +118,14 @@ const GameTeamsModal = ({
                               }`}
                             >
                               {isAddingTeam ? 'Добавление…' : 'Добавить'}
-                            </button>
+                            </CabinetButton>
                           </div>
                         ) : (
                           <p className="mt-3 text-sm text-slate-500">
                             Свободных команд не найдено. Создайте команду или освободите её от участия в игре.
                           </p>
                         )}
-                      </div>
+                      </FormSectionCard>
                     </div>
                   </Modal>
 )

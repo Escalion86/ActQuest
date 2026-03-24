@@ -2,6 +2,7 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import CabinetInputField from '@components/cabinet/CabinetInputField'
 import NoticeBanner from '@components/NoticeBanner'
 import NeonCheckbox from '@components/NeonCheckbox'
 
@@ -53,19 +54,14 @@ const GameCreateModal = ({
                   {createGameFeedback.message}
                 </NoticeBanner>
               )}
-              <div className="space-y-2">
-                <label htmlFor="new-game-name" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
-                  Название игры
-                </label>
-                <input
-                  id="new-game-name"
-                  type="text"
-                  value={newGameName}
-                  onChange={(event) => setNewGameName(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
-                  placeholder="Например, Ночной квест"
-                />
-              </div>
+              <CabinetInputField
+                id="new-game-name"
+                label="Название игры"
+                value={newGameName}
+                onChange={(event) => setNewGameName(event.target.value)}
+                placeholder="Например, Ночной квест"
+                inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+              />
               <NeonCheckbox
                 id="new-game-is-rated"
                 checked={Boolean(newGameIsRated)}

@@ -2,6 +2,9 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import CabinetButton from '@components/cabinet/CabinetButton'
+import CabinetFormField from '@components/cabinet/CabinetFormField'
+import CabinetInputField from '@components/cabinet/CabinetInputField'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NeonCheckbox from '@components/NeonCheckbox'
 
@@ -26,22 +29,20 @@ const TeamCreateModal = ({
     onClose={onClose}
     footer={(
       <>
-        <button
-          type="button"
+        <CabinetButton
           onClick={onClose}
           disabled={isCreatingTeam}
-          className="aq-modal-btn aq-modal-btn-secondary"
+          variant="secondary"
         >
           Отмена
-        </button>
-        <button
-          type="button"
+        </CabinetButton>
+        <CabinetButton
           onClick={onCreateTeam}
           disabled={isCreateActionDisabled}
-          className="aq-modal-btn aq-modal-btn-primary"
+          variant="primary"
         >
           {isCreatingTeam ? 'Создание…' : 'Создать команду'}
-        </button>
+        </CabinetButton>
       </>
     )}
   >
@@ -49,23 +50,15 @@ const TeamCreateModal = ({
       <p className="text-sm text-slate-600 dark:text-slate-300">
         Название команды можно изменить позже. Вы автоматически станете капитаном созданной команды.
       </p>
-      <div className="space-y-2">
-        <label htmlFor="new-team-name" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
-          Название команды
-        </label>
-        <input
-          id="new-team-name"
-          type="text"
-          value={newTeamName}
-          onChange={(event) => onChangeNewTeamName(event.target.value)}
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
-          placeholder="Например, Стремительные"
-        />
-      </div>
-      <div className="space-y-2">
-        <label htmlFor="new-team-description" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
-          Краткое описание (по желанию)
-        </label>
+      <CabinetInputField
+        id="new-team-name"
+        label="Название команды"
+        value={newTeamName}
+        onChange={(event) => onChangeNewTeamName(event.target.value)}
+        placeholder="Например, Стремительные"
+        inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
+      />
+      <CabinetFormField id="new-team-description" label="Краткое описание (по желанию)">
         <textarea
           id="new-team-description"
           value={newTeamDescription}
@@ -74,7 +67,7 @@ const TeamCreateModal = ({
           className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
           placeholder="Расскажите, для кого эта команда"
         />
-      </div>
+      </CabinetFormField>
       <ImagesInput
         images={newTeamImage ? [newTeamImage] : []}
         onChange={(next) => onChangeNewTeamImage(Array.isArray(next) ? next[0] ?? '' : '')}

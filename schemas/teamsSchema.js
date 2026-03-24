@@ -30,6 +30,14 @@ const teamsSchema = {
     enum: TEAM_CAR_SKIN_VALUES,
     default: 'classic',
   },
+  rating: {
+    type: Object,
+    default: null,
+  },
+  ratingsByLocation: {
+    type: Object,
+    default: {},
+  },
 }
 
 export default teamsSchema

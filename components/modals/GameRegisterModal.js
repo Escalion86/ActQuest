@@ -2,6 +2,9 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import CabinetFormField from '@components/cabinet/CabinetFormField'
+import CabinetInputField from '@components/cabinet/CabinetInputField'
+import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import NoticeBanner from '@components/NoticeBanner'
 
 const GameRegisterModal = ({
@@ -67,18 +70,16 @@ const GameRegisterModal = ({
                   Не удалось определить пользователя или площадку для регистрации.
                 </NoticeBanner>
               )}
-              <div className="space-y-2">
-                <label htmlFor="register-team-select" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
-                  Ваша команда
-                </label>
+              <CabinetFormField id="register-team-select" label="Ваша команда">
                 {isRegisterTeamsLoading ? (
                   <p className="text-sm text-slate-500">Загружаем список команд…</p>
                 ) : registerTeams.length > 0 ? (
-                  <select
+                  <CabinetSelectField
                     id="register-team-select"
+                    label={null}
                     value={registerTeamId}
                     onChange={(event) => setRegisterTeamId(event.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                    containerClassName="space-y-0"
                   >
                     <option value="">Выберите команду</option>
                     {registerTeams.map((team) => (
@@ -86,26 +87,21 @@ const GameRegisterModal = ({
                         {team.name || 'Без названия'}
                       </option>
                     ))}
-                  </select>
+                  </CabinetSelectField>
                 ) : (
                   <p className="text-sm text-slate-500">
                     У вас пока нет команд, где вы являетесь капитаном. Создайте команду или запросите права капитана.
                   </p>
                 )}
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="register-game-id" className="text-sm font-semibold text-slate-700 dark:text-slate-100">
-                  ID игры
-                </label>
-                <input
-                  id="register-game-id"
-                  type="text"
-                  value={registerGameId}
-                  onChange={(event) => setRegisterGameId(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm uppercase tracking-wide focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
-                  placeholder="Например, 64ff0c2e12"
-                />
-              </div>
+              </CabinetFormField>
+              <CabinetInputField
+                id="register-game-id"
+                label="ID игры"
+                value={registerGameId}
+                onChange={(event) => setRegisterGameId(event.target.value)}
+                placeholder="Например, 64ff0c2e12"
+                inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm uppercase tracking-wide focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+              />
             </fieldset>
           </Modal>
 )

@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import AmountStepperInput from '@components/cabinet/AmountStepperInput'
 import ImagesInput from '@components/cabinet/ImagesInput'
+import CabinetNumberField from '@components/cabinet/CabinetNumberField'
 import NeonCheckbox from '@components/NeonCheckbox'
 import formatDate from '@helpers/formatDate'
 import formatDateTime from '@helpers/formatDateTime'
@@ -495,23 +496,19 @@ const GameEditModal = ({
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label htmlFor="game-break-duration" className="text-sm font-semibold text-slate-700 dark:text-white">
-                          Перерыв между заданиями (мин)
-                        </label>
-                        <input
-                          id="game-break-duration"
-                          type="number"
-                          min="0"
-                          value={toMinutes(selectedGame.breakDuration)}
-                          onChange={(event) =>
-                            updateSelectedGame({
-                              breakDuration: toSeconds(event.target.value),
-                            })
-                          }
-                          className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
-                        />
-                      </div>
+                      <CabinetNumberField
+                        id="game-break-duration"
+                        label="Перерыв между заданиями (мин)"
+                        min="0"
+                        value={toMinutes(selectedGame.breakDuration)}
+                        onChange={(event) =>
+                          updateSelectedGame({
+                            breakDuration: toSeconds(event.target.value),
+                          })
+                        }
+                        inputClassName="w-full px-4 py-3 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
+                        labelClassName="text-sm font-semibold text-slate-700 dark:text-white"
+                      />
                       <div>
                         <label htmlFor="game-task-penalty" className="text-sm font-semibold text-slate-700 dark:text-white">
                           {selectedGame.type === 'photo'

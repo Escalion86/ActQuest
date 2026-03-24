@@ -2,6 +2,9 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import CabinetButton from '@components/cabinet/CabinetButton'
+import CabinetFormField from '@components/cabinet/CabinetFormField'
+import CabinetInputField from '@components/cabinet/CabinetInputField'
 import ModalSection from '@components/modals/ModalSection'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NeonCheckbox from '@components/NeonCheckbox'
@@ -103,28 +106,26 @@ const TeamEditModal = ({
 
   const modalFooter = (
     <>
-      <button
-        type="button"
+      <CabinetButton
         onClick={onModalPrimaryAction}
         disabled={
           isSaving || (isDirty && (!canManageSelectedTeam || !location))
         }
-        className="aq-modal-btn aq-modal-btn-primary"
+        variant="primary"
       >
         {isDirty
           ? isSaving
             ? 'Сохранение…'
             : 'Сохранить и закрыть'
           : 'Закрыть'}
-      </button>
-      <button
-        type="button"
+      </CabinetButton>
+      <CabinetButton
         onClick={onResetTeam}
         disabled={!canManageSelectedTeam || !isDirty}
-        className="aq-modal-btn aq-modal-btn-secondary"
+        variant="secondary"
       >
         Отменить изменения
-      </button>
+      </CabinetButton>
     </>
   )
 
@@ -141,23 +142,16 @@ const TeamEditModal = ({
       >
         <ModalSection>
           <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label
-                htmlFor="team-name"
-                className="text-sm font-semibold text-slate-900 dark:text-slate-100"
-              >
-                Название команды
-              </label>
-              <input
-                id="team-name"
-                type="text"
-                value={selectedTeam.name}
-                onChange={(event) =>
-                  onTeamFieldChange('name', event.target.value)
-                }
-                className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
-              />
-            </div>
+            <CabinetInputField
+              id="team-name"
+              label="Название команды"
+              value={selectedTeam.name}
+              onChange={(event) =>
+                onTeamFieldChange('name', event.target.value)
+              }
+              labelClassName="text-sm font-semibold text-slate-900 dark:text-slate-100"
+              inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+            />
             <div>
               <label
                 className="text-sm font-semibold text-slate-900 dark:text-slate-100"
@@ -220,13 +214,11 @@ const TeamEditModal = ({
             )}
           </div>
 
-          <div>
-            <label
-              htmlFor="team-description"
-              className="text-sm font-semibold text-slate-900 dark:text-slate-100"
-            >
-              Описание
-            </label>
+          <CabinetFormField
+            id="team-description"
+            label="Описание"
+            labelClassName="text-sm font-semibold text-slate-900 dark:text-slate-100"
+          >
             <textarea
               id="team-description"
               value={selectedTeam.description}
@@ -236,7 +228,7 @@ const TeamEditModal = ({
               rows={5}
               className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
             />
-          </div>
+          </CabinetFormField>
 
           <ImagesInput
             images={selectedTeam.image ? [selectedTeam.image] : []}
@@ -314,10 +306,10 @@ const TeamEditModal = ({
                     {canManageSelectedTeam && (
                       <div className="flex flex-col gap-2 mt-3 md:flex-row">
                         {!member.isCaptain && (
-                          <button
-                            type="button"
+                          <CabinetButton
                             onClick={() => onSetCaptain(member.id)}
                             disabled={isProcessing}
+                            variant="secondary"
                             className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
                               isProcessing
                                 ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
@@ -325,13 +317,13 @@ const TeamEditModal = ({
                             }`}
                           >
                             Назначить капитаном
-                          </button>
+                          </CabinetButton>
                         )}
                         {!member.isCaptain && (
-                          <button
-                            type="button"
+                          <CabinetButton
                             onClick={() => onRemoveMember(member.id)}
                             disabled={isProcessing}
+                            variant="secondary"
                             className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
                               isProcessing
                                 ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
@@ -339,7 +331,7 @@ const TeamEditModal = ({
                             }`}
                           >
                             Удалить из команды
-                          </button>
+                          </CabinetButton>
                         )}
                       </div>
                     )}

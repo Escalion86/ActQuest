@@ -5,6 +5,10 @@ import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import CabinetButton from '@components/cabinet/CabinetButton'
+import CabinetInputField from '@components/cabinet/CabinetInputField'
+import CabinetSelectField from '@components/cabinet/CabinetSelectField'
+import FormSectionCard from '@components/cabinet/FormSectionCard'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
 import NoticeBanner from '@components/NoticeBanner'
@@ -475,12 +479,12 @@ const ManageUsersPage = ({
           description="Доступ ограничен: административные права отсутствуют."
           activePage="admin"
         >
-          <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-            <p className="text-sm text-slate-600">
+          <FormSectionCard>
+            <p className="text-sm text-slate-600 dark:text-slate-200">
               У вас нет доступа к управлению пользователями. Если вы считаете, что это ошибка, обратитесь к
               главному организатору.
             </p>
-          </section>
+          </FormSectionCard>
         </CabinetLayout>
       </>
     )
@@ -498,48 +502,44 @@ const ManageUsersPage = ({
       >
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-5 space-y-4">
-            <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+            <FormSectionCard className="p-4">
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                 Все пользователи
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 Загружено: {users.length}. Выберите участника, чтобы просмотреть детали и обновить его роль.
               </p>
-            </div>
+            </FormSectionCard>
 
-            <div className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-3">
-              <div>
-                <label htmlFor="user-search" className="text-xs font-semibold text-slate-500">
-                  Поиск
-                </label>
-                <input
-                  id="user-search"
-                  type="search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Введите имя, ник или Telegram ID"
-                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-                />
-              </div>
+            <FormSectionCard className="p-4 space-y-3">
+              <CabinetInputField
+                id="user-search"
+                label="Поиск"
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Введите имя, ник или Telegram ID"
+                containerClassName="space-y-1"
+                labelClassName="text-xs font-semibold text-slate-500"
+                inputClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+              />
 
-              <div>
-                <label htmlFor="user-role-filter" className="text-xs font-semibold text-slate-500">
-                  Роль
-                </label>
-                <select
+              <CabinetSelectField
                   id="user-role-filter"
+                  label="Роль"
                   value={roleFilter}
                   onChange={(event) => setRoleFilter(event.target.value)}
-                  className="w-full px-3 py-2 mt-1 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+                  containerClassName="space-y-1"
+                  labelClassName="text-xs font-semibold text-slate-500"
+                  selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
                 >
                   {filterOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.name}
                     </option>
                   ))}
-                </select>
-              </div>
-            </div>
+              </CabinetSelectField>
+            </FormSectionCard>
 
             {filteredUsers.length > 0 ? (
               <div className="space-y-3">
@@ -612,9 +612,9 @@ const ManageUsersPage = ({
                 )}
               </div>
             ) : (
-              <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+              <FormSectionCard className="p-6 text-sm text-center text-slate-500 dark:text-slate-300">
                 Пользователи не найдены. Измените параметры фильтра или сбросьте поиск.
-              </div>
+              </FormSectionCard>
             )}
           </div>
 
@@ -641,7 +641,7 @@ const ManageUsersPage = ({
                 </NoticeBanner>
               )}
 
-              <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-6">
+              <FormSectionCard className="space-y-6">
                 <div>
                   <h2 className={modalItemTitleClass}>
                     {selectedUser.name || 'Без имени'}
@@ -671,58 +671,54 @@ const ManageUsersPage = ({
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="user-role" className={modalItemSmallTitleClass}>
-                    Роль в системе
-                  </label>
-                  <select
+                <CabinetSelectField
                     id="user-role"
+                    label="Роль в системе"
                     value={selectedUser.role}
                     onChange={(event) => handleRoleChange(event.target.value)}
-                    className="w-full px-4 py-3 mt-2 text-sm border rounded-xl border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary"
+                    labelClassName={modalItemSmallTitleClass}
+                    selectClassName="w-full px-4 py-3 text-sm border rounded-xl border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary"
                   >
                     {roleOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.name}
                       </option>
                     ))}
-                  </select>
-                </div>
+                </CabinetSelectField>
 
                 <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                  <button
-                    type="button"
+                  <CabinetButton
                     onClick={handleSave}
                     disabled={!location || !isDirty || isSaving}
-                    className={`inline-flex justify-center px-5 py-3 text-sm font-semibold text-white rounded-xl transition ${
+                    className={`${
                       !location || !isDirty || isSaving
                         ? 'bg-slate-400 cursor-not-allowed'
                         : 'bg-primary hover:bg-blue-700'
                     }`}
                   >
                     {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
-                  </button>
-                  <button
-                    type="button"
+                  </CabinetButton>
+                  <CabinetButton
                     onClick={handleReset}
                     disabled={!isDirty}
-                    className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
+                    variant="secondary"
+                    className={`${
                       !isDirty
                         ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
                         : 'border-primary text-primary hover:bg-blue-50 dark:text-sky-200 dark:hover:bg-sky-500/10'
                     }`}
                   >
                     Отменить
-                  </button>
-                  <button
-                    type="button"
+                  </CabinetButton>
+                  <CabinetButton
                     onClick={handleRequestPhoneViaTelegram}
                     disabled={
                       !location ||
                       !selectedUser.telegramId ||
                       isRequestingPhone
                     }
-                    className={`inline-flex justify-center px-5 py-3 text-sm font-semibold rounded-xl border transition ${
+                    variant="secondary"
+                    className={`${
                       !location || !selectedUser.telegramId || isRequestingPhone
                         ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
                         : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-500/10'
@@ -731,11 +727,11 @@ const ManageUsersPage = ({
                     {isRequestingPhone
                       ? 'Отправка...'
                       : 'Запросить номер телефона через Telegram'}
-                  </button>
+                  </CabinetButton>
                 </div>
-              </section>
+              </FormSectionCard>
 
-              <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
+              <FormSectionCard className="space-y-4">
                 <h3 className={modalSectionTitleClass}>Команды пользователя</h3>
 
                 {selectedUser.teams.length > 0 ? (
@@ -764,9 +760,9 @@ const ManageUsersPage = ({
                     Пользователь ещё не вступил ни в одну команду.
                   </p>
                 )}
-              </section>
+              </FormSectionCard>
 
-              <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
+              <FormSectionCard className="space-y-4">
                 <h3 className={modalSectionTitleClass}>Дополнительная информация</h3>
 
                 <div className="grid gap-3 md:grid-cols-2">
@@ -808,7 +804,7 @@ const ManageUsersPage = ({
                     {selectedUser.about?.trim() || 'Пользователь пока не добавил описание профиля.'}
                   </p>
                 </div>
-              </section>
+              </FormSectionCard>
             </div>
           ) : null}
         </Modal>

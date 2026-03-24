@@ -3,7 +3,10 @@ import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useSession } from 'next-auth/react'
 
+import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import CabinetSelectField from '@components/cabinet/CabinetSelectField'
+import FormSectionCard from '@components/cabinet/FormSectionCard'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import AmountStepperInput from '@components/cabinet/AmountStepperInput'
 import UserSelectField from '@components/cabinet/UserSelectField'
@@ -274,21 +277,19 @@ const AdminTransactionsPage = ({
   const modalFooter = useMemo(
     () => (
       <>
-        <button
-          type="button"
+        <CabinetButton
           onClick={() => setIsCreateModalOpen(false)}
-          className="aq-modal-btn aq-modal-btn-secondary"
+          variant="secondary"
         >
           Отмена
-        </button>
-        <button
-          type="button"
+        </CabinetButton>
+        <CabinetButton
           onClick={createTransaction}
           disabled={isCreating}
-          className="aq-modal-btn aq-modal-btn-primary"
+          variant="primary"
         >
           {isCreating ? 'Сохраняем...' : 'Создать'}
-        </button>
+        </CabinetButton>
       </>
     ),
     [createTransaction, isCreating],
@@ -310,19 +311,40 @@ const AdminTransactionsPage = ({
         headerTitle="Транзакции"
         showPageTitle={false}
       >
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+        <FormSectionCard className="p-4">
           <div className="grid gap-3 md:grid-cols-2">
-            <select className={INPUT_CLASS} value={filters.direction} onChange={(e) => handleFilterChange('direction', e.target.value)}>
+            <CabinetSelectField
+              id="transactions-filter-direction"
+              label={null}
+              value={filters.direction}
+              onChange={(e) => handleFilterChange('direction', e.target.value)}
+              containerClassName="space-y-0"
+              selectClassName={INPUT_CLASS}
+            >
               <option value="">Все направления</option>
               {DIR_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <select className={INPUT_CLASS} value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)}>
+            </CabinetSelectField>
+            <CabinetSelectField
+              id="transactions-filter-status"
+              label={null}
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              containerClassName="space-y-0"
+              selectClassName={INPUT_CLASS}
+            >
               <option value="">Все статусы</option>
               {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <button type="button" onClick={() => setIsCreateModalOpen(true)} className="cursor-pointer rounded-xl border border-cyan-400/50 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-500/20 dark:text-cyan-200 md:col-span-2 md:w-max">Добавить</button>
+            </CabinetSelectField>
+            <CabinetButton
+              type="button"
+              variant="secondary"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="cursor-pointer border-cyan-400/50 bg-cyan-500/10 px-4 py-2 text-cyan-700 hover:bg-cyan-500/20 dark:text-cyan-200 md:col-span-2 md:w-max"
+            >
+              Добавить
+            </CabinetButton>
           </div>
-        </section>
+        </FormSectionCard>
 
         {feedback ? (
           <NoticeBanner
@@ -370,7 +392,15 @@ const AdminTransactionsPage = ({
 
         {hasMore ? (
           <div className="mt-6">
-            <button type="button" onClick={loadMore} disabled={isLoading} className="cursor-pointer rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900">{isLoading ? 'Загружаем...' : 'Загрузить ещё'}</button>
+            <CabinetButton
+              type="button"
+              variant="secondary"
+              onClick={loadMore}
+              disabled={isLoading}
+              className="cursor-pointer border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900"
+            >
+              {isLoading ? 'Загружаем...' : 'Загрузить ещё'}
+            </CabinetButton>
           </div>
         ) : null}
 
@@ -395,13 +425,31 @@ const AdminTransactionsPage = ({
               <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
                 Направление
               </p>
-              <select className={`${INPUT_CLASS} cursor-pointer`} value={form.direction} onChange={(e) => setForm((p) => ({ ...p, direction: e.target.value }))}>{DIR_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+              <CabinetSelectField
+                id="transactions-form-direction"
+                label={null}
+                value={form.direction}
+                onChange={(e) => setForm((p) => ({ ...p, direction: e.target.value }))}
+                containerClassName="space-y-0"
+                selectClassName={`${INPUT_CLASS} cursor-pointer`}
+              >
+                {DIR_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </CabinetSelectField>
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
                 Тип оплаты
               </p>
-              <select className={`${INPUT_CLASS} cursor-pointer`} value={form.paymentMethod} onChange={(e) => setForm((p) => ({ ...p, paymentMethod: e.target.value }))}>{PAY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+              <CabinetSelectField
+                id="transactions-form-payment-method"
+                label={null}
+                value={form.paymentMethod}
+                onChange={(e) => setForm((p) => ({ ...p, paymentMethod: e.target.value }))}
+                containerClassName="space-y-0"
+                selectClassName={`${INPUT_CLASS} cursor-pointer`}
+              >
+                {PAY_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </CabinetSelectField>
             </div>
             <UserSelectField
               label="Пользователь"
