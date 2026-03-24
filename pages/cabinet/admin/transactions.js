@@ -339,8 +339,10 @@ const AdminTransactionsPage = ({
             <CabinetButton
               type="button"
               variant="secondary"
+              tone="cyan"
+              size="md"
               onClick={() => setIsCreateModalOpen(true)}
-              className="cursor-pointer border-cyan-400/50 bg-cyan-500/10 px-4 py-2 text-cyan-700 hover:bg-cyan-500/20 dark:text-cyan-200 md:col-span-2 md:w-max"
+              className="cursor-pointer md:col-span-2 md:w-max"
             >
               Добавить
             </CabinetButton>
@@ -396,9 +398,10 @@ const AdminTransactionsPage = ({
             <CabinetButton
               type="button"
               variant="secondary"
+              size="md"
               onClick={loadMore}
               disabled={isLoading}
-              className="cursor-pointer border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900"
+              className="cursor-pointer"
             >
               {isLoading ? 'Загружаем...' : 'Загрузить ещё'}
             </CabinetButton>

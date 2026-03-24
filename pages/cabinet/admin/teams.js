@@ -793,10 +793,12 @@ const AdminTeamsPage = ({
                   onClick={handleLoadMoreTeams}
                   disabled={isLoadingMoreTeams || isSearchingTeams}
                   variant="secondary"
+                  tone={isLoadingMoreTeams || isSearchingTeams ? 'neutral' : 'cyan'}
+                  size="md"
                   className={`w-full ${
                     isLoadingMoreTeams || isSearchingTeams
-                      ? 'cursor-wait border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500'
-                      : 'cursor-pointer border-cyan-400/60 text-cyan-200 hover:bg-cyan-500/10'
+                      ? 'cursor-wait'
+                      : 'cursor-pointer'
                   }`}
                 >
                   {isLoadingMoreTeams || isSearchingTeams ? 'Загружаем…' : 'Загрузить ещё'}

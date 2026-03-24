@@ -61,11 +61,9 @@ const GameTeamsModal = ({
                                       onClick={() => handleRemoveTeamFromGame(team.id)}
                                       disabled={isRemoving || teamsModalState.isLoading}
                                       variant="secondary"
-                                      className={`inline-flex justify-center rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                                        isRemoving || teamsModalState.isLoading
-                                          ? 'cursor-not-allowed border-slate-200 text-slate-400'
-                                          : 'border-rose-200 text-rose-600 hover:bg-rose-50'
-                                      }`}
+                                      tone={isRemoving || teamsModalState.isLoading ? 'neutral' : 'danger'}
+                                      size="sm"
+                                      className="inline-flex justify-center"
                                     >
                                       {isRemoving ? 'Удаление…' : 'Удалить'}
                                     </CabinetButton>
@@ -111,10 +109,9 @@ const GameTeamsModal = ({
                               onClick={handleAddTeamToGame}
                               disabled={!selectedTeamToAdd || isAddingTeam || teamsModalState.isLoading}
                               variant="primary"
-                              className={`inline-flex justify-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition ${
-                                !selectedTeamToAdd || isAddingTeam || teamsModalState.isLoading
-                                  ? 'bg-slate-400 cursor-not-allowed'
-                                  : 'bg-primary hover:bg-blue-700'
+                              size="md"
+                              className={`inline-flex justify-center ${
+                                isAddingTeam ? 'cursor-wait' : ''
                               }`}
                             >
                               {isAddingTeam ? 'Добавление…' : 'Добавить'}

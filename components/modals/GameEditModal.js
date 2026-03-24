@@ -334,7 +334,9 @@ const GameEditModal = ({
                                     <CabinetButton
                                       onClick={() => handleRemoveModerator(moderatorId)}
                                       variant="secondary"
-                                      className="inline-flex items-center justify-center border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                      tone="danger"
+                                      size="sm"
+                                      className="inline-flex items-center justify-center py-1"
                                     >
                                       Удалить
                                     </CabinetButton>
@@ -382,7 +384,7 @@ const GameEditModal = ({
                                 onClick={handleAddModerator}
                                 disabled={!selectedModeratorToAdd}
                                 variant="primary"
-                                className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
+                                size="md"
                               >
                                 Добавить
                               </CabinetButton>
@@ -600,7 +602,6 @@ const GameEditModal = ({
                       <CabinetButton
                         onClick={handleAddTask}
                         variant="primary"
-                        className="inline-flex justify-center px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
                       >
                         Добавить задание
                       </CabinetButton>
@@ -825,7 +826,9 @@ const GameEditModal = ({
                                       <CabinetButton
                                         onClick={() => handleAddTaskCode(task.id)}
                                         variant="secondary"
-                                        className="inline-flex justify-center border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:text-cyan-200 dark:hover:bg-sky-500/10"
+                                        tone="brand"
+                                        size="sm"
+                                        className="inline-flex justify-center"
                                       >
                                         Добавить код
                                       </CabinetButton>
@@ -856,7 +859,9 @@ const GameEditModal = ({
                                             <CabinetButton
                                               onClick={() => handleRemoveTaskCode(task.id, codeIndex)}
                                               variant="secondary"
-                                              className="inline-flex items-center justify-center border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                              tone="danger"
+                                              size="sm"
+                                              className="inline-flex items-center justify-center"
                                             >
                                               Удалить
                                             </CabinetButton>
@@ -887,7 +892,9 @@ const GameEditModal = ({
                                       <CabinetButton
                                         onClick={() => handleAddClue(task.id)}
                                         variant="secondary"
-                                        className="inline-flex justify-center border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:text-cyan-200 dark:hover:bg-sky-500/10"
+                                        tone="brand"
+                                        size="sm"
+                                        className="inline-flex justify-center"
                                       >
                                         Добавить подсказку
                                       </CabinetButton>
@@ -906,7 +913,9 @@ const GameEditModal = ({
                                               <CabinetButton
                                                 onClick={() => handleRemoveClue(task.id, clue.id)}
                                                 variant="secondary"
-                                                className="inline-flex items-center justify-center border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                                tone="danger"
+                                                size="sm"
+                                                className="inline-flex items-center justify-center"
                                               >
                                                 Удалить подсказку
                                               </CabinetButton>
@@ -960,7 +969,9 @@ const GameEditModal = ({
                                       <CabinetButton
                                         onClick={() => handleAddSubTask(task.id)}
                                         variant="secondary"
-                                        className="inline-flex justify-center border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:text-cyan-200 dark:hover:bg-sky-500/10"
+                                        tone="brand"
+                                        size="sm"
+                                        className="inline-flex justify-center"
                                       >
                                         Добавить подзадание
                                       </CabinetButton>
@@ -979,7 +990,9 @@ const GameEditModal = ({
                                                 <CabinetButton
                                                   onClick={() => handleRemoveSubTask(task.id, subTask.id)}
                                                   variant="secondary"
-                                                  className="inline-flex items-center justify-center border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                                  tone="danger"
+                                                  size="sm"
+                                                  className="inline-flex items-center justify-center"
                                                 >
                                                   Удалить подзадание
                                                 </CabinetButton>
@@ -1052,7 +1065,9 @@ const GameEditModal = ({
                                       <CabinetButton
                                         onClick={() => handleAddPenaltyCode(task.id)}
                                         variant="secondary"
-                                        className="inline-flex justify-center border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:text-cyan-200 dark:hover:bg-sky-500/10"
+                                        tone="brand"
+                                        size="sm"
+                                        className="inline-flex justify-center"
                                       >
                                         Добавить штраф
                                       </CabinetButton>
@@ -1121,7 +1136,9 @@ const GameEditModal = ({
                                               <CabinetButton
                                                 onClick={() => handleRemovePenaltyCode(task.id, penalty.id)}
                                                 variant="secondary"
-                                                className="inline-flex items-center justify-center border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                                tone="danger"
+                                                size="sm"
+                                                className="inline-flex items-center justify-center"
                                               >
                                                 Удалить штраф
                                               </CabinetButton>
@@ -1140,7 +1157,9 @@ const GameEditModal = ({
                                       <CabinetButton
                                         onClick={() => handleAddBonusCode(task.id)}
                                         variant="secondary"
-                                        className="inline-flex justify-center border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:text-cyan-200 dark:hover:bg-sky-500/10"
+                                        tone="brand"
+                                        size="sm"
+                                        className="inline-flex justify-center"
                                       >
                                         Добавить бонус
                                       </CabinetButton>
@@ -1209,7 +1228,9 @@ const GameEditModal = ({
                                               <CabinetButton
                                                 onClick={() => handleRemoveBonusCode(task.id, bonus.id)}
                                                 variant="secondary"
-                                                className="inline-flex items-center justify-center border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                                tone="danger"
+                                                size="sm"
+                                                className="inline-flex items-center justify-center"
                                               >
                                                 Удалить бонус
                                               </CabinetButton>
@@ -1226,7 +1247,9 @@ const GameEditModal = ({
                                     <CabinetButton
                                       onClick={() => handleRemoveTask(task.id)}
                                       variant="secondary"
-                                      className="inline-flex items-center justify-center border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                      tone="danger"
+                                      size="sm"
+                                      className="inline-flex items-center justify-center"
                                     >
                                       Удалить задание
                                     </CabinetButton>
@@ -1321,8 +1344,9 @@ const GameEditModal = ({
                       <CabinetButton
                         onClick={handleGenerateResults}
                         disabled={!canGenerateResults || isGeneratingResults}
-                        variant="secondary"
-                        className="inline-flex items-center justify-center border border-cyan-300/70 bg-cyan-50/70 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
+                        variant="soft"
+                        tone="cyan"
+                        size="md"
                       >
                         {isGeneratingResults ? 'Формируем…' : 'Сформировать результаты'}
                       </CabinetButton>
@@ -1340,7 +1364,7 @@ const GameEditModal = ({
                       <CabinetButton
                         onClick={handleAddPrice}
                         variant="primary"
-                        className="px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                        size="sm"
                       >
                         Добавить тариф
                       </CabinetButton>
@@ -1379,7 +1403,8 @@ const GameEditModal = ({
                             <CabinetButton
                               onClick={() => handleRemovePrice(price.id)}
                               variant="secondary"
-                              className="px-3 py-2 text-xs font-semibold text-rose-600 border border-rose-200 hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                              tone="danger"
+                              size="sm"
                             >
                               Удалить
                             </CabinetButton>
@@ -1399,7 +1424,7 @@ const GameEditModal = ({
                       <CabinetButton
                         onClick={handleAddFinance}
                         variant="primary"
-                        className="px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                        size="sm"
                       >
                         Добавить запись
                       </CabinetButton>
@@ -1450,7 +1475,8 @@ const GameEditModal = ({
                             <CabinetButton
                               onClick={() => handleRemoveFinance(entry.id)}
                               variant="secondary"
-                              className="px-3 py-2 text-xs font-semibold text-rose-600 border border-rose-200 hover:bg-rose-50 dark:border-rose-500/30 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                              tone="danger"
+                              size="sm"
                             >
                               Удалить
                             </CabinetButton>

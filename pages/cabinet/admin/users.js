@@ -597,18 +597,20 @@ const ManageUsersPage = ({
                   })}
                 </ul>
                 {hasMoreUsers && (
-                  <button
-                    type="button"
+                  <CabinetButton
                     onClick={handleLoadMoreUsers}
                     disabled={isLoadingMoreUsers}
-                    className={`w-full rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                    variant="secondary"
+                    tone={isLoadingMoreUsers ? 'neutral' : 'cyan'}
+                    size="md"
+                    className={`w-full ${
                       isLoadingMoreUsers
-                        ? 'cursor-wait border-slate-300 text-slate-400 dark:border-slate-700 dark:text-slate-500'
-                        : 'cursor-pointer border-cyan-400/60 text-cyan-200 hover:bg-cyan-500/10'
+                        ? 'cursor-wait'
+                        : 'cursor-pointer'
                     }`}
                   >
                     {isLoadingMoreUsers ? 'Загружаем…' : 'Загрузить ещё'}
-                  </button>
+                  </CabinetButton>
                 )}
               </div>
             ) : (
@@ -690,11 +692,8 @@ const ManageUsersPage = ({
                   <CabinetButton
                     onClick={handleSave}
                     disabled={!location || !isDirty || isSaving}
-                    className={`${
-                      !location || !isDirty || isSaving
-                        ? 'bg-slate-400 cursor-not-allowed'
-                        : 'bg-primary hover:bg-blue-700'
-                    }`}
+                    variant="primary"
+                    className={isSaving ? 'cursor-wait' : ''}
                   >
                     {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
                   </CabinetButton>
@@ -702,11 +701,7 @@ const ManageUsersPage = ({
                     onClick={handleReset}
                     disabled={!isDirty}
                     variant="secondary"
-                    className={`${
-                      !isDirty
-                        ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                        : 'border-primary text-primary hover:bg-blue-50 dark:text-sky-200 dark:hover:bg-sky-500/10'
-                    }`}
+                    tone="brand"
                   >
                     Отменить
                   </CabinetButton>
@@ -718,11 +713,8 @@ const ManageUsersPage = ({
                       isRequestingPhone
                     }
                     variant="secondary"
-                    className={`${
-                      !location || !selectedUser.telegramId || isRequestingPhone
-                        ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                        : 'border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-500/10'
-                    }`}
+                    tone="success"
+                    className={isRequestingPhone ? 'cursor-wait' : ''}
                   >
                     {isRequestingPhone
                       ? 'Отправка...'

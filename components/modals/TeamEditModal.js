@@ -306,11 +306,9 @@ const TeamEditModal = ({
                             onClick={() => onSetCaptain(member.id)}
                             disabled={isProcessing}
                             variant="secondary"
-                            className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
-                              isProcessing
-                                ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                                : 'border-primary text-primary hover:bg-blue-50 dark:border-cyan-500/40 dark:text-cyan-200 dark:hover:bg-violet-500/10'
-                            }`}
+                            tone={isProcessing ? 'neutral' : 'brand'}
+                            size="sm"
+                            className="inline-flex justify-center"
                           >
                             Назначить капитаном
                           </CabinetButton>
@@ -320,11 +318,9 @@ const TeamEditModal = ({
                             onClick={() => onRemoveMember(member.id)}
                             disabled={isProcessing}
                             variant="secondary"
-                            className={`inline-flex justify-center px-4 py-2 text-xs font-semibold rounded-xl border transition ${
-                              isProcessing
-                                ? 'border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
-                                : 'border-rose-200 text-rose-600 hover:bg-rose-50'
-                            }`}
+                            tone={isProcessing ? 'neutral' : 'danger'}
+                            size="sm"
+                            className="inline-flex justify-center"
                           >
                             Удалить из команды
                           </CabinetButton>

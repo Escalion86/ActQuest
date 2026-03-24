@@ -152,18 +152,6 @@ const ProfilePage = ({ initialProfile }) => {
     [safeFormState, session]
   )
 
-  const submitButtonClasses = useMemo(() => {
-    if (saveState.isSaving) {
-      return 'bg-blue-400 text-white cursor-wait'
-    }
-
-    if (!hasChanges) {
-      return 'bg-slate-200 text-slate-500 dark:bg-slate-700/60 dark:text-slate-300 cursor-not-allowed'
-    }
-
-    return 'bg-primary hover:bg-blue-700 text-white'
-  }, [hasChanges, saveState.isSaving])
-
   return (
     <>
       <Head>
@@ -269,7 +257,8 @@ const ProfilePage = ({ initialProfile }) => {
               <CabinetButton
                 type="submit"
                 disabled={saveState.isSaving || !hasChanges}
-                className={submitButtonClasses}
+                variant="primary"
+                className={saveState.isSaving ? 'cursor-wait' : ''}
               >
                 {saveState.isSaving ? 'Сохраняем…' : 'Сохранить профиль'}
               </CabinetButton>

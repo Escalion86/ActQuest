@@ -7,6 +7,7 @@
     "dev:turbo": "next dev",
     "dev:webpack": "next dev --webpack",
     "build": "NODE_OPTIONS='--max-old-space-size=2048' next build",
+    "lint": "eslint pages/cabinet components/cabinet components/modals --ext .js,.jsx",
     "start": "next start",
     "migrate:teamsusers:user-id": "node scripts/migrateTeamsUsersUserId.js",
     "audit:users:global-merge": "node scripts/auditGlobalUsersMerge.js",
@@ -19,18 +20,18 @@
     "@fortawesome/free-brands-svg-icons": "^7.2.0",
     "@fortawesome/free-regular-svg-icons": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
-    "@fortawesome/react-fontawesome": "^3.2.0",
-    "@tailwindcss/postcss": "^4.2.1",
+    "@fortawesome/react-fontawesome": "^3.3.0",
+    "@tailwindcss/postcss": "^4.2.2",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
-    "framer-motion": "^12.36.0",
-    "jotai": "^2.18.1",
-    "moment-timezone": "^0.6.0",
-    "mongodb": "^7.1.0",
-    "mongoose": "^9.3.0",
+    "framer-motion": "^12.38.0",
+    "jotai": "^2.19.0",
+    "moment-timezone": "^0.6.1",
+    "mongodb": "^7.1.1",
+    "mongoose": "^9.3.2",
     "mongoose-lean-defaults": "^2.3.1",
-    "next": "^16.1.6",
+    "next": "^16.2.1",
     "next-auth": "^4.24.13",
     "next-images": "^1.8.5",
     "next-pwa": "^5.6.0",
@@ -47,9 +48,11 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "autoprefixer": "^10.4.27",
     "cross-env": "^10.1.0",
+    "eslint": "^10.1.0",
     "postcss": "^8.5.8",
-    "tailwindcss": "^4.2.1"
+    "tailwindcss": "^4.2.2"
   }
 }
