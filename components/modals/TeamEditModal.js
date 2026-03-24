@@ -3,8 +3,8 @@ import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
-import CabinetFormField from '@components/cabinet/CabinetFormField'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
+import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import ModalSection from '@components/modals/ModalSection'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NeonCheckbox from '@components/NeonCheckbox'
@@ -214,21 +214,17 @@ const TeamEditModal = ({
             )}
           </div>
 
-          <CabinetFormField
+          <CabinetTextareaField
             id="team-description"
             label="Описание"
+            value={selectedTeam.description}
+            onChange={(event) =>
+              onTeamFieldChange('description', event.target.value)
+            }
+            rows={5}
             labelClassName="text-sm font-semibold text-slate-900 dark:text-slate-100"
-          >
-            <textarea
-              id="team-description"
-              value={selectedTeam.description}
-              onChange={(event) =>
-                onTeamFieldChange('description', event.target.value)
-              }
-              rows={5}
-              className="w-full px-4 py-3 mt-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
-            />
-          </CabinetFormField>
+            textareaClassName="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+          />
 
           <ImagesInput
             images={selectedTeam.image ? [selectedTeam.image] : []}

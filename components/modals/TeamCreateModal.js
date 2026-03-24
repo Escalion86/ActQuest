@@ -3,8 +3,8 @@ import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
-import CabinetFormField from '@components/cabinet/CabinetFormField'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
+import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NeonCheckbox from '@components/NeonCheckbox'
 
@@ -58,16 +58,15 @@ const TeamCreateModal = ({
         placeholder="Например, Стремительные"
         inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
       />
-      <CabinetFormField id="new-team-description" label="Краткое описание (по желанию)">
-        <textarea
-          id="new-team-description"
-          value={newTeamDescription}
-          onChange={(event) => onChangeNewTeamDescription(event.target.value)}
-          rows={4}
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
-          placeholder="Расскажите, для кого эта команда"
-        />
-      </CabinetFormField>
+      <CabinetTextareaField
+        id="new-team-description"
+        label="Краткое описание (по желанию)"
+        value={newTeamDescription}
+        onChange={(event) => onChangeNewTeamDescription(event.target.value)}
+        rows={4}
+        placeholder="Расскажите, для кого эта команда"
+        textareaClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/60"
+      />
       <ImagesInput
         images={newTeamImage ? [newTeamImage] : []}
         onChange={(next) => onChangeNewTeamImage(Array.isArray(next) ? next[0] ?? '' : '')}

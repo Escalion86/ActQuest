@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
+import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import AmountStepperInput from '@components/cabinet/AmountStepperInput'
@@ -483,12 +484,17 @@ const AdminTransactionsPage = ({
                 <input className={INPUT_CLASS} placeholder="Код купона" value={form.couponCode} onChange={(e) => setForm((p) => ({ ...p, couponCode: e.target.value.toUpperCase() }))} />
               </div>
             ) : null}
-            <div className="space-y-1 md:col-span-2">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
-                Комментарий
-              </p>
-              <textarea className={INPUT_CLASS} rows={3} placeholder="Комментарий" value={form.comment} onChange={(e) => setForm((p) => ({ ...p, comment: e.target.value }))} />
-            </div>
+            <CabinetTextareaField
+              id="transactions-form-comment"
+              label="Комментарий"
+              value={form.comment}
+              onChange={(e) => setForm((p) => ({ ...p, comment: e.target.value }))}
+              rows={3}
+              placeholder="Комментарий"
+              containerClassName="space-y-1 md:col-span-2"
+              labelClassName="text-xs font-medium uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300"
+              textareaClassName={INPUT_CLASS}
+            />
           </div>
         </Modal>
       </CabinetLayout>

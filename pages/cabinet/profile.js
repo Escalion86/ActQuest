@@ -5,8 +5,8 @@ import { useSession } from 'next-auth/react'
 
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
-import CabinetFormField from '@components/cabinet/CabinetFormField'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
+import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NoticeBanner from '@components/NoticeBanner'
@@ -219,16 +219,14 @@ const ProfilePage = ({ initialProfile }) => {
               inputClassName="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 opacity-90 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-100 dark:placeholder:text-slate-400"
             />
 
-            <CabinetFormField id="profile-about" label="О себе">
-              <textarea
-                id="profile-about"
-                value={safeFormState.about}
-                onChange={(event) => handleChange('about', event.target.value)}
-                rows={5}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
-                placeholder="Расскажите об опыте, любимых форматах и роли в команде."
-              />
-            </CabinetFormField>
+            <CabinetTextareaField
+              id="profile-about"
+              label="О себе"
+              value={safeFormState.about}
+              onChange={(event) => handleChange('about', event.target.value)}
+              rows={5}
+              placeholder="Расскажите об опыте, любимых форматах и роли в команде."
+            />
 
             <div>
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
