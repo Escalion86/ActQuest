@@ -12,6 +12,7 @@ import CabinetNumberField from '@components/cabinet/CabinetNumberField'
 import NeonCheckbox from '@components/NeonCheckbox'
 import formatDate from '@helpers/formatDate'
 import formatDateTime from '@helpers/formatDateTime'
+import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import ModalSection from './ModalSection'
 
 const GameEditModal = ({
@@ -25,9 +26,9 @@ const GameEditModal = ({
   handleModalPrimaryAction,
   handleResetChanges,
   updateSelectedGame,
-  GAME_STATUS_OPTIONS,
   GAME_TYPE_OPTIONS,
   CLUE_EARLY_MODE_OPTIONS,
+  handleOpenStatusModal,
   toMinutes,
   toSeconds,
   handleAddTask,
@@ -160,7 +161,7 @@ const GameEditModal = ({
                     footer={modalFooter}
                   >
                   <fieldset
-                    disabled={isSaving}
+                    disabled={!canEditSelectedGame || isSaving}
                     className="m-0 space-y-6 border-0 p-0 [&_button]:cursor-pointer [&_select]:cursor-pointer"
                   >
                     <ModalSection>
@@ -189,22 +190,26 @@ const GameEditModal = ({
                         labelClassName={fieldLabelClassName}
                         inputClassName={fieldInputClassName}
                       />
-                      <CabinetSelectField
-                          id="game-status"
-                          label="Статус"
-                          value={selectedGame.status}
-                          onChange={(event) =>
-                            updateSelectedGame({ status: event.target.value })
-                          }
-                          labelClassName={fieldLabelClassName}
-                          selectClassName={fieldSelectClassName}
-                        >
-                          {GAME_STATUS_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                      </CabinetSelectField>
+                      <div className="space-y-2">
+                        <p className={fieldLabelClassName}>Статус игры</p>
+                        <div className="flex items-center gap-3">
+                          <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+                            {getGameStatusLabel(selectedGame.status)}
+                          </span>
+                          <CabinetButton
+                            onClick={() => handleOpenStatusModal(selectedGame)}
+                            variant="secondary"
+                            tone="brand"
+                            size="sm"
+                            disabled={!canEditSelectedGame || isSaving}
+                          >
+                            Сменить статус
+                          </CabinetButton>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-300">
+                          Статус «Запущена» устанавливается только через запуск игры.
+                        </p>
+                      </div>
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
@@ -1535,9 +1540,9 @@ GameEditModal.propTypes = {
   handleModalPrimaryAction: PropTypes.func.isRequired,
   handleResetChanges: PropTypes.func.isRequired,
   updateSelectedGame: PropTypes.func.isRequired,
-  GAME_STATUS_OPTIONS: PropTypes.array.isRequired,
   GAME_TYPE_OPTIONS: PropTypes.array.isRequired,
   CLUE_EARLY_MODE_OPTIONS: PropTypes.array.isRequired,
+  handleOpenStatusModal: PropTypes.func.isRequired,
   toMinutes: PropTypes.func.isRequired,
   toSeconds: PropTypes.func.isRequired,
   handleAddTask: PropTypes.func.isRequired,

@@ -63,6 +63,23 @@ export const TeamCardIcon = () => (
   </svg>
 )
 
+export const StatusCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M4 4h12M4 10h12M4 16h8"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
 const CardActionIconButton = ({
   as: Component,
   onClick,

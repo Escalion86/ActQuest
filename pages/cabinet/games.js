@@ -8,11 +8,13 @@ import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import CardActionIconButton, {
   EditCardIcon,
+  StatusCardIcon,
   TeamCardIcon,
 } from '@components/cabinet/CardActionIconButton'
 import FeedbackToast from '@components/FeedbackToast'
 import NoticeBanner from '@components/NoticeBanner'
 import GameModals from '@components/modals/GameModals'
+import GameStatusModal from '@components/modals/GameStatusModal'
 import getSessionSafe from '@helpers/getSessionSafe'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
@@ -23,11 +25,6 @@ import { getNounTeams } from '@helpers/getNoun'
 import NeonCheckbox from '@components/NeonCheckbox'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
-
-const ALL_GAME_STATUS_OPTIONS = ['active', 'started', 'finished', 'closed', 'canceled'].map((value) => ({
-  value,
-  label: getGameStatusLabel(value),
-}))
 
 const GAME_STATUS_BADGE_STYLES = {
   active:
@@ -166,6 +163,19 @@ const extractErrorMessage = (error) => {
 
 const isClosedStatus = (status) =>
   (typeof status === 'string' ? status.toLowerCase() : String(status)) === 'closed'
+
+const isGameConducted = (game) => {
+  if (!game) {
+    return false
+  }
+
+  const normalizedStatus = String(game.status || '').toLowerCase()
+  if (normalizedStatus === 'started' || normalizedStatus === 'finished' || normalizedStatus === 'closed') {
+    return true
+  }
+
+  return Boolean(game.dateStartFact || game.dateEndFact)
+}
 
 const normalizeVisibleStatus = (status, canSeeClosedStatus) => {
   if (isClosedStatus(status) && !canSeeClosedStatus) {
@@ -414,13 +424,6 @@ const GamesPage = ({
   const canEditAllGames = userRole === 'admin' || userRole === 'dev'
   const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
   const canEditOwnGames = userRole === 'moder'
-  const GAME_STATUS_OPTIONS = useMemo(
-    () =>
-      canSeeClosedStatus
-        ? ALL_GAME_STATUS_OPTIONS
-        : ALL_GAME_STATUS_OPTIONS.filter((item) => item.value !== 'closed'),
-    [canSeeClosedStatus]
-  )
   const safeInitialGames = Array.isArray(initialGames) ? initialGames : []
   const currentUserDbId =
     activeSession?.user?._id === null || activeSession?.user?._id === undefined
@@ -433,6 +436,10 @@ const GamesPage = ({
   const [isLoadingMoreGames, setIsLoadingMoreGames] = useState(false)
   const [selectedGameId, setSelectedGameId] = useState(safeInitialGames[0]?.id ?? null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [statusModalGameId, setStatusModalGameId] = useState('')
+  const [statusValidationResult, setStatusValidationResult] = useState(null)
+  const [isStatusChanging, setIsStatusChanging] = useState(false)
   const [editingGame, setEditingGame] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [, setFeedback] = useState(null)
@@ -610,12 +617,107 @@ const GamesPage = ({
     () => games.find((game) => game.id === selectedGameId) ?? null,
     [games, selectedGameId]
   )
+  const statusModalGame = useMemo(
+    () => games.find((game) => game.id === statusModalGameId) ?? null,
+    [games, statusModalGameId]
+  )
+  const statusModalActions = useMemo(() => {
+    if (!statusModalGame) {
+      return []
+    }
+
+    const normalizedStatus = String(statusModalGame.status || '').toLowerCase()
+    const canCloseGame = isGameConducted(statusModalGame)
+
+    if (normalizedStatus === 'active') {
+      return [
+        {
+          id: 'check_game',
+          label: 'Проверить игру',
+          description: 'Проверит игру на ошибки перед запуском и покажет, что исправить.',
+          variant: 'secondary',
+          tone: 'cyan',
+        },
+        {
+          id: 'start_game',
+          label: 'СТАРТ ИГРЫ',
+          description: 'Перед запуском выполнится проверка игры. При ошибках запуск будет заблокирован.',
+          variant: 'primary',
+          tone: 'success',
+          disabled: Boolean(statusValidationResult?.hasErrors),
+        },
+        {
+          id: 'cancel_game',
+          label: 'Отменить',
+          description: 'Пометит игру отменённой. Команды не смогут продолжить участие.',
+          variant: 'secondary',
+          tone: 'danger',
+        },
+      ]
+    }
+
+    if (normalizedStatus === 'started') {
+      return [
+        {
+          id: 'stop_game',
+          label: 'СТОП ИГРЫ',
+          description: 'Завершит игру, зафиксирует результат и оповестит всех участников.',
+          variant: 'primary',
+          tone: 'danger',
+        },
+      ]
+    }
+
+    if (normalizedStatus === 'finished') {
+      return [
+        {
+          id: 'restart_game',
+          label: 'Перезапустить',
+          description: 'Вернёт игру в статус «Активна», чтобы можно было снова запустить.',
+          variant: 'primary',
+          tone: 'success',
+        },
+        {
+          id: 'cancel_game',
+          label: 'Отменить',
+          description: 'Переведёт завершённую игру в отменённые.',
+          variant: 'secondary',
+          tone: 'danger',
+        },
+        {
+          id: 'close_game',
+          label: 'Закрыть',
+          description: 'Закроет игру окончательно. Редактирование после этого недоступно.',
+          variant: 'secondary',
+          tone: 'neutral',
+          disabled: !canCloseGame,
+        },
+      ]
+    }
+
+    if (normalizedStatus === 'canceled') {
+      return [
+        {
+          id: 'activate_game',
+          label: 'Активировать',
+          description: 'Вернёт отменённую игру в статус «Активна».',
+          variant: 'primary',
+          tone: 'success',
+        },
+      ]
+    }
+
+    return []
+  }, [statusModalGame, statusValidationResult?.hasErrors])
   const selectedGameApiLocation =
     selectedGame?.location || (shouldShowLocationFilter ? gamesFilterLocation : location)
 
   useEffect(() => {
     setExpandedTaskIds([])
     setEditingGame(null)
+    setIsStatusModalOpen(false)
+    setStatusModalGameId('')
+    setStatusValidationResult(null)
     setTeamsModalState({
       isLoading: false,
       error: null,
@@ -1285,6 +1387,7 @@ const GamesPage = ({
       })
 
       setIsCreateGameModalOpen(false)
+      setEditingGame(cloneGameDraft(createdGame))
       setIsEditModalOpen(true)
     } catch (error) {
       console.error('Failed to create game', error)
@@ -2271,6 +2374,7 @@ const GamesPage = ({
       }
 
       setSelectedGameId(game.id)
+      setEditingGame(cloneGameDraft(game))
       setIsTeamsModalOpen(false)
       setIsResultsModalOpen(false)
       setIsDescriptionModalOpen(false)
@@ -2278,6 +2382,212 @@ const GamesPage = ({
     },
     [canManageGame]
   )
+
+  const handleOpenStatusModal = useCallback(
+    (gameCandidate = null) => {
+      const game = gameCandidate || selectedGame
+      if (!game || !canManageGame(game) || isClosedStatus(game.status)) {
+        return
+      }
+
+      setStatusModalGameId(game.id)
+      setStatusValidationResult(null)
+      setIsStatusModalOpen(true)
+    },
+    [canManageGame, selectedGame]
+  )
+
+  const handleCloseStatusModal = useCallback(() => {
+    if (isStatusChanging) {
+      return
+    }
+
+    setIsStatusModalOpen(false)
+    setStatusValidationResult(null)
+  }, [isStatusChanging])
+
+  const handleStatusAction = useCallback(async (actionId) => {
+    if (!statusModalGame || !canManageGame(statusModalGame)) {
+      return
+    }
+
+    if (!actionId) {
+      return
+    }
+
+    if (typeof window !== 'undefined' && actionId === 'start_game') {
+      const shouldStart = window.confirm(
+        'Вы уверены, что хотите запустить игру? Игроки получат уведомление о старте.'
+      )
+      if (!shouldStart) {
+        return
+      }
+    }
+
+    if (typeof window !== 'undefined' && actionId === 'stop_game') {
+      const shouldStop = window.confirm(
+        'Вы уверены, что хотите остановить игру? Коды больше не будут приниматься, игроки получат уведомление.'
+      )
+      if (!shouldStop) {
+        return
+      }
+    }
+
+    const gameApiLocation =
+      statusModalGame.location ||
+      (shouldShowLocationFilter ? gamesFilterLocation : location)
+
+    if (!gameApiLocation) {
+      setFeedback({
+        type: 'error',
+        message: 'Не удалось определить локацию игры для смены статуса.',
+      })
+      return
+    }
+
+    setIsStatusChanging(true)
+    setFeedback(null)
+
+    try {
+      const runGameValidation = async () => {
+        const response = await fetch(
+          `/api/${gameApiLocation}/games/check/${statusModalGame.id}`
+        )
+        const json = await response.json()
+
+        if (!response.ok || json?.success === false) {
+          throw new Error(json?.error || 'Не удалось выполнить проверку игры')
+        }
+
+        const errors = Array.isArray(json?.data?.errors) ? json.data.errors : []
+        const hasErrors = Boolean(json?.data?.hasErrors) || errors.length > 0
+
+        return { hasErrors, errors }
+      }
+
+      if (actionId === 'check_game') {
+        const validation = await runGameValidation()
+        setStatusValidationResult({
+          hasErrors: validation.hasErrors,
+          errors: validation.errors,
+        })
+        setToastEvent({
+          id: `game-check-${Date.now()}`,
+          type: validation.hasErrors ? 'error' : 'success',
+          message: validation.hasErrors
+            ? `Обнаружены ошибки: ${validation.errors.length}`
+            : 'Проверка завершена: ошибок не найдено',
+        })
+        return
+      }
+
+      setStatusValidationResult(null)
+      let response = null
+      let successMessage = 'Статус игры обновлён'
+
+      if (actionId === 'start_game') {
+        const validation = await runGameValidation()
+        setStatusValidationResult({
+          hasErrors: validation.hasErrors,
+          errors: validation.errors,
+        })
+
+        if (validation.hasErrors) {
+          setFeedback({
+            type: 'error',
+            message: 'Запуск игры заблокирован: сначала исправьте ошибки проверки.',
+          })
+          setToastEvent({
+            id: `game-start-validation-${Date.now()}`,
+            type: 'error',
+            message: `Запуск заблокирован: обнаружены ошибки (${validation.errors.length})`,
+          })
+          return
+        }
+
+        response = await fetch(
+          `/api/${gameApiLocation}/games/start/${statusModalGame.id}`
+        )
+        successMessage = 'Игра запущена'
+      } else if (actionId === 'stop_game') {
+        response = await fetch(
+          `/api/${gameApiLocation}/games/stop/${statusModalGame.id}`
+        )
+        successMessage = 'Игра остановлена'
+      } else {
+        let nextStatus = null
+
+        if (actionId === 'restart_game' || actionId === 'activate_game') {
+          nextStatus = 'active'
+        } else if (actionId === 'cancel_game') {
+          nextStatus = 'canceled'
+        } else if (actionId === 'close_game') {
+          if (!isGameConducted(statusModalGame)) {
+            setFeedback({
+              type: 'error',
+              message: 'Нельзя закрыть игру, которая не была проведена.',
+            })
+            setToastEvent({
+              id: `game-status-update-validation-${Date.now()}`,
+              type: 'error',
+              message: 'Нельзя закрыть игру, которая не была проведена.',
+            })
+            return
+          }
+          nextStatus = 'closed'
+        }
+
+        if (!nextStatus) {
+          return
+        }
+
+        response = await fetch(
+          `/api/${gameApiLocation}/games/${statusModalGame.id}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: { status: nextStatus } }),
+          }
+        )
+      }
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(json?.error || 'Не удалось обновить статус игры')
+      }
+
+      await fetchGamesPage({
+        offset: 0,
+        replace: true,
+        locationValue: shouldShowLocationFilter ? gamesFilterLocation : location,
+      })
+
+      setIsStatusModalOpen(false)
+      setFeedback({ type: 'success', message: successMessage })
+      setToastEvent({
+        id: `game-status-updated-${Date.now()}`,
+        type: 'success',
+        message: successMessage,
+      })
+    } catch (error) {
+      const message = error?.message || 'Не удалось обновить статус игры'
+      setFeedback({ type: 'error', message })
+      setToastEvent({
+        id: `game-status-update-error-${Date.now()}`,
+        type: 'error',
+        message,
+      })
+    } finally {
+      setIsStatusChanging(false)
+    }
+  }, [
+    canManageGame,
+    fetchGamesPage,
+    gamesFilterLocation,
+    location,
+    shouldShowLocationFilter,
+    statusModalGame,
+  ])
 
   const handleManageTeamsFromList = useCallback(
     (game) => {
@@ -2636,10 +2946,6 @@ const GamesPage = ({
           })
         : 'Дата не задана'
 
-      const relativeUpdatedAt = game.updatedAt
-        ? formatRelativeTimeFromNow(game.updatedAt)
-        : '—'
-
       const canManageThisGame = canManageGame(game)
       const canViewThisGameResults = canViewResultsForGame(game)
       const visibleStatus = normalizeVisibleStatus(game.status, canSeeClosedStatus)
@@ -2693,9 +2999,7 @@ const GamesPage = ({
                     <span className="text-slate-500">{startDateLabel}</span>
                   </div>
                   <p className="mt-1 text-xs text-slate-400">
-                    {canManageThisGame
-                      ? `${getNounTeams(game.teamsCount)} · Обновлено ${relativeUpdatedAt}`
-                      : getNounTeams(game.teamsCount)}
+                    {getNounTeams(game.teamsCount)}
                   </p>
                 </div>
               </div>
@@ -2709,6 +3013,15 @@ const GamesPage = ({
                     label="Редактировать игру"
                   >
                     <EditCardIcon />
+                  </CardActionIconButton>
+                  <CardActionIconButton
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      handleOpenStatusModal(game)
+                    }}
+                    label="Сменить статус игры"
+                  >
+                    <StatusCardIcon />
                   </CardActionIconButton>
                   <CardActionIconButton
                     onClick={(event) => {
@@ -2743,7 +3056,7 @@ const GamesPage = ({
         </li>
       )
     },
-    [canManageGame, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleSelectGameCard, selectedGameId]
+    [canManageGame, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleOpenStatusModal, handleSelectGameCard, selectedGameId]
   )
 
   const renderGameTileItem = useCallback(
@@ -2754,10 +3067,6 @@ const GamesPage = ({
             timeStyle: 'short',
           })
         : 'Дата не задана'
-
-      const relativeUpdatedAt = game.updatedAt
-        ? formatRelativeTimeFromNow(game.updatedAt)
-        : '—'
 
       const canManageThisGame = canManageGame(game)
       const canViewThisGameResults = canViewResultsForGame(game)
@@ -2825,6 +3134,16 @@ const GamesPage = ({
                     <CardActionIconButton
                       onClick={(event) => {
                         event.stopPropagation()
+                        handleOpenStatusModal(game)
+                      }}
+                      label="Сменить статус игры"
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                    >
+                      <StatusCardIcon />
+                    </CardActionIconButton>
+                    <CardActionIconButton
+                      onClick={(event) => {
+                        event.stopPropagation()
                         handleManageTeamsFromList(game)
                       }}
                       label="Управление командами"
@@ -2842,9 +3161,7 @@ const GamesPage = ({
               </p>
               <p className="text-xs text-slate-500">{startDateLabel}</p>
               <p className="text-xs text-slate-400">
-                {canManageThisGame
-                  ? `${getNounTeams(game.teamsCount)} · Обновлено ${relativeUpdatedAt}`
-                  : getNounTeams(game.teamsCount)}
+                {getNounTeams(game.teamsCount)}
               </p>
               {canViewThisGameResults && (
                 <button
@@ -2868,7 +3185,7 @@ const GamesPage = ({
         </li>
       )
     },
-    [canManageGame, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleSelectGameCard, selectedGameId]
+    [canManageGame, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleOpenStatusModal, handleSelectGameCard, selectedGameId]
   )
 
   const modalGame = isEditModalOpen && editingGame ? editingGame : selectedGame
@@ -3237,9 +3554,9 @@ const GamesPage = ({
                   handleModalPrimaryAction={handleModalPrimaryAction}
                   handleResetChanges={handleResetChanges}
                   updateSelectedGame={updateSelectedGame}
-                  GAME_STATUS_OPTIONS={GAME_STATUS_OPTIONS}
                   GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
                   CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
+                  handleOpenStatusModal={handleOpenStatusModal}
                   toMinutes={toMinutes}
                   toSeconds={toSeconds}
                   handleAddTask={handleAddTask}
@@ -3338,6 +3655,16 @@ const GamesPage = ({
                   isResultsModalOpen={isResultsModalOpen}
                   handleCloseResultsModal={handleCloseResultsModal}
                   resultsModalState={resultsModalState}
+                />
+                <GameStatusModal
+                  isOpen={isStatusModalOpen}
+                  onClose={handleCloseStatusModal}
+                  gameName={statusModalGame?.name || ''}
+                  currentStatusLabel={getGameStatusLabel(statusModalGame?.status || '')}
+                  actions={statusModalActions}
+                  onAction={handleStatusAction}
+                  validationResult={statusValidationResult}
+                  isSaving={isStatusChanging}
                 />
               </div>
             </div>

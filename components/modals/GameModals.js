@@ -20,9 +20,9 @@ const GameModals = ({
   handleModalPrimaryAction,
   handleResetChanges,
   updateSelectedGame,
-  GAME_STATUS_OPTIONS,
   GAME_TYPE_OPTIONS,
   CLUE_EARLY_MODE_OPTIONS,
+  handleOpenStatusModal,
   toMinutes,
   toSeconds,
   handleAddTask,
@@ -134,9 +134,9 @@ const GameModals = ({
       handleModalPrimaryAction={handleModalPrimaryAction}
       handleResetChanges={handleResetChanges}
       updateSelectedGame={updateSelectedGame}
-      GAME_STATUS_OPTIONS={GAME_STATUS_OPTIONS}
       GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
       CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
+      handleOpenStatusModal={handleOpenStatusModal}
       toMinutes={toMinutes}
       toSeconds={toSeconds}
       handleAddTask={handleAddTask}
@@ -311,9 +311,9 @@ GameModals.propTypes = {
   handleModalPrimaryAction: PropTypes.func.isRequired,
   handleResetChanges: PropTypes.func.isRequired,
   updateSelectedGame: PropTypes.func.isRequired,
-  GAME_STATUS_OPTIONS: PropTypes.array.isRequired,
   GAME_TYPE_OPTIONS: PropTypes.array.isRequired,
   CLUE_EARLY_MODE_OPTIONS: PropTypes.array.isRequired,
+  handleOpenStatusModal: PropTypes.func.isRequired,
   toMinutes: PropTypes.func.isRequired,
   toSeconds: PropTypes.func.isRequired,
   handleAddTask: PropTypes.func.isRequired,

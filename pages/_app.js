@@ -87,6 +87,16 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   }, [mode])
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (typeof window.__chromium_devtools_metrics_reporter !== 'function') {
+      window.__chromium_devtools_metrics_reporter = () => {}
+    }
+  }, [])
+
+  useEffect(() => {
     if (typeof window === 'undefined') return
 
     const savedMuted = localStorage.getItem('aq_site_audio_muted')
