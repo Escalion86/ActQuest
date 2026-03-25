@@ -1,50 +1,6 @@
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
-
-const toStringId = (value) => {
-  if (!value && value !== 0) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number') {
-    return value.toString()
-  }
-
-  if (value && typeof value.toString === 'function') {
-    const stringValue = value.toString()
-    return stringValue === '[object Object]' ? null : stringValue
-  }
-
-  return null
-}
-
-const ensureDateISOString = (value) => {
-  if (!value) {
-    return null
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return null
-  }
-
-  return date.toISOString()
-}
-
-const ensureRole = (value) => {
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value.trim()
-  }
-
-  if (value) {
-    return String(value)
-  }
-
-  return 'client'
-}
+import ensureRole from '@helpers/ensureRole'
+import { ensureDateISOString, toStringId } from '@helpers/idAndDate'
 
 const normalizeUserForAdmin = ({
   userDoc,

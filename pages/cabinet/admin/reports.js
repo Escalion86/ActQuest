@@ -1,56 +1,16 @@
 import { useMemo } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
-import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
+import CABINET_ROLE_LABELS from '@helpers/cabinetRoleLabels'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
+import useMergedSession from '@helpers/useMergedSession'
+import { ensureDateISOString, toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
-
-const roleLabels = {
-  client: 'Пользователь',
-  moder: 'Модератор',
-  admin: 'Администратор',
-  dev: 'Разработчик',
-  ban: 'Заблокирован',
-}
-
-const toStringId = (value) => {
-  if (!value && value !== 0) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number') {
-    return value.toString()
-  }
-
-  if (value && typeof value.toString === 'function') {
-    const stringValue = value.toString()
-    return stringValue === '[object Object]' ? null : stringValue
-  }
-
-  return null
-}
-
-const ensureDateISOString = (value) => {
-  if (!value) {
-    return null
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return null
-  }
-
-  return date.toISOString()
-}
 
 const createEmptyReports = () => ({
   summary: {
@@ -74,8 +34,7 @@ const createEmptyReports = () => ({
 })
 
 const ReportsPage = ({ initialReports, initialLocation, session: initialSession }) => {
-  const { data: session } = useSession()
-  const activeSession = session ?? initialSession ?? null
+  const { activeSession } = useMergedSession(initialSession)
   const { effectiveRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
   )
@@ -385,7 +344,7 @@ export async function getServerSideProps(context) {
         const roles = Object.entries(rolesMap)
           .map(([role, count]) => ({
             role,
-            label: roleLabels[role] ?? role,
+            label: CABINET_ROLE_LABELS[role] ?? role,
             count,
           }))
           .sort((a, b) => b.count - a.count)
@@ -458,7 +417,7 @@ export async function getServerSideProps(context) {
             id: `user-${toStringId(user?._id) ?? user?.telegramId ?? Math.random()}`,
             type: 'user',
             name: user?.name?.trim()?.length ? user.name : user?.username ? `@${user.username}` : `ID ${user?.telegramId}`,
-            description: `Роль: ${roleLabels[user?.role] ?? user?.role ?? 'Пользователь'}`,
+            description: `Роль: ${CABINET_ROLE_LABELS[user?.role] ?? user?.role ?? 'Пользователь'}`,
             updatedAt,
           })
         })

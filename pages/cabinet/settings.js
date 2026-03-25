@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
-import { useSession } from 'next-auth/react'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
@@ -11,7 +10,9 @@ import NeonCheckbox from '@components/NeonCheckbox'
 import isUserAdmin from '@helpers/isUserAdmin'
 import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
+import requestApiJson from '@helpers/requestApiJson'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
+import useMergedSession from '@helpers/useMergedSession'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const ensureSiteSettings = (value) => {
@@ -26,9 +27,9 @@ const ensureSiteSettings = (value) => {
   }
 }
 
-const SettingsPage = ({ initialSiteSettings }) => {
-  const { data: session } = useSession()
-  const { effectiveRole } = useCabinetRolePreview(session?.user?.role ?? 'client')
+const SettingsPage = ({ initialSiteSettings, session: initialSession }) => {
+  const { activeSession } = useMergedSession(initialSession)
+  const { effectiveRole } = useCabinetRolePreview(activeSession?.user?.role ?? 'client')
   const isAdmin = isUserAdmin({ role: effectiveRole })
   const [siteSettings, setSiteSettings] = useState(() => ensureSiteSettings(initialSiteSettings))
   const [saveState, setSaveState] = useState({ isSaving: false, isSaved: false, error: null })
@@ -48,7 +49,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
       return
     }
 
-    const location = session?.user?.location ?? null
+    const location = activeSession?.user?.location ?? null
 
     if (!location) {
       setSaveState({ isSaving: false, isSaved: false, error: 'Не удалось определить город для сохранения настроек.' })
@@ -79,25 +80,15 @@ const SettingsPage = ({ initialSiteSettings }) => {
     const method = siteSettings?.id ? 'PUT' : 'POST'
 
     try {
-      const response = await fetch(requestUrl, {
+      const { json } = await requestApiJson(requestUrl, {
         method,
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ data: payload }),
+        fallbackMessage: 'Не удалось сохранить изменения',
       })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText || 'Unknown error')
-      }
-
-      const json = await response.json()
-
-      if (!json?.success) {
-        throw new Error('Не удалось сохранить изменения')
-      }
 
       const normalized = normalizeSiteSettings(json.data)
 
@@ -111,7 +102,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
         error: 'Не удалось сохранить настройки. Попробуйте ещё раз.',
       })
     }
-  }, [isAdmin, session, siteSettings])
+  }, [activeSession, isAdmin, siteSettings])
 
   if (!isAdmin) {
     return (
@@ -249,6 +240,7 @@ const SettingsPage = ({ initialSiteSettings }) => {
 }
 
 SettingsPage.propTypes = {
+  session: PropTypes.object,
   initialSiteSettings: PropTypes.shape({
     id: PropTypes.string,
     supportPhone: PropTypes.string,
@@ -260,6 +252,7 @@ SettingsPage.propTypes = {
 }
 
 SettingsPage.defaultProps = {
+  session: null,
   initialSiteSettings: normalizeSiteSettings(),
 }
 

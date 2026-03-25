@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
-import { useSession } from 'next-auth/react'
 
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
@@ -16,7 +15,9 @@ import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import getSessionSafe from '@helpers/getSessionSafe'
 import canManageTransactions from '@helpers/canManageTransactions'
+import requestApiJson from '@helpers/requestApiJson'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
+import useMergedSession from '@helpers/useMergedSession'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const PAGE_SIZE = 10
@@ -85,8 +86,7 @@ const AdminTransactionsPage = ({
   initialTransactions,
   initialHasMore,
 }) => {
-  const { data: session } = useSession()
-  const activeSession = session ?? initialSession ?? null
+  const { activeSession } = useMergedSession(initialSession)
   const { effectiveRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
   )
@@ -109,11 +109,9 @@ const AdminTransactionsPage = ({
 
   const reload = useCallback(async () => {
     const query = toQueryString({ offset: 0, limit: PAGE_SIZE, filters })
-    const res = await fetch(`/api/cabinet/admin/transactions?${query}`)
-    const json = await res.json()
-    if (!res.ok || json?.success === false) {
-      throw new Error(json?.error || 'Не удалось загрузить транзакции')
-    }
+    const { json } = await requestApiJson(`/api/cabinet/admin/transactions?${query}`, {
+      fallbackMessage: 'Не удалось загрузить транзакции',
+    })
     setTransactions(Array.isArray(json?.data) ? json.data : [])
     setHasMore(Boolean(json?.meta?.hasMore))
   }, [filters])
@@ -127,11 +125,9 @@ const AdminTransactionsPage = ({
         limit: PAGE_SIZE,
         filters,
       })
-      const res = await fetch(`/api/cabinet/admin/transactions?${query}`)
-      const json = await res.json()
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось загрузить ещё')
-      }
+      const { json } = await requestApiJson(`/api/cabinet/admin/transactions?${query}`, {
+        fallbackMessage: 'Не удалось загрузить ещё',
+      })
       setTransactions((prev) => [
         ...prev,
         ...(Array.isArray(json?.data) ? json.data : []),
@@ -157,11 +153,9 @@ const AdminTransactionsPage = ({
         limit: PAGE_SIZE,
         filters: nextFilters,
       })
-      const res = await fetch(`/api/cabinet/admin/transactions?${query}`)
-      const json = await res.json()
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось загрузить транзакции')
-      }
+      const { json } = await requestApiJson(`/api/cabinet/admin/transactions?${query}`, {
+        fallbackMessage: 'Не удалось загрузить транзакции',
+      })
       setTransactions(Array.isArray(json?.data) ? json.data : [])
       setHasMore(Boolean(json?.meta?.hasMore))
     } catch (error) {
@@ -207,15 +201,12 @@ const AdminTransactionsPage = ({
             }
           : { url: '/api/cabinet/admin/transactions', data: basePayload }
 
-      const res = await fetch(request.url, {
+      await requestApiJson(request.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: request.data }),
+        fallbackMessage: 'Не удалось создать транзакцию',
       })
-      const json = await res.json()
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось создать транзакцию')
-      }
 
       setForm(defaultForm)
       setSelectedUserOption(null)
@@ -235,13 +226,10 @@ const AdminTransactionsPage = ({
       setIsDeletingId(id)
       setFeedback(null)
       try {
-        const res = await fetch(`/api/cabinet/admin/transactions/${id}`, {
+        await requestApiJson(`/api/cabinet/admin/transactions/${id}`, {
           method: 'DELETE',
+          fallbackMessage: 'Не удалось удалить транзакцию',
         })
-        const json = await res.json()
-        if (!res.ok || json?.success === false) {
-          throw new Error(json?.error || 'Не удалось удалить транзакцию')
-        }
         setFeedback({ type: 'success', message: 'Транзакция удалена' })
         await reload()
       } catch (error) {
@@ -257,15 +245,12 @@ const AdminTransactionsPage = ({
     setIsUpdatingId(id)
     setFeedback(null)
     try {
-      const res = await fetch(`/api/cabinet/admin/transactions/${id}`, {
+      await requestApiJson(`/api/cabinet/admin/transactions/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: { status } }),
+        fallbackMessage: 'Не удалось обновить транзакцию',
       })
-      const json = await res.json()
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось обновить транзакцию')
-      }
       setFeedback({ type: 'success', message: 'Статус транзакции обновлён' })
       await reload()
     } catch (error) {

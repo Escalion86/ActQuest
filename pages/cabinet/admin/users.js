@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetButton from '@components/cabinet/CabinetButton'
@@ -18,47 +17,19 @@ import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import fetchAdminUsersForCabinet from '@helpers/fetchAdminUsersForCabinet'
+import requestApiJson from '@helpers/requestApiJson'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
+import useMergedSession from '@helpers/useMergedSession'
+import CABINET_ROLE_LABELS from '@helpers/cabinetRoleLabels'
+import ensureRole from '@helpers/ensureRole'
 import { USERS_ROLES } from '@helpers/constants'
+import { ensureDateISOString } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const USERS_PAGE_SIZE = 10
 const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
 const modalItemTitleClass = 'aq-modal-item-title text-lg font-semibold'
 const modalItemSmallTitleClass = 'aq-modal-item-title text-sm font-semibold'
-
-const roleLabels = {
-  client: 'Пользователь',
-  moder: 'Модератор',
-  admin: 'Администратор',
-  dev: 'Разработчик',
-  ban: 'Заблокирован',
-}
-
-const ensureDateISOString = (value) => {
-  if (!value) {
-    return null
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return null
-  }
-
-  return date.toISOString()
-}
-
-const ensureRole = (value) => {
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value.trim()
-  }
-
-  if (value) {
-    return String(value)
-  }
-
-  return 'client'
-}
 
 const cloneUser = (user) => {
   if (!user) {
@@ -82,8 +53,7 @@ const ManageUsersPage = ({
 }) => {
   const safeInitialUsers = Array.isArray(initialUsers) ? initialUsers : []
   const router = useRouter()
-  const { data: session } = useSession()
-  const activeSession = session ?? initialSession ?? null
+  const { activeSession } = useMergedSession(initialSession)
   const location = activeSession?.user?.location ?? initialLocation ?? null
   const { effectiveRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
@@ -152,13 +122,13 @@ const ManageUsersPage = ({
     const knownRoles = new Set(baseOptions.map((option) => option.value))
 
     if (!knownRoles.has('ban')) {
-      baseOptions.push({ value: 'ban', name: roleLabels.ban })
+      baseOptions.push({ value: 'ban', name: CABINET_ROLE_LABELS.ban })
       knownRoles.add('ban')
     }
 
     users.forEach((user) => {
       if (user.role && !knownRoles.has(user.role)) {
-        baseOptions.push({ value: user.role, name: roleLabels[user.role] ?? user.role })
+        baseOptions.push({ value: user.role, name: CABINET_ROLE_LABELS[user.role] ?? user.role })
         knownRoles.add(user.role)
       }
     })
@@ -308,7 +278,7 @@ const ManageUsersPage = ({
     setFeedback(null)
 
     try {
-      const response = await fetch(
+      const { json } = await requestApiJson(
         `/api/${location}/custom?collection=users&id=${selectedUser.id}`,
         {
           method: 'PUT',
@@ -317,19 +287,9 @@ const ManageUsersPage = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ data: { role: selectedUser.role } }),
+          fallbackMessage: 'Не удалось сохранить изменения',
         }
       )
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText || 'Не удалось обновить пользователя')
-      }
-
-      const json = await response.json()
-
-      if (!json?.success) {
-        throw new Error(json?.error || 'Не удалось сохранить изменения')
-      }
 
       const updatedDoc = json.data ?? {}
       const baseProfile = normalizeUserProfile(updatedDoc)
@@ -382,7 +342,7 @@ const ManageUsersPage = ({
     setFeedback(null)
 
     try {
-      const response = await fetch('/api/cabinet/users/request-phone', {
+      await requestApiJson('/api/cabinet/users/request-phone', {
         method: 'POST',
         headers: {
           Accept: 'application/json',
@@ -391,16 +351,8 @@ const ManageUsersPage = ({
         body: JSON.stringify({
           userId: selectedUser.globalUserId || selectedUser.id,
         }),
+        fallbackMessage: 'Не удалось отправить запрос номера через Telegram',
       })
-
-      const json = await response.json().catch(() => null)
-
-      if (!response.ok || !json?.success) {
-        throw new Error(
-          (json && (json.error || json.message)) ||
-            'Не удалось отправить запрос номера через Telegram',
-        )
-      }
 
       setFeedback({
         type: 'success',
@@ -433,12 +385,9 @@ const ManageUsersPage = ({
         offset: String(users.length),
         limit: String(USERS_PAGE_SIZE),
       })
-      const response = await fetch(`/api/cabinet/admin/users-list?${params.toString()}`)
-      const json = await response.json()
-
-      if (!response.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось загрузить пользователей')
-      }
+      const { json } = await requestApiJson(`/api/cabinet/admin/users-list?${params.toString()}`, {
+        fallbackMessage: 'Не удалось загрузить пользователей',
+      })
 
       const nextUsers = Array.isArray(json?.data) ? json.data : []
       const nextHasMore = Boolean(json?.meta?.hasMore)
@@ -572,7 +521,7 @@ const ManageUsersPage = ({
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="px-2 py-1 text-xs font-semibold text-white bg-primary rounded-full">
-                                {roleLabels[user.role] ?? user.role}
+                                {CABINET_ROLE_LABELS[user.role] ?? user.role}
                               </span>
                               <CardActionIconButton
                                 as="span"

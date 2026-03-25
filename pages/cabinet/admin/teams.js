@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
-import { useSession } from 'next-auth/react'
 
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
@@ -16,7 +15,9 @@ import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import { getNounUsers } from '@helpers/getNoun'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
+import requestApiJson from '@helpers/requestApiJson'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
+import useMergedSession from '@helpers/useMergedSession'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
@@ -57,8 +58,7 @@ const AdminTeamsPage = ({
   session: initialSession,
 }) => {
   const safeInitialTeams = Array.isArray(initialTeams) ? initialTeams : []
-  const { data: session } = useSession()
-  const activeSession = session ?? initialSession ?? null
+  const { activeSession } = useMergedSession(initialSession)
   const location = activeSession?.user?.location ?? initialLocation ?? null
   const { effectiveRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
@@ -286,17 +286,12 @@ const AdminTeamsPage = ({
     setFeedback(null)
 
     try {
-      const response = await fetch(`/api/${location}/teams/${selectedTeam.id}`, {
+      const { json } = await requestApiJson(`/api/${location}/teams/${selectedTeam.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: buildTeamUpdatePayload(selectedTeam) }),
+        fallbackMessage: 'Не удалось сохранить команду',
       })
-
-      const json = await response.json()
-
-      if (!response.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось сохранить команду')
-      }
 
       const updatedTeam = {
         ...selectedTeam,
@@ -386,14 +381,10 @@ const AdminTeamsPage = ({
       setFeedback(null)
 
       try {
-        const response = await fetch(`/api/${location}/teamsusers/${memberId}`, {
+        await requestApiJson(`/api/${location}/teamsusers/${memberId}`, {
           method: 'DELETE',
+          fallbackMessage: 'Не удалось удалить участника',
         })
-        const json = await response.json()
-
-        if (!response.ok || json?.success === false) {
-          throw new Error(json?.error || 'Не удалось удалить участника')
-        }
 
         const updatedMembers = (selectedTeam.members ?? []).filter(
           (item) => item.id !== memberId
@@ -559,12 +550,9 @@ const AdminTeamsPage = ({
         params.set('search', searchQuery)
       }
 
-      const response = await fetch(`/api/cabinet/admin/teams-list?${params.toString()}`)
-      const json = await response.json()
-
-      if (!response.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось загрузить команды')
-      }
+      const { json } = await requestApiJson(`/api/cabinet/admin/teams-list?${params.toString()}`, {
+        fallbackMessage: 'Не удалось загрузить команды',
+      })
 
       const nextTeams = Array.isArray(json?.data) ? json.data : []
       const nextHasMore = Boolean(json?.meta?.hasMore)
@@ -607,12 +595,9 @@ const AdminTeamsPage = ({
           params.set('search', searchQuery)
         }
 
-        const response = await fetch(`/api/cabinet/admin/teams-list?${params.toString()}`)
-        const json = await response.json()
-
-        if (!response.ok || json?.success === false) {
-          throw new Error(json?.error || 'Не удалось загрузить команды')
-        }
+        const { json } = await requestApiJson(`/api/cabinet/admin/teams-list?${params.toString()}`, {
+          fallbackMessage: 'Не удалось загрузить команды',
+        })
 
         if (isCancelled) {
           return

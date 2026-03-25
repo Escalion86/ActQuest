@@ -1,12 +1,12 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import canManageTransactions from '@helpers/canManageTransactions'
 import isUserAdmin from '@helpers/isUserAdmin'
 import getSessionSafe from '@helpers/getSessionSafe'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
+import useMergedSession from '@helpers/useMergedSession'
 
 const adminTools = [
   {
@@ -43,9 +43,9 @@ const adminTools = [
   },
 ]
 
-const AdminPage = () => {
-  const { data: session } = useSession()
-  const { effectiveRole } = useCabinetRolePreview(session?.user?.role ?? 'client')
+const AdminPage = ({ session: initialSession }) => {
+  const { activeSession } = useMergedSession(initialSession)
+  const { effectiveRole } = useCabinetRolePreview(activeSession?.user?.role ?? 'client')
   const isAdmin = isUserAdmin({ role: effectiveRole })
   const tools = canManageTransactions({ role: effectiveRole })
     ? adminTools

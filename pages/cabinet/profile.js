@@ -12,6 +12,7 @@ import ImagesInput from '@components/cabinet/ImagesInput'
 import NoticeBanner from '@components/NoticeBanner'
 import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
+import requestApiJson from '@helpers/requestApiJson'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const preferenceOptions = [
@@ -115,25 +116,15 @@ const ProfilePage = ({ initialProfile }) => {
       }
 
       try {
-        const response = await fetch('/api/cabinet/users/profile', {
+        const { json } = await requestApiJson('/api/cabinet/users/profile', {
           method: 'PUT',
           headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
+          fallbackMessage: 'Не удалось сохранить изменения',
         })
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(errorText || 'Unknown error')
-        }
-
-        const json = await response.json()
-
-        if (!json?.success) {
-          throw new Error('Не удалось сохранить изменения')
-        }
 
         const normalized = normalizeUserProfile(json.data)
 

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
-import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
@@ -11,6 +10,7 @@ import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
 import TeamEditModal from '@components/modals/TeamEditModal'
 import TeamJoinModal from '@components/modals/TeamJoinModal'
 import getSessionSafe from '@helpers/getSessionSafe'
+import requestApiJson from '@helpers/requestApiJson'
 import formatDate from '@helpers/formatDate'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
@@ -19,6 +19,7 @@ import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import useSnackbar from '@helpers/useSnackbar'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
+import useMergedSession from '@helpers/useMergedSession'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const MAX_TEAMS_PER_USER = 3
@@ -48,18 +49,6 @@ const buildTeamUpdatePayload = (team) => {
   }
 }
 
-const getErrorMessage = (value, fallbackMessage) => {
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value
-  }
-
-  if (value && typeof value.message === 'string' && value.message.trim().length > 0) {
-    return value.message
-  }
-
-  return fallbackMessage
-}
-
 const normalizeTelegramId = (value) => {
   if (value === null || value === undefined) {
     return null
@@ -81,8 +70,7 @@ const TeamsPage = ({
   initialLocation,
   session: initialSession,
 }) => {
-  const { data: session } = useSession()
-  const activeSession = session ?? initialSession ?? null
+  const { activeSession } = useMergedSession(initialSession)
   const location = activeSession?.user?.location ?? initialLocation ?? null
   const { effectiveRole: userRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
@@ -283,14 +271,9 @@ const TeamsPage = ({
         return []
       }
 
-      const response = await fetch(`/api/cabinet/teams?${params.toString()}`)
-      const json = await response.json()
-
-      if (!response.ok || json?.success === false) {
-        throw new Error(
-          getErrorMessage(json?.error, 'Не удалось загрузить данные команды')
-        )
-      }
+      const { json } = await requestApiJson(`/api/cabinet/teams?${params.toString()}`, {
+        fallbackMessage: 'Не удалось загрузить данные команды',
+      })
 
       return Array.isArray(json?.data) ? json.data : []
     },
@@ -483,22 +466,15 @@ const TeamsPage = ({
         open: Boolean(newTeamOpen),
       })
 
-      const response = await fetch(
+      const { json } = await requestApiJson(
         `/api/${location}/custom?collection=teams`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: createPayload }),
+          fallbackMessage: 'Не удалось создать команду',
         }
       )
-
-      const json = await response.json()
-
-      if (!response.ok || json?.success === false) {
-        throw new Error(
-          getErrorMessage(json?.error, 'Не удалось создать команду')
-        )
-      }
 
       const createdTeamIdRaw = json?.data?._id ?? json?.data?.id
       const createdTeamId =
@@ -510,7 +486,7 @@ const TeamsPage = ({
         throw new Error('Не удалось получить идентификатор новой команды')
       }
 
-      const membershipResponse = await fetch(
+      await requestApiJson(
         `/api/${location}/custom?collection=teamsusers`,
         {
           method: 'POST',
@@ -522,19 +498,9 @@ const TeamsPage = ({
               role: 'capitan',
             },
           }),
+          fallbackMessage: 'Не удалось добавить вас в новую команду',
         }
       )
-
-      const membershipJson = await membershipResponse.json()
-
-      if (!membershipResponse.ok || membershipJson?.success === false) {
-        throw new Error(
-          getErrorMessage(
-            membershipJson?.error,
-            'Не удалось добавить вас в новую команду'
-          )
-        )
-      }
 
       const [freshTeam] = await fetchTeamsSnapshot([createdTeamId])
 
@@ -625,16 +591,9 @@ const TeamsPage = ({
     setIsJoiningTeam(true)
 
     try {
-      const teamResponse = await fetch(
-        `/api/${location}/teams/${trimmedTeamId}`
-      )
-      const teamJson = await teamResponse.json()
-
-      if (!teamResponse.ok || teamJson?.success === false) {
-        throw new Error(
-          getErrorMessage(teamJson?.error, 'Команда не найдена')
-        )
-      }
+      const { json: teamJson } = await requestApiJson(`/api/${location}/teams/${trimmedTeamId}`, {
+        fallbackMessage: 'Команда не найдена',
+      })
 
       const rawOpen = teamJson?.data?.open
       const isTeamOpen =
@@ -646,7 +605,7 @@ const TeamsPage = ({
         )
       }
 
-      const membershipResponse = await fetch(
+      await requestApiJson(
         `/api/${location}/custom?collection=teamsusers`,
         {
           method: 'POST',
@@ -658,19 +617,9 @@ const TeamsPage = ({
               role: 'participant',
             },
           }),
+          fallbackMessage: 'Не удалось присоединиться к команде',
         }
       )
-
-      const membershipJson = await membershipResponse.json()
-
-      if (!membershipResponse.ok || membershipJson?.success === false) {
-        throw new Error(
-          getErrorMessage(
-            membershipJson?.error,
-            'Не удалось присоединиться к команде'
-          )
-        )
-      }
 
       const [freshTeam] = await fetchTeamsSnapshot([trimmedTeamId])
 
@@ -725,22 +674,15 @@ const TeamsPage = ({
     setIsSaving(true)
 
     try {
-      const response = await fetch(
+      const { json } = await requestApiJson(
         `/api/${location}/teams/${selectedTeam.id}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: buildTeamUpdatePayload(selectedTeam) }),
+          fallbackMessage: 'Не удалось сохранить команду',
         }
       )
-
-      const json = await response.json()
-
-      if (!response.ok || json?.success === false) {
-        throw new Error(
-          getErrorMessage(json?.error, 'Не удалось сохранить команду')
-        )
-      }
 
       const updatedTeam = {
         ...selectedTeam,
@@ -811,19 +753,13 @@ const TeamsPage = ({
       setMemberActionId(memberId)
 
       try {
-        const response = await fetch(
+        await requestApiJson(
           `/api/${location}/teamsusers/${memberId}`,
           {
             method: 'DELETE',
+            fallbackMessage: 'Не удалось удалить участника',
           }
         )
-        const json = await response.json()
-
-        if (!response.ok || json?.success === false) {
-          throw new Error(
-            getErrorMessage(json?.error, 'Не удалось удалить участника')
-          )
-        }
 
         const updatedMembers = (selectedTeam.members ?? []).filter(
           (item) => item.id !== memberId
@@ -1404,3 +1340,4 @@ export async function getServerSideProps(context) {
 }
 
 export default TeamsPage
+

@@ -1,17 +1,7 @@
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@pages/api/auth/[...nextauth]'
+import resolveSessionUserFilter from '@helpers/resolveSessionUserFilter'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
-
-const resolveUserFilter = (sessionUser) => {
-  const globalUserId = sessionUser?.globalUserId || sessionUser?._id || null
-  if (globalUserId) return { _id: globalUserId }
-
-  if (sessionUser?.phone) return { phone: Number(sessionUser.phone) }
-  if (sessionUser?.telegramId) return { telegramId: Number(sessionUser.telegramId) }
-  if (sessionUser?.vkId) return { vkId: Number(sessionUser.vkId) }
-
-  return null
-}
 
 const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '')
 
@@ -39,7 +29,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: 'Необходима авторизация' })
   }
 
-  const filter = resolveUserFilter(session.user)
+  const filter = resolveSessionUserFilter(session.user)
   if (!filter) {
     return res.status(400).json({
       success: false,

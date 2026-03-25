@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
@@ -16,11 +15,15 @@ import NoticeBanner from '@components/NoticeBanner'
 import GameModals from '@components/modals/GameModals'
 import GameStatusModal from '@components/modals/GameStatusModal'
 import getSessionSafe from '@helpers/getSessionSafe'
+import extractErrorMessage from '@helpers/extractErrorMessage'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
+import { toStringId } from '@helpers/idAndDate'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import fetchGamesForCabinet from '@helpers/fetchGamesForCabinet'
+import requestApiJson from '@helpers/requestApiJson'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
+import useMergedSession from '@helpers/useMergedSession'
 import { getNounTeams } from '@helpers/getNoun'
 import NeonCheckbox from '@components/NeonCheckbox'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -140,26 +143,6 @@ const gameLocationOptions = Object.entries(LOCATIONS)
       ? value.townRu.charAt(0).toUpperCase() + value.townRu.slice(1)
       : key.toUpperCase(),
   }))
-
-const extractErrorMessage = (error) => {
-  if (!error) {
-    return null
-  }
-
-  if (typeof error === 'string') {
-    return error
-  }
-
-  if (typeof error.message === 'string' && error.message.trim().length > 0) {
-    return error.message
-  }
-
-  if (typeof error.error === 'string' && error.error.trim().length > 0) {
-    return error.error
-  }
-
-  return null
-}
 
 const isClosedStatus = (status) =>
   (typeof status === 'string' ? status.toLowerCase() : String(status)) === 'closed'
@@ -406,8 +389,7 @@ const GamesPage = ({
   availableModerators: initialAvailableModerators,
 }) => {
   const router = useRouter()
-  const { data: session } = useSession()
-  const activeSession = session ?? initialSession ?? null
+  const { activeSession } = useMergedSession(initialSession)
   const location = activeSession?.user?.location ?? initialLocation ?? null
   const { effectiveRole: userRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
@@ -805,14 +787,9 @@ const GamesPage = ({
         params.set('location', locationValue)
       }
 
-      const response = await fetch(`/api/cabinet/games-list?${params.toString()}`)
-      const json = await response.json()
-
-      if (!response.ok || json?.success === false) {
-        throw new Error(
-          extractErrorMessage(json?.error) || 'Не удалось загрузить список игр'
-        )
-      }
+      const { json } = await requestApiJson(`/api/cabinet/games-list?${params.toString()}`, {
+        fallbackMessage: 'Не удалось загрузить список игр',
+      })
 
       const nextGames = Array.isArray(json?.data) ? json.data : []
       const nextHasMore = Boolean(json?.meta?.hasMore)
@@ -957,10 +934,14 @@ const GamesPage = ({
         limit: '200',
       })
 
-      const membershipsResponse = await fetch(
-        `/api/${registerApiLocation}/custom?${membershipsParams.toString()}`
-      )
-      const membershipsJson = await membershipsResponse.json()
+      const { response: membershipsResponse, json: membershipsJson } =
+        await requestApiJson(
+          `/api/${registerApiLocation}/custom?${membershipsParams.toString()}`,
+          {
+            fallbackMessage: 'Не удалось загрузить список команд',
+            throwOnHttpError: false,
+          }
+        )
 
       if (!membershipsResponse.ok || membershipsJson?.success === false) {
         if (
@@ -983,27 +964,6 @@ const GamesPage = ({
         ? membershipsJson.data
         : []
 
-      const toStringId = (value) => {
-        if (!value) {
-          return null
-        }
-
-        if (typeof value === 'string') {
-          return value
-        }
-
-        if (typeof value === 'object' && typeof value.toString === 'function') {
-          const stringValue = value.toString()
-          return stringValue === '[object Object]' ? null : stringValue
-        }
-
-        if (typeof value === 'number') {
-          return value.toString()
-        }
-
-        return null
-      }
-
       const teamIds = Array.from(
         new Set(
           memberships
@@ -1023,10 +983,13 @@ const GamesPage = ({
         teamIds: teamIds.join(','),
       })
 
-      const teamsResponse = await fetch(
-        `/api/cabinet/teams?${teamsParams.toString()}`
+      const { response: teamsResponse, json: teamsJson } = await requestApiJson(
+        `/api/cabinet/teams?${teamsParams.toString()}`,
+        {
+          fallbackMessage: 'Не удалось загрузить данные команд',
+          throwOnHttpError: false,
+        }
       )
-      const teamsJson = await teamsResponse.json()
 
       if (!teamsResponse.ok || teamsJson?.success === false) {
         if (
@@ -1131,18 +1094,14 @@ const GamesPage = ({
     setRegisterFeedback(null)
 
     try {
-      const gameResponse = await fetch(
+      const { json: gameJson } = await requestApiJson(
         `/api/${registerApiLocation}/custom?collection=games&id=${encodeURIComponent(
           trimmedGameId
-        )}`
+        )}`,
+        {
+          fallbackMessage: 'Игра не найдена',
+        }
       )
-      const gameJson = await gameResponse.json()
-
-      if (!gameResponse.ok || gameJson?.success === false) {
-        throw new Error(
-          extractErrorMessage(gameJson?.error) || 'Игра не найдена'
-        )
-      }
 
       const gameData = gameJson?.data ?? null
       const gameStatus = (gameData?.status ?? '').toString().toLowerCase()
@@ -1158,10 +1117,13 @@ const GamesPage = ({
         limit: '1',
       })
 
-      const existingResponse = await fetch(
-        `/api/${registerApiLocation}/custom?${existingParams.toString()}`
+      const { response: existingResponse, json: existingJson } = await requestApiJson(
+        `/api/${registerApiLocation}/custom?${existingParams.toString()}`,
+        {
+          fallbackMessage: 'Не удалось проверить регистрацию команды',
+          throwOnHttpError: false,
+        }
       )
-      const existingJson = await existingResponse.json()
 
       if (
         existingResponse.ok &&
@@ -1171,27 +1133,17 @@ const GamesPage = ({
         throw new Error('Команда уже зарегистрирована на эту игру')
       }
 
-      const registerResponse = await fetch(
-        `/api/${registerApiLocation}/custom?collection=gamesteams`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            data: {
-              teamId: registerTeamId,
-              gameId: trimmedGameId,
-            },
-          }),
-        }
-      )
-      const registerJson = await registerResponse.json()
-
-      if (!registerResponse.ok || registerJson?.success === false) {
-        throw new Error(
-          extractErrorMessage(registerJson?.error) ||
-            'Не удалось зарегистрироваться на игру'
-        )
-      }
+      await requestApiJson(`/api/${registerApiLocation}/custom?collection=gamesteams`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            teamId: registerTeamId,
+            gameId: trimmedGameId,
+          },
+        }),
+        fallbackMessage: 'Не удалось зарегистрироваться на игру',
+      })
 
       setRegisterFeedback({
         type: 'success',
@@ -1341,22 +1293,15 @@ const GamesPage = ({
         creatorTelegramId: currentUserTelegramIdNumber,
       }
 
-      const response = await fetch(
+      const { json } = await requestApiJson(
         `/api/${location}/custom?collection=games`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: payload }),
+          fallbackMessage: 'Не удалось создать игру',
         }
       )
-
-      const json = await response.json()
-
-      if (!response.ok || json?.success === false) {
-        throw new Error(
-          extractErrorMessage(json?.error) || 'Не удалось создать игру'
-        )
-      }
 
       const createdGame = normalizeGameForCabinet({
         ...json.data,
@@ -1640,17 +1585,12 @@ const GamesPage = ({
     setFeedback(null)
 
     try {
-      const response = await fetch(`/api/${gameApiLocation}/games/${gameToSave.id}`, {
+      const { json } = await requestApiJson(`/api/${gameApiLocation}/games/${gameToSave.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: buildUpdatePayload(gameToSave) }),
+        fallbackMessage: 'Не удалось сохранить игру',
       })
-
-      const json = await response.json()
-
-      if (!response.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось сохранить игру')
-      }
 
       const normalizedGame = normalizeGameForCabinet({
         ...json.data,
@@ -2153,10 +2093,14 @@ const GamesPage = ({
         allTeamIds.forEach((id) => detailedParams.append('teamIds', id))
 
         try {
-          const detailedResponse = await fetch(
-            `/api/cabinet/teams?${detailedParams.toString()}`
-          )
-          const detailedJson = await detailedResponse.json()
+          const { response: detailedResponse, json: detailedJson } =
+            await requestApiJson(
+              `/api/cabinet/teams?${detailedParams.toString()}`,
+              {
+                fallbackMessage: 'Не удалось загрузить детальную информацию о командах',
+                throwOnHttpError: false,
+              }
+            )
 
           if (detailedResponse.ok && detailedJson?.success !== false) {
             const detailedTeams = Array.isArray(detailedJson?.data)
@@ -2282,7 +2226,7 @@ const GamesPage = ({
     setTeamsModalState((prev) => ({ ...prev, error: null }))
 
     try {
-      const response = await fetch(`/api/${selectedGameApiLocation}/gamesteams`, {
+      await requestApiJson(`/api/${selectedGameApiLocation}/gamesteams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2291,14 +2235,8 @@ const GamesPage = ({
             gameId: selectedGame.id,
           },
         }),
+        fallbackMessage: 'Не удалось добавить команду',
       })
-
-      const json = await response.json()
-      if (!response.ok || json?.success === false) {
-        throw new Error(
-          extractErrorMessage(json?.error) || 'Не удалось добавить команду'
-        )
-      }
 
       await loadTeamsModalData()
     } catch (error) {
@@ -2324,16 +2262,10 @@ const GamesPage = ({
       setTeamsModalState((prev) => ({ ...prev, error: null }))
 
       try {
-        const response = await fetch(`/api/${selectedGameApiLocation}/gamesteams/${gameTeamId}`, {
+        await requestApiJson(`/api/${selectedGameApiLocation}/gamesteams/${gameTeamId}`, {
           method: 'DELETE',
+          fallbackMessage: 'Не удалось удалить команду',
         })
-
-        const json = await response.json()
-        if (!response.ok || json?.success === false) {
-          throw new Error(
-            extractErrorMessage(json?.error) || 'Не удалось удалить команду'
-          )
-        }
 
         await loadTeamsModalData()
       } catch (error) {
@@ -2450,14 +2382,12 @@ const GamesPage = ({
 
     try {
       const runGameValidation = async () => {
-        const response = await fetch(
-          `/api/${gameApiLocation}/games/check/${statusModalGame.id}`
+        const { json } = await requestApiJson(
+          `/api/${gameApiLocation}/games/check/${statusModalGame.id}`,
+          {
+            fallbackMessage: 'Не удалось выполнить проверку игры',
+          }
         )
-        const json = await response.json()
-
-        if (!response.ok || json?.success === false) {
-          throw new Error(json?.error || 'Не удалось выполнить проверку игры')
-        }
 
         const errors = Array.isArray(json?.data?.errors) ? json.data.errors : []
         const hasErrors = Boolean(json?.data?.hasErrors) || errors.length > 0
@@ -2482,7 +2412,6 @@ const GamesPage = ({
       }
 
       setStatusValidationResult(null)
-      let response = null
       let successMessage = 'Статус игры обновлён'
 
       if (actionId === 'start_game') {
@@ -2505,14 +2434,14 @@ const GamesPage = ({
           return
         }
 
-        response = await fetch(
-          `/api/${gameApiLocation}/games/start/${statusModalGame.id}`
-        )
+        await requestApiJson(`/api/${gameApiLocation}/games/start/${statusModalGame.id}`, {
+          fallbackMessage: 'Не удалось обновить статус игры',
+        })
         successMessage = 'Игра запущена'
       } else if (actionId === 'stop_game') {
-        response = await fetch(
-          `/api/${gameApiLocation}/games/stop/${statusModalGame.id}`
-        )
+        await requestApiJson(`/api/${gameApiLocation}/games/stop/${statusModalGame.id}`, {
+          fallbackMessage: 'Не удалось обновить статус игры',
+        })
         successMessage = 'Игра остановлена'
       } else {
         let nextStatus = null
@@ -2541,19 +2470,15 @@ const GamesPage = ({
           return
         }
 
-        response = await fetch(
+        await requestApiJson(
           `/api/${gameApiLocation}/games/${statusModalGame.id}`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ data: { status: nextStatus } }),
+            fallbackMessage: 'Не удалось обновить статус игры',
           }
         )
-      }
-
-      const json = await response.json()
-      if (!response.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось обновить статус игры')
       }
 
       await fetchGamesPage({
@@ -2665,14 +2590,12 @@ const GamesPage = ({
           params.set('location', locationForApi)
         }
 
-        const response = await fetch(
-          `/api/cabinet/games/${encodeURIComponent(game.id)}/result?${params.toString()}`
+        const { json } = await requestApiJson(
+          `/api/cabinet/games/${encodeURIComponent(game.id)}/result?${params.toString()}`,
+          {
+            fallbackMessage: 'Не удалось загрузить результаты игры',
+          }
         )
-        const json = await response.json()
-
-        if (!response.ok || json?.success === false) {
-          throw new Error(extractErrorMessage(json?.error) || 'Не удалось загрузить результаты игры')
-        }
 
         const nextData = {
           gameId: json?.data?.gameId || game.id,
@@ -2749,19 +2672,15 @@ const GamesPage = ({
     setFeedback(null)
 
     try {
-      const response = await fetch(
+      const { json } = await requestApiJson(
         `/api/cabinet/games/${encodeURIComponent(selectedGame.id)}/result`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ location: locationForApi }),
+          fallbackMessage: 'Не удалось сформировать результаты',
         }
       )
-
-      const json = await response.json()
-      if (!response.ok || json?.success === false) {
-        throw new Error(extractErrorMessage(json?.error) || 'Не удалось сформировать результаты')
-      }
 
       const nextData = {
         gameId: json?.data?.gameId || selectedGame.id,

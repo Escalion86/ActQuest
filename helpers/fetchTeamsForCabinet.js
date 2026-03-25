@@ -1,25 +1,5 @@
 import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
-
-const toStringId = (value) => {
-  if (!value) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number') {
-    return value.toString()
-  }
-
-  if (value && typeof value.toString === 'function') {
-    const stringValue = value.toString()
-    return stringValue === '[object Object]' ? null : stringValue
-  }
-
-  return null
-}
+import { toStringId } from '@helpers/idAndDate'
 
 const ensureArray = (value) => (Array.isArray(value) ? value : [])
 

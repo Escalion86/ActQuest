@@ -1,39 +1,20 @@
 import Head from 'next/head'
 import PropTypes from 'prop-types'
 import { useMemo, useState } from 'react'
-import { useSession } from 'next-auth/react'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import Modal from '@components/Modal'
 import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
 import getSessionSafe from '@helpers/getSessionSafe'
 import { resolveCabinetCallback } from '@helpers/cabinetAuth'
+import resolveSessionUserFilter from '@helpers/resolveSessionUserFilter'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
+import { toStringId } from '@helpers/idAndDate'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
+import useMergedSession from '@helpers/useMergedSession'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
-
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value)
-  }
-
-  if (typeof value.toString === 'function') {
-    const stringValue = value.toString()
-    return stringValue && stringValue !== '[object Object]' ? stringValue : null
-  }
-
-  return null
-}
 
 const normalizeLocationName = (locationKey) => {
   const location = locationKey ? LOCATIONS[locationKey] : null
@@ -44,17 +25,6 @@ const normalizeLocationName = (locationKey) => {
   }
 
   return rawName.charAt(0).toUpperCase() + rawName.slice(1)
-}
-
-const resolveUserFilter = (sessionUser) => {
-  const globalUserId = sessionUser?.globalUserId || sessionUser?._id || null
-  if (globalUserId) return { _id: globalUserId }
-
-  if (sessionUser?.phone) return { phone: Number(sessionUser.phone) }
-  if (sessionUser?.telegramId) return { telegramId: Number(sessionUser.telegramId) }
-  if (sessionUser?.vkId) return { vkId: Number(sessionUser.vkId) }
-
-  return null
 }
 
 const isUpcomingGame = (game, nowDate) => {
@@ -209,8 +179,7 @@ const CabinetDashboard = ({
   session: initialSession,
   dashboardData: initialDashboardData,
 }) => {
-  const { data: session, status } = useSession()
-  const activeSession = session ?? initialSession ?? null
+  const { activeSession, status } = useMergedSession(initialSession)
 
   const dashboardData = initialDashboardData ?? {
     cityName: 'Город не выбран',
@@ -825,7 +794,7 @@ export async function getServerSideProps(context) {
     const GamesModel = db.model('Games')
     const SiteSettingsModel = db.model('SiteSettings')
 
-    const userFilter = resolveUserFilter(session.user)
+    const userFilter = resolveSessionUserFilter(session.user)
     const sessionUserId = toStringId(session?.user?.globalUserId || session?.user?._id)
     const sessionTelegramId =
       session?.user?.telegramId === null || session?.user?.telegramId === undefined

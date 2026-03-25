@@ -1,3 +1,5 @@
+import { ensureDateISOString } from '@helpers/idAndDate'
+
 const ensureString = (value, fallback = '') => {
   if (typeof value === 'string') {
     return value
@@ -42,19 +44,6 @@ const ensureBoolean = (value, fallback = false) => {
   if (value === 'false') return false
 
   return Boolean(value)
-}
-
-const ensureDateISOString = (value) => {
-  if (!value) {
-    return null
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return null
-  }
-
-  return date.toISOString()
 }
 
 const normalizePrices = (prices = []) => {

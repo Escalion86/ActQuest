@@ -8,8 +8,16 @@ import AuthSplitLayout from '@components/cabinet/auth/AuthSplitLayout'
 import AuthLocationSelect from '@components/cabinet/auth/AuthLocationSelect'
 
 import getSessionSafe from '@helpers/getSessionSafe'
+import { defaultSiteAccess } from '@helpers/cabinetSiteAccess'
 import { extractRelativePath, resolveCabinetCallback } from '@helpers/cabinetAuth'
 import { formatPhoneInput, normalizePhoneForSubmit } from '@helpers/phoneInputMask'
+import { mapVkSignInError } from '@helpers/vkAuthErrors'
+import {
+  loadVkSdk,
+  normalizeEnvUrl,
+  parseVkAppId,
+  resolveVkIdCallbackUrl,
+} from '@helpers/vkIdClient'
 import { LOCATIONS } from '@server/serverConstants'
 
 const availableLocations = Object.entries(LOCATIONS)
@@ -17,29 +25,6 @@ const availableLocations = Object.entries(LOCATIONS)
   .map(([key, value]) => ({ key, ...value }))
 
 const defaultLocation = availableLocations[0]?.key ?? 'dev'
-const defaultSiteAccess = {
-  allowSiteAuth: true,
-  allowSiteRegistration: true,
-  enableVkOneTap: true,
-}
-const VK_SIGNIN_ERROR_MESSAGES = {
-  VK_BAD_REQUEST: 'Неполные данные для входа через VK ID. Обновите страницу.',
-  VK_AUTH_DISABLED: 'Вход через VK ID временно отключен для выбранного региона.',
-  VK_EXCHANGE_FAILED:
-    'VK ID временно недоступен. Попробуйте позже или войдите по номеру телефона.',
-  VK_USERINFO_FAILED:
-    'Не удалось получить профиль VK. Попробуйте позже или войдите по номеру телефона.',
-  VK_PROFILE_INVALID: 'Профиль VK ID передан некорректно.',
-  VK_SERVER_UNAVAILABLE: 'Сервис авторизации временно недоступен.',
-  VK_PHONE_REQUIRED:
-    'Произошла ошибка VK ID: не удалось получить номер телефона. Попробуйте зарегистрироваться по номеру телефона.',
-  CredentialsSignin:
-    'Не удалось завершить вход через VK ID. Попробуйте снова или войдите по номеру телефона.',
-}
-
-const mapVkSignInError = (errorCode) =>
-  VK_SIGNIN_ERROR_MESSAGES[errorCode] ||
-  'Не удалось выполнить вход через VK ID. Попробуйте позже.'
 
 const mapPhoneVerifyStatusLabel = (status) => {
   const normalized = String(status || '').trim().toLowerCase()
@@ -48,56 +33,6 @@ const mapPhoneVerifyStatusLabel = (status) => {
   return 'Ожидаем звонок'
 }
 
-const VK_SDK_URL = 'https://unpkg.com/@vkid/sdk@2.6.5/dist-sdk/umd/index.js'
-let vkSdkLoadPromise = null
-
-const loadVkSdk = () => {
-  if (typeof window === 'undefined') return Promise.resolve(false)
-  if (window.VKIDSDK) return Promise.resolve(true)
-  if (vkSdkLoadPromise) return vkSdkLoadPromise
-
-  vkSdkLoadPromise = new Promise((resolve) => {
-    const script = document.createElement('script')
-    script.src = VK_SDK_URL
-    script.async = true
-    script.onload = () => resolve(Boolean(window.VKIDSDK))
-    script.onerror = () => resolve(false)
-    document.head.appendChild(script)
-  })
-
-  return vkSdkLoadPromise
-}
-
-const resolveVkIdCallbackUrl = (explicitCallbackUrl) => {
-  if (typeof window === 'undefined') return ''
-
-  const fallback = `${window.location.origin}/api/vk-id/callback`
-  if (!explicitCallbackUrl || typeof explicitCallbackUrl !== 'string') {
-    return fallback
-  }
-
-  try {
-    return new URL(explicitCallbackUrl, window.location.origin).toString()
-  } catch (error) {
-    return fallback
-  }
-}
-
-const parseVkAppId = (value) => {
-  const raw = String(value || '').trim().replace(/^['"]|['"]$/g, '')
-  const parsed = Number.parseInt(raw, 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
-}
-
-const normalizeEnvUrl = (value) => {
-  const raw = String(value || '').trim().replace(/^['"]|['"]$/g, '')
-  if (!raw) return ''
-  try {
-    return new URL(raw).toString()
-  } catch {
-    return ''
-  }
-}
 
 const CabinetRegisterPage = ({
   authCallbackUrl,
