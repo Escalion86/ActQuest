@@ -2,6 +2,60 @@ import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
 import { toStringId } from '@helpers/idAndDate'
 
 const ensureArray = (value) => (Array.isArray(value) ? value : [])
+const DEFAULT_SORT = 'registration_desc'
+const ALLOWED_SORTS = new Set(['rating', 'games_desc', 'registration_desc'])
+
+const normalizeSortBy = (value) => {
+  if (typeof value !== 'string') {
+    return DEFAULT_SORT
+  }
+
+  const normalized = value.trim().toLowerCase()
+  return ALLOWED_SORTS.has(normalized) ? normalized : DEFAULT_SORT
+}
+
+const compareByRating = (first, second) => {
+  const firstRank = Number(first?.rating?.rank)
+  const secondRank = Number(second?.rating?.rank)
+  const firstEligible = Boolean(first?.rating?.isEligible) && Number.isFinite(firstRank)
+  const secondEligible = Boolean(second?.rating?.isEligible) && Number.isFinite(secondRank)
+
+  if (firstEligible && secondEligible) {
+    if (firstRank !== secondRank) {
+      return firstRank - secondRank
+    }
+    return (second?.gamesCount ?? 0) - (first?.gamesCount ?? 0)
+  }
+
+  if (firstEligible && !secondEligible) {
+    return -1
+  }
+
+  if (!firstEligible && secondEligible) {
+    return 1
+  }
+
+  return (second?.gamesCount ?? 0) - (first?.gamesCount ?? 0)
+}
+
+const sortTeams = (teams, sortBy) => {
+  const resolvedSortBy = normalizeSortBy(sortBy)
+  const items = Array.isArray(teams) ? [...teams] : []
+
+  if (resolvedSortBy === 'rating') {
+    return items.sort(compareByRating)
+  }
+
+  if (resolvedSortBy === 'games_desc') {
+    return items.sort((first, second) => (second?.gamesCount ?? 0) - (first?.gamesCount ?? 0))
+  }
+
+  return items.sort((first, second) => {
+    const firstTime = first?.createdAt ? new Date(first.createdAt).getTime() : 0
+    const secondTime = second?.createdAt ? new Date(second.createdAt).getTime() : 0
+    return secondTime - firstTime
+  })
+}
 
 const toPositiveInteger = (value, fallback) => {
   const numeric = Number(value)
@@ -17,6 +71,8 @@ const fetchTeamsForCabinet = async ({
   db,
   teamIds = null,
   searchQuery = '',
+  location = null,
+  sortBy = DEFAULT_SORT,
   offset = 0,
   limit = null,
   returnMeta = false,
@@ -63,28 +119,21 @@ const fetchTeamsForCabinet = async ({
   const queryOffset = toPositiveInteger(offset, 0)
   const queryLimit = limit === null ? null : toPositiveInteger(limit, 0)
   const shouldPaginate = Number.isFinite(queryLimit) && queryLimit > 0
-  const fetchLimit = shouldPaginate ? queryLimit + 1 : null
 
-  let teamsQuery = TeamsModel.find(teamFilter).sort({ updatedAt: -1 }).skip(queryOffset)
-  if (shouldPaginate) {
-    teamsQuery = teamsQuery.limit(fetchLimit)
-  }
-
-  const teamsDocs = await teamsQuery.lean()
+  const teamsDocs = await TeamsModel.find(teamFilter)
+    .sort({ updatedAt: -1, _id: 1 })
+    .lean()
 
   if (!teamsDocs || teamsDocs.length === 0) {
     return returnMeta ? { teams: [], hasMore: false } : []
   }
 
-  const hasMore = shouldPaginate ? teamsDocs.length > queryLimit : false
-  const teamsSlice = shouldPaginate ? teamsDocs.slice(0, queryLimit) : teamsDocs
-
-  const normalizedTeamIds = teamsSlice
+  const normalizedTeamIds = teamsDocs
     .map((team) => toStringId(team?._id))
     .filter((teamId) => typeof teamId === 'string' && teamId.length > 0)
 
   if (normalizedTeamIds.length === 0) {
-    return returnMeta ? { teams: [], hasMore } : []
+    return returnMeta ? { teams: [], hasMore: false } : []
   }
 
   const teamMembersDocs = await TeamsUsersModel.find({ teamId: { $in: normalizedTeamIds } }).lean()
@@ -177,7 +226,7 @@ const fetchTeamsForCabinet = async ({
 
   const gamesDocs = gameIds.length
     ? await GamesModel.find({ _id: { $in: gameIds } })
-        .select({ _id: 1, name: 1, status: 1, dateStart: 1, hidden: 1 })
+        .select({ _id: 1, name: 1, status: 1, location: 1, dateStart: 1, hidden: 1 })
         .lean()
     : []
 
@@ -209,21 +258,29 @@ const fetchTeamsForCabinet = async ({
     return acc
   }, {})
 
-  const teams = teamsSlice
+  const teams = teamsDocs
     .map((team) =>
       normalizeTeamForCabinet({
         team,
         members: membersByTeam[toStringId(team?._id)] ?? [],
         games: gamesByTeam[toStringId(team?._id)] ?? [],
+        location,
       })
     )
     .filter(Boolean)
+  const sortedTeams = sortTeams(teams, sortBy)
+  const pagedTeams = shouldPaginate
+    ? sortedTeams.slice(queryOffset, queryOffset + queryLimit)
+    : sortedTeams
+  const hasMore = shouldPaginate
+    ? sortedTeams.length > queryOffset + queryLimit
+    : false
 
   if (returnMeta) {
-    return { teams, hasMore }
+    return { teams: pagedTeams, hasMore }
   }
 
-  return teams
+  return pagedTeams
 }
 
 export default fetchTeamsForCabinet

@@ -12,6 +12,7 @@ import usersGamesPaymentsSchema from '@schemas/usersGamesPaymentsSchema'
 import notificationsSchema from '@schemas/notificationsSchema'
 import gamesPaymentsSchema from '@schemas/gamesPaymentsSchema'
 import transactionsSchema from '@schemas/transactionsSchema'
+import seasonsSchema from '@schemas/seasonsSchema'
 
 let globalConnections = global.mongooseGlobal
 
@@ -91,6 +92,17 @@ async function dbConnectGlobal() {
     globalConnections.global.model(
       'Transactions',
       mongoose.Schema(transactionsSchema, { timestamps: true }),
+    )
+    globalConnections.global.model(
+      'Seasons',
+      mongoose.Schema(seasonsSchema, { timestamps: true }),
+    )
+  }
+
+  if (!globalConnections.global.models?.Seasons) {
+    globalConnections.global.model(
+      'Seasons',
+      mongoose.Schema(seasonsSchema, { timestamps: true }),
     )
   }
 

@@ -36,6 +36,16 @@ const gamesSchema = {
     default: null,
     trim: true,
   },
+  seasonId: {
+    type: String,
+    default: null,
+    trim: true,
+  },
+  seasonName: {
+    type: String,
+    default: null,
+    trim: true,
+  },
   image: {
     type: String,
     default: null,

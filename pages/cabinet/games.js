@@ -68,6 +68,21 @@ const CLUE_EARLY_MODE_OPTIONS = [
 const GAMES_PAGE_SIZE = 10
 const GAMES_FILTER_LOCATION_STORAGE_KEY = 'cabinet_games_location_filter'
 const GAMES_DISPLAY_MODE_STORAGE_KEY = 'cabinet_games_display_mode'
+const PAST_GAMES_SEASON_FILTER_ALL = 'all'
+const PAST_GAMES_SEASON_FILTER_OFFSEASON = 'offseason'
+const PAST_GAMES_SEASON_FILTER_NONRATED = 'nonrated'
+const CREATE_GAME_MODE_EMPTY = 'empty'
+const CREATE_GAME_MODE_CLONE = 'clone'
+const DEFAULT_CREATE_GAME_CLONE_OPTIONS = {
+  basic: true,
+  rules: true,
+  captainRules: true,
+  tasks: true,
+  locations: true,
+  moderators: true,
+  publication: true,
+  prices: true,
+}
 
 const toMinutes = (seconds) => {
   const numeric = Number(seconds)
@@ -370,6 +385,14 @@ const buildUpdatePayload = (game) => {
     manyCodesPenalty,
     individualStart: Boolean(game.individualStart),
     isRated: normalizedIsRated,
+    seasonId:
+      normalizedIsRated && typeof game.seasonId === 'string' && game.seasonId.trim()
+        ? game.seasonId.trim()
+        : null,
+    seasonName:
+      normalizedIsRated && typeof game.seasonName === 'string' && game.seasonName.trim()
+        ? game.seasonName.trim()
+        : null,
     hidden: normalizedIsRated ? false : Boolean(game.hidden),
     showCreator: Boolean(game.showCreator),
     showTasks: Boolean(game.showTasks),
@@ -463,12 +486,25 @@ const GamesPage = ({
   const [isCreateGameModalOpen, setIsCreateGameModalOpen] = useState(false)
   const [newGameName, setNewGameName] = useState('')
   const [newGameIsRated, setNewGameIsRated] = useState(true)
+  const [createGameLocation, setCreateGameLocation] = useState('')
+  const [createGameSeasonId, setCreateGameSeasonId] = useState('')
+  const [seasonsByLocation, setSeasonsByLocation] = useState({})
+  const [seasonsLoadingByLocation, setSeasonsLoadingByLocation] = useState({})
+  const [creatingSeasonByLocation, setCreatingSeasonByLocation] = useState({})
+  const [createGameMode, setCreateGameMode] = useState(CREATE_GAME_MODE_EMPTY)
+  const [cloneSourceGameId, setCloneSourceGameId] = useState('')
+  const [cloneSourceGames, setCloneSourceGames] = useState([])
+  const [isCloneSourceGamesLoading, setIsCloneSourceGamesLoading] = useState(false)
+  const [createGameCloneOptions, setCreateGameCloneOptions] = useState(
+    DEFAULT_CREATE_GAME_CLONE_OPTIONS
+  )
   const [createGameFeedback, setCreateGameFeedback] = useState(null)
   const [isCreatingGame, setIsCreatingGame] = useState(false)
   const [isLocationFilterLoading, setIsLocationFilterLoading] = useState(false)
   const [locationFilterError, setLocationFilterError] = useState(null)
   const [gamesDisplayMode, setGamesDisplayMode] = useState('list')
   const [showCanceledGames, setShowCanceledGames] = useState(false)
+  const [pastGamesSeasonFilter, setPastGamesSeasonFilter] = useState(PAST_GAMES_SEASON_FILTER_ALL)
   const rawViewQuery = Array.isArray(router.query?.view)
     ? router.query.view[0]
     : router.query?.view
@@ -485,7 +521,42 @@ const GamesPage = ({
     return gameLocationOptions[0]?.key ?? ''
   }, [location])
   const [gamesFilterLocation, setGamesFilterLocation] = useState(defaultGamesFilterLocation)
+  const [isGamesFilterLocationHydrated, setIsGamesFilterLocationHydrated] = useState(false)
   const registerApiLocation = isFilteredGamesView ? gamesFilterLocation : location
+  const createGameSeasons = useMemo(() => {
+    const locationKey =
+      typeof createGameLocation === 'string'
+        ? createGameLocation.trim().toLowerCase()
+        : ''
+    if (!locationKey) {
+      return []
+    }
+    return Array.isArray(seasonsByLocation[locationKey]) ? seasonsByLocation[locationKey] : []
+  }, [createGameLocation, seasonsByLocation])
+  const editGameSeasons = useMemo(() => {
+    const locationKey =
+      typeof editingGame?.location === 'string'
+        ? editingGame.location.trim().toLowerCase()
+        : ''
+    if (!locationKey) {
+      return []
+    }
+    return Array.isArray(seasonsByLocation[locationKey]) ? seasonsByLocation[locationKey] : []
+  }, [editingGame?.location, seasonsByLocation])
+  const isCreateGameSeasonsLoading = useMemo(() => {
+    const locationKey =
+      typeof createGameLocation === 'string'
+        ? createGameLocation.trim().toLowerCase()
+        : ''
+    return Boolean(locationKey && seasonsLoadingByLocation[locationKey])
+  }, [createGameLocation, seasonsLoadingByLocation])
+  const isEditGameSeasonsLoading = useMemo(() => {
+    const locationKey =
+      typeof editingGame?.location === 'string'
+        ? editingGame.location.trim().toLowerCase()
+        : ''
+    return Boolean(locationKey && seasonsLoadingByLocation[locationKey])
+  }, [editingGame?.location, seasonsLoadingByLocation])
 
   useEffect(() => {
     setGames(safeInitialGames)
@@ -510,6 +581,7 @@ const GamesPage = ({
 
   useEffect(() => {
     if (typeof window === 'undefined' || !shouldShowLocationFilter) {
+      setIsGamesFilterLocationHydrated(false)
       return
     }
 
@@ -534,6 +606,7 @@ const GamesPage = ({
         prev === nextLocation ? prev : nextLocation
       )
     }
+    setIsGamesFilterLocationHydrated(true)
   }, [
     defaultGamesFilterLocation,
     gameLocationOptions,
@@ -545,7 +618,8 @@ const GamesPage = ({
     if (
       typeof window === 'undefined' ||
       !shouldShowLocationFilter ||
-      !gamesFilterLocation
+      !gamesFilterLocation ||
+      !isGamesFilterLocationHydrated
     ) {
       return
     }
@@ -561,7 +635,7 @@ const GamesPage = ({
       GAMES_FILTER_LOCATION_STORAGE_KEY,
       gamesFilterLocation
     )
-  }, [gameLocationOptions, gamesFilterLocation, shouldShowLocationFilter])
+  }, [gameLocationOptions, gamesFilterLocation, isGamesFilterLocationHydrated, shouldShowLocationFilter])
 
   useEffect(() => {
     setFeedback(null)
@@ -689,6 +763,19 @@ const GamesPage = ({
       ]
     }
 
+    if (normalizedStatus === 'closed') {
+      return [
+        {
+          id: 'reopen_game',
+          label: 'Открыть игру',
+          description:
+            'Откроет игру: если есть snapshots результата — вернёт в «Завершена», иначе в «Активна».',
+          variant: 'primary',
+          tone: 'success',
+        },
+      ]
+    }
+
     return []
   }, [statusModalGame, statusValidationResult?.hasErrors])
   const selectedGameApiLocation =
@@ -749,9 +836,43 @@ const GamesPage = ({
       .catch(() => {})
   }, [games, router])
 
-  const sortGamesByUpdatedAt = useCallback((items) => {
+  const sortGamesForCurrentView = useCallback((items) => {
     if (!Array.isArray(items)) {
       return []
+    }
+
+    if (gamesView === 'upcoming') {
+      return [...items].sort((first, second) => {
+        const firstTime = first?.dateStart
+          ? new Date(first.dateStart).getTime()
+          : Number.POSITIVE_INFINITY
+        const secondTime = second?.dateStart
+          ? new Date(second.dateStart).getTime()
+          : Number.POSITIVE_INFINITY
+
+        if (firstTime !== secondTime) {
+          return firstTime - secondTime
+        }
+
+        return String(first?.id || '').localeCompare(String(second?.id || ''), 'ru')
+      })
+    }
+
+    if (gamesView === 'past') {
+      return [...items].sort((first, second) => {
+        const firstTime = first?.dateStart
+          ? new Date(first.dateStart).getTime()
+          : Number.NEGATIVE_INFINITY
+        const secondTime = second?.dateStart
+          ? new Date(second.dateStart).getTime()
+          : Number.NEGATIVE_INFINITY
+
+        if (firstTime !== secondTime) {
+          return secondTime - firstTime
+        }
+
+        return String(second?.id || '').localeCompare(String(first?.id || ''), 'ru')
+      })
     }
 
     return [...items].sort((first, second) => {
@@ -774,7 +895,153 @@ const GamesPage = ({
 
       return secondTime - firstTime
     })
+  }, [gamesView])
+
+  const loadSeasonsForLocation = useCallback(async (locationKey) => {
+    const normalizedLocation =
+      typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
+    if (!normalizedLocation) {
+      return []
+    }
+
+    setSeasonsLoadingByLocation((prev) => ({ ...prev, [normalizedLocation]: true }))
+    try {
+      const params = new URLSearchParams({ location: normalizedLocation })
+      const { json } = await requestApiJson(`/api/cabinet/seasons?${params.toString()}`, {
+        fallbackMessage: 'Не удалось загрузить сезоны',
+      })
+
+      const seasons = Array.isArray(json?.data) ? json.data : []
+      const normalizedSeasons = seasons
+        .map((season) => ({
+          id: typeof season?.id === 'string' ? season.id : '',
+          name: typeof season?.name === 'string' ? season.name : '',
+          location:
+            typeof season?.location === 'string'
+              ? season.location.trim().toLowerCase()
+              : normalizedLocation,
+        }))
+        .filter((season) => season.id && season.name)
+
+      setSeasonsByLocation((prev) => ({
+        ...prev,
+        [normalizedLocation]: normalizedSeasons,
+      }))
+      return normalizedSeasons
+    } finally {
+      setSeasonsLoadingByLocation((prev) => ({ ...prev, [normalizedLocation]: false }))
+    }
   }, [])
+
+  const handleCreateSeason = useCallback(
+    async ({ locationKey, onCreated }) => {
+      const normalizedLocation =
+        typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
+      if (!normalizedLocation) {
+        setFeedback({
+          type: 'error',
+          message: 'Сначала выберите город',
+        })
+        return null
+      }
+
+      const seasonNameRaw =
+        typeof window !== 'undefined'
+          ? window.prompt('Введите название нового сезона')
+          : ''
+      const seasonName =
+        typeof seasonNameRaw === 'string' ? seasonNameRaw.trim().replace(/\s+/g, ' ') : ''
+      if (!seasonName) {
+        return null
+      }
+
+      setCreatingSeasonByLocation((prev) => ({ ...prev, [normalizedLocation]: true }))
+      try {
+        const { json } = await requestApiJson('/api/cabinet/seasons', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location: normalizedLocation,
+            name: seasonName,
+          }),
+          fallbackMessage: 'Не удалось создать сезон',
+        })
+
+        const season = json?.data
+        if (!season?.id || !season?.name) {
+          throw new Error('Сервер вернул некорректный сезон')
+        }
+
+        const normalizedSeason = {
+          id: season.id,
+          name: season.name,
+          location: normalizedLocation,
+        }
+
+        setSeasonsByLocation((prev) => {
+          const existing = Array.isArray(prev[normalizedLocation]) ? prev[normalizedLocation] : []
+          const withoutDuplicate = existing.filter((item) => item.id !== normalizedSeason.id)
+          const next = [...withoutDuplicate, normalizedSeason].sort((a, b) =>
+            a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })
+          )
+          return {
+            ...prev,
+            [normalizedLocation]: next,
+          }
+        })
+
+        if (typeof onCreated === 'function') {
+          onCreated(normalizedSeason)
+        }
+
+        setFeedback({
+          type: 'success',
+          message: `Сезон «${normalizedSeason.name}» создан`,
+        })
+
+        return normalizedSeason
+      } finally {
+        setCreatingSeasonByLocation((prev) => ({ ...prev, [normalizedLocation]: false }))
+      }
+    },
+    [setFeedback]
+  )
+
+  useEffect(() => {
+    const normalizedLocation =
+      typeof createGameLocation === 'string' ? createGameLocation.trim().toLowerCase() : ''
+    if (!normalizedLocation) {
+      return
+    }
+
+    if (!seasonsByLocation[normalizedLocation] && !seasonsLoadingByLocation[normalizedLocation]) {
+      loadSeasonsForLocation(normalizedLocation).catch((error) => {
+        console.error('Failed to load seasons for create game location', error)
+      })
+    }
+  }, [createGameLocation, loadSeasonsForLocation, seasonsByLocation, seasonsLoadingByLocation])
+
+  useEffect(() => {
+    const normalizedLocation =
+      typeof editingGame?.location === 'string'
+        ? editingGame.location.trim().toLowerCase()
+        : ''
+    if (!normalizedLocation || !isEditModalOpen) {
+      return
+    }
+
+    if (!seasonsByLocation[normalizedLocation] && !seasonsLoadingByLocation[normalizedLocation]) {
+      loadSeasonsForLocation(normalizedLocation).catch((error) => {
+        console.error('Failed to load seasons for edit game location', error)
+      })
+    }
+  }, [
+    editingGame?.location,
+    isEditModalOpen,
+    loadSeasonsForLocation,
+    seasonsByLocation,
+    seasonsLoadingByLocation,
+  ])
 
   const fetchGamesPage = useCallback(
     async ({ offset, replace, locationValue }) => {
@@ -793,7 +1060,7 @@ const GamesPage = ({
 
       const nextGames = Array.isArray(json?.data) ? json.data : []
       const nextHasMore = Boolean(json?.meta?.hasMore)
-      const sorted = sortGamesByUpdatedAt(nextGames)
+      const sorted = sortGamesForCurrentView(nextGames)
 
       if (replace) {
         setGames(sorted)
@@ -802,18 +1069,23 @@ const GamesPage = ({
           prev && sorted.some((game) => game.id === prev) ? prev : sorted[0]?.id ?? null
         )
       } else if (sorted.length > 0) {
-        setGames((prev) => sortGamesByUpdatedAt([...prev, ...sorted]))
-        setPersistedGames((prev) => sortGamesByUpdatedAt([...prev, ...sorted]))
+        setGames((prev) => sortGamesForCurrentView([...prev, ...sorted]))
+        setPersistedGames((prev) => sortGamesForCurrentView([...prev, ...sorted]))
       }
 
       setHasMoreGames(nextHasMore)
     },
-    [gamesView, sortGamesByUpdatedAt]
+    [gamesView, sortGamesForCurrentView]
   )
 
   useEffect(() => {
     if (!shouldShowLocationFilter) {
       setLocationFilterError(null)
+      setIsLocationFilterLoading(false)
+      return
+    }
+
+    if (!isGamesFilterLocationHydrated) {
       setIsLocationFilterLoading(false)
       return
     }
@@ -865,6 +1137,7 @@ const GamesPage = ({
   }, [
     fetchGamesPage,
     gamesFilterLocation,
+    isGamesFilterLocationHydrated,
     shouldShowLocationFilter,
   ])
 
@@ -1202,11 +1475,17 @@ const GamesPage = ({
   }, [])
 
   const handleOpenCreateGameModal = useCallback(() => {
+    const defaultLocation = location || gameLocationOptions[0]?.key || ''
     setCreateGameFeedback(null)
     setNewGameName('')
     setNewGameIsRated(true)
+    setCreateGameLocation(defaultLocation)
+    setCreateGameSeasonId('')
+    setCreateGameMode(CREATE_GAME_MODE_EMPTY)
+    setCloneSourceGameId('')
+    setCreateGameCloneOptions(DEFAULT_CREATE_GAME_CLONE_OPTIONS)
     setIsCreateGameModalOpen(true)
-  }, [])
+  }, [location])
 
   const handleCloseCreateGameModal = useCallback(() => {
     if (isCreatingGame) {
@@ -1216,24 +1495,228 @@ const GamesPage = ({
     setIsCreateGameModalOpen(false)
     setNewGameName('')
     setNewGameIsRated(true)
+    setCreateGameLocation(location || gameLocationOptions[0]?.key || '')
+    setCreateGameSeasonId('')
+    setCreateGameMode(CREATE_GAME_MODE_EMPTY)
+    setCloneSourceGameId('')
+    setCloneSourceGames([])
+    setIsCloneSourceGamesLoading(false)
+    setCreateGameCloneOptions(DEFAULT_CREATE_GAME_CLONE_OPTIONS)
     setCreateGameFeedback(null)
-  }, [isCreatingGame])
+  }, [isCreatingGame, location])
+
+  const handleChangeCreateGameCloneOption = useCallback((optionKey, checked) => {
+    if (!(optionKey in DEFAULT_CREATE_GAME_CLONE_OPTIONS)) {
+      return
+    }
+
+    setCreateGameCloneOptions((prev) => ({
+      ...prev,
+      [optionKey]: Boolean(checked),
+    }))
+  }, [])
+
+  const handleCreateGameLocationChange = useCallback((nextLocation) => {
+    setCreateGameLocation(nextLocation)
+    setCreateGameSeasonId('')
+  }, [])
+
+  const handleCreateSeasonForCreateGame = useCallback(async () => {
+    const normalizedLocation =
+      typeof createGameLocation === 'string' ? createGameLocation.trim().toLowerCase() : ''
+    if (!normalizedLocation) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Сначала выберите город для игры',
+      })
+      return
+    }
+
+    try {
+      const season = await handleCreateSeason({
+        locationKey: normalizedLocation,
+        onCreated: (createdSeason) => {
+          setCreateGameSeasonId(createdSeason.id)
+        },
+      })
+      if (season?.id) {
+        setCreateGameFeedback(null)
+      }
+    } catch (error) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: extractErrorMessage(error) || 'Не удалось создать сезон',
+      })
+    }
+  }, [createGameLocation, handleCreateSeason])
+
+  const createGameCloneSourceOptions = useMemo(() => {
+    const byId = new Map()
+
+    cloneSourceGames.forEach((game) => {
+      if (!game?.id || byId.has(game.id)) {
+        return
+      }
+
+      const regionRaw =
+        game.location && LOCATIONS[game.location]?.townRu
+          ? LOCATIONS[game.location].townRu
+          : game.location || 'Неизвестный регион'
+      const regionLabel =
+        typeof regionRaw === 'string' && regionRaw.length > 0
+          ? `${regionRaw.charAt(0).toUpperCase()}${regionRaw.slice(1)}`
+          : 'Неизвестный регион'
+      const gameDateRaw = game.dateStart || game.createdAt || game.updatedAt || null
+      const gameDate = gameDateRaw ? new Date(gameDateRaw) : null
+      const dateLabel =
+        gameDate && !Number.isNaN(gameDate.getTime())
+          ? gameDate.toLocaleDateString('ru-RU', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+            })
+          : '--.--.----'
+      const gameName = game.name || 'Без названия'
+
+      byId.set(game.id, {
+        id: game.id,
+        name: game.name || 'Без названия',
+        sortDate: gameDate && !Number.isNaN(gameDate.getTime()) ? gameDate.getTime() : 0,
+        label: `${dateLabel} "${gameName}" - ${regionLabel}`,
+        location: game.location || '',
+      })
+    })
+
+    return Array.from(byId.values())
+      .sort((a, b) => {
+        if (b.sortDate !== a.sortDate) {
+          return b.sortDate - a.sortDate
+        }
+
+        return a.label.localeCompare(b.label, 'ru')
+      })
+      .map(({ sortDate, ...rest }) => rest)
+  }, [cloneSourceGames])
+
+  useEffect(() => {
+    if (!isCreateGameModalOpen || !canEditAllGames) {
+      return
+    }
+
+    let cancelled = false
+
+    const loadCloneSourceGames = async () => {
+      setIsCloneSourceGamesLoading(true)
+
+      try {
+        const PAGE_LIMIT = 100
+        const MAX_ITEMS = 2000
+        let offset = 0
+        let hasMore = true
+        const collected = []
+
+        while (hasMore && collected.length < MAX_ITEMS) {
+          const params = new URLSearchParams({
+            offset: String(offset),
+            limit: String(PAGE_LIMIT),
+            view: 'all',
+            location: 'all',
+          })
+
+          const { json } = await requestApiJson(
+            `/api/cabinet/games-list?${params.toString()}`,
+            {
+              fallbackMessage: 'Не удалось загрузить список игр для клонирования',
+            }
+          )
+
+          const pageItems = Array.isArray(json?.data) ? json.data : []
+          collected.push(...pageItems)
+
+          hasMore = Boolean(json?.meta?.hasMore) && pageItems.length > 0
+          offset += pageItems.length
+        }
+
+        if (cancelled) {
+          return
+        }
+
+        setCloneSourceGames(collected)
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+
+        setCloneSourceGames([])
+        setCreateGameFeedback({
+          type: 'error',
+          message:
+            extractErrorMessage(error) ||
+            'Не удалось загрузить список игр для клонирования',
+        })
+      } finally {
+        if (!cancelled) {
+          setIsCloneSourceGamesLoading(false)
+        }
+      }
+    }
+
+    loadCloneSourceGames()
+
+    return () => {
+      cancelled = true
+    }
+  }, [canEditAllGames, isCreateGameModalOpen])
+
+  useEffect(() => {
+    if (createGameMode !== CREATE_GAME_MODE_CLONE) {
+      return
+    }
+
+    if (!cloneSourceGameId) {
+      return
+    }
+
+    const sourceGame = createGameCloneSourceOptions.find(
+      (game) => game.id === cloneSourceGameId
+    )
+
+    if (!sourceGame) {
+      return
+    }
+
+    setNewGameName(sourceGame.name || '')
+  }, [cloneSourceGameId, createGameCloneSourceOptions, createGameMode])
+
+  const isCreateGameActionDisabled = useMemo(() => {
+    if (isCreatingGame) {
+      return true
+    }
+
+    if (createGameMode === CREATE_GAME_MODE_CLONE) {
+      if (!cloneSourceGameId) {
+        return true
+      }
+
+      const hasAnyCloneOption = Object.values(createGameCloneOptions).some(Boolean)
+      if (!hasAnyCloneOption) {
+        return true
+      }
+
+      return newGameName.trim().length === 0
+    }
+
+    return newGameName.trim().length === 0
+  }, [cloneSourceGameId, createGameCloneOptions, createGameMode, isCreatingGame, newGameName])
 
   const handleCreateGame = useCallback(async () => {
     const trimmedName = newGameName.trim()
+    const isCloneMode = createGameMode === CREATE_GAME_MODE_CLONE
 
     if (!trimmedName) {
       setCreateGameFeedback({
         type: 'error',
         message: 'Введите название игры',
-      })
-      return
-    }
-
-    if (!location) {
-      setCreateGameFeedback({
-        type: 'error',
-        message: 'Не удалось определить площадку пользователя',
       })
       return
     }
@@ -1254,47 +1737,187 @@ const GamesPage = ({
       return
     }
 
+    if (isCloneMode && !cloneSourceGameId) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Выберите игру-источник для клонирования',
+      })
+      return
+    }
+
+    if (
+      isCloneMode &&
+      !Object.values(createGameCloneOptions).some(Boolean)
+    ) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Выберите хотя бы один блок для клонирования',
+      })
+      return
+    }
+
+    const normalizedCreateLocation =
+      typeof createGameLocation === 'string' ? createGameLocation.trim().toLowerCase() : ''
+    if (!normalizedCreateLocation) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Выберите город для новой игры',
+      })
+      return
+    }
+
+    if (Boolean(newGameIsRated) && !createGameSeasonId) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Для рейтинговой игры выберите сезон или создайте новый',
+      })
+      return
+    }
+
     setIsCreatingGame(true)
     setCreateGameFeedback(null)
 
     try {
+      const baseDraft = {
+        name: trimmedName,
+        status: 'active',
+        dateStart: null,
+        type: 'classic',
+        description: '',
+        image: null,
+        startingPlace: '',
+        finishingPlace: '',
+        taskDuration: 3600,
+        cluesDuration: 1200,
+        clueEarlyAccessMode: 'time',
+        clueEarlyPenalty: 0,
+        allowCaptainForceClue: true,
+        allowCaptainFailTask: true,
+        allowCaptainFinishBreak: true,
+        breakDuration: 0,
+        taskFailurePenalty: 0,
+        manyCodesPenalty: [0, 0],
+        individualStart: false,
+        isRated: Boolean(newGameIsRated),
+        seasonId: '',
+        seasonName: '',
+        hidden: true,
+        showCreator: true,
+        showTasks: false,
+        hideResult: false,
+        prices: [],
+        finances: [],
+        tasks: [],
+        moderators: [],
+      }
+
+      if (isCloneMode) {
+        const cloneSourceMeta = createGameCloneSourceOptions.find(
+          (game) => game.id === cloneSourceGameId
+        )
+        const cloneSourceApiLocation =
+          cloneSourceMeta?.location || normalizedCreateLocation
+
+        const { json: sourceJson } = await requestApiJson(
+          `/api/${cloneSourceApiLocation}/custom?collection=games&id=${encodeURIComponent(
+            cloneSourceGameId
+          )}`,
+          {
+            fallbackMessage: 'Не удалось загрузить игру-источник',
+          }
+        )
+
+        const normalizedSource = normalizeGameForCabinet(sourceJson?.data)
+        if (!normalizedSource) {
+          throw new Error('Не удалось подготовить данные игры-источника')
+        }
+
+        if (createGameCloneOptions.basic) {
+          baseDraft.description = normalizedSource.description || ''
+          baseDraft.image = normalizedSource.image || null
+        }
+
+        baseDraft.name = trimmedName
+
+        if (createGameCloneOptions.rules) {
+          baseDraft.type = normalizedSource.type || 'classic'
+          baseDraft.taskDuration = Number(normalizedSource.taskDuration) || 0
+          baseDraft.cluesDuration = Number(normalizedSource.cluesDuration) || 0
+          baseDraft.clueEarlyAccessMode = normalizedSource.clueEarlyAccessMode || 'time'
+          baseDraft.clueEarlyPenalty = Number(normalizedSource.clueEarlyPenalty) || 0
+          baseDraft.breakDuration = Number(normalizedSource.breakDuration) || 0
+          baseDraft.taskFailurePenalty = Number(normalizedSource.taskFailurePenalty) || 0
+          baseDraft.manyCodesPenalty = Array.isArray(normalizedSource.manyCodesPenalty)
+            ? [...normalizedSource.manyCodesPenalty]
+            : [0, 0]
+          baseDraft.individualStart = Boolean(normalizedSource.individualStart)
+        }
+
+        if (createGameCloneOptions.captainRules) {
+          baseDraft.allowCaptainForceClue = Boolean(normalizedSource.allowCaptainForceClue)
+          baseDraft.allowCaptainFailTask = Boolean(normalizedSource.allowCaptainFailTask)
+          baseDraft.allowCaptainFinishBreak = Boolean(normalizedSource.allowCaptainFinishBreak)
+        }
+
+        if (createGameCloneOptions.tasks) {
+          baseDraft.tasks = Array.isArray(normalizedSource.tasks)
+            ? JSON.parse(JSON.stringify(normalizedSource.tasks))
+            : []
+        }
+
+        if (createGameCloneOptions.locations) {
+          baseDraft.startingPlace = normalizedSource.startingPlace || ''
+          baseDraft.finishingPlace = normalizedSource.finishingPlace || ''
+        }
+
+        if (createGameCloneOptions.moderators) {
+          baseDraft.moderators = Array.isArray(normalizedSource.moderators)
+            ? normalizedSource.moderators
+                .map((moderator) =>
+                  typeof moderator === 'string' ? moderator : moderator?.id || null
+                )
+                .filter(Boolean)
+            : []
+        }
+
+        if (createGameCloneOptions.publication) {
+          baseDraft.hidden = Boolean(normalizedSource.hidden)
+          baseDraft.showCreator = Boolean(normalizedSource.showCreator)
+          baseDraft.showTasks = Boolean(normalizedSource.showTasks)
+          baseDraft.hideResult = Boolean(normalizedSource.hideResult)
+        }
+
+        if (createGameCloneOptions.prices) {
+          baseDraft.prices = Array.isArray(normalizedSource.prices)
+            ? JSON.parse(JSON.stringify(normalizedSource.prices))
+            : []
+        }
+
+      }
+
+      const selectedSeason = createGameSeasons.find((season) => season.id === createGameSeasonId) || null
+      baseDraft.seasonId = Boolean(baseDraft.isRated) ? selectedSeason?.id || '' : ''
+      baseDraft.seasonName = Boolean(baseDraft.isRated) ? selectedSeason?.name || '' : ''
+
+      if (Boolean(baseDraft.isRated) && !baseDraft.seasonId) {
+        setCreateGameFeedback({
+          type: 'error',
+          message: 'Для рейтинговой игры выберите сезон или создайте новый',
+        })
+        return
+      }
+
       const payload = {
         ...buildUpdatePayload({
+          ...baseDraft,
           name: trimmedName,
-          status: 'active',
-          dateStart: null,
-          type: 'classic',
-          description: '',
-          image: null,
-          startingPlace: '',
-          finishingPlace: '',
-          taskDuration: 3600,
-          cluesDuration: 1200,
-          clueEarlyAccessMode: 'time',
-          clueEarlyPenalty: 0,
-          allowCaptainForceClue: true,
-          allowCaptainFailTask: true,
-          allowCaptainFinishBreak: true,
-          breakDuration: 0,
-          taskFailurePenalty: 0,
-          manyCodesPenalty: [0, 0],
-          individualStart: false,
-          isRated: Boolean(newGameIsRated),
-          hidden: true,
-          showCreator: true,
-          showTasks: false,
-          hideResult: false,
-          prices: [],
-          finances: [],
-          tasks: [],
-          moderators: [],
         }),
-        location: typeof location === 'string' ? location.trim().toLowerCase() : location,
+        location: normalizedCreateLocation,
         creatorTelegramId: currentUserTelegramIdNumber,
       }
 
       const { json } = await requestApiJson(
-        `/api/${location}/custom?collection=games`,
+        `/api/${normalizedCreateLocation}/custom?collection=games`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1313,13 +1936,13 @@ const GamesPage = ({
       }
 
       setGames((prev) =>
-        sortGamesByUpdatedAt([
+        sortGamesForCurrentView([
           createdGame,
           ...prev.filter((game) => game.id !== createdGame.id),
         ])
       )
       setPersistedGames((prev) =>
-        sortGamesByUpdatedAt([
+        sortGamesForCurrentView([
           createdGame,
           ...prev.filter((game) => game.id !== createdGame.id),
         ])
@@ -1332,6 +1955,9 @@ const GamesPage = ({
       })
 
       setIsCreateGameModalOpen(false)
+      setCreateGameMode(CREATE_GAME_MODE_EMPTY)
+      setCloneSourceGameId('')
+      setCreateGameCloneOptions(DEFAULT_CREATE_GAME_CLONE_OPTIONS)
       setEditingGame(cloneGameDraft(createdGame))
       setIsEditModalOpen(true)
     } catch (error) {
@@ -1347,6 +1973,13 @@ const GamesPage = ({
   }, [
     buildUpdatePayload,
     canEditAllGames,
+    cloneSourceGameId,
+    createGameCloneOptions,
+    createGameCloneSourceOptions,
+    createGameLocation,
+    createGameSeasonId,
+    createGameSeasons,
+    createGameMode,
     currentUserTelegramIdNumber,
     location,
     newGameName,
@@ -1355,7 +1988,7 @@ const GamesPage = ({
     setGames,
     setPersistedGames,
     setSelectedGameId,
-    sortGamesByUpdatedAt,
+    sortGamesForCurrentView,
   ])
 
   const availableModerators = useMemo(
@@ -1393,11 +2026,23 @@ const GamesPage = ({
     [games]
   )
 
-  const pastGames = useMemo(
+  const pastGamesBase = useMemo(
     () =>
       games.filter((game) => {
         const status = (game?.status ?? '').toString().toLowerCase()
+        const startDate =
+          game?.dateStart !== null && game?.dateStart !== undefined
+            ? new Date(game.dateStart)
+            : null
+        const hasPastStartDate =
+          startDate instanceof Date &&
+          !Number.isNaN(startDate.getTime()) &&
+          startDate.getTime() < Date.now()
+
         if (status === 'finished' || status === 'closed') {
+          return true
+        }
+        if ((status === 'active' || status === 'started') && hasPastStartDate) {
           return true
         }
         if (status === 'canceled') {
@@ -1407,6 +2052,70 @@ const GamesPage = ({
       }),
     [games, showCanceledGames]
   )
+
+  const pastGames = useMemo(
+    () =>
+      pastGamesBase.filter((game) => {
+        if (pastGamesSeasonFilter === PAST_GAMES_SEASON_FILTER_ALL) {
+          return true
+        }
+
+        if (pastGamesSeasonFilter === PAST_GAMES_SEASON_FILTER_NONRATED) {
+          return !Boolean(game?.isRated)
+        }
+
+        if (pastGamesSeasonFilter === PAST_GAMES_SEASON_FILTER_OFFSEASON) {
+          return Boolean(game?.isRated) && !(typeof game?.seasonId === 'string' && game.seasonId.trim())
+        }
+
+        if (pastGamesSeasonFilter.startsWith('season:')) {
+          const seasonId = pastGamesSeasonFilter.slice('season:'.length)
+          return (
+            Boolean(game?.isRated) &&
+            typeof game?.seasonId === 'string' &&
+            game.seasonId === seasonId
+          )
+        }
+
+        return true
+      }),
+    [pastGamesBase, pastGamesSeasonFilter]
+  )
+
+  const pastGamesSeasonOptions = useMemo(() => {
+    const seasonsMap = new Map()
+
+    pastGamesBase.forEach((game) => {
+      if (!Boolean(game?.isRated)) {
+        return
+      }
+
+      const seasonId = typeof game?.seasonId === 'string' ? game.seasonId.trim() : ''
+      const seasonName = typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
+      if (!seasonId || !seasonName || seasonsMap.has(seasonId)) {
+        return
+      }
+      seasonsMap.set(seasonId, seasonName)
+    })
+
+    const seasons = Array.from(seasonsMap.entries())
+      .map(([id, name]) => ({ value: `season:${id}`, label: name }))
+      .sort((left, right) => left.label.localeCompare(right.label, 'ru', { sensitivity: 'base' }))
+
+    return [
+      { value: PAST_GAMES_SEASON_FILTER_ALL, label: 'Все' },
+      ...seasons,
+      { value: PAST_GAMES_SEASON_FILTER_OFFSEASON, label: 'Вне сезона' },
+      { value: PAST_GAMES_SEASON_FILTER_NONRATED, label: 'Не рейтинговые' },
+    ]
+  }, [pastGamesBase])
+
+  useEffect(() => {
+    if (pastGamesSeasonOptions.some((option) => option.value === pastGamesSeasonFilter)) {
+      return
+    }
+    setPastGamesSeasonFilter(PAST_GAMES_SEASON_FILTER_ALL)
+  }, [pastGamesSeasonFilter, pastGamesSeasonOptions])
   const isPhotoGame = selectedGame?.type === 'photo'
 
   useEffect(() => {
@@ -1499,13 +2208,9 @@ const GamesPage = ({
 
   const canManageTeams = canViewRestrictedGameInfo
 
-  const canManageGame = useCallback(
+  const canManageGameStatus = useCallback(
     (game) => {
       if (!game) {
-        return false
-      }
-
-      if (isClosedStatus(game.status)) {
         return false
       }
 
@@ -1547,6 +2252,17 @@ const GamesPage = ({
     [canEditAllGames, canEditOwnGames, currentUserDbId, currentUserIdString]
   )
 
+  const canManageGame = useCallback(
+    (game) => {
+      if (!game || isClosedStatus(game.status)) {
+        return false
+      }
+
+      return canManageGameStatus(game)
+    },
+    [canManageGameStatus]
+  )
+
   const updateSelectedGame = useCallback(
     (updater) => {
       if (!canEditSelectedGame || !editingGame) return
@@ -1560,12 +2276,45 @@ const GamesPage = ({
         const nextGame = { ...prevGame, ...patch }
         if (Boolean(nextGame.isRated ?? true)) {
           nextGame.hidden = false
+        } else {
+          nextGame.seasonId = ''
+          nextGame.seasonName = ''
         }
         return nextGame
       })
     },
     [canEditSelectedGame, editingGame]
   )
+
+  const handleCreateSeasonForEditGame = useCallback(async () => {
+    const gameForEdit = editingGame ?? selectedGame
+    const normalizedLocation =
+      typeof gameForEdit?.location === 'string' ? gameForEdit.location.trim().toLowerCase() : ''
+    if (!normalizedLocation) {
+      setFeedback({
+        type: 'error',
+        message: 'Не удалось определить город игры',
+      })
+      return
+    }
+
+    try {
+      await handleCreateSeason({
+        locationKey: normalizedLocation,
+        onCreated: (season) => {
+          updateSelectedGame({
+            seasonId: season.id,
+            seasonName: season.name,
+          })
+        },
+      })
+    } catch (error) {
+      setFeedback({
+        type: 'error',
+        message: extractErrorMessage(error) || 'Не удалось создать сезон',
+      })
+    }
+  }, [editingGame, handleCreateSeason, selectedGame, setFeedback, updateSelectedGame])
 
   const handleResetChanges = useCallback(() => {
     if (!persistedSelectedGame) return
@@ -1580,6 +2329,14 @@ const GamesPage = ({
       gameToSave?.location || (shouldShowLocationFilter ? gamesFilterLocation : location)
 
     if (!gameToSave || !gameApiLocation || !canEditSelectedGame) return
+
+    if (Boolean(gameToSave.isRated ?? true) && !gameToSave.seasonId) {
+      setFeedback({
+        type: 'error',
+        message: 'Для рейтинговой игры выберите сезон или создайте новый',
+      })
+      return
+    }
 
     setIsSaving(true)
     setFeedback(null)
@@ -2157,7 +2914,12 @@ const GamesPage = ({
             teamId,
             teamName: teamInfo?.name || 'Неизвестная команда',
             teamDescription: teamInfo?.description || '',
+            teamImage: teamInfo?.image || '',
+            open: Boolean(teamInfo?.open),
+            updatedAt: teamInfo?.updatedAt || null,
             membersCount,
+            rating: teamInfo?.rating ?? null,
+            teamDetails: teamInfo ?? null,
           }
         })
         .filter(Boolean)
@@ -2318,7 +3080,7 @@ const GamesPage = ({
   const handleOpenStatusModal = useCallback(
     (gameCandidate = null) => {
       const game = gameCandidate || selectedGame
-      if (!game || !canManageGame(game) || isClosedStatus(game.status)) {
+      if (!game || !canManageGameStatus(game)) {
         return
       }
 
@@ -2326,7 +3088,7 @@ const GamesPage = ({
       setStatusValidationResult(null)
       setIsStatusModalOpen(true)
     },
-    [canManageGame, selectedGame]
+    [canManageGameStatus, selectedGame]
   )
 
   const handleCloseStatusModal = useCallback(() => {
@@ -2339,7 +3101,7 @@ const GamesPage = ({
   }, [isStatusChanging])
 
   const handleStatusAction = useCallback(async (actionId) => {
-    if (!statusModalGame || !canManageGame(statusModalGame)) {
+    if (!statusModalGame || !canManageGameStatus(statusModalGame)) {
       return
     }
 
@@ -2361,6 +3123,15 @@ const GamesPage = ({
         'Вы уверены, что хотите остановить игру? Коды больше не будут приниматься, игроки получат уведомление.'
       )
       if (!shouldStop) {
+        return
+      }
+    }
+
+    if (typeof window !== 'undefined' && actionId === 'restart_game') {
+      const shouldRestart = window.confirm(
+        'Перезапуск вернёт игру в статус «Активна». Продолжить?'
+      )
+      if (!shouldRestart) {
         return
       }
     }
@@ -2464,6 +3235,9 @@ const GamesPage = ({
             return
           }
           nextStatus = 'closed'
+        } else if (actionId === 'reopen_game') {
+          nextStatus = 'reopen'
+          successMessage = 'Игра открыта'
         }
 
         if (!nextStatus) {
@@ -2506,7 +3280,7 @@ const GamesPage = ({
       setIsStatusChanging(false)
     }
   }, [
-    canManageGame,
+    canManageGameStatus,
     fetchGamesPage,
     gamesFilterLocation,
     location,
@@ -2866,10 +3640,14 @@ const GamesPage = ({
         : 'Дата не задана'
 
       const canManageThisGame = canManageGame(game)
+      const canManageStatusThisGame = canManageGameStatus(game)
       const canViewThisGameResults = canViewResultsForGame(game)
       const visibleStatus = normalizeVisibleStatus(game.status, canSeeClosedStatus)
       const userTeamPlace = Number(game.userTeamPlace)
       const hasUserTeamPlace = Number.isFinite(userTeamPlace) && userTeamPlace > 0
+      const hasSeason = typeof game?.seasonId === 'string' && game.seasonId.trim().length > 0
+      const seasonLabel = typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
+      const seasonBadgeLabel = hasSeason && seasonLabel ? seasonLabel : 'Вне сезона'
 
       return (
         <li key={game.id}>
@@ -2911,6 +3689,11 @@ const GamesPage = ({
                   >
                     {getGameStatusLabel(visibleStatus)}
                   </span>
+                  {Boolean(game?.isRated) && (
+                    <span className="mb-2 ml-2 inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
+                      {seasonBadgeLabel}
+                    </span>
+                  )}
                   <p className="aq-line-clamp-2 text-sm font-semibold text-primary dark:text-slate-100">
                     {game.name || 'Без названия'}
                   </p>
@@ -2922,35 +3705,41 @@ const GamesPage = ({
                   </p>
                 </div>
               </div>
-              {canManageThisGame && (
+              {(canManageThisGame || canManageStatusThisGame) && (
                 <div className="absolute right-3 top-3 flex shrink-0 items-center gap-2">
-                  <CardActionIconButton
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      handleEditGameFromList(game)
-                    }}
-                    label="Редактировать игру"
-                  >
-                    <EditCardIcon />
-                  </CardActionIconButton>
-                  <CardActionIconButton
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      handleOpenStatusModal(game)
-                    }}
-                    label="Сменить статус игры"
-                  >
-                    <StatusCardIcon />
-                  </CardActionIconButton>
-                  <CardActionIconButton
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      handleManageTeamsFromList(game)
-                    }}
-                    label="Управление командами"
-                  >
-                    <TeamCardIcon />
-                  </CardActionIconButton>
+                  {canManageThisGame && (
+                    <CardActionIconButton
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleEditGameFromList(game)
+                      }}
+                      label="Редактировать игру"
+                    >
+                      <EditCardIcon />
+                    </CardActionIconButton>
+                  )}
+                  {canManageStatusThisGame && (
+                    <CardActionIconButton
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleOpenStatusModal(game)
+                      }}
+                      label="Сменить статус игры"
+                    >
+                      <StatusCardIcon />
+                    </CardActionIconButton>
+                  )}
+                  {canManageThisGame && (
+                    <CardActionIconButton
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleManageTeamsFromList(game)
+                      }}
+                      label="Управление командами"
+                    >
+                      <TeamCardIcon />
+                    </CardActionIconButton>
+                  )}
                 </div>
               )}
             </div>
@@ -2975,7 +3764,7 @@ const GamesPage = ({
         </li>
       )
     },
-    [canManageGame, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleOpenStatusModal, handleSelectGameCard, selectedGameId]
+    [canManageGame, canManageGameStatus, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleOpenStatusModal, handleSelectGameCard, selectedGameId]
   )
 
   const renderGameTileItem = useCallback(
@@ -2988,10 +3777,14 @@ const GamesPage = ({
         : 'Дата не задана'
 
       const canManageThisGame = canManageGame(game)
+      const canManageStatusThisGame = canManageGameStatus(game)
       const canViewThisGameResults = canViewResultsForGame(game)
       const visibleStatus = normalizeVisibleStatus(game.status, canSeeClosedStatus)
       const userTeamPlace = Number(game.userTeamPlace)
       const hasUserTeamPlace = Number.isFinite(userTeamPlace) && userTeamPlace > 0
+      const hasSeason = typeof game?.seasonId === 'string' && game.seasonId.trim().length > 0
+      const seasonLabel = typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
+      const seasonBadgeLabel = hasSeason && seasonLabel ? seasonLabel : 'Вне сезона'
 
       return (
         <li key={game.id}>
@@ -3031,6 +3824,11 @@ const GamesPage = ({
                 >
                   {getGameStatusLabel(visibleStatus)}
                 </span>
+                {Boolean(game?.isRated) && (
+                  <span className="ml-2 inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
+                    {seasonBadgeLabel}
+                  </span>
+                )}
               </div>
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
                 <span
@@ -3038,38 +3836,49 @@ const GamesPage = ({
                 >
                   {getGameStatusLabel(visibleStatus)}
                 </span>
-                {canManageThisGame && (
+                {Boolean(game?.isRated) && (
+                  <span className="hidden items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200 md:inline-flex">
+                    {seasonBadgeLabel}
+                  </span>
+                )}
+                {(canManageThisGame || canManageStatusThisGame) && (
                   <div className="pointer-events-auto flex items-center gap-2">
-                    <CardActionIconButton
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        handleEditGameFromList(game)
-                      }}
-                      label="Редактировать игру"
-                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                    >
-                      <EditCardIcon />
-                    </CardActionIconButton>
-                    <CardActionIconButton
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        handleOpenStatusModal(game)
-                      }}
-                      label="Сменить статус игры"
-                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                    >
-                      <StatusCardIcon />
-                    </CardActionIconButton>
-                    <CardActionIconButton
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        handleManageTeamsFromList(game)
-                      }}
-                      label="Управление командами"
-                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                    >
-                      <TeamCardIcon />
-                    </CardActionIconButton>
+                    {canManageThisGame && (
+                      <CardActionIconButton
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleEditGameFromList(game)
+                        }}
+                        label="Редактировать игру"
+                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                      >
+                        <EditCardIcon />
+                      </CardActionIconButton>
+                    )}
+                    {canManageStatusThisGame && (
+                      <CardActionIconButton
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleOpenStatusModal(game)
+                        }}
+                        label="Сменить статус игры"
+                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                      >
+                        <StatusCardIcon />
+                      </CardActionIconButton>
+                    )}
+                    {canManageThisGame && (
+                      <CardActionIconButton
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleManageTeamsFromList(game)
+                        }}
+                        label="Управление командами"
+                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                      >
+                        <TeamCardIcon />
+                      </CardActionIconButton>
+                    )}
                   </div>
                 )}
               </div>
@@ -3104,7 +3913,7 @@ const GamesPage = ({
         </li>
       )
     },
-    [canManageGame, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleOpenStatusModal, handleSelectGameCard, selectedGameId]
+    [canManageGame, canManageGameStatus, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleOpenStatusModal, handleSelectGameCard, selectedGameId]
   )
 
   const modalGame = isEditModalOpen && editingGame ? editingGame : selectedGame
@@ -3370,6 +4179,28 @@ const GamesPage = ({
                     </option>
                   ))}
                 </select>
+                {isPastView && (
+                  <>
+                    <label
+                      htmlFor="games-past-season-filter"
+                      className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                    >
+                      Сезон
+                    </label>
+                    <select
+                      id="games-past-season-filter"
+                      value={pastGamesSeasonFilter}
+                      onChange={(event) => setPastGamesSeasonFilter(event.target.value)}
+                      className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700"
+                    >
+                      {pastGamesSeasonOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
                 {locationFilterError && (
                   <p className="mt-2 text-xs text-rose-500">{locationFilterError}</p>
                 )}
@@ -3549,6 +4380,29 @@ const GamesPage = ({
                   setNewGameName={setNewGameName}
                   newGameIsRated={newGameIsRated}
                   setNewGameIsRated={setNewGameIsRated}
+                  createGameMode={createGameMode}
+                  setCreateGameMode={setCreateGameMode}
+                  cloneSourceGameId={cloneSourceGameId}
+                  setCloneSourceGameId={setCloneSourceGameId}
+                  createGameCloneSourceOptions={createGameCloneSourceOptions}
+                  isCloneSourceGamesLoading={isCloneSourceGamesLoading}
+                  createGameLocation={createGameLocation}
+                  setCreateGameLocation={handleCreateGameLocationChange}
+                  createGameSeasonId={createGameSeasonId}
+                  setCreateGameSeasonId={setCreateGameSeasonId}
+                  createGameSeasons={createGameSeasons}
+                  isCreateGameSeasonsLoading={isCreateGameSeasonsLoading}
+                  isCreateGameSeasonCreating={Boolean(
+                    createGameLocation &&
+                    creatingSeasonByLocation[
+                      String(createGameLocation).trim().toLowerCase()
+                    ]
+                  )}
+                  handleCreateSeasonForCreateGame={handleCreateSeasonForCreateGame}
+                  createGameLocationOptions={gameLocationOptions}
+                  createGameCloneOptions={createGameCloneOptions}
+                  handleChangeCreateGameCloneOption={handleChangeCreateGameCloneOption}
+                  isCreateGameActionDisabled={isCreateGameActionDisabled}
                   createGameFeedback={createGameFeedback}
                   isDescriptionModalOpen={isDescriptionModalOpen}
                   handleCloseDescriptionModal={handleCloseDescriptionModal}
@@ -3564,6 +4418,15 @@ const GamesPage = ({
                   setSelectedModeratorToAdd={setSelectedModeratorToAdd}
                   handleAddModerator={handleAddModerator}
                   handleRemoveModerator={handleRemoveModerator}
+                  editGameSeasons={editGameSeasons}
+                  isEditGameSeasonsLoading={isEditGameSeasonsLoading}
+                  isEditGameSeasonCreating={Boolean(
+                    editingGame?.location &&
+                    creatingSeasonByLocation[
+                      String(editingGame.location).trim().toLowerCase()
+                    ]
+                  )}
+                  handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
                   taskDurationLabel={taskDurationLabel}
                   cluesDurationLabel={cluesDurationLabel}
                   clueModeDetails={clueModeDetails}
@@ -3661,6 +4524,8 @@ GamesPage.propTypes = {
       dateStart: PropTypes.string,
       type: PropTypes.string,
       location: PropTypes.string,
+      seasonId: PropTypes.string,
+      seasonName: PropTypes.string,
       description: PropTypes.string,
       image: PropTypes.string,
       startingPlace: PropTypes.string,

@@ -12,6 +12,7 @@ import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { toStringId } from '@helpers/idAndDate'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
+import resolveEntityRating from '@helpers/resolveEntityRating'
 import useMergedSession from '@helpers/useMergedSession'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
@@ -174,6 +175,11 @@ const buildPlayerRatingMetrics = ({ places = [], missedGames = 0 }) => {
     isEligible: playedGames >= RATING_MIN_PLAYED_GAMES && Number.isFinite(finalScore),
   }
 }
+
+const resolveRatingBadge = (rating) =>
+  rating?.isEligible && Number.isFinite(rating?.rank)
+    ? `#${rating.rank}`
+    : null
 
 const CabinetDashboard = ({
   session: initialSession,
@@ -348,11 +354,18 @@ const CabinetDashboard = ({
                               Игр: {team.gamesCount ?? 0}
                             </p>
                           </div>
-                          {team.isCaptain ? (
-                            <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                              Капитан
-                            </span>
-                          ) : null}
+                          <div className="flex shrink-0 items-center gap-2">
+                            {resolveRatingBadge(team.rating) ? (
+                              <span className="inline-flex items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                {resolveRatingBadge(team.rating)}
+                              </span>
+                            ) : null}
+                            {team.isCaptain ? (
+                              <span className="inline-flex items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                Капитан
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </button>
                     </li>
@@ -615,6 +628,16 @@ CabinetDashboard.propTypes = {
         isCaptain: PropTypes.bool,
         description: PropTypes.string,
         open: PropTypes.bool,
+        rating: PropTypes.shape({
+          isEligible: PropTypes.bool,
+          rank: PropTypes.number,
+          totalRanked: PropTypes.number,
+          playersAbove: PropTypes.number,
+          finalScore: PropTypes.number,
+          playedGames: PropTypes.number,
+          missedGames: PropTypes.number,
+          updatedAt: PropTypes.string,
+        }),
         membersCount: PropTypes.number,
         gamesCount: PropTypes.number,
         captain: PropTypes.shape({
@@ -836,7 +859,16 @@ export async function getServerSideProps(context) {
     const [teamsDocs, gamesTeamsDocs, teamMembersDocs] = await Promise.all([
       teamIds.length
         ? TeamsModel.find({ _id: { $in: teamIds } })
-            .select({ _id: 1, name: 1, description: 1, open: 1, updatedAt: 1, createdAt: 1 })
+            .select({
+              _id: 1,
+              name: 1,
+              description: 1,
+              open: 1,
+              rating: 1,
+              ratingsByLocation: 1,
+              updatedAt: 1,
+              createdAt: 1,
+            })
             .lean()
         : [],
       teamIds.length
@@ -1039,6 +1071,7 @@ export async function getServerSideProps(context) {
           isCaptain: Boolean(membershipRoleByTeamId[teamId]),
           description: typeof team?.description === 'string' ? team.description : '',
           open: Boolean(team?.open),
+          rating: resolveEntityRating({ entity: team, location }),
           membersCount: membersCountMap[teamId] ?? members.length,
           gamesCount: teamGames.length,
           captain,

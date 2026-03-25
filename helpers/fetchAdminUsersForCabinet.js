@@ -1,12 +1,68 @@
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import ensureRole from '@helpers/ensureRole'
 import { ensureDateISOString, toStringId } from '@helpers/idAndDate'
+import resolveEntityRating from '@helpers/resolveEntityRating'
+
+const DEFAULT_SORT = 'registration_desc'
+const ALLOWED_SORTS = new Set(['rating', 'games_desc', 'registration_desc'])
+
+const normalizeSortBy = (value) => {
+  if (typeof value !== 'string') {
+    return DEFAULT_SORT
+  }
+
+  const normalized = value.trim().toLowerCase()
+  return ALLOWED_SORTS.has(normalized) ? normalized : DEFAULT_SORT
+}
+
+const compareByRating = (first, second) => {
+  const firstRank = Number(first?.rating?.rank)
+  const secondRank = Number(second?.rating?.rank)
+  const firstEligible = Boolean(first?.rating?.isEligible) && Number.isFinite(firstRank)
+  const secondEligible = Boolean(second?.rating?.isEligible) && Number.isFinite(secondRank)
+
+  if (firstEligible && secondEligible) {
+    if (firstRank !== secondRank) {
+      return firstRank - secondRank
+    }
+    return (second?.gamesCount ?? 0) - (first?.gamesCount ?? 0)
+  }
+
+  if (firstEligible && !secondEligible) {
+    return -1
+  }
+
+  if (!firstEligible && secondEligible) {
+    return 1
+  }
+
+  return (second?.gamesCount ?? 0) - (first?.gamesCount ?? 0)
+}
+
+const sortUsers = (users, sortBy) => {
+  const resolvedSortBy = normalizeSortBy(sortBy)
+  const items = Array.isArray(users) ? [...users] : []
+
+  if (resolvedSortBy === 'rating') {
+    return items.sort(compareByRating)
+  }
+
+  if (resolvedSortBy === 'games_desc') {
+    return items.sort((first, second) => (second?.gamesCount ?? 0) - (first?.gamesCount ?? 0))
+  }
+
+  return items.sort((first, second) => {
+    const firstTime = first?.createdAt ? new Date(first.createdAt).getTime() : 0
+    const secondTime = second?.createdAt ? new Date(second.createdAt).getTime() : 0
+    return secondTime - firstTime
+  })
+}
 
 const normalizeUserForAdmin = ({
   userDoc,
   membershipsByUser,
   teamsMap,
-  gamesIdsByTeam,
+  location,
 }) => {
   const baseProfile = normalizeUserProfile(userDoc)
   const numericTelegramId = Number.isFinite(userDoc?.telegramId)
@@ -25,14 +81,16 @@ const normalizeUserForAdmin = ({
       }
 
       const role = membership.role === 'capitan' ? 'capitan' : 'participant'
-      const games = gamesIdsByTeam[teamId] ?? []
+      const teamGamesCount = Number.isFinite(Number(team?.gamesCount))
+        ? Number(team.gamesCount)
+        : 0
 
       return {
         id: teamId,
         name: team.name,
         role,
         isCaptain: role === 'capitan',
-        gamesCount: games.length,
+        gamesCount: teamGamesCount,
         updatedAt: ensureDateISOString(team.updatedAt),
       }
     })
@@ -45,11 +103,9 @@ const normalizeUserForAdmin = ({
       return a.isCaptain ? -1 : 1
     })
 
-  const uniqueGameIds = new Set()
-  memberships.forEach((membership) => {
-    const ids = gamesIdsByTeam[membership.teamId] ?? []
-    ids.forEach((id) => uniqueGameIds.add(id))
-  })
+  const playedGamesCount = Number.isFinite(Number(userDoc?.gameStats?.playedGamesCount))
+    ? Number(userDoc.gameStats.playedGamesCount)
+    : 0
 
   return {
     ...baseProfile,
@@ -58,9 +114,10 @@ const normalizeUserForAdmin = ({
     role: ensureRole(userDoc?.role),
     createdAt: ensureDateISOString(userDoc?.createdAt),
     updatedAt: ensureDateISOString(userDoc?.updatedAt),
+    rating: resolveEntityRating({ entity: userDoc, location }),
     teams,
     teamsCount: teams.length,
-    gamesCount: uniqueGameIds.size,
+    gamesCount: playedGamesCount,
   }
 }
 
@@ -105,6 +162,8 @@ const fetchAdminUsersForCabinet = async ({
   offset = 0,
   limit = 10,
   search = '',
+  sortBy = DEFAULT_SORT,
+  location = null,
 }) => {
   if (!db) {
     return { users: [], hasMore: false }
@@ -113,25 +172,20 @@ const fetchAdminUsersForCabinet = async ({
   const UsersModel = db.model('Users')
   const TeamsUsersModel = db.model('TeamsUsers')
   const TeamsModel = db.model('Teams')
-  const GamesTeamsModel = db.model('GamesTeams')
 
   const queryOffset = toPositiveInteger(offset, 0)
   const queryLimit = toPositiveInteger(limit, 10)
-  const fetchLimit = queryLimit + 1
 
   const usersQuery = buildUsersQuery(search)
   const usersDocs = await UsersModel.find(usersQuery)
-    .sort({ name: 1 })
-    .skip(queryOffset)
-    .limit(fetchLimit)
+    .sort({ name: 1, _id: 1 })
     .lean()
 
   if (!usersDocs.length) {
     return { users: [], hasMore: false }
   }
 
-  const hasMore = usersDocs.length > queryLimit
-  const usersSlice = usersDocs.slice(0, queryLimit)
+  const usersSlice = usersDocs
 
   const membershipTelegramIds = Array.from(
     new Set(
@@ -159,13 +213,7 @@ const fetchAdminUsersForCabinet = async ({
 
   const teamsDocs = teamIds.length
     ? await TeamsModel.find({ _id: { $in: teamIds } })
-        .select({ _id: 1, name: 1, updatedAt: 1 })
-        .lean()
-    : []
-
-  const gamesTeamsDocs = teamIds.length
-    ? await GamesTeamsModel.find({ teamId: { $in: teamIds } })
-        .select({ teamId: 1, gameId: 1 })
+        .select({ _id: 1, name: 1, updatedAt: 1, gameStats: 1 })
         .lean()
     : []
 
@@ -176,6 +224,9 @@ const fetchAdminUsersForCabinet = async ({
         id,
         name: typeof team?.name === 'string' ? team.name : '',
         updatedAt: team?.updatedAt ?? null,
+        gamesCount: Number.isFinite(Number(team?.gameStats?.playedGamesCount))
+          ? Number(team.gameStats.playedGamesCount)
+          : 0,
       }
     }
     return acc
@@ -203,42 +254,20 @@ const fetchAdminUsersForCabinet = async ({
     return acc
   }, {})
 
-  const gamesIdsByTeamSet = gamesTeamsDocs.reduce((acc, doc) => {
-    const teamId = toStringId(doc?.teamId)
-    const gameId = toStringId(doc?.gameId)
-
-    if (!teamId || !gameId) {
-      return acc
-    }
-
-    if (!acc[teamId]) {
-      acc[teamId] = new Set()
-    }
-
-    acc[teamId].add(gameId)
-    return acc
-  }, {})
-
-  const gamesIdsByTeam = Object.entries(gamesIdsByTeamSet).reduce(
-    (acc, [teamId, ids]) => {
-      acc[teamId] = Array.from(ids)
-      return acc
-    },
-    {}
-  )
-
   const users = usersSlice
     .map((userDoc) =>
       normalizeUserForAdmin({
         userDoc,
         membershipsByUser,
         teamsMap,
-        gamesIdsByTeam,
+        location,
       })
     )
-    .sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }))
+  const sortedUsers = sortUsers(users, sortBy)
+  const pagedUsers = sortedUsers.slice(queryOffset, queryOffset + queryLimit)
+  const hasMore = sortedUsers.length > queryOffset + queryLimit
 
-  return { users, hasMore }
+  return { users: pagedUsers, hasMore }
 }
 
 export default fetchAdminUsersForCabinet

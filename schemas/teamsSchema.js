@@ -38,6 +38,10 @@ const teamsSchema = {
     type: Object,
     default: {},
   },
+  gameStats: {
+    type: Object,
+    default: null,
+  },
 }
 
 export default teamsSchema

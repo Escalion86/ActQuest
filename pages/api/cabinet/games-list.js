@@ -42,11 +42,16 @@ export default async function handler(req, res) {
       : String(session.user._id)
   const currentUserTelegramId = Number.isFinite(creatorTelegramId) ? creatorTelegramId : null
 
+  const hasLocationQueryParam = Object.prototype.hasOwnProperty.call(req.query || {}, 'location')
   const locationFromQuery =
-    typeof req.query?.location === 'string' ? req.query.location : null
+    hasLocationQueryParam && typeof req.query?.location === 'string'
+      ? req.query.location
+      : null
   const locationFromSession =
     typeof session?.user?.location === 'string' ? session.user.location : null
-  const location = (locationFromQuery || locationFromSession || '').trim().toLowerCase()
+  const locationBase = hasLocationQueryParam ? locationFromQuery : locationFromSession
+  const location = (locationBase || '').trim().toLowerCase()
+  const normalizedLocation = location === 'all' ? null : location || null
 
   const offset = parsePositiveInteger(req.query?.offset, 0)
   const limit = parsePositiveInteger(req.query?.limit, 10)
@@ -60,7 +65,7 @@ export default async function handler(req, res) {
 
     const { games, hasMore } = await fetchGamesForCabinet({
       db,
-      location: location || null,
+      location: normalizedLocation,
       userRole,
       creatorTelegramId: Number.isFinite(creatorTelegramId) ? creatorTelegramId : null,
       currentUserId,

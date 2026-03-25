@@ -101,7 +101,11 @@ export default async function handler(req, res) {
     const uniqueTeamIds = Array.from(new Set(entries.map((entry) => entry.teamId)))
 
     const teams = uniqueTeamIds.length
-      ? await fetchTeamsForCabinet({ db, teamIds: uniqueTeamIds })
+      ? await fetchTeamsForCabinet({
+          db,
+          teamIds: uniqueTeamIds,
+          location: requestedLocation,
+        })
       : []
 
     return res.status(200).json({

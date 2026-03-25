@@ -9,8 +9,8 @@ import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import NoticeBanner from '@components/NoticeBanner'
-import Modal from '@components/Modal'
 import TeamEditModal from '@components/modals/TeamEditModal'
+import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import { getNounUsers } from '@helpers/getNoun'
 import getSessionSafe from '@helpers/getSessionSafe'
@@ -23,6 +23,12 @@ import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
 
 const TEAMS_PAGE_SIZE = 10
+
+const resolveRatingBadge = (rating) =>
+  rating?.isEligible && Number.isFinite(rating?.rank)
+    ? `#${rating.rank}`
+    : null
+
 
 const serializeTeamForComparison = (team) => {
   if (!team) {
@@ -71,6 +77,7 @@ const AdminTeamsPage = ({
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [visibilityFilter, setVisibilityFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('registration_desc')
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -79,13 +86,9 @@ const AdminTeamsPage = ({
   const [isSearchingTeams, setIsSearchingTeams] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
+  const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] = useState(false)
   const copyTimeoutRef = useRef(null)
   const isFirstSearchRenderRef = useRef(true)
-  const [teamDescriptionModal, setTeamDescriptionModal] = useState({
-    isOpen: false,
-    title: '',
-    description: '',
-  })
 
   useEffect(() => {
     setTeams(safeInitialTeams)
@@ -146,20 +149,9 @@ const AdminTeamsPage = ({
       }
 
       setSelectedTeamId(team.id)
-      const fullTeam = teams.find((item) => item.id === team.id) ?? null
-      const description =
-        typeof fullTeam?.description === 'string'
-          ? fullTeam.description.trim()
-          : ''
-      const title = fullTeam?.name || team.name || 'Без названия'
-
-      setTeamDescriptionModal({
-        isOpen: true,
-        title,
-        description,
-      })
+      setIsTeamDescriptionModalOpen(true)
     },
-    [teams]
+    []
   )
 
   const selectedTeam = useMemo(
@@ -195,7 +187,7 @@ const AdminTeamsPage = ({
   }, [])
 
   const closeTeamDescriptionModal = useCallback(() => {
-    setTeamDescriptionModal({ isOpen: false, title: '', description: '' })
+    setIsTeamDescriptionModalOpen(false)
   }, [])
 
   const handleOpenEditModal = useCallback((teamId) => {
@@ -517,6 +509,7 @@ const AdminTeamsPage = ({
         name: team.name || 'Без названия',
         image: team.image || '',
         membersLabel: getNounUsers(team.membersCount ?? 0),
+        ratingBadge: resolveRatingBadge(team.rating),
         updatedLabel,
         open: Boolean(team.open),
       }
@@ -545,6 +538,7 @@ const AdminTeamsPage = ({
       const params = new URLSearchParams({
         offset: String(teams.length),
         limit: String(TEAMS_PAGE_SIZE),
+        sortBy,
       })
       if (searchQuery) {
         params.set('search', searchQuery)
@@ -572,7 +566,7 @@ const AdminTeamsPage = ({
     } finally {
       setIsLoadingMoreTeams(false)
     }
-  }, [hasMoreTeams, isLoadingMoreTeams, searchQuery, teams.length])
+  }, [hasMoreTeams, isLoadingMoreTeams, searchQuery, sortBy, teams.length])
 
   useEffect(() => {
     if (isFirstSearchRenderRef.current) {
@@ -590,6 +584,7 @@ const AdminTeamsPage = ({
         const params = new URLSearchParams({
           offset: '0',
           limit: String(TEAMS_PAGE_SIZE),
+          sortBy,
         })
         if (searchQuery) {
           params.set('search', searchQuery)
@@ -630,7 +625,7 @@ const AdminTeamsPage = ({
     return () => {
       isCancelled = true
     }
-  }, [searchQuery])
+  }, [searchQuery, sortBy])
 
   if (!isAdmin) {
     return (
@@ -698,6 +693,20 @@ const AdminTeamsPage = ({
                 <option value="open">Открытые</option>
                 <option value="closed">Закрытые</option>
             </CabinetSelectField>
+
+            <CabinetSelectField
+                id="team-sort"
+                label="Сортировка"
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value)}
+                containerClassName="space-y-1"
+                labelClassName="text-xs font-semibold text-slate-500"
+                selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                <option value="rating">По рейтингу</option>
+                <option value="games_desc">По количеству игр</option>
+                <option value="registration_desc">По дате регистрации</option>
+            </CabinetSelectField>
           </FormSectionCard>
 
           {feedback && (
@@ -746,6 +755,11 @@ const AdminTeamsPage = ({
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {team.ratingBadge ? (
+                            <span className="text-xs font-medium px-2 py-1 rounded-full border border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                              {team.ratingBadge}
+                            </span>
+                          ) : null}
                           <span
                             className={`text-xs font-medium px-2 py-1 rounded-full ${
                               team.open
@@ -814,21 +828,11 @@ const AdminTeamsPage = ({
           location={location}
           canEditCarSkin={isAdmin}
         />
-        <Modal
-          isOpen={teamDescriptionModal.isOpen}
+        <TeamDescriptionModal
+          isOpen={isTeamDescriptionModalOpen}
           onClose={closeTeamDescriptionModal}
-          title={`Описание команды — ${teamDescriptionModal.title || 'Без названия'}`}
-        >
-          {teamDescriptionModal.description ? (
-            <p className="whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
-              {teamDescriptionModal.description}
-            </p>
-          ) : (
-            <p className="text-sm text-slate-500">
-              Описание для этой команды пока не заполнено.
-            </p>
-          )}
-        </Modal>
+          selectedTeam={selectedTeam}
+        />
       </CabinetLayout>
     </>
   )
@@ -868,6 +872,16 @@ AdminTeamsPage.propTypes = {
       captain: teamMemberShape,
       games: PropTypes.arrayOf(teamGameShape),
       gamesCount: PropTypes.number,
+      rating: PropTypes.shape({
+        isEligible: PropTypes.bool,
+        rank: PropTypes.number,
+        totalRanked: PropTypes.number,
+        playersAbove: PropTypes.number,
+        finalScore: PropTypes.number,
+        playedGames: PropTypes.number,
+        missedGames: PropTypes.number,
+        updatedAt: PropTypes.string,
+      }),
       createdAt: PropTypes.string,
       updatedAt: PropTypes.string,
     })
@@ -917,6 +931,7 @@ export async function getServerSideProps(context) {
       if (db) {
         const result = await fetchTeamsForCabinet({
           db,
+          location,
           offset: 0,
           limit: TEAMS_PAGE_SIZE,
           returnMeta: true,

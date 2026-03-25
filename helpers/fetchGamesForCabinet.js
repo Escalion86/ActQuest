@@ -14,6 +14,50 @@ const toDate = (value) => {
   return date && !Number.isNaN(date.getTime()) ? date : null
 }
 
+const resolveGamesSort = (view) => {
+  if (view === 'upcoming') {
+    return { dateStart: 1, _id: 1 }
+  }
+
+  if (view === 'past') {
+    return { dateStart: -1, _id: 1 }
+  }
+
+  return { updatedAt: -1, _id: 1 }
+}
+
+const sortGamesByView = (games, view) => {
+  const items = Array.isArray(games) ? [...games] : []
+
+  if (view === 'upcoming') {
+    return items.sort((first, second) => {
+      const firstDate = toDate(first?.dateStart)
+      const secondDate = toDate(second?.dateStart)
+      const firstTime = firstDate ? firstDate.getTime() : Number.POSITIVE_INFINITY
+      const secondTime = secondDate ? secondDate.getTime() : Number.POSITIVE_INFINITY
+      if (firstTime !== secondTime) {
+        return firstTime - secondTime
+      }
+      return String(first?.id || '').localeCompare(String(second?.id || ''), 'ru')
+    })
+  }
+
+  if (view === 'past') {
+    return items.sort((first, second) => {
+      const firstDate = toDate(first?.dateStart)
+      const secondDate = toDate(second?.dateStart)
+      const firstTime = firstDate ? firstDate.getTime() : Number.NEGATIVE_INFINITY
+      const secondTime = secondDate ? secondDate.getTime() : Number.NEGATIVE_INFINITY
+      if (firstTime !== secondTime) {
+        return secondTime - firstTime
+      }
+      return String(second?.id || '').localeCompare(String(first?.id || ''), 'ru')
+    })
+  }
+
+  return items
+}
+
 const resolveTeamsPlace = (teamsPlaces, teamId) => {
   if (!teamsPlaces || !teamId) {
     return null
@@ -116,7 +160,7 @@ const fetchGamesForCabinet = async ({
   const fetchLimit = queryLimit + 1
 
   const gamesDocsRaw = await GamesModel.find(query)
-    .sort({ updatedAt: -1 })
+    .sort(resolveGamesSort(view))
     .skip(queryOffset)
     .limit(fetchLimit)
     .select({
@@ -155,6 +199,8 @@ const fetchGamesForCabinet = async ({
       creatorTelegramId: 1,
       moderators: 1,
       location: 1,
+      seasonId: 1,
+      seasonName: 1,
       'result.computed': 1,
       'result.teamsPlaces': 1,
     })
@@ -303,7 +349,7 @@ const fetchGamesForCabinet = async ({
       })
     })
 
-    return { games, hasMore }
+    return { games: sortGamesByView(games, view), hasMore }
   }
 
   const games = gamesFiltered.map((game) => {
@@ -318,7 +364,7 @@ const fetchGamesForCabinet = async ({
     })
   })
 
-  return { games, hasMore }
+  return { games: sortGamesByView(games, view), hasMore }
 }
 
 export default fetchGamesForCabinet

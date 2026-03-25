@@ -33,11 +33,15 @@ export default async function handler(req, res) {
     const offset = parsePositiveInteger(req.query?.offset, 0)
     const limit = parsePositiveInteger(req.query?.limit, 10)
     const search = typeof req.query?.q === 'string' ? req.query.q : ''
+    const sortBy = typeof req.query?.sortBy === 'string' ? req.query.sortBy : 'registration_desc'
+    const location = typeof session?.user?.location === 'string' ? session.user.location : null
     const { users, hasMore } = await fetchAdminUsersForCabinet({
       db,
       offset,
       limit,
       search,
+      sortBy,
+      location,
     })
 
     return res.status(200).json({

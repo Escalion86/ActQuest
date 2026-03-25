@@ -24,6 +24,11 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const MAX_TEAMS_PER_USER = 3
 
+const resolveRatingBadge = (rating) =>
+  rating?.isEligible && Number.isFinite(rating?.rank)
+    ? `#${rating.rank}`
+    : null
+
 const serializeTeamForComparison = (team) => {
   if (!team) {
     return null
@@ -939,6 +944,7 @@ const TeamsPage = ({
         image: team.image || '',
         membersCount: getNounUsers(team.membersCount ?? 0),
         gamesCount: team.gamesCount ?? 0,
+        ratingBadge: resolveRatingBadge(team.rating),
         updatedLabel,
         open: Boolean(team.open),
         canManage: canManageTeam,
@@ -1101,6 +1107,11 @@ const TeamsPage = ({
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
+                            {team.ratingBadge ? (
+                              <span className="text-xs font-medium px-2 py-1 rounded-full border border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                {team.ratingBadge}
+                              </span>
+                            ) : null}
                             <span
                               className={`text-xs font-medium px-2 py-1 rounded-full ${
                                 team.open
@@ -1252,6 +1263,16 @@ TeamsPage.propTypes = {
       captain: teamMemberShape,
       games: PropTypes.arrayOf(teamGameShape),
       gamesCount: PropTypes.number,
+      rating: PropTypes.shape({
+        isEligible: PropTypes.bool,
+        rank: PropTypes.number,
+        totalRanked: PropTypes.number,
+        playersAbove: PropTypes.number,
+        finalScore: PropTypes.number,
+        playedGames: PropTypes.number,
+        missedGames: PropTypes.number,
+        updatedAt: PropTypes.string,
+      }),
       createdAt: PropTypes.string,
       updatedAt: PropTypes.string,
     })
@@ -1321,7 +1342,7 @@ export async function getServerSideProps(context) {
           ]
 
           if (teamIds.length > 0) {
-            initialTeams = await fetchTeamsForCabinet({ db, teamIds })
+            initialTeams = await fetchTeamsForCabinet({ db, teamIds, location })
           }
         }
       }

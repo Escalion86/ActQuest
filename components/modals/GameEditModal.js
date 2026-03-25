@@ -80,6 +80,10 @@ const GameEditModal = ({
   setSelectedModeratorToAdd,
   handleAddModerator,
   handleRemoveModerator,
+  editGameSeasons,
+  isEditGameSeasonsLoading,
+  isEditGameSeasonCreating,
+  handleCreateSeasonForEditGame,
 }) => {
   const isPhotoGame = selectedGame?.type === 'photo'
   const amountInputClassName =
@@ -1345,6 +1349,53 @@ const GameEditModal = ({
                         labelClassName="text-sm text-slate-600 dark:text-slate-200"
                       />
                     </div>
+                    {Boolean(selectedGame.isRated ?? true) && (
+                      <div className="mt-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                        <label
+                          htmlFor="game-season"
+                          className="block text-sm font-semibold text-slate-700 dark:text-slate-100"
+                        >
+                          Сезон
+                        </label>
+                        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                          <select
+                            id="game-season"
+                            value={typeof selectedGame.seasonId === 'string' ? selectedGame.seasonId : ''}
+                            onChange={(event) => {
+                              const seasonId = event.target.value
+                              const selectedSeason = Array.isArray(editGameSeasons)
+                                ? editGameSeasons.find((season) => season.id === seasonId)
+                                : null
+                              updateSelectedGame({
+                                seasonId,
+                                seasonName: selectedSeason?.name || '',
+                              })
+                            }}
+                            disabled={isEditGameSeasonsLoading || !canEditSelectedGame || isSaving}
+                            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                          >
+                            <option value="">
+                              {isEditGameSeasonsLoading ? 'Загружаем сезоны…' : 'Выберите сезон'}
+                            </option>
+                            {Array.isArray(editGameSeasons) &&
+                              editGameSeasons.map((season) => (
+                                <option key={season.id} value={season.id}>
+                                  {season.name}
+                                </option>
+                              ))}
+                          </select>
+                          <CabinetButton
+                            onClick={handleCreateSeasonForEditGame}
+                            disabled={!canEditSelectedGame || isEditGameSeasonCreating || isSaving}
+                            variant="secondary"
+                            tone="brand"
+                            size="sm"
+                          >
+                            {isEditGameSeasonCreating ? 'Создание…' : 'Создать сезон'}
+                          </CabinetButton>
+                        </div>
+                      </div>
+                    )}
                     <div className="pt-2">
                       <CabinetButton
                         onClick={handleGenerateResults}
@@ -1598,11 +1649,24 @@ GameEditModal.propTypes = {
   setSelectedModeratorToAdd: PropTypes.func.isRequired,
   handleAddModerator: PropTypes.func.isRequired,
   handleRemoveModerator: PropTypes.func.isRequired,
+  editGameSeasons: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      location: PropTypes.string,
+    })
+  ),
+  isEditGameSeasonsLoading: PropTypes.bool,
+  isEditGameSeasonCreating: PropTypes.bool,
+  handleCreateSeasonForEditGame: PropTypes.func.isRequired,
 }
 
 GameEditModal.defaultProps = {
   selectedGame: null,
   location: null,
+  editGameSeasons: [],
+  isEditGameSeasonsLoading: false,
+  isEditGameSeasonCreating: false,
 }
 
 export default memo(GameEditModal)

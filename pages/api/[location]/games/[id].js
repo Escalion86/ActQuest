@@ -1,6 +1,9 @@
 import CRUD from '@server/CRUD'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
+import buildGameResultComputed from '@server/buildGameResultComputed'
+import updateParticipantsClosedStats from '@server/updateParticipantsClosedStats'
+import updateParticipantsRatings from '@server/updateParticipantsRatings'
 
 const buildResetPayload = () => ({
   activeNum: 0,
@@ -15,6 +18,14 @@ const buildResetPayload = () => ({
   timeAddings: [],
   timerId: null,
 })
+
+const hasResultSnapshots = (result) =>
+  Array.isArray(result?.teams) &&
+  result.teams.length > 0 &&
+  Array.isArray(result?.gameTeams) &&
+  result.gameTeams.length > 0 &&
+  Array.isArray(result?.teamsUsers) &&
+  result.teamsUsers.length > 0
 
 export default async function handler(req, res) {
   if (req.method !== 'PUT') {
@@ -67,16 +78,27 @@ export default async function handler(req, res) {
     }
 
     const previousStatus = String(existingGame.status || '').toLowerCase()
-    const nextStatus = updatePayload.status ?? existingGame.status
-    const nextStatusNormalized = String(nextStatus || '').toLowerCase()
+    const requestedStatus = updatePayload.status ?? existingGame.status
+    const requestedStatusNormalized = String(requestedStatus || '').toLowerCase()
+    const resolvedStatus =
+      requestedStatusNormalized === 'reopen'
+        ? hasResultSnapshots(existingGame?.result)
+          ? 'finished'
+          : 'active'
+        : requestedStatus
+    const nextStatusNormalized = String(resolvedStatus || '').toLowerCase()
     const shouldReset =
-      existingGame.status === 'finished' && nextStatus === 'active'
+      (previousStatus === 'finished' || previousStatus === 'closed') &&
+      nextStatusNormalized === 'active'
     const shouldCreateResultSnapshot =
-      (nextStatusNormalized === 'finished' || nextStatusNormalized === 'closed') &&
+      nextStatusNormalized === 'finished' &&
       previousStatus !== 'finished' &&
       previousStatus !== 'closed'
+    const shouldUpdateParticipantsMetrics =
+      nextStatusNormalized === 'closed' &&
+      previousStatus !== 'closed'
 
-    const updateData = { ...updatePayload }
+    const updateData = { ...updatePayload, status: resolvedStatus }
 
     if (shouldReset) {
       updateData.dateStartFact = null
@@ -96,7 +118,7 @@ export default async function handler(req, res) {
       }
     }
 
-    const updatedGame = await Games.findByIdAndUpdate(id, updateData, {
+    let updatedGame = await Games.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
     })
@@ -110,6 +132,43 @@ export default async function handler(req, res) {
     if (shouldReset) {
       const GamesTeams = db.model('GamesTeams')
       await GamesTeams.updateMany({ gameId: id }, { $set: buildResetPayload() })
+    }
+
+    if (shouldUpdateParticipantsMetrics) {
+      try {
+        const gameForMetrics = updatedGame?.toObject
+          ? updatedGame.toObject()
+          : updatedGame
+        const built = await buildGameResultComputed({ game: gameForMetrics })
+        const nextResult = {
+          ...(gameForMetrics.result && typeof gameForMetrics.result === 'object'
+            ? gameForMetrics.result
+            : {}),
+          teamsPlaces: built.teamsPlaces,
+          computed: built.computed,
+        }
+
+        updatedGame = await Games.findByIdAndUpdate(
+          id,
+          { result: nextResult },
+          { new: true, runValidators: true }
+        )
+
+        const finalGameForMetrics = updatedGame?.toObject
+          ? updatedGame.toObject()
+          : updatedGame
+
+        await updateParticipantsClosedStats({
+          db,
+          game: finalGameForMetrics,
+        })
+        await updateParticipantsRatings({
+          db,
+          game: finalGameForMetrics,
+        })
+      } catch (metricsError) {
+        console.error('Failed to update participants metrics on game close', metricsError)
+      }
     }
 
     return res.status(200).json({ success: true, data: updatedGame })

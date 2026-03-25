@@ -2,6 +2,7 @@ import { getSession } from 'next-auth/react'
 import { getServerSession } from 'next-auth/next'
 import { getToken } from 'next-auth/jwt'
 import { authOptions } from '@pages/api/auth/[...nextauth]'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const AUTH_COOKIE_NAMES = ['next-auth.session-token', '__Secure-next-auth.session-token']
 
@@ -96,6 +97,103 @@ const mergeSessionWithToken = (session, token) => {
   }
 }
 
+const toFiniteNumberOrNull = (value) => {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+const resolveUserLookupFilter = (user) => {
+  if (!user) {
+    return null
+  }
+
+  const globalUserId = user.globalUserId ?? user._id ?? null
+  if (globalUserId) {
+    return { _id: globalUserId }
+  }
+
+  const phone = toFiniteNumberOrNull(user.phone)
+  if (phone !== null) {
+    return { phone }
+  }
+
+  const telegramId = toFiniteNumberOrNull(user.telegramId)
+  if (telegramId !== null) {
+    return { telegramId }
+  }
+
+  const vkId = toFiniteNumberOrNull(user.vkId)
+  if (vkId !== null) {
+    return { vkId }
+  }
+
+  return null
+}
+
+const enrichSessionFromGlobalDb = async (session) => {
+  if (!session?.user) {
+    return session
+  }
+
+  const lookupFilter = resolveUserLookupFilter(session.user)
+  if (!lookupFilter) {
+    return session
+  }
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) {
+      return session
+    }
+
+    const userDoc = await db
+      .model('Users')
+      .findOne(lookupFilter)
+      .select({
+        _id: 1,
+        telegramId: 1,
+        vkId: 1,
+        phone: 1,
+        location: 1,
+        role: 1,
+        name: 1,
+        username: 1,
+        photoUrl: 1,
+        languageCode: 1,
+        isPremium: 1,
+      })
+      .lean()
+
+    if (!userDoc?._id) {
+      return session
+    }
+
+    const resolvedId = userDoc._id.toString()
+
+    return {
+      ...session,
+      user: {
+        ...session.user,
+        _id: session.user._id ?? resolvedId,
+        globalUserId: session.user.globalUserId ?? resolvedId,
+        telegramId: session.user.telegramId ?? userDoc.telegramId ?? null,
+        vkId: session.user.vkId ?? userDoc.vkId ?? null,
+        phone: session.user.phone ?? userDoc.phone ?? null,
+        location: session.user.location ?? userDoc.location ?? null,
+        role: session.user.role ?? userDoc.role ?? 'client',
+        name: session.user.name ?? userDoc.name ?? null,
+        username: session.user.username ?? userDoc.username ?? null,
+        photoUrl: session.user.photoUrl ?? userDoc.photoUrl ?? null,
+        languageCode: session.user.languageCode ?? userDoc.languageCode ?? null,
+        isPremium: Boolean(session.user.isPremium ?? userDoc.isPremium),
+      },
+    }
+  } catch (error) {
+    console.error('Не удалось обогатить сессию данными пользователя', error)
+    return session
+  }
+}
+
 const getSessionSafe = async (context) => {
   const req = context?.req || context
   let session = null
@@ -129,10 +227,11 @@ const getSessionSafe = async (context) => {
 
   const resolvedSession = mergeSessionWithToken(session, token)
   if (resolvedSession) {
-    return resolvedSession
+    return enrichSessionFromGlobalDb(resolvedSession)
   }
 
-  clearAuthCookies(context?.res)
+  // Не очищаем cookie автоматически: при временных сбоях получения сессии
+  // это может вызывать ложный разлогин и пустые данные при client-navigation.
   return null
 }
 

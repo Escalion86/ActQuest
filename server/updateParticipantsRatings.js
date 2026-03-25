@@ -151,9 +151,12 @@ const buildTimeline = (games) =>
 
       const startedAt = game?.dateStart ? new Date(game.dateStart).getTime() : Number.NaN
 
+      const seasonId = toStringId(game?.seasonId)
+
       return {
         id: toStringId(game?._id) || '',
         startedAt: Number.isFinite(startedAt) ? startedAt : Number.POSITIVE_INFINITY,
+        seasonId: seasonId || null,
         teamsPlaces,
         playersPlaces,
       }
@@ -167,43 +170,69 @@ const buildTimeline = (games) =>
     })
 
 const collectMetrics = (timeline, mapSelector) => {
-  const keys = new Set()
-
+  const seasonGamesCount = new Map()
   timeline.forEach((item) => {
-    mapSelector(item).forEach((_, key) => {
-      keys.add(key)
+    const seasonId = toStringId(item?.seasonId)
+    if (!seasonId) {
+      return
+    }
+    seasonGamesCount.set(seasonId, (seasonGamesCount.get(seasonId) ?? 0) + 1)
+  })
+
+  const rawByKey = new Map()
+  timeline.forEach((item) => {
+    const seasonId = toStringId(item?.seasonId)
+    mapSelector(item).forEach((place, key) => {
+      if (!Number.isFinite(place)) {
+        return
+      }
+
+      if (!rawByKey.has(key)) {
+        rawByKey.set(key, {
+          places: [],
+          playedBySeason: new Map(),
+        })
+      }
+
+      const row = rawByKey.get(key)
+      row.places.push(Number(place))
+      if (seasonId) {
+        row.playedBySeason.set(
+          seasonId,
+          (row.playedBySeason.get(seasonId) ?? 0) + 1
+        )
+      }
     })
   })
 
   const metricsByKey = new Map()
-
-  keys.forEach((key) => {
-    const firstPlayedIndex = timeline.findIndex((item) => mapSelector(item).has(key))
-    if (firstPlayedIndex < 0) {
-      return
-    }
-
-    const metrics = {
-      places: [],
-      missedGames: 0,
-    }
-
-    for (let index = firstPlayedIndex; index < timeline.length; index += 1) {
-      const place = mapSelector(timeline[index]).get(key)
-      if (Number.isFinite(place)) {
-        metrics.places.push(Number(place))
-      } else {
-        metrics.missedGames += 1
+  rawByKey.forEach((row, key) => {
+    let missedGames = 0
+    row.playedBySeason.forEach((playedCount, seasonId) => {
+      const totalGamesInSeason = seasonGamesCount.get(seasonId) ?? 0
+      if (playedCount > 0 && totalGamesInSeason > playedCount) {
+        missedGames += totalGamesInSeason - playedCount
       }
-    }
+    })
 
-    metricsByKey.set(key, metrics)
+    metricsByKey.set(key, {
+      places: row.places,
+      missedGames,
+    })
   })
 
   return metricsByKey
 }
 
 const buildRanks = (metricsByKey) => {
+  const isSameScore = (first, second) => {
+    if (!Number.isFinite(first) || !Number.isFinite(second)) {
+      return false
+    }
+
+    return Math.abs(first - second) < 1e-9
+  }
+
   const rows = Array.from(metricsByKey.entries())
     .map(([key, rawMetrics]) => {
       const metrics = buildRatingMetrics(rawMetrics)
@@ -227,8 +256,25 @@ const buildRanks = (metricsByKey) => {
     })
 
   const rankByKey = new Map()
+  let previousScore = null
+  let previousRank = 0
   eligibleRows.forEach((item, index) => {
-    rankByKey.set(item.key, index + 1)
+    const currentScore = Number(item.finalScore)
+    if (index === 0) {
+      previousRank = 1
+      previousScore = currentScore
+      rankByKey.set(item.key, previousRank)
+      return
+    }
+
+    if (isSameScore(currentScore, previousScore)) {
+      rankByKey.set(item.key, previousRank)
+      return
+    }
+
+    previousRank = index + 1
+    previousScore = currentScore
+    rankByKey.set(item.key, previousRank)
   })
 
   const metricsByKeyResolved = new Map()
@@ -271,18 +317,12 @@ const buildRatingSnapshot = ({ rating, location, sourceGameId, entityType }) => 
   }
 }
 
-const normalizeLocation = (value) => {
-  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
-  return normalized || null
-}
-
 const updateParticipantsRatings = async ({ db, game }) => {
   if (!db || !game) {
     return { usersUpdated: 0, teamsUpdated: 0 }
   }
 
   const gameId = toStringId(game?._id)
-  const location = normalizeLocation(game?.location)
   const result = game?.result && typeof game.result === 'object' ? game.result : {}
   const teamsUsers = Array.isArray(result?.teamsUsers) ? result.teamsUsers : []
   const teamsPlacesRaw =
@@ -322,11 +362,8 @@ const updateParticipantsRatings = async ({ db, game }) => {
   }
 
   const gamesQuery = {
-    status: { $in: ['finished', 'closed'] },
+    status: 'closed',
     isRated: { $ne: false },
-  }
-  if (location) {
-    gamesQuery.location = location
   }
 
   const ratedGames = await db
@@ -335,6 +372,7 @@ const updateParticipantsRatings = async ({ db, game }) => {
     .select({
       _id: 1,
       dateStart: 1,
+      seasonId: 1,
       result: 1,
     })
     .lean()
@@ -349,8 +387,6 @@ const updateParticipantsRatings = async ({ db, game }) => {
   const playerRatings = buildRanks(playerMetrics)
   const teamRatings = buildRanks(teamMetrics)
 
-  const locationPath = location ? `ratingsByLocation.${location}` : null
-
   const usersBulkOps = []
   currentUserRefs.forEach((filter, key) => {
     const rating = playerRatings.get(key)
@@ -360,20 +396,15 @@ const updateParticipantsRatings = async ({ db, game }) => {
 
     const snapshot = buildRatingSnapshot({
       rating,
-      location,
+      location: null,
       sourceGameId: gameId,
       entityType: 'player',
     })
 
-    const setPayload = { rating: snapshot }
-    if (locationPath) {
-      setPayload[locationPath] = snapshot
-    }
-
     usersBulkOps.push({
       updateOne: {
         filter,
-        update: { $set: setPayload },
+        update: { $set: { rating: snapshot } },
       },
     })
   })
@@ -387,20 +418,15 @@ const updateParticipantsRatings = async ({ db, game }) => {
 
     const snapshot = buildRatingSnapshot({
       rating,
-      location,
+      location: null,
       sourceGameId: gameId,
       entityType: 'team',
     })
 
-    const setPayload = { rating: snapshot }
-    if (locationPath) {
-      setPayload[locationPath] = snapshot
-    }
-
     teamsBulkOps.push({
       updateOne: {
         filter: { _id: teamId },
-        update: { $set: setPayload },
+        update: { $set: { rating: snapshot } },
       },
     })
   })

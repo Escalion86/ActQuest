@@ -99,6 +99,10 @@ const usersSchema = {
     type: Object,
     default: {},
   },
+  gameStats: {
+    type: Object,
+    default: null,
+  },
   pushSubscriptions: {
     type: [
       {

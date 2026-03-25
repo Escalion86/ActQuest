@@ -85,6 +85,14 @@ const TeamDescriptionModal = ({
               <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{selectedTeam.gamesCount ?? 0}</dd>
             </div>
             <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Рейтинг</dt>
+              <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                {selectedTeam.rating?.isEligible && Number.isFinite(selectedTeam.rating?.rank)
+                  ? `#${selectedTeam.rating.rank} · ${Number(selectedTeam.rating?.finalScore || 0).toFixed(2)}`
+                  : 'Недостаточно данных для рейтинга'}
+              </dd>
+            </div>
+            <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Капитан</dt>
               <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
                 {selectedTeam.captain?.name || 'Не назначен'}
@@ -203,6 +211,14 @@ TeamDescriptionModal.propTypes = {
     open: PropTypes.bool,
     membersCount: PropTypes.number,
     gamesCount: PropTypes.number,
+    rating: PropTypes.shape({
+      isEligible: PropTypes.bool,
+      rank: PropTypes.number,
+      finalScore: PropTypes.number,
+      playedGames: PropTypes.number,
+      missedGames: PropTypes.number,
+      updatedAt: PropTypes.string,
+    }),
     captain: PropTypes.shape({
       name: PropTypes.string,
       username: PropTypes.string,

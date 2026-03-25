@@ -96,6 +96,29 @@ const buildTaskDurations = (gameTeam, game) => {
   return result
 }
 
+const getPhotoTaskChecks = (gameTeam, taskIndex) => {
+  const photos = Array.isArray(gameTeam?.photos) ? gameTeam.photos : []
+  const taskPhotos = photos[taskIndex]
+  const checksRaw = taskPhotos?.checks
+
+  if (checksRaw && typeof checksRaw.get === 'function') {
+    const checksObject = {}
+    Array.from(checksRaw.entries()).forEach(([key, value]) => {
+      checksObject[String(key)] = Boolean(value)
+    })
+    return checksObject
+  }
+
+  if (checksRaw && typeof checksRaw === 'object') {
+    return Object.keys(checksRaw).reduce((acc, key) => {
+      acc[key] = Boolean(checksRaw[key])
+      return acc
+    }, {})
+  }
+
+  return {}
+}
+
 const getTaskPenaltyAndBonus = (task, gameTeam, taskIndex) => {
   const findedPenaltyCodes = Array.isArray(gameTeam?.findedPenaltyCodes)
     ? gameTeam.findedPenaltyCodes
@@ -374,6 +397,121 @@ const buildTeamResult = (team, gameTeam, game) => {
   }
 }
 
+const buildPhotoTeamResult = (team, gameTeam, game) => {
+  const tasks = Array.isArray(game?.tasks) ? game.tasks : []
+  const taskFailurePenalty = Number(game?.taskFailurePenalty) || 0
+  const addings = Array.isArray(gameTeam?.timeAddings)
+    ? gameTeam.timeAddings
+        .map((item) => {
+          const value = Number(item?.time)
+          if (!Number.isFinite(value) || value === 0) {
+            return null
+          }
+
+          // В фотоквесте +time трактуем как штраф (минус баллы), -time как бонус (плюс баллы)
+          const points = value > 0 ? -value : Math.abs(value)
+          return {
+            type: value > 0 ? 'penalty' : 'bonus',
+            points,
+            absPoints: Math.abs(points),
+            name: typeof item?.name === 'string' ? item.name : '',
+            taskId: item?.taskId || null,
+            taskIndex: Number.isFinite(Number(item?.taskIndex)) ? Number(item.taskIndex) : null,
+          }
+        })
+        .filter(Boolean)
+    : []
+
+  let taskPoints = 0
+  let subTaskPoints = 0
+  let failurePenaltyPoints = 0
+  let codePenaltyPoints = 0
+  let codeBonusPoints = 0
+  let manyWrongCodePenaltyPoints = 0
+
+  const taskResults = tasks.map((task, taskIndex) => {
+    const isCanceled = Boolean(task?.canceled)
+    const checks = getPhotoTaskChecks(gameTeam, taskIndex)
+    const accepted = Boolean(checks?.accepted)
+
+    const baseTaskPoints = accepted ? Number(task?.taskBonusForComplite) || 0 : 0
+    const taskSubTasks = Array.isArray(task?.subTasks) ? task.subTasks : []
+    const acceptedSubTaskPoints = accepted
+      ? taskSubTasks.reduce((acc, subTask) => {
+          const subTaskId = toStringId(subTask?._id)
+          if (!subTaskId || !checks[subTaskId]) {
+            return acc
+          }
+          return acc + (Number(subTask?.bonus) || 0)
+        }, 0)
+      : 0
+
+    const codeResult = getTaskPenaltyAndBonus(task, gameTeam, taskIndex)
+    const wrongCodePenalty = getWrongCodePenalty(game, gameTeam, taskIndex)
+    const taskFailurePoints = !isCanceled && !accepted ? taskFailurePenalty : 0
+
+    taskPoints += baseTaskPoints
+    subTaskPoints += acceptedSubTaskPoints
+    failurePenaltyPoints += taskFailurePoints
+    codePenaltyPoints += codeResult.penaltySeconds
+    codeBonusPoints += codeResult.bonusSeconds
+    manyWrongCodePenaltyPoints += wrongCodePenalty
+
+    const resultPoints =
+      baseTaskPoints +
+      acceptedSubTaskPoints +
+      (Number(codeResult.bonusSeconds) || 0) -
+      (Number(codeResult.penaltySeconds) || 0) -
+      wrongCodePenalty -
+      taskFailurePoints
+
+    return {
+      taskIndex,
+      taskTitle: typeof task?.title === 'string' ? task.title : '',
+      accepted,
+      canceled: isCanceled,
+      taskPoints: baseTaskPoints,
+      subTaskPoints: acceptedSubTaskPoints,
+      failurePenaltyPoints: taskFailurePoints,
+      codePenaltyPoints: Number(codeResult.penaltySeconds) || 0,
+      codeBonusPoints: Number(codeResult.bonusSeconds) || 0,
+      manyWrongCodePenaltyPoints: wrongCodePenalty,
+      resultPoints,
+      display: `${resultPoints} б.`,
+    }
+  })
+
+  const addingsPoints = addings.reduce((acc, item) => acc + (Number(item.points) || 0), 0)
+  const finalPoints =
+    taskPoints +
+    subTaskPoints +
+    codeBonusPoints -
+    codePenaltyPoints -
+    manyWrongCodePenaltyPoints -
+    failurePenaltyPoints +
+    addingsPoints
+
+  const teamId = toStringId(team?._id ?? team?.id) || toStringId(gameTeam?.teamId) || ''
+
+  return {
+    teamId,
+    teamName: typeof team?.name === 'string' && team.name.trim() ? team.name.trim() : 'Без названия',
+    scoringMode: 'points',
+    taskPoints,
+    subTaskPoints,
+    failurePenaltyPoints,
+    codePenaltyPoints,
+    codeBonusPoints,
+    manyWrongCodePenaltyPoints,
+    addingsPoints,
+    addings,
+    finalPoints,
+    finalDisplay: `${finalPoints} б.`,
+    taskResults,
+    place: null,
+  }
+}
+
 const buildTaskBoards = (teamsResults, game) => {
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
 
@@ -567,16 +705,26 @@ const buildGameResultComputed = async ({ game }) => {
   const gameTeams = Array.isArray(snapshots.gameTeams) ? snapshots.gameTeams : []
   const teamsUsers = Array.isArray(snapshots.teamsUsers) ? snapshots.teamsUsers : []
 
+  const isPhotoGame = game?.type === 'photo'
   const teamsResults = teams.map((team) => {
     const teamId = toStringId(team?._id ?? team?.id)
     const gameTeam = gameTeams.find((item) => toStringId(item?.teamId) === teamId)
-    return buildTeamResult(team, gameTeam, game)
+    return isPhotoGame
+      ? buildPhotoTeamResult(team, gameTeam, game)
+      : buildTeamResult(team, gameTeam, game)
   })
 
   const sortedTeams = [...teamsResults].sort((first, second) => {
-    if (first.finalSeconds !== second.finalSeconds) {
+    if (isPhotoGame) {
+      const a = Number(first?.finalPoints)
+      const b = Number(second?.finalPoints)
+      if (Number.isFinite(a) && Number.isFinite(b) && a !== b) {
+        return b - a
+      }
+    } else if (first.finalSeconds !== second.finalSeconds) {
       return first.finalSeconds - second.finalSeconds
     }
+
     return first.teamName.localeCompare(second.teamName, 'ru')
   })
 
@@ -604,6 +752,7 @@ const buildGameResultComputed = async ({ game }) => {
       version: 1,
       generatedAt: new Date().toISOString(),
       summary: {
+        scoringMode: isPhotoGame ? 'points' : 'time',
         teamsCount: sortedTeams.length,
         participantsCount: teamsUsers.length,
         tasksCount: Array.isArray(game?.tasks) ? game.tasks.length : 0,

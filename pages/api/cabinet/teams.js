@@ -53,7 +53,11 @@ export default async function handler(req, res) {
       throw new Error('Соединение с базой данных не установлено')
     }
 
-    const teams = await fetchTeamsForCabinet({ db, teamIds })
+    const teams = await fetchTeamsForCabinet({
+      db,
+      teamIds,
+      location: typeof location === 'string' ? location : null,
+    })
 
     return res.status(200).json({
       success: true,

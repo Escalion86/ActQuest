@@ -2,7 +2,7 @@ import { getData } from '@helpers/CRUD'
 // import { getSession } from 'next-auth/react'
 import Head from 'next/head'
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 // import Image from 'next/image'
@@ -77,6 +77,17 @@ const Car = ({
     />
   )
 }
+
+const YellowCupIcon = () => (
+  <svg
+    className="h-3.5 w-3.5 text-amber-400 dark:text-amber-300"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M6 2.75A.75.75 0 016.75 2h6.5a.75.75 0 01.75.75V5h1.25A1.75 1.75 0 0117 6.75v.9a3.35 3.35 0 01-2.75 3.3A5.26 5.26 0 0111 13.78v1.47h2.1a.75.75 0 010 1.5H6.9a.75.75 0 010-1.5H9v-1.47a5.26 5.26 0 01-3.25-2.83A3.35 3.35 0 013 7.65v-.9A1.75 1.75 0 014.75 5H6V2.75zM6 6.5H4.75a.25.25 0 00-.25.25v.9c0 .9.62 1.66 1.45 1.88A5.18 5.18 0 016 8.75V6.5zm8 0v2.25c0 .27-.02.53-.07.78.83-.22 1.45-.98 1.45-1.88v-.9a.25.25 0 00-.25-.25H14z" />
+  </svg>
+)
 
 const toHHMMSS = (sec, noHours = false) => {
   const tempSec = Math.abs(sec)
@@ -174,9 +185,17 @@ const TimeResult = ({
   adjustments,
   rowHeight,
   isBonusTask,
+  isGapFromPrevious = false,
+  forceFinish = false,
+  adjustmentKey,
+  activeAdjustmentKey,
+  setActiveAdjustmentKey,
+  showBestCup = false,
   ...props
 }) => {
-  const [isTooltipOpen, setIsTooltipOpen] = useState(false)
+  const tooltipContainerRef = useRef(null)
+  const isTooltipOpen =
+    Boolean(adjustmentKey) && activeAdjustmentKey === adjustmentKey
   const penaltySeconds = Number.isFinite(Number(penalty))
     ? Math.max(0, Number(penalty))
     : 0
@@ -188,11 +207,34 @@ const TimeResult = ({
   const hasAnyAdjustment =
     hasAdjustmentsData || penaltySeconds > 0 || bonusSeconds > 0
 
+  useEffect(() => {
+    if (!isTooltipOpen) {
+      return undefined
+    }
+
+    const handleOutsideClick = (event) => {
+      if (
+        tooltipContainerRef.current &&
+        !tooltipContainerRef.current.contains(event.target)
+      ) {
+        setActiveAdjustmentKey(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick)
+    document.addEventListener('touchstart', handleOutsideClick)
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick)
+      document.removeEventListener('touchstart', handleOutsideClick)
+    }
+  }, [isTooltipOpen, setActiveAdjustmentKey])
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{
-        opacity: start ? [0, 0, 1, 1] : 0,
+        opacity: forceFinish ? 1 : start ? [0, 0, 1, 1] : 0,
       }}
       transition={{
         // type: 'just',
@@ -200,7 +242,7 @@ const TimeResult = ({
         // type: 'spring',
         // stiffness: 1,
         // duration: start ? duration : 0,
-        delay: start ? delay : 0,
+        delay: forceFinish ? 0 : start ? delay : 0,
       }}
       className={cn(
         'flex flex-col font-bold w-[120px] items-center justify-center',
@@ -220,78 +262,108 @@ const TimeResult = ({
       }}
       {...props}
     >
-      {isBonusTask ? '---' : toHHMMSS(timeResult)}
+      <div className="relative inline-flex items-center justify-center">
+        {showBestCup ? (
+          <span className="pointer-events-none absolute right-full mr-1">
+            <YellowCupIcon />
+          </span>
+        ) : null}
+        <span>{isBonusTask ? '---' : toHHMMSS(timeResult)}</span>
+      </div>
       {hasAnyAdjustment && (
-        <div className="relative flex -mb-[9px] -mt-1.5 text-xs font-normal">
-          <button
-            type="button"
-            className="inline-flex cursor-pointer items-center gap-x-2 rounded-md border border-slate-300/70 bg-white/75 px-1.5 py-0.5 transition hover:bg-white dark:border-cyan-500/30 dark:bg-[#0a1730]/70 dark:hover:bg-[#0f1f3f]"
-            onClick={(event) => {
-              event.stopPropagation()
-              setIsTooltipOpen((state) => !state)
-            }}
-            title="Показать бонусы и штрафы"
-          >
-            <span className="text-red-600 dark:text-rose-300">
-              {toHHMMSS(penaltySeconds, true)}
-            </span>
-            <span className="text-green-800 dark:text-emerald-300">
-              {toHHMMSS(bonusSeconds, true)}
-            </span>
-          </button>
-          {isTooltipOpen && (
-            <div className="absolute left-1/2 top-full z-30 mt-1.5 w-56 -translate-x-1/2 rounded-lg border border-cyan-300/60 bg-white/95 p-2 text-left text-[11px] text-slate-700 shadow-lg dark:border-cyan-500/35 dark:bg-[#07122a]/96 dark:text-slate-200">
-              <p className="mb-1 font-semibold text-slate-800 dark:text-slate-100">
-                Учтённые бонусы и штрафы
-              </p>
-              {hasAdjustmentsData ? (
-                <ul className="space-y-1">
-                  {adjustments.map((item, index) => {
-                    const secondsValue = Number(item?.seconds)
-                    const type = item?.type === 'bonus' ? 'bonus' : 'penalty'
-                    const display =
-                      item?.display || toHHMMSS(Math.abs(secondsValue), true)
-                    const description =
-                      item?.description || item?.name || 'Корректировка'
-                    return (
-                      <li
-                        key={`${type}-${index}-${description}`}
-                        className="flex items-start gap-1.5"
-                      >
-                        <span
-                          className={cn(
-                            'mt-0.5 inline-flex h-1.5 w-1.5 rounded-full',
-                            type === 'bonus' ? 'bg-emerald-500' : 'bg-rose-500',
-                          )}
-                        />
-                        <span>
-                          <span
-                            className={cn(
-                              'font-mono',
-                              type === 'bonus'
-                                ? 'text-emerald-700 dark:text-emerald-300'
-                                : 'text-rose-700 dark:text-rose-300',
-                            )}
+        <div
+          ref={tooltipContainerRef}
+          className="relative flex -mb-[8px] mt-0.5 text-xs font-normal"
+        >
+          {isGapFromPrevious ? (
+            <div className="inline-flex items-center gap-x-1 rounded-md border border-rose-300/65 bg-rose-50/85 px-1.5 py-0.5 text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/12 dark:text-rose-200">
+              <span className="font-mono">+{toHHMMSS(penaltySeconds, true)}</span>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="inline-flex cursor-pointer items-center gap-x-2 rounded-md border border-slate-300/70 bg-white/75 px-1.5 py-0.5 transition hover:bg-white dark:border-cyan-500/30 dark:bg-[#0a1730]/70 dark:hover:bg-[#0f1f3f]"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  if (isTooltipOpen) {
+                    setActiveAdjustmentKey(null)
+                    return
+                  }
+                  setActiveAdjustmentKey(adjustmentKey || null)
+                }}
+                title="Показать бонусы и штрафы"
+              >
+                {penaltySeconds > 0 && (
+                  <span className="text-red-600 dark:text-rose-300">
+                    {toHHMMSS(penaltySeconds, true)}
+                  </span>
+                )}
+                {bonusSeconds > 0 && (
+                  <span className="text-green-800 dark:text-emerald-300">
+                    {toHHMMSS(bonusSeconds, true)}
+                  </span>
+                )}
+              </button>
+              {isTooltipOpen && (
+                <div className="absolute left-1/2 top-full z-30 mt-1.5 w-56 -translate-x-1/2 rounded-lg border border-cyan-300/60 bg-white/95 p-2 text-left text-[11px] text-slate-700 shadow-lg dark:border-cyan-500/35 dark:bg-[#07122a]/96 dark:text-slate-200">
+                  <p className="mb-1 font-semibold text-slate-800 dark:text-slate-100">
+                    Учтённые бонусы и штрафы
+                  </p>
+                  {hasAdjustmentsData ? (
+                    <ul className="space-y-1">
+                      {adjustments.map((item, index) => {
+                        const secondsValue = Number(item?.seconds)
+                        const type = item?.type === 'bonus' ? 'bonus' : 'penalty'
+                        const display =
+                          item?.display || toHHMMSS(Math.abs(secondsValue), true)
+                        const description =
+                          item?.description || item?.name || 'Корректировка'
+                        return (
+                          <li
+                            key={`${type}-${index}-${description}`}
+                            className="flex items-start gap-1.5"
                           >
-                            {display}
-                          </span>{' '}
-                          <span>{description}</span>
-                        </span>
-                      </li>
-                    )
-                  })}
-                </ul>
-              ) : (
-                <div className="space-y-1">
-                  <p className="text-rose-700 dark:text-rose-300">
-                    Штрафы: {toHHMMSS(penaltySeconds, true)}
-                  </p>
-                  <p className="text-emerald-700 dark:text-emerald-300">
-                    Бонусы: {toHHMMSS(bonusSeconds, true)}
-                  </p>
+                            <span
+                              className={cn(
+                                'mt-0.5 inline-flex h-1.5 w-1.5 rounded-full',
+                                type === 'bonus' ? 'bg-emerald-500' : 'bg-rose-500',
+                              )}
+                            />
+                            <span>
+                              <span
+                                className={cn(
+                                  'font-mono',
+                                  type === 'bonus'
+                                    ? 'text-emerald-700 dark:text-emerald-300'
+                                    : 'text-rose-700 dark:text-rose-300',
+                                )}
+                              >
+                                {display}
+                              </span>{' '}
+                              <span>{description}</span>
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : (
+                    <div className="space-y-1">
+                      {penaltySeconds > 0 && (
+                        <p className="text-rose-700 dark:text-rose-300">
+                          Штрафы: {toHHMMSS(penaltySeconds, true)}
+                        </p>
+                      )}
+                      {bonusSeconds > 0 && (
+                        <p className="text-emerald-700 dark:text-emerald-300">
+                          Бонусы: {toHHMMSS(bonusSeconds, true)}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       )}
@@ -305,6 +377,14 @@ const GameBlock = ({ game, isDarkTheme }) => {
   const [duration, setDuration] = useState(40) //totalSeconds / 100
   const [isForceFinished, setIsForceFinished] = useState(false)
   const [sortMode, setSortMode] = useState('result')
+  const [activeAdjustmentKey, setActiveAdjustmentKey] = useState(null)
+  const [isTableDragging, setIsTableDragging] = useState(false)
+  const tableScrollRef = useRef(null)
+  const tableDragStateRef = useRef({
+    isActive: false,
+    startX: 0,
+    scrollLeft: 0,
+  })
 
   const { result, tasks } = game
   if (!result) return <div>Результаты игры не сформированы</div>
@@ -458,6 +538,74 @@ const GameBlock = ({ game, isDarkTheme }) => {
       return (clamped * 0.99) / maxTeamTime
     }),
   )
+  const bestTaskTimeByIndex = Array.from({ length: tasksCount }, (_, taskIndex) => {
+    const task = tasks[taskIndex]
+    if (task?.isBonusTask) {
+      return null
+    }
+
+    let best = Number.POSITIVE_INFINITY
+    teamsAnimateSteps.forEach((timeResults) => {
+      const current = Number(timeResults?.[taskIndex])
+      const previous = taskIndex > 0 ? Number(timeResults?.[taskIndex - 1]) : 0
+      if (!Number.isFinite(current) || !Number.isFinite(previous)) {
+        return
+      }
+
+      const timeSpent = current - previous
+      if (Number.isFinite(timeSpent) && timeSpent >= 0 && timeSpent < best) {
+        best = timeSpent
+      }
+    })
+
+    return Number.isFinite(best) && best < Number.POSITIVE_INFINITY ? best : null
+  })
+
+  const teamSegmentSpeedModes = teamsAnimateSteps.map((timeResults) =>
+    Array.from({ length: tasksCount }, (_, taskIndex) => {
+      const task = tasks[taskIndex]
+      if (task?.isBonusTask || task?.canceled) {
+        return 'normal'
+      }
+
+      const current = Number(timeResults?.[taskIndex])
+      const previous = taskIndex > 0 ? Number(timeResults?.[taskIndex - 1]) : 0
+      if (!Number.isFinite(current) || !Number.isFinite(previous)) {
+        return 'normal'
+      }
+
+      const timeSpent = current - previous
+      if (!Number.isFinite(timeSpent) || timeSpent < 0 || taskDuration <= 0) {
+        return 'normal'
+      }
+
+      if (timeSpent < taskDuration / 3) {
+        return 'blaze'
+      }
+
+      if (timeSpent < (taskDuration * 2) / 3) {
+        return 'fast'
+      }
+
+      return 'normal'
+    }),
+  )
+
+  const teamSpeedTonePoints = teamSegmentSpeedModes.map((segmentModes) => {
+    const points = Array.from({ length: tasksCount + 2 }, () => 'normal')
+    if (tasksCount === 0) {
+      return points
+    }
+
+    points[0] = segmentModes[0] || 'normal'
+    for (let taskIndex = 0; taskIndex < tasksCount; taskIndex++) {
+      const currentTone = segmentModes[taskIndex] || 'normal'
+      points[taskIndex + 1] = currentTone
+    }
+    points[tasksCount + 1] = 'normal'
+
+    return points
+  })
 
   const teamsTaskPenalty = gameTeamsWithTeams.map(
     (
@@ -607,6 +755,131 @@ const GameBlock = ({ game, isDarkTheme }) => {
       )
     },
   )
+  const totalTeamsAdjustments = gameTeamsWithTeams.map(
+    ({ computedTeam, timeAddings = [] }, index) => {
+      const fromComputedTasks =
+        computedTeam && Array.isArray(computedTeam.taskResults)
+          ? computedTeam.taskResults.flatMap((taskResult, taskIndex) => {
+              const taskTitle =
+                typeof taskResult?.taskTitle === 'string' &&
+                taskResult.taskTitle.trim().length > 0
+                  ? taskResult.taskTitle.trim()
+                  : typeof tasks?.[taskIndex]?.title === 'string' &&
+                      tasks[taskIndex].title.trim().length > 0
+                    ? tasks[taskIndex].title.trim()
+                    : ''
+              const taskPrefix = taskTitle ? `Задание «${taskTitle}»: ` : ''
+              const rawAdjustments = Array.isArray(taskResult?.adjustments)
+                ? taskResult.adjustments
+                : []
+
+              return rawAdjustments
+                .map((item) => {
+                  const type = item?.type === 'bonus' ? 'bonus' : 'penalty'
+                  const numericSeconds = Number(item?.seconds)
+                  const absSeconds = Number.isFinite(numericSeconds)
+                    ? Math.abs(numericSeconds)
+                    : 0
+
+                  if (!(absSeconds > 0)) {
+                    return null
+                  }
+
+                  return {
+                    type,
+                    seconds: absSeconds,
+                    display: item?.display || toHHMMSS(absSeconds, true),
+                    description:
+                      taskPrefix +
+                      (item?.description || item?.name || 'Корректировка'),
+                  }
+                })
+                .filter(Boolean)
+            })
+          : []
+
+      const fromComputedAddings =
+        computedTeam && Array.isArray(computedTeam.addings)
+          ? computedTeam.addings
+              .map((item) => {
+                const rawSeconds = Number(item?.seconds)
+                const absSeconds = Number.isFinite(rawSeconds)
+                  ? Math.abs(rawSeconds)
+                  : 0
+                if (!(absSeconds > 0)) {
+                  return null
+                }
+
+                return {
+                  type: item?.type === 'bonus' || rawSeconds < 0 ? 'bonus' : 'penalty',
+                  seconds: absSeconds,
+                  display: item?.display || toHHMMSS(absSeconds, true),
+                  description:
+                    typeof item?.name === 'string' && item.name.trim().length > 0
+                      ? `Орг. корректировка: ${item.name.trim()}`
+                      : 'Орг. корректировка',
+                }
+              })
+              .filter(Boolean)
+          : []
+
+      const fromLegacyAddings =
+        !computedTeam && Array.isArray(timeAddings)
+          ? timeAddings
+              .map((item) => {
+                const rawSeconds = Number(item?.time)
+                const absSeconds = Number.isFinite(rawSeconds)
+                  ? Math.abs(rawSeconds)
+                  : 0
+                if (!(absSeconds > 0)) {
+                  return null
+                }
+
+                return {
+                  type: rawSeconds < 0 ? 'bonus' : 'penalty',
+                  seconds: absSeconds,
+                  display: toHHMMSS(absSeconds, true),
+                  description:
+                    typeof item?.name === 'string' && item.name.trim().length > 0
+                      ? `Орг. корректировка: ${item.name.trim()}`
+                      : 'Орг. корректировка',
+                }
+              })
+              .filter(Boolean)
+          : []
+
+      const fromTaskAdjustments = !computedTeam
+        ? (Array.isArray(teamsTaskAdjustments[index])
+            ? teamsTaskAdjustments[index]
+                .flat()
+                .map((item) => {
+                  const type = item?.type === 'bonus' ? 'bonus' : 'penalty'
+                  const numericSeconds = Number(item?.seconds)
+                  const absSeconds = Number.isFinite(numericSeconds)
+                    ? Math.abs(numericSeconds)
+                    : 0
+                  if (!(absSeconds > 0)) {
+                    return null
+                  }
+                  return {
+                    ...item,
+                    type,
+                    seconds: absSeconds,
+                    display: item?.display || toHHMMSS(absSeconds, true),
+                  }
+                })
+                .filter(Boolean)
+            : [])
+        : []
+
+      return [
+        ...fromComputedTasks,
+        ...fromTaskAdjustments,
+        ...fromComputedAddings,
+        ...fromLegacyAddings,
+      ]
+    },
+  )
 
   const fallbackPlaces = totalTeamsTimeWithBonusAndPenalty.map(
     (time) =>
@@ -630,6 +903,51 @@ const GameBlock = ({ game, isDarkTheme }) => {
   const tableBorderColor = isDarkTheme
     ? 'rgba(0, 209, 255, 0.26)'
     : 'rgba(15, 23, 42, 0.18)'
+
+  useEffect(() => {
+    setStart(false)
+    setIsForceFinished(false)
+    setActiveAdjustmentKey(null)
+  }, [game?._id, game?.updatedAt])
+
+  const handleTableMouseDown = (event) => {
+    if (event.button !== 0) {
+      return
+    }
+
+    const container = tableScrollRef.current
+    if (!container) {
+      return
+    }
+
+    tableDragStateRef.current = {
+      isActive: true,
+      startX: event.clientX,
+      scrollLeft: container.scrollLeft,
+    }
+    setIsTableDragging(true)
+  }
+
+  const handleTableMouseMove = (event) => {
+    const container = tableScrollRef.current
+    const dragState = tableDragStateRef.current
+    if (!container || !dragState.isActive) {
+      return
+    }
+
+    const deltaX = event.clientX - dragState.startX
+    container.scrollLeft = dragState.scrollLeft - deltaX
+    event.preventDefault()
+  }
+
+  const stopTableDragging = () => {
+    if (!tableDragStateRef.current.isActive) {
+      return
+    }
+
+    tableDragStateRef.current.isActive = false
+    setIsTableDragging(false)
+  }
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-slate-100 text-slate-900 dark:bg-[#040812] dark:text-slate-100">
@@ -670,6 +988,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                 type="button"
                 className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300 bg-cyan-50/90 px-5 py-2 text-base font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:shadow-[0_0_0_1px_rgba(0,209,255,0.16),0_0_14px_rgba(0,209,255,0.2)] dark:hover:bg-[#00D1FF]/24 dark:hover:text-[#e9fbff]"
                 onClick={() => {
+                  setActiveAdjustmentKey(null)
                   if (start) {
                     setStart(false)
                     setIsForceFinished(false)
@@ -686,7 +1005,10 @@ const GameBlock = ({ game, isDarkTheme }) => {
                 <button
                   type="button"
                   className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-violet-300 bg-violet-50/90 px-5 py-2 text-base font-semibold text-violet-700 transition hover:border-violet-500 hover:bg-violet-100 dark:border-[#7A00FF]/45 dark:bg-[#7A00FF]/16 dark:text-[#ddc8ff] dark:shadow-[0_0_0_1px_rgba(122,0,255,0.18),0_0_14px_rgba(122,0,255,0.22)] dark:hover:bg-[#7A00FF]/24 dark:hover:text-[#f0e5ff]"
-                  onClick={() => setIsForceFinished(true)}
+                  onClick={() => {
+                    setActiveAdjustmentKey(null)
+                    setIsForceFinished(true)
+                  }}
                 >
                   Финишировать
                 </button>
@@ -708,10 +1030,20 @@ const GameBlock = ({ game, isDarkTheme }) => {
           </div>
         </div>
       </div>
-      <div className="relative z-50 px-2 pb-8 overflow-x-auto md:px-4">
+      <div
+        ref={tableScrollRef}
+        className={cn(
+          'relative z-50 px-2 pb-8 overflow-x-auto md:px-4',
+          isTableDragging ? 'cursor-grabbing select-none' : 'cursor-grab',
+        )}
+        onMouseDown={handleTableMouseDown}
+        onMouseMove={handleTableMouseMove}
+        onMouseUp={stopTableDragging}
+        onMouseLeave={stopTableDragging}
+      >
         <div className="mx-auto w-fit">
           <div
-            className="rounded-2xl border border-slate-300/70 bg-white/85 text-slate-800 shadow-[0_10px_26px_rgba(2,8,23,0.14)] -translate-x-[20%] tablet:-translate-x-[10%] laptop:translate-x-0 -translate-y-[19%] tablet:-translate-y-[12%] laptop:translate-y-0 scale-[60%] tablet:scale-75 laptop:scale-100 dark:border-[#00D1FF]/32 dark:bg-[#060d20]/92 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(0,209,255,0.14),0_0_26px_rgba(0,209,255,0.12),0_22px_42px_rgba(0,0,0,0.55)]"
+            className="overflow-hidden rounded-2xl border border-slate-300/70 bg-white/85 text-slate-800 shadow-[0_10px_26px_rgba(2,8,23,0.14)] translate-x-0 -translate-y-[19%] tablet:-translate-y-[12%] laptop:translate-y-0 scale-[60%] tablet:scale-75 laptop:scale-100 dark:border-[#00D1FF]/32 dark:bg-[#060d20]/92 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(0,209,255,0.14),0_0_26px_rgba(0,209,255,0.12),0_22px_42px_rgba(0,0,0,0.55)]"
             style={{
               position: 'relative',
               display: 'flex',
@@ -758,12 +1090,12 @@ const GameBlock = ({ game, isDarkTheme }) => {
                     <motion.div
                       key={'order' + index}
                       animate={{
-                        opacity: start ? [0, 0, 1] : 0,
+                        opacity: isForceFinished ? 1 : start ? [0, 0, 1] : 0,
                       }}
                       transition={{
                         ease: 'linear',
-                        duration: start ? animationDuration : 0,
-                        times: start ? [0, 0.99, 1] : 0,
+                        duration: isForceFinished ? 0 : start ? animationDuration : 0,
+                        times: isForceFinished ? undefined : start ? [0, 0.99, 1] : 0,
                       }}
                       className="flex items-center justify-center w-full text-lg leading-5 text-center text-slate-900 dark:text-slate-100"
                       style={{
@@ -852,7 +1184,16 @@ const GameBlock = ({ game, isDarkTheme }) => {
                         penalty={teamsTaskPenalty[i][index]}
                         bonus={teamsTaskBonus[i][index]}
                         adjustments={teamsTaskAdjustments[i][index]}
+                        adjustmentKey={`task-${i}-${index}`}
+                        activeAdjustmentKey={activeAdjustmentKey}
+                        setActiveAdjustmentKey={setActiveAdjustmentKey}
+                        showBestCup={
+                          !isBonusTask &&
+                          Number.isFinite(bestTaskTimeByIndex[index]) &&
+                          timeResult === bestTaskTimeByIndex[index]
+                        }
                         rowHeight={rowHeight}
+                        forceFinish={isForceFinished}
                       />
                     )
                   })}
@@ -942,8 +1283,13 @@ const GameBlock = ({ game, isDarkTheme }) => {
                         totalBonus[index] -
                         (totalAddings[index] < 0 ? totalAddings[index] : 0)
                       }
+                      adjustments={totalTeamsAdjustments[index]}
+                      adjustmentKey={`result-${index}`}
+                      activeAdjustmentKey={activeAdjustmentKey}
+                      setActiveAdjustmentKey={setActiveAdjustmentKey}
                       addings={totalAddings[index]}
                       rowHeight={rowHeight}
+                      forceFinish={isForceFinished}
                     />
                   )
                 })}
@@ -1006,11 +1352,16 @@ const GameBlock = ({ game, isDarkTheme }) => {
                       delay={animationDuration}
                       timeResult={timeResult}
                       rowHeight={rowHeight}
+                      isGapFromPrevious
                       penalty={
                         orderPlaces[index] > 1
                           ? timeResult - prevTime
                           : undefined
                       }
+                      adjustmentKey={`total-${index}`}
+                      activeAdjustmentKey={activeAdjustmentKey}
+                      setActiveAdjustmentKey={setActiveAdjustmentKey}
+                      forceFinish={isForceFinished}
                     />
                   )
                 })}
@@ -1040,15 +1391,15 @@ const GameBlock = ({ game, isDarkTheme }) => {
                   <motion.div
                     key={'order' + index}
                     animate={{
-                      opacity: start ? [0, 0, 1] : 0,
+                      opacity: isForceFinished ? 1 : start ? [0, 0, 1] : 0,
                     }}
                     transition={{
                       // type: 'just',
                       ease: 'linear',
                       // type: 'spring',
                       // stiffness: 1,
-                      duration: start ? animationDuration : 0,
-                      times: start ? [0, 0.99, 1] : 0,
+                      duration: isForceFinished ? 0 : start ? animationDuration : 0,
+                      times: isForceFinished ? undefined : start ? [0, 0.99, 1] : 0,
                     }}
                     className={cn(
                       'w-[50px] flex items-center justify-center',
@@ -1075,43 +1426,147 @@ const GameBlock = ({ game, isDarkTheme }) => {
                 preparedTeamsAnimateSteps[index][
                   preparedTeamsAnimateSteps[index].length - 1
                 ] * 1.01
+              const carTimelineTimes = (() => {
+                const rawTimes = [
+                  0,
+                  ...preparedTeamsAnimateSteps[index],
+                  finalStep > 1 ? 1 : finalStep,
+                ]
+                const normalized = []
+                let prev = 0
+
+                rawTimes.forEach((raw, pointIndex) => {
+                  let value = Number.isFinite(raw) ? raw : 0
+                  if (value < 0) value = 0
+                  if (value > 1) value = 1
+
+                  if (pointIndex === 0) {
+                    normalized.push(0)
+                    prev = 0
+                    return
+                  }
+
+                  if (value <= prev) {
+                    value = Math.min(1, prev + 0.0001)
+                  }
+
+                  normalized.push(value)
+                  prev = value
+                })
+
+                return normalized
+              })()
+              const speedTonePoints = Array.isArray(teamSpeedTonePoints[index])
+                ? teamSpeedTonePoints[index]
+                : []
+              const speedScalePoints = speedTonePoints.map((tone) =>
+                tone === 'blaze' ? 1.08 : tone === 'fast' ? 1.04 : 1,
+              )
+              const flameOpacityPoints = speedTonePoints.map((tone) =>
+                tone === 'blaze' ? 1 : 0,
+              )
+
+              if (!start) {
+                return (
+                  <div
+                    key={'car-static-' + index}
+                    className="z-10 flex items-center"
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      top: rowHeight * index + tableTitleHeight + 2,
+                    }}
+                  >
+                    <Car
+                      name={team?.name}
+                      color={
+                        isDarkTheme
+                          ? CYBER_CAR_COLORS[index % CYBER_CAR_COLORS.length]
+                          : PASTEL_COLORS[index]
+                      }
+                      skin={team?.carSkin}
+                      rowHeight={rowHeight}
+                      isDarkTheme={isDarkTheme}
+                    />
+                  </div>
+                )
+              }
+
               return (
                 <motion.div
                   key={'car' + index}
                   className="z-10 flex items-center"
+                  initial={{ x: 0 }}
                   style={{
                     position: 'absolute',
+                    left: 0,
                     top: rowHeight * index + tableTitleHeight + 2,
                   }}
                   animate={{
-                    x: start ? animateSteps : 0,
+                    x: isForceFinished
+                      ? animateSteps[animateSteps.length - 1]
+                      : start
+                        ? animateSteps
+                        : 0,
+                    scale: isForceFinished
+                      ? 1
+                      : start && speedScalePoints.length > 0
+                        ? speedScalePoints
+                        : 1,
                   }}
                   transition={{
                     // type: 'just',
                     ease: 'linear',
                     // type: 'spring',
                     // stiffness: 1,
-                    duration: start ? animationDuration : 0,
-                    times: start
-                      ? [
-                          0,
-                          ...preparedTeamsAnimateSteps[index],
-                          finalStep > 1 ? 1 : finalStep,
-                        ]
-                      : 0,
+                    duration: isForceFinished ? 0 : start ? animationDuration : 0,
+                    times: isForceFinished
+                      ? undefined
+                      : start
+                        ? carTimelineTimes
+                        : 0,
                   }}
                 >
-                  <Car
-                    name={team?.name}
-                    color={
-                      isDarkTheme
-                        ? CYBER_CAR_COLORS[index % CYBER_CAR_COLORS.length]
-                        : PASTEL_COLORS[index]
-                    }
-                    skin={team?.carSkin}
-                    rowHeight={rowHeight}
-                    isDarkTheme={isDarkTheme}
-                  />
+                  <div className="relative flex items-center">
+                    <motion.span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-[94px] top-1/2 -z-10 block h-4 w-8 -translate-y-1/2 rounded-full bg-gradient-to-r from-amber-300/0 via-orange-500/80 to-rose-500/0 blur-[1.4px]"
+                      animate={{
+                        opacity: isForceFinished
+                          ? 0
+                          : start && flameOpacityPoints.length > 0
+                            ? flameOpacityPoints
+                            : 0,
+                        scaleX: isForceFinished
+                          ? 0.85
+                          : start && flameOpacityPoints.length > 0
+                            ? flameOpacityPoints.map((opacity) =>
+                                opacity > 0 ? 1.35 : 0.85,
+                              )
+                            : 0.85,
+                      }}
+                      transition={{
+                        ease: 'linear',
+                        duration: isForceFinished ? 0 : start ? animationDuration : 0,
+                        times: isForceFinished
+                          ? undefined
+                          : start
+                            ? carTimelineTimes
+                            : 0,
+                      }}
+                    />
+                    <Car
+                      name={team?.name}
+                      color={
+                        isDarkTheme
+                          ? CYBER_CAR_COLORS[index % CYBER_CAR_COLORS.length]
+                          : PASTEL_COLORS[index]
+                      }
+                      skin={team?.carSkin}
+                      rowHeight={rowHeight}
+                      isDarkTheme={isDarkTheme}
+                    />
+                  </div>
                 </motion.div>
               )
             })}

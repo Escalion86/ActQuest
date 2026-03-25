@@ -16,6 +16,7 @@ import {
   faChevronDown,
   faMoon,
   faSun,
+  faCode,
 } from '@fortawesome/free-solid-svg-icons'
 import { LOCATIONS } from '@server/serverConstants'
 import isUserAdmin from '@helpers/isUserAdmin'
@@ -59,6 +60,13 @@ const adminMenuItems = [
     icon: faSliders,
   },
 ]
+
+const developerMenuItem = {
+  id: 'developer',
+  label: 'Разработчик',
+  href: '/cabinet/developer',
+  icon: faCode,
+}
 
 const adminSubmenuItems = [
   {
@@ -227,12 +235,18 @@ const CabinetLayout = ({
   )
 
   const menuItems = useMemo(() => {
+    const nextItems = [...baseMenuItems]
+
     if (isUserAdmin({ role })) {
-      return [...baseMenuItems, ...adminMenuItems]
+      nextItems.push(...adminMenuItems)
     }
 
-    return baseMenuItems
-  }, [role])
+    if (isDeveloper) {
+      nextItems.push(developerMenuItem)
+    }
+
+    return nextItems
+  }, [isDeveloper, role])
   const gamesView =
     typeof router.query?.view === 'string'
       ? router.query.view.toLowerCase()

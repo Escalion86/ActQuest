@@ -83,7 +83,7 @@ const SportCar = ({
     {showName ? (
       <div
         className={cn(
-          '-mt-0.5 text-right whitespace-nowrap',
+          '-mt-0.5 -translate-x-2 text-right whitespace-nowrap',
           isDarkTheme ? 'text-cyan-100/90' : 'text-slate-900',
         )}
         style={{
@@ -124,4 +124,3 @@ SportCar.defaultProps = {
 }
 
 export default SportCar
-

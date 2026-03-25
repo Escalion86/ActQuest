@@ -1,5 +1,6 @@
 import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
 import { ensureDateISOString } from '@helpers/idAndDate'
+import resolveEntityRating from '@helpers/resolveEntityRating'
 
 const ensureString = (value, fallback = '') => {
   if (typeof value === 'string') {
@@ -104,6 +105,7 @@ const normalizeGames = (games = []) => {
       id: ensureString(game?._id ?? game?.id, `game-${index}`),
       name: ensureString(game?.name, ''),
       status: ensureString(game?.status, ''),
+      location: ensureString(game?.location, ''),
       dateStart: ensureDateISOString(game?.dateStart),
       hidden: ensureBoolean(game?.hidden, false),
     }))
@@ -114,7 +116,19 @@ const normalizeGames = (games = []) => {
     })
 }
 
-const normalizeTeamForCabinet = ({ team, members, games }) => {
+const resolvePlayedGamesCount = ({ team, normalizedGames }) => {
+  const storedCount = Number(team?.gameStats?.playedGamesCount)
+  if (Number.isFinite(storedCount) && storedCount >= 0) {
+    return storedCount
+  }
+
+  return normalizedGames.reduce((acc, game) => {
+    const status = typeof game?.status === 'string' ? game.status.trim().toLowerCase() : ''
+    return status === 'closed' ? acc + 1 : acc
+  }, 0)
+}
+
+const normalizeTeamForCabinet = ({ team, members, games, location = null }) => {
   if (!team) {
     return null
   }
@@ -136,7 +150,8 @@ const normalizeTeamForCabinet = ({ team, members, games }) => {
     membersCount: normalizedMembers.length,
     captain,
     games: normalizedGames,
-    gamesCount: normalizedGames.length,
+    gamesCount: resolvePlayedGamesCount({ team, normalizedGames }),
+    rating: resolveEntityRating({ entity: team, location }),
     createdAt: ensureDateISOString(team?.createdAt),
     updatedAt: ensureDateISOString(team?.updatedAt),
   }

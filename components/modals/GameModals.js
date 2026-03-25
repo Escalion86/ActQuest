@@ -96,6 +96,24 @@ const GameModals = ({
   setNewGameName,
   newGameIsRated,
   setNewGameIsRated,
+  createGameMode,
+  setCreateGameMode,
+  cloneSourceGameId,
+  setCloneSourceGameId,
+  createGameCloneSourceOptions,
+  isCloneSourceGamesLoading,
+  createGameLocation,
+  setCreateGameLocation,
+  createGameSeasonId,
+  setCreateGameSeasonId,
+  createGameSeasons,
+  isCreateGameSeasonsLoading,
+  isCreateGameSeasonCreating,
+  handleCreateSeasonForCreateGame,
+  createGameLocationOptions,
+  createGameCloneOptions,
+  handleChangeCreateGameCloneOption,
+  isCreateGameActionDisabled,
   createGameFeedback,
   isDescriptionModalOpen,
   handleCloseDescriptionModal,
@@ -111,6 +129,10 @@ const GameModals = ({
   setSelectedModeratorToAdd,
   handleAddModerator,
   handleRemoveModerator,
+  editGameSeasons,
+  isEditGameSeasonsLoading,
+  isEditGameSeasonCreating,
+  handleCreateSeasonForEditGame,
   taskDurationLabel,
   cluesDurationLabel,
   clueModeDetails,
@@ -188,6 +210,10 @@ const GameModals = ({
       setSelectedModeratorToAdd={setSelectedModeratorToAdd}
       handleAddModerator={handleAddModerator}
       handleRemoveModerator={handleRemoveModerator}
+      editGameSeasons={editGameSeasons}
+      isEditGameSeasonsLoading={isEditGameSeasonsLoading}
+      isEditGameSeasonCreating={isEditGameSeasonCreating}
+      handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
     />
 
     <GameTeamsModal
@@ -228,6 +254,24 @@ const GameModals = ({
       setNewGameName={setNewGameName}
       newGameIsRated={newGameIsRated}
       setNewGameIsRated={setNewGameIsRated}
+      createGameMode={createGameMode}
+      setCreateGameMode={setCreateGameMode}
+      cloneSourceGameId={cloneSourceGameId}
+      setCloneSourceGameId={setCloneSourceGameId}
+      cloneSourceGames={createGameCloneSourceOptions}
+      isCloneSourceGamesLoading={isCloneSourceGamesLoading}
+      createGameLocation={createGameLocation}
+      setCreateGameLocation={setCreateGameLocation}
+      createGameSeasonId={createGameSeasonId}
+      setCreateGameSeasonId={setCreateGameSeasonId}
+      createGameSeasons={createGameSeasons}
+      isCreateGameSeasonsLoading={isCreateGameSeasonsLoading}
+      isCreateGameSeasonCreating={isCreateGameSeasonCreating}
+      handleCreateSeasonForCreateGame={handleCreateSeasonForCreateGame}
+      createGameLocationOptions={createGameLocationOptions}
+      cloneOptions={createGameCloneOptions}
+      onCloneOptionChange={handleChangeCreateGameCloneOption}
+      isCreateGameActionDisabled={isCreateGameActionDisabled}
       createGameFeedback={createGameFeedback}
     />
 
@@ -398,6 +442,50 @@ GameModals.propTypes = {
   setNewGameName: PropTypes.func.isRequired,
   newGameIsRated: PropTypes.bool.isRequired,
   setNewGameIsRated: PropTypes.func.isRequired,
+  createGameMode: PropTypes.oneOf(['empty', 'clone']).isRequired,
+  setCreateGameMode: PropTypes.func.isRequired,
+  cloneSourceGameId: PropTypes.string.isRequired,
+  setCloneSourceGameId: PropTypes.func.isRequired,
+  createGameCloneSourceOptions: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      label: PropTypes.string.isRequired,
+      location: PropTypes.string,
+    })
+  ).isRequired,
+  isCloneSourceGamesLoading: PropTypes.bool,
+  createGameLocation: PropTypes.string.isRequired,
+  setCreateGameLocation: PropTypes.func.isRequired,
+  createGameSeasonId: PropTypes.string.isRequired,
+  setCreateGameSeasonId: PropTypes.func.isRequired,
+  createGameSeasons: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      location: PropTypes.string,
+    })
+  ),
+  isCreateGameSeasonsLoading: PropTypes.bool,
+  isCreateGameSeasonCreating: PropTypes.bool,
+  handleCreateSeasonForCreateGame: PropTypes.func.isRequired,
+  createGameLocationOptions: PropTypes.arrayOf(
+    PropTypes.shape({
+      key: PropTypes.string.isRequired,
+      label: PropTypes.string.isRequired,
+    })
+  ).isRequired,
+  createGameCloneOptions: PropTypes.shape({
+    basic: PropTypes.bool,
+    rules: PropTypes.bool,
+    captainRules: PropTypes.bool,
+    tasks: PropTypes.bool,
+    locations: PropTypes.bool,
+    moderators: PropTypes.bool,
+    publication: PropTypes.bool,
+    prices: PropTypes.bool,
+  }).isRequired,
+  handleChangeCreateGameCloneOption: PropTypes.func.isRequired,
+  isCreateGameActionDisabled: PropTypes.bool.isRequired,
   createGameFeedback: registerFeedbackShape,
   isDescriptionModalOpen: PropTypes.bool.isRequired,
   handleCloseDescriptionModal: PropTypes.func.isRequired,
@@ -413,6 +501,16 @@ GameModals.propTypes = {
   setSelectedModeratorToAdd: PropTypes.func.isRequired,
   handleAddModerator: PropTypes.func.isRequired,
   handleRemoveModerator: PropTypes.func.isRequired,
+  editGameSeasons: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      location: PropTypes.string,
+    })
+  ),
+  isEditGameSeasonsLoading: PropTypes.bool,
+  isEditGameSeasonCreating: PropTypes.bool,
+  handleCreateSeasonForEditGame: PropTypes.func.isRequired,
   taskDurationLabel: PropTypes.string.isRequired,
   cluesDurationLabel: PropTypes.string.isRequired,
   clueModeDetails: PropTypes.shape({
@@ -444,8 +542,16 @@ GameModals.defaultProps = {
   location: null,
   registerFeedback: null,
   currentUserId: null,
+  isCloneSourceGamesLoading: false,
   selectedTeamToAdd: '',
+  createGameSeasons: [],
+  isCreateGameSeasonsLoading: false,
+  isCreateGameSeasonCreating: false,
+  createGameLocationOptions: [],
   createGameFeedback: null,
+  editGameSeasons: [],
+  isEditGameSeasonsLoading: false,
+  isEditGameSeasonCreating: false,
   manyCodesLimitLabel: null,
   manyCodesPenaltyLabel: null,
 }

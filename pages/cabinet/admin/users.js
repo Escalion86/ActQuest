@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
@@ -13,6 +13,7 @@ import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActi
 import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
+import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
@@ -25,11 +26,73 @@ import ensureRole from '@helpers/ensureRole'
 import { USERS_ROLES } from '@helpers/constants'
 import { ensureDateISOString } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { LOCATIONS } from '@server/serverConstants'
 
 const USERS_PAGE_SIZE = 10
 const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
 const modalItemTitleClass = 'aq-modal-item-title text-lg font-semibold'
 const modalItemSmallTitleClass = 'aq-modal-item-title text-sm font-semibold'
+const GAME_STATUS_BADGE_STYLES = {
+  active:
+    'border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]',
+  started:
+    'border border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-[#17e6ae]/35 dark:bg-[#17e6ae]/12 dark:text-[#c8ffe9]',
+  finished:
+    'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#e2d5ff]',
+  closed:
+    'border border-indigo-300 bg-indigo-100 text-indigo-700 dark:border-[#8b5cf6]/45 dark:bg-[#8b5cf6]/14 dark:text-[#e9ddff]',
+  canceled:
+    'border border-rose-300 bg-rose-100 text-rose-700 dark:border-[#ff4d6d]/35 dark:bg-[#ff4d6d]/12 dark:text-[#ffd1da]',
+}
+
+const resolveRatingBadge = (rating) =>
+  rating?.isEligible && Number.isFinite(rating?.rank)
+    ? `#${rating.rank}`
+    : null
+
+const resolveLocationLabel = (locationKey) => {
+  const key = typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
+  if (!key) {
+    return 'Не указан'
+  }
+
+  const rawName = LOCATIONS?.[key]?.townRu
+  if (!rawName || typeof rawName !== 'string') {
+    return locationKey
+  }
+
+  return rawName.charAt(0).toUpperCase() + rawName.slice(1)
+}
+
+const getStatusBadgeClassName = (status) => {
+  if (!status) {
+    return 'bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-100'
+  }
+
+  const normalized = typeof status === 'string' ? status.toLowerCase() : String(status)
+
+  return (
+    GAME_STATUS_BADGE_STYLES[normalized] ??
+    'border border-slate-300 bg-slate-100 text-slate-700 dark:border-white/20 dark:bg-white/10 dark:text-slate-200'
+  )
+}
+
+const GamesCardIcon = () => (
+  <svg
+    className="h-4 w-4"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <path
+      d="M5 5h10M5 10h10M5 15h10"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+)
 
 const cloneUser = (user) => {
   if (!user) {
@@ -65,12 +128,21 @@ const ManageUsersPage = ({
   const [selectedUserId, setSelectedUserId] = useState(safeInitialUsers[0]?.id ?? null)
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('registration_desc')
+  const isFirstSortRenderRef = useRef(true)
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [hasMoreUsers, setHasMoreUsers] = useState(Boolean(initialHasMore))
   const [isLoadingMoreUsers, setIsLoadingMoreUsers] = useState(false)
   const [isRequestingPhone, setIsRequestingPhone] = useState(false)
   const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false)
+  const [isUserGamesModalOpen, setIsUserGamesModalOpen] = useState(false)
+  const [userGamesState, setUserGamesState] = useState({
+    isLoading: false,
+    error: null,
+    userName: '',
+    games: [],
+  })
 
   useEffect(() => {
     setUsers(safeInitialUsers)
@@ -116,6 +188,17 @@ const ManageUsersPage = ({
     setIsUserEditModalOpen(false)
     setUserIdQuery(null)
   }, [setUserIdQuery])
+
+  const closeUserGamesModal = useCallback(() => {
+    setIsUserGamesModalOpen(false)
+    setUserGamesState((prev) => ({
+      ...prev,
+      isLoading: false,
+      error: null,
+      userName: '',
+      games: [],
+    }))
+  }, [])
 
   const roleOptions = useMemo(() => {
     const baseOptions = USERS_ROLES.map(({ value, name }) => ({ value, name }))
@@ -173,6 +256,60 @@ const ManageUsersPage = ({
     })
   }, [filteredUsers, setUserIdQuery])
 
+  useEffect(() => {
+    if (isFirstSortRenderRef.current) {
+      isFirstSortRenderRef.current = false
+      return
+    }
+
+    let cancelled = false
+
+    const loadSortedUsers = async () => {
+      setIsLoadingMoreUsers(true)
+      setFeedback(null)
+
+      try {
+        const params = new URLSearchParams({
+          offset: '0',
+          limit: String(USERS_PAGE_SIZE),
+          sortBy,
+        })
+        const { json } = await requestApiJson(`/api/cabinet/admin/users-list?${params.toString()}`, {
+          fallbackMessage: 'Не удалось загрузить пользователей',
+        })
+
+        if (cancelled) {
+          return
+        }
+
+        const nextUsers = Array.isArray(json?.data) ? json.data : []
+        const nextHasMore = Boolean(json?.meta?.hasMore)
+        setUsers(nextUsers)
+        setPersistedUsers(nextUsers)
+        setHasMoreUsers(nextHasMore)
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+        console.error('Failed to load users with selected sort', error)
+        setFeedback({
+          type: 'error',
+          message: error?.message || 'Не удалось применить сортировку',
+        })
+      } finally {
+        if (!cancelled) {
+          setIsLoadingMoreUsers(false)
+        }
+      }
+    }
+
+    loadSortedUsers()
+
+    return () => {
+      cancelled = true
+    }
+  }, [sortBy])
+
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
     [selectedUserId, users]
@@ -198,6 +335,77 @@ const ManageUsersPage = ({
       setUserIdQuery(user.id)
     },
     [setUserIdQuery]
+  )
+
+  const handleOpenUserGamesModal = useCallback(
+    async (user) => {
+      if (!user) {
+        return
+      }
+
+      setIsUserGamesModalOpen(true)
+      setUserGamesState({
+        isLoading: true,
+        error: null,
+        userName: user.name || 'Без имени',
+        games: [],
+      })
+
+      try {
+        const params = new URLSearchParams()
+        if (typeof user.id === 'string' && user.id) {
+          params.set('userId', user.id)
+        }
+        if (typeof user.telegramId === 'string' && user.telegramId) {
+          params.set('telegramId', user.telegramId)
+        }
+
+        const { json } = await requestApiJson(`/api/cabinet/admin/user-games?${params.toString()}`, {
+          fallbackMessage: 'Не удалось загрузить игры пользователя',
+        })
+
+        const gamesRaw = Array.isArray(json?.data) ? json.data : []
+        const games = gamesRaw.sort((first, second) => {
+          const firstTime = first?.dateStart ? new Date(first.dateStart).getTime() : 0
+          const secondTime = second?.dateStart ? new Date(second.dateStart).getTime() : 0
+          return secondTime - firstTime
+        })
+
+        setUserGamesState({
+          isLoading: false,
+          error: null,
+          userName: user.name || 'Без имени',
+          games,
+        })
+      } catch (error) {
+        console.error('Failed to load user games', error)
+        setUserGamesState({
+          isLoading: false,
+          error: error?.message || 'Не удалось загрузить игры пользователя',
+          userName: user.name || 'Без имени',
+          games: [],
+        })
+      }
+    },
+    []
+  )
+
+  const handleOpenParticipationGame = useCallback(
+    (gameId) => {
+      if (!gameId) {
+        return
+      }
+
+      closeUserGamesModal()
+      router.push({
+        pathname: '/cabinet/games',
+        query: {
+          view: 'past',
+          gameId,
+        },
+      }).catch(() => {})
+    },
+    [closeUserGamesModal, router]
   )
 
   useEffect(() => {
@@ -384,6 +592,7 @@ const ManageUsersPage = ({
       const params = new URLSearchParams({
         offset: String(users.length),
         limit: String(USERS_PAGE_SIZE),
+        sortBy,
       })
       const { json } = await requestApiJson(`/api/cabinet/admin/users-list?${params.toString()}`, {
         fallbackMessage: 'Не удалось загрузить пользователей',
@@ -407,7 +616,7 @@ const ManageUsersPage = ({
     } finally {
       setIsLoadingMoreUsers(false)
     }
-  }, [hasMoreUsers, isLoadingMoreUsers, users.length])
+  }, [hasMoreUsers, isLoadingMoreUsers, sortBy, users.length])
 
   const filterOptions = useMemo(
     () => [
@@ -488,26 +697,33 @@ const ManageUsersPage = ({
                     </option>
                   ))}
               </CabinetSelectField>
+
+              <CabinetSelectField
+                  id="user-sort"
+                  label="Сортировка"
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value)}
+                  containerClassName="space-y-1"
+                  labelClassName="text-xs font-semibold text-slate-500"
+                  selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+                >
+                  <option value="rating">По рейтингу</option>
+                  <option value="games_desc">По количеству игр</option>
+                  <option value="registration_desc">По дате регистрации</option>
+              </CabinetSelectField>
             </FormSectionCard>
 
             {filteredUsers.length > 0 ? (
               <div className="space-y-3">
                 <ul className="space-y-3">
                   {filteredUsers.map((user) => {
-                    const isActive = user.id === selectedUserId
-                    const lastUpdateLabel = user.updatedAt
-                      ? formatRelativeTimeFromNow(user.updatedAt)
-                      : '—'
-
                     return (
                       <li key={user.id}>
                         <SelectableCard
                           as="button"
                           onClick={() => handleUserCardClick(user)}
                           type="button"
-                          isActive={isActive}
                           className="w-full text-left"
-                          aria-pressed={isActive}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
@@ -520,9 +736,24 @@ const ManageUsersPage = ({
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
+                              {resolveRatingBadge(user.rating) ? (
+                                <span className="px-2 py-1 text-xs font-semibold text-cyan-700 bg-cyan-50 border border-cyan-300 rounded-full dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                  {resolveRatingBadge(user.rating)}
+                                </span>
+                              ) : null}
                               <span className="px-2 py-1 text-xs font-semibold text-white bg-primary rounded-full">
                                 {CABINET_ROLE_LABELS[user.role] ?? user.role}
                               </span>
+                              <CardActionIconButton
+                                as="span"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleOpenUserGamesModal(user)
+                                }}
+                                label="Показать игры участия"
+                              >
+                                <GamesCardIcon />
+                              </CardActionIconButton>
                               <CardActionIconButton
                                 as="span"
                                 onClick={(event) => {
@@ -538,7 +769,6 @@ const ManageUsersPage = ({
                           <div className="flex flex-wrap gap-3 mt-3 text-xs text-slate-500">
                             <span>Команд: {user.teamsCount}</span>
                             <span>Игры: {user.gamesCount}</span>
-                            <span>Обновлён {lastUpdateLabel}</span>
                           </div>
                         </SelectableCard>
                       </li>
@@ -558,7 +788,7 @@ const ManageUsersPage = ({
                         : 'cursor-pointer'
                     }`}
                   >
-                    {isLoadingMoreUsers ? 'Загружаем…' : 'Загрузить ещё'}
+                  {isLoadingMoreUsers ? 'Загружаем…' : 'Загрузить ещё'}
                   </CabinetButton>
                 )}
               </div>
@@ -620,6 +850,19 @@ const ManageUsersPage = ({
                         : 'Неизвестно'}
                     </p>
                   </div>
+                </div>
+
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                  <p className="text-xs text-amber-700 dark:text-amber-300">Рейтинг пользователя</p>
+                  {selectedUser.rating?.isEligible && Number.isFinite(selectedUser.rating?.rank) ? (
+                    <p className="mt-1 text-sm font-semibold text-amber-800 dark:text-amber-100">
+                      #{selectedUser.rating.rank} · {Number(selectedUser.rating?.finalScore || 0).toFixed(2)}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm text-amber-700 dark:text-amber-200">
+                      Недостаточно данных для рейтинга
+                    </p>
+                  )}
                 </div>
 
                 <CabinetSelectField
@@ -749,6 +992,77 @@ const ManageUsersPage = ({
             </div>
           ) : null}
         </Modal>
+        <Modal
+          isOpen={isUserGamesModalOpen}
+          onClose={closeUserGamesModal}
+          title={`Игры участия — ${userGamesState.userName || 'Пользователь'}`}
+        >
+          {userGamesState.isLoading ? (
+            <p className="text-sm text-slate-500">Загружаем список игр...</p>
+          ) : userGamesState.error ? (
+            <p className="text-sm text-rose-500">{userGamesState.error}</p>
+          ) : userGamesState.games.length > 0 ? (
+            <ul className="space-y-3">
+              {userGamesState.games.map((game) => (
+                <li key={game.id}>
+                  <SelectableCard
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleOpenParticipationGame(game.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        handleOpenParticipationGame(game.id)
+                      }
+                    }}
+                    className="relative cursor-pointer"
+                    aria-label={`Открыть игру «${game.name || 'Без названия'}»`}
+                    title={game.name || 'Без названия'}
+                  >
+                    <div className="flex min-w-0 w-full flex-1 items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span
+                          className={`mb-2 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(game.status)}`}
+                        >
+                          {getGameStatusLabel(game.status)}
+                        </span>
+                        <p className="aq-line-clamp-2 text-sm font-semibold text-primary dark:text-slate-100">
+                          {game.name || 'Без названия'}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                          <span className="text-slate-500">
+                            {game.dateStart
+                              ? new Date(game.dateStart).toLocaleString('ru-RU', {
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                              })
+                              : 'Дата не указана'}
+                          </span>
+                          <span className="text-slate-400">·</span>
+                          <span className="text-slate-500">
+                            {resolveLocationLabel(game.location)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-400">
+                          Команда: {Array.isArray(game.teams) && game.teams.length > 0 ? game.teams.join(', ') : '—'}
+                        </p>
+                      </div>
+                    </div>
+                    {Number.isFinite(Number(game.place)) && Number(game.place) > 0 && (
+                      <span className="pointer-events-none mt-2 inline-flex items-center self-start rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
+                        Место: {Number(game.place)}
+                      </span>
+                    )}
+                  </SelectableCard>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-500">
+              У пользователя пока нет игр участия через команды.
+            </p>
+          )}
+        </Modal>
       </CabinetLayout>
     </>
   )
@@ -778,6 +1092,16 @@ const userShape = PropTypes.shape({
   teams: PropTypes.arrayOf(userTeamShape),
   teamsCount: PropTypes.number,
   gamesCount: PropTypes.number,
+  rating: PropTypes.shape({
+    isEligible: PropTypes.bool,
+    rank: PropTypes.number,
+    totalRanked: PropTypes.number,
+    playersAbove: PropTypes.number,
+    finalScore: PropTypes.number,
+    playedGames: PropTypes.number,
+    missedGames: PropTypes.number,
+    updatedAt: PropTypes.string,
+  }),
 })
 
 ManageUsersPage.propTypes = {
@@ -829,6 +1153,7 @@ export async function getServerSideProps(context) {
           db,
           offset: 0,
           limit: USERS_PAGE_SIZE,
+          location,
         })
         initialUsers = Array.isArray(result)
           ? result
