@@ -3,14 +3,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 export const CABINET_ROLE_PREVIEW_STORAGE_KEY = 'cabinet-role-preview'
 export const CABINET_ROLE_PREVIEW_EVENT = 'cabinet-role-preview-changed'
 
-const ROLE_PREVIEW_OPTIONS = ['client', 'admin', 'dev']
+const ROLE_PREVIEW_OPTIONS = ['client', 'moder', 'admin', 'dev']
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
     return null
   }
 
-  const normalized = value.trim().toLowerCase()
+  const normalizedRaw = value.trim().toLowerCase()
+  const normalized = normalizedRaw === 'moderator' ? 'moder' : normalizedRaw
   return ROLE_PREVIEW_OPTIONS.includes(normalized) ? normalized : null
 }
 

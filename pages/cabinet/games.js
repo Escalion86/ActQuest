@@ -428,7 +428,7 @@ const GamesPage = ({
       : Number(currentUserTelegramId)
   const canEditAllGames = userRole === 'admin' || userRole === 'dev'
   const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
-  const canEditOwnGames = userRole === 'moder'
+  const canEditOwnGames = userRole === 'moder' || userRole === 'moderator'
   const safeInitialGames = Array.isArray(initialGames) ? initialGames : []
   const currentUserDbId =
     activeSession?.user?._id === null || activeSession?.user?._id === undefined
@@ -783,7 +783,9 @@ const GamesPage = ({
 
   useEffect(() => {
     setExpandedTaskIds([])
-    setEditingGame(null)
+    if (!isEditModalOpen) {
+      setEditingGame(null)
+    }
     setIsStatusModalOpen(false)
     setStatusModalGameId('')
     setStatusValidationResult(null)
@@ -797,7 +799,7 @@ const GamesPage = ({
     setRemovingTeamIds([])
     setSelectedModeratorToAdd('')
     setIsResultsModalOpen(false)
-  }, [selectedGameId])
+  }, [isEditModalOpen, selectedGameId])
 
   useEffect(() => {
     if (!router.isReady) {
@@ -2172,11 +2174,14 @@ const GamesPage = ({
   }, [editingGame, persistedSelectedGame])
 
   const canEditSelectedGame = useMemo(() => {
-    if (!selectedGame) {
+    const gameForPermissions =
+      isEditModalOpen && editingGame ? editingGame : selectedGame
+
+    if (!gameForPermissions) {
       return false
     }
 
-    if (isClosedStatus(selectedGame.status)) {
+    if (isClosedStatus(gameForPermissions.status)) {
       return false
     }
 
@@ -2193,7 +2198,7 @@ const GamesPage = ({
         return false
       }
 
-      const creatorId = selectedGame.creatorTelegramId
+      const creatorId = String(gameForPermissions.creatorTelegramId || '')
       if (!creatorId) {
         return false
       }
@@ -2202,7 +2207,16 @@ const GamesPage = ({
     }
 
     return false
-  }, [canEditAllGames, canEditOwnGames, currentUserIdString, isGameModerator, selectedGame])
+  }, [
+    canEditAllGames,
+    canEditOwnGames,
+    currentUserDbId,
+    currentUserIdString,
+    editingGame,
+    isEditModalOpen,
+    isGameModerator,
+    selectedGame,
+  ])
 
   const canViewRestrictedGameInfo = canEditSelectedGame
 
