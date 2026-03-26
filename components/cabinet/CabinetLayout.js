@@ -1,4 +1,11 @@
-import { useMemo, useState, useCallback, useEffect, useLayoutEffect } from 'react'
+import {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from 'react'
 import PropTypes from 'prop-types'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
@@ -205,6 +212,7 @@ const CabinetLayout = ({
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
   const [isRouteLoading, setIsRouteLoading] = useState(false)
+  const routeLoadingTimeoutRef = useRef(null)
 
   const sessionRole = session?.user?.role ?? 'client'
   const { isDeveloper, effectiveRole, setRolePreview } =
@@ -272,20 +280,40 @@ const CabinetLayout = ({
     if (window.innerWidth < 768) {
       setIsSidebarExpanded(false)
     }
+  }, [theme])
+
+  const stopRouteLoading = useCallback(() => {
+    if (routeLoadingTimeoutRef.current) {
+      clearTimeout(routeLoadingTimeoutRef.current)
+      routeLoadingTimeoutRef.current = null
+    }
+    setIsRouteLoading(false)
+  }, [])
+
+  const startRouteLoading = useCallback(() => {
+    if (routeLoadingTimeoutRef.current) {
+      clearTimeout(routeLoadingTimeoutRef.current)
+    }
+
+    setIsRouteLoading(true)
+    routeLoadingTimeoutRef.current = setTimeout(() => {
+      setIsRouteLoading(false)
+      routeLoadingTimeoutRef.current = null
+    }, 15000)
   }, [])
 
   useEffect(() => {
     const handleRouteChangeStart = () => {
-      setIsRouteLoading(true)
+      startRouteLoading()
     }
 
     const handleRouteChangeComplete = () => {
-      setIsRouteLoading(false)
+      stopRouteLoading()
       closeSidebarOnMobile()
     }
 
     const handleRouteChangeError = () => {
-      setIsRouteLoading(false)
+      stopRouteLoading()
     }
 
     router.events.on('routeChangeStart', handleRouteChangeStart)
@@ -296,8 +324,13 @@ const CabinetLayout = ({
       router.events.off('routeChangeStart', handleRouteChangeStart)
       router.events.off('routeChangeComplete', handleRouteChangeComplete)
       router.events.off('routeChangeError', handleRouteChangeError)
+      stopRouteLoading()
     }
-  }, [closeSidebarOnMobile, router])
+  }, [closeSidebarOnMobile, router, startRouteLoading, stopRouteLoading])
+
+  useEffect(() => {
+    stopRouteLoading()
+  }, [router.asPath, stopRouteLoading])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -399,9 +432,9 @@ const CabinetLayout = ({
         return
       }
 
-      setIsRouteLoading(true)
+      startRouteLoading()
     },
-    [closeSidebarOnMobile, router.asPath],
+    [closeSidebarOnMobile, router.asPath, startRouteLoading],
   )
 
   const handleLocationChange = useCallback(
