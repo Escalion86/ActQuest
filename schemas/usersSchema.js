@@ -37,10 +37,6 @@ const usersSchema = {
     type: Boolean,
     default: false,
   },
-  gender: {
-    type: String,
-    default: null,
-  },
   phone: {
     type: Number,
     default: null,

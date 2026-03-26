@@ -44,6 +44,8 @@ const DeveloperPage = ({ session: initialSession }) => {
   const [isLoadingUsersWithoutPhone, setIsLoadingUsersWithoutPhone] = useState(false)
   const [usersWithoutPhoneResult, setUsersWithoutPhoneResult] = useState(null)
   const [usersWithoutPhoneError, setUsersWithoutPhoneError] = useState('')
+  const [requestingPhoneByUserId, setRequestingPhoneByUserId] = useState({})
+  const [requestPhoneFeedbackByUserId, setRequestPhoneFeedbackByUserId] = useState({})
   const [error, setError] = useState('')
 
   const handleRecalculate = async () => {
@@ -194,6 +196,54 @@ const DeveloperPage = ({ session: initialSession }) => {
     }
   }
 
+  const handleRequestPhoneForUser = async (userId) => {
+    if (!userId || requestingPhoneByUserId[userId]) {
+      return
+    }
+
+    setRequestingPhoneByUserId((prev) => ({
+      ...prev,
+      [userId]: true,
+    }))
+    setRequestPhoneFeedbackByUserId((prev) => ({
+      ...prev,
+      [userId]: '',
+    }))
+
+    try {
+      const response = await fetch('/api/cabinet/users/request-phone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+        }),
+      })
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(json?.error || 'Не удалось отправить запрос номера')
+      }
+
+      setRequestPhoneFeedbackByUserId((prev) => ({
+        ...prev,
+        [userId]: 'Запрос отправлен',
+      }))
+    } catch (requestError) {
+      setRequestPhoneFeedbackByUserId((prev) => ({
+        ...prev,
+        [userId]: requestError?.message || 'Ошибка отправки запроса',
+      }))
+    } finally {
+      setRequestingPhoneByUserId((prev) => ({
+        ...prev,
+        [userId]: false,
+      }))
+    }
+  }
+
   if (!isDeveloperRole(activeSession?.user?.role)) {
     return (
       <>
@@ -309,6 +359,24 @@ const DeveloperPage = ({ session: initialSession }) => {
                         Telegram ID: {user.telegramId ?? '—'} · Роль: {user.role || 'client'} ·
                         Город: {user.accountLocation || '—'}
                       </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <CabinetButton
+                          size="sm"
+                          variant="secondary"
+                          tone="cyan"
+                          disabled={!user.id || !user.telegramId || requestingPhoneByUserId[user.id]}
+                          onClick={() => handleRequestPhoneForUser(user.id)}
+                        >
+                          {requestingPhoneByUserId[user.id]
+                            ? 'Отправка...'
+                            : 'Запросить номер в Telegram'}
+                        </CabinetButton>
+                        {requestPhoneFeedbackByUserId[user.id] ? (
+                          <span className="text-[11px] text-slate-500 dark:text-slate-300">
+                            {requestPhoneFeedbackByUserId[user.id]}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>

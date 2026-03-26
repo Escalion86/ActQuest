@@ -7,9 +7,11 @@ import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
+import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
+import ImagesInput from '@components/cabinet/ImagesInput'
 import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
@@ -23,12 +25,19 @@ import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import CABINET_ROLE_LABELS from '@helpers/cabinetRoleLabels'
 import ensureRole from '@helpers/ensureRole'
+import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 import { USERS_ROLES } from '@helpers/constants'
 import { ensureDateISOString } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
 
 const USERS_PAGE_SIZE = 10
+const preferenceOptions = [
+  'Городские квесты',
+  'Настольные сценарии',
+  'Корпоративные игры',
+  'Командные задания',
+]
 const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
 const modalItemTitleClass = 'aq-modal-item-title text-lg font-semibold'
 const modalItemSmallTitleClass = 'aq-modal-item-title text-sm font-semibold'
@@ -135,6 +144,7 @@ const ManageUsersPage = ({
   const [hasMoreUsers, setHasMoreUsers] = useState(Boolean(initialHasMore))
   const [isLoadingMoreUsers, setIsLoadingMoreUsers] = useState(false)
   const [isRequestingPhone, setIsRequestingPhone] = useState(false)
+  const [isUserViewModalOpen, setIsUserViewModalOpen] = useState(false)
   const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false)
   const [isUserGamesModalOpen, setIsUserGamesModalOpen] = useState(false)
   const [userGamesState, setUserGamesState] = useState({
@@ -186,6 +196,10 @@ const ManageUsersPage = ({
 
   const closeUserEditModal = useCallback(() => {
     setIsUserEditModalOpen(false)
+  }, [])
+
+  const closeUserViewModal = useCallback(() => {
+    setIsUserViewModalOpen(false)
     setUserIdQuery(null)
   }, [setUserIdQuery])
 
@@ -242,6 +256,7 @@ const ManageUsersPage = ({
   useEffect(() => {
     if (filteredUsers.length === 0) {
       setSelectedUserId(null)
+      setIsUserViewModalOpen(false)
       setIsUserEditModalOpen(false)
       setUserIdQuery(null)
       return
@@ -324,18 +339,29 @@ const ManageUsersPage = ({
     setFeedback(null)
   }, [selectedUserId])
 
-  const handleUserCardClick = useCallback(
+  const handleOpenUserViewModal = useCallback(
     (user) => {
       if (!user) {
         return
       }
 
       setSelectedUserId(user.id)
-      setIsUserEditModalOpen(true)
+      setIsUserEditModalOpen(false)
+      setIsUserViewModalOpen(true)
       setUserIdQuery(user.id)
     },
     [setUserIdQuery]
   )
+
+  const handleOpenUserEditModal = useCallback((user) => {
+    if (!user) {
+      return
+    }
+
+    setSelectedUserId(user.id)
+    setIsUserViewModalOpen(false)
+    setIsUserEditModalOpen(true)
+  }, [])
 
   const handleOpenUserGamesModal = useCallback(
     async (user) => {
@@ -417,18 +443,19 @@ const ManageUsersPage = ({
     const userIdFromQuery = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId
 
     if (!userIdFromQuery || typeof userIdFromQuery !== 'string') {
-      setIsUserEditModalOpen(false)
+      setIsUserViewModalOpen(false)
       return
     }
 
     const exists = users.some((user) => user.id === userIdFromQuery)
     if (!exists) {
-      setIsUserEditModalOpen(false)
+      setIsUserViewModalOpen(false)
       return
     }
 
     setSelectedUserId(userIdFromQuery)
-    setIsUserEditModalOpen(true)
+    setIsUserEditModalOpen(false)
+    setIsUserViewModalOpen(true)
   }, [router.isReady, router.query?.userId, users])
 
   const isDirty = useMemo(() => {
@@ -436,8 +463,81 @@ const ManageUsersPage = ({
       return false
     }
 
-    return selectedUser.role !== persistedSelectedUser.role
+    const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '')
+    const sanitizeNullable = (value) => {
+      const normalized = sanitizeText(value)
+      return normalized.length > 0 ? normalized : null
+    }
+    const normalizePreferences = (value) =>
+      Array.isArray(value)
+        ? Array.from(new Set(value.map((item) => sanitizeText(item)).filter(Boolean))).sort()
+        : []
+
+    return JSON.stringify({
+      role: selectedUser.role,
+      name: sanitizeText(selectedUser.name),
+      username: sanitizeNullable(selectedUser.username),
+      photoUrl: sanitizeNullable(selectedUser.photoUrl),
+      about: sanitizeText(selectedUser.about),
+      preferences: normalizePreferences(selectedUser.preferences),
+    }) !== JSON.stringify({
+      role: persistedSelectedUser.role,
+      name: sanitizeText(persistedSelectedUser.name),
+      username: sanitizeNullable(persistedSelectedUser.username),
+      photoUrl: sanitizeNullable(persistedSelectedUser.photoUrl),
+      about: sanitizeText(persistedSelectedUser.about),
+      preferences: normalizePreferences(persistedSelectedUser.preferences),
+    })
   }, [persistedSelectedUser, selectedUser])
+
+  const handleEditFieldChange = useCallback(
+    (field, value) => {
+      if (!selectedUserId) {
+        return
+      }
+
+      setFeedback(null)
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === selectedUserId
+            ? {
+                ...user,
+                [field]: value,
+              }
+            : user
+        )
+      )
+    },
+    [selectedUserId]
+  )
+
+  const togglePreference = useCallback(
+    (preference) => {
+      if (!selectedUserId) {
+        return
+      }
+
+      setFeedback(null)
+      setUsers((prevUsers) =>
+        prevUsers.map((user) => {
+          if (user.id !== selectedUserId) {
+            return user
+          }
+
+          const current = Array.isArray(user.preferences) ? user.preferences : []
+          const hasPreference = current.includes(preference)
+
+          return {
+            ...user,
+            preferences: hasPreference
+              ? current.filter((item) => item !== preference)
+              : [...current, preference],
+          }
+        })
+      )
+    },
+    [selectedUserId]
+  )
 
   const handleRoleChange = useCallback(
     (role) => {
@@ -474,11 +574,11 @@ const ManageUsersPage = ({
   }, [persistedSelectedUser, selectedUserId])
 
   const handleSave = useCallback(async () => {
-    if (!selectedUser || !persistedSelectedUser || !location) {
+    if (!selectedUser || !persistedSelectedUser) {
       return
     }
 
-    if (selectedUser.role === persistedSelectedUser.role) {
+    if (!isDirty) {
       return
     }
 
@@ -486,18 +586,48 @@ const ManageUsersPage = ({
     setFeedback(null)
 
     try {
-      const { json } = await requestApiJson(
-        `/api/${location}/custom?collection=users&id=${selectedUser.id}`,
-        {
-          method: 'PUT',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ data: { role: selectedUser.role } }),
-          fallbackMessage: 'Не удалось сохранить изменения',
+      const normalizeText = (value) =>
+        typeof value === 'string' ? value.trim() : ''
+      const normalizeNullable = (value) => {
+        const normalized = normalizeText(value)
+        return normalized.length > 0 ? normalized : null
+      }
+      const normalizePhone = (value) => {
+        if (typeof value !== 'string') {
+          return null
         }
-      )
+
+        const digits = value.replace(/\D/g, '')
+        return digits.length > 0 ? Number(digits) : null
+      }
+
+      const payload = {
+        role: selectedUser.role,
+        name: normalizeText(selectedUser.name),
+        username: normalizeNullable(selectedUser.username),
+        photoUrl: normalizeNullable(selectedUser.photoUrl),
+        phone: normalizePhone(selectedUser.phone),
+        about: normalizeText(selectedUser.about),
+        preferences: Array.isArray(selectedUser.preferences)
+          ? Array.from(
+              new Set(
+                selectedUser.preferences
+                  .map((item) => normalizeText(item))
+                  .filter((item) => item.length > 0),
+              ),
+            )
+          : [],
+      }
+
+      const { json } = await requestApiJson(`/api/cabinet/admin/users/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        fallbackMessage: 'Не удалось сохранить изменения',
+      })
 
       const updatedDoc = json.data ?? {}
       const baseProfile = normalizeUserProfile(updatedDoc)
@@ -520,7 +650,7 @@ const ManageUsersPage = ({
       )
       setFeedback({
         type: 'success',
-        message: 'Роль пользователя обновлена',
+        message: 'Данные пользователя обновлены',
       })
     } catch (error) {
       console.error('Failed to update user role', error)
@@ -531,7 +661,7 @@ const ManageUsersPage = ({
     } finally {
       setIsSaving(false)
     }
-  }, [location, persistedSelectedUser, selectedUser])
+  }, [isDirty, persistedSelectedUser, selectedUser])
 
   const handleRequestPhoneViaTelegram = useCallback(async () => {
     if (!selectedUser || !location || isRequestingPhone) {
@@ -660,15 +790,6 @@ const ManageUsersPage = ({
       >
         <section className="grid gap-6 md:grid-cols-5">
           <div className="md:col-span-5 space-y-4">
-            <FormSectionCard className="p-4">
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                Все пользователи
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Загружено: {users.length}. Выберите участника, чтобы просмотреть детали и обновить его роль.
-              </p>
-            </FormSectionCard>
-
             <FormSectionCard className="p-4 space-y-3">
               <CabinetInputField
                 id="user-search"
@@ -721,19 +842,23 @@ const ManageUsersPage = ({
                       <li key={user.id}>
                         <SelectableCard
                           as="button"
-                          onClick={() => handleUserCardClick(user)}
+                          onClick={() => handleOpenUserViewModal(user)}
                           type="button"
                           className="w-full text-left"
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                                {user.name || 'Без имени'}
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                {user.username ? `@${user.username}` : 'Без ника'} · Телеграм ID:{' '}
-                                {user.telegramId || 'не указан'}
-                              </p>
+                            <div className="flex min-w-0 items-start gap-3">
+                              <img
+                                src={getUserAvatarSrc(user)}
+                                alt={user.name || 'Аватар пользователя'}
+                                className="h-12 w-12 shrink-0 rounded-full border border-slate-200 object-cover dark:border-slate-700"
+                                loading="lazy"
+                              />
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                  {user.name || 'Без имени'}
+                                </p>
+                              </div>
                             </div>
                             <div className="flex items-center gap-2">
                               {resolveRatingBadge(user.rating) ? (
@@ -758,7 +883,7 @@ const ManageUsersPage = ({
                                 as="span"
                                 onClick={(event) => {
                                   event.stopPropagation()
-                                  handleUserCardClick(user)
+                                  handleOpenUserEditModal(user)
                                 }}
                                 label="Редактировать пользователя"
                               >
@@ -767,8 +892,16 @@ const ManageUsersPage = ({
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-3 mt-3 text-xs text-slate-500">
-                            <span>Команд: {user.teamsCount}</span>
                             <span>Игры: {user.gamesCount}</span>
+                          </div>
+                          <div className="mt-2 text-xs text-slate-500">
+                            {Array.isArray(user.teams) && user.teams.length > 0 ? (
+                              <p className="truncate">
+                                Команды: {user.teams.map((team) => team?.name).filter(Boolean).join(', ')}
+                              </p>
+                            ) : (
+                              <p>Команды: —</p>
+                            )}
                           </div>
                         </SelectableCard>
                       </li>
@@ -801,18 +934,12 @@ const ManageUsersPage = ({
 
         </section>
         <Modal
-          isOpen={isUserEditModalOpen && Boolean(selectedUser)}
-          onClose={closeUserEditModal}
+          isOpen={isUserViewModalOpen && Boolean(selectedUser)}
+          onClose={closeUserViewModal}
           title={`Пользователь — ${selectedUser?.name || 'Без имени'}`}
         >
           {selectedUser ? (
             <div className="space-y-6">
-              {!location && (
-                <NoticeBanner tone="warning" variant="neon">
-                  Не удалось определить площадку пользователя. Сохранение изменений недоступно.
-                </NoticeBanner>
-              )}
-
               {feedback && (
                 <NoticeBanner
                   tone={feedback.type === 'success' ? 'success' : 'error'}
@@ -823,14 +950,18 @@ const ManageUsersPage = ({
               )}
 
               <FormSectionCard className="space-y-6">
-                <div>
-                  <h2 className={modalItemTitleClass}>
-                    {selectedUser.name || 'Без имени'}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {selectedUser.username ? `@${selectedUser.username}` : 'Ник не указан'} · Telegram ID:{' '}
-                    {selectedUser.telegramId || '—'}
-                  </p>
+                <div className="flex items-start gap-3">
+                  <img
+                    src={getUserAvatarSrc(selectedUser)}
+                    alt={selectedUser.name || 'Аватар пользователя'}
+                    className="h-[200px] w-[200px] shrink-0 rounded-full border border-slate-200 object-cover dark:border-slate-700"
+                    loading="lazy"
+                  />
+                  <div className="min-w-0">
+                    <h2 className={modalItemTitleClass}>
+                      {selectedUser.name || 'Без имени'}
+                    </h2>
+                  </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
@@ -865,54 +996,6 @@ const ManageUsersPage = ({
                   )}
                 </div>
 
-                <CabinetSelectField
-                    id="user-role"
-                    label="Роль в системе"
-                    value={selectedUser.role}
-                    onChange={(event) => handleRoleChange(event.target.value)}
-                    labelClassName={modalItemSmallTitleClass}
-                    selectClassName="w-full px-4 py-3 text-sm border rounded-xl border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary"
-                  >
-                    {roleOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.name}
-                      </option>
-                    ))}
-                </CabinetSelectField>
-
-                <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                  <CabinetButton
-                    onClick={handleSave}
-                    disabled={!location || !isDirty || isSaving}
-                    variant="primary"
-                    className={isSaving ? 'cursor-wait' : ''}
-                  >
-                    {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
-                  </CabinetButton>
-                  <CabinetButton
-                    onClick={handleReset}
-                    disabled={!isDirty}
-                    variant="secondary"
-                    tone="brand"
-                  >
-                    Отменить
-                  </CabinetButton>
-                  <CabinetButton
-                    onClick={handleRequestPhoneViaTelegram}
-                    disabled={
-                      !location ||
-                      !selectedUser.telegramId ||
-                      isRequestingPhone
-                    }
-                    variant="secondary"
-                    tone="success"
-                    className={isRequestingPhone ? 'cursor-wait' : ''}
-                  >
-                    {isRequestingPhone
-                      ? 'Отправка...'
-                      : 'Запросить номер телефона через Telegram'}
-                  </CabinetButton>
-                </div>
               </FormSectionCard>
 
               <FormSectionCard className="space-y-4">
@@ -987,6 +1070,151 @@ const ManageUsersPage = ({
                   <p className="mt-1 text-sm text-slate-500 whitespace-pre-line">
                     {selectedUser.about?.trim() || 'Пользователь пока не добавил описание профиля.'}
                   </p>
+                </div>
+              </FormSectionCard>
+            </div>
+          ) : null}
+        </Modal>
+        <Modal
+          isOpen={isUserEditModalOpen && Boolean(selectedUser)}
+          onClose={closeUserEditModal}
+          title={`Редактирование — ${selectedUser?.name || 'Без имени'}`}
+        >
+          {selectedUser ? (
+            <div className="space-y-6">
+              {!location && (
+                <NoticeBanner tone="warning" variant="neon">
+                  Не удалось определить площадку пользователя. Сохранение изменений недоступно.
+                </NoticeBanner>
+              )}
+
+              {feedback && (
+                <NoticeBanner
+                  tone={feedback.type === 'success' ? 'success' : 'error'}
+                  variant="neon"
+                >
+                  {feedback.message}
+                </NoticeBanner>
+              )}
+
+              <FormSectionCard className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <CabinetInputField
+                    id="user-edit-name"
+                    label="Имя и фамилия"
+                    value={selectedUser.name || ''}
+                    onChange={(event) => handleEditFieldChange('name', event.target.value)}
+                  />
+                  <CabinetInputField
+                    id="user-edit-username"
+                    label="Никнейм в ActQuest"
+                    value={selectedUser.username || ''}
+                    onChange={(event) => handleEditFieldChange('username', event.target.value)}
+                    placeholder="Например, quest_master"
+                  />
+                </div>
+
+                <div>
+                  <label className={modalItemSmallTitleClass}>
+                    Фото профиля
+                  </label>
+                  <ImagesInput
+                    images={selectedUser.photoUrl ? [selectedUser.photoUrl] : []}
+                    onChange={(nextImages) =>
+                      handleEditFieldChange('photoUrl', nextImages?.[0] ?? '')
+                    }
+                    directory="users"
+                    imageName={selectedUser.id || 'user'}
+                    maxImages={1}
+                    previewShape="circle"
+                  />
+                </div>
+
+                <CabinetTextareaField
+                  id="user-edit-about"
+                  label="О себе"
+                  value={selectedUser.about || ''}
+                  onChange={(event) => handleEditFieldChange('about', event.target.value)}
+                  rows={5}
+                  placeholder="Расскажите об опыте, любимых форматах и роли в команде."
+                />
+
+                <div>
+                  <p className={modalItemSmallTitleClass}>
+                    Предпочитаемые форматы
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    {preferenceOptions.map((preference) => {
+                      const selectedPreferences = Array.isArray(selectedUser.preferences)
+                        ? selectedUser.preferences
+                        : []
+                      const isActive = selectedPreferences.includes(preference)
+
+                      return (
+                        <button
+                          key={preference}
+                          type="button"
+                          onClick={() => togglePreference(preference)}
+                          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                            isActive
+                              ? 'bg-primary text-white shadow-sm'
+                              : 'border border-slate-200 text-slate-600 hover:border-primary hover:text-primary dark:border-slate-600 dark:bg-slate-800/35 dark:text-slate-200 dark:hover:border-cyan-400 dark:hover:text-cyan-200'
+                          }`}
+                        >
+                          {preference}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <CabinetSelectField
+                  id="user-role"
+                  label="Роль в системе"
+                  value={selectedUser.role}
+                  onChange={(event) => handleRoleChange(event.target.value)}
+                  labelClassName={modalItemSmallTitleClass}
+                  selectClassName="w-full px-4 py-3 text-sm border rounded-xl border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary"
+                >
+                  {roleOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.name}
+                    </option>
+                  ))}
+                </CabinetSelectField>
+
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                  <CabinetButton
+                    onClick={handleSave}
+                    disabled={!isDirty || isSaving}
+                    variant="primary"
+                    className={isSaving ? 'cursor-wait' : ''}
+                  >
+                    {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
+                  </CabinetButton>
+                  <CabinetButton
+                    onClick={handleReset}
+                    disabled={!isDirty}
+                    variant="secondary"
+                    tone="brand"
+                  >
+                    Отменить
+                  </CabinetButton>
+                  <CabinetButton
+                    onClick={handleRequestPhoneViaTelegram}
+                    disabled={
+                      !location ||
+                      !selectedUser.telegramId ||
+                      isRequestingPhone
+                    }
+                    variant="secondary"
+                    tone="success"
+                    className={isRequestingPhone ? 'cursor-wait' : ''}
+                  >
+                    {isRequestingPhone
+                      ? 'Отправка...'
+                      : 'Запросить номер телефона через Telegram'}
+                  </CabinetButton>
                 </div>
               </FormSectionCard>
             </div>

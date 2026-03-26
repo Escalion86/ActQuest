@@ -176,10 +176,21 @@ const buildPlayerRatingMetrics = ({ places = [], missedGames = 0 }) => {
   }
 }
 
-const resolveRatingBadge = (rating) =>
-  rating?.isEligible && Number.isFinite(rating?.rank)
-    ? `#${rating.rank}`
-    : null
+const resolveTeamRatingBadge = (rating) => {
+  if (!rating) {
+    return { label: 'Без рейтинга', eligible: false }
+  }
+
+  if (rating.isEligible && Number.isFinite(rating.rank)) {
+    return { label: `#${rating.rank}`, eligible: true }
+  }
+
+  if (Number.isFinite(rating.finalScore)) {
+    return { label: Number(rating.finalScore).toFixed(2), eligible: false }
+  }
+
+  return { label: 'Без рейтинга', eligible: false }
+}
 
 const CabinetDashboard = ({
   session: initialSession,
@@ -331,45 +342,53 @@ const CabinetDashboard = ({
               <h3 className="aq-modal-section-title text-base font-semibold">Мои команды</h3>
               {dashboardData.participantTeams.length > 0 ? (
                 <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {dashboardData.participantTeams.map((team) => (
-                    <li key={team.id}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedTeamId(team.id)
-                          setIsTeamDescriptionOpen(true)
-                        }}
-                        className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-cyan-400 hover:bg-cyan-50/70 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
-                        title={team.name}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                              {team.name}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                              Участников: {team.membersCount ?? 0}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                              Игр: {team.gamesCount ?? 0}
-                            </p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            {resolveRatingBadge(team.rating) ? (
-                              <span className="inline-flex items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                                {resolveRatingBadge(team.rating)}
+                  {dashboardData.participantTeams.map((team) => {
+                    const teamRatingBadge = resolveTeamRatingBadge(team.rating)
+
+                    return (
+                      <li key={team.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedTeamId(team.id)
+                            setIsTeamDescriptionOpen(true)
+                          }}
+                          className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-cyan-400 hover:bg-cyan-50/70 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
+                          title={team.name}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                {team.name}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+                                Участников: {team.membersCount ?? 0}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+                                Игр: {team.gamesCount ?? 0}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span
+                                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                                  teamRatingBadge.eligible
+                                    ? 'border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200'
+                                    : 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-700/40 dark:text-slate-200'
+                                }`}
+                              >
+                                {teamRatingBadge.label}
                               </span>
-                            ) : null}
-                            {team.isCaptain ? (
-                              <span className="inline-flex items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                                Капитан
-                              </span>
-                            ) : null}
+                              {team.isCaptain ? (
+                                <span className="inline-flex items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                  Капитан
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
-                        </div>
-                      </button>
-                    </li>
-                  ))}
+                        </button>
+                      </li>
+                    )
+                  })}
                 </ul>
               ) : (
                 <p className="mt-3 text-xs text-slate-500 dark:text-slate-300">Вы пока не состоите в командах</p>

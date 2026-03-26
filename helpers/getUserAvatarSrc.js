@@ -1,6 +1,22 @@
-const getUserAvatarSrc = (user) =>
-  user?.images?.length > 0
-    ? user.images[0]
-    : `/img/users/${user?.gender ?? 'null'}.jpg`
+const getUserAvatarSrc = (user) => {
+  const photoUrl =
+    typeof user?.photoUrl === 'string' && user.photoUrl.trim().length > 0
+      ? user.photoUrl.trim()
+      : null
+
+  if (photoUrl) {
+    return photoUrl
+  }
+
+  if (Array.isArray(user?.images) && user.images.length > 0) {
+    const firstImage =
+      typeof user.images[0] === 'string' ? user.images[0].trim() : ''
+    if (firstImage) {
+      return firstImage
+    }
+  }
+
+  return '/img/users/null.png'
+}
 
 export default getUserAvatarSrc

@@ -516,16 +516,6 @@ const AdminTeamsPage = ({
     })
   }, [filteredTeams])
 
-  const summary = useMemo(() => {
-    const total = teams.length
-    const open = teams.filter((team) => team.open).length
-    return {
-      total,
-      open,
-      closed: total - open,
-    }
-  }, [teams])
-
   const handleLoadMoreTeams = useCallback(async () => {
     if (isLoadingMoreTeams || !hasMoreTeams) {
       return
@@ -660,13 +650,6 @@ const AdminTeamsPage = ({
         activePage="admin"
       >
         <section className="grid gap-6">
-          <FormSectionCard className="p-4">
-            <p className="text-sm font-semibold text-primary dark:text-slate-100">Все команды</p>
-            <p className="mt-1 text-xs text-slate-500">
-              Загружено: {summary.total}. Открытых: {summary.open}. Закрытых: {summary.closed}.
-            </p>
-          </FormSectionCard>
-
           <FormSectionCard className="p-4 space-y-3">
             <CabinetInputField
               id="team-search"

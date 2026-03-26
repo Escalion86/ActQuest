@@ -19,6 +19,18 @@ const resolveGamesView = (value) => {
   return 'all'
 }
 
+const normalizeRole = (value) => {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const normalizedRaw = value.trim().toLowerCase()
+  const normalized = normalizedRaw === 'moderator' ? 'moder' : normalizedRaw
+  return ['client', 'moder', 'admin', 'dev'].includes(normalized)
+    ? normalized
+    : null
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET'])
@@ -30,7 +42,12 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: 'Требуется авторизация' })
   }
 
-  const userRole = session?.user?.role ?? 'client'
+  const sessionRole = normalizeRole(session?.user?.role) ?? 'client'
+  const previewRole = normalizeRole(req.query?.rolePreview)
+  const userRole =
+    sessionRole === 'dev' && previewRole && previewRole !== 'dev'
+      ? previewRole
+      : sessionRole
   const rawTelegramId = session?.user?.telegramId
   const creatorTelegramId =
     rawTelegramId === null || rawTelegramId === undefined

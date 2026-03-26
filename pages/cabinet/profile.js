@@ -29,8 +29,14 @@ const ProfilePage = ({ initialProfile }) => {
     [initialProfile],
   )
   const [formState, setFormState] = useState(() => normalizedInitialProfile)
-  const [lastSavedState, setLastSavedState] = useState(() => normalizedInitialProfile)
-  const [saveState, setSaveState] = useState({ isSaving: false, isSaved: false, error: null })
+  const [lastSavedState, setLastSavedState] = useState(
+    () => normalizedInitialProfile,
+  )
+  const [saveState, setSaveState] = useState({
+    isSaving: false,
+    isSaved: false,
+    error: null,
+  })
 
   useEffect(() => {
     setFormState(normalizedInitialProfile)
@@ -48,7 +54,10 @@ const ProfilePage = ({ initialProfile }) => {
   }, [formState, lastSavedState])
 
   const handleChange = useCallback((field, value) => {
-    setFormState((prevState) => ({ ...normalizeUserProfile(prevState), [field]: value }))
+    setFormState((prevState) => ({
+      ...normalizeUserProfile(prevState),
+      [field]: value,
+    }))
     setSaveState((prevState) => ({ ...prevState, isSaved: false, error: null }))
   }, [])
 
@@ -67,7 +76,10 @@ const ProfilePage = ({ initialProfile }) => {
     setSaveState((prevState) => ({ ...prevState, isSaved: false, error: null }))
   }, [])
 
-  const safeFormState = useMemo(() => normalizeUserProfile(formState), [formState])
+  const safeFormState = useMemo(
+    () => normalizeUserProfile(formState),
+    [formState],
+  )
 
   const handleSubmit = useCallback(
     async (event) => {
@@ -84,7 +96,8 @@ const ProfilePage = ({ initialProfile }) => {
 
       setSaveState({ isSaving: true, isSaved: false, error: null })
 
-      const normalizeText = (value) => (typeof value === 'string' ? value.trim() : '')
+      const normalizeText = (value) =>
+        typeof value === 'string' ? value.trim() : ''
       const normalizeNullable = (value) => {
         const normalized = normalizeText(value)
         return normalized.length > 0 ? normalized : null
@@ -109,8 +122,8 @@ const ProfilePage = ({ initialProfile }) => {
               new Set(
                 safeFormState.preferences
                   .map((item) => normalizeText(item))
-                  .filter((item) => item.length > 0)
-              )
+                  .filter((item) => item.length > 0),
+              ),
             )
           : [],
       }
@@ -140,7 +153,7 @@ const ProfilePage = ({ initialProfile }) => {
         })
       }
     },
-    [safeFormState, session]
+    [safeFormState, session],
   )
 
   return (
@@ -167,7 +180,9 @@ const ProfilePage = ({ initialProfile }) => {
                 id="profile-username"
                 label="Никнейм в ActQuest"
                 value={safeFormState.username ?? ''}
-                onChange={(event) => handleChange('username', event.target.value)}
+                onChange={(event) =>
+                  handleChange('username', event.target.value)
+                }
                 placeholder="Например, quest_master"
               />
             </div>
@@ -213,7 +228,8 @@ const ProfilePage = ({ initialProfile }) => {
               </p>
               <div className="flex flex-wrap gap-3 mt-3">
                 {preferenceOptions.map((preference) => {
-                  const isActive = safeFormState.preferences.includes(preference)
+                  const isActive =
+                    safeFormState.preferences.includes(preference)
 
                   return (
                     <button
@@ -298,13 +314,19 @@ export async function getServerSideProps(context) {
   const userId = session?.user?.globalUserId || session?.user?._id
   const rawTelegramId = session?.user?.telegramId
   const numericTelegramId =
-    rawTelegramId === null || rawTelegramId === undefined ? null : Number(rawTelegramId)
-  const telegramId = Number.isFinite(numericTelegramId) ? numericTelegramId : null
+    rawTelegramId === null || rawTelegramId === undefined
+      ? null
+      : Number(rawTelegramId)
+  const telegramId = Number.isFinite(numericTelegramId)
+    ? numericTelegramId
+    : null
   const rawPhone = session?.user?.phone
-  const numericPhone = rawPhone === null || rawPhone === undefined ? null : Number(rawPhone)
+  const numericPhone =
+    rawPhone === null || rawPhone === undefined ? null : Number(rawPhone)
   const phone = Number.isFinite(numericPhone) ? numericPhone : null
   const rawVkId = session?.user?.vkId
-  const numericVkId = rawVkId === null || rawVkId === undefined ? null : Number(rawVkId)
+  const numericVkId =
+    rawVkId === null || rawVkId === undefined ? null : Number(rawVkId)
   const vkId = Number.isFinite(numericVkId) ? numericVkId : null
 
   let initialProfile = normalizeUserProfile()

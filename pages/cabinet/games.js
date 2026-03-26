@@ -1207,6 +1207,9 @@ const GamesPage = ({
         limit: String(GAMES_PAGE_SIZE),
         view: gamesView,
       })
+      if (userRole) {
+        params.set('rolePreview', userRole)
+      }
       if (locationValue) {
         params.set('location', locationValue)
       }
@@ -1239,7 +1242,7 @@ const GamesPage = ({
 
       setHasMoreGames(nextHasMore)
     },
-    [gamesView, sortGamesForCurrentView],
+    [gamesView, sortGamesForCurrentView, userRole],
   )
 
   useEffect(() => {
@@ -1807,6 +1810,9 @@ const GamesPage = ({
             view: 'all',
             location: 'all',
           })
+          if (userRole) {
+            params.set('rolePreview', userRole)
+          }
 
           const { json } = await requestApiJson(
             `/api/cabinet/games-list?${params.toString()}`,
@@ -1852,7 +1858,7 @@ const GamesPage = ({
     return () => {
       cancelled = true
     }
-  }, [canEditAllGames, isCreateGameModalOpen])
+  }, [canEditAllGames, isCreateGameModalOpen, userRole])
 
   useEffect(() => {
     if (createGameMode !== CREATE_GAME_MODE_CLONE) {
@@ -4004,9 +4010,9 @@ const GamesPage = ({
                 handleSelectGameCard(game)
               }
             }}
-            isActive={selectedGameId === game.id}
+            isActive={false}
             className="relative p-0 overflow-hidden cursor-pointer"
-            aria-pressed={selectedGameId === game.id}
+            aria-pressed={false}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
@@ -4183,9 +4189,9 @@ const GamesPage = ({
                 handleSelectGameCard(game)
               }
             }}
-            isActive={selectedGameId === game.id}
+            isActive={false}
             className="relative p-0 overflow-hidden cursor-pointer"
-            aria-pressed={selectedGameId === game.id}
+            aria-pressed={false}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
