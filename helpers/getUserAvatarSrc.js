@@ -16,7 +16,7 @@ const getUserAvatarSrc = (user) => {
     }
   }
 
-  return '/img/users/null.png'
+  return '/img/avatars/user.png'
 }
 
 export default getUserAvatarSrc

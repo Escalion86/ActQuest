@@ -6,6 +6,7 @@ import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import ModalSection from '@components/modals/ModalSection'
+import ModalSectionTitle from '@components/modals/ModalSectionTitle'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NeonCheckbox from '@components/NeonCheckbox'
 import ClassicCar from '@components/cars/ClassicCar'
@@ -104,6 +105,11 @@ const TeamEditModal = ({
     return null
   }
 
+  const fieldLabelClassName = 'text-sm font-semibold text-slate-700 dark:text-white'
+  const fieldInputClassName =
+    'w-full px-4 py-3 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none'
+  const sectionTitleClassName = 'text-lg text-slate-800 dark:text-white'
+
   const modalFooter = (
     <>
       <CabinetButton
@@ -149,47 +155,14 @@ const TeamEditModal = ({
               onChange={(event) =>
                 onTeamFieldChange('name', event.target.value)
               }
-              labelClassName="text-sm font-semibold text-slate-900 dark:text-slate-100"
-              inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
+              labelClassName={fieldLabelClassName}
+              inputClassName={fieldInputClassName}
             />
-            <div>
-              <label
-                className="text-sm font-semibold text-slate-900 dark:text-slate-100"
-                htmlFor="team-open"
-              >
-                Доступность команды
-              </label>
-              <div className="mt-3">
-                <NeonCheckbox
-                  id="team-open"
-                  checked={Boolean(selectedTeam.open)}
-                  onChange={(event) =>
-                    onTeamFieldChange('open', event.target.checked)
-                  }
-                  label="Разрешить новым участникам присоединяться к команде по id"
-                  labelClassName="text-sm text-slate-600 dark:text-slate-300"
-                />
-              </div>
-              {selectedTeam.open ? (
-                <button
-                  type="button"
-                  onClick={onCopyTeamId}
-                  className="inline-flex items-center justify-between w-full px-3 py-2 mt-2 text-xs font-medium transition border border-dashed rounded-lg border-primary/40 bg-blue-50/70 text-primary hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:border-blue-300/30 dark:bg-blue-500/10 dark:text-blue-100 dark:hover:bg-blue-500/20"
-                >
-                  <span>ID команды: {selectedTeam.id}</span>
-                  <span className="text-[11px] font-normal uppercase tracking-wide">
-                    {isTeamIdCopied
-                      ? 'Скопировано'
-                      : 'Нажмите, чтобы скопировать'}
-                  </span>
-                </button>
-              ) : null}
-            </div>
             {canEditCarSkin && (
               <div>
                 <label
                   htmlFor="team-car-skin"
-                  className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  className={fieldLabelClassName}
                 >
                   Вид машинки в интерактивной таблице
                 </label>
@@ -200,7 +173,7 @@ const TeamEditModal = ({
                     onChange={(event) =>
                       onTeamFieldChange('carSkin', event.target.value)
                     }
-                    className="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+                    className={fieldInputClassName}
                   >
                     {TEAM_CAR_SKIN_OPTIONS.map((item) => (
                       <option key={item.value} value={item.value}>
@@ -222,8 +195,8 @@ const TeamEditModal = ({
               onTeamFieldChange('description', event.target.value)
             }
             rows={5}
-            labelClassName="text-sm font-semibold text-slate-900 dark:text-slate-100"
-            textareaClassName="w-full px-4 py-3 text-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:outline-none"
+            labelClassName={fieldLabelClassName}
+            textareaClassName={fieldInputClassName}
           />
 
           <ImagesInput
@@ -234,19 +207,51 @@ const TeamEditModal = ({
                 Array.isArray(next) ? (next[0] ?? '') : '',
               )
             }
-            directory="teams"
-            imageName={selectedTeam.id || 'team-avatar'}
-            label="Иконка команды"
+            directory={`teams/${selectedTeam.id || 'draft'}`}
+            imageName="cover"
+            label="Аватарка команды"
             maxImages={1}
             disabled={!canManageSelectedTeam || isSaving}
+            previewShape="circle"
           />
         </ModalSection>
 
         <ModalSection>
+          <ModalSectionTitle as="h2" className={sectionTitleClassName}>
+            Доступность команды
+          </ModalSectionTitle>
+          <div className="mt-3">
+            <NeonCheckbox
+              id="team-open"
+              checked={Boolean(selectedTeam.open)}
+              onChange={(event) =>
+                onTeamFieldChange('open', event.target.checked)
+              }
+              label="Разрешить новым участникам присоединяться к команде по id"
+              labelClassName="text-sm text-slate-600 dark:text-slate-300"
+            />
+          </div>
+          {selectedTeam.open ? (
+            <button
+              type="button"
+              onClick={onCopyTeamId}
+              className="inline-flex items-center justify-between w-full px-3 py-2 mt-2 text-xs font-medium transition border border-dashed rounded-lg border-primary/40 bg-blue-50/70 text-primary hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:border-blue-300/30 dark:bg-blue-500/10 dark:text-blue-100 dark:hover:bg-blue-500/20"
+            >
+              <span>ID команды: {selectedTeam.id}</span>
+              <span className="text-[11px] font-normal uppercase tracking-wide">
+                {isTeamIdCopied
+                  ? 'Скопировано'
+                  : 'Нажмите, чтобы скопировать'}
+              </span>
+            </button>
+          ) : null}
+        </ModalSection>
+
+        <ModalSection>
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            <ModalSectionTitle as="h2" className={sectionTitleClassName}>
               Состав команды
-            </h2>
+            </ModalSectionTitle>
             {selectedTeam.captain && (
               <span className="text-xs text-slate-500">
                 Капитан: {selectedTeam.captain.name || 'не указан'}

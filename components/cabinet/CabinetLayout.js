@@ -249,12 +249,12 @@ const CabinetLayout = ({
       nextItems.push(...adminMenuItems)
     }
 
-    if (isDeveloper) {
+    if (role === 'dev') {
       nextItems.push(developerMenuItem)
     }
 
     return nextItems
-  }, [isDeveloper, role])
+  }, [role])
   const gamesView =
     typeof router.query?.view === 'string'
       ? router.query.view.toLowerCase()
@@ -277,7 +277,7 @@ const CabinetLayout = ({
       return
     }
 
-    if (window.innerWidth < 768) {
+    if (window.innerWidth < 960) {
       setIsSidebarExpanded(false)
     }
   }, [theme])
@@ -553,9 +553,7 @@ const CabinetLayout = ({
 
   return (
     <div className="cabinet-neon">
-      <div
-        className={`relative flex min-h-screen overflow-hidden ${appBgClass}`}
-      >
+      <div className={`relative flex min-h-screen ${appBgClass}`}>
         <div className="absolute inset-0 pointer-events-none">
           <div
             className={`absolute -left-24 top-8 h-72 w-72 rounded-full blur-3xl ${decorClass.one}`}
@@ -568,7 +566,7 @@ const CabinetLayout = ({
           />
         </div>
         <div
-          className={`fixed inset-y-0 left-0 z-40 flex border-r backdrop-blur-xl transition-all duration-200 md:w-64 md:translate-x-0 ${sidebarClass} ${
+          className={`fixed inset-y-0 left-0 z-40 flex border-r backdrop-blur-xl transition-all duration-200 laptop:w-64 laptop:translate-x-0 ${sidebarClass} ${
             isSidebarExpanded
               ? 'w-64 translate-x-0 shadow-xl'
               : 'w-16 -translate-x-full'
@@ -597,11 +595,11 @@ const CabinetLayout = ({
                         onClick={handleToggleGamesMenu}
                         className={`flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
                           isGamesSectionActive ? navActiveClass : navIdleClass
-                        } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
+                        } ${isSidebarExpanded ? 'justify-start' : 'justify-center laptop:justify-start'}`}
                       >
                         <FontAwesomeIcon icon={item.icon} className="w-5 h-5 shrink-0" />
                         <span
-                          className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
+                          className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'} transition-opacity duration-150`}
                         >
                           {item.label}
                         </span>
@@ -609,7 +607,7 @@ const CabinetLayout = ({
                           icon={faChevronDown}
                           className={`ml-auto h-3 w-3 shrink-0 transition-transform duration-150 ${
                             isGamesMenuOpen ? 'rotate-180' : ''
-                          } ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'}`}
+                          } ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'}`}
                         />
                       </button>
                       <div
@@ -663,14 +661,14 @@ const CabinetLayout = ({
                         onClick={handleToggleAdminMenu}
                         className={`flex w-full cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
                           isAdminSectionActive ? navActiveClass : navIdleClass
-                        } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
+                        } ${isSidebarExpanded ? 'justify-start' : 'justify-center laptop:justify-start'}`}
                       >
                         <FontAwesomeIcon
                           icon={item.icon}
                           className="w-5 h-5 shrink-0"
                         />
                         <span
-                          className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
+                          className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'} transition-opacity duration-150`}
                         >
                           {item.label}
                         </span>
@@ -678,7 +676,7 @@ const CabinetLayout = ({
                           icon={faChevronDown}
                           className={`ml-auto h-3 w-3 shrink-0 transition-transform duration-150 ${
                             isAdminMenuOpen ? 'rotate-180' : ''
-                          } ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'}`}
+                          } ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'}`}
                         />
                       </button>
 
@@ -733,12 +731,12 @@ const CabinetLayout = ({
                     href={item.href}
                     className={`flex cursor-pointer items-center gap-4 px-4 py-3 text-sm font-medium transition-colors duration-150 ${
                       isActive ? navActiveClass : navIdleClass
-                    } ${isSidebarExpanded ? 'justify-start' : 'justify-center md:justify-start'}`}
+                    } ${isSidebarExpanded ? 'justify-start' : 'justify-center laptop:justify-start'}`}
                     onClick={(event) => handleNavLinkClick(item.href, event)}
                   >
                     <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
                     <span
-                      className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
+                      className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'} transition-opacity duration-150`}
                     >
                       {item.label}
                     </span>
@@ -795,7 +793,7 @@ const CabinetLayout = ({
                   className="w-4 h-4"
                 />
                 <span
-                  className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 md:opacity-100'} transition-opacity duration-150`}
+                  className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'} transition-opacity duration-150`}
                 >
                   Выйти
                 </span>
@@ -806,21 +804,21 @@ const CabinetLayout = ({
 
         {isSidebarExpanded && (
           <div
-            className={`fixed inset-0 z-30 md:hidden ${overlayClass}`}
+            className={`fixed inset-0 z-30 laptop:hidden ${overlayClass}`}
             aria-hidden="true"
             onClick={() => setIsSidebarExpanded(false)}
           />
         )}
 
-        <div className="flex flex-col flex-1 min-h-screen md:pl-64">
+        <div className="flex flex-col flex-1 min-h-screen laptop:pl-64">
           <header
             className={`sticky top-0 z-20 border-b backdrop-blur-xl ${headerClass}`}
           >
-            <div className="flex items-center justify-between px-4 py-4 md:px-8">
+            <div className="flex items-center justify-between px-4 py-4 laptop:px-8">
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border transition-colors duration-150 md:hidden ${mobileMenuBtnClass}`}
+                  className={`flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border transition-colors duration-150 laptop:hidden ${mobileMenuBtnClass}`}
                   onClick={() => setIsSidebarExpanded((prev) => !prev)}
                   aria-label="Открыть меню"
                 >
@@ -828,14 +826,14 @@ const CabinetLayout = ({
                 </button>
                 <div>
                   <h1
-                    className={`text-xl font-semibold md:text-2xl ${userNameClass}`}
+                    className={`text-xl font-semibold laptop:text-2xl ${userNameClass}`}
                   >
                     {resolvedHeaderTitle}
                   </h1>
                 </div>
               </div>
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="hidden text-right md:block">
+              <div className="flex items-center gap-3 laptop:gap-4">
+                <div className="hidden text-right laptop:block">
                   <p className={`text-sm font-semibold ${userNameClass}`}>
                     {userName}
                   </p>
@@ -863,7 +861,7 @@ const CabinetLayout = ({
           </header>
 
           <main
-            className={`relative z-10 flex-1 px-4 py-6 md:px-8 ${mainTextClass}`}
+            className={`relative z-10 flex-1 px-4 py-6 laptop:px-8 ${mainTextClass}`}
           >
             <div className="max-w-5xl mx-auto">
               {showPageTitle ? (

@@ -72,9 +72,10 @@ const TeamCreateModal = ({
         onChange={(next) => onChangeNewTeamImage(Array.isArray(next) ? next[0] ?? '' : '')}
         directory="teams/draft"
         imageName="avatar"
-        label="Иконка команды"
+        label="Аватарка команды"
         maxImages={1}
         disabled={isCreatingTeam}
+        previewShape="circle"
       />
       <NeonCheckbox
         id="new-team-open"

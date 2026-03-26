@@ -125,18 +125,12 @@ const GameTeamsModal = ({
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0 flex items-center gap-3">
-                            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
-                              {team.teamImage ? (
-                                <img
-                                  src={team.teamImage}
-                                  alt={`Иконка команды ${team.teamName}`}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500 dark:text-slate-300">
-                                  {team.teamName?.[0] ? team.teamName[0].toUpperCase() : '?'}
-                                </div>
-                              )}
+                            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+                              <img
+                                src={team.teamImage || '/img/avatars/team.png'}
+                                alt={`Иконка команды ${team.teamName}`}
+                                className="h-full w-full object-cover"
+                              />
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">

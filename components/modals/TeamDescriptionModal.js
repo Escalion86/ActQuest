@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import PropTypes from 'prop-types'
 
+import CabinetButton from '@components/cabinet/CabinetButton'
 import Modal from '@components/Modal'
 import formatDate from '@helpers/formatDate'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
@@ -20,28 +21,49 @@ const TeamDescriptionModal = ({
   isOpen,
   onClose,
   selectedTeam,
+  canLeaveTeam,
+  isLeavingTeam,
+  onLeaveTeam,
 }) => (
   <Modal
     isOpen={isOpen}
     title={`Команда — ${selectedTeam?.name || 'Без названия'}`}
     onClose={onClose}
+    footer={
+      canLeaveTeam ? (
+        <>
+          <CabinetButton
+            type="button"
+            variant="secondary"
+            tone="neutral"
+            onClick={onClose}
+            disabled={isLeavingTeam}
+          >
+            Закрыть
+          </CabinetButton>
+          <CabinetButton
+            type="button"
+            variant="secondary"
+            tone="danger"
+            onClick={onLeaveTeam}
+            disabled={isLeavingTeam}
+          >
+            {isLeavingTeam ? 'Выходим...' : 'Выйти из команды'}
+          </CabinetButton>
+        </>
+      ) : undefined
+    }
   >
     {selectedTeam ? (
       <div className="space-y-6">
         <ModalSection className="p-5">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
-              {selectedTeam.image ? (
-                <img
-                  src={selectedTeam.image}
-                  alt={`Иконка команды ${selectedTeam.name || 'Без названия'}`}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-slate-500 dark:text-slate-300">
-                  {selectedTeam.name?.[0] ? selectedTeam.name[0].toUpperCase() : '?'}
-                </div>
-              )}
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+              <img
+                src={selectedTeam.image || '/img/avatars/team.png'}
+                alt={`Иконка команды ${selectedTeam.name || 'Без названия'}`}
+                className="h-full w-full object-cover"
+              />
             </div>
             <div className="min-w-0">
               <p className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -203,6 +225,9 @@ const TeamDescriptionModal = ({
 TeamDescriptionModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  canLeaveTeam: PropTypes.bool,
+  isLeavingTeam: PropTypes.bool,
+  onLeaveTeam: PropTypes.func,
   selectedTeam: PropTypes.shape({
     id: PropTypes.string,
     name: PropTypes.string,
@@ -250,6 +275,9 @@ TeamDescriptionModal.propTypes = {
 }
 
 TeamDescriptionModal.defaultProps = {
+  canLeaveTeam: false,
+  isLeavingTeam: false,
+  onLeaveTeam: undefined,
   selectedTeam: null,
 }
 

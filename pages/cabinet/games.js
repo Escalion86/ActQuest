@@ -4011,13 +4011,13 @@ const GamesPage = ({
               }
             }}
             isActive={false}
-            className="relative p-0 overflow-hidden cursor-pointer"
+            className="relative min-h-[150px] overflow-hidden p-0 cursor-pointer sm:min-h-[168px]"
             aria-pressed={false}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
             <div className="flex items-start min-w-0">
-              <div className="relative hidden w-[156px] shrink-0 rounded-lg overflow-hidden bg-slate-100 sm:block dark:border-slate-700 dark:bg-slate-900">
+              <div className="relative hidden min-h-[160px] w-[156px] shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:block dark:border-slate-700 dark:bg-slate-900">
                 <GameCardImage
                   src={game.image}
                   alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
@@ -4029,7 +4029,7 @@ const GamesPage = ({
                 className="min-w-0 flex-1 p-0 sm:absolute sm:inset-y-0 sm:left-[168px] sm:right-0 sm:overflow-hidden sm:p-4"
               >
                 <div className="flex items-start flex-1 w-full min-w-0 gap-3">
-                  <div className="relative w-24 overflow-hidden border shrink-0 rounded-xl border-slate-200 bg-slate-100 sm:hidden dark:border-slate-700 dark:bg-slate-900">
+                  <div className="relative min-h-[96px] w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 sm:hidden dark:border-slate-700 dark:bg-slate-900">
                     <GameCardImage
                       src={game.image}
                       alt={

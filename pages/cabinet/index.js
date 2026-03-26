@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import PropTypes from 'prop-types'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import Modal from '@components/Modal'
@@ -12,7 +13,9 @@ import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { toStringId } from '@helpers/idAndDate'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
+import requestApiJson from '@helpers/requestApiJson'
 import resolveEntityRating from '@helpers/resolveEntityRating'
+import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
@@ -196,7 +199,11 @@ const CabinetDashboard = ({
   session: initialSession,
   dashboardData: initialDashboardData,
 }) => {
+  const router = useRouter()
   const { activeSession, status } = useMergedSession(initialSession)
+  const { effectiveRole } = useCabinetRolePreview(
+    activeSession?.user?.role ?? 'client',
+  )
 
   const dashboardData = initialDashboardData ?? {
     cityName: 'Город не выбран',
@@ -229,10 +236,46 @@ const CabinetDashboard = ({
   const [isPlayedGamePreviewOpen, setIsPlayedGamePreviewOpen] = useState(false)
   const [previewPlayedGame, setPreviewPlayedGame] = useState(null)
   const [isRatingInfoOpen, setIsRatingInfoOpen] = useState(false)
+  const [isLeavingTeam, setIsLeavingTeam] = useState(false)
+  const [leaveTeamError, setLeaveTeamError] = useState('')
   const selectedTeam = useMemo(
     () => dashboardData.participantTeams.find((team) => team.id === selectedTeamId) ?? null,
     [dashboardData.participantTeams, selectedTeamId]
   )
+  const isPrivilegedTeamEditor = ['admin', 'dev'].includes(
+    String(effectiveRole ?? 'client').toLowerCase()
+  )
+  const canLeaveSelectedTeam = Boolean(selectedTeam?.membershipId) && !selectedTeam?.isCaptain
+  const userLocation = activeSession?.user?.location ?? null
+
+  const handleLeaveSelectedTeam = useCallback(async () => {
+    if (!selectedTeam?.membershipId || !userLocation || selectedTeam?.isCaptain || isLeavingTeam) {
+      return
+    }
+
+    const confirmed = window.confirm('Вы уверены, что хотите выйти из команды?')
+    if (!confirmed) {
+      return
+    }
+
+    setLeaveTeamError('')
+    setIsLeavingTeam(true)
+
+    try {
+      await requestApiJson(`/api/${userLocation}/teamsusers/${selectedTeam.membershipId}`, {
+        method: 'DELETE',
+        fallbackMessage: 'Не удалось выйти из команды',
+      })
+
+      setIsTeamDescriptionOpen(false)
+      router.replace(router.asPath).catch(() => {})
+    } catch (error) {
+      console.error('Failed to leave selected team from dashboard', error)
+      setLeaveTeamError(error?.message || 'Не удалось выйти из команды')
+    } finally {
+      setIsLeavingTeam(false)
+    }
+  }, [isLeavingTeam, router, selectedTeam, userLocation])
   const latestPlayedGame = dashboardData.personalProgressGames[0] ?? null
 
   if (!activeSession) {
@@ -340,10 +383,16 @@ const CabinetDashboard = ({
 
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
               <h3 className="aq-modal-section-title text-base font-semibold">Мои команды</h3>
+              {leaveTeamError ? (
+                <p className="mt-3 rounded-xl border border-rose-300/70 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+                  {leaveTeamError}
+                </p>
+              ) : null}
               {dashboardData.participantTeams.length > 0 ? (
-                <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <ul className="mt-4 grid gap-3">
                   {dashboardData.participantTeams.map((team) => {
                     const teamRatingBadge = resolveTeamRatingBadge(team.rating)
+                    const canManageTeam = isPrivilegedTeamEditor || team.isCaptain
 
                     return (
                       <li key={team.id}>
@@ -353,38 +402,96 @@ const CabinetDashboard = ({
                             setSelectedTeamId(team.id)
                             setIsTeamDescriptionOpen(true)
                           }}
-                          className="w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-cyan-400 hover:bg-cyan-50/70 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
+                          className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-cyan-400 hover:bg-cyan-50/70 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
                           title={team.name}
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                                {team.name}
-                              </p>
-                              <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                                Участников: {team.membersCount ?? 0}
-                              </p>
-                              <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                                Игр: {team.gamesCount ?? 0}
-                              </p>
+                            <div className="min-w-0 flex flex-1 items-start gap-3">
+                              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+                                <img
+                                  src={team.image || '/img/avatars/team.png'}
+                                  alt={`Иконка команды ${team.name || 'Без названия'}`}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                  {team.name}
+                                </p>
+                              </div>
                             </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              <span
-                                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                                  teamRatingBadge.eligible
-                                    ? 'border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200'
-                                    : 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-700/40 dark:text-slate-200'
-                                }`}
+                              {canManageTeam ? (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    router.push({
+                                      pathname: '/cabinet/teams',
+                                      query: {
+                                        teamId: team.id,
+                                        mode: 'edit',
+                                      },
+                                    }).catch(() => {})
+                                  }}
+                                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cyan-300 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 dark:border-[#00D1FF]/35 dark:text-[#b3ecff] dark:hover:border-[#00D1FF]/65 dark:hover:bg-[#00D1FF]/10 dark:hover:text-[#e1f8ff]"
+                                  aria-label="Открыть управление командой"
+                                  title="Открыть управление командой"
                               >
-                                {teamRatingBadge.label}
-                              </span>
-                              {team.isCaptain ? (
-                                <span className="inline-flex items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                                  Капитан
-                                </span>
-                              ) : null}
-                            </div>
+                                <svg
+                                  className="h-4 w-4"
+                                  viewBox="0 0 20 20"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    d="M4 13.5V16h2.5L15 7.5l-2.5-2.5L4 13.5z"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                  <path
+                                    d="M12.5 5.5l2-2a1.5 1.5 0 112.121 2.121l-2 2"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              </button>
+                            ) : null}
                           </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                                teamRatingBadge.eligible
+                                  ? 'border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200'
+                                  : 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-700/40 dark:text-slate-200'
+                              }`}
+                            >
+                              {teamRatingBadge.label}
+                            </span>
+                            {team.isCaptain ? (
+                              <span className="inline-flex items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                Капитан
+                              </span>
+                            ) : null}
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                                team.open
+                                  ? 'border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
+                                  : 'border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#d9c8ff]'
+                              }`}
+                            >
+                              {team.open ? 'Открыта' : 'Закрыта'}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
+                            Участников: {team.membersCount ?? 0}
+                          </p>
+                          <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
+                            Игр: {team.gamesCount ?? 0}
+                          </p>
                         </button>
                       </li>
                     )
@@ -529,6 +636,9 @@ const CabinetDashboard = ({
         isOpen={isTeamDescriptionOpen}
         onClose={() => setIsTeamDescriptionOpen(false)}
         selectedTeam={selectedTeam}
+        canLeaveTeam={canLeaveSelectedTeam}
+        isLeavingTeam={isLeavingTeam}
+        onLeaveTeam={handleLeaveSelectedTeam}
       />
       <Modal
         isOpen={isAllPlayedGamesOpen}
@@ -643,7 +753,9 @@ CabinetDashboard.propTypes = {
     participantTeams: PropTypes.arrayOf(
       PropTypes.shape({
         id: PropTypes.string.isRequired,
+        membershipId: PropTypes.string,
         name: PropTypes.string,
+        image: PropTypes.string,
         isCaptain: PropTypes.bool,
         description: PropTypes.string,
         open: PropTypes.bool,
@@ -863,7 +975,7 @@ export async function getServerSideProps(context) {
 
     const memberships = membershipOr.length
       ? await TeamsUsersModel.find({ $or: membershipOr })
-          .select({ teamId: 1, role: 1, updatedAt: 1, createdAt: 1 })
+          .select({ _id: 1, teamId: 1, role: 1, updatedAt: 1, createdAt: 1 })
           .lean()
       : []
 
@@ -882,6 +994,7 @@ export async function getServerSideProps(context) {
               _id: 1,
               name: 1,
               description: 1,
+              image: 1,
               open: 1,
               rating: 1,
               ratingsByLocation: 1,
@@ -1043,6 +1156,14 @@ export async function getServerSideProps(context) {
       }
       return acc
     }, {})
+    const membershipIdByTeamId = memberships.reduce((acc, membership) => {
+      const teamId = toStringId(membership?.teamId)
+      const membershipId = toStringId(membership?._id)
+      if (teamId && membershipId) {
+        acc[teamId] = membershipId
+      }
+      return acc
+    }, {})
     const participantTeams = teamsDocs
       .map((team) => {
         const teamId = toStringId(team?._id)
@@ -1087,6 +1208,8 @@ export async function getServerSideProps(context) {
         return {
           id: teamId,
           name: teamName || 'Без названия',
+          image: typeof team?.image === 'string' ? team.image : '',
+          membershipId: membershipIdByTeamId[teamId] ?? null,
           isCaptain: Boolean(membershipRoleByTeamId[teamId]),
           description: typeof team?.description === 'string' ? team.description : '',
           open: Boolean(team?.open),

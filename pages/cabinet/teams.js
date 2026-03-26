@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
@@ -75,6 +76,7 @@ const TeamsPage = ({
   initialLocation,
   session: initialSession,
 }) => {
+  const router = useRouter()
   const safeInitialTeams = Array.isArray(initialTeams) ? initialTeams : []
   const { activeSession } = useMergedSession(initialSession)
   const location = activeSession?.user?.location ?? initialLocation ?? null
@@ -107,6 +109,7 @@ const TeamsPage = ({
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const copyTimeoutRef = useRef(null)
   const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] = useState(false)
+  const [isLeavingTeam, setIsLeavingTeam] = useState(false)
   const snackbar = useSnackbar()
 
   const filterTeamsByCurrentUser = useCallback(
@@ -228,6 +231,28 @@ const TeamsPage = ({
   }, [currentUserId, selectedTeam])
 
   const canManageSelectedTeam = isAdmin || isTeamCaptain
+  const selectedTeamCurrentMember = useMemo(() => {
+    if (!selectedTeam) {
+      return null
+    }
+
+    return (
+      (selectedTeam.members ?? []).find((member) => {
+        if (currentUserId && member.userId === currentUserId) {
+          return true
+        }
+
+        if (currentTelegramId && member.telegramId === currentTelegramId) {
+          return true
+        }
+
+        return false
+      }) ?? null
+    )
+  }, [currentTelegramId, currentUserId, selectedTeam])
+
+  const canLeaveSelectedTeam =
+    Boolean(selectedTeamCurrentMember) && !selectedTeamCurrentMember.isCaptain
   const canUseSelfServiceTeams =
     Boolean(location) && Boolean(currentUserId)
   const isTeamsLimitReached = visibleTeams.length >= MAX_TEAMS_PER_USER
@@ -995,6 +1020,101 @@ const TeamsPage = ({
     ]
   )
 
+  useEffect(() => {
+    if (!router.isReady) {
+      return
+    }
+
+    const rawTeamId = router.query?.teamId
+    const teamIdFromQuery = Array.isArray(rawTeamId) ? rawTeamId[0] : rawTeamId
+    const rawMode = router.query?.mode
+    const modeFromQuery = Array.isArray(rawMode) ? rawMode[0] : rawMode
+
+    if (typeof teamIdFromQuery !== 'string' || teamIdFromQuery.length === 0) {
+      return
+    }
+
+    const team = visibleTeams.find((item) => item.id === teamIdFromQuery)
+    if (!team) {
+      return
+    }
+
+    setSelectedTeamId(teamIdFromQuery)
+
+    if (modeFromQuery === 'edit') {
+      const canManageTeam =
+        isAdmin ||
+        (team.members ?? []).some(
+          (member) =>
+            member.isCaptain &&
+            member.userId === (currentUserId ?? '')
+        )
+
+      if (canManageTeam) {
+        setIsTeamDescriptionModalOpen(false)
+        setIsEditModalOpen(true)
+      } else {
+        setIsEditModalOpen(false)
+        setIsTeamDescriptionModalOpen(true)
+      }
+    } else {
+      setIsEditModalOpen(false)
+      setIsTeamDescriptionModalOpen(true)
+    }
+
+    const nextQuery = { ...router.query }
+    delete nextQuery.teamId
+    delete nextQuery.mode
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: nextQuery,
+      },
+      undefined,
+      { shallow: true, scroll: false }
+    ).catch(() => {})
+  }, [currentUserId, isAdmin, router, visibleTeams])
+
+  const handleLeaveSelectedTeam = useCallback(async () => {
+    if (!location || !selectedTeam || !selectedTeamCurrentMember || selectedTeamCurrentMember.isCaptain) {
+      return
+    }
+
+    const confirmed = window.confirm('Вы уверены, что хотите выйти из команды?')
+    if (!confirmed) {
+      return
+    }
+
+    setIsLeavingTeam(true)
+
+    try {
+      await requestApiJson(
+        `/api/${location}/teamsusers/${selectedTeamCurrentMember.id}`,
+        {
+          method: 'DELETE',
+          fallbackMessage: 'Не удалось выйти из команды',
+        }
+      )
+
+      setTeams((prevTeams) => prevTeams.filter((team) => team.id !== selectedTeam.id))
+      setPersistedTeams((prevTeams) => prevTeams.filter((team) => team.id !== selectedTeam.id))
+      closeTeamDescriptionModal()
+
+      snackbar.success('Вы вышли из команды')
+    } catch (error) {
+      console.error('Failed to leave team', error)
+      snackbar.error(error?.message || 'Не удалось выйти из команды')
+    } finally {
+      setIsLeavingTeam(false)
+    }
+  }, [
+    closeTeamDescriptionModal,
+    location,
+    selectedTeam,
+    selectedTeamCurrentMember,
+    snackbar,
+  ])
+
   return (
     <>
       <Head>
@@ -1090,18 +1210,12 @@ const TeamsPage = ({
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex flex-1 items-start gap-3">
-                            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
-                              {team.image ? (
-                                <img
-                                  src={team.image}
-                                  alt={`Иконка команды ${team.name}`}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500 dark:text-slate-300">
-                                  {team.name?.[0] ? team.name[0].toUpperCase() : '?'}
-                                </div>
-                              )}
+                            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+                              <img
+                                src={team.image || '/img/avatars/team.png'}
+                                alt={`Иконка команды ${team.name}`}
+                                className="h-full w-full object-cover"
+                              />
                             </div>
                             <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                               {team.name}
@@ -1224,6 +1338,9 @@ const TeamsPage = ({
           isOpen={isTeamDescriptionModalOpen}
           onClose={closeTeamDescriptionModal}
           selectedTeam={selectedTeam}
+          canLeaveTeam={canLeaveSelectedTeam}
+          isLeavingTeam={isLeavingTeam}
+          onLeaveTeam={handleLeaveSelectedTeam}
         />
       </CabinetLayout>
     </>

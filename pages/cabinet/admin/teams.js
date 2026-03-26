@@ -719,18 +719,12 @@ const AdminTeamsPage = ({
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0 flex items-center gap-3">
-                          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
-                            {team.image ? (
-                              <img
-                                src={team.image}
-                                alt={`Иконка команды ${team.name}`}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500 dark:text-slate-300">
-                                {team.name?.[0] ? team.name[0].toUpperCase() : '?'}
-                              </div>
-                            )}
+                          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+                            <img
+                              src={team.image || '/img/avatars/team.png'}
+                              alt={`Иконка команды ${team.name}`}
+                              className="h-full w-full object-cover"
+                            />
                           </div>
                           <div className="min-w-0">
                           <p className="text-sm font-semibold text-primary dark:text-slate-100">{team.name}</p>
