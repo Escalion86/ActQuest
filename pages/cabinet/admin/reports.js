@@ -34,6 +34,14 @@ const createEmptyReports = () => ({
 })
 
 const ReportsPage = ({ initialReports, initialLocation, session: initialSession }) => {
+  const safeInitialReports =
+    initialReports &&
+    typeof initialReports === 'object' &&
+    initialReports.summary &&
+    typeof initialReports.summary === 'object'
+      ? initialReports
+      : createEmptyReports()
+
   const { activeSession } = useMergedSession(initialSession)
   const { effectiveRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
@@ -42,7 +50,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
   const summarySections = useMemo(() => {
-    const summary = initialReports.summary
+    const summary = safeInitialReports.summary
 
     return [
       {
@@ -77,7 +85,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
         ],
       },
     ]
-  }, [initialReports.summary])
+  }, [safeInitialReports.summary])
 
   if (!isAdmin) {
     return (
@@ -135,9 +143,9 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
         <section className="grid gap-6 mt-6 md:grid-cols-1">
           <article className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
               <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Топ команд по активности</h2>
-            {initialReports.topTeams.length > 0 ? (
+            {safeInitialReports.topTeams.length > 0 ? (
               <ul className="space-y-3">
-                {initialReports.topTeams.map((team) => (
+                {safeInitialReports.topTeams.map((team) => (
                   <li
                     key={team.id}
                     className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
@@ -164,9 +172,9 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
 
         <section className="mt-6 p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
           <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Недавняя активность</h2>
-          {initialReports.recentActivity.length > 0 ? (
+          {safeInitialReports.recentActivity.length > 0 ? (
             <ul className="space-y-3">
-              {initialReports.recentActivity.map((activity) => (
+              {safeInitialReports.recentActivity.map((activity) => (
                 <li
                   key={activity.id}
                   className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"

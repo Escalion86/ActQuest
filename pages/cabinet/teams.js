@@ -75,6 +75,7 @@ const TeamsPage = ({
   initialLocation,
   session: initialSession,
 }) => {
+  const safeInitialTeams = Array.isArray(initialTeams) ? initialTeams : []
   const { activeSession } = useMergedSession(initialSession)
   const location = activeSession?.user?.location ?? initialLocation ?? null
   const { effectiveRole: userRole } = useCabinetRolePreview(
@@ -86,10 +87,10 @@ const TeamsPage = ({
       : String(activeSession.user._id)
   const currentTelegramId = normalizeTelegramId(activeSession?.user?.telegramId)
 
-  const [teams, setTeams] = useState(initialTeams)
-  const [persistedTeams, setPersistedTeams] = useState(initialTeams)
+  const [teams, setTeams] = useState(safeInitialTeams)
+  const [persistedTeams, setPersistedTeams] = useState(safeInitialTeams)
   const [selectedTeamId, setSelectedTeamId] = useState(
-    initialTeams[0]?.id ?? null
+    safeInitialTeams[0]?.id ?? null
   )
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -140,7 +141,7 @@ const TeamsPage = ({
   )
 
   useEffect(() => {
-    const filteredInitialTeams = filterTeamsByCurrentUser(initialTeams)
+    const filteredInitialTeams = filterTeamsByCurrentUser(safeInitialTeams)
 
     setTeams(filteredInitialTeams)
     setPersistedTeams(filteredInitialTeams)
@@ -151,7 +152,7 @@ const TeamsPage = ({
 
       return filteredInitialTeams[0]?.id ?? null
     })
-  }, [filterTeamsByCurrentUser, initialTeams])
+  }, [filterTeamsByCurrentUser, safeInitialTeams])
 
   const visibleTeams = useMemo(
     () => filterTeamsByCurrentUser(teams),
