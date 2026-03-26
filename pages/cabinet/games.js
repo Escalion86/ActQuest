@@ -47,7 +47,8 @@ const getStatusBadgeClassName = (status) => {
     return 'bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-100'
   }
 
-  const normalized = typeof status === 'string' ? status.toLowerCase() : String(status)
+  const normalized =
+    typeof status === 'string' ? status.toLowerCase() : String(status)
 
   return (
     GAME_STATUS_BADGE_STYLES[normalized] ??
@@ -160,7 +161,8 @@ const gameLocationOptions = Object.entries(LOCATIONS)
   }))
 
 const isClosedStatus = (status) =>
-  (typeof status === 'string' ? status.toLowerCase() : String(status)) === 'closed'
+  (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
+  'closed'
 
 const isGameConducted = (game) => {
   if (!game) {
@@ -168,7 +170,11 @@ const isGameConducted = (game) => {
   }
 
   const normalizedStatus = String(game.status || '').toLowerCase()
-  if (normalizedStatus === 'started' || normalizedStatus === 'finished' || normalizedStatus === 'closed') {
+  if (
+    normalizedStatus === 'started' ||
+    normalizedStatus === 'finished' ||
+    normalizedStatus === 'closed'
+  ) {
     return true
   }
 
@@ -234,7 +240,7 @@ const serializeGameForComparison = (game) => {
       prices: game.prices ?? [],
       finances: game.finances ?? [],
       tasks: game.tasks ?? [],
-    })
+    }),
   )
 }
 
@@ -303,7 +309,8 @@ const buildUpdatePayload = (game) => {
         const normalizedPenalty = {
           code: typeof penalty.code === 'string' ? penalty.code : '',
           penalty: Number(penalty.penalty) || 0,
-          description: typeof penalty.description === 'string' ? penalty.description : '',
+          description:
+            typeof penalty.description === 'string' ? penalty.description : '',
         }
 
         if (penalty.mongoId) {
@@ -316,7 +323,8 @@ const buildUpdatePayload = (game) => {
         const normalizedBonus = {
           code: typeof bonus.code === 'string' ? bonus.code : '',
           bonus: Number(bonus.bonus) || 0,
-          description: typeof bonus.description === 'string' ? bonus.description : '',
+          description:
+            typeof bonus.description === 'string' ? bonus.description : '',
         }
 
         if (bonus.mongoId) {
@@ -339,7 +347,10 @@ const buildUpdatePayload = (game) => {
   })
 
   const manyCodesPenalty = Array.isArray(game.manyCodesPenalty)
-    ? [Number(game.manyCodesPenalty[0]) || 0, Number(game.manyCodesPenalty[1]) || 0]
+    ? [
+        Number(game.manyCodesPenalty[0]) || 0,
+        Number(game.manyCodesPenalty[1]) || 0,
+      ]
     : [0, 0]
 
   const moderatorsSet = new Set()
@@ -386,11 +397,15 @@ const buildUpdatePayload = (game) => {
     individualStart: Boolean(game.individualStart),
     isRated: normalizedIsRated,
     seasonId:
-      normalizedIsRated && typeof game.seasonId === 'string' && game.seasonId.trim()
+      normalizedIsRated &&
+      typeof game.seasonId === 'string' &&
+      game.seasonId.trim()
         ? game.seasonId.trim()
         : null,
     seasonName:
-      normalizedIsRated && typeof game.seasonName === 'string' && game.seasonName.trim()
+      normalizedIsRated &&
+      typeof game.seasonName === 'string' &&
+      game.seasonName.trim()
         ? game.seasonName.trim()
         : null,
     hidden: normalizedIsRated ? false : Boolean(game.hidden),
@@ -485,7 +500,9 @@ const GamesPage = ({
   const [persistedGames, setPersistedGames] = useState(safeInitialGames)
   const [hasMoreGames, setHasMoreGames] = useState(Boolean(initialHasMore))
   const [isLoadingMoreGames, setIsLoadingMoreGames] = useState(false)
-  const [selectedGameId, setSelectedGameId] = useState(safeInitialGames[0]?.id ?? null)
+  const [selectedGameId, setSelectedGameId] = useState(
+    safeInitialGames[0]?.id ?? null,
+  )
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
   const [statusModalGameId, setStatusModalGameId] = useState('')
@@ -558,9 +575,10 @@ const GamesPage = ({
   const [createGameMode, setCreateGameMode] = useState(CREATE_GAME_MODE_EMPTY)
   const [cloneSourceGameId, setCloneSourceGameId] = useState('')
   const [cloneSourceGames, setCloneSourceGames] = useState([])
-  const [isCloneSourceGamesLoading, setIsCloneSourceGamesLoading] = useState(false)
+  const [isCloneSourceGamesLoading, setIsCloneSourceGamesLoading] =
+    useState(false)
   const [createGameCloneOptions, setCreateGameCloneOptions] = useState(
-    DEFAULT_CREATE_GAME_CLONE_OPTIONS
+    DEFAULT_CREATE_GAME_CLONE_OPTIONS,
   )
   const [createGameFeedback, setCreateGameFeedback] = useState(null)
   const [isCreatingGame, setIsCreatingGame] = useState(false)
@@ -568,25 +586,37 @@ const GamesPage = ({
   const [locationFilterError, setLocationFilterError] = useState(null)
   const [gamesDisplayMode, setGamesDisplayMode] = useState('list')
   const [showCanceledGames, setShowCanceledGames] = useState(false)
-  const [pastGamesSeasonFilter, setPastGamesSeasonFilter] = useState(PAST_GAMES_SEASON_FILTER_ALL)
+  const [pastGamesSeasonFilter, setPastGamesSeasonFilter] = useState(
+    PAST_GAMES_SEASON_FILTER_ALL,
+  )
   const rawViewQuery = Array.isArray(router.query?.view)
     ? router.query.view[0]
     : router.query?.view
-  const gamesView = rawViewQuery === 'upcoming' || rawViewQuery === 'past' ? rawViewQuery : 'all'
+  const gamesView =
+    rawViewQuery === 'upcoming' || rawViewQuery === 'past'
+      ? rawViewQuery
+      : 'all'
   const isUpcomingView = gamesView === 'upcoming'
   const isPastView = gamesView === 'past'
   const shouldShowLocationFilter = isUpcomingView || isPastView
-  const isFilteredGamesView = rawViewQuery === 'upcoming' || rawViewQuery === 'past'
+  const isFilteredGamesView =
+    rawViewQuery === 'upcoming' || rawViewQuery === 'past'
   const defaultGamesFilterLocation = useMemo(() => {
-    const byUser = typeof location === 'string' ? location.trim().toLowerCase() : ''
+    const byUser =
+      typeof location === 'string' ? location.trim().toLowerCase() : ''
     if (byUser && gameLocationOptions.some((item) => item.key === byUser)) {
       return byUser
     }
     return gameLocationOptions[0]?.key ?? ''
   }, [location])
-  const [gamesFilterLocation, setGamesFilterLocation] = useState(defaultGamesFilterLocation)
-  const [isGamesFilterLocationHydrated, setIsGamesFilterLocationHydrated] = useState(false)
-  const registerApiLocation = isFilteredGamesView ? gamesFilterLocation : location
+  const [gamesFilterLocation, setGamesFilterLocation] = useState(
+    defaultGamesFilterLocation,
+  )
+  const [isGamesFilterLocationHydrated, setIsGamesFilterLocationHydrated] =
+    useState(false)
+  const registerApiLocation = isFilteredGamesView
+    ? gamesFilterLocation
+    : location
   const createGameSeasons = useMemo(() => {
     const locationKey =
       typeof createGameLocation === 'string'
@@ -595,7 +625,9 @@ const GamesPage = ({
     if (!locationKey) {
       return []
     }
-    return Array.isArray(seasonsByLocation[locationKey]) ? seasonsByLocation[locationKey] : []
+    return Array.isArray(seasonsByLocation[locationKey])
+      ? seasonsByLocation[locationKey]
+      : []
   }, [createGameLocation, seasonsByLocation])
   const editGameSeasons = useMemo(() => {
     const locationKey =
@@ -605,7 +637,9 @@ const GamesPage = ({
     if (!locationKey) {
       return []
     }
-    return Array.isArray(seasonsByLocation[locationKey]) ? seasonsByLocation[locationKey] : []
+    return Array.isArray(seasonsByLocation[locationKey])
+      ? seasonsByLocation[locationKey]
+      : []
   }, [editingGame?.location, seasonsByLocation])
   const isCreateGameSeasonsLoading = useMemo(() => {
     const locationKey =
@@ -639,7 +673,7 @@ const GamesPage = ({
     setGamesFilterLocation((prev) =>
       prev && gameLocationOptions.some((item) => item.key === prev)
         ? prev
-        : defaultGamesFilterLocation
+        : defaultGamesFilterLocation,
     )
   }, [defaultGamesFilterLocation])
 
@@ -650,13 +684,13 @@ const GamesPage = ({
     }
 
     const savedLocationFromUnifiedKey = window.localStorage.getItem(
-      GAMES_FILTER_LOCATION_STORAGE_KEY
+      GAMES_FILTER_LOCATION_STORAGE_KEY,
     )
     const legacyStorageKey = `cabinet_games_location_filter_${gamesView}`
-    const savedLocationFromLegacyKey = window.localStorage.getItem(
-      legacyStorageKey
-    )
-    const savedLocation = savedLocationFromUnifiedKey || savedLocationFromLegacyKey
+    const savedLocationFromLegacyKey =
+      window.localStorage.getItem(legacyStorageKey)
+    const savedLocation =
+      savedLocationFromUnifiedKey || savedLocationFromLegacyKey
     const isSavedLocationValid =
       typeof savedLocation === 'string' &&
       gameLocationOptions.some((item) => item.key === savedLocation)
@@ -667,7 +701,7 @@ const GamesPage = ({
 
     if (nextLocation) {
       setGamesFilterLocation((prev) =>
-        prev === nextLocation ? prev : nextLocation
+        prev === nextLocation ? prev : nextLocation,
       )
     }
     setIsGamesFilterLocationHydrated(true)
@@ -689,7 +723,7 @@ const GamesPage = ({
     }
 
     const isCurrentLocationValid = gameLocationOptions.some(
-      (item) => item.key === gamesFilterLocation
+      (item) => item.key === gamesFilterLocation,
     )
     if (!isCurrentLocationValid) {
       return
@@ -697,9 +731,14 @@ const GamesPage = ({
 
     window.localStorage.setItem(
       GAMES_FILTER_LOCATION_STORAGE_KEY,
-      gamesFilterLocation
+      gamesFilterLocation,
     )
-  }, [gameLocationOptions, gamesFilterLocation, isGamesFilterLocationHydrated, shouldShowLocationFilter])
+  }, [
+    gameLocationOptions,
+    gamesFilterLocation,
+    isGamesFilterLocationHydrated,
+    shouldShowLocationFilter,
+  ])
 
   useEffect(() => {
     setFeedback(null)
@@ -711,7 +750,7 @@ const GamesPage = ({
     }
 
     const savedModeFromUnifiedKey = window.localStorage.getItem(
-      GAMES_DISPLAY_MODE_STORAGE_KEY
+      GAMES_DISPLAY_MODE_STORAGE_KEY,
     )
     const legacyStorageKey = `cabinet_games_display_mode_${gamesView}`
     const savedModeFromLegacyKey = window.localStorage.getItem(legacyStorageKey)
@@ -729,17 +768,17 @@ const GamesPage = ({
 
     window.localStorage.setItem(
       GAMES_DISPLAY_MODE_STORAGE_KEY,
-      gamesDisplayMode
+      gamesDisplayMode,
     )
   }, [gamesDisplayMode])
 
   const selectedGame = useMemo(
     () => games.find((game) => game.id === selectedGameId) ?? null,
-    [games, selectedGameId]
+    [games, selectedGameId],
   )
   const statusModalGame = useMemo(
     () => games.find((game) => game.id === statusModalGameId) ?? null,
-    [games, statusModalGameId]
+    [games, statusModalGameId],
   )
   const statusModalActions = useMemo(() => {
     if (!statusModalGame) {
@@ -754,14 +793,16 @@ const GamesPage = ({
         {
           id: 'check_game',
           label: 'Проверить игру',
-          description: 'Проверит игру на ошибки перед запуском и покажет, что исправить.',
+          description:
+            'Проверит игру на ошибки перед запуском и покажет, что исправить.',
           variant: 'secondary',
           tone: 'cyan',
         },
         {
           id: 'start_game',
           label: 'СТАРТ ИГРЫ',
-          description: 'Перед запуском выполнится проверка игры. При ошибках запуск будет заблокирован.',
+          description:
+            'Перед запуском выполнится проверка игры. При ошибках запуск будет заблокирован.',
           variant: 'primary',
           tone: 'success',
           disabled: Boolean(statusValidationResult?.hasErrors),
@@ -769,7 +810,8 @@ const GamesPage = ({
         {
           id: 'cancel_game',
           label: 'Отменить',
-          description: 'Пометит игру отменённой. Команды не смогут продолжить участие.',
+          description:
+            'Пометит игру отменённой. Команды не смогут продолжить участие.',
           variant: 'secondary',
           tone: 'danger',
         },
@@ -781,7 +823,8 @@ const GamesPage = ({
         {
           id: 'stop_game',
           label: 'СТОП ИГРЫ',
-          description: 'Завершит игру, зафиксирует результат и оповестит всех участников.',
+          description:
+            'Завершит игру, зафиксирует результат и оповестит всех участников.',
           variant: 'primary',
           tone: 'danger',
         },
@@ -793,7 +836,8 @@ const GamesPage = ({
         {
           id: 'restart_game',
           label: 'Перезапустить',
-          description: 'Вернёт игру в статус «Активна», чтобы можно было снова запустить.',
+          description:
+            'Вернёт игру в статус «Активна», чтобы можно было снова запустить.',
           variant: 'primary',
           tone: 'success',
         },
@@ -807,7 +851,8 @@ const GamesPage = ({
         {
           id: 'close_game',
           label: 'Закрыть',
-          description: 'Закроет игру окончательно. Редактирование после этого недоступно.',
+          description:
+            'Закроет игру окончательно. Редактирование после этого недоступно.',
           variant: 'secondary',
           tone: 'neutral',
           disabled: !canCloseGame,
@@ -843,7 +888,8 @@ const GamesPage = ({
     return []
   }, [statusModalGame, statusValidationResult?.hasErrors])
   const selectedGameApiLocation =
-    selectedGame?.location || (shouldShowLocationFilter ? gamesFilterLocation : location)
+    selectedGame?.location ||
+    (shouldShowLocationFilter ? gamesFilterLocation : location)
 
   useEffect(() => {
     setExpandedTaskIds([])
@@ -897,71 +943,82 @@ const GamesPage = ({
           query: nextQuery,
         },
         undefined,
-        { shallow: true }
+        { shallow: true },
       )
       .catch(() => {})
   }, [games, router])
 
-  const sortGamesForCurrentView = useCallback((items) => {
-    if (!Array.isArray(items)) {
-      return []
-    }
+  const sortGamesForCurrentView = useCallback(
+    (items) => {
+      if (!Array.isArray(items)) {
+        return []
+      }
 
-    if (gamesView === 'upcoming') {
+      if (gamesView === 'upcoming') {
+        return [...items].sort((first, second) => {
+          const firstTime = first?.dateStart
+            ? new Date(first.dateStart).getTime()
+            : Number.POSITIVE_INFINITY
+          const secondTime = second?.dateStart
+            ? new Date(second.dateStart).getTime()
+            : Number.POSITIVE_INFINITY
+
+          if (firstTime !== secondTime) {
+            return firstTime - secondTime
+          }
+
+          return String(first?.id || '').localeCompare(
+            String(second?.id || ''),
+            'ru',
+          )
+        })
+      }
+
+      if (gamesView === 'past') {
+        return [...items].sort((first, second) => {
+          const firstTime = first?.dateStart
+            ? new Date(first.dateStart).getTime()
+            : Number.NEGATIVE_INFINITY
+          const secondTime = second?.dateStart
+            ? new Date(second.dateStart).getTime()
+            : Number.NEGATIVE_INFINITY
+
+          if (firstTime !== secondTime) {
+            return secondTime - firstTime
+          }
+
+          return String(second?.id || '').localeCompare(
+            String(first?.id || ''),
+            'ru',
+          )
+        })
+      }
+
       return [...items].sort((first, second) => {
-        const firstTime = first?.dateStart
-          ? new Date(first.dateStart).getTime()
-          : Number.POSITIVE_INFINITY
-        const secondTime = second?.dateStart
-          ? new Date(second.dateStart).getTime()
-          : Number.POSITIVE_INFINITY
+        const firstTime = first?.updatedAt
+          ? new Date(first.updatedAt).getTime()
+          : 0
+        const secondTime = second?.updatedAt
+          ? new Date(second.updatedAt).getTime()
+          : 0
 
-        if (firstTime !== secondTime) {
-          return firstTime - secondTime
+        if (Number.isNaN(secondTime) && Number.isNaN(firstTime)) {
+          return 0
         }
 
-        return String(first?.id || '').localeCompare(String(second?.id || ''), 'ru')
-      })
-    }
-
-    if (gamesView === 'past') {
-      return [...items].sort((first, second) => {
-        const firstTime = first?.dateStart
-          ? new Date(first.dateStart).getTime()
-          : Number.NEGATIVE_INFINITY
-        const secondTime = second?.dateStart
-          ? new Date(second.dateStart).getTime()
-          : Number.NEGATIVE_INFINITY
-
-        if (firstTime !== secondTime) {
-          return secondTime - firstTime
+        if (Number.isNaN(secondTime)) {
+          return -1
         }
 
-        return String(second?.id || '').localeCompare(String(first?.id || ''), 'ru')
+        if (Number.isNaN(firstTime)) {
+          return 1
+        }
+
+        return secondTime - firstTime
       })
-    }
-
-    return [...items].sort((first, second) => {
-      const firstTime = first?.updatedAt ? new Date(first.updatedAt).getTime() : 0
-      const secondTime = second?.updatedAt
-        ? new Date(second.updatedAt).getTime()
-        : 0
-
-      if (Number.isNaN(secondTime) && Number.isNaN(firstTime)) {
-        return 0
-      }
-
-      if (Number.isNaN(secondTime)) {
-        return -1
-      }
-
-      if (Number.isNaN(firstTime)) {
-        return 1
-      }
-
-      return secondTime - firstTime
-    })
-  }, [gamesView])
+    },
+    [gamesView],
+  )
 
   const loadSeasonsForLocation = useCallback(async (locationKey) => {
     const normalizedLocation =
@@ -970,12 +1027,18 @@ const GamesPage = ({
       return []
     }
 
-    setSeasonsLoadingByLocation((prev) => ({ ...prev, [normalizedLocation]: true }))
+    setSeasonsLoadingByLocation((prev) => ({
+      ...prev,
+      [normalizedLocation]: true,
+    }))
     try {
       const params = new URLSearchParams({ location: normalizedLocation })
-      const { json } = await requestApiJson(`/api/cabinet/seasons?${params.toString()}`, {
-        fallbackMessage: 'Не удалось загрузить сезоны',
-      })
+      const { json } = await requestApiJson(
+        `/api/cabinet/seasons?${params.toString()}`,
+        {
+          fallbackMessage: 'Не удалось загрузить сезоны',
+        },
+      )
 
       const seasons = Array.isArray(json?.data) ? json.data : []
       const normalizedSeasons = seasons
@@ -995,7 +1058,10 @@ const GamesPage = ({
       }))
       return normalizedSeasons
     } finally {
-      setSeasonsLoadingByLocation((prev) => ({ ...prev, [normalizedLocation]: false }))
+      setSeasonsLoadingByLocation((prev) => ({
+        ...prev,
+        [normalizedLocation]: false,
+      }))
     }
   }, [])
 
@@ -1016,12 +1082,17 @@ const GamesPage = ({
           ? window.prompt('Введите название нового сезона')
           : ''
       const seasonName =
-        typeof seasonNameRaw === 'string' ? seasonNameRaw.trim().replace(/\s+/g, ' ') : ''
+        typeof seasonNameRaw === 'string'
+          ? seasonNameRaw.trim().replace(/\s+/g, ' ')
+          : ''
       if (!seasonName) {
         return null
       }
 
-      setCreatingSeasonByLocation((prev) => ({ ...prev, [normalizedLocation]: true }))
+      setCreatingSeasonByLocation((prev) => ({
+        ...prev,
+        [normalizedLocation]: true,
+      }))
       try {
         const { json } = await requestApiJson('/api/cabinet/seasons', {
           method: 'POST',
@@ -1045,10 +1116,14 @@ const GamesPage = ({
         }
 
         setSeasonsByLocation((prev) => {
-          const existing = Array.isArray(prev[normalizedLocation]) ? prev[normalizedLocation] : []
-          const withoutDuplicate = existing.filter((item) => item.id !== normalizedSeason.id)
+          const existing = Array.isArray(prev[normalizedLocation])
+            ? prev[normalizedLocation]
+            : []
+          const withoutDuplicate = existing.filter(
+            (item) => item.id !== normalizedSeason.id,
+          )
           const next = [...withoutDuplicate, normalizedSeason].sort((a, b) =>
-            a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })
+            a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }),
           )
           return {
             ...prev,
@@ -1067,25 +1142,38 @@ const GamesPage = ({
 
         return normalizedSeason
       } finally {
-        setCreatingSeasonByLocation((prev) => ({ ...prev, [normalizedLocation]: false }))
+        setCreatingSeasonByLocation((prev) => ({
+          ...prev,
+          [normalizedLocation]: false,
+        }))
       }
     },
-    [setFeedback]
+    [setFeedback],
   )
 
   useEffect(() => {
     const normalizedLocation =
-      typeof createGameLocation === 'string' ? createGameLocation.trim().toLowerCase() : ''
+      typeof createGameLocation === 'string'
+        ? createGameLocation.trim().toLowerCase()
+        : ''
     if (!normalizedLocation) {
       return
     }
 
-    if (!seasonsByLocation[normalizedLocation] && !seasonsLoadingByLocation[normalizedLocation]) {
+    if (
+      !seasonsByLocation[normalizedLocation] &&
+      !seasonsLoadingByLocation[normalizedLocation]
+    ) {
       loadSeasonsForLocation(normalizedLocation).catch((error) => {
         console.error('Failed to load seasons for create game location', error)
       })
     }
-  }, [createGameLocation, loadSeasonsForLocation, seasonsByLocation, seasonsLoadingByLocation])
+  }, [
+    createGameLocation,
+    loadSeasonsForLocation,
+    seasonsByLocation,
+    seasonsLoadingByLocation,
+  ])
 
   useEffect(() => {
     const normalizedLocation =
@@ -1096,7 +1184,10 @@ const GamesPage = ({
       return
     }
 
-    if (!seasonsByLocation[normalizedLocation] && !seasonsLoadingByLocation[normalizedLocation]) {
+    if (
+      !seasonsByLocation[normalizedLocation] &&
+      !seasonsLoadingByLocation[normalizedLocation]
+    ) {
       loadSeasonsForLocation(normalizedLocation).catch((error) => {
         console.error('Failed to load seasons for edit game location', error)
       })
@@ -1120,9 +1211,12 @@ const GamesPage = ({
         params.set('location', locationValue)
       }
 
-      const { json } = await requestApiJson(`/api/cabinet/games-list?${params.toString()}`, {
-        fallbackMessage: 'Не удалось загрузить список игр',
-      })
+      const { json } = await requestApiJson(
+        `/api/cabinet/games-list?${params.toString()}`,
+        {
+          fallbackMessage: 'Не удалось загрузить список игр',
+        },
+      )
 
       const nextGames = Array.isArray(json?.data) ? json.data : []
       const nextHasMore = Boolean(json?.meta?.hasMore)
@@ -1132,16 +1226,20 @@ const GamesPage = ({
         setGames(sorted)
         setPersistedGames(sorted)
         setSelectedGameId((prev) =>
-          prev && sorted.some((game) => game.id === prev) ? prev : sorted[0]?.id ?? null
+          prev && sorted.some((game) => game.id === prev)
+            ? prev
+            : (sorted[0]?.id ?? null),
         )
       } else if (sorted.length > 0) {
         setGames((prev) => sortGamesForCurrentView([...prev, ...sorted]))
-        setPersistedGames((prev) => sortGamesForCurrentView([...prev, ...sorted]))
+        setPersistedGames((prev) =>
+          sortGamesForCurrentView([...prev, ...sorted]),
+        )
       }
 
       setHasMoreGames(nextHasMore)
     },
-    [gamesView, sortGamesForCurrentView]
+    [gamesView, sortGamesForCurrentView],
   )
 
   useEffect(() => {
@@ -1186,7 +1284,8 @@ const GamesPage = ({
         setSelectedGameId(null)
         setHasMoreGames(false)
         setLocationFilterError(
-          extractErrorMessage(error) || 'Не удалось загрузить игры выбранного города.'
+          extractErrorMessage(error) ||
+            'Не удалось загрузить игры выбранного города.',
         )
       } finally {
         if (!cancelled) {
@@ -1219,12 +1318,16 @@ const GamesPage = ({
       await fetchGamesPage({
         offset: games.length,
         replace: false,
-        locationValue: shouldShowLocationFilter ? gamesFilterLocation : location,
+        locationValue: shouldShowLocationFilter
+          ? gamesFilterLocation
+          : location,
       })
     } catch (error) {
       setFeedback({
         type: 'error',
-        message: extractErrorMessage(error) || 'Не удалось загрузить дополнительные игры',
+        message:
+          extractErrorMessage(error) ||
+          'Не удалось загрузить дополнительные игры',
       })
     } finally {
       setIsLoadingMoreGames(false)
@@ -1279,7 +1382,7 @@ const GamesPage = ({
           {
             fallbackMessage: 'Не удалось загрузить список команд',
             throwOnHttpError: false,
-          }
+          },
         )
 
       if (!membershipsResponse.ok || membershipsJson?.success === false) {
@@ -1295,7 +1398,7 @@ const GamesPage = ({
 
         throw new Error(
           extractErrorMessage(membershipsJson?.error) ||
-            'Не удалось загрузить список команд'
+            'Не удалось загрузить список команд',
         )
       }
 
@@ -1307,8 +1410,10 @@ const GamesPage = ({
         new Set(
           memberships
             .map((membership) => toStringId(membership?.teamId))
-            .filter((teamId) => typeof teamId === 'string' && teamId.length > 0)
-        )
+            .filter(
+              (teamId) => typeof teamId === 'string' && teamId.length > 0,
+            ),
+        ),
       )
 
       if (teamIds.length === 0) {
@@ -1327,7 +1432,7 @@ const GamesPage = ({
         {
           fallbackMessage: 'Не удалось загрузить данные команд',
           throwOnHttpError: false,
-        }
+        },
       )
 
       if (!teamsResponse.ok || teamsJson?.success === false) {
@@ -1343,7 +1448,7 @@ const GamesPage = ({
 
         throw new Error(
           extractErrorMessage(teamsJson?.error) ||
-            'Не удалось загрузить данные команд'
+            'Не удалось загрузить данные команд',
         )
       }
 
@@ -1419,7 +1524,9 @@ const GamesPage = ({
       return
     }
 
-    const selectedTeam = registerTeams.find((team) => team.id === registerTeamId)
+    const selectedTeam = registerTeams.find(
+      (team) => team.id === registerTeamId,
+    )
 
     if (!selectedTeam) {
       setRegisterFeedback({
@@ -1435,11 +1542,11 @@ const GamesPage = ({
     try {
       const { json: gameJson } = await requestApiJson(
         `/api/${registerApiLocation}/custom?collection=games&id=${encodeURIComponent(
-          trimmedGameId
+          trimmedGameId,
         )}`,
         {
           fallbackMessage: 'Игра не найдена',
-        }
+        },
       )
 
       const gameData = gameJson?.data ?? null
@@ -1456,13 +1563,14 @@ const GamesPage = ({
         limit: '1',
       })
 
-      const { response: existingResponse, json: existingJson } = await requestApiJson(
-        `/api/${registerApiLocation}/custom?${existingParams.toString()}`,
-        {
-          fallbackMessage: 'Не удалось проверить регистрацию команды',
-          throwOnHttpError: false,
-        }
-      )
+      const { response: existingResponse, json: existingJson } =
+        await requestApiJson(
+          `/api/${registerApiLocation}/custom?${existingParams.toString()}`,
+          {
+            fallbackMessage: 'Не удалось проверить регистрацию команды',
+            throwOnHttpError: false,
+          },
+        )
 
       if (
         existingResponse.ok &&
@@ -1472,17 +1580,20 @@ const GamesPage = ({
         throw new Error('Команда уже зарегистрирована на эту игру')
       }
 
-      await requestApiJson(`/api/${registerApiLocation}/custom?collection=gamesteams`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          data: {
-            teamId: registerTeamId,
-            gameId: trimmedGameId,
-          },
-        }),
-        fallbackMessage: 'Не удалось зарегистрироваться на игру',
-      })
+      await requestApiJson(
+        `/api/${registerApiLocation}/custom?collection=gamesteams`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: {
+              teamId: registerTeamId,
+              gameId: trimmedGameId,
+            },
+          }),
+          fallbackMessage: 'Не удалось зарегистрироваться на игру',
+        },
+      )
 
       setRegisterFeedback({
         type: 'success',
@@ -1500,7 +1611,7 @@ const GamesPage = ({
             ...game,
             teamsCount: (game.teamsCount ?? 0) + 1,
           }
-        })
+        }),
       )
 
       setPersistedGames((prev) =>
@@ -1513,15 +1624,14 @@ const GamesPage = ({
             ...game,
             teamsCount: (game.teamsCount ?? 0) + 1,
           }
-        })
+        }),
       )
     } catch (error) {
       console.error('Failed to register team to game', error)
       setRegisterFeedback({
         type: 'error',
         message:
-          extractErrorMessage(error) ||
-          'Не удалось зарегистрироваться на игру',
+          extractErrorMessage(error) || 'Не удалось зарегистрироваться на игру',
       })
     } finally {
       setIsRegisterSubmitting(false)
@@ -1571,16 +1681,19 @@ const GamesPage = ({
     setCreateGameFeedback(null)
   }, [isCreatingGame, location])
 
-  const handleChangeCreateGameCloneOption = useCallback((optionKey, checked) => {
-    if (!(optionKey in DEFAULT_CREATE_GAME_CLONE_OPTIONS)) {
-      return
-    }
+  const handleChangeCreateGameCloneOption = useCallback(
+    (optionKey, checked) => {
+      if (!(optionKey in DEFAULT_CREATE_GAME_CLONE_OPTIONS)) {
+        return
+      }
 
-    setCreateGameCloneOptions((prev) => ({
-      ...prev,
-      [optionKey]: Boolean(checked),
-    }))
-  }, [])
+      setCreateGameCloneOptions((prev) => ({
+        ...prev,
+        [optionKey]: Boolean(checked),
+      }))
+    },
+    [],
+  )
 
   const handleCreateGameLocationChange = useCallback((nextLocation) => {
     setCreateGameLocation(nextLocation)
@@ -1589,7 +1702,9 @@ const GamesPage = ({
 
   const handleCreateSeasonForCreateGame = useCallback(async () => {
     const normalizedLocation =
-      typeof createGameLocation === 'string' ? createGameLocation.trim().toLowerCase() : ''
+      typeof createGameLocation === 'string'
+        ? createGameLocation.trim().toLowerCase()
+        : ''
     if (!normalizedLocation) {
       setCreateGameFeedback({
         type: 'error',
@@ -1632,7 +1747,8 @@ const GamesPage = ({
         typeof regionRaw === 'string' && regionRaw.length > 0
           ? `${regionRaw.charAt(0).toUpperCase()}${regionRaw.slice(1)}`
           : 'Неизвестный регион'
-      const gameDateRaw = game.dateStart || game.createdAt || game.updatedAt || null
+      const gameDateRaw =
+        game.dateStart || game.createdAt || game.updatedAt || null
       const gameDate = gameDateRaw ? new Date(gameDateRaw) : null
       const dateLabel =
         gameDate && !Number.isNaN(gameDate.getTime())
@@ -1647,7 +1763,10 @@ const GamesPage = ({
       byId.set(game.id, {
         id: game.id,
         name: game.name || 'Без названия',
-        sortDate: gameDate && !Number.isNaN(gameDate.getTime()) ? gameDate.getTime() : 0,
+        sortDate:
+          gameDate && !Number.isNaN(gameDate.getTime())
+            ? gameDate.getTime()
+            : 0,
         label: `${dateLabel} "${gameName}" - ${regionLabel}`,
         location: game.location || '',
       })
@@ -1692,8 +1811,9 @@ const GamesPage = ({
           const { json } = await requestApiJson(
             `/api/cabinet/games-list?${params.toString()}`,
             {
-              fallbackMessage: 'Не удалось загрузить список игр для клонирования',
-            }
+              fallbackMessage:
+                'Не удалось загрузить список игр для клонирования',
+            },
           )
 
           const pageItems = Array.isArray(json?.data) ? json.data : []
@@ -1744,7 +1864,7 @@ const GamesPage = ({
     }
 
     const sourceGame = createGameCloneSourceOptions.find(
-      (game) => game.id === cloneSourceGameId
+      (game) => game.id === cloneSourceGameId,
     )
 
     if (!sourceGame) {
@@ -1764,7 +1884,9 @@ const GamesPage = ({
         return true
       }
 
-      const hasAnyCloneOption = Object.values(createGameCloneOptions).some(Boolean)
+      const hasAnyCloneOption = Object.values(createGameCloneOptions).some(
+        Boolean,
+      )
       if (!hasAnyCloneOption) {
         return true
       }
@@ -1773,7 +1895,13 @@ const GamesPage = ({
     }
 
     return newGameName.trim().length === 0
-  }, [cloneSourceGameId, createGameCloneOptions, createGameMode, isCreatingGame, newGameName])
+  }, [
+    cloneSourceGameId,
+    createGameCloneOptions,
+    createGameMode,
+    isCreatingGame,
+    newGameName,
+  ])
 
   const handleCreateGame = useCallback(async () => {
     const trimmedName = newGameName.trim()
@@ -1811,10 +1939,7 @@ const GamesPage = ({
       return
     }
 
-    if (
-      isCloneMode &&
-      !Object.values(createGameCloneOptions).some(Boolean)
-    ) {
+    if (isCloneMode && !Object.values(createGameCloneOptions).some(Boolean)) {
       setCreateGameFeedback({
         type: 'error',
         message: 'Выберите хотя бы один блок для клонирования',
@@ -1823,7 +1948,9 @@ const GamesPage = ({
     }
 
     const normalizedCreateLocation =
-      typeof createGameLocation === 'string' ? createGameLocation.trim().toLowerCase() : ''
+      typeof createGameLocation === 'string'
+        ? createGameLocation.trim().toLowerCase()
+        : ''
     if (!normalizedCreateLocation) {
       setCreateGameFeedback({
         type: 'error',
@@ -1879,18 +2006,18 @@ const GamesPage = ({
 
       if (isCloneMode) {
         const cloneSourceMeta = createGameCloneSourceOptions.find(
-          (game) => game.id === cloneSourceGameId
+          (game) => game.id === cloneSourceGameId,
         )
         const cloneSourceApiLocation =
           cloneSourceMeta?.location || normalizedCreateLocation
 
         const { json: sourceJson } = await requestApiJson(
           `/api/${cloneSourceApiLocation}/custom?collection=games&id=${encodeURIComponent(
-            cloneSourceGameId
+            cloneSourceGameId,
           )}`,
           {
             fallbackMessage: 'Не удалось загрузить игру-источник',
-          }
+          },
         )
 
         const normalizedSource = normalizeGameForCabinet(sourceJson?.data)
@@ -1909,20 +2036,31 @@ const GamesPage = ({
           baseDraft.type = normalizedSource.type || 'classic'
           baseDraft.taskDuration = Number(normalizedSource.taskDuration) || 0
           baseDraft.cluesDuration = Number(normalizedSource.cluesDuration) || 0
-          baseDraft.clueEarlyAccessMode = normalizedSource.clueEarlyAccessMode || 'time'
-          baseDraft.clueEarlyPenalty = Number(normalizedSource.clueEarlyPenalty) || 0
+          baseDraft.clueEarlyAccessMode =
+            normalizedSource.clueEarlyAccessMode || 'time'
+          baseDraft.clueEarlyPenalty =
+            Number(normalizedSource.clueEarlyPenalty) || 0
           baseDraft.breakDuration = Number(normalizedSource.breakDuration) || 0
-          baseDraft.taskFailurePenalty = Number(normalizedSource.taskFailurePenalty) || 0
-          baseDraft.manyCodesPenalty = Array.isArray(normalizedSource.manyCodesPenalty)
+          baseDraft.taskFailurePenalty =
+            Number(normalizedSource.taskFailurePenalty) || 0
+          baseDraft.manyCodesPenalty = Array.isArray(
+            normalizedSource.manyCodesPenalty,
+          )
             ? [...normalizedSource.manyCodesPenalty]
             : [0, 0]
           baseDraft.individualStart = Boolean(normalizedSource.individualStart)
         }
 
         if (createGameCloneOptions.captainRules) {
-          baseDraft.allowCaptainForceClue = Boolean(normalizedSource.allowCaptainForceClue)
-          baseDraft.allowCaptainFailTask = Boolean(normalizedSource.allowCaptainFailTask)
-          baseDraft.allowCaptainFinishBreak = Boolean(normalizedSource.allowCaptainFinishBreak)
+          baseDraft.allowCaptainForceClue = Boolean(
+            normalizedSource.allowCaptainForceClue,
+          )
+          baseDraft.allowCaptainFailTask = Boolean(
+            normalizedSource.allowCaptainFailTask,
+          )
+          baseDraft.allowCaptainFinishBreak = Boolean(
+            normalizedSource.allowCaptainFinishBreak,
+          )
         }
 
         if (createGameCloneOptions.tasks) {
@@ -1940,7 +2078,9 @@ const GamesPage = ({
           baseDraft.moderators = Array.isArray(normalizedSource.moderators)
             ? normalizedSource.moderators
                 .map((moderator) =>
-                  typeof moderator === 'string' ? moderator : moderator?.id || null
+                  typeof moderator === 'string'
+                    ? moderator
+                    : moderator?.id || null,
                 )
                 .filter(Boolean)
             : []
@@ -1958,12 +2098,17 @@ const GamesPage = ({
             ? JSON.parse(JSON.stringify(normalizedSource.prices))
             : []
         }
-
       }
 
-      const selectedSeason = createGameSeasons.find((season) => season.id === createGameSeasonId) || null
-      baseDraft.seasonId = Boolean(baseDraft.isRated) ? selectedSeason?.id || '' : ''
-      baseDraft.seasonName = Boolean(baseDraft.isRated) ? selectedSeason?.name || '' : ''
+      const selectedSeason =
+        createGameSeasons.find((season) => season.id === createGameSeasonId) ||
+        null
+      baseDraft.seasonId = Boolean(baseDraft.isRated)
+        ? selectedSeason?.id || ''
+        : ''
+      baseDraft.seasonName = Boolean(baseDraft.isRated)
+        ? selectedSeason?.name || ''
+        : ''
 
       if (Boolean(baseDraft.isRated) && !baseDraft.seasonId) {
         setCreateGameFeedback({
@@ -1989,7 +2134,7 @@ const GamesPage = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: payload }),
           fallbackMessage: 'Не удалось создать игру',
-        }
+        },
       )
 
       const createdGame = normalizeGameForCabinet({
@@ -2005,13 +2150,13 @@ const GamesPage = ({
         sortGamesForCurrentView([
           createdGame,
           ...prev.filter((game) => game.id !== createdGame.id),
-        ])
+        ]),
       )
       setPersistedGames((prev) =>
         sortGamesForCurrentView([
           createdGame,
           ...prev.filter((game) => game.id !== createdGame.id),
-        ])
+        ]),
       )
       setSelectedGameId(createdGame.id)
 
@@ -2030,8 +2175,7 @@ const GamesPage = ({
       console.error('Failed to create game', error)
       setCreateGameFeedback({
         type: 'error',
-        message:
-          extractErrorMessage(error) || 'Не удалось создать игру',
+        message: extractErrorMessage(error) || 'Не удалось создать игру',
       })
     } finally {
       setIsCreatingGame(false)
@@ -2062,15 +2206,15 @@ const GamesPage = ({
       Array.isArray(initialAvailableModerators)
         ? initialAvailableModerators
         : [],
-    [initialAvailableModerators]
+    [initialAvailableModerators],
   )
 
   const availableModeratorsMap = useMemo(
     () =>
       new Map(
-        availableModerators.map((moderator) => [moderator.id, moderator])
+        availableModerators.map((moderator) => [moderator.id, moderator]),
       ),
-    [availableModerators]
+    [availableModerators],
   )
 
   const currencyFormatter = useMemo(
@@ -2080,16 +2224,18 @@ const GamesPage = ({
         currency: 'RUB',
         maximumFractionDigits: 0,
       }),
-    []
+    [],
   )
 
   const upcomingGames = useMemo(
     () =>
       games.filter((game) => {
         const status = (game?.status ?? '').toString().toLowerCase()
-        return status !== 'finished' && status !== 'closed' && status !== 'canceled'
+        return (
+          status !== 'finished' && status !== 'closed' && status !== 'canceled'
+        )
       }),
-    [games]
+    [games],
   )
 
   const pastGamesBase = useMemo(
@@ -2116,7 +2262,7 @@ const GamesPage = ({
         }
         return false
       }),
-    [games, showCanceledGames]
+    [games, showCanceledGames],
   )
 
   const pastGames = useMemo(
@@ -2131,7 +2277,10 @@ const GamesPage = ({
         }
 
         if (pastGamesSeasonFilter === PAST_GAMES_SEASON_FILTER_OFFSEASON) {
-          return Boolean(game?.isRated) && !(typeof game?.seasonId === 'string' && game.seasonId.trim())
+          return (
+            Boolean(game?.isRated) &&
+            !(typeof game?.seasonId === 'string' && game.seasonId.trim())
+          )
         }
 
         if (pastGamesSeasonFilter.startsWith('season:')) {
@@ -2145,7 +2294,7 @@ const GamesPage = ({
 
         return true
       }),
-    [pastGamesBase, pastGamesSeasonFilter]
+    [pastGamesBase, pastGamesSeasonFilter],
   )
 
   const pastGamesSeasonOptions = useMemo(() => {
@@ -2156,8 +2305,10 @@ const GamesPage = ({
         return
       }
 
-      const seasonId = typeof game?.seasonId === 'string' ? game.seasonId.trim() : ''
-      const seasonName = typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
+      const seasonId =
+        typeof game?.seasonId === 'string' ? game.seasonId.trim() : ''
+      const seasonName =
+        typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
       if (!seasonId || !seasonName || seasonsMap.has(seasonId)) {
         return
       }
@@ -2166,7 +2317,9 @@ const GamesPage = ({
 
     const seasons = Array.from(seasonsMap.entries())
       .map(([id, name]) => ({ value: `season:${id}`, label: name }))
-      .sort((left, right) => left.label.localeCompare(right.label, 'ru', { sensitivity: 'base' }))
+      .sort((left, right) =>
+        left.label.localeCompare(right.label, 'ru', { sensitivity: 'base' }),
+      )
 
     return [
       { value: PAST_GAMES_SEASON_FILTER_ALL, label: 'Все' },
@@ -2177,7 +2330,11 @@ const GamesPage = ({
   }, [pastGamesBase])
 
   useEffect(() => {
-    if (pastGamesSeasonOptions.some((option) => option.value === pastGamesSeasonFilter)) {
+    if (
+      pastGamesSeasonOptions.some(
+        (option) => option.value === pastGamesSeasonFilter,
+      )
+    ) {
       return
     }
     setPastGamesSeasonFilter(PAST_GAMES_SEASON_FILTER_ALL)
@@ -2198,14 +2355,14 @@ const GamesPage = ({
 
     setExpandedTaskIds((prev) =>
       prev.filter((taskId) =>
-        (selectedGame.tasks ?? []).some((task) => task.id === taskId)
-      )
+        (selectedGame.tasks ?? []).some((task) => task.id === taskId),
+      ),
     )
   }, [selectedGame])
 
   const persistedSelectedGame = useMemo(
     () => persistedGames.find((game) => game.id === selectedGameId) ?? null,
-    [persistedGames, selectedGameId]
+    [persistedGames, selectedGameId],
   )
 
   const isGameModerator = useMemo(() => {
@@ -2311,9 +2468,7 @@ const GamesPage = ({
         return false
       }
 
-      const moderators = Array.isArray(game?.moderators)
-        ? game.moderators
-        : []
+      const moderators = Array.isArray(game?.moderators) ? game.moderators : []
 
       return moderators.some((moderator) => {
         if (!moderator) {
@@ -2327,7 +2482,7 @@ const GamesPage = ({
         return moderator.id === currentUserDbId
       })
     },
-    [canEditAllGames, canEditOwnGames, currentUserDbId, currentUserIdString]
+    [canEditAllGames, canEditOwnGames, currentUserDbId, currentUserIdString],
   )
 
   const canManageGame = useCallback(
@@ -2338,7 +2493,7 @@ const GamesPage = ({
 
       return canManageGameStatus(game)
     },
-    [canManageGameStatus]
+    [canManageGameStatus],
   )
 
   const updateSelectedGame = useCallback(
@@ -2350,7 +2505,8 @@ const GamesPage = ({
           return prevGame
         }
 
-        const patch = typeof updater === 'function' ? updater(prevGame) : updater
+        const patch =
+          typeof updater === 'function' ? updater(prevGame) : updater
         const nextGame = { ...prevGame, ...patch }
         if (Boolean(nextGame.isRated ?? true)) {
           nextGame.hidden = false
@@ -2361,13 +2517,15 @@ const GamesPage = ({
         return nextGame
       })
     },
-    [canEditSelectedGame, editingGame]
+    [canEditSelectedGame, editingGame],
   )
 
   const handleCreateSeasonForEditGame = useCallback(async () => {
     const gameForEdit = editingGame ?? selectedGame
     const normalizedLocation =
-      typeof gameForEdit?.location === 'string' ? gameForEdit.location.trim().toLowerCase() : ''
+      typeof gameForEdit?.location === 'string'
+        ? gameForEdit.location.trim().toLowerCase()
+        : ''
     if (!normalizedLocation) {
       setFeedback({
         type: 'error',
@@ -2392,7 +2550,13 @@ const GamesPage = ({
         message: extractErrorMessage(error) || 'Не удалось создать сезон',
       })
     }
-  }, [editingGame, handleCreateSeason, selectedGame, setFeedback, updateSelectedGame])
+  }, [
+    editingGame,
+    handleCreateSeason,
+    selectedGame,
+    setFeedback,
+    updateSelectedGame,
+  ])
 
   const handleResetChanges = useCallback(() => {
     if (!persistedSelectedGame) return
@@ -2404,7 +2568,8 @@ const GamesPage = ({
   const handleSaveChanges = useCallback(async () => {
     const gameToSave = editingGame ?? selectedGame
     const gameApiLocation =
-      gameToSave?.location || (shouldShowLocationFilter ? gamesFilterLocation : location)
+      gameToSave?.location ||
+      (shouldShowLocationFilter ? gamesFilterLocation : location)
 
     if (!gameToSave || !gameApiLocation || !canEditSelectedGame) return
 
@@ -2420,12 +2585,15 @@ const GamesPage = ({
     setFeedback(null)
 
     try {
-      const { json } = await requestApiJson(`/api/${gameApiLocation}/games/${gameToSave.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: buildUpdatePayload(gameToSave) }),
-        fallbackMessage: 'Не удалось сохранить игру',
-      })
+      const { json } = await requestApiJson(
+        `/api/${gameApiLocation}/games/${gameToSave.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: buildUpdatePayload(gameToSave) }),
+          fallbackMessage: 'Не удалось сохранить игру',
+        },
+      )
 
       const normalizedGame = normalizeGameForCabinet({
         ...json.data,
@@ -2433,10 +2601,14 @@ const GamesPage = ({
       })
 
       setGames((prevGames) =>
-        prevGames.map((game) => (game.id === normalizedGame.id ? normalizedGame : game))
+        prevGames.map((game) =>
+          game.id === normalizedGame.id ? normalizedGame : game,
+        ),
       )
       setPersistedGames((prevGames) =>
-        prevGames.map((game) => (game.id === normalizedGame.id ? normalizedGame : game))
+        prevGames.map((game) =>
+          game.id === normalizedGame.id ? normalizedGame : game,
+        ),
       )
       setFeedback({ type: 'success', message: 'Изменения сохранены' })
       setEditingGame(null)
@@ -2474,13 +2646,14 @@ const GamesPage = ({
           price.id === priceId
             ? {
                 ...price,
-                [field]: field === 'price' ? Math.max(0, Number(value) || 0) : value,
+                [field]:
+                  field === 'price' ? Math.max(0, Number(value) || 0) : value,
               }
-            : price
+            : price,
         ),
       }))
     },
-    [canEditSelectedGame, updateSelectedGame]
+    [canEditSelectedGame, updateSelectedGame],
   )
 
   const handleRemovePrice = useCallback(
@@ -2490,7 +2663,7 @@ const GamesPage = ({
         prices: (game.prices ?? []).filter((price) => price.id !== priceId),
       }))
     },
-    [canEditSelectedGame, updateSelectedGame]
+    [canEditSelectedGame, updateSelectedGame],
   )
 
   const handleAddFinance = useCallback(() => {
@@ -2514,28 +2687,36 @@ const GamesPage = ({
           }
 
           if (field === 'date') {
-            return { ...entry, date: value ? new Date(value).toISOString() : null }
+            return {
+              ...entry,
+              date: value ? new Date(value).toISOString() : null,
+            }
           }
 
           if (field === 'type') {
-            return { ...entry, type: value === 'expense' ? 'expense' : 'income' }
+            return {
+              ...entry,
+              type: value === 'expense' ? 'expense' : 'income',
+            }
           }
 
-        return { ...entry, [field]: value }
-      }),
-    }))
-  },
-    [canEditSelectedGame, updateSelectedGame]
+          return { ...entry, [field]: value }
+        }),
+      }))
+    },
+    [canEditSelectedGame, updateSelectedGame],
   )
 
   const handleRemoveFinance = useCallback(
     (financeId) => {
       if (!canEditSelectedGame) return
       updateSelectedGame((game) => ({
-        finances: (game.finances ?? []).filter((entry) => entry.id !== financeId),
+        finances: (game.finances ?? []).filter(
+          (entry) => entry.id !== financeId,
+        ),
       }))
     },
-    [canEditSelectedGame, updateSelectedGame]
+    [canEditSelectedGame, updateSelectedGame],
   )
 
   const updateTask = useCallback(
@@ -2553,7 +2734,7 @@ const GamesPage = ({
         }),
       }))
     },
-    [canEditSelectedGame, updateSelectedGame]
+    [canEditSelectedGame, updateSelectedGame],
   )
 
   const handleAddTask = useCallback(() => {
@@ -2574,14 +2755,14 @@ const GamesPage = ({
       }))
       setExpandedTaskIds((prev) => prev.filter((id) => id !== taskId))
     },
-    [canEditSelectedGame, updateSelectedGame]
+    [canEditSelectedGame, updateSelectedGame],
   )
 
   const handleTaskFieldChange = useCallback(
     (taskId, field, value) => {
       updateTask(taskId, { [field]: value })
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleTaskNumberChange = useCallback(
@@ -2589,21 +2770,21 @@ const GamesPage = ({
       const numeric = Number(value)
       updateTask(taskId, { [field]: Number.isFinite(numeric) ? numeric : 0 })
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleTaskOptionalNumberChange = useCallback(
     (taskId, field, value) => {
       updateTask(taskId, { [field]: toNullableNumber(value) })
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleTaskCheckboxChange = useCallback(
     (taskId, field, checked) => {
       updateTask(taskId, { [field]: Boolean(checked) })
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleTaskCoordinateChange = useCallback(
@@ -2611,19 +2792,23 @@ const GamesPage = ({
       const numericValue = toNullableNumber(value)
       updateTask(taskId, (task) => ({
         coordinates: {
-          ...(task.coordinates ?? { latitude: null, longitude: null, radius: null }),
+          ...(task.coordinates ?? {
+            latitude: null,
+            longitude: null,
+            radius: null,
+          }),
           [field]: numericValue,
         },
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleAddTaskCode = useCallback(
     (taskId) => {
       updateTask(taskId, (task) => ({ codes: [...(task.codes ?? []), ''] }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleTaskCodeChange = useCallback(
@@ -2634,7 +2819,7 @@ const GamesPage = ({
         return { codes: nextCodes }
       })
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleRemoveTaskCode = useCallback(
@@ -2643,14 +2828,14 @@ const GamesPage = ({
         codes: (task.codes ?? []).filter((_, codeIndex) => codeIndex !== index),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleAddTaskImage = useCallback(
     (taskId) => {
       updateTask(taskId, (task) => ({ images: [...(task.images ?? []), ''] }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleTaskImageChange = useCallback(
@@ -2661,35 +2846,39 @@ const GamesPage = ({
         return { images: nextImages }
       })
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleRemoveTaskImage = useCallback(
     (taskId, index) => {
       updateTask(taskId, (task) => ({
-        images: (task.images ?? []).filter((_, imageIndex) => imageIndex !== index),
+        images: (task.images ?? []).filter(
+          (_, imageIndex) => imageIndex !== index,
+        ),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleAddClue = useCallback(
     (taskId) => {
       const newClue = createClue()
-      updateTask(taskId, (task) => ({ clues: [...(task.clues ?? []), newClue] }))
+      updateTask(taskId, (task) => ({
+        clues: [...(task.clues ?? []), newClue],
+      }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleTaskClueChange = useCallback(
     (taskId, clueId, field, value) => {
       updateTask(taskId, (task) => ({
         clues: (task.clues ?? []).map((clue) =>
-          clue.id === clueId ? { ...clue, [field]: value } : clue
+          clue.id === clueId ? { ...clue, [field]: value } : clue,
         ),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleRemoveClue = useCallback(
@@ -2698,7 +2887,7 @@ const GamesPage = ({
         clues: (task.clues ?? []).filter((clue) => clue.id !== clueId),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleAddClueImage = useCallback(
@@ -2707,11 +2896,11 @@ const GamesPage = ({
         clues: (task.clues ?? []).map((clue) =>
           clue.id === clueId
             ? { ...clue, images: [...(clue.images ?? []), ''] }
-            : clue
+            : clue,
         ),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleClueImageChange = useCallback(
@@ -2728,7 +2917,7 @@ const GamesPage = ({
         }),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleRemoveClueImage = useCallback(
@@ -2738,41 +2927,47 @@ const GamesPage = ({
           clue.id === clueId
             ? {
                 ...clue,
-                images: (clue.images ?? []).filter((_, imageIndex) => imageIndex !== index),
+                images: (clue.images ?? []).filter(
+                  (_, imageIndex) => imageIndex !== index,
+                ),
               }
-            : clue
+            : clue,
         ),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleAddSubTask = useCallback(
     (taskId) => {
       const newSubTask = createSubTask()
-      updateTask(taskId, (task) => ({ subTasks: [...(task.subTasks ?? []), newSubTask] }))
+      updateTask(taskId, (task) => ({
+        subTasks: [...(task.subTasks ?? []), newSubTask],
+      }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleSubTaskChange = useCallback(
     (taskId, subTaskId, field, value) => {
       updateTask(taskId, (task) => ({
         subTasks: (task.subTasks ?? []).map((subTask) =>
-          subTask.id === subTaskId ? { ...subTask, [field]: value } : subTask
+          subTask.id === subTaskId ? { ...subTask, [field]: value } : subTask,
         ),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleRemoveSubTask = useCallback(
     (taskId, subTaskId) => {
       updateTask(taskId, (task) => ({
-        subTasks: (task.subTasks ?? []).filter((subTask) => subTask.id !== subTaskId),
+        subTasks: (task.subTasks ?? []).filter(
+          (subTask) => subTask.id !== subTaskId,
+        ),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleAddPenaltyCode = useCallback(
@@ -2782,27 +2977,29 @@ const GamesPage = ({
         penaltyCodes: [...(task.penaltyCodes ?? []), newPenalty],
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handlePenaltyCodeChange = useCallback(
     (taskId, penaltyId, field, value) => {
       updateTask(taskId, (task) => ({
         penaltyCodes: (task.penaltyCodes ?? []).map((penalty) =>
-          penalty.id === penaltyId ? { ...penalty, [field]: value } : penalty
+          penalty.id === penaltyId ? { ...penalty, [field]: value } : penalty,
         ),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleRemovePenaltyCode = useCallback(
     (taskId, penaltyId) => {
       updateTask(taskId, (task) => ({
-        penaltyCodes: (task.penaltyCodes ?? []).filter((penalty) => penalty.id !== penaltyId),
+        penaltyCodes: (task.penaltyCodes ?? []).filter(
+          (penalty) => penalty.id !== penaltyId,
+        ),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleAddBonusCode = useCallback(
@@ -2812,34 +3009,36 @@ const GamesPage = ({
         bonusCodes: [...(task.bonusCodes ?? []), newBonus],
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleBonusCodeChange = useCallback(
     (taskId, bonusId, field, value) => {
       updateTask(taskId, (task) => ({
         bonusCodes: (task.bonusCodes ?? []).map((bonus) =>
-          bonus.id === bonusId ? { ...bonus, [field]: value } : bonus
+          bonus.id === bonusId ? { ...bonus, [field]: value } : bonus,
         ),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const handleRemoveBonusCode = useCallback(
     (taskId, bonusId) => {
       updateTask(taskId, (task) => ({
-        bonusCodes: (task.bonusCodes ?? []).filter((bonus) => bonus.id !== bonusId),
+        bonusCodes: (task.bonusCodes ?? []).filter(
+          (bonus) => bonus.id !== bonusId,
+        ),
       }))
     },
-    [updateTask]
+    [updateTask],
   )
 
   const toggleTaskExpansion = useCallback((taskId) => {
     setExpandedTaskIds((prev) =>
       prev.includes(taskId)
         ? prev.filter((id) => id !== taskId)
-        : [...prev, taskId]
+        : [...prev, taskId],
     )
   }, [])
 
@@ -2873,21 +3072,25 @@ const GamesPage = ({
     setTeamsModalState((prev) => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      const teamsParams = new URLSearchParams({ location: selectedGameApiLocation })
+      const teamsParams = new URLSearchParams({
+        location: selectedGameApiLocation,
+      })
       const [gameTeamsResponse, teamsResponse] = await Promise.all([
         fetch(
           `/api/cabinet/games/${encodeURIComponent(
-            selectedGame.id
-          )}/teams?${teamsParams.toString()}`
+            selectedGame.id,
+          )}/teams?${teamsParams.toString()}`,
         ),
-        fetch(`/api/${selectedGameApiLocation}/custom?collection=teams&limit=200&sort=name_lowered`),
+        fetch(
+          `/api/${selectedGameApiLocation}/custom?collection=teams&limit=200&sort=name_lowered`,
+        ),
       ])
 
       const gameTeamsJson = await gameTeamsResponse.json()
       if (!gameTeamsResponse.ok || gameTeamsJson?.success === false) {
         throw new Error(
           extractErrorMessage(gameTeamsJson?.error) ||
-            'Не удалось загрузить команды игры'
+            'Не удалось загрузить команды игры',
         )
       }
 
@@ -2895,7 +3098,7 @@ const GamesPage = ({
       if (!teamsResponse.ok || teamsJson?.success === false) {
         throw new Error(
           extractErrorMessage(teamsJson?.error) ||
-            'Не удалось загрузить список команд'
+            'Не удалось загрузить список команд',
         )
       }
 
@@ -2924,7 +3127,9 @@ const GamesPage = ({
       let detailedTeamsMap = {}
 
       if (allTeamIds.length > 0) {
-        const detailedParams = new URLSearchParams({ location: selectedGameApiLocation })
+        const detailedParams = new URLSearchParams({
+          location: selectedGameApiLocation,
+        })
         allTeamIds.forEach((id) => detailedParams.append('teamIds', id))
 
         try {
@@ -2932,9 +3137,10 @@ const GamesPage = ({
             await requestApiJson(
               `/api/cabinet/teams?${detailedParams.toString()}`,
               {
-                fallbackMessage: 'Не удалось загрузить детальную информацию о командах',
+                fallbackMessage:
+                  'Не удалось загрузить детальную информацию о командах',
                 throwOnHttpError: false,
-              }
+              },
             )
 
           if (detailedResponse.ok && detailedJson?.success !== false) {
@@ -2952,13 +3158,13 @@ const GamesPage = ({
           } else {
             console.error(
               'Failed to load detailed team info for modal',
-              detailedJson
+              detailedJson,
             )
           }
         } catch (detailsError) {
           console.error(
             'Failed to load detailed team info for modal',
-            detailsError
+            detailsError,
           )
         }
       }
@@ -2984,8 +3190,8 @@ const GamesPage = ({
           const membersCount = Number.isFinite(teamInfo?.membersCount)
             ? teamInfo.membersCount
             : Array.isArray(teamInfo?.members)
-            ? teamInfo.members.length
-            : null
+              ? teamInfo.members.length
+              : null
 
           return {
             id: entryId,
@@ -3009,8 +3215,8 @@ const GamesPage = ({
           const membersCount = Number.isFinite(detailedTeam?.membersCount)
             ? detailedTeam.membersCount
             : Array.isArray(detailedTeam?.members)
-            ? detailedTeam.members.length
-            : 0
+              ? detailedTeam.members.length
+              : 0
 
           acc[id] = {
             id,
@@ -3025,7 +3231,7 @@ const GamesPage = ({
 
       const existingTeamIds = new Set(gameTeams.map((entry) => entry.teamId))
       const availableTeams = Object.values(allTeamsMap).filter(
-        (team) => team.id && !existingTeamIds.has(team.id)
+        (team) => team.id && !existingTeamIds.has(team.id),
       )
 
       setTeamsModalState({
@@ -3039,7 +3245,7 @@ const GamesPage = ({
         setSelectedTeamToAdd((prev) =>
           prev && availableTeams.some((team) => team.id === prev)
             ? prev
-            : availableTeams[0].id
+            : availableTeams[0].id,
         )
       } else {
         setSelectedTeamToAdd('')
@@ -3049,7 +3255,8 @@ const GamesPage = ({
       setTeamsModalState({
         isLoading: false,
         error:
-          extractErrorMessage(error) || 'Не удалось загрузить данные команд игры',
+          extractErrorMessage(error) ||
+          'Не удалось загрузить данные команд игры',
         gameTeams: [],
         availableTeams: [],
       })
@@ -3088,7 +3295,12 @@ const GamesPage = ({
     } finally {
       setIsAddingTeam(false)
     }
-  }, [loadTeamsModalData, selectedGame, selectedGameApiLocation, selectedTeamToAdd])
+  }, [
+    loadTeamsModalData,
+    selectedGame,
+    selectedGameApiLocation,
+    selectedTeamToAdd,
+  ])
 
   const handleRemoveTeamFromGame = useCallback(
     async (gameTeamId) => {
@@ -3097,15 +3309,18 @@ const GamesPage = ({
       }
 
       setRemovingTeamIds((prev) =>
-        prev.includes(gameTeamId) ? prev : [...prev, gameTeamId]
+        prev.includes(gameTeamId) ? prev : [...prev, gameTeamId],
       )
       setTeamsModalState((prev) => ({ ...prev, error: null }))
 
       try {
-        await requestApiJson(`/api/${selectedGameApiLocation}/gamesteams/${gameTeamId}`, {
-          method: 'DELETE',
-          fallbackMessage: 'Не удалось удалить команду',
-        })
+        await requestApiJson(
+          `/api/${selectedGameApiLocation}/gamesteams/${gameTeamId}`,
+          {
+            method: 'DELETE',
+            fallbackMessage: 'Не удалось удалить команду',
+          },
+        )
 
         await loadTeamsModalData()
       } catch (error) {
@@ -3118,7 +3333,7 @@ const GamesPage = ({
         setRemovingTeamIds((prev) => prev.filter((id) => id !== gameTeamId))
       }
     },
-    [loadTeamsModalData, selectedGameApiLocation]
+    [loadTeamsModalData, selectedGameApiLocation],
   )
 
   useEffect(() => {
@@ -3152,7 +3367,7 @@ const GamesPage = ({
       setIsDescriptionModalOpen(false)
       setIsEditModalOpen(true)
     },
-    [canManageGame]
+    [canManageGame],
   )
 
   const handleOpenStatusModal = useCallback(
@@ -3166,7 +3381,7 @@ const GamesPage = ({
       setStatusValidationResult(null)
       setIsStatusModalOpen(true)
     },
-    [canManageGameStatus, selectedGame]
+    [canManageGameStatus, selectedGame],
   )
 
   const handleCloseStatusModal = useCallback(() => {
@@ -3178,193 +3393,207 @@ const GamesPage = ({
     setStatusValidationResult(null)
   }, [isStatusChanging])
 
-  const handleStatusAction = useCallback(async (actionId) => {
-    if (!statusModalGame || !canManageGameStatus(statusModalGame)) {
-      return
-    }
-
-    if (!actionId) {
-      return
-    }
-
-    if (typeof window !== 'undefined' && actionId === 'start_game') {
-      const shouldStart = window.confirm(
-        'Вы уверены, что хотите запустить игру? Игроки получат уведомление о старте.'
-      )
-      if (!shouldStart) {
+  const handleStatusAction = useCallback(
+    async (actionId) => {
+      if (!statusModalGame || !canManageGameStatus(statusModalGame)) {
         return
       }
-    }
 
-    if (typeof window !== 'undefined' && actionId === 'stop_game') {
-      const shouldStop = window.confirm(
-        'Вы уверены, что хотите остановить игру? Коды больше не будут приниматься, игроки получат уведомление.'
-      )
-      if (!shouldStop) {
+      if (!actionId) {
         return
       }
-    }
 
-    if (typeof window !== 'undefined' && actionId === 'restart_game') {
-      const shouldRestart = window.confirm(
-        'Перезапуск вернёт игру в статус «Активна». Продолжить?'
-      )
-      if (!shouldRestart) {
-        return
-      }
-    }
-
-    const gameApiLocation =
-      statusModalGame.location ||
-      (shouldShowLocationFilter ? gamesFilterLocation : location)
-
-    if (!gameApiLocation) {
-      setFeedback({
-        type: 'error',
-        message: 'Не удалось определить локацию игры для смены статуса.',
-      })
-      return
-    }
-
-    setIsStatusChanging(true)
-    setFeedback(null)
-
-    try {
-      const runGameValidation = async () => {
-        const { json } = await requestApiJson(
-          `/api/${gameApiLocation}/games/check/${statusModalGame.id}`,
-          {
-            fallbackMessage: 'Не удалось выполнить проверку игры',
-          }
+      if (typeof window !== 'undefined' && actionId === 'start_game') {
+        const shouldStart = window.confirm(
+          'Вы уверены, что хотите запустить игру? Игроки получат уведомление о старте.',
         )
-
-        const errors = Array.isArray(json?.data?.errors) ? json.data.errors : []
-        const hasErrors = Boolean(json?.data?.hasErrors) || errors.length > 0
-
-        return { hasErrors, errors }
+        if (!shouldStart) {
+          return
+        }
       }
 
-      if (actionId === 'check_game') {
-        const validation = await runGameValidation()
-        setStatusValidationResult({
-          hasErrors: validation.hasErrors,
-          errors: validation.errors,
-        })
-        setToastEvent({
-          id: `game-check-${Date.now()}`,
-          type: validation.hasErrors ? 'error' : 'success',
-          message: validation.hasErrors
-            ? `Обнаружены ошибки: ${validation.errors.length}`
-            : 'Проверка завершена: ошибок не найдено',
+      if (typeof window !== 'undefined' && actionId === 'stop_game') {
+        const shouldStop = window.confirm(
+          'Вы уверены, что хотите остановить игру? Коды больше не будут приниматься, игроки получат уведомление.',
+        )
+        if (!shouldStop) {
+          return
+        }
+      }
+
+      if (typeof window !== 'undefined' && actionId === 'restart_game') {
+        const shouldRestart = window.confirm(
+          'Перезапуск вернёт игру в статус «Активна». Продолжить?',
+        )
+        if (!shouldRestart) {
+          return
+        }
+      }
+
+      const gameApiLocation =
+        statusModalGame.location ||
+        (shouldShowLocationFilter ? gamesFilterLocation : location)
+
+      if (!gameApiLocation) {
+        setFeedback({
+          type: 'error',
+          message: 'Не удалось определить локацию игры для смены статуса.',
         })
         return
       }
 
-      setStatusValidationResult(null)
-      let successMessage = 'Статус игры обновлён'
+      setIsStatusChanging(true)
+      setFeedback(null)
 
-      if (actionId === 'start_game') {
-        const validation = await runGameValidation()
-        setStatusValidationResult({
-          hasErrors: validation.hasErrors,
-          errors: validation.errors,
-        })
+      try {
+        const runGameValidation = async () => {
+          const { json } = await requestApiJson(
+            `/api/${gameApiLocation}/games/check/${statusModalGame.id}`,
+            {
+              fallbackMessage: 'Не удалось выполнить проверку игры',
+            },
+          )
 
-        if (validation.hasErrors) {
-          setFeedback({
-            type: 'error',
-            message: 'Запуск игры заблокирован: сначала исправьте ошибки проверки.',
+          const errors = Array.isArray(json?.data?.errors)
+            ? json.data.errors
+            : []
+          const hasErrors = Boolean(json?.data?.hasErrors) || errors.length > 0
+
+          return { hasErrors, errors }
+        }
+
+        if (actionId === 'check_game') {
+          const validation = await runGameValidation()
+          setStatusValidationResult({
+            hasErrors: validation.hasErrors,
+            errors: validation.errors,
           })
           setToastEvent({
-            id: `game-start-validation-${Date.now()}`,
-            type: 'error',
-            message: `Запуск заблокирован: обнаружены ошибки (${validation.errors.length})`,
+            id: `game-check-${Date.now()}`,
+            type: validation.hasErrors ? 'error' : 'success',
+            message: validation.hasErrors
+              ? `Обнаружены ошибки: ${validation.errors.length}`
+              : 'Проверка завершена: ошибок не найдено',
           })
           return
         }
 
-        await requestApiJson(`/api/${gameApiLocation}/games/start/${statusModalGame.id}`, {
-          fallbackMessage: 'Не удалось обновить статус игры',
-        })
-        successMessage = 'Игра запущена'
-      } else if (actionId === 'stop_game') {
-        await requestApiJson(`/api/${gameApiLocation}/games/stop/${statusModalGame.id}`, {
-          fallbackMessage: 'Не удалось обновить статус игры',
-        })
-        successMessage = 'Игра остановлена'
-      } else {
-        let nextStatus = null
+        setStatusValidationResult(null)
+        let successMessage = 'Статус игры обновлён'
 
-        if (actionId === 'restart_game' || actionId === 'activate_game') {
-          nextStatus = 'active'
-        } else if (actionId === 'cancel_game') {
-          nextStatus = 'canceled'
-        } else if (actionId === 'close_game') {
-          if (!isGameConducted(statusModalGame)) {
+        if (actionId === 'start_game') {
+          const validation = await runGameValidation()
+          setStatusValidationResult({
+            hasErrors: validation.hasErrors,
+            errors: validation.errors,
+          })
+
+          if (validation.hasErrors) {
             setFeedback({
               type: 'error',
-              message: 'Нельзя закрыть игру, которая не была проведена.',
+              message:
+                'Запуск игры заблокирован: сначала исправьте ошибки проверки.',
             })
             setToastEvent({
-              id: `game-status-update-validation-${Date.now()}`,
+              id: `game-start-validation-${Date.now()}`,
               type: 'error',
-              message: 'Нельзя закрыть игру, которая не была проведена.',
+              message: `Запуск заблокирован: обнаружены ошибки (${validation.errors.length})`,
             })
             return
           }
-          nextStatus = 'closed'
-        } else if (actionId === 'reopen_game') {
-          nextStatus = 'reopen'
-          successMessage = 'Игра открыта'
-        }
 
-        if (!nextStatus) {
-          return
-        }
+          await requestApiJson(
+            `/api/${gameApiLocation}/games/start/${statusModalGame.id}`,
+            {
+              fallbackMessage: 'Не удалось обновить статус игры',
+            },
+          )
+          successMessage = 'Игра запущена'
+        } else if (actionId === 'stop_game') {
+          await requestApiJson(
+            `/api/${gameApiLocation}/games/stop/${statusModalGame.id}`,
+            {
+              fallbackMessage: 'Не удалось обновить статус игры',
+            },
+          )
+          successMessage = 'Игра остановлена'
+        } else {
+          let nextStatus = null
 
-        await requestApiJson(
-          `/api/${gameApiLocation}/games/${statusModalGame.id}`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: { status: nextStatus } }),
-            fallbackMessage: 'Не удалось обновить статус игры',
+          if (actionId === 'restart_game' || actionId === 'activate_game') {
+            nextStatus = 'active'
+          } else if (actionId === 'cancel_game') {
+            nextStatus = 'canceled'
+          } else if (actionId === 'close_game') {
+            if (!isGameConducted(statusModalGame)) {
+              setFeedback({
+                type: 'error',
+                message: 'Нельзя закрыть игру, которая не была проведена.',
+              })
+              setToastEvent({
+                id: `game-status-update-validation-${Date.now()}`,
+                type: 'error',
+                message: 'Нельзя закрыть игру, которая не была проведена.',
+              })
+              return
+            }
+            nextStatus = 'closed'
+          } else if (actionId === 'reopen_game') {
+            nextStatus = 'reopen'
+            successMessage = 'Игра открыта'
           }
-        )
+
+          if (!nextStatus) {
+            return
+          }
+
+          await requestApiJson(
+            `/api/${gameApiLocation}/games/${statusModalGame.id}`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ data: { status: nextStatus } }),
+              fallbackMessage: 'Не удалось обновить статус игры',
+            },
+          )
+        }
+
+        await fetchGamesPage({
+          offset: 0,
+          replace: true,
+          locationValue: shouldShowLocationFilter
+            ? gamesFilterLocation
+            : location,
+        })
+
+        setIsStatusModalOpen(false)
+        setFeedback({ type: 'success', message: successMessage })
+        setToastEvent({
+          id: `game-status-updated-${Date.now()}`,
+          type: 'success',
+          message: successMessage,
+        })
+      } catch (error) {
+        const message = error?.message || 'Не удалось обновить статус игры'
+        setFeedback({ type: 'error', message })
+        setToastEvent({
+          id: `game-status-update-error-${Date.now()}`,
+          type: 'error',
+          message,
+        })
+      } finally {
+        setIsStatusChanging(false)
       }
-
-      await fetchGamesPage({
-        offset: 0,
-        replace: true,
-        locationValue: shouldShowLocationFilter ? gamesFilterLocation : location,
-      })
-
-      setIsStatusModalOpen(false)
-      setFeedback({ type: 'success', message: successMessage })
-      setToastEvent({
-        id: `game-status-updated-${Date.now()}`,
-        type: 'success',
-        message: successMessage,
-      })
-    } catch (error) {
-      const message = error?.message || 'Не удалось обновить статус игры'
-      setFeedback({ type: 'error', message })
-      setToastEvent({
-        id: `game-status-update-error-${Date.now()}`,
-        type: 'error',
-        message,
-      })
-    } finally {
-      setIsStatusChanging(false)
-    }
-  }, [
-    canManageGameStatus,
-    fetchGamesPage,
-    gamesFilterLocation,
-    location,
-    shouldShowLocationFilter,
-    statusModalGame,
-  ])
+    },
+    [
+      canManageGameStatus,
+      fetchGamesPage,
+      gamesFilterLocation,
+      location,
+      shouldShowLocationFilter,
+      statusModalGame,
+    ],
+  )
 
   const handleManageTeamsFromList = useCallback(
     (game) => {
@@ -3377,7 +3606,7 @@ const GamesPage = ({
       setIsDescriptionModalOpen(false)
       setIsTeamsModalOpen(true)
     },
-    [canManageGame]
+    [canManageGame],
   )
 
   const canViewResultsForGame = useCallback((game) => {
@@ -3389,7 +3618,8 @@ const GamesPage = ({
       return false
     }
 
-    const status = typeof game.status === 'string' ? game.status.toLowerCase() : ''
+    const status =
+      typeof game.status === 'string' ? game.status.toLowerCase() : ''
     return status === 'finished' || status === 'closed'
   }, [])
 
@@ -3398,9 +3628,10 @@ const GamesPage = ({
       return false
     }
 
-    const status = typeof selectedGame.status === 'string'
-      ? selectedGame.status.toLowerCase()
-      : ''
+    const status =
+      typeof selectedGame.status === 'string'
+        ? selectedGame.status.toLowerCase()
+        : ''
 
     return status === 'finished' || status === 'closed'
   }, [canEditSelectedGame, selectedGame])
@@ -3422,7 +3653,9 @@ const GamesPage = ({
       }
 
       const locationForApi =
-        game.location || (shouldShowLocationFilter ? gamesFilterLocation : location) || ''
+        game.location ||
+        (shouldShowLocationFilter ? gamesFilterLocation : location) ||
+        ''
 
       setResultsModalState({
         isLoading: true,
@@ -3446,7 +3679,7 @@ const GamesPage = ({
           `/api/cabinet/games/${encodeURIComponent(game.id)}/result?${params.toString()}`,
           {
             fallbackMessage: 'Не удалось загрузить результаты игры',
-          }
+          },
         )
 
         const nextData = {
@@ -3460,7 +3693,8 @@ const GamesPage = ({
               ? json.data.computed
               : null,
           interactiveResultsUrl:
-            typeof json?.data?.interactiveResultsUrl === 'string' && json.data.interactiveResultsUrl.trim().length > 0
+            typeof json?.data?.interactiveResultsUrl === 'string' &&
+            json.data.interactiveResultsUrl.trim().length > 0
               ? json.data.interactiveResultsUrl.trim()
               : null,
         }
@@ -3489,7 +3723,12 @@ const GamesPage = ({
         })
       }
     },
-    [gamesFilterLocation, location, resultsCacheByGameId, shouldShowLocationFilter]
+    [
+      gamesFilterLocation,
+      location,
+      resultsCacheByGameId,
+      shouldShowLocationFilter,
+    ],
   )
 
   const handleOpenResultsFromGame = useCallback(
@@ -3505,7 +3744,7 @@ const GamesPage = ({
       setIsResultsModalOpen(true)
       loadGameResults(game)
     },
-    [canViewResultsForGame, loadGameResults]
+    [canViewResultsForGame, loadGameResults],
   )
 
   const handleCloseResultsModal = useCallback(() => {
@@ -3518,7 +3757,9 @@ const GamesPage = ({
     }
 
     const locationForApi =
-      selectedGame.location || (shouldShowLocationFilter ? gamesFilterLocation : location) || ''
+      selectedGame.location ||
+      (shouldShowLocationFilter ? gamesFilterLocation : location) ||
+      ''
 
     setIsGeneratingResults(true)
     setFeedback(null)
@@ -3531,7 +3772,7 @@ const GamesPage = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ location: locationForApi }),
           fallbackMessage: 'Не удалось сформировать результаты',
-        }
+        },
       )
 
       const nextData = {
@@ -3545,7 +3786,8 @@ const GamesPage = ({
             ? json.data.computed
             : null,
         interactiveResultsUrl:
-          typeof json?.data?.interactiveResultsUrl === 'string' && json.data.interactiveResultsUrl.trim().length > 0
+          typeof json?.data?.interactiveResultsUrl === 'string' &&
+          json.data.interactiveResultsUrl.trim().length > 0
             ? json.data.interactiveResultsUrl.trim()
             : null,
       }
@@ -3559,15 +3801,15 @@ const GamesPage = ({
         prev.map((gameItem) =>
           gameItem.id === selectedGame.id
             ? { ...gameItem, isResultGenerated: true }
-            : gameItem
-        )
+            : gameItem,
+        ),
       )
       setPersistedGames((prev) =>
         prev.map((gameItem) =>
           gameItem.id === selectedGame.id
             ? { ...gameItem, isResultGenerated: true }
-            : gameItem
-        )
+            : gameItem,
+        ),
       )
 
       setResultsModalState({
@@ -3639,7 +3881,13 @@ const GamesPage = ({
     } else {
       handleCloseEditModal()
     }
-  }, [canEditSelectedGame, handleCloseEditModal, handleSaveChanges, isDirty, isSaving])
+  }, [
+    canEditSelectedGame,
+    handleCloseEditModal,
+    handleSaveChanges,
+    isDirty,
+    isSaving,
+  ])
 
   const handleAddModerator = useCallback(() => {
     if (!selectedGame || !canEditSelectedGame) {
@@ -3683,7 +3931,13 @@ const GamesPage = ({
     })
 
     setSelectedModeratorToAdd('')
-  }, [availableModeratorsMap, canEditSelectedGame, selectedGame, selectedModeratorToAdd, updateSelectedGame])
+  }, [
+    availableModeratorsMap,
+    canEditSelectedGame,
+    selectedGame,
+    selectedModeratorToAdd,
+    updateSelectedGame,
+  ])
 
   const handleRemoveModerator = useCallback(
     (moderatorId) => {
@@ -3692,7 +3946,10 @@ const GamesPage = ({
       }
 
       updateSelectedGame((game) => ({
-        moderators: (Array.isArray(game.moderators) ? game.moderators : []).filter((moderator) => {
+        moderators: (Array.isArray(game.moderators)
+          ? game.moderators
+          : []
+        ).filter((moderator) => {
           if (!moderator) {
             return false
           }
@@ -3705,7 +3962,7 @@ const GamesPage = ({
         }),
       }))
     },
-    [canEditSelectedGame, updateSelectedGame]
+    [canEditSelectedGame, updateSelectedGame],
   )
 
   const renderGameListItem = useCallback(
@@ -3720,12 +3977,19 @@ const GamesPage = ({
       const canManageThisGame = canManageGame(game)
       const canManageStatusThisGame = canManageGameStatus(game)
       const canViewThisGameResults = canViewResultsForGame(game)
-      const visibleStatus = normalizeVisibleStatus(game.status, canSeeClosedStatus)
+      const visibleStatus = normalizeVisibleStatus(
+        game.status,
+        canSeeClosedStatus,
+      )
       const userTeamPlace = Number(game.userTeamPlace)
-      const hasUserTeamPlace = Number.isFinite(userTeamPlace) && userTeamPlace > 0
-      const hasSeason = typeof game?.seasonId === 'string' && game.seasonId.trim().length > 0
-      const seasonLabel = typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
-      const seasonBadgeLabel = hasSeason && seasonLabel ? seasonLabel : 'Вне сезона'
+      const hasUserTeamPlace =
+        Number.isFinite(userTeamPlace) && userTeamPlace > 0
+      const hasSeason =
+        typeof game?.seasonId === 'string' && game.seasonId.trim().length > 0
+      const seasonLabel =
+        typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
+      const seasonBadgeLabel =
+        hasSeason && seasonLabel ? seasonLabel : 'Вне сезона'
       const isHiddenGame = Boolean(game?.hidden)
 
       return (
@@ -3741,31 +4005,35 @@ const GamesPage = ({
               }
             }}
             isActive={selectedGameId === game.id}
-            className="relative cursor-pointer overflow-hidden p-0"
+            className="relative p-0 overflow-hidden cursor-pointer"
             aria-pressed={selectedGameId === game.id}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
-            <div className="flex min-w-0 items-start">
-              <div className="relative hidden w-[156px] shrink-0 overflow-hidden border-r border-slate-200 bg-slate-100 sm:block dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-start min-w-0">
+              <div className="relative hidden w-[156px] shrink-0 rounded-lg overflow-hidden bg-slate-100 sm:block dark:border-slate-700 dark:bg-slate-900">
                 <GameCardImage
                   src={game.image}
                   alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
-                  className="block h-auto w-full"
-                  placeholderClassName="flex min-h-[120px] w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
+                  className="block w-full h-auto"
+                  placeholderClassName="flex w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 py-6 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
                 />
               </div>
-              <div className="min-w-0 flex-1 p-4">
-                <div className="flex min-w-0 w-full flex-1 items-start gap-3">
-                  <div className="relative w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 sm:hidden dark:border-slate-700 dark:bg-slate-900">
+              <div
+                className="min-w-0 flex-1 p-0 sm:absolute sm:inset-y-0 sm:left-[168px] sm:right-0 sm:overflow-hidden sm:p-4"
+              >
+                <div className="flex items-start flex-1 w-full min-w-0 gap-3">
+                  <div className="relative w-24 overflow-hidden border shrink-0 rounded-xl border-slate-200 bg-slate-100 sm:hidden dark:border-slate-700 dark:bg-slate-900">
                     <GameCardImage
                       src={game.image}
-                      alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
-                      className="block h-auto w-full"
-                      placeholderClassName="flex min-h-[96px] w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
+                      alt={
+                        game.name ? `Обложка игры ${game.name}` : 'Обложка игры'
+                      }
+                      className="block w-full h-auto"
+                      placeholderClassName="flex w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 py-4 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
                     />
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="flex-1 min-w-0">
                     <span
                       className={`mb-2 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
                     >
@@ -3781,10 +4049,10 @@ const GamesPage = ({
                         Скрыта
                       </span>
                     )}
-                    <p className="aq-line-clamp-2 text-sm font-semibold text-primary dark:text-slate-100">
+                    <p className="text-sm font-semibold aq-line-clamp-2 text-primary dark:text-slate-100">
                       {game.name || 'Без названия'}
                     </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
                       <span className="text-slate-500">{startDateLabel}</span>
                     </div>
                     <p className="mt-1 text-xs text-slate-400">
@@ -3792,15 +4060,55 @@ const GamesPage = ({
                     </p>
                   </div>
                 </div>
-                {(canViewThisGameResults || hasUserTeamPlace) && (
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    {hasUserTeamPlace ? (
-                      <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
-                        Место: {userTeamPlace}
-                      </span>
-                    ) : (
-                      <span />
-                    )}
+                {(hasUserTeamPlace ||
+                  canManageThisGame ||
+                  canManageStatusThisGame ||
+                  canViewThisGameResults) && (
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      {(canManageThisGame || canManageStatusThisGame) && (
+                        <>
+                          {canManageThisGame && (
+                            <CardActionIconButton
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleEditGameFromList(game)
+                              }}
+                              label="Редактировать игру"
+                            >
+                              <EditCardIcon />
+                            </CardActionIconButton>
+                          )}
+                          {canManageStatusThisGame && (
+                            <CardActionIconButton
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleOpenStatusModal(game)
+                              }}
+                              label="Сменить статус игры"
+                            >
+                              <StatusCardIcon />
+                            </CardActionIconButton>
+                          )}
+                          {canManageThisGame && (
+                            <CardActionIconButton
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleManageTeamsFromList(game)
+                              }}
+                              label="Управление командами"
+                            >
+                              <TeamCardIcon />
+                            </CardActionIconButton>
+                          )}
+                        </>
+                      )}
+                      {hasUserTeamPlace && (
+                        <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
+                          Место: {userTeamPlace}
+                        </span>
+                      )}
+                    </div>
                     {canViewThisGameResults && (
                       <button
                         type="button"
@@ -3816,49 +4124,24 @@ const GamesPage = ({
                   </div>
                 )}
               </div>
-              {(canManageThisGame || canManageStatusThisGame) && (
-                <div className="absolute right-3 top-3 flex shrink-0 items-center gap-2">
-                  {canManageThisGame && (
-                    <CardActionIconButton
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        handleEditGameFromList(game)
-                      }}
-                      label="Редактировать игру"
-                    >
-                      <EditCardIcon />
-                    </CardActionIconButton>
-                  )}
-                  {canManageStatusThisGame && (
-                    <CardActionIconButton
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        handleOpenStatusModal(game)
-                      }}
-                      label="Сменить статус игры"
-                    >
-                      <StatusCardIcon />
-                    </CardActionIconButton>
-                  )}
-                  {canManageThisGame && (
-                    <CardActionIconButton
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        handleManageTeamsFromList(game)
-                      }}
-                      label="Управление командами"
-                    >
-                      <TeamCardIcon />
-                    </CardActionIconButton>
-                  )}
-                </div>
-              )}
             </div>
           </SelectableCard>
         </li>
       )
     },
-    [canManageGame, canManageGameStatus, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleOpenStatusModal, handleSelectGameCard, selectedGameId]
+    [
+      canManageGame,
+      canManageGameStatus,
+      canSeeClosedStatus,
+      canViewResultsForGame,
+      getNounTeams,
+      handleEditGameFromList,
+      handleManageTeamsFromList,
+      handleOpenResultsFromGame,
+      handleOpenStatusModal,
+      handleSelectGameCard,
+      selectedGameId,
+    ],
   )
 
   const renderGameTileItem = useCallback(
@@ -3873,12 +4156,19 @@ const GamesPage = ({
       const canManageThisGame = canManageGame(game)
       const canManageStatusThisGame = canManageGameStatus(game)
       const canViewThisGameResults = canViewResultsForGame(game)
-      const visibleStatus = normalizeVisibleStatus(game.status, canSeeClosedStatus)
+      const visibleStatus = normalizeVisibleStatus(
+        game.status,
+        canSeeClosedStatus,
+      )
       const userTeamPlace = Number(game.userTeamPlace)
-      const hasUserTeamPlace = Number.isFinite(userTeamPlace) && userTeamPlace > 0
-      const hasSeason = typeof game?.seasonId === 'string' && game.seasonId.trim().length > 0
-      const seasonLabel = typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
-      const seasonBadgeLabel = hasSeason && seasonLabel ? seasonLabel : 'Вне сезона'
+      const hasUserTeamPlace =
+        Number.isFinite(userTeamPlace) && userTeamPlace > 0
+      const hasSeason =
+        typeof game?.seasonId === 'string' && game.seasonId.trim().length > 0
+      const seasonLabel =
+        typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
+      const seasonBadgeLabel =
+        hasSeason && seasonLabel ? seasonLabel : 'Вне сезона'
       const isHiddenGame = Boolean(game?.hidden)
 
       return (
@@ -3894,7 +4184,7 @@ const GamesPage = ({
               }
             }}
             isActive={selectedGameId === game.id}
-            className="relative cursor-pointer overflow-hidden p-0"
+            className="relative p-0 overflow-hidden cursor-pointer"
             aria-pressed={selectedGameId === game.id}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
@@ -3903,11 +4193,11 @@ const GamesPage = ({
               <GameCardImage
                 src={game.image}
                 alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
-                className="block h-auto w-full"
+                className="block w-full h-auto"
                 placeholderClassName="flex min-h-[180px] w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
               />
             </div>
-            <div className="space-y-2 p-4">
+            <div className="p-4 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
@@ -3925,7 +4215,7 @@ const GamesPage = ({
                   </span>
                 )}
               </div>
-              <p className="aq-line-clamp-2 text-sm font-semibold text-primary dark:text-slate-100">
+              <p className="text-sm font-semibold aq-line-clamp-2 text-primary dark:text-slate-100">
                 {game.name || 'Без названия'}
               </p>
               <p className="text-xs text-slate-500">{startDateLabel}</p>
@@ -3936,7 +4226,7 @@ const GamesPage = ({
                 hasUserTeamPlace ||
                 canManageThisGame ||
                 canManageStatusThisGame) && (
-                <div className="mt-3 flex items-end justify-between gap-2">
+                <div className="flex items-end justify-between gap-2 mt-3">
                   <div className="flex flex-col items-start gap-2">
                     {canViewThisGameResults && (
                       <button
@@ -3957,7 +4247,7 @@ const GamesPage = ({
                     )}
                   </div>
                   {(canManageThisGame || canManageStatusThisGame) && (
-                    <div className="pointer-events-auto flex items-center gap-2 self-end">
+                    <div className="flex items-center self-end gap-2 pointer-events-auto">
                       {canManageThisGame && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -3965,7 +4255,7 @@ const GamesPage = ({
                             handleEditGameFromList(game)
                           }}
                           label="Редактировать игру"
-                          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <EditCardIcon />
                         </CardActionIconButton>
@@ -3977,7 +4267,7 @@ const GamesPage = ({
                             handleOpenStatusModal(game)
                           }}
                           label="Сменить статус игры"
-                          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <StatusCardIcon />
                         </CardActionIconButton>
@@ -3989,7 +4279,7 @@ const GamesPage = ({
                             handleManageTeamsFromList(game)
                           }}
                           label="Управление командами"
-                          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <TeamCardIcon />
                         </CardActionIconButton>
@@ -4003,7 +4293,19 @@ const GamesPage = ({
         </li>
       )
     },
-    [canManageGame, canManageGameStatus, canSeeClosedStatus, canViewResultsForGame, getNounTeams, handleEditGameFromList, handleManageTeamsFromList, handleOpenResultsFromGame, handleOpenStatusModal, handleSelectGameCard, selectedGameId]
+    [
+      canManageGame,
+      canManageGameStatus,
+      canSeeClosedStatus,
+      canViewResultsForGame,
+      getNounTeams,
+      handleEditGameFromList,
+      handleManageTeamsFromList,
+      handleOpenResultsFromGame,
+      handleOpenStatusModal,
+      handleSelectGameCard,
+      selectedGameId,
+    ],
   )
 
   const modalGame = isEditModalOpen && editingGame ? editingGame : selectedGame
@@ -4013,7 +4315,9 @@ const GamesPage = ({
       return '—'
     }
 
-    const option = GAME_TYPE_OPTIONS.find((item) => item.value === modalGame.type)
+    const option = GAME_TYPE_OPTIONS.find(
+      (item) => item.value === modalGame.type,
+    )
     return option?.label ?? '—'
   }, [modalGame])
 
@@ -4076,10 +4380,12 @@ const GamesPage = ({
 
           return moderator.id
         })
-        .filter(Boolean)
+        .filter(Boolean),
     )
 
-    return availableModerators.filter((moderator) => !existingIds.has(moderator.id))
+    return availableModerators.filter(
+      (moderator) => !existingIds.has(moderator.id),
+    )
   }, [availableModerators, modalGame, selectedGameModerators])
 
   const clueModeDetails = useMemo(() => {
@@ -4088,14 +4394,15 @@ const GamesPage = ({
     }
 
     const option = CLUE_EARLY_MODE_OPTIONS.find(
-      (item) => item.value === modalGame.clueEarlyAccessMode
+      (item) => item.value === modalGame.clueEarlyAccessMode,
     )
     const minutes = toMinutes(modalGame.clueEarlyPenalty)
 
     if (modalGame.clueEarlyAccessMode === 'penalty') {
       return {
         modeLabel: option?.label ?? '—',
-        valueLabel: minutes > 0 ? `Штраф ${minutes} мин` : 'Штраф не применяется',
+        valueLabel:
+          minutes > 0 ? `Штраф ${minutes} мин` : 'Штраф не применяется',
       }
     }
 
@@ -4110,7 +4417,7 @@ const GamesPage = ({
 
   const canViewGameResults = useMemo(
     () => canViewResultsForGame(selectedGame),
-    [canViewResultsForGame, selectedGame]
+    [canViewResultsForGame, selectedGame],
   )
 
   const breakDurationLabel = useMemo(() => {
@@ -4169,22 +4476,24 @@ const GamesPage = ({
         }
         return acc
       },
-      { income: 0, expense: 0 }
+      { income: 0, expense: 0 },
     )
 
     return { income, expense, balance: income - expense }
   }, [modalGame])
 
-  const balanceClass = financesSummary.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'
+  const balanceClass =
+    financesSummary.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'
   const isCardsDisplay = gamesDisplayMode === 'cards'
   const pageTitle = isUpcomingView
     ? 'Предстоящие игры'
     : isPastView
       ? 'Прошедшие игры'
       : 'Игры'
-  const pageDescription = isUpcomingView || isPastView
-    ? 'Выберите игру из списка и откройте детали.'
-    : 'Редактируйте сценарии, управляйте статусами и готовьте квесты к запуску.'
+  const pageDescription =
+    isUpcomingView || isPastView
+      ? 'Выберите игру из списка и откройте детали.'
+      : 'Редактируйте сценарии, управляйте статусами и готовьте квесты к запуску.'
 
   return (
     <>
@@ -4198,12 +4507,12 @@ const GamesPage = ({
       >
         <FeedbackToast event={toastEvent} />
         <section className="grid gap-6 md:grid-cols-5">
-          <div className="md:col-span-5 space-y-4 md:max-w-4xl">
+          <div className="space-y-4 md:col-span-5 md:max-w-4xl">
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={handleOpenRegisterModal}
-                className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white transition cursor-pointer rounded-xl bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
               >
                 Зарегистрироваться на игру по id
               </button>
@@ -4211,12 +4520,12 @@ const GamesPage = ({
                 <button
                   type="button"
                   onClick={handleOpenCreateGameModal}
-                  className="inline-flex items-center justify-center rounded-xl border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:border-slate-400 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:bg-slate-700"
+                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold transition border rounded-xl border-primary text-primary hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:border-slate-400 dark:bg-slate-800/50 dark:text-slate-100 dark:hover:bg-slate-700"
                 >
                   Создать игру
                 </button>
               )}
-              <div className="ml-auto inline-flex rounded-xl border border-slate-200 p-1 dark:border-slate-700">
+              <div className="inline-flex p-1 ml-auto border rounded-xl border-slate-200 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => setGamesDisplayMode('list')}
@@ -4244,24 +4553,26 @@ const GamesPage = ({
                 id="games-show-canceled"
                 checked={showCanceledGames}
                 onChange={(event) => setShowCanceledGames(event.target.checked)}
-                className="rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700"
+                className="px-3 py-2 border rounded-xl border-slate-200 dark:border-slate-700"
                 label="Отменённые"
                 labelClassName="text-xs font-semibold text-slate-600 dark:text-slate-300"
               />
             </div>
             {shouldShowLocationFilter && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+              <div className="p-4 bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/80">
                 <label
                   htmlFor="games-city-filter"
-                  className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                  className="text-xs font-semibold tracking-wide uppercase text-slate-500"
                 >
                   Город для списка игр
                 </label>
                 <select
                   id="games-city-filter"
                   value={gamesFilterLocation}
-                  onChange={(event) => setGamesFilterLocation(event.target.value)}
-                  className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700"
+                  onChange={(event) =>
+                    setGamesFilterLocation(event.target.value)
+                  }
+                  className="w-full px-3 py-2 mt-2 text-sm border cursor-pointer rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700"
                 >
                   {gameLocationOptions.map((item) => (
                     <option key={item.key} value={item.key}>
@@ -4273,15 +4584,17 @@ const GamesPage = ({
                   <>
                     <label
                       htmlFor="games-past-season-filter"
-                      className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                      className="block mt-4 text-xs font-semibold tracking-wide uppercase text-slate-500"
                     >
                       Сезон
                     </label>
                     <select
                       id="games-past-season-filter"
                       value={pastGamesSeasonFilter}
-                      onChange={(event) => setPastGamesSeasonFilter(event.target.value)}
-                      className="mt-2 w-full cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700"
+                      onChange={(event) =>
+                        setPastGamesSeasonFilter(event.target.value)
+                      }
+                      className="w-full px-3 py-2 mt-2 text-sm border cursor-pointer rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700"
                     >
                       {pastGamesSeasonOptions.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -4292,22 +4605,27 @@ const GamesPage = ({
                   </>
                 )}
                 {locationFilterError && (
-                  <p className="mt-2 text-xs text-rose-500">{locationFilterError}</p>
+                  <p className="mt-2 text-xs text-rose-500">
+                    {locationFilterError}
+                  </p>
                 )}
               </div>
             )}
             {!shouldShowLocationFilter && (
-              <div className="flex items-start gap-3 p-4 bg-violet-50 border border-violet-100 shadow-sm rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
+              <div className="flex items-start gap-3 p-4 border shadow-sm bg-violet-50 border-violet-100 rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
                 <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-violet-600 font-semibold shadow-sm dark:bg-violet-500/40 dark:text-violet-100"
+                  className="flex items-center justify-center font-semibold bg-white rounded-full shadow-sm h-9 w-9 shrink-0 text-violet-600 dark:bg-violet-500/40 dark:text-violet-100"
                   aria-hidden="true"
                 >
                   i
                 </span>
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-violet-900 dark:text-violet-50">Ваши игры</p>
+                  <p className="text-sm font-semibold text-violet-900 dark:text-violet-50">
+                    Ваши игры
+                  </p>
                   <p className="text-xs leading-5 text-violet-700 dark:text-violet-200">
-                    Выберите игру, чтобы открыть ключевые настройки, управлять составами и следить за финансами.
+                    Выберите игру, чтобы открыть ключевые настройки, управлять
+                    составами и следить за финансами.
                   </p>
                 </div>
               </div>
@@ -4315,43 +4633,62 @@ const GamesPage = ({
 
             {selectedGame && !location && (
               <NoticeBanner tone="warning" variant="neon">
-                Не удалось определить площадку пользователя. Сохранение изменений недоступно.
+                Не удалось определить площадку пользователя. Сохранение
+                изменений недоступно.
               </NoticeBanner>
             )}
 
             {isLocationFilterLoading && shouldShowLocationFilter ? (
-              <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+              <div className="p-6 text-sm text-center bg-white border shadow-sm text-slate-500 dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl">
                 Загружаем игры выбранного города...
               </div>
             ) : games.length > 0 ? (
               <div className="space-y-6">
                 {!isPastView && upcomingGames.length > 0 && (
                   <div>
-                    <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <h3 className="px-1 text-xs font-semibold tracking-wide uppercase text-slate-500">
                       Активные и запланированные
                     </h3>
-                    <ul className={isCardsDisplay ? 'mt-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'mt-2 space-y-3'}>
+                    <ul
+                      className={
+                        isCardsDisplay
+                          ? 'mt-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-3'
+                          : 'mt-2 space-y-3'
+                      }
+                    >
                       {upcomingGames.map((game) =>
-                        isCardsDisplay ? renderGameTileItem(game) : renderGameListItem(game)
+                        isCardsDisplay
+                          ? renderGameTileItem(game)
+                          : renderGameListItem(game),
                       )}
                     </ul>
                   </div>
                 )}
                 {!isUpcomingView && pastGames.length > 0 && (
                   <div>
-                    <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {showCanceledGames ? 'Завершённые и отменённые' : 'Завершённые'}
+                    <h3 className="px-1 text-xs font-semibold tracking-wide uppercase text-slate-500">
+                      {showCanceledGames
+                        ? 'Завершённые и отменённые'
+                        : 'Завершённые'}
                     </h3>
-                    <ul className={isCardsDisplay ? 'mt-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'mt-2 space-y-3'}>
+                    <ul
+                      className={
+                        isCardsDisplay
+                          ? 'mt-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-3'
+                          : 'mt-2 space-y-3'
+                      }
+                    >
                       {pastGames.map((game) =>
-                        isCardsDisplay ? renderGameTileItem(game) : renderGameListItem(game)
+                        isCardsDisplay
+                          ? renderGameTileItem(game)
+                          : renderGameListItem(game),
                       )}
                     </ul>
                   </div>
                 )}
                 {((isUpcomingView && upcomingGames.length === 0) ||
                   (isPastView && pastGames.length === 0)) && (
-                  <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                  <div className="p-6 text-sm text-center bg-white border shadow-sm text-slate-500 dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl">
                     {isUpcomingView
                       ? 'Предстоящих игр пока нет.'
                       : 'Прошедших игр пока нет.'}
@@ -4373,8 +4710,9 @@ const GamesPage = ({
                 )}
               </div>
             ) : (
-              <div className="p-6 text-sm text-center text-slate-500 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
-                Для выбранного города пока нет игр. Создайте сценарий в телеграм-боте, чтобы он появился здесь.
+              <div className="p-6 text-sm text-center bg-white border shadow-sm text-slate-500 dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl">
+                Для выбранного города пока нет игр. Создайте сценарий в
+                телеграм-боте, чтобы он появился здесь.
               </div>
             )}
           </div>
@@ -4403,7 +4741,9 @@ const GamesPage = ({
                   handleRemoveTask={handleRemoveTask}
                   handleTaskFieldChange={handleTaskFieldChange}
                   handleTaskNumberChange={handleTaskNumberChange}
-                  handleTaskOptionalNumberChange={handleTaskOptionalNumberChange}
+                  handleTaskOptionalNumberChange={
+                    handleTaskOptionalNumberChange
+                  }
                   handleTaskCheckboxChange={handleTaskCheckboxChange}
                   handleTaskCoordinateChange={handleTaskCoordinateChange}
                   handleAddTaskCode={handleAddTaskCode}
@@ -4486,12 +4826,16 @@ const GamesPage = ({
                     createGameLocation &&
                     creatingSeasonByLocation[
                       String(createGameLocation).trim().toLowerCase()
-                    ]
+                    ],
                   )}
-                  handleCreateSeasonForCreateGame={handleCreateSeasonForCreateGame}
+                  handleCreateSeasonForCreateGame={
+                    handleCreateSeasonForCreateGame
+                  }
                   createGameLocationOptions={gameLocationOptions}
                   createGameCloneOptions={createGameCloneOptions}
-                  handleChangeCreateGameCloneOption={handleChangeCreateGameCloneOption}
+                  handleChangeCreateGameCloneOption={
+                    handleChangeCreateGameCloneOption
+                  }
                   isCreateGameActionDisabled={isCreateGameActionDisabled}
                   createGameFeedback={createGameFeedback}
                   isDescriptionModalOpen={isDescriptionModalOpen}
@@ -4500,7 +4844,9 @@ const GamesPage = ({
                   plannedStartLabel={plannedStartLabel}
                   canViewRestrictedGameInfo={canViewRestrictedGameInfo}
                   canViewGameResults={canViewGameResults}
-                  handleOpenResultsModal={() => handleOpenResultsFromGame(selectedGame)}
+                  handleOpenResultsModal={() =>
+                    handleOpenResultsFromGame(selectedGame)
+                  }
                   selectedGameModerators={selectedGameModerators}
                   availableModeratorsForSelect={availableModeratorsForSelect}
                   availableModeratorsMap={availableModeratorsMap}
@@ -4514,7 +4860,7 @@ const GamesPage = ({
                     editingGame?.location &&
                     creatingSeasonByLocation[
                       String(editingGame.location).trim().toLowerCase()
-                    ]
+                    ],
                   )}
                   handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
                   taskDurationLabel={taskDurationLabel}
@@ -4532,7 +4878,9 @@ const GamesPage = ({
                   isOpen={isStatusModalOpen}
                   onClose={handleCloseStatusModal}
                   gameName={statusModalGame?.name || ''}
-                  currentStatusLabel={getGameStatusLabel(statusModalGame?.status || '')}
+                  currentStatusLabel={getGameStatusLabel(
+                    statusModalGame?.status || '',
+                  )}
                   actions={statusModalActions}
                   onAction={handleStatusAction}
                   validationResult={statusValidationResult}
@@ -4656,7 +5004,7 @@ GamesPage.propTypes = {
           postMessage: PropTypes.string,
           canceled: PropTypes.bool,
           isBonusTask: PropTypes.bool,
-        })
+        }),
       ),
       teamsCount: PropTypes.number,
       userTeamPlace: PropTypes.number,
@@ -4669,7 +5017,7 @@ GamesPage.propTypes = {
       updatedAt: PropTypes.string,
       createdAt: PropTypes.string,
       moderators: PropTypes.arrayOf(moderatorShape),
-    })
+    }),
   ),
   initialHasMore: PropTypes.bool,
   initialLocation: PropTypes.string,
@@ -4744,25 +5092,27 @@ export async function getServerSideProps(context) {
           .select({ _id: 1, name: 1, username: 1, telegramId: 1 })
           .lean()
 
-        availableGameModerators = moderatorsDocs.map((moderator) => {
-          const id = moderator?._id ? moderator._id.toString() : null
+        availableGameModerators = moderatorsDocs
+          .map((moderator) => {
+            const id = moderator?._id ? moderator._id.toString() : null
 
-          if (!id) {
-            return null
-          }
+            if (!id) {
+              return null
+            }
 
-          const telegramId =
-            typeof moderator.telegramId === 'number'
-              ? moderator.telegramId.toString()
-              : moderator.telegramId
+            const telegramId =
+              typeof moderator.telegramId === 'number'
+                ? moderator.telegramId.toString()
+                : moderator.telegramId
 
-          return {
-            id,
-            name: moderator.name ?? '',
-            username: moderator.username ?? '',
-            telegramId: telegramId ? String(telegramId) : '',
-          }
-        }).filter(Boolean)
+            return {
+              id,
+              name: moderator.name ?? '',
+              username: moderator.username ?? '',
+              telegramId: telegramId ? String(telegramId) : '',
+            }
+          })
+          .filter(Boolean)
       }
     } catch (error) {
       console.error('Failed to load games for cabinet', error)
