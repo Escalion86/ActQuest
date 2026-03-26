@@ -1375,7 +1375,7 @@ const GameEditModal = ({
                             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
                           >
                             <option value="">
-                              {isEditGameSeasonsLoading ? 'Загружаем сезоны…' : 'Выберите сезон'}
+                              {isEditGameSeasonsLoading ? 'Загружаем сезоны…' : 'Вне сезона'}
                             </option>
                             {Array.isArray(editGameSeasons) &&
                               editGameSeasons.map((season) => (

@@ -255,7 +255,7 @@ const GameCreateModal = ({
                       className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
                     >
                       <option value="">
-                        {isCreateGameSeasonsLoading ? 'Загружаем сезоны…' : 'Выберите сезон'}
+                        {isCreateGameSeasonsLoading ? 'Загружаем сезоны…' : 'Вне сезона'}
                       </option>
                       {createGameSeasons.map((season) => (
                         <option key={season.id} value={season.id}>

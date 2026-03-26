@@ -5,6 +5,14 @@ import buildGameResultComputed from '@server/buildGameResultComputed'
 import updateParticipantsClosedStats from '@server/updateParticipantsClosedStats'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '5mb',
+    },
+  },
+}
+
 const buildResetPayload = () => ({
   activeNum: 0,
   findedCodes: [],

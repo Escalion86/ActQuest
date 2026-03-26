@@ -195,6 +195,10 @@ const gamesSchema = {
     enum: ['active', 'started', 'finished', 'closed', 'canceled'],
     default: 'active',
   },
+  isRated: {
+    type: Boolean,
+    default: true,
+  },
   hidden: {
     type: Boolean,
     default: true,

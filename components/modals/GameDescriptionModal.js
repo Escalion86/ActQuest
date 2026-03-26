@@ -39,7 +39,7 @@ const GameDescriptionModal = ({
                     <img
                       src={selectedGame.image}
                       alt="Обложка игры"
-                      className="mt-4 h-48 w-full rounded-xl object-cover"
+                      className="mt-4 max-h-[60vh] w-full rounded-xl object-contain"
                     />
                   )}
                   <dl className="mt-4 grid gap-4 sm:grid-cols-2">

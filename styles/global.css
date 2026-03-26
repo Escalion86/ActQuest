@@ -848,3 +848,20 @@ html {
 .dark .aq-neon-checkbox-description {
   color: rgb(148 163 184 / 1);
 }
+
+.aq-logo-float {
+  animation: aqLogoFloat 6.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes aqLogoFloat {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}

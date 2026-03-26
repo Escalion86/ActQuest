@@ -404,6 +404,52 @@ const buildUpdatePayload = (game) => {
   }
 }
 
+const GameCardImage = ({ src, alt, className, placeholderClassName }) => {
+  const [hasLoadError, setHasLoadError] = useState(false)
+
+  if (!src || hasLoadError) {
+    return (
+      <div
+        className={
+          placeholderClassName ||
+          'flex min-h-[180px] w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400'
+        }
+      >
+        <img
+          src="/logo_title.png"
+          alt="ActQuest"
+          className="aq-logo-float h-auto w-[70%] max-w-[220px] opacity-90"
+          loading="lazy"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className || 'block h-auto w-full'}
+      loading="lazy"
+      onError={() => setHasLoadError(true)}
+    />
+  )
+}
+
+GameCardImage.propTypes = {
+  src: PropTypes.string,
+  alt: PropTypes.string,
+  className: PropTypes.string,
+  placeholderClassName: PropTypes.string,
+}
+
+GameCardImage.defaultProps = {
+  src: '',
+  alt: 'Изображение',
+  className: '',
+  placeholderClassName: '',
+}
+
 const GamesPage = ({
   initialGames,
   initialHasMore,
@@ -447,8 +493,26 @@ const GamesPage = ({
   const [isStatusChanging, setIsStatusChanging] = useState(false)
   const [editingGame, setEditingGame] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [, setFeedback] = useState(null)
   const [toastEvent, setToastEvent] = useState(null)
+  const setFeedback = useCallback((feedback) => {
+    if (!feedback) {
+      return
+    }
+
+    const type = feedback.type === 'error' ? 'error' : 'success'
+    const message =
+      typeof feedback.message === 'string' && feedback.message.trim()
+        ? feedback.message
+        : type === 'error'
+          ? 'Произошла ошибка'
+          : 'Операция выполнена'
+
+    setToastEvent({
+      id: Date.now(),
+      type,
+      message,
+    })
+  }, [])
   const [expandedTaskIds, setExpandedTaskIds] = useState([])
   const [isTeamsModalOpen, setIsTeamsModalOpen] = useState(false)
   const [teamsModalState, setTeamsModalState] = useState({
@@ -3662,6 +3726,7 @@ const GamesPage = ({
       const hasSeason = typeof game?.seasonId === 'string' && game.seasonId.trim().length > 0
       const seasonLabel = typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
       const seasonBadgeLabel = hasSeason && seasonLabel ? seasonLabel : 'Вне сезона'
+      const isHiddenGame = Boolean(game?.hidden)
 
       return (
         <li key={game.id}>
@@ -3676,48 +3741,80 @@ const GamesPage = ({
               }
             }}
             isActive={selectedGameId === game.id}
-            className="relative cursor-pointer"
+            className="relative cursor-pointer overflow-hidden p-0"
             aria-pressed={selectedGameId === game.id}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
-            <div className="flex flex-col items-start justify-between gap-3 pb-0 sm:flex-row sm:pb-12">
-              <div className="flex min-w-0 w-full flex-1 items-start gap-3">
-                <div className="relative hidden h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 sm:block sm:h-[120px] sm:w-[120px] dark:border-slate-700 dark:bg-slate-900">
-                  {game.image ? (
-                    <img
+            <div className="flex min-w-0 items-start">
+              <div className="relative hidden w-[156px] shrink-0 overflow-hidden border-r border-slate-200 bg-slate-100 sm:block dark:border-slate-700 dark:bg-slate-900">
+                <GameCardImage
+                  src={game.image}
+                  alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
+                  className="block h-auto w-full"
+                  placeholderClassName="flex min-h-[120px] w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
+                />
+              </div>
+              <div className="min-w-0 flex-1 p-4">
+                <div className="flex min-w-0 w-full flex-1 items-start gap-3">
+                  <div className="relative w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 sm:hidden dark:border-slate-700 dark:bg-slate-900">
+                    <GameCardImage
                       src={game.image}
                       alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
+                      className="block h-auto w-full"
+                      placeholderClassName="flex min-h-[96px] w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
                     />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400">
-                      Нет фото
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span
-                    className={`mb-2 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
-                  >
-                    {getGameStatusLabel(visibleStatus)}
-                  </span>
-                  {Boolean(game?.isRated) && (
-                    <span className="mb-2 ml-2 inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
-                      {seasonBadgeLabel}
-                    </span>
-                  )}
-                  <p className="aq-line-clamp-2 text-sm font-semibold text-primary dark:text-slate-100">
-                    {game.name || 'Без названия'}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-slate-500">{startDateLabel}</span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {getNounTeams(game.teamsCount)}
-                  </p>
+                  <div className="min-w-0 flex-1">
+                    <span
+                      className={`mb-2 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
+                    >
+                      {getGameStatusLabel(visibleStatus)}
+                    </span>
+                    {game?.isRated === true && (
+                      <span className="mb-2 ml-2 inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
+                        {seasonBadgeLabel}
+                      </span>
+                    )}
+                    {isHiddenGame && (
+                      <span className="mb-2 ml-2 inline-flex items-center rounded-full border border-rose-300/70 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-200">
+                        Скрыта
+                      </span>
+                    )}
+                    <p className="aq-line-clamp-2 text-sm font-semibold text-primary dark:text-slate-100">
+                      {game.name || 'Без названия'}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-slate-500">{startDateLabel}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {getNounTeams(game.teamsCount)}
+                    </p>
+                  </div>
                 </div>
+                {(canViewThisGameResults || hasUserTeamPlace) && (
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    {hasUserTeamPlace ? (
+                      <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
+                        Место: {userTeamPlace}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    {canViewThisGameResults && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleOpenResultsFromGame(game)
+                        }}
+                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
+                      >
+                        Результаты
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
               {(canManageThisGame || canManageStatusThisGame) && (
                 <div className="absolute right-3 top-3 flex shrink-0 items-center gap-2">
@@ -3757,23 +3854,6 @@ const GamesPage = ({
                 </div>
               )}
             </div>
-            {canViewThisGameResults && (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  handleOpenResultsFromGame(game)
-                }}
-                className="mt-1 inline-flex cursor-pointer items-center justify-center self-end rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 sm:absolute sm:bottom-3 sm:right-3 sm:mt-0 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
-              >
-                Результаты
-              </button>
-            )}
-            {hasUserTeamPlace && (
-              <span className="pointer-events-none mt-1 inline-flex items-center self-start rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 sm:absolute sm:bottom-3 sm:left-3 sm:mt-0 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
-                Место: {userTeamPlace}
-              </span>
-            )}
           </SelectableCard>
         </li>
       )
@@ -3799,6 +3879,7 @@ const GamesPage = ({
       const hasSeason = typeof game?.seasonId === 'string' && game.seasonId.trim().length > 0
       const seasonLabel = typeof game?.seasonName === 'string' ? game.seasonName.trim() : ''
       const seasonBadgeLabel = hasSeason && seasonLabel ? seasonLabel : 'Вне сезона'
+      const isHiddenGame = Boolean(game?.hidden)
 
       return (
         <li key={game.id}>
@@ -3818,86 +3899,32 @@ const GamesPage = ({
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
-            <div className="relative mx-auto aspect-square w-full max-w-[240px] overflow-hidden border-b border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900 md:max-w-none md:mx-0">
-              {game.image ? (
-                <img
-                  src={game.image}
-                  alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400">
-                  Нет фото
-                </div>
-              )}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
-              <div className="absolute left-2 top-2 md:hidden">
+            <div className="relative w-full overflow-hidden border-b border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900">
+              <GameCardImage
+                src={game.image}
+                alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
+                className="block h-auto w-full"
+                placeholderClassName="flex min-h-[180px] w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
+              />
+            </div>
+            <div className="space-y-2 p-4">
+              <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
                 >
                   {getGameStatusLabel(visibleStatus)}
                 </span>
-                {Boolean(game?.isRated) && (
-                  <span className="ml-2 inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
+                {game?.isRated === true && (
+                  <span className="inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
                     {seasonBadgeLabel}
                   </span>
                 )}
-              </div>
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
-                <span
-                  className={`hidden items-center rounded-full px-2.5 py-1 text-xs font-semibold md:inline-flex ${getStatusBadgeClassName(visibleStatus)}`}
-                >
-                  {getGameStatusLabel(visibleStatus)}
-                </span>
-                {Boolean(game?.isRated) && (
-                  <span className="hidden items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200 md:inline-flex">
-                    {seasonBadgeLabel}
+                {isHiddenGame && (
+                  <span className="inline-flex items-center rounded-full border border-rose-300/70 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-200">
+                    Скрыта
                   </span>
                 )}
-                {(canManageThisGame || canManageStatusThisGame) && (
-                  <div className="pointer-events-auto flex items-center gap-2">
-                    {canManageThisGame && (
-                      <CardActionIconButton
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleEditGameFromList(game)
-                        }}
-                        label="Редактировать игру"
-                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                      >
-                        <EditCardIcon />
-                      </CardActionIconButton>
-                    )}
-                    {canManageStatusThisGame && (
-                      <CardActionIconButton
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleOpenStatusModal(game)
-                        }}
-                        label="Сменить статус игры"
-                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                      >
-                        <StatusCardIcon />
-                      </CardActionIconButton>
-                    )}
-                    {canManageThisGame && (
-                      <CardActionIconButton
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleManageTeamsFromList(game)
-                        }}
-                        label="Управление командами"
-                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                      >
-                        <TeamCardIcon />
-                      </CardActionIconButton>
-                    )}
-                  </div>
-                )}
               </div>
-            </div>
-            <div className="space-y-2 p-4">
               <p className="aq-line-clamp-2 text-sm font-semibold text-primary dark:text-slate-100">
                 {game.name || 'Без названия'}
               </p>
@@ -3905,24 +3932,73 @@ const GamesPage = ({
               <p className="text-xs text-slate-400">
                 {getNounTeams(game.teamsCount)}
               </p>
-              {canViewThisGameResults && (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    handleOpenResultsFromGame(game)
-                  }}
-                  className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
-                >
-                  Результаты
-                </button>
+              {(canViewThisGameResults ||
+                hasUserTeamPlace ||
+                canManageThisGame ||
+                canManageStatusThisGame) && (
+                <div className="mt-3 flex items-end justify-between gap-2">
+                  <div className="flex flex-col items-start gap-2">
+                    {canViewThisGameResults && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleOpenResultsFromGame(game)
+                        }}
+                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
+                      >
+                        Результаты
+                      </button>
+                    )}
+                    {hasUserTeamPlace && (
+                      <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
+                        Место: {userTeamPlace}
+                      </span>
+                    )}
+                  </div>
+                  {(canManageThisGame || canManageStatusThisGame) && (
+                    <div className="pointer-events-auto flex items-center gap-2 self-end">
+                      {canManageThisGame && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleEditGameFromList(game)
+                          }}
+                          label="Редактировать игру"
+                          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <EditCardIcon />
+                        </CardActionIconButton>
+                      )}
+                      {canManageStatusThisGame && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleOpenStatusModal(game)
+                          }}
+                          label="Сменить статус игры"
+                          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <StatusCardIcon />
+                        </CardActionIconButton>
+                      )}
+                      {canManageThisGame && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleManageTeamsFromList(game)
+                          }}
+                          label="Управление командами"
+                          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-cyan-300 bg-white/90 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <TeamCardIcon />
+                        </CardActionIconButton>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-            {hasUserTeamPlace && (
-              <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
-                Место: {userTeamPlace}
-              </span>
-            )}
           </SelectableCard>
         </li>
       )
