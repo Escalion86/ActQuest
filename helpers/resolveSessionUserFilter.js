@@ -1,5 +1,10 @@
 const resolveSessionUserFilter = (sessionUser) => {
-  const globalUserId = sessionUser?.globalUserId || sessionUser?._id || null
+  const globalUserId =
+    sessionUser?.globalUserId ||
+    sessionUser?.userId ||
+    sessionUser?.id ||
+    sessionUser?._id ||
+    null
   if (globalUserId) return { _id: globalUserId }
 
   if (sessionUser?.phone) return { phone: Number(sessionUser.phone) }

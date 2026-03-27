@@ -80,19 +80,25 @@ const ProfilePage = ({ initialProfile }) => {
     () => normalizeUserProfile(formState),
     [formState],
   )
+  const resolvedProfileId = useMemo(() => {
+    const idFromState =
+      typeof safeFormState.id === 'string' ? safeFormState.id.trim() : ''
+    if (idFromState) {
+      return idFromState
+    }
+
+    const idFromSession =
+      (typeof session?.user?.globalUserId === 'string'
+        ? session.user.globalUserId.trim()
+        : '') ||
+      (typeof session?.user?._id === 'string' ? session.user._id.trim() : '')
+
+    return idFromSession || null
+  }, [safeFormState.id, session?.user?._id, session?.user?.globalUserId])
 
   const handleSubmit = useCallback(
     async (event) => {
       event.preventDefault()
-
-      if (!safeFormState.id) {
-        setSaveState({
-          isSaving: false,
-          isSaved: false,
-          error: 'Не удалось определить пользователя для обновления профиля.',
-        })
-        return
-      }
 
       setSaveState({ isSaving: true, isSaved: false, error: null })
 
@@ -197,7 +203,7 @@ const ProfilePage = ({ initialProfile }) => {
                   handleChange('photoUrl', nextImages?.[0] ?? '')
                 }
                 directory="users"
-                imageName={safeFormState.id || 'user'}
+                imageName={resolvedProfileId || 'user'}
                 maxImages={1}
                 previewShape="circle"
               />
