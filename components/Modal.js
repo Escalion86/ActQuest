@@ -97,7 +97,7 @@ const Modal = ({
         <div className={`min-h-0 flex-1 overflow-y-auto py-5 ${horizontalPaddingClass}`}>
           {children}
         </div>
-        <div className={`flex shrink-0 flex-col gap-3 border-t border-slate-200/85 bg-white/95 py-4 dark:border-[#00D1FF]/25 dark:bg-[#090018]/95 sm:flex-row sm:items-center sm:justify-end ${horizontalPaddingClass}`}>
+        <div className={`flex shrink-0 flex-row flex-wrap items-center justify-end gap-3 border-t border-slate-200/85 bg-white/95 py-4 dark:border-[#00D1FF]/25 dark:bg-[#090018]/95 ${horizontalPaddingClass}`}>
           {resolvedFooter}
         </div>
       </div>

@@ -5,6 +5,7 @@ import createTaskProgressArrays, {
 } from '@helpers/createTaskProgressArrays'
 import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
 import removeCluePenalties from '@helpers/removeCluePenalties'
+import sanitize from '@helpers/sanitize'
 import secondsToTime from 'telegram/func/secondsToTime'
 import taskText from 'telegram/func/taskText'
 
@@ -17,6 +18,8 @@ const createPromptMessage = (gameType) => {
   const label = PROMPT_TEXT[gameType] || PROMPT_TEXT.classic
   return `<b>${label}</b>`
 }
+
+const sanitizeFragment = (value) => sanitize(String(value || ''))
 
 const ensureDate = (value) => {
   if (!value) return null
@@ -94,7 +97,9 @@ const buildBreakMessage = ({ code, task, breakDuration }) => {
 
   if (task?.postMessage) {
     parts.push(
-      `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${task.postMessage}</blockquote>`
+      `<br /><br /><b>Сообщение от организаторов:</b><br /><blockquote>${sanitizeFragment(
+        task.postMessage
+      )}</blockquote>`
     )
   }
 
@@ -123,7 +128,9 @@ const buildGameFinishedMessage = (game) => {
 
   if (lastTask?.postMessage) {
     parts.push(
-      `<b>Сообщение от прошлого задания:</b><br /><blockquote>${lastTask.postMessage}</blockquote>`
+      `<b>Сообщение от прошлого задания:</b><br /><blockquote>${sanitizeFragment(
+        lastTask.postMessage
+      )}</blockquote>`
     )
   }
 

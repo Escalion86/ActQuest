@@ -1115,6 +1115,60 @@ function GameTeamPage({
         .dark .aq-task-content a:focus-visible {
           color: #bfdbfe;
         }
+
+        .aq-task-content img {
+          display: block;
+          max-width: 100%;
+          height: auto;
+          margin: 12px 0;
+          border-radius: 14px;
+        }
+
+        .aq-task-content .aq-audio-message,
+        .aq-task-content audio-message {
+          display: block;
+          margin: 12px 0;
+          border-radius: 14px;
+          border: 1px solid rgba(37, 99, 235, 0.25);
+          background: rgba(219, 234, 254, 0.45);
+          padding: 10px 12px;
+        }
+
+        .aq-task-content .aq-audio-message__meta {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #1d4ed8;
+        }
+
+        .aq-task-content .aq-audio-message__dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: #2563eb;
+        }
+
+        .aq-task-content .aq-audio-message audio,
+        .aq-task-content audio-message audio {
+          width: 100%;
+        }
+
+        .dark .aq-task-content .aq-audio-message,
+        .dark .aq-task-content audio-message {
+          border-color: rgba(96, 165, 250, 0.4);
+          background: rgba(30, 58, 138, 0.25);
+        }
+
+        .dark .aq-task-content .aq-audio-message__meta {
+          color: #bfdbfe;
+        }
+
+        .dark .aq-task-content .aq-audio-message__dot {
+          background: #93c5fd;
+        }
       `}</style>
     </>
   )

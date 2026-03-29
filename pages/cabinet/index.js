@@ -396,11 +396,19 @@ const CabinetDashboard = ({
 
                     return (
                       <li key={team.id}>
-                        <button
-                          type="button"
+                        <div
+                          role="button"
+                          tabIndex={0}
                           onClick={() => {
                             setSelectedTeamId(team.id)
                             setIsTeamDescriptionOpen(true)
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              setSelectedTeamId(team.id)
+                              setIsTeamDescriptionOpen(true)
+                            }
                           }}
                           className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-cyan-400 hover:bg-cyan-50/70 dark:border-slate-700 dark:bg-slate-800/80 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
                           title={team.name}
@@ -492,7 +500,7 @@ const CabinetDashboard = ({
                           <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
                             Игр: {team.gamesCount ?? 0}
                           </p>
-                        </button>
+                        </div>
                       </li>
                     )
                   })}

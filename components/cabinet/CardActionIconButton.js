@@ -63,19 +63,138 @@ export const TeamCardIcon = () => (
   </svg>
 )
 
-export const StatusCardIcon = () => (
+export const StatusCardIcon = ({ status }) => {
+  const normalizedStatus = String(status || '').toLowerCase()
+
+  if (normalizedStatus === 'active') {
+    return (
+      <svg
+        className="h-5 w-5"
+        viewBox="0 0 20 20"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="10" cy="10" r="6.75" stroke="currentColor" strokeWidth="1.5" />
+        <path
+          d="M10 6.5V10.2L12.7 11.8"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
+  if (normalizedStatus === 'started') {
+    return (
+      <svg
+        className="h-5 w-5"
+        viewBox="0 0 20 20"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M7.25 5.5L14.5 10L7.25 14.5V5.5Z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
+  if (normalizedStatus === 'finished') {
+    return (
+      <svg
+        className="h-5 w-5"
+        viewBox="0 0 20 20"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M5.5 10.5L8.6 13.6L14.5 7.7"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
+  if (normalizedStatus === 'closed') {
+    return (
+      <svg
+        className="h-5 w-5"
+        viewBox="0 0 20 20"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          x="4.5"
+          y="9"
+          width="11"
+          height="7"
+          rx="1.75"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+        <path
+          d="M6.8 9V7.6C6.8 5.95 8.15 4.6 9.8 4.6H10.2C11.85 4.6 13.2 5.95 13.2 7.6V9"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+    )
+  }
+
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M4 4h12M4 10h12M4 16h8"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+export const TargetCardIcon = () => (
   <svg
     className="h-5 w-5"
     viewBox="0 0 20 20"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
+    <circle
+      cx="10"
+      cy="10"
+      r="6.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <circle
+      cx="10"
+      cy="10"
+      r="3.2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
     <path
-      d="M4 4h12M4 10h12M4 16h8"
+      d="M10 1.75V4.25M10 15.75V18.25M1.75 10H4.25M15.75 10H18.25"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
-      strokeLinejoin="round"
     />
   </svg>
 )
@@ -138,6 +257,14 @@ CardActionIconButton.defaultProps = {
   as: 'button',
   title: null,
   className: '',
+}
+
+StatusCardIcon.propTypes = {
+  status: PropTypes.string,
+}
+
+StatusCardIcon.defaultProps = {
+  status: '',
 }
 
 export default CardActionIconButton

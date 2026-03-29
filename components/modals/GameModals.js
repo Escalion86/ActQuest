@@ -7,22 +7,25 @@ import GameRegisterModal from './GameRegisterModal'
 import GameCreateModal from './GameCreateModal'
 import GameDescriptionModal from './GameDescriptionModal'
 import GameResultsModal from './GameResultsModal'
+import GameTasksViewModal from './GameTasksViewModal'
 
 const GameModals = ({
   selectedGame,
   editGame,
   isEditModalOpen,
   handleCloseEditModal,
+  isTasksModalOpen,
+  handleCloseTasksModal,
   canEditSelectedGame,
   isSaving,
   location,
   isDirty,
   handleModalPrimaryAction,
+  handleTasksModalPrimaryAction,
   handleResetChanges,
   updateSelectedGame,
   GAME_TYPE_OPTIONS,
   CLUE_EARLY_MODE_OPTIONS,
-  handleOpenStatusModal,
   toMinutes,
   toSeconds,
   handleAddTask,
@@ -117,6 +120,8 @@ const GameModals = ({
   createGameFeedback,
   isDescriptionModalOpen,
   handleCloseDescriptionModal,
+  isTasksViewModalOpen,
+  handleCloseTasksViewModal,
   gameTypeLabel,
   plannedStartLabel,
   canViewRestrictedGameInfo,
@@ -158,7 +163,6 @@ const GameModals = ({
       updateSelectedGame={updateSelectedGame}
       GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
       CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
-      handleOpenStatusModal={handleOpenStatusModal}
       toMinutes={toMinutes}
       toSeconds={toSeconds}
       handleAddTask={handleAddTask}
@@ -214,6 +218,78 @@ const GameModals = ({
       isEditGameSeasonsLoading={isEditGameSeasonsLoading}
       isEditGameSeasonCreating={isEditGameSeasonCreating}
       handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+    />
+
+    <GameEditModal
+      selectedGame={editGame ?? selectedGame}
+      isEditModalOpen={isTasksModalOpen}
+      handleCloseEditModal={handleCloseTasksModal}
+      canEditSelectedGame={canEditSelectedGame}
+      isSaving={isSaving}
+      location={location}
+      isDirty={isDirty}
+      handleModalPrimaryAction={handleTasksModalPrimaryAction}
+      handleResetChanges={handleResetChanges}
+      updateSelectedGame={updateSelectedGame}
+      GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
+      CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
+      toMinutes={toMinutes}
+      toSeconds={toSeconds}
+      handleAddTask={handleAddTask}
+      handleRemoveTask={handleRemoveTask}
+      handleTaskFieldChange={handleTaskFieldChange}
+      handleTaskNumberChange={handleTaskNumberChange}
+      handleTaskOptionalNumberChange={handleTaskOptionalNumberChange}
+      handleTaskCheckboxChange={handleTaskCheckboxChange}
+      handleTaskCoordinateChange={handleTaskCoordinateChange}
+      handleAddTaskCode={handleAddTaskCode}
+      handleTaskCodeChange={handleTaskCodeChange}
+      handleRemoveTaskCode={handleRemoveTaskCode}
+      handleAddTaskImage={handleAddTaskImage}
+      handleTaskImageChange={handleTaskImageChange}
+      handleRemoveTaskImage={handleRemoveTaskImage}
+      handleAddClue={handleAddClue}
+      handleTaskClueChange={handleTaskClueChange}
+      handleRemoveClue={handleRemoveClue}
+      handleAddClueImage={handleAddClueImage}
+      handleClueImageChange={handleClueImageChange}
+      handleRemoveClueImage={handleRemoveClueImage}
+      handleAddSubTask={handleAddSubTask}
+      handleSubTaskChange={handleSubTaskChange}
+      handleRemoveSubTask={handleRemoveSubTask}
+      handleAddPenaltyCode={handleAddPenaltyCode}
+      handlePenaltyCodeChange={handlePenaltyCodeChange}
+      handleRemovePenaltyCode={handleRemovePenaltyCode}
+      handleAddBonusCode={handleAddBonusCode}
+      handleBonusCodeChange={handleBonusCodeChange}
+      handleRemoveBonusCode={handleRemoveBonusCode}
+      handleAddPrice={handleAddPrice}
+      handlePriceChange={handlePriceChange}
+      handleRemovePrice={handleRemovePrice}
+      handleAddFinance={handleAddFinance}
+      handleFinanceChange={handleFinanceChange}
+      handleRemoveFinance={handleRemoveFinance}
+      canGenerateResults={canGenerateResults}
+      isGeneratingResults={isGeneratingResults}
+      handleGenerateResults={handleGenerateResults}
+      currencyFormatter={currencyFormatter}
+      financesSummary={financesSummary}
+      balanceClass={balanceClass}
+      expandedTaskIds={expandedTaskIds}
+      toggleTaskExpansion={toggleTaskExpansion}
+      selectedGameModerators={selectedGameModerators}
+      availableModeratorsForSelect={availableModeratorsForSelect}
+      availableModeratorsMap={availableModeratorsMap}
+      selectedModeratorToAdd={selectedModeratorToAdd}
+      setSelectedModeratorToAdd={setSelectedModeratorToAdd}
+      handleAddModerator={handleAddModerator}
+      handleRemoveModerator={handleRemoveModerator}
+      editGameSeasons={editGameSeasons}
+      isEditGameSeasonsLoading={isEditGameSeasonsLoading}
+      isEditGameSeasonCreating={isEditGameSeasonCreating}
+      handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+      sectionMode="tasks"
+      modalTitleOverride={`Редактор заданий «${(editGame ?? selectedGame)?.name || 'Без названия'}»`}
     />
 
     <GameTeamsModal
@@ -301,6 +377,12 @@ const GameModals = ({
       handleCloseResultsModal={handleCloseResultsModal}
       resultsModalState={resultsModalState}
     />
+
+    <GameTasksViewModal
+      isTasksViewModalOpen={isTasksViewModalOpen}
+      handleCloseTasksViewModal={handleCloseTasksViewModal}
+      selectedGame={selectedGame}
+    />
   </>
 )
 
@@ -345,6 +427,8 @@ GameModals.propTypes = {
   editGame: PropTypes.shape({ id: PropTypes.string }),
   isEditModalOpen: PropTypes.bool.isRequired,
   handleCloseEditModal: PropTypes.func.isRequired,
+  isTasksModalOpen: PropTypes.bool.isRequired,
+  handleCloseTasksModal: PropTypes.func.isRequired,
   canEditSelectedGame: PropTypes.bool.isRequired,
   isSaving: PropTypes.bool.isRequired,
   location: PropTypes.oneOfType([
@@ -353,11 +437,11 @@ GameModals.propTypes = {
   ]),
   isDirty: PropTypes.bool.isRequired,
   handleModalPrimaryAction: PropTypes.func.isRequired,
+  handleTasksModalPrimaryAction: PropTypes.func.isRequired,
   handleResetChanges: PropTypes.func.isRequired,
   updateSelectedGame: PropTypes.func.isRequired,
   GAME_TYPE_OPTIONS: PropTypes.array.isRequired,
   CLUE_EARLY_MODE_OPTIONS: PropTypes.array.isRequired,
-  handleOpenStatusModal: PropTypes.func.isRequired,
   toMinutes: PropTypes.func.isRequired,
   toSeconds: PropTypes.func.isRequired,
   handleAddTask: PropTypes.func.isRequired,
@@ -489,6 +573,8 @@ GameModals.propTypes = {
   createGameFeedback: registerFeedbackShape,
   isDescriptionModalOpen: PropTypes.bool.isRequired,
   handleCloseDescriptionModal: PropTypes.func.isRequired,
+  isTasksViewModalOpen: PropTypes.bool.isRequired,
+  handleCloseTasksViewModal: PropTypes.func.isRequired,
   gameTypeLabel: PropTypes.string.isRequired,
   plannedStartLabel: PropTypes.string.isRequired,
   canViewRestrictedGameInfo: PropTypes.bool.isRequired,
@@ -557,3 +643,4 @@ GameModals.defaultProps = {
 }
 
 export default memo(GameModals)
+

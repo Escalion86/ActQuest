@@ -4,6 +4,7 @@ import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
 import buildGameResultComputed from '@server/buildGameResultComputed'
 import updateParticipantsClosedStats from '@server/updateParticipantsClosedStats'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
+import sanitize from '@helpers/sanitize'
 
 export const config = {
   api: {
@@ -34,6 +35,33 @@ const hasResultSnapshots = (result) =>
   result.gameTeams.length > 0 &&
   Array.isArray(result?.teamsUsers) &&
   result.teamsUsers.length > 0
+
+const sanitizeTaskMedia = (media = []) =>
+  (Array.isArray(media) ? media : [])
+    .map((item, index) => ({
+      id:
+        typeof item?.id === 'string' && item.id.trim().length > 0
+          ? item.id.trim()
+          : `task-media-${index}`,
+      type: item?.type === 'audio' ? 'audio' : 'image',
+      url: typeof item?.url === 'string' ? item.url.trim() : '',
+      mime: typeof item?.mime === 'string' ? item.mime.trim() : '',
+      size: Number(item?.size) || 0,
+      duration: Number(item?.duration) || 0,
+      path: typeof item?.path === 'string' ? item.path.trim() : '',
+      title: typeof item?.title === 'string' ? item.title.trim() : '',
+    }))
+    .filter((item) => item.url !== '')
+
+const sanitizeTasksRichContent = (tasks = []) =>
+  (Array.isArray(tasks) ? tasks : []).map((task) => ({
+    ...task,
+    taskRich:
+      typeof task?.taskRich === 'string' && task.taskRich.trim().length > 0
+        ? sanitize(task.taskRich)
+        : '',
+    taskMedia: sanitizeTaskMedia(task?.taskMedia),
+  }))
 
 export default async function handler(req, res) {
   if (req.method !== 'PUT') {
@@ -107,6 +135,10 @@ export default async function handler(req, res) {
       previousStatus !== 'closed'
 
     const updateData = { ...updatePayload, status: resolvedStatus }
+
+    if (Array.isArray(updateData.tasks)) {
+      updateData.tasks = sanitizeTasksRichContent(updateData.tasks)
+    }
 
     if (shouldReset) {
       updateData.dateStartFact = null

@@ -27,6 +27,11 @@ const sanitizeConf = {
     'ol',
     'li',
     'ul',
+    'img',
+    'figure',
+    'audio',
+    'source',
+    'audio-message',
   ],
   // selfClosing: ['br'],
   allowedAttributes: {
@@ -42,26 +47,24 @@ const sanitizeConf = {
     h5: ['style', 'class'],
     h6: ['style', 'class'],
     li: ['style'],
+    img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
+    figure: ['class', 'style', 'data-src'],
+    audio: ['src', 'controls', 'preload'],
+    source: ['src', 'type'],
+    'audio-message': ['src', 'title', 'mime', 'class'],
   },
-  // allowedStyles: {
-  // '*': {
-  // Match HEX and RGB
-  // 'color': [/^#(0x)?[0-9a-f]+$/i, /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/],
-  // 'text-align': [/^left$/, /^right$/, /^center$/],
-  // Match any number with px, em, or %
-  // 'font-size': [/^\d+(?:px|em|%)$/]
-  // },
-  // div: {
-  //   // Match HEX and RGB
-  //   // 'color': [/^#(0x)?[0-9a-f]+$/i, /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/],
-  //   'text-align': [/^left$/, /^right$/, /^center$/],
-  //   // Match any number with px, em, or %
-  //   // 'font-size': [/^\d+(?:px|em|%)$/]
-  // },
-  // 'p': {
-  //   'font-size': [/^\d+rem$/]
-  // }
-  // },
+  allowedStyles: {
+    '*': {
+      color: [
+        /^#([0-9a-f]{3}|[0-9a-f]{6})$/i,
+        /^rgb\(\s*(\d{1,3}\s*,\s*){2}\d{1,3}\s*\)$/i,
+        /^rgba\(\s*(\d{1,3}\s*,\s*){3}(0|1|0?\.\d+)\s*\)$/i,
+      ],
+      'font-family': [/^[a-z0-9\s'",-]+$/i],
+      'font-size': [/^\d+(px|rem|em|%)$/],
+      'text-align': [/^(left|right|center|justify)$/],
+    },
+  },
 }
 
 const sanitize = (html) =>

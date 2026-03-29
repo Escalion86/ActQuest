@@ -3,6 +3,7 @@ import fetchTeam from '@server/fetchTeam'
 import webGameProcess from '@server/webGameProcess'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import taskText from 'telegram/func/taskText'
+import sanitize from '@helpers/sanitize'
 
 const ensureDateValue = (value) => {
   if (!value) return null
@@ -66,6 +67,7 @@ export const GAME_TASK_ERRORS = {
 const buildError = (code, extra = {}) => ({ success: false, errorCode: code, ...extra })
 
 const safeSerialize = (value) => JSON.parse(JSON.stringify(value))
+const sanitizeFragment = (value) => sanitize(String(value || ''))
 
 const computeTaskHtml = async ({
   game,
@@ -237,7 +239,7 @@ const computeTaskHtml = async ({
         completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
       }
       if (lastTask?.postMessage) {
-        postCompletionMessage = lastTask.postMessage
+        postCompletionMessage = sanitizeFragment(lastTask.postMessage)
       }
       taskHtml = completionParts.join('')
       taskState = 'completed'
@@ -304,7 +306,7 @@ const computeTaskHtml = async ({
       if (breakSecondsLeft !== null) {
         const postMessage = tasks[activeTaskIndex]?.postMessage
         if (postMessage) {
-          postCompletionMessage = postMessage
+          postCompletionMessage = sanitizeFragment(postMessage)
         }
         const breakParts = [
           breakReason === 'timeout'
@@ -361,7 +363,7 @@ const computeTaskHtml = async ({
         if (activeTaskIndex > 0) {
           const previousTask = tasks[activeTaskIndex - 1] ?? null
           if (previousTask?.postMessage) {
-            postCompletionMessage = previousTask.postMessage
+            postCompletionMessage = sanitizeFragment(previousTask.postMessage)
           }
         }
       }
@@ -376,7 +378,7 @@ const computeTaskHtml = async ({
       completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
     }
     if (lastTask?.postMessage) {
-      postCompletionMessage = lastTask.postMessage
+      postCompletionMessage = sanitizeFragment(lastTask.postMessage)
     }
     taskHtml = completionParts.join('')
     taskState = 'completed'

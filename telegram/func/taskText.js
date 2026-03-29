@@ -3,6 +3,19 @@ import secondsToTime from './secondsToTime'
 import { getNounCodes, getNounPoints } from '@helpers/getNoun'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import linkifyText from './linkifyText'
+import sanitize from '@helpers/sanitize'
+
+const getTaskBodyHtml = ({ taskTextValue, taskRichValue, format }) => {
+  if (
+    format === 'web' &&
+    typeof taskRichValue === 'string' &&
+    taskRichValue.trim().length > 0
+  ) {
+    return sanitize(taskRichValue)
+  }
+
+  return `<blockquote>${linkifyText(taskTextValue)}</blockquote>`
+}
 
 const taskText = ({
   game,
@@ -20,17 +33,19 @@ const taskText = ({
   format = 'telegram',
 }) => {
   const { tasks } = game
+  const taskEntry = tasks[taskNum] || {}
   const {
-    task,
-    codes,
-    bonusCodes,
-    penaltyCodes,
-    clues,
+    task = '',
+    taskRich = '',
+    codes = [],
+    bonusCodes = [],
+    penaltyCodes = [],
+    clues = [],
     numCodesToCompliteTask,
     taskBonusForComplite,
-    subTasks,
-  } = tasks[taskNum]
-  const currentTaskId = tasks[taskNum]?._id ? String(tasks[taskNum]._id) : null
+    subTasks = [],
+  } = taskEntry
+  const currentTaskId = taskEntry?._id ? String(taskEntry._id) : null
   const startTaskDate =
     startTaskTime instanceof Date && !Number.isNaN(startTaskTime.getTime())
       ? startTaskTime
@@ -143,9 +158,15 @@ const taskText = ({
     game.type === 'photo' ? 'ОТПРАВТЕ ФОТО' : 'ВВЕДИТЕ КОД'
   }</b>`
 
+  const taskBodyHtml = getTaskBodyHtml({
+    taskTextValue: task,
+    taskRichValue: taskRich,
+    format,
+  })
+
   return `<b>Задание №${taskNum + 1}${
-    task.isBonusTask ? ' (БОНУСНОЕ)' : ''
-  }:</b>\n<blockquote>${linkifyText(task)}</blockquote>${cluesText}${
+    taskEntry.isBonusTask ? ' (БОНУСНОЕ)' : ''
+  }:</b>\n${taskBodyHtml}${cluesText}${
     game.type !== 'photo' && (haveBonusCodes || havePenaltyCodes)
       ? `\n\n<b>Внимание:</b> На месте есть ${
           haveBonusCodes && havePenaltyCodes

@@ -8,6 +8,7 @@ import SelectableCard from '@components/cabinet/SelectableCard'
 import CardActionIconButton, {
   EditCardIcon,
   StatusCardIcon,
+  TargetCardIcon,
   TeamCardIcon,
 } from '@components/cabinet/CardActionIconButton'
 import FeedbackToast from '@components/FeedbackToast'
@@ -188,11 +189,35 @@ const normalizeVisibleStatus = (status, canSeeClosedStatus) => {
   return status
 }
 
+const getStatusActionLabel = (status) => {
+  const normalizedStatus = String(status || '').toLowerCase()
+
+  if (normalizedStatus === 'active') {
+    return 'Статус игры: активна'
+  }
+
+  if (normalizedStatus === 'started') {
+    return 'Статус игры: в процессе'
+  }
+
+  if (normalizedStatus === 'finished') {
+    return 'Статус игры: завершена'
+  }
+
+  if (normalizedStatus === 'closed') {
+    return 'Статус игры: закрыта'
+  }
+
+  return 'Сменить статус игры'
+}
+
 const createTask = () => ({
   id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
   mongoId: null,
   title: '',
   task: '',
+  taskRich: '',
+  taskMedia: [],
   taskBonusForComplite: 0,
   clues: [],
   subTasks: [],
@@ -220,6 +245,20 @@ const sanitizeStringArray = (values = []) =>
   (Array.isArray(values) ? values : [])
     .map((item) => (typeof item === 'string' ? item.trim() : ''))
     .filter((item) => item !== '')
+
+const stripHtmlToPlainText = (value) =>
+  String(value || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h1|h2|h3|h4|h5|h6|li|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\r?\n[ \t]+/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 
 const cloneGameDraft = (game) => {
   if (!game || typeof game !== 'object') {
@@ -273,7 +312,26 @@ const buildUpdatePayload = (game) => {
 
     const baseTask = {
       title: typeof task.title === 'string' ? task.title : '',
-      task: typeof task.task === 'string' ? task.task : '',
+      task:
+        typeof task.task === 'string' && task.task.trim() !== ''
+          ? task.task
+          : stripHtmlToPlainText(task.taskRich),
+      taskRich: typeof task.taskRich === 'string' ? task.taskRich : '',
+      taskMedia: (Array.isArray(task.taskMedia) ? task.taskMedia : [])
+        .map((media, index) => ({
+          id:
+            typeof media?.id === 'string' && media.id.trim() !== ''
+              ? media.id.trim()
+              : `task-media-${index}`,
+          type: media?.type === 'audio' ? 'audio' : 'image',
+          url: typeof media?.url === 'string' ? media.url.trim() : '',
+          mime: typeof media?.mime === 'string' ? media.mime.trim() : '',
+          size: Number(media?.size) || 0,
+          duration: Number(media?.duration) || 0,
+          path: typeof media?.path === 'string' ? media.path.trim() : '',
+          title: typeof media?.title === 'string' ? media.title.trim() : '',
+        }))
+        .filter((media) => media.url !== ''),
       taskBonusForComplite: Number(task.taskBonusForComplite) || 0,
       clues: (task.clues ?? []).map((clue) => {
         const normalizedClue = {
@@ -504,6 +562,7 @@ const GamesPage = ({
     safeInitialGames[0]?.id ?? null,
   )
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isTasksModalOpen, setIsTasksModalOpen] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
   const [statusModalGameId, setStatusModalGameId] = useState('')
   const [statusValidationResult, setStatusValidationResult] = useState(null)
@@ -544,6 +603,7 @@ const GamesPage = ({
   const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
   const [isResultsModalOpen, setIsResultsModalOpen] = useState(false)
+  const [isTasksViewModalOpen, setIsTasksViewModalOpen] = useState(false)
   const [resultsModalState, setResultsModalState] = useState({
     isLoading: false,
     error: null,
@@ -893,7 +953,7 @@ const GamesPage = ({
 
   useEffect(() => {
     setExpandedTaskIds([])
-    if (!isEditModalOpen) {
+    if (!isEditModalOpen && !isTasksModalOpen) {
       setEditingGame(null)
     }
     setIsStatusModalOpen(false)
@@ -908,8 +968,7 @@ const GamesPage = ({
     setSelectedTeamToAdd('')
     setRemovingTeamIds([])
     setSelectedModeratorToAdd('')
-    setIsResultsModalOpen(false)
-  }, [isEditModalOpen, selectedGameId])
+  }, [isEditModalOpen, isTasksModalOpen, selectedGameId])
 
   useEffect(() => {
     if (!router.isReady) {
@@ -931,7 +990,9 @@ const GamesPage = ({
     setSelectedGameId(targetGame.id)
     setIsDescriptionModalOpen(true)
     setIsEditModalOpen(false)
+    setIsTasksModalOpen(false)
     setIsTeamsModalOpen(false)
+    setIsTasksViewModalOpen(false)
 
     const nextQuery = { ...router.query }
     delete nextQuery.gameId
@@ -2408,10 +2469,6 @@ const GamesPage = ({
       return false
     }
 
-    if (isClosedStatus(gameForPermissions.status)) {
-      return false
-    }
-
     if (canEditAllGames) {
       return true
     }
@@ -2502,6 +2559,17 @@ const GamesPage = ({
     [canManageGameStatus],
   )
 
+  const canOpenGameEditModal = useCallback(
+    (game) => {
+      if (!game) {
+        return false
+      }
+
+      return canManageGameStatus(game)
+    },
+    [canManageGameStatus],
+  )
+
   const updateSelectedGame = useCallback(
     (updater) => {
       if (!canEditSelectedGame || !editingGame) return
@@ -2513,7 +2581,23 @@ const GamesPage = ({
 
         const patch =
           typeof updater === 'function' ? updater(prevGame) : updater
-        const nextGame = { ...prevGame, ...patch }
+        const isClosedEditing = isClosedStatus(prevGame.status)
+        const allowedClosedKeys = ['showCreator', 'showTasks', 'hideResult']
+        const normalizedPatch =
+          isClosedEditing && patch && typeof patch === 'object'
+            ? Object.fromEntries(
+                Object.entries(patch).filter(([key]) =>
+                  allowedClosedKeys.includes(key),
+                ),
+              )
+            : patch
+        if (
+          isClosedEditing &&
+          (!normalizedPatch || Object.keys(normalizedPatch).length === 0)
+        ) {
+          return prevGame
+        }
+        const nextGame = { ...prevGame, ...normalizedPatch }
         if (Boolean(nextGame.isRated ?? true)) {
           nextGame.hidden = false
         } else {
@@ -2619,6 +2703,7 @@ const GamesPage = ({
       setFeedback({ type: 'success', message: 'Изменения сохранены' })
       setEditingGame(null)
       setIsEditModalOpen(false)
+      setIsTasksModalOpen(false)
     } catch (error) {
       console.error('Failed to update game', error)
       setFeedback({
@@ -3356,11 +3441,31 @@ const GamesPage = ({
     setSelectedGameId(game.id)
     setIsTeamsModalOpen(false)
     setIsEditModalOpen(false)
+    setIsTasksModalOpen(false)
     setIsResultsModalOpen(false)
+    setIsTasksViewModalOpen(false)
     setIsDescriptionModalOpen(true)
   }, [])
 
   const handleEditGameFromList = useCallback(
+    (game) => {
+      if (!game || !canOpenGameEditModal(game)) {
+        return
+      }
+
+      setSelectedGameId(game.id)
+      setEditingGame(cloneGameDraft(game))
+      setIsTeamsModalOpen(false)
+      setIsResultsModalOpen(false)
+      setIsTasksViewModalOpen(false)
+      setIsDescriptionModalOpen(false)
+      setIsTasksModalOpen(false)
+      setIsEditModalOpen(true)
+    },
+    [canOpenGameEditModal],
+  )
+
+  const handleEditTasksFromList = useCallback(
     (game) => {
       if (!game || !canManageGame(game)) {
         return
@@ -3370,8 +3475,10 @@ const GamesPage = ({
       setEditingGame(cloneGameDraft(game))
       setIsTeamsModalOpen(false)
       setIsResultsModalOpen(false)
+      setIsTasksViewModalOpen(false)
       setIsDescriptionModalOpen(false)
-      setIsEditModalOpen(true)
+      setIsEditModalOpen(false)
+      setIsTasksModalOpen(true)
     },
     [canManageGame],
   )
@@ -3379,7 +3486,7 @@ const GamesPage = ({
   const handleOpenStatusModal = useCallback(
     (gameCandidate = null) => {
       const game = gameCandidate || selectedGame
-      if (!game || !canManageGameStatus(game)) {
+      if (!game || !canEditAllGames || !canManageGameStatus(game)) {
         return
       }
 
@@ -3387,7 +3494,7 @@ const GamesPage = ({
       setStatusValidationResult(null)
       setIsStatusModalOpen(true)
     },
-    [canManageGameStatus, selectedGame],
+    [canEditAllGames, canManageGameStatus, selectedGame],
   )
 
   const handleCloseStatusModal = useCallback(() => {
@@ -3401,7 +3508,11 @@ const GamesPage = ({
 
   const handleStatusAction = useCallback(
     async (actionId) => {
-      if (!statusModalGame || !canManageGameStatus(statusModalGame)) {
+      if (
+        !statusModalGame ||
+        !canEditAllGames ||
+        !canManageGameStatus(statusModalGame)
+      ) {
         return
       }
 
@@ -3592,6 +3703,7 @@ const GamesPage = ({
       }
     },
     [
+      canEditAllGames,
       canManageGameStatus,
       fetchGamesPage,
       gamesFilterLocation,
@@ -3609,6 +3721,7 @@ const GamesPage = ({
 
       setSelectedGameId(game.id)
       setIsResultsModalOpen(false)
+      setIsTasksViewModalOpen(false)
       setIsDescriptionModalOpen(false)
       setIsTeamsModalOpen(true)
     },
@@ -3627,6 +3740,21 @@ const GamesPage = ({
     const status =
       typeof game.status === 'string' ? game.status.toLowerCase() : ''
     return status === 'finished' || status === 'closed'
+  }, [])
+
+  const canViewTasksForGame = useCallback((game) => {
+    if (!game || !Boolean(game.showTasks)) {
+      return false
+    }
+
+    const status =
+      typeof game.status === 'string' ? game.status.toLowerCase() : ''
+    const isCompleted = status === 'finished' || status === 'closed'
+    if (!isCompleted) {
+      return false
+    }
+
+    return Array.isArray(game.tasks) && game.tasks.length > 0
   }, [])
 
   const canGenerateResults = useMemo(() => {
@@ -3747,6 +3875,7 @@ const GamesPage = ({
       setIsDescriptionModalOpen(false)
       setIsEditModalOpen(false)
       setIsTeamsModalOpen(false)
+      setIsTasksViewModalOpen(false)
       setIsResultsModalOpen(true)
       loadGameResults(game)
     },
@@ -3755,6 +3884,27 @@ const GamesPage = ({
 
   const handleCloseResultsModal = useCallback(() => {
     setIsResultsModalOpen(false)
+  }, [])
+
+  const handleOpenTasksViewFromGame = useCallback(
+    (game) => {
+      if (!game || !canViewTasksForGame(game)) {
+        return
+      }
+
+      setSelectedGameId(game.id)
+      setIsDescriptionModalOpen(false)
+      setIsEditModalOpen(false)
+      setIsTasksModalOpen(false)
+      setIsTeamsModalOpen(false)
+      setIsResultsModalOpen(false)
+      setIsTasksViewModalOpen(true)
+    },
+    [canViewTasksForGame],
+  )
+
+  const handleCloseTasksViewModal = useCallback(() => {
+    setIsTasksViewModalOpen(false)
   }, [])
 
   const handleGenerateResults = useCallback(async () => {
@@ -3853,25 +4003,27 @@ const GamesPage = ({
     shouldShowLocationFilter,
   ])
 
-  const handleOpenEditModal = useCallback(() => {
-    if (!canEditSelectedGame) {
-      return
-    }
-
-    setEditingGame(cloneGameDraft(selectedGame))
-    setIsResultsModalOpen(false)
-    setIsDescriptionModalOpen(false)
-    setIsEditModalOpen(true)
-  }, [canEditSelectedGame, selectedGame])
-
   const handleCloseEditModal = useCallback(() => {
     if (isSaving) {
       return
     }
 
-    setEditingGame(null)
     setIsEditModalOpen(false)
-  }, [isSaving])
+    if (!isTasksModalOpen) {
+      setEditingGame(null)
+    }
+  }, [isSaving, isTasksModalOpen])
+
+  const handleCloseTasksModal = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+
+    setIsTasksModalOpen(false)
+    if (!isEditModalOpen) {
+      setEditingGame(null)
+    }
+  }, [isEditModalOpen, isSaving])
 
   const handleCloseDescriptionModal = useCallback(() => {
     setIsDescriptionModalOpen(false)
@@ -3890,6 +4042,24 @@ const GamesPage = ({
   }, [
     canEditSelectedGame,
     handleCloseEditModal,
+    handleSaveChanges,
+    isDirty,
+    isSaving,
+  ])
+
+  const handleTasksModalPrimaryAction = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+
+    if (isDirty && canEditSelectedGame) {
+      handleSaveChanges()
+    } else {
+      handleCloseTasksModal()
+    }
+  }, [
+    canEditSelectedGame,
+    handleCloseTasksModal,
     handleSaveChanges,
     isDirty,
     isSaving,
@@ -3981,8 +4151,11 @@ const GamesPage = ({
         : 'Дата не задана'
 
       const canManageThisGame = canManageGame(game)
-      const canManageStatusThisGame = canManageGameStatus(game)
+      const canEditThisGame = canOpenGameEditModal(game)
+      const canManageStatusThisGame =
+        canEditAllGames && canManageGameStatus(game)
       const canViewThisGameResults = canViewResultsForGame(game)
+      const canViewThisGameTasks = canViewTasksForGame(game)
       const visibleStatus = normalizeVisibleStatus(
         game.status,
         canSeeClosedStatus,
@@ -4067,14 +4240,18 @@ const GamesPage = ({
                   </div>
                 </div>
                 {(hasUserTeamPlace ||
+                  canEditThisGame ||
                   canManageThisGame ||
                   canManageStatusThisGame ||
-                  canViewThisGameResults) && (
+                  canViewThisGameResults ||
+                  canViewThisGameTasks) && (
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      {(canManageThisGame || canManageStatusThisGame) && (
+                      {(canEditThisGame ||
+                        canManageThisGame ||
+                        canManageStatusThisGame) && (
                         <>
-                          {canManageThisGame && (
+                          {canEditThisGame && (
                             <CardActionIconButton
                               onClick={(event) => {
                                 event.stopPropagation()
@@ -4085,15 +4262,28 @@ const GamesPage = ({
                               <EditCardIcon />
                             </CardActionIconButton>
                           )}
+                          {canManageThisGame && (
+                            <CardActionIconButton
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleEditTasksFromList(game)
+                              }}
+                              label="Редактор заданий"
+                              title="Открыть редактор заданий"
+                            >
+                              <TargetCardIcon />
+                            </CardActionIconButton>
+                          )}
                           {canManageStatusThisGame && (
                             <CardActionIconButton
                               onClick={(event) => {
                                 event.stopPropagation()
                                 handleOpenStatusModal(game)
                               }}
-                              label="Сменить статус игры"
+                              label={getStatusActionLabel(game.status)}
+                              title={getStatusActionLabel(game.status)}
                             >
-                              <StatusCardIcon />
+                              <StatusCardIcon status={game.status} />
                             </CardActionIconButton>
                           )}
                           {canManageThisGame && (
@@ -4115,17 +4305,33 @@ const GamesPage = ({
                         </span>
                       )}
                     </div>
-                    {canViewThisGameResults && (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleOpenResultsFromGame(game)
-                        }}
-                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
-                      >
-                        Результаты
-                      </button>
+                    {(canViewThisGameTasks || canViewThisGameResults) && (
+                      <div className="flex items-center gap-2">
+                        {canViewThisGameTasks && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleOpenTasksViewFromGame(game)
+                            }}
+                            className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-violet-300/70 bg-violet-50/85 px-4 py-1.5 text-sm font-semibold text-violet-700 transition hover:border-violet-500 hover:bg-violet-100 dark:border-violet-500/45 dark:bg-violet-500/12 dark:text-violet-200 dark:hover:bg-violet-500/20"
+                          >
+                            Задания
+                          </button>
+                        )}
+                        {canViewThisGameResults && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleOpenResultsFromGame(game)
+                            }}
+                            className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
+                          >
+                            Результаты
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -4137,12 +4343,17 @@ const GamesPage = ({
     },
     [
       canManageGame,
+      canOpenGameEditModal,
       canManageGameStatus,
+      canEditAllGames,
       canSeeClosedStatus,
       canViewResultsForGame,
+      canViewTasksForGame,
       getNounTeams,
       handleEditGameFromList,
+      handleEditTasksFromList,
       handleManageTeamsFromList,
+      handleOpenTasksViewFromGame,
       handleOpenResultsFromGame,
       handleOpenStatusModal,
       handleSelectGameCard,
@@ -4160,8 +4371,11 @@ const GamesPage = ({
         : 'Дата не задана'
 
       const canManageThisGame = canManageGame(game)
-      const canManageStatusThisGame = canManageGameStatus(game)
+      const canEditThisGame = canOpenGameEditModal(game)
+      const canManageStatusThisGame =
+        canEditAllGames && canManageGameStatus(game)
       const canViewThisGameResults = canViewResultsForGame(game)
+      const canViewThisGameTasks = canViewTasksForGame(game)
       const visibleStatus = normalizeVisibleStatus(
         game.status,
         canSeeClosedStatus,
@@ -4229,11 +4443,25 @@ const GamesPage = ({
                 {getNounTeams(game.teamsCount)}
               </p>
               {(canViewThisGameResults ||
+                canViewThisGameTasks ||
                 hasUserTeamPlace ||
+                canEditThisGame ||
                 canManageThisGame ||
                 canManageStatusThisGame) && (
                 <div className="flex items-end justify-between gap-2 mt-3">
                   <div className="flex flex-col items-start gap-2">
+                    {canViewThisGameTasks && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleOpenTasksViewFromGame(game)
+                        }}
+                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-violet-300/70 bg-violet-50/80 px-4 py-1.5 text-sm font-semibold text-violet-700 transition hover:border-violet-500 hover:bg-violet-100 dark:border-violet-500/45 dark:bg-violet-500/12 dark:text-violet-200 dark:hover:bg-violet-500/20"
+                      >
+                        Задания
+                      </button>
+                    )}
                     {canViewThisGameResults && (
                       <button
                         type="button"
@@ -4252,9 +4480,11 @@ const GamesPage = ({
                       </span>
                     )}
                   </div>
-                  {(canManageThisGame || canManageStatusThisGame) && (
+                  {(canEditThisGame ||
+                    canManageThisGame ||
+                    canManageStatusThisGame) && (
                     <div className="flex items-center self-end gap-2 pointer-events-auto">
-                      {canManageThisGame && (
+                      {canEditThisGame && (
                         <CardActionIconButton
                           onClick={(event) => {
                             event.stopPropagation()
@@ -4266,16 +4496,30 @@ const GamesPage = ({
                           <EditCardIcon />
                         </CardActionIconButton>
                       )}
+                      {canManageThisGame && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleEditTasksFromList(game)
+                          }}
+                          label="Редактор заданий"
+                          title="Открыть редактор заданий"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <TargetCardIcon />
+                        </CardActionIconButton>
+                      )}
                       {canManageStatusThisGame && (
                         <CardActionIconButton
                           onClick={(event) => {
                             event.stopPropagation()
                             handleOpenStatusModal(game)
                           }}
-                          label="Сменить статус игры"
+                          label={getStatusActionLabel(game.status)}
+                          title={getStatusActionLabel(game.status)}
                           className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
-                          <StatusCardIcon />
+                          <StatusCardIcon status={game.status} />
                         </CardActionIconButton>
                       )}
                       {canManageThisGame && (
@@ -4301,12 +4545,17 @@ const GamesPage = ({
     },
     [
       canManageGame,
+      canOpenGameEditModal,
       canManageGameStatus,
+      canEditAllGames,
       canSeeClosedStatus,
       canViewResultsForGame,
+      canViewTasksForGame,
       getNounTeams,
       handleEditGameFromList,
+      handleEditTasksFromList,
       handleManageTeamsFromList,
+      handleOpenTasksViewFromGame,
       handleOpenResultsFromGame,
       handleOpenStatusModal,
       handleSelectGameCard,
@@ -4314,7 +4563,10 @@ const GamesPage = ({
     ],
   )
 
-  const modalGame = isEditModalOpen && editingGame ? editingGame : selectedGame
+  const modalGame =
+    (isEditModalOpen || isTasksModalOpen) && editingGame
+      ? editingGame
+      : selectedGame
 
   const gameTypeLabel = useMemo(() => {
     if (!modalGame) {
@@ -4731,16 +4983,18 @@ const GamesPage = ({
                   editGame={editingGame}
                   isEditModalOpen={isEditModalOpen}
                   handleCloseEditModal={handleCloseEditModal}
+                  isTasksModalOpen={isTasksModalOpen}
+                  handleCloseTasksModal={handleCloseTasksModal}
                   canEditSelectedGame={canEditSelectedGame}
                   isSaving={isSaving}
                   location={selectedGameApiLocation}
                   isDirty={isDirty}
                   handleModalPrimaryAction={handleModalPrimaryAction}
+                  handleTasksModalPrimaryAction={handleTasksModalPrimaryAction}
                   handleResetChanges={handleResetChanges}
                   updateSelectedGame={updateSelectedGame}
                   GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
                   CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
-                  handleOpenStatusModal={handleOpenStatusModal}
                   toMinutes={toMinutes}
                   toSeconds={toSeconds}
                   handleAddTask={handleAddTask}
@@ -4846,6 +5100,8 @@ const GamesPage = ({
                   createGameFeedback={createGameFeedback}
                   isDescriptionModalOpen={isDescriptionModalOpen}
                   handleCloseDescriptionModal={handleCloseDescriptionModal}
+                  isTasksViewModalOpen={isTasksViewModalOpen}
+                  handleCloseTasksViewModal={handleCloseTasksViewModal}
                   gameTypeLabel={gameTypeLabel}
                   plannedStartLabel={plannedStartLabel}
                   canViewRestrictedGameInfo={canViewRestrictedGameInfo}
@@ -4952,6 +5208,17 @@ const coordinatesShape = PropTypes.shape({
   radius: PropTypes.number,
 })
 
+const taskMediaShape = PropTypes.shape({
+  id: PropTypes.string,
+  type: PropTypes.oneOf(['image', 'audio']),
+  url: PropTypes.string,
+  mime: PropTypes.string,
+  size: PropTypes.number,
+  duration: PropTypes.number,
+  path: PropTypes.string,
+  title: PropTypes.string,
+})
+
 const moderatorShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   name: PropTypes.string,
@@ -4998,6 +5265,8 @@ GamesPage.propTypes = {
           mongoId: PropTypes.string,
           title: PropTypes.string,
           task: PropTypes.string,
+          taskRich: PropTypes.string,
+          taskMedia: PropTypes.arrayOf(taskMediaShape),
           taskBonusForComplite: PropTypes.number,
           clues: PropTypes.arrayOf(clueShape),
           subTasks: PropTypes.arrayOf(subTaskShape),

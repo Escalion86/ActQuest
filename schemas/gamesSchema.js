@@ -64,6 +64,25 @@ const gamesSchema = {
           default: '',
           trim: true,
         },
+        taskRich: {
+          type: String,
+          default: '',
+        },
+        taskMedia: {
+          type: [
+            {
+              id: { type: String, trim: true },
+              type: { type: String, enum: ['image', 'audio'], default: 'image' },
+              url: { type: String, trim: true, default: '' },
+              mime: { type: String, trim: true, default: '' },
+              size: { type: Number, default: 0 },
+              duration: { type: Number, default: 0 },
+              path: { type: String, trim: true, default: '' },
+              title: { type: String, trim: true, default: '' },
+            },
+          ],
+          default: [],
+        },
         taskBonusForComplite: {
           type: Number,
           default: 0,

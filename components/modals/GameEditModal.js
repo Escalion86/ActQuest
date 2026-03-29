@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import PropTypes from 'prop-types'
+import dynamic from 'next/dynamic'
 
 import Modal from '@components/Modal'
 import AmountStepperInput from '@components/cabinet/AmountStepperInput'
@@ -15,6 +16,10 @@ import formatDateTime from '@helpers/formatDateTime'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import ModalSection from './ModalSection'
 
+const TaskRichEditor = dynamic(() => import('@components/cabinet/TaskRichEditor'), {
+  ssr: false,
+})
+
 const GameEditModal = ({
   selectedGame,
   isEditModalOpen,
@@ -28,7 +33,6 @@ const GameEditModal = ({
   updateSelectedGame,
   GAME_TYPE_OPTIONS,
   CLUE_EARLY_MODE_OPTIONS,
-  handleOpenStatusModal,
   toMinutes,
   toSeconds,
   handleAddTask,
@@ -84,7 +88,12 @@ const GameEditModal = ({
   isEditGameSeasonsLoading,
   isEditGameSeasonCreating,
   handleCreateSeasonForEditGame,
+  sectionMode,
+  modalTitleOverride,
 }) => {
+  const isTasksOnly = sectionMode === 'tasks'
+  const isClosedGame =
+    String(selectedGame?.status || '').toLowerCase() === 'closed'
   const isPhotoGame = selectedGame?.type === 'photo'
   const amountInputClassName =
     'aq-amount-step-input h-10 w-full rounded-xl border border-slate-200 bg-white px-12 py-2 text-center text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
@@ -157,10 +166,79 @@ const GameEditModal = ({
     )
   }
 
+  if (!isTasksOnly && isClosedGame) {
+    return (
+      <Modal
+        isOpen={isEditModalOpen}
+        title={
+          modalTitleOverride ||
+          `Редактирование игры «${selectedGame?.name || 'Без названия'}»`
+        }
+        onClose={handleCloseEditModal}
+        footer={modalFooter}
+      >
+        <fieldset
+          disabled={!canEditSelectedGame || isSaving}
+          className="m-0 space-y-4 border-0 p-0"
+        >
+          <ModalSection>
+            <p className="text-sm text-slate-500 dark:text-slate-300">
+              Для закрытой игры можно менять только параметры публикации.
+            </p>
+            <div className="mt-4 grid gap-3">
+              <NeonCheckbox
+                id="game-show-creator-closed"
+                checked={Boolean(selectedGame.showCreator)}
+                onChange={(eventOrChecked) =>
+                  debugCheckboxUpdate(
+                    'showCreator',
+                    getCheckboxChecked(eventOrChecked),
+                    (checked) => ({ showCreator: checked }),
+                  )
+                }
+                label="Показывать организатора игрокам"
+                labelClassName="text-sm text-slate-600 dark:text-slate-200"
+              />
+              <NeonCheckbox
+                id="game-show-tasks-closed"
+                checked={Boolean(selectedGame.showTasks)}
+                onChange={(eventOrChecked) =>
+                  debugCheckboxUpdate(
+                    'showTasks',
+                    getCheckboxChecked(eventOrChecked),
+                    (checked) => ({ showTasks: checked }),
+                  )
+                }
+                label="Открыть задания после завершения"
+                labelClassName="text-sm text-slate-600 dark:text-slate-200"
+              />
+              <NeonCheckbox
+                id="game-hide-result-closed"
+                checked={!Boolean(selectedGame.hideResult)}
+                onChange={(eventOrChecked) =>
+                  debugCheckboxUpdate(
+                    'hideResult',
+                    getCheckboxChecked(eventOrChecked),
+                    (checked) => ({ hideResult: !checked }),
+                  )
+                }
+                label="Показать результаты"
+                labelClassName="text-sm text-slate-600 dark:text-slate-200"
+              />
+            </div>
+          </ModalSection>
+        </fieldset>
+      </Modal>
+    )
+  }
+
   return (
     <Modal
                     isOpen={isEditModalOpen}
-                    title={`Редактирование игры «${selectedGame?.name || 'Без названия'}»`}
+                    title={
+                      modalTitleOverride ||
+                      `Редактирование игры «${selectedGame?.name || 'Без названия'}»`
+                    }
                     onClose={handleCloseEditModal}
                     footer={modalFooter}
                   >
@@ -168,6 +246,7 @@ const GameEditModal = ({
                     disabled={!canEditSelectedGame || isSaving}
                     className="m-0 space-y-6 border-0 p-0 [&_button]:cursor-pointer [&_select]:cursor-pointer"
                   >
+                    {!isTasksOnly && (
                     <ModalSection>
                     <ImagesInput
                       label="Обложка игры"
@@ -196,22 +275,11 @@ const GameEditModal = ({
                       />
                       <div className="space-y-2">
                         <p className={fieldLabelClassName}>Статус игры</p>
-                        <div className="flex items-center gap-3">
-                          <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
-                            {getGameStatusLabel(selectedGame.status)}
-                          </span>
-                          <CabinetButton
-                            onClick={() => handleOpenStatusModal(selectedGame)}
-                            variant="secondary"
-                            tone="brand"
-                            size="sm"
-                            disabled={!canEditSelectedGame || isSaving}
-                          >
-                            Сменить статус
-                          </CabinetButton>
-                        </div>
+                        <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+                          {getGameStatusLabel(selectedGame.status)}
+                        </span>
                         <p className="text-xs text-slate-500 dark:text-slate-300">
-                          Статус «Запущена» устанавливается только через запуск игры.
+                          Смена статуса доступна только с карточки игры.
                         </p>
                       </div>
                     </div>
@@ -409,7 +477,9 @@ const GameEditModal = ({
                     )}
 
                     </ModalSection>
+                    )}
 
+                    {!isTasksOnly && (
                     <ModalSection>
                     <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Настройки заданий и подсказок</h2>
                     <div className="grid gap-4 md:grid-cols-2">
@@ -603,8 +673,9 @@ const GameEditModal = ({
                       />
                     </div>
                     </ModalSection>
+                    )}
 
-
+                    {isTasksOnly && (
                     <ModalSection>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Задания</h2>
@@ -713,54 +784,39 @@ const GameEditModal = ({
                                     </div>
                                   </div>
 
-                                  <CabinetTextareaField
-                                    id={`task-text-${task.id}`}
-                                    label="Описание задания"
-                                    rows={4}
-                                    value={task.task}
-                                    onChange={(event) =>
-                                      handleTaskFieldChange(task.id, 'task', event.target.value)
-                                    }
-                                    labelClassName={fieldLabelClassName}
-                                    textareaClassName={fieldInputClassName}
-                                  />
-
-                                  <div className="grid gap-4 md:grid-cols-2">
-                                    <CabinetNumberField
-                                      id={`task-bonus-${task.id}`}
-                                      label="Бонус за выполнение"
-                                      min="0"
-                                      value={task.taskBonusForComplite ?? 0}
-                                      onChange={(event) =>
-                                        handleTaskNumberChange(
-                                          task.id,
-                                          'taskBonusForComplite',
-                                          event.target.value
-                                        )
-                                      }
-                                      labelClassName={fieldLabelClassName}
-                                      inputClassName={fieldInputClassName}
+                                  <div className="space-y-2">
+                                    <p className={fieldLabelClassName}>Описание задания</p>
+                                    <TaskRichEditor
+                                      value={task.taskRich || task.task || ''}
+                                      directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/editor`}
+                                      disabled={!canEditSelectedGame || isSaving}
+                                      placeholder="Введите описание задания. Можно использовать форматирование, картинки и аудио."
+                                      onChange={({ html, plainText, media }) => {
+                                        handleTaskFieldChange(task.id, 'taskRich', html)
+                                        handleTaskFieldChange(task.id, 'task', plainText)
+                                        handleTaskFieldChange(task.id, 'taskMedia', media)
+                                      }}
                                     />
-                                    <div>
+                                  </div>
+
+                                  <div className="grid gap-4">
+                                    {isPhotoGame && (
                                       <CabinetNumberField
-                                        id={`task-codes-required-${task.id}`}
-                                        label="Кодов для выполнения"
+                                        id={`task-bonus-${task.id}`}
+                                        label="Бонус за выполнение"
                                         min="0"
-                                        value={task.numCodesToCompliteTask ?? ''}
+                                        value={task.taskBonusForComplite ?? 0}
                                         onChange={(event) =>
-                                          handleTaskOptionalNumberChange(
+                                          handleTaskNumberChange(
                                             task.id,
-                                            'numCodesToCompliteTask',
+                                            'taskBonusForComplite',
                                             event.target.value
                                           )
                                         }
                                         labelClassName={fieldLabelClassName}
                                         inputClassName={fieldInputClassName}
                                       />
-                                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
-                                        Оставьте пустым, чтобы требовались все коды.
-                                      </p>
-                                    </div>
+                                    )}
                                   </div>
 
                                   <CabinetTextareaField
@@ -829,9 +885,10 @@ const GameEditModal = ({
                                     </div>
                                   </div>
 
+                                  {!isPhotoGame && (
                                   <div>
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                      <h4 className="text-sm font-semibold text-slate-700 dark:text-white">Коды для задания</h4>
+                                      <h4 className="text-sm font-semibold text-slate-700 dark:text-white">Коды задания</h4>
                                       <CabinetButton
                                         onClick={() => handleAddTaskCode(task.id)}
                                         variant="secondary"
@@ -880,20 +937,28 @@ const GameEditModal = ({
                                     ) : (
                                       <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">Кодов пока нет.</p>
                                     )}
+                                    <div className="mt-4">
+                                      <CabinetNumberField
+                                        id={`task-codes-required-${task.id}`}
+                                        label="Кодов для выполнения"
+                                        min="0"
+                                        value={task.numCodesToCompliteTask ?? ''}
+                                        onChange={(event) =>
+                                          handleTaskOptionalNumberChange(
+                                            task.id,
+                                            'numCodesToCompliteTask',
+                                            event.target.value
+                                          )
+                                        }
+                                        labelClassName={compactLabelClassName}
+                                        inputClassName={compactInputClassName}
+                                      />
+                                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
+                                        Оставьте пустым, чтобы требовались все коды.
+                                      </p>
+                                    </div>
                                   </div>
-
-                                  <div>
-                                    <ImagesInput
-                                      label="Изображения задания"
-                                      images={task.images ?? []}
-                                      onChange={(nextImages) =>
-                                        handleTaskFieldChange(task.id, 'images', nextImages)
-                                      }
-                                      directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}`}
-                                      disabled={!canEditSelectedGame || isSaving}
-                                      maxImages={12}
-                                    />
-                                  </div>
+                                  )}
 
                                   <div>
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1068,6 +1133,7 @@ const GameEditModal = ({
                                     </div>
                                   )}
 
+                                  {!isPhotoGame && (
                                   <div>
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                       <h4 className="text-sm font-semibold text-slate-700 dark:text-white">Штрафные коды</h4>
@@ -1159,7 +1225,9 @@ const GameEditModal = ({
                                       <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">Штрафных кодов пока нет.</p>
                                     )}
                                   </div>
+                                  )}
 
+                                  {!isPhotoGame && (
                                   <div>
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                       <h4 className="text-sm font-semibold text-slate-700 dark:text-white">Бонусные коды</h4>
@@ -1251,10 +1319,23 @@ const GameEditModal = ({
                                       <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">Бонусных кодов пока нет.</p>
                                     )}
                                   </div>
+                                  )}
 
                                   <div className="flex justify-end">
                                     <CabinetButton
-                                      onClick={() => handleRemoveTask(task.id)}
+                                      onClick={() => {
+                                        if (
+                                          typeof window !== 'undefined' &&
+                                          !window.confirm(
+                                            `Удалить задание «${
+                                              task.title || `№${index + 1}`
+                                            }»? Это действие нельзя отменить.`
+                                          )
+                                        ) {
+                                          return
+                                        }
+                                        handleRemoveTask(task.id)
+                                      }}
                                       variant="secondary"
                                       tone="danger"
                                       size="sm"
@@ -1275,7 +1356,9 @@ const GameEditModal = ({
                       </p>
                     )}
                     </ModalSection>
+                    )}
 
+                    {!isTasksOnly && (
                     <ModalSection>
                     <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Публикация и результаты</h2>
                     <div className="grid gap-3 md:grid-cols-2">
@@ -1413,7 +1496,9 @@ const GameEditModal = ({
                       )}
                     </div>
                     </ModalSection>
+                    )}
 
+                    {!isTasksOnly && (
                     <ModalSection>
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Стоимость участия</h2>
@@ -1473,7 +1558,9 @@ const GameEditModal = ({
                       </p>
                     )}
                   </ModalSection>
+                  )}
 
+                  {!isTasksOnly && (
                   <ModalSection>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Финансы игры</h2>
@@ -1571,6 +1658,7 @@ const GameEditModal = ({
                       </p>
                     </div>
                     </ModalSection>
+                    )}
 
                   </fieldset>
                   </Modal>
@@ -1593,7 +1681,6 @@ GameEditModal.propTypes = {
   updateSelectedGame: PropTypes.func.isRequired,
   GAME_TYPE_OPTIONS: PropTypes.array.isRequired,
   CLUE_EARLY_MODE_OPTIONS: PropTypes.array.isRequired,
-  handleOpenStatusModal: PropTypes.func.isRequired,
   toMinutes: PropTypes.func.isRequired,
   toSeconds: PropTypes.func.isRequired,
   handleAddTask: PropTypes.func.isRequired,
@@ -1659,6 +1746,8 @@ GameEditModal.propTypes = {
   isEditGameSeasonsLoading: PropTypes.bool,
   isEditGameSeasonCreating: PropTypes.bool,
   handleCreateSeasonForEditGame: PropTypes.func.isRequired,
+  sectionMode: PropTypes.oneOf(['full', 'tasks']),
+  modalTitleOverride: PropTypes.string,
 }
 
 GameEditModal.defaultProps = {
@@ -1667,6 +1756,8 @@ GameEditModal.defaultProps = {
   editGameSeasons: [],
   isEditGameSeasonsLoading: false,
   isEditGameSeasonCreating: false,
+  sectionMode: 'full',
+  modalTitleOverride: null,
 }
 
 export default memo(GameEditModal)

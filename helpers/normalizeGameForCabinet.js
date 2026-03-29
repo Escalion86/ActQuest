@@ -90,6 +90,25 @@ const normalizeStringArray = (values = []) => {
     .filter((item) => item !== '')
 }
 
+const normalizeTaskMedia = (media = []) => {
+  if (!Array.isArray(media) || media.length === 0) {
+    return []
+  }
+
+  return media
+    .map((item, index) => ({
+      id: ensureString(item?.id, `task-media-${index}`),
+      type: item?.type === 'audio' ? 'audio' : 'image',
+      url: ensureString(item?.url, ''),
+      mime: ensureString(item?.mime, ''),
+      size: ensureNumber(item?.size, 0),
+      duration: ensureNumber(item?.duration, 0),
+      path: ensureString(item?.path, ''),
+      title: ensureString(item?.title, ''),
+    }))
+    .filter((item) => item.url !== '')
+}
+
 const normalizeClues = (clues = []) => {
   if (!Array.isArray(clues) || clues.length === 0) {
     return []
@@ -190,6 +209,8 @@ const normalizeTasks = (tasks = []) => {
     mongoId: task?._id ? ensureString(task._id) : null,
     title: ensureString(task?.title, ''),
     task: ensureString(task?.task, ''),
+    taskRich: ensureString(task?.taskRich, ''),
+    taskMedia: normalizeTaskMedia(task?.taskMedia),
     taskBonusForComplite: ensureNumber(task?.taskBonusForComplite, 0),
     clues: normalizeClues(task?.clues),
     subTasks: normalizeSubTasks(task?.subTasks),
