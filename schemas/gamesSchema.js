@@ -94,6 +94,10 @@ const gamesSchema = {
               default: '',
               trim: true,
             },
+            clueRich: {
+              type: String,
+              default: '',
+            },
             images: {
               type: [String],
               default: [],

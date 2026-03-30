@@ -118,6 +118,7 @@ const normalizeClues = (clues = []) => {
     id: ensureString(clue?._id ?? clue?.id, `clue-${index}`),
     mongoId: clue?._id ? ensureString(clue._id) : null,
     clue: ensureString(clue?.clue, ''),
+    clueRich: ensureString(clue?.clueRich, ''),
     images: normalizeStringArray(clue?.images),
   }))
 }

@@ -1,4 +1,5 @@
 import isObject from './isObject'
+const isDevEnv = process.env.NODE_ENV !== 'production'
 
 export const deleteImage = async (publicId, resource_type = 'image') => {
   try {
@@ -102,6 +103,13 @@ export const sendImage = async (
       }
 
       if (!response.ok || !responseJson?.success) {
+        if (isDevEnv) {
+          console.log('[EscalionCloud][upload][client-response-error]', {
+            status: response.status,
+            ok: response.ok,
+            body: responseJson,
+          })
+        }
         const error =
           responseJson?.data?.error?.message || `Upload failed: ${response.status}`
         if (onError) onError(error)
@@ -109,6 +117,12 @@ export const sendImage = async (
       }
 
       const data = responseJson.data
+      if (isDevEnv) {
+        console.log('[EscalionCloud][upload][client-response-success]', {
+          status: response.status,
+          data,
+        })
+      }
       if (callback) callback(data)
       return data
     } catch (err) {

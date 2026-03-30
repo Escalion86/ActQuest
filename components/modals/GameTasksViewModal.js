@@ -275,9 +275,16 @@ const GameTasksViewModal = ({
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
                               Подсказка {clueIndex + 1}
                             </p>
-                            <p className="mt-1 whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">
-                              {clue?.clue || 'Текст подсказки отсутствует.'}
-                            </p>
+                            {typeof clue?.clueRich === 'string' && clue.clueRich.trim() ? (
+                              <div
+                                className="aq-task-content mt-1 text-sm leading-relaxed text-slate-700 dark:text-slate-200"
+                                dangerouslySetInnerHTML={{ __html: clue.clueRich }}
+                              />
+                            ) : (
+                              <p className="mt-1 whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">
+                                {clue?.clue || 'Текст подсказки отсутствует.'}
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -333,6 +340,7 @@ GameTasksViewModal.propTypes = {
         clues: PropTypes.arrayOf(
           PropTypes.shape({
             clue: PropTypes.string,
+            clueRich: PropTypes.string,
           })
         ),
       })

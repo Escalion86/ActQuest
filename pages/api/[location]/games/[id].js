@@ -53,6 +53,20 @@ const sanitizeTaskMedia = (media = []) =>
     }))
     .filter((item) => item.url !== '')
 
+const stripHtmlToPlainText = (value) =>
+  String(value || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h1|h2|h3|h4|h5|h6|li|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\r?\n[ \t]+/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
 const sanitizeTasksRichContent = (tasks = []) =>
   (Array.isArray(tasks) ? tasks : []).map((task) => ({
     ...task,
@@ -60,6 +74,19 @@ const sanitizeTasksRichContent = (tasks = []) =>
       typeof task?.taskRich === 'string' && task.taskRich.trim().length > 0
         ? sanitize(task.taskRich)
         : '',
+    clues: (Array.isArray(task?.clues) ? task.clues : []).map((clue) => {
+      const clueRichRaw =
+        typeof clue?.clueRich === 'string' ? clue.clueRich.trim() : ''
+      const clueRich = clueRichRaw ? sanitize(clueRichRaw) : ''
+      const cluePlainRaw = typeof clue?.clue === 'string' ? clue.clue : ''
+      const cluePlain = cluePlainRaw.trim() || stripHtmlToPlainText(clueRich)
+
+      return {
+        ...clue,
+        clue: cluePlain,
+        clueRich,
+      }
+    }),
     taskMedia: sanitizeTaskMedia(task?.taskMedia),
   }))
 
@@ -214,8 +241,30 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, data: updatedGame })
   } catch (error) {
     console.error('Failed to update game', error)
+
+    const errorName = typeof error?.name === 'string' ? error.name : ''
+    const errorMessage =
+      typeof error?.message === 'string' && error.message.trim()
+        ? error.message.trim()
+        : 'Не удалось обновить игру'
+    const isValidationError =
+      errorName === 'ValidationError' ||
+      errorName === 'CastError' ||
+      errorName === 'StrictModeError'
+
+    if (isValidationError) {
+      return res.status(400).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+
+    const isDevEnv = process.env.NODE_ENV !== 'production'
     return res
       .status(500)
-      .json({ success: false, error: 'Не удалось обновить игру' })
+      .json({
+        success: false,
+        error: isDevEnv ? `Не удалось обновить игру: ${errorMessage}` : 'Не удалось обновить игру',
+      })
   }
 }

@@ -21,6 +21,7 @@ const parseUpstreamResponse = async (response) => {
 
 const normalizePathSegment = (value) =>
   typeof value === 'string' ? value.trim().replace(/^\/+|\/+$/g, '') : ''
+const isDevEnv = process.env.NODE_ENV !== 'production'
 
 export const config = {
   api: {
@@ -112,6 +113,19 @@ export default async function handler(req, res) {
     })
 
     const upstreamBody = await parseUpstreamResponse(upstreamResponse)
+
+    if (isDevEnv) {
+      console.log('[EscalionCloud][upload][upstream-response]', {
+        status: upstreamResponse.status,
+        ok: upstreamResponse.ok,
+        directory,
+        filesCount: files.length,
+        fileNames: files
+          .map((file) => (typeof file?.name === 'string' ? file.name : null))
+          .filter(Boolean),
+        body: upstreamBody,
+      })
+    }
 
     if (!upstreamResponse.ok) {
       const upstreamMessage =

@@ -125,6 +125,7 @@ const createClue = () => ({
   id: `clue-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
   mongoId: null,
   clue: '',
+  clueRich: '',
   images: [],
 })
 
@@ -334,8 +335,16 @@ const buildUpdatePayload = (game) => {
         .filter((media) => media.url !== ''),
       taskBonusForComplite: Number(task.taskBonusForComplite) || 0,
       clues: (task.clues ?? []).map((clue) => {
+        const clueRich =
+          typeof clue.clueRich === 'string' ? clue.clueRich : ''
+        const cluePlain =
+          typeof clue.clue === 'string' && clue.clue.trim() !== ''
+            ? clue.clue
+            : stripHtmlToPlainText(clueRich)
+
         const normalizedClue = {
-          clue: typeof clue.clue === 'string' ? clue.clue : '',
+          clue: cluePlain,
+          clueRich,
           images: sanitizeStringArray(clue.images),
         }
 
@@ -2981,54 +2990,6 @@ const GamesPage = ({
     [updateTask],
   )
 
-  const handleAddClueImage = useCallback(
-    (taskId, clueId) => {
-      updateTask(taskId, (task) => ({
-        clues: (task.clues ?? []).map((clue) =>
-          clue.id === clueId
-            ? { ...clue, images: [...(clue.images ?? []), ''] }
-            : clue,
-        ),
-      }))
-    },
-    [updateTask],
-  )
-
-  const handleClueImageChange = useCallback(
-    (taskId, clueId, index, value) => {
-      updateTask(taskId, (task) => ({
-        clues: (task.clues ?? []).map((clue) => {
-          if (clue.id !== clueId) {
-            return clue
-          }
-
-          const nextImages = [...(clue.images ?? [])]
-          nextImages[index] = value
-          return { ...clue, images: nextImages }
-        }),
-      }))
-    },
-    [updateTask],
-  )
-
-  const handleRemoveClueImage = useCallback(
-    (taskId, clueId, index) => {
-      updateTask(taskId, (task) => ({
-        clues: (task.clues ?? []).map((clue) =>
-          clue.id === clueId
-            ? {
-                ...clue,
-                images: (clue.images ?? []).filter(
-                  (_, imageIndex) => imageIndex !== index,
-                ),
-              }
-            : clue,
-        ),
-      }))
-    },
-    [updateTask],
-  )
-
   const handleAddSubTask = useCallback(
     (taskId) => {
       const newSubTask = createSubTask()
@@ -5015,9 +4976,6 @@ const GamesPage = ({
                   handleAddClue={handleAddClue}
                   handleTaskClueChange={handleTaskClueChange}
                   handleRemoveClue={handleRemoveClue}
-                  handleAddClueImage={handleAddClueImage}
-                  handleClueImageChange={handleClueImageChange}
-                  handleRemoveClueImage={handleRemoveClueImage}
                   handleAddSubTask={handleAddSubTask}
                   handleSubTaskChange={handleSubTaskChange}
                   handleRemoveSubTask={handleRemoveSubTask}
@@ -5175,6 +5133,7 @@ const clueShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   mongoId: PropTypes.string,
   clue: PropTypes.string,
+  clueRich: PropTypes.string,
   images: PropTypes.arrayOf(PropTypes.string),
 })
 

@@ -51,9 +51,6 @@ const GameEditModal = ({
   handleAddClue,
   handleTaskClueChange,
   handleRemoveClue,
-  handleAddClueImage,
-  handleClueImageChange,
-  handleRemoveClueImage,
   handleAddSubTask,
   handleSubTaskChange,
   handleRemoveSubTask,
@@ -994,38 +991,17 @@ const GameEditModal = ({
                                                 Удалить подсказку
                                               </CabinetButton>
                                             </div>
-                                            <CabinetTextareaField
-                                              id={`task-clue-${clue.id}`}
-                                              label="Текст подсказки"
-                                              rows={3}
-                                              value={clue.clue}
-                                              onChange={(event) =>
-                                                handleTaskClueChange(
-                                                  task.id,
-                                                  clue.id,
-                                                  'clue',
-                                                  event.target.value
-                                                )
-                                              }
-                                              containerClassName="space-y-1"
-                                              labelClassName={compactLabelClassName}
-                                              textareaClassName={compactInputClassName}
-                                            />
-                                            <div>
-                                              <ImagesInput
-                                                label="Изображения подсказки"
-                                                images={clue.images ?? []}
-                                                onChange={(nextImages) =>
-                                                  handleTaskClueChange(
-                                                    task.id,
-                                                    clue.id,
-                                                    'images',
-                                                    nextImages
-                                                  )
-                                                }
-                                                directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}`}
+                                            <div className="space-y-2">
+                                              <p className={compactLabelClassName}>Текст подсказки</p>
+                                              <TaskRichEditor
+                                                value={clue.clueRich || clue.clue || ''}
+                                                directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}/editor`}
                                                 disabled={!canEditSelectedGame || isSaving}
-                                                maxImages={8}
+                                                placeholder="Введите текст подсказки. Можно использовать форматирование, картинки и аудио."
+                                                onChange={({ html, plainText }) => {
+                                                  handleTaskClueChange(task.id, clue.id, 'clueRich', html)
+                                                  handleTaskClueChange(task.id, clue.id, 'clue', plainText)
+                                                }}
                                               />
                                             </div>
                                           </div>
@@ -1699,9 +1675,6 @@ GameEditModal.propTypes = {
   handleAddClue: PropTypes.func.isRequired,
   handleTaskClueChange: PropTypes.func.isRequired,
   handleRemoveClue: PropTypes.func.isRequired,
-  handleAddClueImage: PropTypes.func.isRequired,
-  handleClueImageChange: PropTypes.func.isRequired,
-  handleRemoveClueImage: PropTypes.func.isRequired,
   handleAddSubTask: PropTypes.func.isRequired,
   handleSubTaskChange: PropTypes.func.isRequired,
   handleRemoveSubTask: PropTypes.func.isRequired,
