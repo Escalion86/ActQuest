@@ -823,6 +823,9 @@ const Index2Page = () => {
       window.removeEventListener('pointermove', handleArchiveSledPointerMove)
       window.removeEventListener('pointerup', handleArchiveSledPointerEnd)
       window.removeEventListener('pointercancel', handleArchiveSledPointerEnd)
+      window.removeEventListener('touchmove', handleArchiveSledTouchMove)
+      window.removeEventListener('touchend', handleArchiveSledTouchEnd)
+      window.removeEventListener('touchcancel', handleArchiveSledTouchEnd)
       clearArchiveSledDrag()
     }
   }, [])
@@ -1832,6 +1835,12 @@ const Index2Page = () => {
     window.removeEventListener('pointercancel', handleArchiveSledPointerEnd)
   }
 
+  const detachArchiveSledTouchListeners = () => {
+    window.removeEventListener('touchmove', handleArchiveSledTouchMove)
+    window.removeEventListener('touchend', handleArchiveSledTouchEnd)
+    window.removeEventListener('touchcancel', handleArchiveSledTouchEnd)
+  }
+
   const clearArchiveSledDrag = () => {
     clearArchiveSledHoldTimer()
     archiveSledPendingPointerIdRef.current = null
@@ -1936,7 +1945,8 @@ const Index2Page = () => {
   }
 
   const handleArchiveSledPointerDown = (event) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return
+    if (event.pointerType !== 'mouse') return
+    if (event.button !== 0) return
     if (event.cancelable) {
       event.preventDefault()
     }
@@ -1967,6 +1977,112 @@ const Index2Page = () => {
     window.addEventListener('pointermove', handleArchiveSledPointerMove)
     window.addEventListener('pointerup', handleArchiveSledPointerEnd)
     window.addEventListener('pointercancel', handleArchiveSledPointerEnd)
+  }
+
+  const getTouchByIdentifier = (touchList, identifier) =>
+    Array.from(touchList || []).find((touch) => touch.identifier === identifier)
+
+  const handleArchiveSledTouchMove = (event) => {
+    const pendingId = archiveSledPendingPointerIdRef.current
+    if (typeof pendingId === 'number') {
+      const pendingTouch = getTouchByIdentifier(event.touches, pendingId)
+      if (!pendingTouch) return
+      archiveSledLastPointRef.current = {
+        x: pendingTouch.clientX,
+        y: pendingTouch.clientY,
+      }
+
+      const dx = pendingTouch.clientX - archiveSledHoldStartPointRef.current.x
+      const dy = pendingTouch.clientY - archiveSledHoldStartPointRef.current.y
+      if (Math.hypot(dx, dy) > ARCHIVE_SLED_HOLD_MOVE_TOLERANCE_PX) {
+        clearArchiveSledHoldTimer()
+        archiveSledPendingPointerIdRef.current = null
+        archiveSledPendingPointerTypeRef.current = ''
+        archiveSledDragElementRef.current = null
+        setArchiveDragActive(false)
+        setSledDragGhost(null)
+        detachArchiveSledTouchListeners()
+      }
+      return
+    }
+
+    const activeId = archiveSledPointerIdRef.current
+    if (typeof activeId !== 'number') return
+    const activeTouch = getTouchByIdentifier(event.touches, activeId)
+    if (!activeTouch) return
+
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+    const { clientX, clientY } = activeTouch
+    const isInside = isPointInsideArchiveDropZone(clientX, clientY)
+    setArchiveDragActive(isInside)
+    setSledDragGhost({ x: clientX, y: clientY })
+  }
+
+  const handleArchiveSledTouchEnd = (event) => {
+    const pendingId = archiveSledPendingPointerIdRef.current
+    if (typeof pendingId === 'number') {
+      const pendingTouch = getTouchByIdentifier(event.changedTouches, pendingId)
+      if (!pendingTouch) return
+      clearArchiveSledHoldTimer()
+      archiveSledPendingPointerIdRef.current = null
+      archiveSledPendingPointerTypeRef.current = ''
+      archiveSledDragElementRef.current = null
+      setArchiveDragActive(false)
+      setSledDragGhost(null)
+      detachArchiveSledTouchListeners()
+      return
+    }
+
+    const activeId = archiveSledPointerIdRef.current
+    if (typeof activeId !== 'number') return
+    const activeTouch = getTouchByIdentifier(event.changedTouches, activeId)
+    if (!activeTouch) return
+
+    const isInside = isPointInsideArchiveDropZone(
+      activeTouch.clientX,
+      activeTouch.clientY,
+    )
+    if (isInside) {
+      persistArchiveImage(ARCHIVE_SLED_SRC)
+    }
+    clearArchiveSledDrag()
+    detachArchiveSledTouchListeners()
+  }
+
+  const handleArchiveSledTouchStart = (event) => {
+    const touch = event.touches?.[0]
+    if (!touch) return
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+
+    archiveSledDragElementRef.current = event.currentTarget
+    archiveSledLastPointRef.current = { x: touch.clientX, y: touch.clientY }
+    archiveSledHoldStartPointRef.current = { x: touch.clientX, y: touch.clientY }
+    archiveSledPendingPointerIdRef.current = touch.identifier
+    archiveSledPendingPointerTypeRef.current = 'touch'
+    setArchiveDragActive(false)
+    setArchiveStatus('')
+
+    clearArchiveSledHoldTimer()
+    archiveSledHoldTimerRef.current = setTimeout(() => {
+      if (archiveSledPendingPointerIdRef.current !== touch.identifier) return
+      archiveSledPendingPointerIdRef.current = null
+      startArchiveSledDrag(touch.identifier, 'touch')
+      archiveSledPendingPointerTypeRef.current = ''
+    }, ARCHIVE_SLED_HOLD_MS)
+
+    window.addEventListener('touchmove', handleArchiveSledTouchMove, {
+      passive: false,
+    })
+    window.addEventListener('touchend', handleArchiveSledTouchEnd, {
+      passive: false,
+    })
+    window.addEventListener('touchcancel', handleArchiveSledTouchEnd, {
+      passive: false,
+    })
   }
 
   const handleProcessRowPointerDown = (rowId) => {
@@ -2474,6 +2590,7 @@ const Index2Page = () => {
                   className="absolute -top-20 -right-30 z-20 h-auto w-[18rem] rotate-[-50deg] touch-none tablet:rotate-[-60deg] opacity-95 tablet:-top-35 tablet:-right-22 tablet:w-[28rem]"
                   draggable={false}
                   onPointerDown={handleArchiveSledPointerDown}
+                  onTouchStart={handleArchiveSledTouchStart}
                 />
                 <div className="grid gap-8">
                   <div>
@@ -2592,7 +2709,7 @@ const Index2Page = () => {
                     <div className="mt-4">
                       <div className="rounded-xl border border-[#00D1FF]/35 bg-[#070014]/65 px-4 py-4">
                         <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#c8f8ff]">
-                          След принят в архив
+                          След принят
                         </p>
                         <p className="mt-2 text-sm leading-relaxed text-[#bfe6ff]">
                           Ты заметил связь там, где другие видят случайность.
