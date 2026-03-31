@@ -671,7 +671,7 @@ const Index2Page = () => {
       { id: 'path', label: 'маршрут собран', done: gameComplete },
       {
         id: 'archive',
-        label: 'след в архиве оставлен',
+        label: 'след оставлен',
         done: Boolean(archiveImage),
       },
       {
@@ -1862,7 +1862,8 @@ const Index2Page = () => {
     archiveSledDragElementRef.current = null
     if (typeof document !== 'undefined') {
       document.body.style.overflow = pageOverflowRestoreRef.current.body
-      document.documentElement.style.overflow = pageOverflowRestoreRef.current.html
+      document.documentElement.style.overflow =
+        pageOverflowRestoreRef.current.html
     }
     setArchiveDragActive(false)
     setSledDragGhost(null)
@@ -1953,7 +1954,10 @@ const Index2Page = () => {
 
     archiveSledDragElementRef.current = event.currentTarget
     archiveSledLastPointRef.current = { x: event.clientX, y: event.clientY }
-    archiveSledHoldStartPointRef.current = { x: event.clientX, y: event.clientY }
+    archiveSledHoldStartPointRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+    }
     setArchiveDragActive(false)
     setArchiveStatus('')
 
@@ -2060,7 +2064,10 @@ const Index2Page = () => {
 
     archiveSledDragElementRef.current = event.currentTarget
     archiveSledLastPointRef.current = { x: touch.clientX, y: touch.clientY }
-    archiveSledHoldStartPointRef.current = { x: touch.clientX, y: touch.clientY }
+    archiveSledHoldStartPointRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+    }
     archiveSledPendingPointerIdRef.current = touch.identifier
     archiveSledPendingPointerTypeRef.current = 'touch'
     setArchiveDragActive(false)

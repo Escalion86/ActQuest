@@ -553,7 +553,9 @@ const CabinetLayout = ({
 
   return (
     <div className="cabinet-neon">
-      <div className={`relative flex min-h-screen ${appBgClass}`}>
+      <div
+        className={`relative flex h-[100dvh] min-h-[100dvh] overflow-hidden laptop:min-h-screen ${appBgClass}`}
+      >
         <div className="absolute inset-0 pointer-events-none">
           <div
             className={`absolute -left-24 top-8 h-72 w-72 rounded-full blur-3xl ${decorClass.one}`}
@@ -810,9 +812,9 @@ const CabinetLayout = ({
           />
         )}
 
-        <div className="flex flex-col flex-1 min-h-screen laptop:pl-64">
+        <div className="flex h-[100dvh] min-h-0 flex-1 flex-col overflow-hidden laptop:pl-64 laptop:min-h-screen">
           <header
-            className={`sticky top-0 z-20 border-b backdrop-blur-xl ${headerClass}`}
+            className={`z-20 shrink-0 border-b backdrop-blur-xl ${headerClass}`}
           >
             <div className="flex items-center justify-between px-4 py-4 laptop:px-8">
               <div className="flex items-center gap-4">
@@ -861,7 +863,7 @@ const CabinetLayout = ({
           </header>
 
           <main
-            className={`relative z-10 flex-1 px-4 py-6 laptop:px-8 ${mainTextClass}`}
+            className={`relative z-10 flex-1 overflow-y-auto px-4 py-6 laptop:px-8 ${mainTextClass}`}
           >
             <div className="max-w-5xl mx-auto">
               {showPageTitle ? (
