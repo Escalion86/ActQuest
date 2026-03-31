@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import { sendImage } from '@helpers/cloudinary'
@@ -19,6 +19,24 @@ const moveToFirst = (items, index) => {
   const next = [...items]
   const [selected] = next.splice(index, 1)
   next.unshift(selected)
+  return next
+}
+
+const moveItem = (items, fromIndex, toIndex) => {
+  if (
+    !Array.isArray(items) ||
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= items.length ||
+    toIndex >= items.length
+  ) {
+    return items
+  }
+
+  const next = [...items]
+  const [selected] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, selected)
   return next
 }
 
@@ -66,12 +84,49 @@ const ImagesInput = ({
   previewShape,
 }) => {
   const fileInputRef = useRef(null)
+  const dragStateRef = useRef({
+    pointerId: null,
+    fromIndex: -1,
+    currentIndex: -1,
+    active: false,
+  })
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
+  const [isTouchLikeDevice, setIsTouchLikeDevice] = useState(false)
+  const [draggingIndex, setDraggingIndex] = useState(-1)
 
   const normalizedImages = useMemo(() => normalizeImages(images), [images])
   const isCirclePreview = previewShape === 'circle'
   const isSquarePreview = previewShape === 'square'
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+
+    const mediaQuery = window.matchMedia(
+      '(hover: none), (pointer: coarse), (any-hover: none), (any-pointer: coarse)'
+    )
+
+    const applyState = () => {
+      setIsTouchLikeDevice(Boolean(mediaQuery.matches))
+    }
+
+    applyState()
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', applyState)
+      return () => {
+        mediaQuery.removeEventListener('change', applyState)
+      }
+    }
+
+    if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(applyState)
+      return () => {
+        mediaQuery.removeListener(applyState)
+      }
+    }
+
+    return undefined
+  }, [])
 
   const handleRemove = (index) => {
     const next = normalizedImages.filter((_, itemIndex) => itemIndex !== index)
@@ -81,6 +136,80 @@ const ImagesInput = ({
   const handleSetMain = (index) => {
     const next = moveToFirst(normalizedImages, index)
     onChange(next)
+  }
+
+  const stopDrag = (pointerId) => {
+    if (!dragStateRef.current.active) return
+    if (
+      typeof pointerId === 'number' &&
+      dragStateRef.current.pointerId !== pointerId
+    ) {
+      return
+    }
+
+    dragStateRef.current = {
+      pointerId: null,
+      fromIndex: -1,
+      currentIndex: -1,
+      active: false,
+    }
+    setDraggingIndex(-1)
+  }
+
+  const handleDragHandlePointerDown = (index, event) => {
+    if (disabled || normalizedImages.length < 2) return
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+    event.stopPropagation()
+
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      fromIndex: index,
+      currentIndex: index,
+      active: true,
+    }
+    setDraggingIndex(index)
+
+    if (event.currentTarget?.setPointerCapture) {
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId)
+      } catch {
+        // ignore unsupported browsers
+      }
+    }
+  }
+
+  const handleGridPointerMove = (event) => {
+    if (!dragStateRef.current.active) return
+    if (dragStateRef.current.pointerId !== event.pointerId) return
+
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest?.('[data-image-index]')
+    if (!target) return
+
+    const nextIndex = Number.parseInt(
+      target.getAttribute('data-image-index') || '',
+      10
+    )
+    if (!Number.isInteger(nextIndex)) return
+    if (nextIndex === dragStateRef.current.currentIndex) return
+
+    const reordered = moveItem(
+      normalizedImages,
+      dragStateRef.current.currentIndex,
+      nextIndex
+    )
+    dragStateRef.current.currentIndex = nextIndex
+    setDraggingIndex(nextIndex)
+    onChange(reordered)
   }
 
   const handleUpload = async (file) => {
@@ -129,6 +258,14 @@ const ImagesInput = ({
 
       {normalizedImages.length > 0 ? (
         <div
+          onPointerMove={handleGridPointerMove}
+          onPointerUp={(event) => stopDrag(event.pointerId)}
+          onPointerCancel={(event) => stopDrag(event.pointerId)}
+          onPointerLeave={(event) => {
+            if (event.pointerType === 'mouse') {
+              stopDrag(event.pointerId)
+            }
+          }}
           className={
             isCirclePreview
               ? 'flex flex-wrap gap-3'
@@ -140,6 +277,7 @@ const ImagesInput = ({
           {normalizedImages.map((imageUrl, index) => (
             <div
               key={`${imageUrl}-${index}`}
+              data-image-index={index}
               className={`group overflow-hidden border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 ${
                 isCirclePreview
                   ? 'rounded-full h-28 w-28'
@@ -164,7 +302,11 @@ const ImagesInput = ({
                   type="button"
                   onClick={() => handleRemove(index)}
                   disabled={disabled}
-                  className="absolute right-2 top-2 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-rose-300 bg-rose-50/90 text-rose-600 opacity-0 shadow-sm transition hover:bg-rose-100 focus:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-400/40 dark:bg-slate-900/80 dark:text-rose-300"
+                  className={`absolute right-2 top-2 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-rose-300 bg-rose-50/90 text-rose-600 shadow-sm transition hover:bg-rose-100 focus:opacity-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-400/40 dark:bg-slate-900/80 dark:text-rose-300 ${
+                    isTouchLikeDevice
+                      ? 'opacity-100'
+                      : 'opacity-0 group-hover:opacity-100'
+                  }`}
                   title="Удалить изображение"
                   aria-label="Удалить изображение"
                 >
@@ -211,6 +353,28 @@ const ImagesInput = ({
                       className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                     >
                       {index === 0 ? 'Главная' : 'Сделать главной'}
+                    </button>
+                    <button
+                      type="button"
+                      onPointerDown={(event) =>
+                        handleDragHandlePointerDown(index, event)
+                      }
+                      onPointerUp={(event) => stopDrag(event.pointerId)}
+                      onPointerCancel={(event) => stopDrag(event.pointerId)}
+                      disabled={disabled}
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 ${
+                        draggingIndex === index ? 'bg-slate-100 dark:bg-slate-800' : ''
+                      }`}
+                      title="Перетащить"
+                      aria-label="Перетащить"
+                    >
+                      <svg
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="h-4 w-4"
+                      >
+                        <path d="M6 4.75a1.25 1.25 0 112.5 0A1.25 1.25 0 016 4.75zm0 5.25a1.25 1.25 0 112.5 0A1.25 1.25 0 016 10zm0 5.25a1.25 1.25 0 112.5 0A1.25 1.25 0 016 15.25zm5.5-10.5a1.25 1.25 0 112.5 0 1.25 1.25 0 01-2.5 0zm0 5.25a1.25 1.25 0 112.5 0 1.25 1.25 0 01-2.5 0zm0 5.25a1.25 1.25 0 112.5 0 1.25 1.25 0 01-2.5 0z" />
+                      </svg>
                     </button>
                   </div>
                 </div>

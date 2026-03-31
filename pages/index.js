@@ -59,7 +59,9 @@ const GAME_ACCESS_CHECK_DELAY_MS = 5000
 const ARCHIVE_SLIDE_INTERVAL_MS = 4200
 const ARCHIVE_REALITY_SWAP_MS = 10000
 const PROCESS_GRAB_HOLD_MS = 1600
-const ARCHIVE_HOLD_TO_UNLOCK_MS = 1800
+const ARCHIVE_SLED_SRC = '/img/sled.png'
+const ARCHIVE_SLED_HOLD_MS = 1000
+const ARCHIVE_SLED_HOLD_MOVE_TOLERANCE_PX = 12
 
 const normalize = (value) =>
   value
@@ -459,7 +461,9 @@ const ScenarioCard = ({
                 isFallbackConfirmed ? 'text-[#9dffd5]' : 'text-[#9dd9ff]'
               }`}
             >
-              {isFallbackConfirmed ? 'готовность подтверждена' : 'ожидание подтверждения'}
+              {isFallbackConfirmed
+                ? 'готовность подтверждена'
+                : 'ожидание подтверждения'}
             </p>
             <button
               type="button"
@@ -603,14 +607,14 @@ const Index2Page = () => {
   const [archiveImage, setArchiveImage] = useState('')
   const [archiveDragActive, setArchiveDragActive] = useState(false)
   const [archiveStatus, setArchiveStatus] = useState('')
-  const [isArchiveUploadUnlocked, setIsArchiveUploadUnlocked] = useState(false)
+  const [sledDragGhost, setSledDragGhost] = useState(null)
   const [projectChatUrl, setProjectChatUrl] = useState('')
   const [visibleFlowCount, setVisibleFlowCount] = useState(0)
   const transitionTimeoutRef = useRef(null)
   const inputGlitchTimeoutRef = useRef(null)
   const mapContainerRef = useRef(null)
   const archiveRealityLineRef = useRef(null)
-  const archiveInputRef = useRef(null)
+  const archiveDropZoneRef = useRef(null)
   const gamePathRef = useRef([])
   const gameSegmentsRef = useRef([])
   const mapIdleTimeoutRef = useRef(null)
@@ -622,7 +626,14 @@ const Index2Page = () => {
   const archiveRealityTimerRef = useRef(null)
   const archiveRealityGlitchTimerRef = useRef(null)
   const processGrabTimerRef = useRef(null)
-  const archiveUnlockHoldTimerRef = useRef(null)
+  const archiveSledPointerIdRef = useRef(null)
+  const archiveSledPendingPointerIdRef = useRef(null)
+  const archiveSledPendingPointerTypeRef = useRef('')
+  const archiveSledHoldStartPointRef = useRef({ x: 0, y: 0 })
+  const archiveSledLastPointRef = useRef({ x: 0, y: 0 })
+  const archiveSledHoldTimerRef = useRef(null)
+  const archiveSledDragElementRef = useRef(null)
+  const pageOverflowRestoreRef = useRef({ body: '', html: '' })
 
   const displayAnswer = useMemo(() => normalize(answer), [answer])
   const selectedKey = useMemo(() => {
@@ -751,7 +762,6 @@ const Index2Page = () => {
     setProcessRowsState(getShuffledFlowRows())
     setGrabbedProcessRowId(null)
     setIsProcessOrderLocked(false)
-    setIsArchiveUploadUnlocked(false)
   }, [stage])
 
   useEffect(() => {
@@ -810,10 +820,10 @@ const Index2Page = () => {
         clearTimeout(processGrabTimerRef.current)
         processGrabTimerRef.current = null
       }
-      if (archiveUnlockHoldTimerRef.current) {
-        clearTimeout(archiveUnlockHoldTimerRef.current)
-        archiveUnlockHoldTimerRef.current = null
-      }
+      window.removeEventListener('pointermove', handleArchiveSledPointerMove)
+      window.removeEventListener('pointerup', handleArchiveSledPointerEnd)
+      window.removeEventListener('pointercancel', handleArchiveSledPointerEnd)
+      clearArchiveSledDrag()
     }
   }, [])
 
@@ -1131,7 +1141,8 @@ const Index2Page = () => {
             location: locationKey,
             sort: '-dateEndFact',
             limit: '120',
-            select: '_id,name,image,location,dateStart,dateEndFact,status,hidden',
+            select:
+              '_id,name,image,location,dateStart,dateEndFact,status,hidden',
           })
           const response = await fetch(
             `/api/${locationKey}/custom?${params.toString()}`,
@@ -1745,7 +1756,6 @@ const Index2Page = () => {
     setArchiveImage('')
     setArchiveDragActive(false)
     setArchiveStatus('')
-    setIsArchiveUploadUnlocked(false)
     setSecretFound(false)
     setVisibleFlowCount(0)
     if (transitionTimeoutRef.current) {
@@ -1768,10 +1778,6 @@ const Index2Page = () => {
       clearTimeout(processGrabTimerRef.current)
       processGrabTimerRef.current = null
     }
-    if (archiveUnlockHoldTimerRef.current) {
-      clearTimeout(archiveUnlockHoldTimerRef.current)
-      archiveUnlockHoldTimerRef.current = null
-    }
 
     const lineTimer = setInterval(() => {
       setVisiblePrelude((prev) => {
@@ -1790,7 +1796,7 @@ const Index2Page = () => {
 
   const persistArchiveImage = (dataUrl) => {
     setArchiveImage(dataUrl)
-    setArchiveStatus('След сохранен в локальном архиве.')
+    setArchiveStatus('')
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(ARCHIVE_IMAGE_KEY, dataUrl)
@@ -1802,72 +1808,165 @@ const Index2Page = () => {
     }
   }
 
-  const handleArchiveFile = (file) => {
-    if (!file || !file.type?.startsWith('image/')) {
-      setArchiveStatus('Нужен файл изображения.')
-      return
-    }
+  const isPointInsideArchiveDropZone = (clientX, clientY) => {
+    const zoneRect = archiveDropZoneRef.current?.getBoundingClientRect?.()
+    if (!zoneRect) return false
+    return (
+      clientX >= zoneRect.left &&
+      clientX <= zoneRect.right &&
+      clientY >= zoneRect.top &&
+      clientY <= zoneRect.bottom
+    )
+  }
 
-    if (file.size > 2.2 * 1024 * 1024) {
-      setArchiveStatus(
-        'Изображение слишком большое для локального архива (до 2.2MB).',
-      )
-      return
+  const clearArchiveSledHoldTimer = () => {
+    if (archiveSledHoldTimerRef.current) {
+      clearTimeout(archiveSledHoldTimerRef.current)
+      archiveSledHoldTimerRef.current = null
     }
+  }
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : ''
-      if (!result) {
-        setArchiveStatus('Не удалось прочитать изображение.')
-        return
+  const detachArchiveSledPointerListeners = () => {
+    window.removeEventListener('pointermove', handleArchiveSledPointerMove)
+    window.removeEventListener('pointerup', handleArchiveSledPointerEnd)
+    window.removeEventListener('pointercancel', handleArchiveSledPointerEnd)
+  }
+
+  const clearArchiveSledDrag = () => {
+    clearArchiveSledHoldTimer()
+    archiveSledPendingPointerIdRef.current = null
+    archiveSledPendingPointerTypeRef.current = ''
+    const pointerId = archiveSledPointerIdRef.current
+    const dragElement = archiveSledDragElementRef.current
+    if (
+      dragElement &&
+      typeof pointerId === 'number' &&
+      dragElement.releasePointerCapture
+    ) {
+      try {
+        dragElement.releasePointerCapture(pointerId)
+      } catch {
+        // ignore release errors
       }
-      persistArchiveImage(result)
     }
-    reader.onerror = () => {
-      setArchiveStatus('Ошибка чтения изображения.')
+    archiveSledPointerIdRef.current = null
+    archiveSledDragElementRef.current = null
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = pageOverflowRestoreRef.current.body
+      document.documentElement.style.overflow = pageOverflowRestoreRef.current.html
     }
-    reader.readAsDataURL(file)
-  }
-
-  const handleArchiveDrop = (event) => {
-    event.preventDefault()
     setArchiveDragActive(false)
-    const file = event.dataTransfer?.files?.[0]
-    handleArchiveFile(file)
+    setSledDragGhost(null)
   }
 
-  const handleArchivePaste = (event) => {
-    const items = Array.from(event.clipboardData?.items || [])
-    const imageItem = items.find((item) => item.type.startsWith('image/'))
-    if (!imageItem) return
-    event.preventDefault()
-    const file = imageItem.getAsFile()
-    handleArchiveFile(file)
-  }
-
-  const clearArchiveUnlockHoldTimer = () => {
-    if (archiveUnlockHoldTimerRef.current) {
-      clearTimeout(archiveUnlockHoldTimerRef.current)
-      archiveUnlockHoldTimerRef.current = null
+  const startArchiveSledDrag = (pointerId, pointerType) => {
+    if (typeof pointerId !== 'number') return
+    archiveSledPointerIdRef.current = pointerId
+    const dragElement = archiveSledDragElementRef.current
+    if (dragElement?.setPointerCapture) {
+      try {
+        dragElement.setPointerCapture(pointerId)
+      } catch {
+        // ignore capture errors
+      }
+    }
+    setSledDragGhost({
+      x: archiveSledLastPointRef.current.x,
+      y: archiveSledLastPointRef.current.y,
+    })
+    setArchiveDragActive(false)
+    setArchiveStatus('')
+    if (typeof document !== 'undefined' && pointerType !== 'mouse') {
+      pageOverflowRestoreRef.current = {
+        body: document.body.style.overflow,
+        html: document.documentElement.style.overflow,
+      }
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
     }
   }
 
-  const handleArchiveHoldStart = (event) => {
-    if (event?.pointerType && event.pointerType !== 'touch') return
-    if (typeof window !== 'undefined') {
-      const isCoarsePointer = window.matchMedia(
-        '(hover: none) and (pointer: coarse)',
-      ).matches
-      if (!isCoarsePointer) return
+  const handleArchiveSledPointerMove = (event) => {
+    archiveSledLastPointRef.current = { x: event.clientX, y: event.clientY }
+
+    if (archiveSledPendingPointerIdRef.current === event.pointerId) {
+      const dx = event.clientX - archiveSledHoldStartPointRef.current.x
+      const dy = event.clientY - archiveSledHoldStartPointRef.current.y
+      if (Math.hypot(dx, dy) > ARCHIVE_SLED_HOLD_MOVE_TOLERANCE_PX) {
+        clearArchiveSledHoldTimer()
+        archiveSledPendingPointerIdRef.current = null
+        archiveSledPendingPointerTypeRef.current = ''
+        archiveSledDragElementRef.current = null
+        setArchiveDragActive(false)
+        setSledDragGhost(null)
+        detachArchiveSledPointerListeners()
+      }
+      return
     }
-    if (isArchiveUploadUnlocked) return
-    clearArchiveUnlockHoldTimer()
-    archiveUnlockHoldTimerRef.current = setTimeout(() => {
-      setIsArchiveUploadUnlocked(true)
-      setArchiveStatus('Сигнал принят. След можно зафиксировать.')
-      archiveUnlockHoldTimerRef.current = null
-    }, ARCHIVE_HOLD_TO_UNLOCK_MS)
+
+    if (archiveSledPointerIdRef.current !== event.pointerId) return
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+    const isInside = isPointInsideArchiveDropZone(event.clientX, event.clientY)
+    setArchiveDragActive(isInside)
+    setSledDragGhost({ x: event.clientX, y: event.clientY })
+  }
+
+  const handleArchiveSledPointerEnd = (event) => {
+    if (archiveSledPendingPointerIdRef.current === event.pointerId) {
+      clearArchiveSledHoldTimer()
+      archiveSledPendingPointerIdRef.current = null
+      archiveSledPendingPointerTypeRef.current = ''
+      archiveSledDragElementRef.current = null
+      setArchiveDragActive(false)
+      setSledDragGhost(null)
+      detachArchiveSledPointerListeners()
+      return
+    }
+
+    if (archiveSledPointerIdRef.current !== event.pointerId) return
+
+    const isInside = isPointInsideArchiveDropZone(event.clientX, event.clientY)
+    if (isInside) {
+      persistArchiveImage(ARCHIVE_SLED_SRC)
+    }
+    clearArchiveSledDrag()
+    detachArchiveSledPointerListeners()
+  }
+
+  const handleArchiveSledPointerDown = (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+
+    archiveSledDragElementRef.current = event.currentTarget
+    archiveSledLastPointRef.current = { x: event.clientX, y: event.clientY }
+    archiveSledHoldStartPointRef.current = { x: event.clientX, y: event.clientY }
+    setArchiveDragActive(false)
+    setArchiveStatus('')
+
+    if (event.pointerType === 'mouse') {
+      startArchiveSledDrag(event.pointerId, event.pointerType)
+    } else {
+      archiveSledPendingPointerIdRef.current = event.pointerId
+      archiveSledPendingPointerTypeRef.current = event.pointerType
+      clearArchiveSledHoldTimer()
+      archiveSledHoldTimerRef.current = setTimeout(() => {
+        if (archiveSledPendingPointerIdRef.current !== event.pointerId) return
+        archiveSledPendingPointerIdRef.current = null
+        startArchiveSledDrag(
+          event.pointerId,
+          archiveSledPendingPointerTypeRef.current,
+        )
+        archiveSledPendingPointerTypeRef.current = ''
+      }, ARCHIVE_SLED_HOLD_MS)
+    }
+
+    window.addEventListener('pointermove', handleArchiveSledPointerMove)
+    window.addEventListener('pointerup', handleArchiveSledPointerEnd)
+    window.addEventListener('pointercancel', handleArchiveSledPointerEnd)
   }
 
   const handleProcessRowPointerDown = (rowId) => {
@@ -2368,8 +2467,15 @@ const Index2Page = () => {
               <p className="text-xs uppercase tracking-[0.18em] text-[#00D1FF]/85">
                 архив
               </p>
-              <div className="mt-4 border rounded-3xl border-white/10 bg-white/5 p-7 md:p-10">
-                <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+              <div className="relative mt-4 border rounded-3xl border-white/10 bg-white/5 p-7 md:p-10">
+                <img
+                  src={ARCHIVE_SLED_SRC}
+                  alt="След автомобиля"
+                  className="absolute -top-20 -right-30 z-20 h-auto w-[18rem] rotate-[-50deg] touch-none tablet:rotate-[-60deg] opacity-95 tablet:-top-35 tablet:-right-22 tablet:w-[28rem]"
+                  draggable={false}
+                  onPointerDown={handleArchiveSledPointerDown}
+                />
+                <div className="grid gap-8">
                   <div>
                     <p className="text-3xl leading-tight text-white md:text-4xl">
                       Это не экскурсия
@@ -2471,26 +2577,7 @@ const Index2Page = () => {
                   </div>
                 </div>
                 <div
-                  onDragOver={(event) => {
-                    event.preventDefault()
-                    setArchiveDragActive(true)
-                  }}
-                  onDragEnter={(event) => {
-                    event.preventDefault()
-                    setArchiveDragActive(true)
-                  }}
-                  onDragLeave={(event) => {
-                    event.preventDefault()
-                    if (event.currentTarget.contains(event.relatedTarget))
-                      return
-                    setArchiveDragActive(false)
-                  }}
-                  onDrop={handleArchiveDrop}
-                  onPaste={handleArchivePaste}
-                  onPointerDown={handleArchiveHoldStart}
-                  onPointerUp={clearArchiveUnlockHoldTimer}
-                  onPointerLeave={clearArchiveUnlockHoldTimer}
-                  onPointerCancel={clearArchiveUnlockHoldTimer}
+                  ref={archiveDropZoneRef}
                   className={`mt-8 cursor-help rounded-2xl border border-dashed bg-black/20 p-4 outline-none transition ${
                     archiveDragActive
                       ? 'archive-drop-glow border-[#00D1FF] bg-[#00D1FF]/10'
@@ -2498,45 +2585,19 @@ const Index2Page = () => {
                   }`}
                   aria-label="Зона архива для загрузки изображения"
                 >
-                  <input
-                    ref={archiveInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={(event) => {
-                      handleArchiveFile(event.target.files?.[0])
-                      event.target.value = ''
-                    }}
-                  />
                   <p className="text-sm uppercase tracking-[0.14em] text-[#bfeeff]">
-                    Оставь и ты свой след здесь
+                    Оставь и ты след здесь
                   </p>
-
-                  {isArchiveUploadUnlocked && (
-                    <div className="flex items-center justify-start mt-3">
-                      <button
-                        type="button"
-                        onPointerDown={(event) => event.stopPropagation()}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          archiveInputRef.current?.click()
-                        }}
-                        className="cursor-pointer rounded-lg border border-[#00D1FF]/45 bg-[#00D1FF]/10 px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-[#baf3ff] transition hover:bg-[#00D1FF]/20"
-                      >
-                        зафиксировать
-                      </button>
-                    </div>
-                  )}
-
                   {archiveImage && (
                     <div className="mt-4">
-                      <div className="overflow-hidden rounded-xl border border-[#00D1FF]/35 bg-[#070014]/65">
-                        <img
-                          src={archiveImage}
-                          alt="След наблюдателя"
-                          className="max-h-[320px] w-full object-contain"
-                        />
+                      <div className="rounded-xl border border-[#00D1FF]/35 bg-[#070014]/65 px-4 py-4">
+                        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[#c8f8ff]">
+                          След принят в архив
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-[#bfe6ff]">
+                          Ты заметил связь там, где другие видят случайность.
+                          Маршрут активирован. Город уже отвечает тебе.
+                        </p>
                       </div>
                       <p className="mt-3 text-sm leading-relaxed text-[#bfe6ff]">
                         Ты всегда можешь создать свою игру и задать свои
@@ -2552,6 +2613,18 @@ const Index2Page = () => {
                     </p>
                   )}
                 </div>
+                {sledDragGhost && (
+                  <img
+                    src={ARCHIVE_SLED_SRC}
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none fixed z-[9999] h-auto w-32 -translate-x-1/2 -translate-y-1/2 rotate-[-50deg] opacity-90"
+                    style={{
+                      left: `${sledDragGhost.x}px`,
+                      top: `${sledDragGhost.y}px`,
+                    }}
+                  />
+                )}
               </div>
             </section>
 
