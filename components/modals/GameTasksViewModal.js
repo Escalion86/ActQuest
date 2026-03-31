@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import TiptapContentView from '@components/cabinet/TiptapContentView'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
 
@@ -252,16 +253,16 @@ const GameTasksViewModal = ({
                   <div className="space-y-4 px-4 py-4">
                     <div>
                       <ModalSectionTitle>Описание задания</ModalSectionTitle>
-                      {typeof task?.taskRich === 'string' && task.taskRich.trim() ? (
-                        <div
-                          className="aq-task-content mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200"
-                          dangerouslySetInnerHTML={{ __html: task.taskRich }}
+                      <div className="mt-2">
+                        <TiptapContentView
+                          html={task?.taskRich}
+                          text={task?.task}
+                          emptyText="Описание отсутствует."
+                          className="text-sm leading-relaxed text-slate-700 dark:prose-invert dark:text-slate-200"
+                          textClassName="text-sm leading-relaxed text-slate-700 dark:text-slate-200"
+                          emptyClassName="text-sm text-slate-500 dark:text-slate-300"
                         />
-                      ) : (
-                        <p className="mt-2 whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">
-                          {task?.task || 'Описание отсутствует.'}
-                        </p>
-                      )}
+                      </div>
                     </div>
 
                     {visibleClues.length > 0 && (
@@ -275,16 +276,16 @@ const GameTasksViewModal = ({
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
                               Подсказка {clueIndex + 1}
                             </p>
-                            {typeof clue?.clueRich === 'string' && clue.clueRich.trim() ? (
-                              <div
-                                className="aq-task-content mt-1 text-sm leading-relaxed text-slate-700 dark:text-slate-200"
-                                dangerouslySetInnerHTML={{ __html: clue.clueRich }}
+                            <div className="mt-1">
+                              <TiptapContentView
+                                html={clue?.clueRich}
+                                text={clue?.clue}
+                                emptyText="Текст подсказки отсутствует."
+                                className="text-sm leading-relaxed text-slate-700 dark:prose-invert dark:text-slate-200"
+                                textClassName="text-sm leading-relaxed text-slate-700 dark:text-slate-200"
+                                emptyClassName="text-sm text-slate-500 dark:text-slate-300"
                               />
-                            ) : (
-                              <p className="mt-1 whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">
-                                {clue?.clue || 'Текст подсказки отсутствует.'}
-                              </p>
-                            )}
+                            </div>
                           </div>
                         ))}
                       </div>

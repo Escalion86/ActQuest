@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth/next'
 
 import fetchGame from '@server/fetchGame'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import TiptapContentView from '@components/cabinet/TiptapContentView'
 
 import { authOptions } from '@pages/api/auth/[...nextauth]'
 
@@ -199,18 +200,13 @@ function GameEntryPage({
                     {location}
                   </span>
                 </div>
-                {descriptionRich ? (
-                  <div
-                    className="prose prose-slate max-w-none leading-relaxed dark:prose-invert"
-                    dangerouslySetInnerHTML={{ __html: descriptionRich }}
-                  />
-                ) : descriptionParts.length > 0 ? (
-                  <div className="flex flex-col gap-2 text-base leading-relaxed text-gray-700 dark:text-slate-200">
-                    {descriptionParts.map((part, index) => (
-                      <p key={`description-${index}`}>{part}</p>
-                    ))}
-                  </div>
-                ) : null}
+                <TiptapContentView
+                  html={descriptionRich}
+                  text={descriptionParts.join('\n')}
+                  className="prose-slate text-base leading-relaxed text-gray-700 dark:prose-invert dark:text-slate-200"
+                  textClassName="text-base leading-relaxed text-gray-700 dark:text-slate-200"
+                  emptyText=""
+                />
                 <div className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2 dark:text-slate-300">
                   {plannedStart ? (
                     <div className="flex flex-col">

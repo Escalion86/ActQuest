@@ -260,6 +260,123 @@ blockquote {
   /* Standard syntax */
 }
 
+.aq-rich-text-base {
+  font-size: 15px;
+  line-height: 1.333333;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.aq-rich-text-base p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.aq-rich-text-base p[data-aq-empty-line='true'] {
+  min-height: 1.333333em;
+}
+
+.aq-rich-text-base p + p {
+  margin-top: 0;
+}
+
+.aq-rich-text-base h2 {
+  margin: 0.4rem 0 0.35rem;
+  font-size: 1.35rem;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.aq-rich-text-base h3 {
+  margin: 0.35rem 0 0.3rem;
+  font-size: 1.15rem;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.aq-rich-text-base ul,
+.aq-rich-text-base ol {
+  margin: 0.35rem 0;
+  padding-left: 1.25rem;
+}
+
+.aq-rich-text-base ul {
+  list-style: disc outside !important;
+}
+
+.aq-rich-text-base ol {
+  list-style: decimal outside !important;
+}
+
+.aq-rich-text-base li {
+  display: list-item;
+}
+
+.aq-rich-text-base li::marker {
+  color: currentColor;
+}
+
+.aq-rich-text-base blockquote {
+  margin: 0.45rem 0;
+  border-left: 3px solid rgba(14, 165, 233, 0.9) !important;
+  border-radius: 10px;
+  background: linear-gradient(
+    120deg,
+    rgba(14, 165, 233, 0.12),
+    rgba(59, 130, 246, 0.06)
+  );
+  padding: 0.55rem 0.75rem;
+  color: #0f3b67;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.aq-rich-text-base pre {
+  margin: 0.45rem 0;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #0f172a;
+  padding: 0.7rem 0.8rem;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.aq-rich-text-base a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.aq-rich-text-base img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 12px 0;
+  border-radius: 12px;
+}
+
+.dark .aq-rich-text-base h2,
+.dark .aq-rich-text-base h3 {
+  color: #f8fafc;
+}
+
+.dark .aq-rich-text-base blockquote {
+  border-left-color: rgba(56, 189, 248, 0.9) !important;
+  background: linear-gradient(
+    120deg,
+    rgba(14, 116, 144, 0.35),
+    rgba(30, 58, 138, 0.2)
+  );
+  color: #dbeafe;
+}
+
 .real-screen-height {
   height: 100vh;
   height: calc(var(--vh, 1vh) * 100);

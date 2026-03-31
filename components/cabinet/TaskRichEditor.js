@@ -116,6 +116,44 @@ const escapeHtmlAttribute = (value) =>
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
 
+const escapeHtmlText = (value) =>
+  String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+
+const containsHtmlLikeTag = (value) =>
+  /<([a-z][\w-]*)(\s[^>]*)?>/i.test(String(value || ''))
+
+const plainTextToEditorHtml = (value) => {
+  const normalizedText = String(value || '')
+    .replace(/\r\n?/g, '\n')
+    .replaceAll('\u00A0', ' ')
+    .trim()
+
+  if (!normalizedText) {
+    return '<p></p>'
+  }
+
+  return normalizedText
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${escapeHtmlText(paragraph).replace(/\n/g, '<br>')}</p>`)
+    .join('')
+}
+
+const normalizeEditorInputValue = (value) => {
+  const source = typeof value === 'string' ? value : ''
+  if (!source.trim()) {
+    return '<p></p>'
+  }
+
+  if (containsHtmlLikeTag(source)) {
+    return source
+  }
+
+  return plainTextToEditorHtml(source)
+}
+
 const buildAudioHtml = (url, title = 'Аудио') => {
   const safeUrl = escapeHtmlAttribute(url)
   const safeTitle = escapeHtmlAttribute(title)
@@ -675,6 +713,10 @@ const TaskRichEditor = ({
   })
 
   const normalizedValue = typeof value === 'string' ? value : ''
+  const normalizedContentValue = useMemo(
+    () => normalizeEditorInputValue(normalizedValue),
+    [normalizedValue],
+  )
 
   const extensions = useMemo(
     () => [
@@ -707,13 +749,13 @@ const TaskRichEditor = ({
   const editor = useEditor(
     {
       extensions,
-      content: normalizedValue || '<p></p>',
+      content: normalizedContentValue,
       editable: !disabled,
       immediatelyRender: false,
       editorProps: {
         attributes: {
           class:
-            'ProseMirror prose prose-slate max-w-none min-h-[220px] px-5 py-4 text-[15px] leading-5 text-slate-800 focus:outline-none dark:prose-invert dark:text-slate-100',
+            'ProseMirror aq-rich-text-base max-w-none min-h-[220px] px-5 py-4 text-slate-800 focus:outline-none dark:text-slate-100',
         },
       },
       onUpdate: ({ editor: nextEditor }) => {
@@ -725,9 +767,9 @@ const TaskRichEditor = ({
 
   useEffect(() => {
     if (!editor) return
-    if (editor.getHTML() === normalizedValue) return
-    editor.commands.setContent(normalizedValue || '<p></p>', false)
-  }, [editor, normalizedValue])
+    if (editor.getHTML() === normalizedContentValue) return
+    editor.commands.setContent(normalizedContentValue, false)
+  }, [editor, normalizedContentValue])
 
   useEffect(() => {
     if (!editor) return
@@ -1391,84 +1433,6 @@ const TaskRichEditor = ({
       </div>
 
       <style jsx global>{`
-        .ProseMirror p {
-          margin: 0;
-        }
-
-        .ProseMirror h2 {
-          margin: 0.4rem 0 0.35rem;
-          font-size: 1.35rem;
-          line-height: 1.35;
-          font-weight: 700;
-          color: #0f172a;
-        }
-
-        .ProseMirror h3 {
-          margin: 0.35rem 0 0.3rem;
-          font-size: 1.15rem;
-          line-height: 1.35;
-          font-weight: 700;
-          color: #1e293b;
-        }
-
-        .ProseMirror ul,
-        .ProseMirror ol {
-          margin: 0.35rem 0;
-          padding-left: 1.25rem;
-        }
-
-        .ProseMirror ul {
-          list-style: disc outside !important;
-        }
-
-        .ProseMirror ol {
-          list-style: decimal outside !important;
-        }
-
-        .ProseMirror li {
-          display: list-item;
-        }
-
-        .ProseMirror li::marker {
-          color: currentColor;
-        }
-
-        .ProseMirror blockquote {
-          margin: 0.45rem 0;
-          border-left: 3px solid rgba(14, 165, 233, 0.9);
-          border-radius: 10px;
-          background: linear-gradient(
-            120deg,
-            rgba(14, 165, 233, 0.12),
-            rgba(59, 130, 246, 0.06)
-          );
-          padding: 0.55rem 0.75rem;
-          color: #0f3b67;
-        }
-
-        .ProseMirror pre {
-          margin: 0.45rem 0;
-          border-radius: 12px;
-          border: 1px solid rgba(148, 163, 184, 0.35);
-          background: #0f172a;
-          padding: 0.7rem 0.8rem;
-          color: #e2e8f0;
-        }
-
-        .ProseMirror a {
-          color: #2563eb;
-          text-decoration: underline;
-          text-underline-offset: 2px;
-        }
-
-        .ProseMirror img {
-          display: block;
-          max-width: 100%;
-          height: auto;
-          margin: 12px 0;
-          border-radius: 12px;
-        }
-
         .ProseMirror .aq-image-node {
           position: relative;
           display: inline-block;
@@ -1757,20 +1721,6 @@ const TaskRichEditor = ({
           background: #67e8f9;
         }
 
-        .dark .ProseMirror h2,
-        .dark .ProseMirror h3 {
-          color: #f8fafc;
-        }
-
-        .dark .ProseMirror blockquote {
-          border-left-color: rgba(56, 189, 248, 0.9);
-          background: linear-gradient(
-            120deg,
-            rgba(14, 116, 144, 0.35),
-            rgba(30, 58, 138, 0.2)
-          );
-          color: #dbeafe;
-        }
       `}</style>
     </>
   )

@@ -7,6 +7,8 @@ import { SnackbarProvider } from 'lib/notistack'
 
 import '../styles/global.css'
 
+const SITE_AUDIO_SRC = '/sounds/Cibircatacombs.mp3'
+
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   const router = useRouter()
   const mode = process.env.MODE ?? process.env.NODE_ENV
@@ -14,6 +16,8 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   const [isMuted, setIsMuted] = useState(false)
   const [hasStartedPlayback, setHasStartedPlayback] = useState(false)
   const [isAudioReady, setIsAudioReady] = useState(false)
+  const [lastAudioError, setLastAudioError] = useState('')
+  const [isAudioHintDismissed, setIsAudioHintDismissed] = useState(false)
   const isCabinetRoute = router.pathname.startsWith('/cabinet')
   const isLandingRoute = router.pathname === '/' || router.pathname === '/index2'
 
@@ -22,10 +26,29 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
     if (!audio || isMuted || isCabinetRoute) return false
 
     try {
+      if (audio.readyState < 2) {
+        audio.load()
+      }
       await audio.play()
       setHasStartedPlayback(true)
+      setLastAudioError('')
+      setIsAudioHintDismissed(false)
       return true
-    } catch {
+    } catch (error) {
+      const errorName =
+        typeof error?.name === 'string' && error.name.trim()
+          ? error.name.trim()
+          : 'UnknownError'
+      setLastAudioError(errorName)
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[site-audio] play() rejected', {
+          errorName,
+          pathname: router.pathname,
+          readyState: audio.readyState,
+          muted: audio.muted,
+          paused: audio.paused,
+        })
+      }
       return false
     }
   }
@@ -138,6 +161,28 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   }, [router.pathname, isLandingRoute, isCabinetRoute, isMuted, hasStartedPlayback])
 
   useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return undefined
+    if (!isLandingRoute || isMuted || isCabinetRoute || hasStartedPlayback) {
+      return undefined
+    }
+
+    const tryResume = () => {
+      void tryPlayAudio()
+    }
+
+    audio.addEventListener('canplay', tryResume)
+    window.addEventListener('pageshow', tryResume)
+    document.addEventListener('visibilitychange', tryResume)
+
+    return () => {
+      audio.removeEventListener('canplay', tryResume)
+      window.removeEventListener('pageshow', tryResume)
+      document.removeEventListener('visibilitychange', tryResume)
+    }
+  }, [hasStartedPlayback, isCabinetRoute, isLandingRoute, isMuted])
+
+  useEffect(() => {
     if (typeof window === 'undefined') return
     if (isMuted || hasStartedPlayback || isCabinetRoute) return
 
@@ -173,6 +218,28 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
     }
   }, [router.pathname])
 
+  useEffect(() => {
+    if (lastAudioError === 'NotAllowedError') {
+      setIsAudioHintDismissed(false)
+    }
+  }, [lastAudioError])
+
+  const showAudioUnlockHint =
+    !isCabinetRoute &&
+    isLandingRoute &&
+    !isMuted &&
+    !hasStartedPlayback &&
+    !isAudioHintDismissed &&
+    lastAudioError === 'NotAllowedError'
+
+  const handleEnableAudio = async () => {
+    const started = await tryPlayAudio()
+    if (!started) {
+      return
+    }
+    setIsAudioHintDismissed(false)
+  }
+
   return (
     <>
       <Head>
@@ -180,6 +247,7 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
         <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="preload" as="audio" href={SITE_AUDIO_SRC} type="audio/mpeg" />
       </Head>
       <SessionProvider session={session} refetchInterval={5 * 60}>
         <SnackbarProvider
@@ -190,14 +258,38 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
           <JotaiProvider>
             <audio
               ref={audioRef}
-              src="/sounds/Cibircatacombs.mp3"
+              src={SITE_AUDIO_SRC}
               loop
-              preload="auto"
+              preload="metadata"
+              playsInline
               onCanPlay={() => setIsAudioReady(true)}
               onCanPlayThrough={() => setIsAudioReady(true)}
               onLoadedMetadata={() => setIsAudioReady(true)}
             />
             <Component {...pageProps} />
+            {showAudioUnlockHint ? (
+              <div className="fixed bottom-20 right-5 z-[9999] w-[min(92vw,320px)] rounded-2xl border border-[#00D1FF]/40 bg-[#0B001A]/88 p-3 text-[#d7f7ff] shadow-[0_0_24px_rgba(0,209,255,0.2)] backdrop-blur-sm">
+                <p className="text-sm leading-snug">
+                  Браузер заблокировал автозапуск музыки. Нажмите, чтобы включить звук.
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleEnableAudio}
+                    className="inline-flex items-center justify-center rounded-xl border border-[#00D1FF]/55 bg-[#102040] px-3 py-1.5 text-xs font-semibold text-[#baf3ff] transition hover:bg-[#17325f]"
+                  >
+                    Включить звук
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAudioHintDismissed(true)}
+                    className="inline-flex items-center justify-center rounded-xl border border-[#6b7280]/50 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/5"
+                  >
+                    Скрыть
+                  </button>
+                </div>
+              </div>
+            ) : null}
             {!isCabinetRoute && isAudioReady && (
               <button
                 type="button"
@@ -205,6 +297,7 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
                 className="fixed bottom-5 right-5 z-[9999] inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-[#00D1FF]/50 bg-[#0B001A]/80 text-[#baf3ff] shadow-[0_0_18px_rgba(0,209,255,0.24)] backdrop-blur-sm transition hover:bg-[#12012a]"
                 aria-label={isMuted ? 'Включить музыку' : 'Выключить музыку'}
                 title={isMuted ? 'Включить музыку' : 'Выключить музыку'}
+                data-audio-error={lastAudioError || undefined}
               >
                 {isMuted ? (
                   <svg

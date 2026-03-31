@@ -172,6 +172,8 @@ const fetchGamesForCabinet = async ({
       dateEndFact: 1,
       type: 1,
       description: 1,
+      descriptionRich: 1,
+      descriptionMedia: 1,
       image: 1,
       startingPlace: 1,
       finishingPlace: 1,

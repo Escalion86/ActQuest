@@ -13,7 +13,6 @@ import CabinetNumberField from '@components/cabinet/CabinetNumberField'
 import NeonCheckbox from '@components/NeonCheckbox'
 import formatDate from '@helpers/formatDate'
 import formatDateTime from '@helpers/formatDateTime'
-import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import ModalSection from './ModalSection'
 
 const TaskRichEditor = dynamic(() => import('@components/cabinet/TaskRichEditor'), {
@@ -272,28 +271,17 @@ const GameEditModal = ({
                       previewShape="square"
                     />
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <CabinetInputField
-                        id="game-title"
-                        label="Название игры"
-                        type="text"
-                        value={selectedGame.name}
-                        onChange={(event) =>
-                          updateSelectedGame({ name: event.target.value })
-                        }
-                        labelClassName={fieldLabelClassName}
-                        inputClassName={fieldInputClassName}
-                      />
-                      <div className="space-y-2">
-                        <p className={fieldLabelClassName}>Статус игры</p>
-                        <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
-                          {getGameStatusLabel(selectedGame.status)}
-                        </span>
-                        <p className="text-xs text-slate-500 dark:text-slate-300">
-                          Смена статуса доступна только с карточки игры.
-                        </p>
-                      </div>
-                    </div>
+                    <CabinetInputField
+                      id="game-title"
+                      label="Название игры"
+                      type="text"
+                      value={selectedGame.name}
+                      onChange={(event) =>
+                        updateSelectedGame({ name: event.target.value })
+                      }
+                      labelClassName={fieldLabelClassName}
+                      inputClassName={fieldInputClassName}
+                    />
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <CabinetSelectField

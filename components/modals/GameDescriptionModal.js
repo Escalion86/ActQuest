@@ -2,6 +2,7 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import TiptapContentView from '@components/cabinet/TiptapContentView'
 import formatDate from '@helpers/formatDate'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
@@ -102,15 +103,16 @@ const GameDescriptionModal = ({
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
                   <ModalSectionTitle>Описание</ModalSectionTitle>
-                  {selectedGame.description ? (
-                    <p className="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
-                      {selectedGame.description}
-                    </p>
-                  ) : (
-                    <p className="mt-3 text-sm text-slate-500">
-                      Описание для этой игры не заполнено.
-                    </p>
-                  )}
+                  <div className="mt-3">
+                    <TiptapContentView
+                      html={selectedGame.descriptionRich}
+                      text={selectedGame.description}
+                      emptyText="Описание для этой игры не заполнено."
+                      className="text-slate-600 dark:prose-invert dark:text-slate-300"
+                      textClassName="text-sm text-slate-600 dark:text-slate-300"
+                      emptyClassName="text-sm text-slate-500"
+                    />
+                  </div>
                 </div>
 
                 {canViewGameResults && (

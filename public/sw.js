@@ -1,4 +1,4 @@
-const CACHE_NAME = 'actquest-cache-v3'
+const CACHE_NAME = 'actquest-cache-v4'
 const PRECACHE_URLS = [
   '/',
   '/favicon.ico',
@@ -36,6 +36,10 @@ self.addEventListener('fetch', (event) => {
   const isSameOrigin = requestURL.origin === self.location.origin
   const isAuthRequest = requestURL.pathname.startsWith('/api/auth/')
   const isApiRequest = requestURL.pathname.startsWith('/api/')
+  const isAudioRequest =
+    requestURL.pathname.startsWith('/sounds/') ||
+    (request.headers.get('accept') || '').includes('audio/')
+  const hasRangeHeader = request.headers.has('range')
   const acceptHeader = request.headers.get('accept') || ''
   const isHtmlRequest =
     request.mode === 'navigate' || acceptHeader.includes('text/html')
@@ -47,7 +51,34 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // Do not intercept byte-range requests. Browsers often use them for media streaming,
+  // and cache-matching a full response may break seek/start behavior.
+  if (hasRangeHeader) {
+    return
+  }
+
   if (isApiRequest) {
+    return
+  }
+
+  if (isAudioRequest) {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone()
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseToCache)
+            })
+          }
+          return networkResponse
+        })
+        .catch(async () => {
+          const cached = await caches.match(request)
+          if (cached) return cached
+          return new Response('', { status: 504, statusText: 'Gateway Timeout' })
+        }),
+    )
     return
   }
 
