@@ -22,6 +22,26 @@ const parseUpstreamResponse = async (response) => {
 const normalizePathSegment = (value) =>
   typeof value === 'string' ? value.trim().replace(/^\/+|\/+$/g, '') : ''
 const isDevEnv = process.env.NODE_ENV !== 'production'
+const IOS_USER_AGENT_RE = /\b(iPhone|iPad|iPod)\b/i
+const HEIC_HEIF_NAME_RE = /\.(heic|heif)$/i
+
+const getRequestId = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+const getFileMeta = (file) => {
+  const name = typeof file?.name === 'string' ? file.name : ''
+  const type = typeof file?.type === 'string' ? file.type : ''
+  const size = Number.isFinite(file?.size) ? Number(file.size) : null
+  const isHeic =
+    /image\/hei(c|f)/i.test(type) || HEIC_HEIF_NAME_RE.test(String(name))
+
+  return {
+    name,
+    type,
+    size,
+    isHeic,
+  }
+}
 
 export const config = {
   api: {
@@ -30,6 +50,11 @@ export const config = {
 }
 
 export default async function handler(req, res) {
+  const requestId = getRequestId()
+  const userAgent = String(req.headers['user-agent'] || '')
+  const contentLength = String(req.headers['content-length'] || '')
+  const isIosClient = IOS_USER_AGENT_RE.test(userAgent)
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json(buildError('METHOD_NOT_ALLOWED', 'Method not allowed'))
@@ -51,6 +76,8 @@ export default async function handler(req, res) {
     })
     const incomingFormData = await webRequest.formData()
     const files = incomingFormData.getAll('files')
+    const filesMeta = files.map((file) => getFileMeta(file))
+    const hasHeicFiles = filesMeta.some((file) => file.isHeic)
     const directoryRaw = incomingFormData.get('directory')
     const fileNameRaw = incomingFormData.get('fileName')
     const extensionRaw = incomingFormData.get('extension')
@@ -77,12 +104,27 @@ export default async function handler(req, res) {
       [legacyProject, legacyFolder].filter(Boolean).join('/')
 
     if (!files.length) {
+      console.error('[EscalionCloud][upload][validation-error]', {
+        requestId,
+        reason: 'NO_FILES',
+        isIosClient,
+        userAgent,
+        contentLength,
+      })
       return res.status(400).json(
         buildError('VALIDATION_ERROR', 'No files provided for upload'),
       )
     }
 
     if (!directory) {
+      console.error('[EscalionCloud][upload][validation-error]', {
+        requestId,
+        reason: 'EMPTY_DIRECTORY',
+        isIosClient,
+        userAgent,
+        contentLength,
+        filesMeta,
+      })
       return res.status(400).json(
         buildError(
           'VALIDATION_ERROR',
@@ -116,13 +158,12 @@ export default async function handler(req, res) {
 
     if (isDevEnv) {
       console.log('[EscalionCloud][upload][upstream-response]', {
+        requestId,
         status: upstreamResponse.status,
         ok: upstreamResponse.ok,
         directory,
         filesCount: files.length,
-        fileNames: files
-          .map((file) => (typeof file?.name === 'string' ? file.name : null))
-          .filter(Boolean),
+        filesMeta,
         body: upstreamBody,
       })
     }
@@ -135,10 +176,32 @@ export default async function handler(req, res) {
           ? upstreamMessage
           : JSON.stringify(upstreamMessage) ||
             `EscalionCloud upload failed with status ${upstreamResponse.status}`
+      const isHeicLikelyRejected =
+        hasHeicFiles &&
+        /hei(c|f)|unsupported|format|mime|type|extension/i.test(
+          String(errorMessage),
+        )
+
+      console.error('[EscalionCloud][upload][upstream-error]', {
+        requestId,
+        status: upstreamResponse.status,
+        directory,
+        isIosClient,
+        contentLength,
+        filesMeta,
+        upstreamBody,
+      })
 
       return res
         .status(upstreamResponse.status)
-        .json(buildError('ESCALIONCLOUD_REQUEST_FAILED', errorMessage))
+        .json(
+          buildError(
+            'ESCALIONCLOUD_REQUEST_FAILED',
+            isHeicLikelyRejected
+              ? 'Формат HEIC/HEIF сейчас не поддерживается загрузчиком. На iPhone выберите фото в JPEG (Настройки -> Камера -> Форматы -> Наиболее совместимые) или пересохраните изображение.'
+              : errorMessage,
+          ),
+        )
     }
 
     return res.status(200).json({
@@ -148,7 +211,13 @@ export default async function handler(req, res) {
         : upstreamBody?.data ?? upstreamBody,
     })
   } catch (error) {
-    console.log('EscalionCloud upload API error:', error)
+    console.error('[EscalionCloud][upload][internal-error]', {
+      requestId,
+      isIosClient,
+      contentLength,
+      message: error?.message,
+      stack: error?.stack,
+    })
     return res.status(500).json(
       buildError(
         'INTERNAL_ERROR',

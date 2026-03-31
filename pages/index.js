@@ -65,7 +65,7 @@ const normalize = (value) =>
   value
     .trim()
     .toLowerCase()
-    .replace(/[.!?,:;\-]/g, '')
+    .replace(/[.!?,:;-]/g, '')
 const parsePercent = (value) =>
   Number.parseFloat(String(value).replace('%', ''))
 
@@ -615,6 +615,7 @@ const Index2Page = () => {
   const gameSegmentsRef = useRef([])
   const mapIdleTimeoutRef = useRef(null)
   const mapHoverStartRef = useRef(0)
+  const activeMapPointerIdRef = useRef(null)
   const keyboardBufferRef = useRef('')
   const keyboardMessageTimeoutRef = useRef(null)
   const scenarioAccessTimerRef = useRef(null)
@@ -735,6 +736,7 @@ const Index2Page = () => {
     setSpecialPointNote('')
     setMapObserverUnlocked(false)
     setMapTouchedPointIds([])
+    activeMapPointerIdRef.current = null
     setKeyboardEasterMessage('')
     setGamePath([])
     setGameSegments([])
@@ -1582,7 +1584,11 @@ const Index2Page = () => {
   const handlePointPointerDown = (pointId, event) => {
     if (!secretFound || gameComplete) return
 
-    event.preventDefault()
+    if (event.cancelable) {
+      event.preventDefault()
+    }
+    event.stopPropagation()
+    activeMapPointerIdRef.current = event.pointerId
     captureMapPointer(event.pointerId)
     const rel = getRelativeMapPoint(event.clientX, event.clientY)
     if (!rel) return
@@ -1620,6 +1626,10 @@ const Index2Page = () => {
 
   const handleMapPointerMove = (event) => {
     if (!secretFound) return
+    const activePointerId = activeMapPointerIdRef.current
+    if (isDrawingPath && typeof activePointerId === 'number') {
+      if (event.pointerId !== activePointerId) return
+    }
     if (isDrawingPath && event.cancelable) {
       event.preventDefault()
     }
@@ -1652,6 +1662,14 @@ const Index2Page = () => {
   }
 
   const handleMapPointerUp = (event) => {
+    const activePointerId = activeMapPointerIdRef.current
+    if (
+      typeof activePointerId === 'number' &&
+      event?.pointerId !== activePointerId
+    ) {
+      return
+    }
+    activeMapPointerIdRef.current = null
     releaseMapPointer(event?.pointerId)
     if (!isDrawingPath) return
     if (gameComplete) return
@@ -1659,12 +1677,28 @@ const Index2Page = () => {
   }
 
   const handleMapPointerCancel = (event) => {
+    const activePointerId = activeMapPointerIdRef.current
+    if (
+      typeof activePointerId === 'number' &&
+      event?.pointerId !== activePointerId
+    ) {
+      return
+    }
+    activeMapPointerIdRef.current = null
     releaseMapPointer(event?.pointerId)
     if (!isDrawingPath || gameComplete) return
     restartPathGame('Линия оборвалась.')
   }
 
   const handleMapPointerLeave = (event) => {
+    const activePointerId = activeMapPointerIdRef.current
+    if (
+      typeof activePointerId === 'number' &&
+      event?.pointerId !== activePointerId
+    ) {
+      return
+    }
+    activeMapPointerIdRef.current = null
     releaseMapPointer(event?.pointerId)
     if (mapIdleTimeoutRef.current) {
       clearTimeout(mapIdleTimeoutRef.current)
@@ -1773,6 +1807,27 @@ const Index2Page = () => {
       })
     }, PRELUDE_LINE_DELAY_MS)
   }
+
+  useEffect(() => {
+    if (!isDrawingPath) return undefined
+
+    const preventTouchDefaults = (event) => {
+      if (!event.cancelable) return
+      event.preventDefault()
+    }
+
+    document.addEventListener('touchmove', preventTouchDefaults, {
+      passive: false,
+    })
+    document.addEventListener('touchend', preventTouchDefaults, {
+      passive: false,
+    })
+
+    return () => {
+      document.removeEventListener('touchmove', preventTouchDefaults)
+      document.removeEventListener('touchend', preventTouchDefaults)
+    }
+  }, [isDrawingPath])
 
   const persistArchiveImage = (dataUrl) => {
     setArchiveImage(dataUrl)
@@ -2128,6 +2183,11 @@ const Index2Page = () => {
                   onPointerCancel={handleMapPointerCancel}
                   onPointerLeave={handleMapPointerLeave}
                   className="panel-breathe touch-none relative h-[340px] overflow-hidden rounded-3xl border border-white/15 bg-[radial-gradient(circle_at_20%_20%,rgba(122,0,255,0.26),transparent_35%),radial-gradient(circle_at_80%_75%,rgba(0,209,255,0.22),transparent_30%),linear-gradient(140deg,#16032c_0%,#0b001a_45%,#130024_100%)] p-4 lg:h-[390px] xl:h-[430px]"
+                  style={{
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTouchCallout: 'none',
+                  }}
                 >
                   <p className="text-xs uppercase tracking-[0.16em] text-slate-300">
                     Карта города
@@ -2194,6 +2254,7 @@ const Index2Page = () => {
                       }`}
                       style={{ top: point.top, left: point.left }}
                       aria-label="map point"
+                      draggable={false}
                     >
                       <span className="sr-only">map point</span>
                     </button>
@@ -2210,6 +2271,7 @@ const Index2Page = () => {
                     className="absolute w-10 h-10 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 cursor-pointer"
                     style={{ top: promoPoint.top, left: promoPoint.left }}
                     aria-label="secret zone"
+                    draggable={false}
                   />
 
                   {secretFound && (
@@ -2232,6 +2294,7 @@ const Index2Page = () => {
                           : ''
                       }`}
                       style={{ top: promoPoint.top, left: promoPoint.left }}
+                      draggable={false}
                     />
                   )}
 
