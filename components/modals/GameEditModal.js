@@ -235,6 +235,19 @@ const GameEditModal = ({
                 label="Показать результаты"
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
               />
+              <NeonCheckbox
+                id="game-registration-open-closed"
+                checked={Boolean(selectedGame.registrationOpen ?? true)}
+                onChange={(eventOrChecked) =>
+                  debugCheckboxUpdate(
+                    'registrationOpen',
+                    getCheckboxChecked(eventOrChecked),
+                    (checked) => ({ registrationOpen: checked }),
+                  )
+                }
+                label="Запись на игру открыта"
+                labelClassName="text-sm text-slate-600 dark:text-slate-200"
+              />
             </div>
           </ModalSection>
         </fieldset>
@@ -1417,6 +1430,19 @@ const GameEditModal = ({
                           )
                         }
                         label="Показать результаты"
+                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                      />
+                      <NeonCheckbox
+                        id="game-registration-open"
+                        checked={Boolean(selectedGame.registrationOpen ?? true)}
+                        onChange={(eventOrChecked) =>
+                          debugCheckboxUpdate(
+                            'registrationOpen',
+                            getCheckboxChecked(eventOrChecked),
+                            (checked) => ({ registrationOpen: checked }),
+                          )
+                        }
+                        label="Запись на игру открыта"
                         labelClassName="text-sm text-slate-600 dark:text-slate-200"
                       />
                     </div>

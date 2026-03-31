@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import Head from 'next/head'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import CABINET_ROLE_LABELS from '@helpers/cabinetRoleLabels'
 import getSessionSafe from '@helpers/getSessionSafe'
@@ -146,21 +147,11 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
             {safeInitialReports.topTeams.length > 0 ? (
               <ul className="space-y-3">
                 {safeInitialReports.topTeams.map((team) => (
-                  <li
-                    key={team.id}
-                    className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-primary dark:text-slate-100">{team.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-300">
-                        Участников: {numberFormatter.format(team.membersCount)} · Игр: {numberFormatter.format(team.gamesCount)}
-                      </p>
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      {team.updatedAt
-                        ? `Обновлено ${formatRelativeTimeFromNow(team.updatedAt)}`
-                        : 'Дата обновления неизвестна'}
-                    </p>
+                  <li key={team.id}>
+                    <UserTeamCard
+                      team={team}
+                      metaText={`Участников: ${numberFormatter.format(team.membersCount)} · Сыграно игр: ${numberFormatter.format(team.gamesCount)}`}
+                    />
                   </li>
                 ))}
               </ul>

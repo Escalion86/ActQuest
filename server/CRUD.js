@@ -104,6 +104,24 @@ const isGameClosedById = async (db, gameId) => {
   return isClosedGameStatus(game?.status)
 }
 
+const isGameRegistrationClosedById = async (db, gameId) => {
+  if (!gameId) {
+    return false
+  }
+
+  const game = await db
+    .model('Games')
+    .findById(gameId)
+    .select({ registrationOpen: 1 })
+    .lean()
+
+  if (!game) {
+    return true
+  }
+
+  return game.registrationOpen === false
+}
+
 export default async function handler(Schema, req, res, params = null) {
   const { query, method, body } = req
 
@@ -239,6 +257,13 @@ export default async function handler(Schema, req, res, params = null) {
               return res?.status(400).json({
                 success: false,
                 error: 'Игра закрыта. Изменение состава участников запрещено.',
+              })
+            }
+
+            if (await isGameRegistrationClosedById(db, gameId)) {
+              return res?.status(400).json({
+                success: false,
+                error: 'Запись на игру закрыта.',
               })
             }
           }

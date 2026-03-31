@@ -154,6 +154,7 @@ const fetchGamesForCabinet = async ({
   const GamesModel = db.model('Games')
   const GamesTeamsModel = db.model('GamesTeams')
   const TeamsUsersModel = db.model('TeamsUsers')
+  const TeamsModel = db.model('Teams')
 
   const queryOffset = toPositiveInteger(offset, 0)
   const queryLimit = toPositiveInteger(limit, 10)
@@ -193,6 +194,7 @@ const fetchGamesForCabinet = async ({
       showCreator: 1,
       showTasks: 1,
       hideResult: 1,
+      registrationOpen: 1,
       prices: 1,
       finances: 1,
       tasks: 1,
@@ -274,6 +276,7 @@ const fetchGamesForCabinet = async ({
     const hasTelegramId = Number.isFinite(currentUserTelegramIdNumber)
 
     let userTeamPlaceByGameId = {}
+    let userParticipationTeamsByGameId = {}
     if (gamesTeams.length > 0 && (hasUserId || hasTelegramId)) {
       const teamIds = Array.from(
         new Set(gamesTeams.map((doc) => toStringId(doc?.teamId)).filter(Boolean))
@@ -292,13 +295,41 @@ const fetchGamesForCabinet = async ({
             teamId: { $in: teamIds },
             $or: membershipOr,
           })
-            .select({ teamId: 1 })
+            .select({ teamId: 1, role: 1 })
             .lean()
         : []
 
-      const userTeamIdsSet = new Set(
-        memberships.map((doc) => toStringId(doc?.teamId)).filter(Boolean)
-      )
+      const userMembershipByTeamId = memberships.reduce((acc, doc) => {
+        const teamId = toStringId(doc?.teamId)
+        if (!teamId) {
+          return acc
+        }
+
+        const role =
+          typeof doc?.role === 'string' ? doc.role.trim().toLowerCase() : ''
+        acc[teamId] = {
+          teamId,
+          isCaptain: role === 'capitan',
+        }
+        return acc
+      }, {})
+
+      const userTeamIdsSet = new Set(Object.keys(userMembershipByTeamId))
+      const teamsById = teamIds.length
+        ? (
+            await TeamsModel.find({ _id: { $in: teamIds } })
+              .select({ _id: 1, name: 1 })
+              .lean()
+          ).reduce((acc, teamDoc) => {
+            const teamId = toStringId(teamDoc?._id)
+            if (!teamId) {
+              return acc
+            }
+            acc[teamId] = teamDoc
+            return acc
+          }, {})
+        : {}
+
       const userTeamIdsByGameId = gamesTeams.reduce((acc, doc) => {
         const gameId = toStringId(doc?.gameId)
         const teamId = toStringId(doc?.teamId)
@@ -312,6 +343,35 @@ const fetchGamesForCabinet = async ({
         acc[gameId].push(teamId)
         return acc
       }, {})
+
+      userParticipationTeamsByGameId = Object.entries(userTeamIdsByGameId).reduce(
+        (acc, [gameId, ids]) => {
+          const uniqueTeamIds = Array.from(new Set(Array.isArray(ids) ? ids : []))
+          if (uniqueTeamIds.length === 0) {
+            return acc
+          }
+
+          acc[gameId] = uniqueTeamIds.map((teamId) => {
+            const membership = userMembershipByTeamId[teamId] ?? {
+              teamId,
+              isCaptain: false,
+            }
+            const teamDoc = teamsById[teamId]
+
+            return {
+              teamId,
+              teamName:
+                typeof teamDoc?.name === 'string' && teamDoc.name.trim() !== ''
+                  ? teamDoc.name.trim()
+                  : `Команда ${teamId}`,
+              isCaptain: Boolean(membership?.isCaptain),
+            }
+          })
+
+          return acc
+        },
+        {}
+      )
 
       userTeamPlaceByGameId = gamesFiltered.reduce((acc, game) => {
         const gameId = toStringId(game?._id)
@@ -348,6 +408,9 @@ const fetchGamesForCabinet = async ({
         status: normalizedStatus,
         teamsCount: gameId ? teamsCountMap[gameId] ?? 0 : 0,
         userTeamPlace: gameId ? userTeamPlaceByGameId[gameId] ?? null : null,
+        userParticipationTeams: gameId
+          ? userParticipationTeamsByGameId[gameId] ?? []
+          : [],
       })
     })
 
@@ -363,6 +426,7 @@ const fetchGamesForCabinet = async ({
       status: normalizedStatus,
       teamsCount: game?._id ? teamsCountMap[game._id.toString()] ?? 0 : 0,
       userTeamPlace: null,
+      userParticipationTeams: [],
     })
   })
 

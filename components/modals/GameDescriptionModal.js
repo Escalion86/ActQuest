@@ -16,6 +16,12 @@ const GameDescriptionModal = ({
   canViewRestrictedGameInfo,
   canViewGameResults,
   handleOpenResultsModal,
+  participationSummaryLabel,
+  canJoinGame,
+  canCancelRegistration,
+  onJoinGame,
+  onCancelRegistration,
+  isRegistrationSubmitting,
   taskDurationLabel,
   cluesDurationLabel,
   clueModeDetails,
@@ -99,6 +105,35 @@ const GameDescriptionModal = ({
                       </div>
                     )}
                   </dl>
+                  {(participationSummaryLabel || canJoinGame || canCancelRegistration) && (
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      {participationSummaryLabel && (
+                        <span className="inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
+                          {participationSummaryLabel}
+                        </span>
+                      )}
+                      {canJoinGame && (
+                        <button
+                          type="button"
+                          onClick={onJoinGame}
+                          disabled={isRegistrationSubmitting}
+                          className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/85 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
+                        >
+                          Присоединиться к игре
+                        </button>
+                      )}
+                      {canCancelRegistration && (
+                        <button
+                          type="button"
+                          onClick={onCancelRegistration}
+                          disabled={isRegistrationSubmitting}
+                          className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
+                        >
+                          Отменить регистрацию
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </ModalSection>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
@@ -298,6 +333,12 @@ GameDescriptionModal.propTypes = {
   canViewRestrictedGameInfo: PropTypes.bool.isRequired,
   canViewGameResults: PropTypes.bool.isRequired,
   handleOpenResultsModal: PropTypes.func.isRequired,
+  participationSummaryLabel: PropTypes.string,
+  canJoinGame: PropTypes.bool,
+  canCancelRegistration: PropTypes.bool,
+  onJoinGame: PropTypes.func,
+  onCancelRegistration: PropTypes.func,
+  isRegistrationSubmitting: PropTypes.bool,
   taskDurationLabel: PropTypes.string.isRequired,
   cluesDurationLabel: PropTypes.string.isRequired,
   clueModeDetails: PropTypes.shape({
@@ -319,6 +360,12 @@ GameDescriptionModal.propTypes = {
 
 GameDescriptionModal.defaultProps = {
   selectedGame: null,
+  participationSummaryLabel: '',
+  canJoinGame: false,
+  canCancelRegistration: false,
+  onJoinGame: undefined,
+  onCancelRegistration: undefined,
+  isRegistrationSubmitting: false,
   manyCodesLimitLabel: null,
   manyCodesPenaltyLabel: null,
 }

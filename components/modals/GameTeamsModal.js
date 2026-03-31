@@ -6,7 +6,7 @@ import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import NoticeBanner from '@components/NoticeBanner'
-import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
+import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import TeamDescriptionModal from './TeamDescriptionModal'
 
 const resolveRatingBadge = (rating) =>
@@ -27,20 +27,26 @@ const GameTeamsModal = ({
   handleRemoveTeamFromGame,
 }) => {
   const [isTeamDetailsModalOpen, setIsTeamDetailsModalOpen] = useState(false)
+  const [isTeamDetailsLoading, setIsTeamDetailsLoading] = useState(false)
   const [selectedTeamDetails, setSelectedTeamDetails] = useState(null)
+  const [teamDetailsError, setTeamDetailsError] = useState('')
 
   const closeTeamDetailsModal = useCallback(() => {
     setIsTeamDetailsModalOpen(false)
+    setIsTeamDetailsLoading(false)
+    setTeamDetailsError('')
   }, [])
 
   useEffect(() => {
     if (!isTeamsModalOpen) {
       setIsTeamDetailsModalOpen(false)
       setSelectedTeamDetails(null)
+      setIsTeamDetailsLoading(false)
+      setTeamDetailsError('')
     }
   }, [isTeamsModalOpen])
 
-  const handleOpenTeamDetails = useCallback((team) => {
+  const handleOpenTeamDetails = useCallback(async (team) => {
     if (!team) {
       return
     }
@@ -80,6 +86,17 @@ const GameTeamsModal = ({
 
     setSelectedTeamDetails(normalizedTeamDetails)
     setIsTeamDetailsModalOpen(true)
+    setTeamDetailsError('')
+    setIsTeamDetailsLoading(true)
+
+    try {
+      const detailedTeam = await fetchCabinetTeamDetails({ teamId: fallbackTeamDetails.id })
+      setSelectedTeamDetails(detailedTeam)
+    } catch (error) {
+      setTeamDetailsError(error?.message || 'Не удалось загрузить команду')
+    } finally {
+      setIsTeamDetailsLoading(false)
+    }
   }, [])
 
   return (
@@ -95,6 +112,11 @@ const GameTeamsModal = ({
               {teamsModalState.error}
             </NoticeBanner>
           )}
+          {teamDetailsError && (
+            <NoticeBanner tone="error" variant="neon">
+              {teamDetailsError}
+            </NoticeBanner>
+          )}
 
           <div className="space-y-4">
             {teamsModalState.isLoading ? (
@@ -105,9 +127,6 @@ const GameTeamsModal = ({
                   const isRemoving = removingTeamIds.includes(team.id)
                   const membersCount = Number.isFinite(team?.membersCount) ? team.membersCount : 0
                   const ratingBadge = resolveRatingBadge(team?.rating)
-                  const updatedLabel = team?.updatedAt
-                    ? formatRelativeTimeFromNow(team.updatedAt)
-                    : null
 
                   return (
                     <li key={team.id}>
@@ -186,7 +205,7 @@ const GameTeamsModal = ({
                           </div>
                         </div>
                         <p className="mt-2 text-xs text-slate-400">
-                          {updatedLabel ? `Обновлено ${updatedLabel}` : `ID команды: ${team.teamId || '—'}`}
+                          ID команды: {team.teamId || '—'}
                         </p>
                       </div>
                     </li>
@@ -251,6 +270,13 @@ const GameTeamsModal = ({
         onClose={closeTeamDetailsModal}
         selectedTeam={selectedTeamDetails}
       />
+      <Modal
+        isOpen={isTeamDetailsLoading}
+        onClose={() => setIsTeamDetailsLoading(false)}
+        title="Команда"
+      >
+        <p className="text-sm text-slate-500">Загружаем данные команды...</p>
+      </Modal>
     </>
   )
 }

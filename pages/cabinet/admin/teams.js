@@ -7,11 +7,11 @@ import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
+import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import NoticeBanner from '@components/NoticeBanner'
 import TeamEditModal from '@components/modals/TeamEditModal'
 import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
-import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import { getNounUsers } from '@helpers/getNoun'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
@@ -113,34 +113,20 @@ const AdminTeamsPage = ({
     }
   }, [searchInput])
 
-  const filteredTeams = useMemo(() => {
-
-    return teams.filter((team) => {
-      if (visibilityFilter === 'open' && !team.open) {
-        return false
-      }
-
-      if (visibilityFilter === 'closed' && team.open) {
-        return false
-      }
-      return true
-    })
-  }, [teams, visibilityFilter])
-
   useEffect(() => {
-    if (filteredTeams.length === 0) {
+    if (teams.length === 0) {
       setSelectedTeamId(null)
       return
     }
 
     setSelectedTeamId((prev) => {
-      if (prev && filteredTeams.some((team) => team.id === prev)) {
+      if (prev && teams.some((team) => team.id === prev)) {
         return prev
       }
 
-      return filteredTeams[0]?.id ?? null
+      return teams[0]?.id ?? null
     })
-  }, [filteredTeams])
+  }, [teams])
 
   const handleTeamCardClick = useCallback(
     (team) => {
@@ -499,22 +485,18 @@ const AdminTeamsPage = ({
   )
 
   const teamsForList = useMemo(() => {
-    return filteredTeams.map((team) => {
-      const updatedLabel = team.updatedAt
-        ? formatRelativeTimeFromNow(team.updatedAt)
-        : '—'
-
+    return teams.map((team) => {
       return {
         id: team.id,
         name: team.name || 'Без названия',
         image: team.image || '',
+        gamesCount: Number(team.gamesCount) || 0,
         membersLabel: getNounUsers(team.membersCount ?? 0),
         ratingBadge: resolveRatingBadge(team.rating),
-        updatedLabel,
         open: Boolean(team.open),
       }
     })
-  }, [filteredTeams])
+  }, [teams])
 
   const handleLoadMoreTeams = useCallback(async () => {
     if (isLoadingMoreTeams || !hasMoreTeams) {
@@ -532,6 +514,9 @@ const AdminTeamsPage = ({
       })
       if (searchQuery) {
         params.set('search', searchQuery)
+      }
+      if (visibilityFilter && visibilityFilter !== 'all') {
+        params.set('visibility', visibilityFilter)
       }
 
       const { json } = await requestApiJson(`/api/cabinet/admin/teams-list?${params.toString()}`, {
@@ -556,7 +541,7 @@ const AdminTeamsPage = ({
     } finally {
       setIsLoadingMoreTeams(false)
     }
-  }, [hasMoreTeams, isLoadingMoreTeams, searchQuery, sortBy, teams.length])
+  }, [hasMoreTeams, isLoadingMoreTeams, searchQuery, sortBy, teams.length, visibilityFilter])
 
   useEffect(() => {
     if (isFirstSearchRenderRef.current) {
@@ -578,6 +563,9 @@ const AdminTeamsPage = ({
         })
         if (searchQuery) {
           params.set('search', searchQuery)
+        }
+        if (visibilityFilter && visibilityFilter !== 'all') {
+          params.set('visibility', visibilityFilter)
         }
 
         const { json } = await requestApiJson(`/api/cabinet/admin/teams-list?${params.toString()}`, {
@@ -615,7 +603,7 @@ const AdminTeamsPage = ({
     return () => {
       isCancelled = true
     }
-  }, [searchQuery, sortBy])
+  }, [searchQuery, sortBy, visibilityFilter])
 
   if (!isAdmin) {
     return (
@@ -712,25 +700,12 @@ const AdminTeamsPage = ({
               <ul className="space-y-3">
                 {teamsForList.map((team) => (
                   <li key={team.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleTeamCardClick(team)}
-                      className="w-full cursor-pointer text-left p-4 border rounded-2xl transition border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50 dark:hover:border-[#7A00FF]/60 dark:hover:bg-[#110a24]"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0 flex items-center gap-3">
-                          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
-                            <img
-                              src={team.image || '/img/avatars/team.png'}
-                              alt={`Иконка команды ${team.name}`}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                          <div className="min-w-0">
-                          <p className="text-sm font-semibold text-primary dark:text-slate-100">{team.name}</p>
-                          <p className="text-xs text-slate-500">{team.membersLabel}</p>
-                          </div>
-                        </div>
+                    <UserTeamCard
+                      team={team}
+                      onOpen={handleTeamCardClick}
+                      metaText={`${team.membersLabel} · Сыграно игр: ${team.gamesCount}`}
+                      showCaptainBadge={false}
+                      rightContent={
                         <div className="flex items-center gap-2">
                           {team.ratingBadge ? (
                             <span className="text-xs font-medium px-2 py-1 rounded-full border border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
@@ -748,6 +723,7 @@ const AdminTeamsPage = ({
                           </span>
                           {canManageSelectedTeam ? (
                             <CardActionIconButton
+                              as="span"
                               onClick={(event) => {
                                 event.stopPropagation()
                                 handleOpenEditModal(team.id)
@@ -758,9 +734,8 @@ const AdminTeamsPage = ({
                             </CardActionIconButton>
                           ) : null}
                         </div>
-                      </div>
-                      <p className="mt-2 text-xs text-slate-400">Обновлено {team.updatedLabel}</p>
-                    </button>
+                      }
+                    />
                   </li>
                 ))}
               </ul>

@@ -16,6 +16,9 @@ const GameRegisterModal = ({
   registerGameId,
   setRegisterTeamId,
   setRegisterGameId,
+  isRegisterModalFromCard,
+  registerModalGameName,
+  shouldHideRegisterGameIdField,
   registerFeedback,
   isRegisterTeamsLoading,
   registerTeams,
@@ -24,7 +27,11 @@ const GameRegisterModal = ({
 }) => (
   <Modal
             isOpen={isRegisterModalOpen}
-            title="Регистрация команды по ID игры"
+            title={
+              isRegisterModalFromCard
+                ? 'Присоединение к игре'
+                : 'Регистрация команды по ID игры'
+            }
             onClose={handleCloseRegisterModal}
             footer={(
               <>
@@ -55,8 +62,15 @@ const GameRegisterModal = ({
           >
             <fieldset disabled={isRegisterSubmitting} className="m-0 space-y-5 border-0 p-0">
               <p className="text-sm text-slate-600 dark:text-slate-300">
-                Укажите игру и команду, чтобы зарегистрировать её на участие. Команда должна принадлежать вам как капитану.
+                {isRegisterModalFromCard
+                  ? 'Выберите команду капитана для участия в выбранной игре.'
+                  : 'Укажите игру и команду, чтобы зарегистрировать её на участие. Команда должна принадлежать вам как капитану.'}
               </p>
+              {isRegisterModalFromCard && registerModalGameName && (
+                <div className="rounded-xl border border-cyan-300/60 bg-cyan-50/70 px-4 py-3 text-sm text-cyan-800 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]">
+                  Игра: <span className="font-semibold">{registerModalGameName}</span>
+                </div>
+              )}
               {registerFeedback && (
                 <NoticeBanner
                   tone={registerFeedback.type === 'success' ? 'success' : 'error'}
@@ -94,14 +108,16 @@ const GameRegisterModal = ({
                   </p>
                 )}
               </CabinetFormField>
-              <CabinetInputField
-                id="register-game-id"
-                label="ID игры"
-                value={registerGameId}
-                onChange={(event) => setRegisterGameId(event.target.value)}
-                placeholder="Например, 64ff0c2e12"
-                inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm uppercase tracking-wide focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
-              />
+              {!shouldHideRegisterGameIdField && (
+                <CabinetInputField
+                  id="register-game-id"
+                  label="ID игры"
+                  value={registerGameId}
+                  onChange={(event) => setRegisterGameId(event.target.value)}
+                  placeholder="Например, 64ff0c2e12"
+                  inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm uppercase tracking-wide focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                />
+              )}
             </fieldset>
           </Modal>
 )
@@ -120,6 +136,9 @@ GameRegisterModal.propTypes = {
   registerGameId: PropTypes.string.isRequired,
   setRegisterTeamId: PropTypes.func.isRequired,
   setRegisterGameId: PropTypes.func.isRequired,
+  isRegisterModalFromCard: PropTypes.bool,
+  registerModalGameName: PropTypes.string,
+  shouldHideRegisterGameIdField: PropTypes.bool,
   registerFeedback: PropTypes.shape({
     type: PropTypes.string.isRequired,
     message: PropTypes.string.isRequired,
@@ -132,6 +151,9 @@ GameRegisterModal.propTypes = {
 
 GameRegisterModal.defaultProps = {
   registerFeedback: null,
+  isRegisterModalFromCard: false,
+  registerModalGameName: '',
+  shouldHideRegisterGameIdField: false,
   location: null,
   currentUserId: null,
 }

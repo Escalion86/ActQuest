@@ -144,7 +144,6 @@ const buildUsersQuery = (search) => {
     $or: [
       { name: regex },
       { username: regex },
-      { phone: regex },
       { globalUserId: regex },
     ],
   }
@@ -152,9 +151,23 @@ const buildUsersQuery = (search) => {
   const numericSearch = Number(normalizedSearch)
   if (Number.isFinite(numericSearch)) {
     query.$or.push({ telegramId: numericSearch })
+    query.$or.push({ phone: numericSearch })
   }
 
   return query
+}
+
+const normalizeRoleFilter = (roleFilter) => {
+  if (typeof roleFilter !== 'string') {
+    return null
+  }
+
+  const normalized = roleFilter.trim().toLowerCase()
+  if (!normalized || normalized === 'all') {
+    return null
+  }
+
+  return ensureRole(normalized)
 }
 
 const fetchAdminUsersForCabinet = async ({
@@ -162,6 +175,7 @@ const fetchAdminUsersForCabinet = async ({
   offset = 0,
   limit = 10,
   search = '',
+  roleFilter = 'all',
   sortBy = DEFAULT_SORT,
   location = null,
 }) => {
@@ -177,6 +191,10 @@ const fetchAdminUsersForCabinet = async ({
   const queryLimit = toPositiveInteger(limit, 10)
 
   const usersQuery = buildUsersQuery(search)
+  const normalizedRoleFilter = normalizeRoleFilter(roleFilter)
+  if (normalizedRoleFilter) {
+    usersQuery.role = normalizedRoleFilter
+  }
   const usersDocs = await UsersModel.find(usersQuery)
     .sort({ name: 1, _id: 1 })
     .lean()

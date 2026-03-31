@@ -1,21 +1,16 @@
-import { memo } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import CabinetButton from '@components/cabinet/CabinetButton'
+import ParticipationGameCard from '@components/cabinet/cards/ParticipationGameCard'
+import TeamMemberCard from '@components/cabinet/cards/TeamMemberCard'
 import Modal from '@components/Modal'
+import fetchCabinetUserDetails from '@helpers/fetchCabinetUserDetails'
 import formatDate from '@helpers/formatDate'
-import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
-import getGameStatusLabel from '@helpers/getGameStatusLabel'
+import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
-const itemTitleClass = 'aq-modal-item-title font-semibold'
-const systemRoleLabels = {
-  client: 'Участник',
-  moder: 'Модератор',
-  admin: 'Администратор',
-  dev: 'Разработчик',
-  ban: 'Заблокирован',
-}
+import UnifiedGameDescriptionModal from './UnifiedGameDescriptionModal'
 
 const TeamDescriptionModal = ({
   isOpen,
@@ -24,8 +19,89 @@ const TeamDescriptionModal = ({
   canLeaveTeam,
   isLeavingTeam,
   onLeaveTeam,
-}) => (
-  <Modal
+  onOpenMember,
+  onOpenGame,
+}) => {
+  const [isGamePreviewModalOpen, setIsGamePreviewModalOpen] = useState(false)
+  const [selectedGamePreview, setSelectedGamePreview] = useState(null)
+  const [isGamePreviewLoading, setIsGamePreviewLoading] = useState(false)
+  const [gamePreviewError, setGamePreviewError] = useState('')
+  const [isMemberPreviewModalOpen, setIsMemberPreviewModalOpen] = useState(false)
+  const [selectedMemberPreview, setSelectedMemberPreview] = useState(null)
+  const [isMemberPreviewLoading, setIsMemberPreviewLoading] = useState(false)
+  const [memberPreviewError, setMemberPreviewError] = useState('')
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsGamePreviewModalOpen(false)
+      setSelectedGamePreview(null)
+      setIsGamePreviewLoading(false)
+      setGamePreviewError('')
+      setIsMemberPreviewModalOpen(false)
+      setSelectedMemberPreview(null)
+      setIsMemberPreviewLoading(false)
+      setMemberPreviewError('')
+    }
+  }, [isOpen])
+
+  const handleOpenMemberCard = useCallback(
+    async (member) => {
+      if (!member) {
+        return
+      }
+
+      if (typeof onOpenMember === 'function') {
+        onOpenMember(member)
+        return
+      }
+
+      setIsMemberPreviewLoading(true)
+      setMemberPreviewError('')
+      try {
+        const detailedUser = await fetchCabinetUserDetails({
+          userId: member.userId || '',
+          telegramId: member.telegramId || null,
+        })
+        setSelectedMemberPreview(detailedUser)
+        setIsMemberPreviewModalOpen(true)
+      } catch (error) {
+        setMemberPreviewError(error?.message || 'Не удалось загрузить пользователя')
+      } finally {
+        setIsMemberPreviewLoading(false)
+      }
+    },
+    [onOpenMember]
+  )
+
+  const handleOpenGameCard = useCallback(
+    async (game) => {
+      if (!game) {
+        return
+      }
+
+      if (typeof onOpenGame === 'function') {
+        onOpenGame(game)
+        return
+      }
+
+      setIsGamePreviewLoading(true)
+      setGamePreviewError('')
+      try {
+        const detailedGame = await fetchCabinetGameDetails({ gameId: game.id, location: game.location || null })
+        setSelectedGamePreview(detailedGame)
+        setIsGamePreviewModalOpen(true)
+      } catch (error) {
+        setGamePreviewError(error?.message || 'Не удалось загрузить данные игры')
+      } finally {
+        setIsGamePreviewLoading(false)
+      }
+    },
+    [onOpenGame]
+  )
+
+  return (
+    <>
+      <Modal
     isOpen={isOpen}
     title={`Команда — ${selectedTeam?.name || 'Без названия'}`}
     onClose={onClose}
@@ -103,7 +179,7 @@ const TeamDescriptionModal = ({
               <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{selectedTeam.membersCount ?? 0}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Участие в играх</dt>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Сыгранных игр</dt>
               <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{selectedTeam.gamesCount ?? 0}</dd>
             </div>
             <div>
@@ -121,14 +197,6 @@ const TeamDescriptionModal = ({
                 {selectedTeam.captain?.username ? ` (@${selectedTeam.captain.username})` : ''}
               </dd>
             </div>
-            {selectedTeam.updatedAt && (
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Обновлено</dt>
-                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                  {formatRelativeTimeFromNow(selectedTeam.updatedAt)}
-                </dd>
-              </div>
-            )}
             {selectedTeam.createdAt && (
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Создана</dt>
@@ -142,43 +210,14 @@ const TeamDescriptionModal = ({
 
         <ModalSection className="p-5">
           <ModalSectionTitle>Состав команды</ModalSectionTitle>
+          {memberPreviewError ? (
+            <p className="mt-2 text-xs text-rose-500">{memberPreviewError}</p>
+          ) : null}
           {selectedTeam.members?.length > 0 ? (
             <ul className="mt-4 space-y-3">
               {selectedTeam.members.map((member) => (
-                <li
-                  key={member.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
-                >
-                  <p className={itemTitleClass}>
-                    {member.name || 'Без имени'}
-                    {member.isCaptain ? ' · Капитан' : ''}
-                  </p>
-                  {member.username && (
-                    <p className="mt-1 text-xs text-slate-500">@{member.username}</p>
-                  )}
-                  {member.userRole && (
-                    (() => {
-                      const normalizedRole = String(member.userRole).toLowerCase()
-                      const roleLabel =
-                        systemRoleLabels[normalizedRole] ?? member.userRole
-                      if (normalizedRole === 'client' || roleLabel === 'Участник') {
-                        return null
-                      }
-                      return (
-                        <p className="mt-1 text-xs text-slate-400">
-                          Роль в системе: {roleLabel}
-                        </p>
-                      )
-                    })()
-                  )}
-                  {!member.hasLinkedUser && (
-                    <p className="mt-1 text-xs text-amber-600">
-                      Профиль пользователя не найден в глобальной базе.
-                    </p>
-                  )}
-                  {member.phone && (
-                    <p className="mt-2 text-xs text-slate-500">Телефон: {member.phone}</p>
-                  )}
+                <li key={member.id}>
+                  <TeamMemberCard member={member} onOpen={handleOpenMemberCard} />
                 </li>
               ))}
             </ul>
@@ -191,23 +230,19 @@ const TeamDescriptionModal = ({
 
         {selectedTeam.games?.length > 0 && (
           <ModalSection className="p-5">
-            <ModalSectionTitle>Участие в играх</ModalSectionTitle>
+            <ModalSectionTitle>Сыгранных игр</ModalSectionTitle>
+            {gamePreviewError ? (
+              <p className="mt-2 text-xs text-rose-500">{gamePreviewError}</p>
+            ) : null}
             <ul className="mt-4 space-y-3">
               {selectedTeam.games.map((game) => (
-                <li
-                  key={game.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
-                >
-                  <p className={itemTitleClass}>{game.name || 'Без названия'}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Статус: {getGameStatusLabel(game.status)}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {game.dateStart ? formatDate(game.dateStart) : 'Дата не назначена'}
-                  </p>
-                  {game.hidden && (
-                    <p className="mt-1 text-xs text-slate-400">Игра скрыта из публичного списка</p>
-                  )}
+                <li key={game.id}>
+                  <ParticipationGameCard
+                    game={game}
+                    onOpen={() => handleOpenGameCard(game)}
+                    showTeam={false}
+                    footerText={game.hidden ? 'Игра скрыта из публичного списка' : ''}
+                  />
                 </li>
               ))}
             </ul>
@@ -218,9 +253,76 @@ const TeamDescriptionModal = ({
       <p className="text-sm text-slate-500">
         Выберите команду из списка слева, чтобы просмотреть детали.
       </p>
-    )}
-  </Modal>
-)
+      )}
+      </Modal>
+      <Modal
+        isOpen={isOpen && isGamePreviewLoading}
+        onClose={() => setIsGamePreviewLoading(false)}
+        title="Игра"
+      >
+        <p className="text-sm text-slate-500">Загружаем подробности игры...</p>
+      </Modal>
+      <Modal
+        isOpen={isOpen && isMemberPreviewLoading}
+        onClose={() => setIsMemberPreviewLoading(false)}
+        title="Пользователь"
+      >
+        <p className="text-sm text-slate-500">Загружаем профиль пользователя...</p>
+      </Modal>
+      <UnifiedGameDescriptionModal
+        selectedGame={selectedGamePreview}
+        isOpen={isOpen && isGamePreviewModalOpen}
+        onClose={() => {
+          setIsGamePreviewModalOpen(false)
+          setSelectedGamePreview(null)
+        }}
+        canViewRestrictedGameInfo
+        canViewGameResults={Boolean(selectedGamePreview?.status === 'closed' || selectedGamePreview?.status === 'finished')}
+      />
+      <Modal
+        isOpen={isOpen && isMemberPreviewModalOpen}
+        onClose={() => {
+          setIsMemberPreviewModalOpen(false)
+          setSelectedMemberPreview(null)
+        }}
+        title={`Пользователь — ${selectedMemberPreview?.name || 'Без имени'}`}
+      >
+        {selectedMemberPreview ? (
+          <div className="space-y-5">
+            <ModalSection className="p-5">
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Имя</dt>
+                  <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                    {selectedMemberPreview.name || 'Без имени'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ник</dt>
+                  <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                    {selectedMemberPreview.username ? `@${selectedMemberPreview.username}` : '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Команд</dt>
+                  <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                    {Number(selectedMemberPreview.teamsCount || 0)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Сыграно игр</dt>
+                  <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                    {Number(selectedMemberPreview.gamesCount || 0)}
+                  </dd>
+                </div>
+              </dl>
+            </ModalSection>
+          </div>
+        ) : null}
+      </Modal>
+    </>
+  )
+}
 
 TeamDescriptionModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
@@ -228,6 +330,8 @@ TeamDescriptionModal.propTypes = {
   canLeaveTeam: PropTypes.bool,
   isLeavingTeam: PropTypes.bool,
   onLeaveTeam: PropTypes.func,
+  onOpenMember: PropTypes.func,
+  onOpenGame: PropTypes.func,
   selectedTeam: PropTypes.shape({
     id: PropTypes.string,
     name: PropTypes.string,
@@ -253,6 +357,7 @@ TeamDescriptionModal.propTypes = {
     members: PropTypes.arrayOf(
       PropTypes.shape({
         id: PropTypes.string.isRequired,
+        userId: PropTypes.string,
         name: PropTypes.string,
         username: PropTypes.string,
         userRole: PropTypes.string,
@@ -278,6 +383,8 @@ TeamDescriptionModal.defaultProps = {
   canLeaveTeam: false,
   isLeavingTeam: false,
   onLeaveTeam: undefined,
+  onOpenMember: undefined,
+  onOpenGame: undefined,
   selectedTeam: null,
 }
 

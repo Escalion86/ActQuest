@@ -30,8 +30,10 @@ const sanitizeConf = {
     'img',
     'figure',
     'audio',
+    'video',
     'source',
     'audio-message',
+    'video-message',
   ],
   // selfClosing: ['br'],
   allowedAttributes: {
@@ -50,8 +52,10 @@ const sanitizeConf = {
     img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
     figure: ['class', 'style', 'data-src'],
     audio: ['src', 'controls', 'preload'],
+    video: ['src', 'controls', 'preload', 'playsinline', 'poster'],
     source: ['src', 'type'],
     'audio-message': ['src', 'title', 'mime', 'class'],
+    'video-message': ['src', 'title', 'mime', 'class'],
   },
   allowedStyles: {
     '*': {

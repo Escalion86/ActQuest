@@ -43,7 +43,8 @@ const sanitizeTaskMedia = (media = []) =>
         typeof item?.id === 'string' && item.id.trim().length > 0
           ? item.id.trim()
           : `task-media-${index}`,
-      type: item?.type === 'audio' ? 'audio' : 'image',
+      type:
+        item?.type === 'audio' ? 'audio' : item?.type === 'video' ? 'video' : 'image',
       url: typeof item?.url === 'string' ? item.url.trim() : '',
       mime: typeof item?.mime === 'string' ? item.mime.trim() : '',
       size: Number(item?.size) || 0,

@@ -43,6 +43,11 @@ const SLASH_COMMANDS = [
     label: 'Нумерованный список',
     aliases: ['ol', 'ordered', 'number'],
   },
+  {
+    id: 'frameBox',
+    label: 'Рамка',
+    aliases: ['frame', 'box', 'рамка'],
+  },
   { id: 'blockquote', label: 'Цитата', aliases: ['quote', 'blockquote'] },
   { id: 'codeBlock', label: 'Код-блок', aliases: ['code', 'snippet'] },
 ]
@@ -50,6 +55,9 @@ const SLASH_COMMANDS = [
 const ESCALIONCLOUD_PUBLIC_ORIGIN =
   process.env.NEXT_PUBLIC_ESCALIONCLOUD_PUBLIC_ORIGIN ||
   'https://escalioncloud.ru'
+const MAX_VIDEO_SIZE_BYTES = 40 * 1024 * 1024
+const DEFAULT_PICKER_COLOR = '#111827'
+const NO_COLOR_TOKEN = '__no_color__'
 
 const extractUrlCandidates = (value) => {
   if (!value) return []
@@ -97,13 +105,23 @@ const normalizeUploadedUrl = (value) => {
 
 const detectUploadModeByFile = (file, fallbackMode = 'image') => {
   const mime = typeof file?.type === 'string' ? file.type.toLowerCase() : ''
+  if (mime.startsWith('video/')) {
+    return 'video'
+  }
   if (mime.startsWith('audio/')) {
     return 'audio'
   }
 
   const name = typeof file?.name === 'string' ? file.name.toLowerCase() : ''
+  if (/\.(mp4|webm|ogv|mov|m4v|avi|mkv)$/i.test(name)) {
+    return 'video'
+  }
   if (/\.(mp3|wav|ogg|aac|m4a|flac|opus|weba)$/i.test(name)) {
     return 'audio'
+  }
+
+  if (fallbackMode === 'video') {
+    return 'video'
   }
 
   return fallbackMode === 'audio' ? 'audio' : 'image'
@@ -154,11 +172,49 @@ const normalizeEditorInputValue = (value) => {
   return plainTextToEditorHtml(source)
 }
 
+const toHexColor = (value) => {
+  const source = String(value || '').trim()
+  if (!source) return ''
+
+  const shortHexMatch = source.match(/^#([0-9a-f]{3})$/i)
+  if (shortHexMatch) {
+    const [r, g, b] = shortHexMatch[1].split('')
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase()
+  }
+
+  const fullHexMatch = source.match(/^#([0-9a-f]{6})$/i)
+  if (fullHexMatch) {
+    return `#${fullHexMatch[1].toLowerCase()}`
+  }
+
+  const rgbMatch = source.match(
+    /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i,
+  )
+  if (rgbMatch) {
+    const values = [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map((item) =>
+      Number(item),
+    )
+    if (values.some((item) => !Number.isFinite(item) || item < 0 || item > 255)) {
+      return ''
+    }
+    return `#${values.map((item) => item.toString(16).padStart(2, '0')).join('')}`
+  }
+
+  return ''
+}
+
 const buildAudioHtml = (url, title = 'Аудио') => {
   const safeUrl = escapeHtmlAttribute(url)
   const safeTitle = escapeHtmlAttribute(title)
 
   return `<audio-message src="${safeUrl}" title="${safeTitle}"></audio-message><p></p>`
+}
+
+const buildVideoHtml = (url, title = 'Видео') => {
+  const safeUrl = escapeHtmlAttribute(url)
+  const safeTitle = escapeHtmlAttribute(title)
+
+  return `<video-message src="${safeUrl}" title="${safeTitle}"></video-message><p></p>`
 }
 
 const formatAudioClock = (seconds) => {
@@ -395,6 +451,24 @@ const extractMediaFromHtml = (html) => {
     match = audioRegex.exec(source)
   }
 
+  const videoMessageRegex = /<video-message[^>]*\ssrc="([^"]+)"[^>]*>/gi
+  match = videoMessageRegex.exec(source)
+  while (match) {
+    if (match[1]) {
+      results.push({ type: 'video', url: match[1] })
+    }
+    match = videoMessageRegex.exec(source)
+  }
+
+  const videoRegex = /<video[^>]*\ssrc="([^"]+)"[^>]*>/gi
+  match = videoRegex.exec(source)
+  while (match) {
+    if (match[1]) {
+      results.push({ type: 'video', url: match[1] })
+    }
+    match = videoRegex.exec(source)
+  }
+
   return dedupeMedia(results)
 }
 
@@ -449,6 +523,84 @@ const AudioMessage = Node.create({
 
   addNodeView() {
     return ReactNodeViewRenderer(AudioMessageNodeView)
+  },
+})
+
+const VideoMessage = Node.create({
+  name: 'videoMessage',
+  group: 'block',
+  atom: true,
+  draggable: false,
+
+  addAttributes() {
+    return {
+      src: { default: '' },
+      title: { default: '' },
+      mime: { default: '' },
+    }
+  },
+
+  parseHTML() {
+    return [{ tag: 'video-message' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'video-message',
+      mergeAttributes(HTMLAttributes, {
+        class: 'aq-video-message',
+        draggable: 'false',
+      }),
+      [
+        'video',
+        {
+          controls: 'true',
+          preload: 'metadata',
+          src: HTMLAttributes.src || '',
+          playsinline: 'true',
+          draggable: 'false',
+        },
+      ],
+    ]
+  },
+})
+
+const FrameBox = Node.create({
+  name: 'frameBox',
+  group: 'block',
+  content: 'block+',
+  defining: true,
+
+  parseHTML() {
+    return [{ tag: 'div.aq-frame-box' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'div',
+      mergeAttributes(HTMLAttributes, {
+        class: 'aq-frame-box',
+      }),
+      0,
+    ]
+  },
+
+  addCommands() {
+    return {
+      insertFrameBox:
+        () =>
+        ({ state, commands }) => {
+          const { selection } = state
+          if (!selection.empty) {
+            return commands.wrapIn(this.name)
+          }
+
+          return commands.insertContent({
+            type: this.name,
+            content: [{ type: 'paragraph' }],
+          })
+        },
+    }
   },
 })
 
@@ -683,6 +835,7 @@ const TaskRichEditor = ({
   directory,
   disabled,
   placeholder,
+  contentMaxHeight,
 }) => {
   const fileInputRef = useRef(null)
   const editorContentWrapperRef = useRef(null)
@@ -690,13 +843,16 @@ const TaskRichEditor = ({
   const [uploadMode, setUploadMode] = useState('image')
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
-  const [selectedColor, setSelectedColor] = useState('#111827')
+  const [selectedColor, setSelectedColor] = useState(DEFAULT_PICKER_COLOR)
+  const [isColorActive, setIsColorActive] = useState(false)
+  const [isMixedColorSelection, setIsMixedColorSelection] = useState(false)
   const [toolbarState, setToolbarState] = useState({
     blockType: 'p',
     bold: false,
     italic: false,
     strike: false,
     underline: false,
+    frameBox: false,
     bulletList: false,
     orderedList: false,
     link: false,
@@ -732,6 +888,8 @@ const TaskRichEditor = ({
       Color,
       FontFamily,
       AudioMessage,
+      VideoMessage,
+      FrameBox,
     ],
     [],
   )
@@ -789,14 +947,77 @@ const TaskRichEditor = ({
       italic: editor.isActive('italic'),
       strike: editor.isActive('strike'),
       underline: editor.isActive('underline'),
+      frameBox: editor.isActive('frameBox'),
       bulletList: editor.isActive('bulletList'),
       orderedList: editor.isActive('orderedList'),
       link: editor.isActive('link'),
       fontFamily: editor.getAttributes('textStyle').fontFamily || '',
     })
 
+    const readColorState = () => {
+      const { selection, doc } = editor.state
+
+      if (selection.empty) {
+        const cursorColor = toHexColor(editor.getAttributes('textStyle').color)
+        return {
+          color: cursorColor || DEFAULT_PICKER_COLOR,
+          active: Boolean(cursorColor),
+          mixed: false,
+        }
+      }
+
+      const colors = new Set()
+      let hasText = false
+
+      doc.nodesBetween(selection.from, selection.to, (node) => {
+        if (!node?.isText || !node.text) return
+        hasText = true
+
+        const textStyleMark = node.marks.find(
+          (mark) =>
+            mark?.type?.name === 'textStyle' &&
+            typeof mark?.attrs?.color === 'string' &&
+            mark.attrs.color.trim() !== '',
+        )
+        const normalized = toHexColor(textStyleMark?.attrs?.color || '')
+        colors.add(normalized || NO_COLOR_TOKEN)
+      })
+
+      if (!hasText) {
+        const fallbackColor = toHexColor(editor.getAttributes('textStyle').color)
+        return {
+          color: fallbackColor || DEFAULT_PICKER_COLOR,
+          active: Boolean(fallbackColor),
+          mixed: false,
+        }
+      }
+
+      if (colors.size === 1) {
+        const [singleColor] = Array.from(colors)
+        if (singleColor === NO_COLOR_TOKEN) {
+          return {
+            color: DEFAULT_PICKER_COLOR,
+            active: false,
+            mixed: false,
+          }
+        }
+        return {
+          color: singleColor || DEFAULT_PICKER_COLOR,
+          active: Boolean(singleColor),
+          mixed: false,
+        }
+      }
+
+      return {
+        color: selectedColor,
+        active: false,
+        mixed: true,
+      }
+    }
+
     const syncToolbarState = () => {
       const nextState = readToolbarState()
+      const nextColorState = readColorState()
       setToolbarState((prev) => {
         const isSame =
           prev.blockType === nextState.blockType &&
@@ -804,6 +1025,7 @@ const TaskRichEditor = ({
           prev.italic === nextState.italic &&
           prev.strike === nextState.strike &&
           prev.underline === nextState.underline &&
+          prev.frameBox === nextState.frameBox &&
           prev.bulletList === nextState.bulletList &&
           prev.orderedList === nextState.orderedList &&
           prev.link === nextState.link &&
@@ -811,6 +1033,11 @@ const TaskRichEditor = ({
 
         return isSame ? prev : nextState
       })
+      setIsMixedColorSelection(nextColorState.mixed)
+      setIsColorActive(nextColorState.active)
+      if (!nextColorState.mixed && nextColorState.color !== selectedColor) {
+        setSelectedColor(nextColorState.color)
+      }
     }
 
     syncToolbarState()
@@ -826,7 +1053,7 @@ const TaskRichEditor = ({
       editor.off('focus', syncToolbarState)
       editor.off('blur', syncToolbarState)
     }
-  }, [editor])
+  }, [editor, selectedColor])
 
   const filteredSlashCommands = useMemo(() => {
     const query = slashMenu.query.trim().toLowerCase()
@@ -851,6 +1078,7 @@ const TaskRichEditor = ({
       if (commandId === 'h2') chain.toggleHeading({ level: 2 }).run()
       else if (commandId === 'h3') chain.toggleHeading({ level: 3 }).run()
       else if (commandId === 'paragraph') chain.setParagraph().run()
+      else if (commandId === 'frameBox') chain.insertFrameBox().run()
       else if (commandId === 'bulletList') chain.toggleBulletList().run()
       else if (commandId === 'orderedList') chain.toggleOrderedList().run()
       else if (commandId === 'blockquote') chain.toggleBlockquote().run()
@@ -1095,7 +1323,13 @@ const TaskRichEditor = ({
       setUploadMode(mode)
       setUploadError('')
       if (fileInputRef.current) {
-        fileInputRef.current.accept = mode === 'audio' ? 'audio/*' : 'image/*'
+        if (mode === 'audio') {
+          fileInputRef.current.accept = 'audio/*'
+        } else if (mode === 'video') {
+          fileInputRef.current.accept = 'video/*'
+        } else {
+          fileInputRef.current.accept = 'image/*'
+        }
       }
       fileInputRef.current?.click()
     },
@@ -1107,6 +1341,11 @@ const TaskRichEditor = ({
       if (!file || !editor || disabled || isUploading) return
       const fallbackMode = modeOverride || uploadModeRef.current || uploadMode
       const resolvedMode = detectUploadModeByFile(file, fallbackMode)
+
+      if (resolvedMode === 'video' && Number(file.size) > MAX_VIDEO_SIZE_BYTES) {
+        setUploadError('Видео слишком большое. Максимальный размер: 40 МБ.')
+        return
+      }
 
       setUploadError('')
       setIsUploading(true)
@@ -1166,6 +1405,26 @@ const TaskRichEditor = ({
         const nextHtml = editor.getHTML()
         if (!nextHtml.includes(url)) {
           forceAppendHtmlToEditor(audioHtml)
+        }
+      } else if (resolvedMode === 'video') {
+        const videoHtml = buildVideoHtml(url, file.name || 'Видео')
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: 'videoMessage',
+            attrs: {
+              src: url,
+              title: file.name || 'Видео',
+              mime: file.type || '',
+            },
+          })
+          .insertContent({ type: 'paragraph' })
+          .run()
+
+        const nextHtml = editor.getHTML()
+        if (!nextHtml.includes(url)) {
+          forceAppendHtmlToEditor(videoHtml)
         }
       } else {
         editor
@@ -1285,7 +1544,20 @@ const TaskRichEditor = ({
             disabled={disabled}
           />
 
-          <label className="inline-flex items-center gap-2 px-2 py-1 text-xs bg-white border rounded-lg border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100">
+          <label
+            className={`inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-xs transition ${
+              isMixedColorSelection
+                ? 'border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-400 dark:bg-amber-500/15 dark:text-amber-200'
+                : isColorActive
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/20 dark:text-blue-100'
+                  : 'border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100'
+            }`}
+            title={
+              isMixedColorSelection
+                ? 'В выделении несколько разных цветов'
+                : 'Цвет текста'
+            }
+          >
             Цвет
             <input
               type="color"
@@ -1294,6 +1566,8 @@ const TaskRichEditor = ({
               onChange={(event) => {
                 const color = event.target.value
                 setSelectedColor(color)
+                setIsMixedColorSelection(false)
+                setIsColorActive(true)
                 editor.chain().focus().setColor(color).run()
               }}
               className="w-6 h-5 p-0 bg-transparent cursor-pointer"
@@ -1312,6 +1586,12 @@ const TaskRichEditor = ({
             label="1. List"
             isActive={toolbarState.orderedList}
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            disabled={disabled}
+          />
+          <ToolbarButton
+            label="Рамка"
+            isActive={toolbarState.frameBox}
+            onClick={() => editor.chain().focus().insertFrameBox().run()}
             disabled={disabled}
           />
           <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
@@ -1349,6 +1629,13 @@ const TaskRichEditor = ({
             onClick={() => triggerFileInput('audio')}
             disabled={disabled || isUploading}
           />
+          <ToolbarButton
+            label={
+              isUploading && uploadMode === 'video' ? 'Загрузка...' : 'Видео'
+            }
+            onClick={() => triggerFileInput('video')}
+            disabled={disabled || isUploading}
+          />
           <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
           <ToolbarButton
             label="Очистить"
@@ -1357,14 +1644,16 @@ const TaskRichEditor = ({
           />
         </div>
 
-        <p className="px-4 py-2 text-xs border-b border-slate-200/70 text-slate-500 dark:border-slate-700 dark:text-slate-300">
-          Введите `/` для быстрых блоков: заголовки, списки, цитата, code block.
-        </p>
-
         <input
           ref={fileInputRef}
           type="file"
-          accept={uploadMode === 'audio' ? 'audio/*' : 'image/*'}
+          accept={
+            uploadMode === 'audio'
+              ? 'audio/*'
+              : uploadMode === 'video'
+                ? 'video/*'
+                : 'image/*'
+          }
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0] ?? null
@@ -1375,7 +1664,8 @@ const TaskRichEditor = ({
 
         <div
           ref={editorContentWrapperRef}
-          className="relative"
+          className="relative overflow-y-auto overscroll-contain"
+          style={{ maxHeight: contentMaxHeight }}
           onKeyDown={handleEditorKeyDown}
         >
           <EditorContent editor={editor} />
@@ -1507,6 +1797,22 @@ const TaskRichEditor = ({
             0 12px 32px rgba(2, 6, 23, 0.28);
           padding: 11px 12px;
           color: #e7f9ff;
+        }
+
+        .ProseMirror .aq-video-message,
+        .ProseMirror video-message {
+          display: block;
+          margin: 12px 0;
+          max-width: min(100%, 820px);
+        }
+
+        .ProseMirror .aq-video-message video,
+        .ProseMirror video-message video {
+          display: block;
+          width: 100%;
+          height: auto;
+          border-radius: 12px;
+          background: #020617;
         }
 
         .ProseMirror .aq-audio-message--custom .aq-audio-message__shell {
@@ -1732,6 +2038,7 @@ TaskRichEditor.propTypes = {
   directory: PropTypes.string,
   disabled: PropTypes.bool,
   placeholder: PropTypes.string,
+  contentMaxHeight: PropTypes.string,
 }
 
 TaskRichEditor.defaultProps = {
@@ -1740,6 +2047,7 @@ TaskRichEditor.defaultProps = {
   directory: 'games/draft/tasks/draft/editor',
   disabled: false,
   placeholder: '',
+  contentMaxHeight: '56vh',
 }
 
 export default TaskRichEditor

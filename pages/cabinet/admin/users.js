@@ -9,13 +9,18 @@ import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
-import SelectableCard from '@components/cabinet/SelectableCard'
-import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
+import AdminUserCard from '@components/cabinet/cards/AdminUserCard'
+import ParticipationGameCard from '@components/cabinet/cards/ParticipationGameCard'
+import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
+import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
+import UnifiedGameDescriptionModal from '@components/modals/UnifiedGameDescriptionModal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
-import getGameStatusLabel from '@helpers/getGameStatusLabel'
+import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
+import fetchCabinetUserDetails from '@helpers/fetchCabinetUserDetails'
+import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
@@ -41,23 +46,6 @@ const preferenceOptions = [
 const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
 const modalItemTitleClass = 'aq-modal-item-title text-lg font-semibold'
 const modalItemSmallTitleClass = 'aq-modal-item-title text-sm font-semibold'
-const GAME_STATUS_BADGE_STYLES = {
-  active:
-    'border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]',
-  started:
-    'border border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-[#17e6ae]/35 dark:bg-[#17e6ae]/12 dark:text-[#c8ffe9]',
-  finished:
-    'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#e2d5ff]',
-  closed:
-    'border border-indigo-300 bg-indigo-100 text-indigo-700 dark:border-[#8b5cf6]/45 dark:bg-[#8b5cf6]/14 dark:text-[#e9ddff]',
-  canceled:
-    'border border-rose-300 bg-rose-100 text-rose-700 dark:border-[#ff4d6d]/35 dark:bg-[#ff4d6d]/12 dark:text-[#ffd1da]',
-}
-
-const resolveRatingBadge = (rating) =>
-  rating?.isEligible && Number.isFinite(rating?.rank)
-    ? `#${rating.rank}`
-    : null
 
 const resolveLocationLabel = (locationKey) => {
   const key = typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
@@ -72,36 +60,6 @@ const resolveLocationLabel = (locationKey) => {
 
   return rawName.charAt(0).toUpperCase() + rawName.slice(1)
 }
-
-const getStatusBadgeClassName = (status) => {
-  if (!status) {
-    return 'bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-100'
-  }
-
-  const normalized = typeof status === 'string' ? status.toLowerCase() : String(status)
-
-  return (
-    GAME_STATUS_BADGE_STYLES[normalized] ??
-    'border border-slate-300 bg-slate-100 text-slate-700 dark:border-white/20 dark:bg-white/10 dark:text-slate-200'
-  )
-}
-
-const GamesCardIcon = () => (
-  <svg
-    className="h-4 w-4"
-    viewBox="0 0 20 20"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
-  >
-    <path
-      d="M5 5h10M5 10h10M5 15h10"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-    />
-  </svg>
-)
 
 const cloneUser = (user) => {
   if (!user) {
@@ -135,10 +93,11 @@ const ManageUsersPage = ({
   const [users, setUsers] = useState(safeInitialUsers)
   const [persistedUsers, setPersistedUsers] = useState(safeInitialUsers)
   const [selectedUserId, setSelectedUserId] = useState(safeInitialUsers[0]?.id ?? null)
+  const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [sortBy, setSortBy] = useState('registration_desc')
-  const isFirstSortRenderRef = useRef(true)
+  const isFirstFiltersRenderRef = useRef(true)
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [hasMoreUsers, setHasMoreUsers] = useState(Boolean(initialHasMore))
@@ -147,11 +106,23 @@ const ManageUsersPage = ({
   const [isUserViewModalOpen, setIsUserViewModalOpen] = useState(false)
   const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false)
   const [isUserGamesModalOpen, setIsUserGamesModalOpen] = useState(false)
+  const [isUserTeamModalOpen, setIsUserTeamModalOpen] = useState(false)
+  const [isParticipationGameModalOpen, setIsParticipationGameModalOpen] = useState(false)
+  const [isParticipationGameLoading, setIsParticipationGameLoading] = useState(false)
+  const [selectedParticipationGame, setSelectedParticipationGame] = useState(null)
+  const [selectedUserTeam, setSelectedUserTeam] = useState(null)
   const [userGamesState, setUserGamesState] = useState({
     isLoading: false,
     error: null,
     userName: '',
     games: [],
+  })
+  const [userGamesPreviewState, setUserGamesPreviewState] = useState({
+    isLoading: false,
+    error: null,
+    userId: null,
+    games: [],
+    total: 0,
   })
 
   useEffect(() => {
@@ -166,6 +137,16 @@ const ManageUsersPage = ({
       return safeInitialUsers[0]?.id ?? null
     })
   }, [initialHasMore, safeInitialUsers])
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchQuery(searchInput.trim())
+    }, 450)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [searchInput])
 
   const setUserIdQuery = useCallback(
     (nextUserId) => {
@@ -198,10 +179,16 @@ const ManageUsersPage = ({
     setIsUserEditModalOpen(false)
   }, [])
 
+  const closeUserTeamModal = useCallback(() => {
+    setIsUserTeamModalOpen(false)
+    setSelectedUserTeam(null)
+  }, [])
+
   const closeUserViewModal = useCallback(() => {
     setIsUserViewModalOpen(false)
+    closeUserTeamModal()
     setUserIdQuery(null)
-  }, [setUserIdQuery])
+  }, [closeUserTeamModal, setUserIdQuery])
 
   const closeUserGamesModal = useCallback(() => {
     setIsUserGamesModalOpen(false)
@@ -212,6 +199,12 @@ const ManageUsersPage = ({
       userName: '',
       games: [],
     }))
+  }, [])
+
+  const closeParticipationGameModal = useCallback(() => {
+    setIsParticipationGameModalOpen(false)
+    setSelectedParticipationGame(null)
+    setIsParticipationGameLoading(false)
   }, [])
 
   const roleOptions = useMemo(() => {
@@ -233,28 +226,8 @@ const ManageUsersPage = ({
     return baseOptions
   }, [users])
 
-  const filteredUsers = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase()
-
-    return users.filter((user) => {
-      if (roleFilter !== 'all' && user.role !== roleFilter) {
-        return false
-      }
-
-      if (!normalizedQuery) {
-        return true
-      }
-
-      const haystack = [user.name, user.username, user.telegramId]
-        .map((value) => (typeof value === 'string' ? value.toLowerCase() : ''))
-        .filter(Boolean)
-
-      return haystack.some((value) => value.includes(normalizedQuery))
-    })
-  }, [users, roleFilter, searchQuery])
-
   useEffect(() => {
-    if (filteredUsers.length === 0) {
+    if (users.length === 0) {
       setSelectedUserId(null)
       setIsUserViewModalOpen(false)
       setIsUserEditModalOpen(false)
@@ -263,23 +236,23 @@ const ManageUsersPage = ({
     }
 
     setSelectedUserId((prev) => {
-      if (prev && filteredUsers.some((user) => user.id === prev)) {
+      if (prev && users.some((user) => user.id === prev)) {
         return prev
       }
 
-      return filteredUsers[0]?.id ?? null
+      return users[0]?.id ?? null
     })
-  }, [filteredUsers, setUserIdQuery])
+  }, [setUserIdQuery, users])
 
   useEffect(() => {
-    if (isFirstSortRenderRef.current) {
-      isFirstSortRenderRef.current = false
+    if (isFirstFiltersRenderRef.current) {
+      isFirstFiltersRenderRef.current = false
       return
     }
 
     let cancelled = false
 
-    const loadSortedUsers = async () => {
+    const loadUsersByFilters = async () => {
       setIsLoadingMoreUsers(true)
       setFeedback(null)
 
@@ -289,6 +262,12 @@ const ManageUsersPage = ({
           limit: String(USERS_PAGE_SIZE),
           sortBy,
         })
+        if (searchQuery) {
+          params.set('q', searchQuery)
+        }
+        if (roleFilter && roleFilter !== 'all') {
+          params.set('role', roleFilter)
+        }
         const { json } = await requestApiJson(`/api/cabinet/admin/users-list?${params.toString()}`, {
           fallbackMessage: 'Не удалось загрузить пользователей',
         })
@@ -306,10 +285,10 @@ const ManageUsersPage = ({
         if (cancelled) {
           return
         }
-        console.error('Failed to load users with selected sort', error)
+        console.error('Failed to load users with selected filters', error)
         setFeedback({
           type: 'error',
-          message: error?.message || 'Не удалось применить сортировку',
+          message: error?.message || 'Не удалось применить фильтры',
         })
       } finally {
         if (!cancelled) {
@@ -318,12 +297,12 @@ const ManageUsersPage = ({
       }
     }
 
-    loadSortedUsers()
+    loadUsersByFilters()
 
     return () => {
       cancelled = true
     }
-  }, [sortBy])
+  }, [roleFilter, searchQuery, sortBy])
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -363,6 +342,29 @@ const ManageUsersPage = ({
     setIsUserEditModalOpen(true)
   }, [])
 
+  const fetchUserGames = useCallback(async (user) => {
+    const params = new URLSearchParams()
+    if (typeof user?.id === 'string' && user.id) {
+      params.set('userId', user.id)
+    }
+    if (typeof user?.telegramId === 'string' && user.telegramId) {
+      params.set('telegramId', user.telegramId)
+    }
+
+    const { json } = await requestApiJson(`/api/cabinet/admin/user-games?${params.toString()}`, {
+      fallbackMessage: 'Не удалось загрузить игры пользователя',
+    })
+
+    const gamesRaw = Array.isArray(json?.data) ? json.data : []
+    const games = gamesRaw.sort((first, second) => {
+      const firstTime = first?.dateStart ? new Date(first.dateStart).getTime() : 0
+      const secondTime = second?.dateStart ? new Date(second.dateStart).getTime() : 0
+      return secondTime - firstTime
+    })
+
+    return games
+  }, [])
+
   const handleOpenUserGamesModal = useCallback(
     async (user) => {
       if (!user) {
@@ -370,6 +372,22 @@ const ManageUsersPage = ({
       }
 
       setIsUserGamesModalOpen(true)
+      const previewReady =
+        userGamesPreviewState.userId === user.id &&
+        !userGamesPreviewState.isLoading &&
+        !userGamesPreviewState.error &&
+        Array.isArray(userGamesPreviewState.games)
+
+      if (previewReady) {
+        setUserGamesState({
+          isLoading: false,
+          error: null,
+          userName: user.name || 'Без имени',
+          games: userGamesPreviewState.games,
+        })
+        return
+      }
+
       setUserGamesState({
         isLoading: true,
         error: null,
@@ -378,24 +396,7 @@ const ManageUsersPage = ({
       })
 
       try {
-        const params = new URLSearchParams()
-        if (typeof user.id === 'string' && user.id) {
-          params.set('userId', user.id)
-        }
-        if (typeof user.telegramId === 'string' && user.telegramId) {
-          params.set('telegramId', user.telegramId)
-        }
-
-        const { json } = await requestApiJson(`/api/cabinet/admin/user-games?${params.toString()}`, {
-          fallbackMessage: 'Не удалось загрузить игры пользователя',
-        })
-
-        const gamesRaw = Array.isArray(json?.data) ? json.data : []
-        const games = gamesRaw.sort((first, second) => {
-          const firstTime = first?.dateStart ? new Date(first.dateStart).getTime() : 0
-          const secondTime = second?.dateStart ? new Date(second.dateStart).getTime() : 0
-          return secondTime - firstTime
-        })
+        const games = await fetchUserGames(user)
 
         setUserGamesState({
           isLoading: false,
@@ -413,26 +414,214 @@ const ManageUsersPage = ({
         })
       }
     },
-    []
+    [fetchUserGames, userGamesPreviewState]
   )
 
   const handleOpenParticipationGame = useCallback(
-    (gameId) => {
+    async (gameOrId) => {
+      const gameId =
+        typeof gameOrId === 'string'
+          ? gameOrId
+          : typeof gameOrId?.id === 'string'
+            ? gameOrId.id
+            : ''
       if (!gameId) {
         return
       }
 
-      closeUserGamesModal()
-      router.push({
-        pathname: '/cabinet/games',
-        query: {
-          view: 'past',
-          gameId,
-        },
-      }).catch(() => {})
+      const gameFromState =
+        (Array.isArray(userGamesState.games)
+          ? userGamesState.games.find((item) => item.id === gameId)
+          : null) ||
+        (Array.isArray(userGamesPreviewState.games)
+          ? userGamesPreviewState.games.find((item) => item.id === gameId)
+          : null) ||
+        (gameOrId && typeof gameOrId === 'object' ? gameOrId : null)
+
+      if (!gameFromState) {
+        setFeedback({
+          type: 'error',
+          message: 'Не удалось открыть игру: данные отсутствуют',
+        })
+        return
+      }
+
+      const hasDetailedFields =
+        Object.prototype.hasOwnProperty.call(gameFromState, 'descriptionRich') ||
+        Object.prototype.hasOwnProperty.call(gameFromState, 'startingPlace') ||
+        Object.prototype.hasOwnProperty.call(gameFromState, 'prices')
+
+      setIsUserTeamModalOpen(false)
+      setIsParticipationGameLoading(true)
+      setFeedback(null)
+      try {
+        const detailedGame = hasDetailedFields
+          ? gameFromState
+          : await fetchCabinetGameDetails({ gameId, location: gameFromState.location || location || null })
+        setSelectedParticipationGame(detailedGame)
+        setIsParticipationGameModalOpen(true)
+      } catch (error) {
+        setFeedback({
+          type: 'error',
+          message: error?.message || 'Не удалось открыть игру',
+        })
+      } finally {
+        setIsParticipationGameLoading(false)
+      }
     },
-    [closeUserGamesModal, router]
+    [location, userGamesPreviewState.games, userGamesState.games]
   )
+
+  const ensureUserInState = useCallback((userPatch) => {
+    if (!userPatch?.id) {
+      return null
+    }
+
+    setUsers((prevUsers) => {
+      const exists = prevUsers.some((item) => item.id === userPatch.id)
+      const fallbackUser = {
+        id: userPatch.id,
+        globalUserId: null,
+        telegramId: '',
+        name: userPatch.name || 'Без имени',
+        username: userPatch.username || '',
+        phone: userPatch.phone || '',
+        role: userPatch.role || 'client',
+        about: '',
+        preferences: [],
+        createdAt: null,
+        updatedAt: null,
+        teams: [],
+        teamsCount: 0,
+        gamesCount: 0,
+        rating: null,
+      }
+
+      if (exists) {
+        return prevUsers.map((item) => (
+          item.id === userPatch.id
+            ? { ...item, ...fallbackUser, ...userPatch }
+            : item
+        ))
+      }
+
+      return [{ ...fallbackUser, ...userPatch }, ...prevUsers]
+    })
+
+    return userPatch.id
+  }, [])
+
+  const handleOpenUserTeamModal = useCallback(
+    async (team) => {
+      if (!team?.id) {
+        return
+      }
+
+      setFeedback(null)
+
+      try {
+        const detailedTeam = await fetchCabinetTeamDetails({ teamId: team.id })
+
+        setSelectedUserTeam(detailedTeam)
+        setIsUserTeamModalOpen(true)
+      } catch (error) {
+        setFeedback({
+          type: 'error',
+          message: error?.message || 'Не удалось загрузить команду',
+        })
+      }
+    },
+    []
+  )
+
+  const handleOpenMemberProfile = useCallback(
+    async (member) => {
+      if (!member) {
+        return
+      }
+
+      const nextUserId = typeof member.userId === 'string' && member.userId
+        ? member.userId
+        : null
+
+      if (!nextUserId) {
+        return
+      }
+
+      let loadedUser = null
+      try {
+        loadedUser = await fetchCabinetUserDetails({
+          userId: nextUserId || '',
+          telegramId: member.telegramId || null,
+        })
+      } catch (error) {
+        void error
+      }
+
+      ensureUserInState(
+        loadedUser || {
+          id: nextUserId,
+          name: member.name || 'Без имени',
+          username: member.username || '',
+          phone: member.phone || '',
+          role: member.userRole || 'client',
+        }
+      )
+
+      setSelectedUserId(nextUserId)
+      setIsUserTeamModalOpen(false)
+      setIsUserEditModalOpen(false)
+      setIsUserViewModalOpen(true)
+      setUserIdQuery(nextUserId)
+    },
+    [ensureUserInState, setUserIdQuery]
+  )
+
+  useEffect(() => {
+    if (!isUserViewModalOpen || !selectedUser) {
+      return
+    }
+
+    let cancelled = false
+
+    setUserGamesPreviewState({
+      isLoading: true,
+      error: null,
+      userId: selectedUser.id,
+      games: [],
+      total: Number(selectedUser.gamesCount) || 0,
+    })
+
+    fetchUserGames(selectedUser)
+      .then((games) => {
+        if (cancelled) {
+          return
+        }
+        setUserGamesPreviewState({
+          isLoading: false,
+          error: null,
+          userId: selectedUser.id,
+          games,
+          total: games.length,
+        })
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return
+        }
+        setUserGamesPreviewState({
+          isLoading: false,
+          error: error?.message || 'Не удалось загрузить игры пользователя',
+          userId: selectedUser.id,
+          games: [],
+          total: Number(selectedUser.gamesCount) || 0,
+        })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [fetchUserGames, isUserViewModalOpen, selectedUser])
 
   useEffect(() => {
     if (!router.isReady) {
@@ -724,6 +913,12 @@ const ManageUsersPage = ({
         limit: String(USERS_PAGE_SIZE),
         sortBy,
       })
+      if (searchQuery) {
+        params.set('q', searchQuery)
+      }
+      if (roleFilter && roleFilter !== 'all') {
+        params.set('role', roleFilter)
+      }
       const { json } = await requestApiJson(`/api/cabinet/admin/users-list?${params.toString()}`, {
         fallbackMessage: 'Не удалось загрузить пользователей',
       })
@@ -746,7 +941,7 @@ const ManageUsersPage = ({
     } finally {
       setIsLoadingMoreUsers(false)
     }
-  }, [hasMoreUsers, isLoadingMoreUsers, sortBy, users.length])
+  }, [hasMoreUsers, isLoadingMoreUsers, roleFilter, searchQuery, sortBy, users.length])
 
   const filterOptions = useMemo(
     () => [
@@ -795,8 +990,8 @@ const ManageUsersPage = ({
                 id="user-search"
                 label="Поиск"
                 type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Введите имя, ник или Telegram ID"
                 containerClassName="space-y-1"
                 labelClassName="text-xs font-semibold text-slate-500"
@@ -834,76 +1029,18 @@ const ManageUsersPage = ({
               </CabinetSelectField>
             </FormSectionCard>
 
-            {filteredUsers.length > 0 ? (
+            {users.length > 0 ? (
               <div className="space-y-3">
                 <ul className="space-y-3">
-                  {filteredUsers.map((user) => {
+                  {users.map((user) => {
                     return (
                       <li key={user.id}>
-                        <SelectableCard
-                          as="button"
-                          onClick={() => handleOpenUserViewModal(user)}
-                          type="button"
-                          className="w-full text-left"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex min-w-0 items-start gap-3">
-                              <img
-                                src={getUserAvatarSrc(user)}
-                                alt={user.name || 'Аватар пользователя'}
-                                className="h-12 w-12 shrink-0 rounded-full border border-slate-200 object-cover dark:border-slate-700"
-                                loading="lazy"
-                              />
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                                  {user.name || 'Без имени'}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {resolveRatingBadge(user.rating) ? (
-                                <span className="px-2 py-1 text-xs font-semibold text-cyan-700 bg-cyan-50 border border-cyan-300 rounded-full dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                                  {resolveRatingBadge(user.rating)}
-                                </span>
-                              ) : null}
-                              <span className="px-2 py-1 text-xs font-semibold text-white bg-primary rounded-full">
-                                {CABINET_ROLE_LABELS[user.role] ?? user.role}
-                              </span>
-                              <CardActionIconButton
-                                as="span"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  handleOpenUserGamesModal(user)
-                                }}
-                                label="Показать игры участия"
-                              >
-                                <GamesCardIcon />
-                              </CardActionIconButton>
-                              <CardActionIconButton
-                                as="span"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  handleOpenUserEditModal(user)
-                                }}
-                                label="Редактировать пользователя"
-                              >
-                                <EditCardIcon />
-                              </CardActionIconButton>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-3 mt-3 text-xs text-slate-500">
-                            <span>Игры: {user.gamesCount}</span>
-                          </div>
-                          <div className="mt-2 text-xs text-slate-500">
-                            {Array.isArray(user.teams) && user.teams.length > 0 ? (
-                              <p className="truncate">
-                                Команды: {user.teams.map((team) => team?.name).filter(Boolean).join(', ')}
-                              </p>
-                            ) : (
-                              <p>Команды: —</p>
-                            )}
-                          </div>
-                        </SelectableCard>
+                        <AdminUserCard
+                          user={user}
+                          onOpenView={handleOpenUserViewModal}
+                          onOpenGames={handleOpenUserGamesModal}
+                          onOpenEdit={handleOpenUserEditModal}
+                        />
                       </li>
                     )
                   })}
@@ -1004,27 +1141,58 @@ const ManageUsersPage = ({
                 {selectedUser.teams.length > 0 ? (
                   <ul className="space-y-3">
                     {selectedUser.teams.map((team) => (
-                      <li
-                        key={team.id}
-                        className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
-                      >
-                        <div>
-                          <p className={modalItemSmallTitleClass}>{team.name || 'Без названия'}</p>
-                          <p className="text-xs text-slate-500">
-                            {team.isCaptain ? 'Капитан' : 'Участник'} · Игр: {team.gamesCount}
-                          </p>
-                        </div>
-                        <p className="text-xs text-slate-400">
-                          {team.updatedAt
-                            ? `Обновлено ${formatRelativeTimeFromNow(team.updatedAt)}`
-                            : 'Дата обновления неизвестна'}
-                        </p>
+                      <li key={team.id}>
+                        <UserTeamCard team={team} onOpen={handleOpenUserTeamModal} />
                       </li>
                     ))}
                   </ul>
                 ) : (
                   <p className="text-sm text-slate-500">
                     Пользователь ещё не вступил ни в одну команду.
+                  </p>
+                )}
+              </FormSectionCard>
+
+              <FormSectionCard className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className={modalSectionTitleClass}>Игры участия</h3>
+                  <span className="text-xs text-slate-500 dark:text-slate-300">
+                    Сыграно игр: {Number(userGamesPreviewState.total || selectedUser.gamesCount || 0)}
+                  </span>
+                </div>
+
+                {userGamesPreviewState.isLoading ? (
+                  <p className="text-sm text-slate-500">Загружаем игры пользователя...</p>
+                ) : userGamesPreviewState.error ? (
+                  <p className="text-sm text-rose-500">{userGamesPreviewState.error}</p>
+                ) : userGamesPreviewState.games.length > 0 ? (
+                  <>
+                    <ul className="space-y-3">
+                      {userGamesPreviewState.games.slice(0, 3).map((game) => (
+                        <li key={game.id}>
+                          <ParticipationGameCard game={game} onOpen={handleOpenParticipationGame} />
+                        </li>
+                      ))}
+                    </ul>
+                    {userGamesPreviewState.games.length > 3 && (
+                      <div className="flex items-center justify-between gap-3">
+                        <CabinetButton
+                          onClick={() => handleOpenUserGamesModal(selectedUser)}
+                          variant="secondary"
+                          tone="cyan"
+                          size="sm"
+                        >
+                          Посмотреть все
+                        </CabinetButton>
+                        <span className="text-xs text-slate-500 dark:text-slate-300">
+                          Всего: {userGamesPreviewState.games.length}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    У пользователя пока нет игр участия через команды.
                   </p>
                 )}
               </FormSectionCard>
@@ -1233,55 +1401,13 @@ const ManageUsersPage = ({
             <ul className="space-y-3">
               {userGamesState.games.map((game) => (
                 <li key={game.id}>
-                  <SelectableCard
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleOpenParticipationGame(game.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        handleOpenParticipationGame(game.id)
-                      }
-                    }}
-                    className="relative cursor-pointer"
-                    aria-label={`Открыть игру «${game.name || 'Без названия'}»`}
-                    title={game.name || 'Без названия'}
-                  >
-                    <div className="flex min-w-0 w-full flex-1 items-start gap-3">
-                      <div className="min-w-0 flex-1">
-                        <span
-                          className={`mb-2 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(game.status)}`}
-                        >
-                          {getGameStatusLabel(game.status)}
-                        </span>
-                        <p className="aq-line-clamp-2 text-sm font-semibold text-primary dark:text-slate-100">
-                          {game.name || 'Без названия'}
-                        </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                          <span className="text-slate-500">
-                            {game.dateStart
-                              ? new Date(game.dateStart).toLocaleString('ru-RU', {
-                                dateStyle: 'short',
-                                timeStyle: 'short',
-                              })
-                              : 'Дата не указана'}
-                          </span>
-                          <span className="text-slate-400">·</span>
-                          <span className="text-slate-500">
-                            {resolveLocationLabel(game.location)}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-slate-400">
-                          Команда: {Array.isArray(game.teams) && game.teams.length > 0 ? game.teams.join(', ') : '—'}
-                        </p>
-                      </div>
-                    </div>
-                    {Number.isFinite(Number(game.place)) && Number(game.place) > 0 && (
-                      <span className="pointer-events-none mt-2 inline-flex items-center self-start rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
-                        Место: {Number(game.place)}
-                      </span>
-                    )}
-                  </SelectableCard>
+                  <ParticipationGameCard
+                    game={game}
+                    onOpen={handleOpenParticipationGame}
+                    showPlace
+                    showLocation
+                    locationLabel={resolveLocationLabel(game.location)}
+                  />
                 </li>
               ))}
             </ul>
@@ -1291,6 +1417,30 @@ const ManageUsersPage = ({
             </p>
           )}
         </Modal>
+        <TeamDescriptionModal
+          isOpen={isUserTeamModalOpen}
+          onClose={closeUserTeamModal}
+          selectedTeam={selectedUserTeam}
+          onOpenMember={handleOpenMemberProfile}
+          onOpenGame={handleOpenParticipationGame}
+        />
+        <Modal
+          isOpen={isParticipationGameLoading}
+          onClose={() => setIsParticipationGameLoading(false)}
+          title="Игра"
+        >
+          <p className="text-sm text-slate-500">Загружаем подробности игры...</p>
+        </Modal>
+        <UnifiedGameDescriptionModal
+          selectedGame={selectedParticipationGame}
+          isOpen={isParticipationGameModalOpen}
+          onClose={closeParticipationGameModal}
+          canViewRestrictedGameInfo
+          canViewGameResults={Boolean(
+            selectedParticipationGame?.status === 'closed' ||
+            selectedParticipationGame?.status === 'finished'
+          )}
+        />
       </CabinetLayout>
     </>
   )
@@ -1299,6 +1449,7 @@ const ManageUsersPage = ({
 const userTeamShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   name: PropTypes.string,
+  image: PropTypes.string,
   role: PropTypes.string,
   isCaptain: PropTypes.bool,
   gamesCount: PropTypes.number,

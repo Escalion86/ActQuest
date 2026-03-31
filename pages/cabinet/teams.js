@@ -13,7 +13,6 @@ import TeamJoinModal from '@components/modals/TeamJoinModal'
 import getSessionSafe from '@helpers/getSessionSafe'
 import requestApiJson from '@helpers/requestApiJson'
 import formatDate from '@helpers/formatDate'
-import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { getNounUsers } from '@helpers/getNoun'
 import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
@@ -952,10 +951,6 @@ const TeamsPage = ({
     }
 
     return visibleTeams.map((team) => {
-      const updatedLabel = team.updatedAt
-        ? formatRelativeTimeFromNow(team.updatedAt)
-        : '—'
-
       const canManageTeam =
         isAdmin ||
         (team.members ?? []).some(
@@ -971,7 +966,6 @@ const TeamsPage = ({
         membersCount: getNounUsers(team.membersCount ?? 0),
         gamesCount: team.gamesCount ?? 0,
         ratingBadge: resolveRatingBadge(team.rating),
-        updatedLabel,
         open: Boolean(team.open),
         canManage: canManageTeam,
       }
@@ -1185,7 +1179,7 @@ const TeamsPage = ({
               </button>
             </div>
             {isTeamsLimitReached && (
-              <NoticeBanner tone="warning" variant="neon">
+              <NoticeBanner tone="warning">
                 Достигнут лимит команд: один игрок может состоять максимум в {MAX_TEAMS_PER_USER} командах.
               </NoticeBanner>
             )}
@@ -1276,9 +1270,7 @@ const TeamsPage = ({
                           {team.membersCount}
                         </p>
                         <p className="mt-1 text-xs text-slate-400">
-                          {team.gamesCount > 0
-                            ? `Игр: ${team.gamesCount} · Обновлено ${team.updatedLabel}`
-                            : `Обновлено ${team.updatedLabel}`}
+                          Игр: {team.gamesCount}
                         </p>
                       </SelectableCard>
                     </li>

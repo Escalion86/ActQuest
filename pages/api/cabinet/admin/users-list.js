@@ -33,6 +33,8 @@ export default async function handler(req, res) {
     const offset = parsePositiveInteger(req.query?.offset, 0)
     const limit = parsePositiveInteger(req.query?.limit, 10)
     const search = typeof req.query?.q === 'string' ? req.query.q : ''
+    const roleFilter =
+      typeof req.query?.role === 'string' ? req.query.role : 'all'
     const sortBy = typeof req.query?.sortBy === 'string' ? req.query.sortBy : 'registration_desc'
     const location = typeof session?.user?.location === 'string' ? session.user.location : null
     const { users, hasMore } = await fetchAdminUsersForCabinet({
@@ -40,6 +42,7 @@ export default async function handler(req, res) {
       offset,
       limit,
       search,
+      roleFilter,
       sortBy,
       location,
     })

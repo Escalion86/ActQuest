@@ -84,6 +84,9 @@ const GameModals = ({
   registerGameId,
   setRegisterTeamId,
   setRegisterGameId,
+  isRegisterModalFromCard,
+  registerModalGameName,
+  shouldHideRegisterGameIdField,
   registerFeedback,
   isRegisterTeamsLoading,
   registerTeams,
@@ -124,6 +127,12 @@ const GameModals = ({
   canViewRestrictedGameInfo,
   canViewGameResults,
   handleOpenResultsModal,
+  participationSummaryLabel,
+  canJoinGameFromDescription,
+  canCancelGameRegistrationFromDescription,
+  handleJoinGameFromDescription,
+  handleCancelGameRegistrationFromDescription,
+  isGameRegistrationSubmittingFromDescription,
   selectedGameModerators,
   availableModeratorsForSelect,
   availableModeratorsMap,
@@ -305,6 +314,9 @@ const GameModals = ({
       registerGameId={registerGameId}
       setRegisterTeamId={setRegisterTeamId}
       setRegisterGameId={setRegisterGameId}
+      isRegisterModalFromCard={isRegisterModalFromCard}
+      registerModalGameName={registerModalGameName}
+      shouldHideRegisterGameIdField={shouldHideRegisterGameIdField}
       registerFeedback={registerFeedback}
       isRegisterTeamsLoading={isRegisterTeamsLoading}
       registerTeams={registerTeams}
@@ -351,6 +363,12 @@ const GameModals = ({
       canViewRestrictedGameInfo={canViewRestrictedGameInfo}
       canViewGameResults={canViewGameResults}
       handleOpenResultsModal={handleOpenResultsModal}
+      participationSummaryLabel={participationSummaryLabel}
+      canJoinGame={canJoinGameFromDescription}
+      canCancelRegistration={canCancelGameRegistrationFromDescription}
+      onJoinGame={handleJoinGameFromDescription}
+      onCancelRegistration={handleCancelGameRegistrationFromDescription}
+      isRegistrationSubmitting={isGameRegistrationSubmittingFromDescription}
       taskDurationLabel={taskDurationLabel}
       cluesDurationLabel={cluesDurationLabel}
       clueModeDetails={clueModeDetails}
@@ -500,6 +518,9 @@ GameModals.propTypes = {
   registerGameId: PropTypes.string.isRequired,
   setRegisterTeamId: PropTypes.func.isRequired,
   setRegisterGameId: PropTypes.func.isRequired,
+  isRegisterModalFromCard: PropTypes.bool,
+  registerModalGameName: PropTypes.string,
+  shouldHideRegisterGameIdField: PropTypes.bool,
   registerFeedback: registerFeedbackShape,
   isRegisterTeamsLoading: PropTypes.bool.isRequired,
   registerTeams: PropTypes.arrayOf(
@@ -568,6 +589,12 @@ GameModals.propTypes = {
   canViewRestrictedGameInfo: PropTypes.bool.isRequired,
   canViewGameResults: PropTypes.bool.isRequired,
   handleOpenResultsModal: PropTypes.func.isRequired,
+  participationSummaryLabel: PropTypes.string,
+  canJoinGameFromDescription: PropTypes.bool,
+  canCancelGameRegistrationFromDescription: PropTypes.bool,
+  handleJoinGameFromDescription: PropTypes.func,
+  handleCancelGameRegistrationFromDescription: PropTypes.func,
+  isGameRegistrationSubmittingFromDescription: PropTypes.bool,
   selectedGameModerators: PropTypes.arrayOf(moderatorShape).isRequired,
   availableModeratorsForSelect: PropTypes.arrayOf(moderatorOptionShape).isRequired,
   availableModeratorsMap: PropTypes.instanceOf(Map).isRequired,
@@ -614,6 +641,9 @@ GameModals.defaultProps = {
   selectedGame: null,
   editGame: null,
   location: null,
+  isRegisterModalFromCard: false,
+  registerModalGameName: '',
+  shouldHideRegisterGameIdField: false,
   registerFeedback: null,
   currentUserId: null,
   isCloneSourceGamesLoading: false,
@@ -623,6 +653,12 @@ GameModals.defaultProps = {
   isCreateGameSeasonCreating: false,
   createGameLocationOptions: [],
   createGameFeedback: null,
+  participationSummaryLabel: '',
+  canJoinGameFromDescription: false,
+  canCancelGameRegistrationFromDescription: false,
+  handleJoinGameFromDescription: undefined,
+  handleCancelGameRegistrationFromDescription: undefined,
+  isGameRegistrationSubmittingFromDescription: false,
   editGameSeasons: [],
   isEditGameSeasonsLoading: false,
   isEditGameSeasonCreating: false,

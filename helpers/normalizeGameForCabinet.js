@@ -98,7 +98,8 @@ const normalizeTaskMedia = (media = []) => {
   return media
     .map((item, index) => ({
       id: ensureString(item?.id, `task-media-${index}`),
-      type: item?.type === 'audio' ? 'audio' : 'image',
+      type:
+        item?.type === 'audio' ? 'audio' : item?.type === 'video' ? 'video' : 'image',
       url: ensureString(item?.url, ''),
       mime: ensureString(item?.mime, ''),
       size: ensureNumber(item?.size, 0),
@@ -183,6 +184,27 @@ const normalizeModerators = (moderators = []) => {
         name: ensureString(moderator?.name, ''),
         username: ensureString(moderator?.username, ''),
         telegramId: ensureString(moderator?.telegramId, ''),
+      }
+    })
+    .filter(Boolean)
+}
+
+const normalizeUserParticipationTeams = (teams = []) => {
+  if (!Array.isArray(teams) || teams.length === 0) {
+    return []
+  }
+
+  return teams
+    .map((team) => {
+      const teamId = ensureString(team?.teamId ?? team?.id, '')
+      if (!teamId) {
+        return null
+      }
+
+      return {
+        teamId,
+        teamName: ensureString(team?.teamName ?? team?.name, ''),
+        isCaptain: ensureBoolean(team?.isCaptain, false),
       }
     })
     .filter(Boolean)
@@ -300,11 +322,15 @@ const normalizeGameForCabinet = (game) => {
     showCreator: ensureBoolean(game.showCreator, true),
     showTasks: ensureBoolean(game.showTasks, false),
     hideResult: ensureBoolean(game.hideResult, false),
+    registrationOpen: ensureBoolean(game.registrationOpen, true),
     prices: normalizePrices(game.prices),
     finances: normalizeFinances(game.finances),
     tasks: normalizeTasks(game.tasks),
     teamsCount: ensureNumber(game.teamsCount, 0),
     userTeamPlace: ensureNullableNumber(game.userTeamPlace),
+    userParticipationTeams: normalizeUserParticipationTeams(
+      game.userParticipationTeams,
+    ),
     tasksStats,
     isResultGenerated: isResultGenerated(game.result),
     updatedAt: ensureDateISOString(game.updatedAt),

@@ -20,6 +20,22 @@ if (!globalConnections) {
   globalConnections = global.mongooseGlobal = {}
 }
 
+const ensureModel = (connection, name, schemaFactory) => {
+  const hasModel = Boolean(connection.models?.[name])
+  if (!hasModel) {
+    return connection.model(name, schemaFactory())
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return connection.model(name)
+  }
+
+  // In dev Next.js keeps a warm process and mongoose models can stay stale after
+  // schema edits. Re-create model to pick up enum/field changes without restart.
+  connection.deleteModel(name)
+  return connection.model(name, schemaFactory())
+}
+
 async function dbConnectGlobal() {
   const dbName = process.env.MONGODB_GLOBAL_DBNAME
   const mongoUri = process.env.MONGODB_URI
@@ -45,66 +61,53 @@ async function dbConnectGlobal() {
       dbName,
     })
 
-    globalConnections.global.model(
-      'Users',
+    ensureModel(globalConnections.global, 'Users', () =>
       mongoose.Schema(usersSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'Games',
+    ensureModel(globalConnections.global, 'Games', () =>
       mongoose.Schema(gamesSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'GamesTeams',
+    ensureModel(globalConnections.global, 'GamesTeams', () =>
       mongoose.Schema(gamesTeamsSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'Teams',
+    ensureModel(globalConnections.global, 'Teams', () =>
       mongoose.Schema(teamsSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'TeamsUsers',
+    ensureModel(globalConnections.global, 'TeamsUsers', () =>
       mongoose.Schema(teamsUsersSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'SiteSettings',
+    ensureModel(globalConnections.global, 'SiteSettings', () =>
       mongoose.Schema(siteSettingsSchema),
     )
-    globalConnections.global.model(
-      'LastCommands',
+    ensureModel(globalConnections.global, 'LastCommands', () =>
       mongoose.Schema(lastCommandsSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'UsersGamesPayments',
+    ensureModel(globalConnections.global, 'UsersGamesPayments', () =>
       mongoose.Schema(usersGamesPaymentsSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'Notifications',
+    ensureModel(globalConnections.global, 'Notifications', () =>
       mongoose.Schema(notificationsSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'GamesPayments',
+    ensureModel(globalConnections.global, 'GamesPayments', () =>
       mongoose.Schema(gamesPaymentsSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'PhoneVerifications',
+    ensureModel(globalConnections.global, 'PhoneVerifications', () =>
       mongoose.Schema(phoneVerificationsSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'Transactions',
+    ensureModel(globalConnections.global, 'Transactions', () =>
       mongoose.Schema(transactionsSchema, { timestamps: true }),
     )
-    globalConnections.global.model(
-      'Seasons',
+    ensureModel(globalConnections.global, 'Seasons', () =>
       mongoose.Schema(seasonsSchema, { timestamps: true }),
     )
   }
 
-  if (!globalConnections.global.models?.Seasons) {
-    globalConnections.global.model(
-      'Seasons',
-      mongoose.Schema(seasonsSchema, { timestamps: true }),
-    )
-  }
+  ensureModel(globalConnections.global, 'Games', () =>
+    mongoose.Schema(gamesSchema, { timestamps: true }),
+  )
+  ensureModel(globalConnections.global, 'Seasons', () =>
+    mongoose.Schema(seasonsSchema, { timestamps: true }),
+  )
 
   return globalConnections.global.asPromise()
 }

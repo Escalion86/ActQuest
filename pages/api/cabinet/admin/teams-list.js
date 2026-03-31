@@ -34,6 +34,8 @@ export default async function handler(req, res) {
     const limit = parsePositiveInteger(req.query?.limit, 10)
     const searchQuery =
       typeof req.query?.search === 'string' ? req.query.search.trim().slice(0, 100) : ''
+    const visibilityFilter =
+      typeof req.query?.visibility === 'string' ? req.query.visibility : 'all'
     const sortBy =
       typeof req.query?.sortBy === 'string' ? req.query.sortBy : 'registration_desc'
     const location = typeof session?.user?.location === 'string' ? session.user.location : null
@@ -45,6 +47,7 @@ export default async function handler(req, res) {
       offset,
       limit,
       searchQuery,
+      visibilityFilter,
       returnMeta: true,
     })
 
@@ -56,6 +59,7 @@ export default async function handler(req, res) {
         limit,
         hasMore,
         search: searchQuery,
+        visibility: visibilityFilter,
       },
     })
   } catch (error) {

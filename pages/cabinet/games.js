@@ -261,6 +261,34 @@ const stripHtmlToPlainText = (value) =>
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 
+const isActiveGameStatus = (status) =>
+  (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
+  'active'
+
+const getUserParticipationTeams = (game) =>
+  (Array.isArray(game?.userParticipationTeams)
+    ? game.userParticipationTeams
+    : []
+  )
+    .map((entry) => {
+      const teamId =
+        entry?.teamId === null || entry?.teamId === undefined
+          ? ''
+          : String(entry.teamId).trim()
+
+      if (!teamId) {
+        return null
+      }
+
+      return {
+        teamId,
+        teamName:
+          typeof entry?.teamName === 'string' ? entry.teamName.trim() : '',
+        isCaptain: Boolean(entry?.isCaptain),
+      }
+    })
+    .filter(Boolean)
+
 const cloneGameDraft = (game) => {
   if (!game || typeof game !== 'object') {
     return null
@@ -324,7 +352,12 @@ const buildUpdatePayload = (game) => {
             typeof media?.id === 'string' && media.id.trim() !== ''
               ? media.id.trim()
               : `task-media-${index}`,
-          type: media?.type === 'audio' ? 'audio' : 'image',
+          type:
+            media?.type === 'audio'
+              ? 'audio'
+              : media?.type === 'video'
+                ? 'video'
+                : 'image',
           url: typeof media?.url === 'string' ? media.url.trim() : '',
           mime: typeof media?.mime === 'string' ? media.mime.trim() : '',
           size: Number(media?.size) || 0,
@@ -335,8 +368,7 @@ const buildUpdatePayload = (game) => {
         .filter((media) => media.url !== ''),
       taskBonusForComplite: Number(task.taskBonusForComplite) || 0,
       clues: (task.clues ?? []).map((clue) => {
-        const clueRich =
-          typeof clue.clueRich === 'string' ? clue.clueRich : ''
+        const clueRich = typeof clue.clueRich === 'string' ? clue.clueRich : ''
         const cluePlain =
           typeof clue.clue === 'string' && clue.clue.trim() !== ''
             ? clue.clue
@@ -462,7 +494,12 @@ const buildUpdatePayload = (game) => {
           typeof media?.id === 'string' && media.id.trim() !== ''
             ? media.id.trim()
             : `game-description-media-${index}`,
-        type: media?.type === 'audio' ? 'audio' : 'image',
+        type:
+          media?.type === 'audio'
+            ? 'audio'
+            : media?.type === 'video'
+              ? 'video'
+              : 'image',
         url: typeof media?.url === 'string' ? media.url.trim() : '',
         mime: typeof media?.mime === 'string' ? media.mime.trim() : '',
         size: Number(media?.size) || 0,
@@ -502,6 +539,7 @@ const buildUpdatePayload = (game) => {
     showCreator: Boolean(game.showCreator),
     showTasks: Boolean(game.showTasks),
     hideResult: Boolean(game.hideResult),
+    registrationOpen: Boolean(game.registrationOpen ?? true),
     prices,
     finances,
     tasks,
@@ -521,9 +559,15 @@ const GameCardImage = ({ src, alt, className, placeholderClassName }) => {
         }
       >
         <img
+          src="/logo_title_light.png"
+          alt="ActQuest"
+          className="aq-logo-float h-auto w-[70%] max-w-[220px] opacity-90 dark:hidden"
+          loading="lazy"
+        />
+        <img
           src="/logo_title.png"
           alt="ActQuest"
-          className="aq-logo-float h-auto w-[70%] max-w-[220px] opacity-90"
+          className="aq-logo-float hidden h-auto w-[70%] max-w-[220px] opacity-90 dark:block"
           loading="lazy"
         />
       </div>
@@ -651,11 +695,15 @@ const GamesPage = ({
   const [isGeneratingResults, setIsGeneratingResults] = useState(false)
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
   const [registerGameId, setRegisterGameId] = useState('')
+  const [isRegisterModalFromCard, setIsRegisterModalFromCard] = useState(false)
+  const [registerModalGameName, setRegisterModalGameName] = useState('')
   const [registerTeamId, setRegisterTeamId] = useState('')
   const [registerTeams, setRegisterTeams] = useState([])
   const [isRegisterTeamsLoading, setIsRegisterTeamsLoading] = useState(false)
   const [registerFeedback, setRegisterFeedback] = useState(null)
   const [isRegisterSubmitting, setIsRegisterSubmitting] = useState(false)
+  const [cancellingRegistrationGameIds, setCancellingRegistrationGameIds] =
+    useState([])
   const [isCreateGameModalOpen, setIsCreateGameModalOpen] = useState(false)
   const [newGameName, setNewGameName] = useState('')
   const [newGameIsRated, setNewGameIsRated] = useState(true)
@@ -867,6 +915,10 @@ const GamesPage = ({
   const selectedGame = useMemo(
     () => games.find((game) => game.id === selectedGameId) ?? null,
     [games, selectedGameId],
+  )
+  const registerModalGame = useMemo(
+    () => games.find((game) => game.id === registerGameId) ?? null,
+    [games, registerGameId],
   )
   const statusModalGame = useMemo(
     () => games.find((game) => game.id === statusModalGameId) ?? null,
@@ -1438,8 +1490,8 @@ const GamesPage = ({
     shouldShowLocationFilter,
   ])
 
-  const resetRegisterForm = useCallback(() => {
-    setRegisterGameId('')
+  const resetRegisterForm = useCallback((nextGameId = '') => {
+    setRegisterGameId(nextGameId)
     setRegisterTeamId('')
     setRegisterFeedback(null)
   }, [])
@@ -1450,13 +1502,15 @@ const GamesPage = ({
     }
 
     setIsRegisterModalOpen(false)
+    setIsRegisterModalFromCard(false)
+    setRegisterModalGameName('')
     setRegisterTeams([])
     setIsRegisterTeamsLoading(false)
     resetRegisterForm()
   }, [isRegisterSubmitting, resetRegisterForm])
 
   const loadRegisterTeams = useCallback(async () => {
-    if (!registerApiLocation || !currentUserDbId) {
+    if (!currentUserDbId && !currentUserTelegramIdNumber) {
       setRegisterTeams([])
       setRegisterTeamId('')
       return
@@ -1465,77 +1519,26 @@ const GamesPage = ({
     setIsRegisterTeamsLoading(true)
 
     try {
-      const membershipsParams = new URLSearchParams({
-        collection: 'teamsusers',
-        userId: currentUserDbId,
-        role: 'capitan',
-        limit: '200',
-      })
-
-      const { response: membershipsResponse, json: membershipsJson } =
-        await requestApiJson(
-          `/api/${registerApiLocation}/custom?${membershipsParams.toString()}`,
-          {
-            fallbackMessage: 'Не удалось загрузить список команд',
-            throwOnHttpError: false,
-          },
-        )
-
-      if (!membershipsResponse.ok || membershipsJson?.success === false) {
-        if (
-          membershipsResponse.status === 404 ||
-          membershipsResponse.status === 204 ||
-          membershipsJson?.errorCode === 'not_found'
-        ) {
-          setRegisterTeams([])
-          setRegisterTeamId('')
-          return
-        }
-
-        throw new Error(
-          extractErrorMessage(membershipsJson?.error) ||
-            'Не удалось загрузить список команд',
-        )
+      const userDetailsParams = new URLSearchParams()
+      if (currentUserDbId) {
+        userDetailsParams.set('userId', currentUserDbId)
+      } else if (Number.isFinite(currentUserTelegramIdNumber)) {
+        userDetailsParams.set('telegramId', String(currentUserTelegramIdNumber))
       }
 
-      const memberships = Array.isArray(membershipsJson?.data)
-        ? membershipsJson.data
-        : []
-
-      const teamIds = Array.from(
-        new Set(
-          memberships
-            .map((membership) => toStringId(membership?.teamId))
-            .filter(
-              (teamId) => typeof teamId === 'string' && teamId.length > 0,
-            ),
-        ),
-      )
-
-      if (teamIds.length === 0) {
-        setRegisterTeams([])
-        setRegisterTeamId('')
-        return
-      }
-
-      const teamsParams = new URLSearchParams({
-        location: registerApiLocation,
-        teamIds: teamIds.join(','),
-      })
-
-      const { response: teamsResponse, json: teamsJson } = await requestApiJson(
-        `/api/cabinet/teams?${teamsParams.toString()}`,
+      const { response: userResponse, json: userJson } = await requestApiJson(
+        `/api/cabinet/user-details?${userDetailsParams.toString()}`,
         {
-          fallbackMessage: 'Не удалось загрузить данные команд',
+          fallbackMessage: 'Не удалось загрузить список команд',
           throwOnHttpError: false,
         },
       )
 
-      if (!teamsResponse.ok || teamsJson?.success === false) {
+      if (!userResponse.ok || userJson?.success === false) {
         if (
-          teamsResponse.status === 404 ||
-          teamsResponse.status === 204 ||
-          teamsJson?.errorCode === 'not_found'
+          userResponse.status === 404 ||
+          userResponse.status === 204 ||
+          userJson?.errorCode === 'not_found'
         ) {
           setRegisterTeams([])
           setRegisterTeamId('')
@@ -1543,14 +1546,28 @@ const GamesPage = ({
         }
 
         throw new Error(
-          extractErrorMessage(teamsJson?.error) ||
-            'Не удалось загрузить данные команд',
+          extractErrorMessage(userJson?.error) ||
+            'Не удалось загрузить список команд',
         )
       }
 
-      const teamsList = Array.isArray(teamsJson?.data)
-        ? teamsJson.data.filter(Boolean)
+      const teamsList = (Array.isArray(userJson?.data?.teams)
+        ? userJson.data.teams
         : []
+      )
+        .filter((team) => Boolean(team?.isCaptain))
+        .map((team) => ({
+          ...team,
+          id: toStringId(team?.id),
+          name: typeof team?.name === 'string' ? team.name : '',
+        }))
+        .filter((team) => typeof team.id === 'string' && team.id.length > 0)
+
+      if (teamsList.length === 0) {
+        setRegisterTeams([])
+        setRegisterTeamId('')
+        return
+      }
 
       teamsList.sort((first, second) => {
         const firstName = (first?.name ?? '').toLowerCase()
@@ -1574,16 +1591,17 @@ const GamesPage = ({
     } finally {
       setIsRegisterTeamsLoading(false)
     }
-  }, [currentUserDbId, registerApiLocation])
+  }, [currentUserDbId, currentUserTelegramIdNumber])
 
   useEffect(() => {
     if (isRegisterModalOpen) {
-      resetRegisterForm()
+      setRegisterTeamId('')
+      setRegisterFeedback(null)
       loadRegisterTeams()
     } else {
       setIsRegisterSubmitting(false)
     }
-  }, [isRegisterModalOpen, loadRegisterTeams, resetRegisterForm])
+  }, [isRegisterModalOpen, loadRegisterTeams])
 
   const handleSubmitRegister = useCallback(async () => {
     const trimmedGameId = registerGameId.trim()
@@ -1647,8 +1665,12 @@ const GamesPage = ({
 
       const gameData = gameJson?.data ?? null
       const gameStatus = (gameData?.status ?? '').toString().toLowerCase()
+      const isRegistrationOpen = gameData?.registrationOpen !== false
 
       if (gameStatus && gameStatus !== 'active') {
+        throw new Error('Запись на эту игру закрыта')
+      }
+      if (!isRegistrationOpen) {
         throw new Error('Запись на эту игру закрыта')
       }
 
@@ -1695,7 +1717,6 @@ const GamesPage = ({
         type: 'success',
         message: `Команда «${selectedTeam.name || 'без названия'}» зарегистрирована на игру`,
       })
-      setRegisterGameId('')
 
       setGames((prev) =>
         prev.map((game) => {
@@ -1703,9 +1724,26 @@ const GamesPage = ({
             return game
           }
 
+          const nextParticipationTeams = getUserParticipationTeams(game)
+          const hasTeamAlready = nextParticipationTeams.some(
+            (entry) => entry.teamId === registerTeamId,
+          )
+
+          if (!hasTeamAlready) {
+            nextParticipationTeams.push({
+              teamId: registerTeamId,
+              teamName:
+                typeof selectedTeam?.name === 'string'
+                  ? selectedTeam.name.trim()
+                  : '',
+              isCaptain: true,
+            })
+          }
+
           return {
             ...game,
             teamsCount: (game.teamsCount ?? 0) + 1,
+            userParticipationTeams: nextParticipationTeams,
           }
         }),
       )
@@ -1716,12 +1754,40 @@ const GamesPage = ({
             return game
           }
 
+          const nextParticipationTeams = getUserParticipationTeams(game)
+          const hasTeamAlready = nextParticipationTeams.some(
+            (entry) => entry.teamId === registerTeamId,
+          )
+
+          if (!hasTeamAlready) {
+            nextParticipationTeams.push({
+              teamId: registerTeamId,
+              teamName:
+                typeof selectedTeam?.name === 'string'
+                  ? selectedTeam.name.trim()
+                  : '',
+              isCaptain: true,
+            })
+          }
+
           return {
             ...game,
             teamsCount: (game.teamsCount ?? 0) + 1,
+            userParticipationTeams: nextParticipationTeams,
           }
         }),
       )
+
+      setFeedback({
+        type: 'success',
+        message: `Команда «${selectedTeam.name || 'без названия'}» зарегистрирована на игру`,
+      })
+      setIsRegisterModalOpen(false)
+      setIsRegisterModalFromCard(false)
+      setRegisterModalGameName('')
+      setRegisterTeams([])
+      setIsRegisterTeamsLoading(false)
+      resetRegisterForm()
     } catch (error) {
       console.error('Failed to register team to game', error)
       setRegisterFeedback({
@@ -1738,13 +1804,199 @@ const GamesPage = ({
     registerGameId,
     registerTeamId,
     registerTeams,
+    resetRegisterForm,
     setGames,
+    setFeedback,
     setPersistedGames,
   ])
 
   const handleOpenRegisterModal = useCallback(() => {
+    resetRegisterForm('')
+    setIsRegisterModalFromCard(false)
+    setRegisterModalGameName('')
     setIsRegisterModalOpen(true)
-  }, [])
+  }, [resetRegisterForm])
+
+  const handleOpenRegisterModalForGame = useCallback(
+    (game) => {
+      if (!game?.id) {
+        return
+      }
+
+      setSelectedGameId(game.id)
+      setIsDescriptionModalOpen(false)
+      resetRegisterForm(game.id)
+      setIsRegisterModalFromCard(true)
+      setRegisterModalGameName(game.name || 'Без названия')
+      setIsRegisterModalOpen(true)
+    },
+    [resetRegisterForm],
+  )
+
+  const isRegistrationCancellationInProgress = useCallback(
+    (gameId) =>
+      typeof gameId === 'string' &&
+      cancellingRegistrationGameIds.includes(gameId),
+    [cancellingRegistrationGameIds],
+  )
+
+  const handleCancelRegistrationFromGame = useCallback(
+    async (game) => {
+      if (!game?.id) {
+        return
+      }
+
+      const captainParticipations = getUserParticipationTeams(game).filter(
+        (entry) => entry.isCaptain,
+      )
+
+      if (captainParticipations.length === 0) {
+        setFeedback({
+          type: 'error',
+          message:
+            'Отмена регистрации доступна только капитану зарегистрированной команды.',
+        })
+        return
+      }
+
+      const gameApiLocation =
+        game.location ||
+        (shouldShowLocationFilter ? gamesFilterLocation : location) ||
+        registerApiLocation
+
+      if (!gameApiLocation) {
+        setFeedback({
+          type: 'error',
+          message: 'Не удалось определить площадку игры.',
+        })
+        return
+      }
+
+      if (isRegistrationCancellationInProgress(game.id)) {
+        return
+      }
+
+      const teamsLabel = captainParticipations
+        .map((entry) => `«${entry.teamName || entry.teamId}»`)
+        .join(', ')
+      const confirmMessage =
+        captainParticipations.length > 1
+          ? `Отменить регистрацию команд ${teamsLabel} на игру «${game.name || 'Без названия'}»?`
+          : `Отменить регистрацию команды ${teamsLabel} на игру «${game.name || 'Без названия'}»?`
+
+      if (typeof window !== 'undefined') {
+        const isConfirmed = window.confirm(confirmMessage)
+        if (!isConfirmed) {
+          return
+        }
+      }
+
+      setCancellingRegistrationGameIds((prev) =>
+        prev.includes(game.id) ? prev : [...prev, game.id],
+      )
+
+      try {
+        const existingParams = new URLSearchParams({
+          collection: 'gamesteams',
+          gameId: game.id,
+          limit: '200',
+        })
+
+        const { response: existingResponse, json: existingJson } =
+          await requestApiJson(
+            `/api/${gameApiLocation}/custom?${existingParams.toString()}`,
+            {
+              fallbackMessage: 'Не удалось проверить регистрацию команды',
+              throwOnHttpError: false,
+            },
+          )
+
+        if (!existingResponse.ok || existingJson?.success === false) {
+          throw new Error(
+            extractErrorMessage(existingJson?.error) ||
+              'Не удалось проверить регистрацию команды',
+          )
+        }
+
+        const captainTeamIds = new Set(
+          captainParticipations.map((entry) => entry.teamId).filter(Boolean),
+        )
+        const gameTeamIdsToDelete = (
+          Array.isArray(existingJson?.data) ? existingJson.data : []
+        )
+          .filter((entry) => captainTeamIds.has(toStringId(entry?.teamId)))
+          .map((entry) => toStringId(entry?._id))
+          .filter(Boolean)
+
+        if (gameTeamIdsToDelete.length === 0) {
+          throw new Error('Не найдены записи регистрации для удаления')
+        }
+
+        await requestApiJson(
+          `/api/${gameApiLocation}/custom?collection=gamesteams`,
+          {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ params: gameTeamIdsToDelete }),
+            fallbackMessage: 'Не удалось отменить регистрацию команды',
+          },
+        )
+
+        const applyCancellationToGame = (gameItem) => {
+          if (!gameItem || gameItem.id !== game.id) {
+            return gameItem
+          }
+
+          const nextParticipationTeams = getUserParticipationTeams(
+            gameItem,
+          ).filter((entry) => !captainTeamIds.has(entry.teamId))
+
+          return {
+            ...gameItem,
+            teamsCount: Math.max(
+              0,
+              (Number(gameItem.teamsCount) || 0) - gameTeamIdsToDelete.length,
+            ),
+            userParticipationTeams: nextParticipationTeams,
+            userTeamPlace:
+              nextParticipationTeams.length > 0 ? gameItem.userTeamPlace : null,
+          }
+        }
+
+        setGames((prev) =>
+          prev.map((gameItem) => applyCancellationToGame(gameItem)),
+        )
+        setPersistedGames((prev) =>
+          prev.map((gameItem) => applyCancellationToGame(gameItem)),
+        )
+
+        setFeedback({
+          type: 'success',
+          message: 'Регистрация на игру отменена',
+        })
+      } catch (error) {
+        console.error('Failed to cancel game registration', error)
+        setFeedback({
+          type: 'error',
+          message:
+            extractErrorMessage(error) ||
+            'Не удалось отменить регистрацию команды',
+        })
+      } finally {
+        setCancellingRegistrationGameIds((prev) =>
+          prev.filter((item) => item !== game.id),
+        )
+      }
+    },
+    [
+      gamesFilterLocation,
+      isRegistrationCancellationInProgress,
+      location,
+      registerApiLocation,
+      setFeedback,
+      shouldShowLocationFilter,
+    ],
+  )
 
   const handleOpenCreateGameModal = useCallback(() => {
     const defaultLocation = location || gameLocationOptions[0]?.key || ''
@@ -2099,6 +2351,7 @@ const GamesPage = ({
         showCreator: true,
         showTasks: false,
         hideResult: false,
+        registrationOpen: true,
         prices: [],
         finances: [],
         tasks: [],
@@ -2198,6 +2451,9 @@ const GamesPage = ({
           baseDraft.showCreator = Boolean(normalizedSource.showCreator)
           baseDraft.showTasks = Boolean(normalizedSource.showTasks)
           baseDraft.hideResult = Boolean(normalizedSource.hideResult)
+          baseDraft.registrationOpen = Boolean(
+            normalizedSource.registrationOpen ?? true,
+          )
         }
 
         if (createGameCloneOptions.prices) {
@@ -2622,7 +2878,12 @@ const GamesPage = ({
         const patch =
           typeof updater === 'function' ? updater(prevGame) : updater
         const isClosedEditing = isClosedStatus(prevGame.status)
-        const allowedClosedKeys = ['showCreator', 'showTasks', 'hideResult']
+        const allowedClosedKeys = [
+          'showCreator',
+          'showTasks',
+          'hideResult',
+          'registrationOpen',
+        ]
         const normalizedPatch =
           isClosedEditing && patch && typeof patch === 'object'
             ? Object.fromEntries(
@@ -4155,6 +4416,27 @@ const GamesPage = ({
       const userTeamPlace = Number(game.userTeamPlace)
       const hasUserTeamPlace =
         Number.isFinite(userTeamPlace) && userTeamPlace > 0
+      const participationTeams = getUserParticipationTeams(game)
+      const hasParticipation = participationTeams.length > 0
+      const captainParticipationTeams = participationTeams.filter(
+        (entry) => entry.isCaptain,
+      )
+      const canJoinGame =
+        !hasParticipation &&
+        isActiveGameStatus(visibleStatus) &&
+        Boolean(game?.registrationOpen ?? true) &&
+        Boolean(currentUserDbId)
+      const canCancelRegistration =
+        captainParticipationTeams.length > 0 &&
+        isActiveGameStatus(visibleStatus)
+      const participationSummary = hasParticipation
+        ? `Вы участвуете: ${participationTeams
+            .map((entry) => entry.teamName || entry.teamId)
+            .join(', ')}`
+        : ''
+      const isCancellingRegistration = isRegistrationCancellationInProgress(
+        game.id,
+      )
       const hasSeason =
         typeof game?.seasonId === 'string' && game.seasonId.trim().length > 0
       const seasonLabel =
@@ -4182,7 +4464,7 @@ const GamesPage = ({
             title={game.name || 'Без названия'}
           >
             <div className="flex items-start min-w-0">
-              <div className="relative hidden min-h-[160px] w-[156px] shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:block dark:border-slate-700 dark:bg-slate-900">
+              <div className="relative hidden min-h-[156px] w-[156px] shrink-0 overflow-hidden rounded-lg border border-slate-300 shadow-inner sm:block dark:border-slate-700 dark:from-slate-900 dark:to-slate-900">
                 <GameCardImage
                   src={game.image}
                   alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
@@ -4190,11 +4472,9 @@ const GamesPage = ({
                   placeholderClassName="flex w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 py-6 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
                 />
               </div>
-              <div
-                className="min-w-0 flex-1 p-0 sm:absolute sm:inset-y-0 sm:left-[168px] sm:right-0 sm:overflow-hidden sm:p-4"
-              >
+              <div className="min-w-0 flex-1 p-0 sm:absolute sm:inset-y-0 sm:left-[168px] sm:right-0 sm:overflow-hidden sm:p-4">
                 <div className="flex items-start flex-1 w-full min-w-0 gap-3">
-                  <div className="relative min-h-[96px] w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 sm:hidden dark:border-slate-700 dark:bg-slate-900">
+                  <div className="relative min-h-[96px] w-24 shrink-0 overflow-hidden rounded-xl border border-slate-300 bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 shadow-inner sm:hidden dark:border-slate-700 dark:from-slate-900 dark:to-slate-900">
                     <GameCardImage
                       src={game.image}
                       alt={
@@ -4211,7 +4491,7 @@ const GamesPage = ({
                       {getGameStatusLabel(visibleStatus)}
                     </span>
                     {game?.isRated === true && (
-                      <span className="mb-2 ml-2 inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
+                      <span className="mb-2 ml-2 inline-flex items-center rounded-full border border-amber-400/75 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-300/60 dark:bg-amber-500/10 dark:text-amber-200">
                         {seasonBadgeLabel}
                       </span>
                     )}
@@ -4229,15 +4509,23 @@ const GamesPage = ({
                     <p className="mt-1 text-xs text-slate-400">
                       {getNounTeams(game.teamsCount)}
                     </p>
+                    {hasParticipation && (
+                      <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-300">
+                        {participationSummary}
+                      </p>
+                    )}
                   </div>
                 </div>
                 {(hasUserTeamPlace ||
+                  hasParticipation ||
+                  canJoinGame ||
+                  canCancelRegistration ||
                   canEditThisGame ||
                   canManageThisGame ||
                   canManageStatusThisGame ||
                   canViewThisGameResults ||
                   canViewThisGameTasks) && (
-                  <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 mt-3">
                     <div className="flex items-center gap-2">
                       {(canEditThisGame ||
                         canManageThisGame ||
@@ -4296,9 +4584,36 @@ const GamesPage = ({
                           Место: {userTeamPlace}
                         </span>
                       )}
+                      {canCancelRegistration && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleCancelRegistrationFromGame(game)
+                          }}
+                          disabled={isCancellingRegistration}
+                          className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
+                        >
+                          Отменить регистрацию
+                        </button>
+                      )}
                     </div>
-                    {(canViewThisGameTasks || canViewThisGameResults) && (
+                    {(canJoinGame ||
+                      canViewThisGameTasks ||
+                      canViewThisGameResults) && (
                       <div className="flex items-center gap-2">
+                        {canJoinGame && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleOpenRegisterModalForGame(game)
+                            }}
+                            className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
+                          >
+                            Присоединиться
+                          </button>
+                        )}
                         {canViewThisGameTasks && (
                           <button
                             type="button"
@@ -4341,13 +4656,17 @@ const GamesPage = ({
       canSeeClosedStatus,
       canViewResultsForGame,
       canViewTasksForGame,
+      currentUserDbId,
       getNounTeams,
+      handleCancelRegistrationFromGame,
       handleEditGameFromList,
       handleEditTasksFromList,
       handleManageTeamsFromList,
+      handleOpenRegisterModalForGame,
       handleOpenTasksViewFromGame,
       handleOpenResultsFromGame,
       handleOpenStatusModal,
+      isRegistrationCancellationInProgress,
       handleSelectGameCard,
       selectedGameId,
     ],
@@ -4375,6 +4694,27 @@ const GamesPage = ({
       const userTeamPlace = Number(game.userTeamPlace)
       const hasUserTeamPlace =
         Number.isFinite(userTeamPlace) && userTeamPlace > 0
+      const participationTeams = getUserParticipationTeams(game)
+      const hasParticipation = participationTeams.length > 0
+      const captainParticipationTeams = participationTeams.filter(
+        (entry) => entry.isCaptain,
+      )
+      const canJoinGame =
+        !hasParticipation &&
+        isActiveGameStatus(visibleStatus) &&
+        Boolean(game?.registrationOpen ?? true) &&
+        Boolean(currentUserDbId)
+      const canCancelRegistration =
+        captainParticipationTeams.length > 0 &&
+        isActiveGameStatus(visibleStatus)
+      const participationSummary = hasParticipation
+        ? `Вы участвуете: ${participationTeams
+            .map((entry) => entry.teamName || entry.teamId)
+            .join(', ')}`
+        : ''
+      const isCancellingRegistration = isRegistrationCancellationInProgress(
+        game.id,
+      )
       const hasSeason =
         typeof game?.seasonId === 'string' && game.seasonId.trim().length > 0
       const seasonLabel =
@@ -4401,7 +4741,7 @@ const GamesPage = ({
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
-            <div className="relative w-full overflow-hidden border-b border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-900">
+            <div className="relative w-full overflow-hidden shadow-inner bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-900">
               <GameCardImage
                 src={game.image}
                 alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
@@ -4409,7 +4749,7 @@ const GamesPage = ({
                 placeholderClassName="flex min-h-[180px] w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:from-slate-800 dark:to-slate-900 dark:text-slate-400"
               />
             </div>
-            <div className="p-4 space-y-2">
+            <div className="pt-4 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
@@ -4417,7 +4757,7 @@ const GamesPage = ({
                   {getGameStatusLabel(visibleStatus)}
                 </span>
                 {game?.isRated === true && (
-                  <span className="inline-flex items-center rounded-full border border-amber-300/60 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
+                  <span className="inline-flex items-center rounded-full border border-amber-400/75 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-300/60 dark:bg-amber-500/10 dark:text-amber-200">
                     {seasonBadgeLabel}
                   </span>
                 )}
@@ -4434,9 +4774,17 @@ const GamesPage = ({
               <p className="text-xs text-slate-400">
                 {getNounTeams(game.teamsCount)}
               </p>
+              {hasParticipation && (
+                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-300">
+                  {participationSummary}
+                </p>
+              )}
               {(canViewThisGameResults ||
                 canViewThisGameTasks ||
                 hasUserTeamPlace ||
+                hasParticipation ||
+                canJoinGame ||
+                canCancelRegistration ||
                 canEditThisGame ||
                 canManageThisGame ||
                 canManageStatusThisGame) && (
@@ -4470,6 +4818,31 @@ const GamesPage = ({
                       <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
                         Место: {userTeamPlace}
                       </span>
+                    )}
+                    {canJoinGame && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleOpenRegisterModalForGame(game)
+                        }}
+                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
+                      >
+                        Присоединиться
+                      </button>
+                    )}
+                    {canCancelRegistration && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleCancelRegistrationFromGame(game)
+                        }}
+                        disabled={isCancellingRegistration}
+                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
+                      >
+                        Отменить регистрацию
+                      </button>
                     )}
                   </div>
                   {(canEditThisGame ||
@@ -4543,13 +4916,17 @@ const GamesPage = ({
       canSeeClosedStatus,
       canViewResultsForGame,
       canViewTasksForGame,
+      currentUserDbId,
       getNounTeams,
+      handleCancelRegistrationFromGame,
       handleEditGameFromList,
       handleEditTasksFromList,
       handleManageTeamsFromList,
+      handleOpenRegisterModalForGame,
       handleOpenTasksViewFromGame,
       handleOpenResultsFromGame,
       handleOpenStatusModal,
+      isRegistrationCancellationInProgress,
       handleSelectGameCard,
       selectedGameId,
     ],
@@ -4669,6 +5046,61 @@ const GamesPage = ({
     () => canViewResultsForGame(selectedGame),
     [canViewResultsForGame, selectedGame],
   )
+  const selectedGameParticipationTeams = useMemo(
+    () => getUserParticipationTeams(selectedGame),
+    [selectedGame],
+  )
+  const selectedGameCaptainParticipationTeams = useMemo(
+    () => selectedGameParticipationTeams.filter((entry) => entry.isCaptain),
+    [selectedGameParticipationTeams],
+  )
+  const selectedGameParticipationSummaryLabel = useMemo(() => {
+    if (selectedGameParticipationTeams.length === 0) {
+      return ''
+    }
+
+    const teamNames = selectedGameParticipationTeams.map(
+      (entry) => entry.teamName || entry.teamId,
+    )
+    return `Вы участвуете в составе: ${teamNames.join(', ')}`
+  }, [selectedGameParticipationTeams])
+  const canJoinSelectedGame = useMemo(
+    () =>
+      Boolean(selectedGame?.id) &&
+      selectedGameParticipationTeams.length === 0 &&
+      isActiveGameStatus(selectedGame?.status) &&
+      Boolean(selectedGame?.registrationOpen ?? true) &&
+      Boolean(currentUserDbId),
+    [currentUserDbId, selectedGame, selectedGameParticipationTeams.length],
+  )
+  const canCancelSelectedGameRegistration = useMemo(
+    () =>
+      Boolean(selectedGame?.id) &&
+      selectedGameCaptainParticipationTeams.length > 0 &&
+      isActiveGameStatus(selectedGame?.status),
+    [selectedGame, selectedGameCaptainParticipationTeams.length],
+  )
+  const isSelectedGameRegistrationCancelling = useMemo(
+    () =>
+      Boolean(selectedGame?.id) &&
+      isRegistrationCancellationInProgress(selectedGame.id),
+    [isRegistrationCancellationInProgress, selectedGame],
+  )
+  const handleJoinSelectedGameFromDescription = useCallback(() => {
+    if (!selectedGame) {
+      return
+    }
+
+    handleOpenRegisterModalForGame(selectedGame)
+  }, [handleOpenRegisterModalForGame, selectedGame])
+  const handleCancelSelectedGameRegistrationFromDescription =
+    useCallback(() => {
+      if (!selectedGame) {
+        return
+      }
+
+      handleCancelRegistrationFromGame(selectedGame)
+    }, [handleCancelRegistrationFromGame, selectedGame])
 
   const breakDurationLabel = useMemo(() => {
     if (!modalGame) {
@@ -4803,7 +5235,8 @@ const GamesPage = ({
                 id="games-show-canceled"
                 checked={showCanceledGames}
                 onChange={(event) => setShowCanceledGames(event.target.checked)}
-                className="px-3 py-2 border rounded-xl border-slate-200 dark:border-slate-700"
+                className="items-center px-3 py-2 border rounded-xl border-slate-200 dark:border-slate-700"
+                boxClassName="mt-0"
                 label="Отменённые"
                 labelClassName="text-xs font-semibold text-slate-600 dark:text-slate-300"
               />
@@ -5047,6 +5480,9 @@ const GamesPage = ({
                   registerGameId={registerGameId}
                   setRegisterTeamId={setRegisterTeamId}
                   setRegisterGameId={setRegisterGameId}
+                  isRegisterModalFromCard={isRegisterModalFromCard}
+                  registerModalGameName={registerModalGameName}
+                  shouldHideRegisterGameIdField={Boolean(isRegisterModalFromCard)}
                   registerFeedback={registerFeedback}
                   isRegisterTeamsLoading={isRegisterTeamsLoading}
                   registerTeams={registerTeams}
@@ -5097,6 +5533,22 @@ const GamesPage = ({
                   canViewGameResults={canViewGameResults}
                   handleOpenResultsModal={() =>
                     handleOpenResultsFromGame(selectedGame)
+                  }
+                  participationSummaryLabel={
+                    selectedGameParticipationSummaryLabel
+                  }
+                  canJoinGameFromDescription={canJoinSelectedGame}
+                  canCancelGameRegistrationFromDescription={
+                    canCancelSelectedGameRegistration
+                  }
+                  handleJoinGameFromDescription={
+                    handleJoinSelectedGameFromDescription
+                  }
+                  handleCancelGameRegistrationFromDescription={
+                    handleCancelSelectedGameRegistrationFromDescription
+                  }
+                  isGameRegistrationSubmittingFromDescription={
+                    isSelectedGameRegistrationCancelling
                   }
                   selectedGameModerators={selectedGameModerators}
                   availableModeratorsForSelect={availableModeratorsForSelect}
@@ -5200,7 +5652,7 @@ const coordinatesShape = PropTypes.shape({
 
 const taskMediaShape = PropTypes.shape({
   id: PropTypes.string,
-  type: PropTypes.oneOf(['image', 'audio']),
+  type: PropTypes.oneOf(['image', 'audio', 'video']),
   url: PropTypes.string,
   mime: PropTypes.string,
   size: PropTypes.number,
@@ -5214,6 +5666,12 @@ const moderatorShape = PropTypes.shape({
   name: PropTypes.string,
   username: PropTypes.string,
   telegramId: PropTypes.string,
+})
+
+const userParticipationTeamShape = PropTypes.shape({
+  teamId: PropTypes.string.isRequired,
+  teamName: PropTypes.string,
+  isCaptain: PropTypes.bool,
 })
 
 GamesPage.propTypes = {
@@ -5249,6 +5707,7 @@ GamesPage.propTypes = {
       showCreator: PropTypes.bool,
       showTasks: PropTypes.bool,
       hideResult: PropTypes.bool,
+      registrationOpen: PropTypes.bool,
       prices: PropTypes.arrayOf(priceShape),
       finances: PropTypes.arrayOf(financeShape),
       tasks: PropTypes.arrayOf(
@@ -5275,6 +5734,7 @@ GamesPage.propTypes = {
       ),
       teamsCount: PropTypes.number,
       userTeamPlace: PropTypes.number,
+      userParticipationTeams: PropTypes.arrayOf(userParticipationTeamShape),
       isResultGenerated: PropTypes.bool,
       tasksStats: PropTypes.shape({
         total: PropTypes.number,

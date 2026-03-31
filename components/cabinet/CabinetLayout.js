@@ -352,6 +352,20 @@ const CabinetLayout = ({
   }, [isDarkTheme, theme])
 
   useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined
+    }
+
+    document.documentElement.classList.add('aq-cabinet-lock-page-scroll')
+    document.body.classList.add('aq-cabinet-lock-page-scroll')
+
+    return () => {
+      document.documentElement.classList.remove('aq-cabinet-lock-page-scroll')
+      document.body.classList.remove('aq-cabinet-lock-page-scroll')
+    }
+  }, [])
+
+  useEffect(() => {
     if (!shouldForceLocationSelection) {
       setLocationPromptValue('')
       setLocationPromptError('')

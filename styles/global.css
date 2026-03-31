@@ -260,6 +260,10 @@ blockquote {
   /* Standard syntax */
 }
 
+input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
 .aq-rich-text-base {
   font-size: 15px;
   line-height: 1.333333;
@@ -360,6 +364,47 @@ blockquote {
   height: auto;
   margin: 12px 0;
   border-radius: 12px;
+}
+
+.aq-rich-text-base video,
+.aq-rich-text-base .aq-video-message video,
+.aq-rich-text-base video-message video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: min(100%, 820px);
+  margin: 0;
+  border-radius: 12px;
+  background: #020617;
+}
+
+.aq-rich-text-base .aq-video-message,
+.aq-rich-text-base video-message {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.aq-rich-text-base .aq-frame-box {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 221, 255, 0.26);
+  border-radius: 14px;
+  background: rgba(8, 30, 68, 0.32);
+  box-shadow: 0 0 0 1px rgba(0, 221, 255, 0.08);
+}
+
+.aq-rich-text-base .aq-frame-box > :first-child {
+  margin-top: 0;
+}
+
+.aq-rich-text-base .aq-frame-box > :last-child {
+  margin-bottom: 0;
+}
+
+.dark .aq-rich-text-base .aq-frame-box {
+  border-color: rgba(0, 221, 255, 0.34);
+  background: rgba(8, 30, 68, 0.4);
 }
 
 .dark .aq-rich-text-base h2,
@@ -795,7 +840,7 @@ blockquote {
 
 /* Global custom scrollbars */
 html {
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
 }
 
 * {
@@ -839,6 +884,12 @@ html {
 
 .dark *::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgba(0, 209, 255, 0.9), rgba(122, 0, 255, 0.78));
+}
+
+/* Cabinet pages: hide global document scrolling, keep inner layout scrolling */
+html.aq-cabinet-lock-page-scroll,
+body.aq-cabinet-lock-page-scroll {
+  overflow: hidden;
 }
 
 /* Multi-line truncation */

@@ -14,6 +14,19 @@ const normalizeSortBy = (value) => {
   return ALLOWED_SORTS.has(normalized) ? normalized : DEFAULT_SORT
 }
 
+const normalizeVisibilityFilter = (value) => {
+  if (typeof value !== 'string') {
+    return 'all'
+  }
+
+  const normalized = value.trim().toLowerCase()
+  if (normalized === 'open' || normalized === 'closed') {
+    return normalized
+  }
+
+  return 'all'
+}
+
 const compareByRating = (first, second) => {
   const firstRank = Number(first?.rating?.rank)
   const secondRank = Number(second?.rating?.rank)
@@ -71,6 +84,7 @@ const fetchTeamsForCabinet = async ({
   db,
   teamIds = null,
   searchQuery = '',
+  visibilityFilter = 'all',
   location = null,
   sortBy = DEFAULT_SORT,
   offset = 0,
@@ -103,6 +117,7 @@ const fetchTeamsForCabinet = async ({
 
   const normalizedSearchQuery =
     typeof searchQuery === 'string' ? searchQuery.trim().toLowerCase().slice(0, 100) : ''
+  const normalizedVisibilityFilter = normalizeVisibilityFilter(visibilityFilter)
   const baseFilter = Array.isArray(uniqueTeamIds) ? { _id: { $in: uniqueTeamIds } } : null
   const searchFilter = normalizedSearchQuery
     ? {
@@ -112,10 +127,17 @@ const fetchTeamsForCabinet = async ({
         ],
       }
     : null
+  const visibilityDbFilter =
+    normalizedVisibilityFilter === 'open'
+      ? { open: true }
+      : normalizedVisibilityFilter === 'closed'
+        ? { open: false }
+        : null
+  const filterParts = [baseFilter, searchFilter, visibilityDbFilter].filter(Boolean)
   const teamFilter =
-    baseFilter && searchFilter
-      ? { $and: [baseFilter, searchFilter] }
-      : baseFilter || searchFilter || {}
+    filterParts.length > 1
+      ? { $and: filterParts }
+      : filterParts[0] || {}
   const queryOffset = toPositiveInteger(offset, 0)
   const queryLimit = limit === null ? null : toPositiveInteger(limit, 0)
   const shouldPaginate = Number.isFinite(queryLimit) && queryLimit > 0
