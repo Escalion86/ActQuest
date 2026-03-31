@@ -8,6 +8,7 @@ import {
 } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
+import Underline from '@tiptap/extension-underline'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
 import FontFamily from '@tiptap/extension-font-family'
@@ -415,7 +416,12 @@ const AudioMessage = Node.create({
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
-const ResizableImageNodeView = ({ node, selected, updateAttributes, editor }) => {
+const ResizableImageNodeView = ({
+  node,
+  selected,
+  updateAttributes,
+  editor,
+}) => {
   const imageRef = useRef(null)
   const resizeStateRef = useRef(null)
   const frameRef = useRef(null)
@@ -435,7 +441,7 @@ const ResizableImageNodeView = ({ node, selected, updateAttributes, editor }) =>
         height: Math.round(clamp(nextHeight, 60, 1200)),
       })
     },
-    [updateAttributes]
+    [updateAttributes],
   )
 
   const startResize = useCallback(
@@ -450,9 +456,12 @@ const ResizableImageNodeView = ({ node, selected, updateAttributes, editor }) =>
       if (!imageElement) return
 
       const rect = imageElement.getBoundingClientRect()
-      const startWidth = normalizedWidth || rect.width || imageElement.naturalWidth || 320
-      const startHeight = normalizedHeight || rect.height || imageElement.naturalHeight || 180
-      const aspect = startWidth > 0 && startHeight > 0 ? startWidth / startHeight : 1
+      const startWidth =
+        normalizedWidth || rect.width || imageElement.naturalWidth || 320
+      const startHeight =
+        normalizedHeight || rect.height || imageElement.naturalHeight || 180
+      const aspect =
+        startWidth > 0 && startHeight > 0 ? startWidth / startHeight : 1
 
       resizeStateRef.current = {
         startX: event.clientX,
@@ -472,7 +481,8 @@ const ResizableImageNodeView = ({ node, selected, updateAttributes, editor }) =>
         const deltaX = (moveEvent.clientX - state.startX) * horizontalSign
         const deltaY = (moveEvent.clientY - state.startY) * verticalSign
         const widthByY = deltaY * state.aspect
-        const deltaWidth = Math.abs(deltaX) >= Math.abs(widthByY) ? deltaX : widthByY
+        const deltaWidth =
+          Math.abs(deltaX) >= Math.abs(widthByY) ? deltaX : widthByY
         const nextWidth = clamp(state.startWidth + deltaWidth, 80, 1400)
         const nextHeight = clamp(nextWidth / (state.aspect || 1), 60, 1200)
 
@@ -499,7 +509,7 @@ const ResizableImageNodeView = ({ node, selected, updateAttributes, editor }) =>
       window.addEventListener('pointerup', finish)
       window.addEventListener('pointercancel', finish)
     },
-    [applySize, editor?.isEditable, normalizedHeight, normalizedWidth]
+    [applySize, editor?.isEditable, normalizedHeight, normalizedWidth],
   )
 
   useEffect(() => {
@@ -532,10 +542,30 @@ const ResizableImageNodeView = ({ node, selected, updateAttributes, editor }) =>
 
       {editor?.isEditable && selected ? (
         <>
-          <button type="button" className="aq-image-node__handle aq-image-node__handle--nw" onPointerDown={(event) => startResize(event, 'nw')} aria-label="Изменить размер изображения" />
-          <button type="button" className="aq-image-node__handle aq-image-node__handle--ne" onPointerDown={(event) => startResize(event, 'ne')} aria-label="Изменить размер изображения" />
-          <button type="button" className="aq-image-node__handle aq-image-node__handle--sw" onPointerDown={(event) => startResize(event, 'sw')} aria-label="Изменить размер изображения" />
-          <button type="button" className="aq-image-node__handle aq-image-node__handle--se" onPointerDown={(event) => startResize(event, 'se')} aria-label="Изменить размер изображения" />
+          <button
+            type="button"
+            className="aq-image-node__handle aq-image-node__handle--nw"
+            onPointerDown={(event) => startResize(event, 'nw')}
+            aria-label="Изменить размер изображения"
+          />
+          <button
+            type="button"
+            className="aq-image-node__handle aq-image-node__handle--ne"
+            onPointerDown={(event) => startResize(event, 'ne')}
+            aria-label="Изменить размер изображения"
+          />
+          <button
+            type="button"
+            className="aq-image-node__handle aq-image-node__handle--sw"
+            onPointerDown={(event) => startResize(event, 'sw')}
+            aria-label="Изменить размер изображения"
+          />
+          <button
+            type="button"
+            className="aq-image-node__handle aq-image-node__handle--se"
+            onPointerDown={(event) => startResize(event, 'se')}
+            aria-label="Изменить размер изображения"
+          />
         </>
       ) : null}
     </NodeViewWrapper>
@@ -551,7 +581,9 @@ const ResizableImage = Image.extend({
         parseHTML: (element) => {
           const attr = element.getAttribute('width')
           const parsed = Number(attr)
-          return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null
+          return Number.isFinite(parsed) && parsed > 0
+            ? Math.round(parsed)
+            : null
         },
         renderHTML: (attributes) =>
           attributes.width && Number(attributes.width) > 0
@@ -563,7 +595,9 @@ const ResizableImage = Image.extend({
         parseHTML: (element) => {
           const attr = element.getAttribute('height')
           const parsed = Number(attr)
-          return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null
+          return Number.isFinite(parsed) && parsed > 0
+            ? Math.round(parsed)
+            : null
         },
         renderHTML: (attributes) =>
           attributes.height && Number(attributes.height) > 0
@@ -619,6 +653,17 @@ const TaskRichEditor = ({
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [selectedColor, setSelectedColor] = useState('#111827')
+  const [toolbarState, setToolbarState] = useState({
+    blockType: 'p',
+    bold: false,
+    italic: false,
+    strike: false,
+    underline: false,
+    bulletList: false,
+    orderedList: false,
+    link: false,
+    fontFamily: '',
+  })
   const [slashMenu, setSlashMenu] = useState({
     isOpen: false,
     from: 0,
@@ -640,6 +685,7 @@ const TaskRichEditor = ({
         inline: false,
         allowBase64: false,
       }),
+      Underline,
       TextStyle,
       Color,
       FontFamily,
@@ -687,6 +733,58 @@ const TaskRichEditor = ({
     if (!editor) return
     editor.setEditable(!disabled)
   }, [editor, disabled])
+
+  useEffect(() => {
+    if (!editor) return undefined
+
+    const readToolbarState = () => ({
+      blockType: editor.isActive('heading', { level: 2 })
+        ? 'h2'
+        : editor.isActive('heading', { level: 3 })
+          ? 'h3'
+          : 'p',
+      bold: editor.isActive('bold'),
+      italic: editor.isActive('italic'),
+      strike: editor.isActive('strike'),
+      underline: editor.isActive('underline'),
+      bulletList: editor.isActive('bulletList'),
+      orderedList: editor.isActive('orderedList'),
+      link: editor.isActive('link'),
+      fontFamily: editor.getAttributes('textStyle').fontFamily || '',
+    })
+
+    const syncToolbarState = () => {
+      const nextState = readToolbarState()
+      setToolbarState((prev) => {
+        const isSame =
+          prev.blockType === nextState.blockType &&
+          prev.bold === nextState.bold &&
+          prev.italic === nextState.italic &&
+          prev.strike === nextState.strike &&
+          prev.underline === nextState.underline &&
+          prev.bulletList === nextState.bulletList &&
+          prev.orderedList === nextState.orderedList &&
+          prev.link === nextState.link &&
+          prev.fontFamily === nextState.fontFamily
+
+        return isSame ? prev : nextState
+      })
+    }
+
+    syncToolbarState()
+
+    editor.on('selectionUpdate', syncToolbarState)
+    editor.on('transaction', syncToolbarState)
+    editor.on('focus', syncToolbarState)
+    editor.on('blur', syncToolbarState)
+
+    return () => {
+      editor.off('selectionUpdate', syncToolbarState)
+      editor.off('transaction', syncToolbarState)
+      editor.off('focus', syncToolbarState)
+      editor.off('blur', syncToolbarState)
+    }
+  }, [editor])
 
   const filteredSlashCommands = useMemo(() => {
     const query = slashMenu.query.trim().toLowerCase()
@@ -1081,13 +1179,7 @@ const TaskRichEditor = ({
       <div className="relative overflow-visible bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/70">
         <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-slate-200/80 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-800/60">
           <select
-            value={
-              editor.isActive('heading', { level: 2 })
-                ? 'h2'
-                : editor.isActive('heading', { level: 3 })
-                  ? 'h3'
-                  : 'p'
-            }
+            value={toolbarState.blockType}
             onChange={(event) => {
               const nextBlock = event.target.value
               if (nextBlock === 'h2')
@@ -1105,58 +1197,8 @@ const TaskRichEditor = ({
             <option value="h3">Заголовок 3</option>
           </select>
 
-          <ToolbarButton
-            label="B"
-            isActive={editor.isActive('bold')}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            disabled={disabled}
-          />
-          <ToolbarButton
-            label="I"
-            isActive={editor.isActive('italic')}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            disabled={disabled}
-          />
-          <ToolbarButton
-            label="U"
-            isActive={editor.isActive('underline')}
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-            disabled={disabled}
-          />
-          <ToolbarButton
-            label="• List"
-            isActive={editor.isActive('bulletList')}
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            disabled={disabled}
-          />
-          <ToolbarButton
-            label="1. List"
-            isActive={editor.isActive('orderedList')}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            disabled={disabled}
-          />
-          <ToolbarButton
-            label="Ссылка"
-            isActive={editor.isActive('link')}
-            onClick={() => {
-              if (disabled) return
-              const currentHref = editor.getAttributes('link').href || ''
-              const nextHref = window.prompt('Введите ссылку', currentHref)
-              if (nextHref === null) return
-              const normalizedHref = nextHref.trim()
-              if (!normalizedHref) {
-                editor.chain().focus().unsetLink().run()
-                return
-              }
-              editor.chain().focus().setLink({ href: normalizedHref }).run()
-            }}
-            disabled={disabled}
-          />
-
-          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
-
           <select
-            value={editor.getAttributes('textStyle').fontFamily || ''}
+            value={toolbarState.fontFamily}
             onChange={(event) => {
               const nextFont = event.target.value
               if (!nextFont) {
@@ -1176,6 +1218,31 @@ const TaskRichEditor = ({
             ))}
           </select>
 
+          <ToolbarButton
+            label="B"
+            isActive={toolbarState.bold}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            disabled={disabled}
+          />
+          <ToolbarButton
+            label="I"
+            isActive={toolbarState.italic}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            disabled={disabled}
+          />
+          <ToolbarButton
+            label="U"
+            isActive={toolbarState.underline}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            disabled={disabled}
+          />
+          <ToolbarButton
+            label="S"
+            isActive={toolbarState.strike}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            disabled={disabled}
+          />
+
           <label className="inline-flex items-center gap-2 px-2 py-1 text-xs bg-white border rounded-lg border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100">
             Цвет
             <input
@@ -1191,6 +1258,40 @@ const TaskRichEditor = ({
               aria-label="Цвет текста"
             />
           </label>
+          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+
+          <ToolbarButton
+            label="• List"
+            isActive={toolbarState.bulletList}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            disabled={disabled}
+          />
+          <ToolbarButton
+            label="1. List"
+            isActive={toolbarState.orderedList}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            disabled={disabled}
+          />
+          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+          <ToolbarButton
+            label="Ссылка"
+            isActive={toolbarState.link}
+            onClick={() => {
+              if (disabled) return
+              const currentHref = editor.getAttributes('link').href || ''
+              const nextHref = window.prompt('Введите ссылку', currentHref)
+              if (nextHref === null) return
+              const normalizedHref = nextHref.trim()
+              if (!normalizedHref) {
+                editor.chain().focus().unsetLink().run()
+                return
+              }
+              editor.chain().focus().setLink({ href: normalizedHref }).run()
+            }}
+            disabled={disabled}
+          />
+
+          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
 
           <ToolbarButton
             label={
@@ -1206,6 +1307,7 @@ const TaskRichEditor = ({
             onClick={() => triggerFileInput('audio')}
             disabled={disabled || isUploading}
           />
+          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
           <ToolbarButton
             label="Очистить"
             onClick={clearFormatting}

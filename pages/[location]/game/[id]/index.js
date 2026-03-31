@@ -113,6 +113,13 @@ function GameEntryPage({
     () => splitDescription(game?.description ?? ''),
     [game?.description]
   )
+  const descriptionRich = useMemo(
+    () =>
+      typeof game?.descriptionRich === 'string'
+        ? game.descriptionRich.trim()
+        : '',
+    [game?.descriptionRich]
+  )
 
   const statusLabel = statusLabels[status] ?? 'Статус неизвестен'
   const participantTeam = useMemo(
@@ -192,7 +199,12 @@ function GameEntryPage({
                     {location}
                   </span>
                 </div>
-                {descriptionParts.length > 0 ? (
+                {descriptionRich ? (
+                  <div
+                    className="prose prose-slate max-w-none leading-relaxed dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: descriptionRich }}
+                  />
+                ) : descriptionParts.length > 0 ? (
                   <div className="flex flex-col gap-2 text-base leading-relaxed text-gray-700 dark:text-slate-200">
                     {descriptionParts.map((part, index) => (
                       <p key={`description-${index}`}>{part}</p>

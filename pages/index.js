@@ -2591,6 +2591,13 @@ const Index2Page = () => {
                   draggable={false}
                   onPointerDown={handleArchiveSledPointerDown}
                   onTouchStart={handleArchiveSledTouchStart}
+                  onContextMenu={(event) => event.preventDefault()}
+                  style={{
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTouchCallout: 'none',
+                    WebkitUserDrag: 'none',
+                  }}
                 />
                 <div className="grid gap-8">
                   <div>

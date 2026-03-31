@@ -566,7 +566,7 @@ const CabinetLayout = ({
           />
         </div>
         <div
-          className={`fixed inset-y-0 left-0 z-40 flex border-r backdrop-blur-xl transition-all duration-200 laptop:w-64 laptop:translate-x-0 ${sidebarClass} ${
+          className={`fixed left-0 top-0 z-40 flex h-[100dvh] max-h-[100dvh] border-r backdrop-blur-xl transition-all duration-200 laptop:inset-y-0 laptop:h-screen laptop:max-h-screen laptop:w-64 laptop:translate-x-0 ${sidebarClass} ${
             isSidebarExpanded
               ? 'w-64 translate-x-0 shadow-xl'
               : 'w-16 -translate-x-full'
@@ -745,7 +745,7 @@ const CabinetLayout = ({
               })}
             </nav>
             <div
-              className={`sticky bottom-0 mt-auto border-t px-4 py-4 backdrop-blur-xl ${sidebarFooterClass}`}
+              className={`mt-auto border-t px-4 py-4 backdrop-blur-xl ${sidebarFooterClass}`}
             >
               {isDeveloper ? (
                 <div className="mb-3">

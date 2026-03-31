@@ -279,6 +279,8 @@ const normalizeGameForCabinet = (game) => {
     seasonName: ensureString(game.seasonName, ''),
     type: game?.type === 'photo' ? 'photo' : 'classic',
     description: ensureString(game.description, ''),
+    descriptionRich: ensureString(game.descriptionRich, ''),
+    descriptionMedia: normalizeTaskMedia(game.descriptionMedia),
     image: ensureString(game.image, ''),
     startingPlace: ensureString(game.startingPlace, ''),
     finishingPlace: ensureString(game.finishingPlace, ''),

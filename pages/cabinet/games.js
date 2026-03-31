@@ -447,7 +447,30 @@ const buildUpdatePayload = (game) => {
     status: game.status,
     dateStart: game.dateStart ? new Date(game.dateStart).toISOString() : null,
     type: game.type,
-    description: game.description,
+    description:
+      typeof game.description === 'string'
+        ? game.description
+        : stripHtmlToPlainText(game.descriptionRich),
+    descriptionRich:
+      typeof game.descriptionRich === 'string' ? game.descriptionRich : '',
+    descriptionMedia: (Array.isArray(game.descriptionMedia)
+      ? game.descriptionMedia
+      : []
+    )
+      .map((media, index) => ({
+        id:
+          typeof media?.id === 'string' && media.id.trim() !== ''
+            ? media.id.trim()
+            : `game-description-media-${index}`,
+        type: media?.type === 'audio' ? 'audio' : 'image',
+        url: typeof media?.url === 'string' ? media.url.trim() : '',
+        mime: typeof media?.mime === 'string' ? media.mime.trim() : '',
+        size: Number(media?.size) || 0,
+        duration: Number(media?.duration) || 0,
+        path: typeof media?.path === 'string' ? media.path.trim() : '',
+        title: typeof media?.title === 'string' ? media.title.trim() : '',
+      }))
+      .filter((media) => media.url !== ''),
     image: game.image ? game.image : null,
     startingPlace: game.startingPlace ?? '',
     finishingPlace: game.finishingPlace ?? '',
@@ -2053,6 +2076,8 @@ const GamesPage = ({
         dateStart: null,
         type: 'classic',
         description: '',
+        descriptionRich: '',
+        descriptionMedia: [],
         image: null,
         startingPlace: '',
         finishingPlace: '',
@@ -2103,6 +2128,12 @@ const GamesPage = ({
 
         if (createGameCloneOptions.basic) {
           baseDraft.description = normalizedSource.description || ''
+          baseDraft.descriptionRich = normalizedSource.descriptionRich || ''
+          baseDraft.descriptionMedia = Array.isArray(
+            normalizedSource.descriptionMedia,
+          )
+            ? normalizedSource.descriptionMedia
+            : []
           baseDraft.image = normalizedSource.image || null
         }
 
@@ -5197,6 +5228,8 @@ GamesPage.propTypes = {
       seasonId: PropTypes.string,
       seasonName: PropTypes.string,
       description: PropTypes.string,
+      descriptionRich: PropTypes.string,
+      descriptionMedia: PropTypes.arrayOf(taskMediaShape),
       image: PropTypes.string,
       startingPlace: PropTypes.string,
       finishingPlace: PropTypes.string,

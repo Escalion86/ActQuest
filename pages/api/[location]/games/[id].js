@@ -90,6 +90,24 @@ const sanitizeTasksRichContent = (tasks = []) =>
     taskMedia: sanitizeTaskMedia(task?.taskMedia),
   }))
 
+const sanitizeGameDescriptionContent = (gameData = {}) => {
+  const descriptionRichRaw =
+    typeof gameData?.descriptionRich === 'string'
+      ? gameData.descriptionRich.trim()
+      : ''
+  const descriptionRich = descriptionRichRaw ? sanitize(descriptionRichRaw) : ''
+  const descriptionPlainRaw =
+    typeof gameData?.description === 'string' ? gameData.description : ''
+  const descriptionPlain =
+    descriptionPlainRaw.trim() || stripHtmlToPlainText(descriptionRich)
+
+  return {
+    description: descriptionPlain,
+    descriptionRich,
+    descriptionMedia: sanitizeTaskMedia(gameData?.descriptionMedia),
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'PUT') {
     return CRUD('Games', req, res)
@@ -165,6 +183,14 @@ export default async function handler(req, res) {
 
     if (Array.isArray(updateData.tasks)) {
       updateData.tasks = sanitizeTasksRichContent(updateData.tasks)
+    }
+
+    const hasDescriptionContentKeys =
+      Object.prototype.hasOwnProperty.call(updateData, 'description') ||
+      Object.prototype.hasOwnProperty.call(updateData, 'descriptionRich') ||
+      Object.prototype.hasOwnProperty.call(updateData, 'descriptionMedia')
+    if (hasDescriptionContentKeys) {
+      Object.assign(updateData, sanitizeGameDescriptionContent(updateData))
     }
 
     if (shouldReset) {

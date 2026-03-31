@@ -20,6 +20,20 @@ const TaskRichEditor = dynamic(() => import('@components/cabinet/TaskRichEditor'
   ssr: false,
 })
 
+const stripHtmlToPlainText = (value) =>
+  String(value || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h1|h2|h3|h4|h5|h6|li|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\r?\n[ \t]+/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
 const GameEditModal = ({
   selectedGame,
   isEditModalOpen,
@@ -358,17 +372,27 @@ const GameEditModal = ({
                       />
                     </div>
 
-                    <CabinetTextareaField
-                      id="game-description"
-                      label="Описание"
-                      value={selectedGame.description}
-                      onChange={(event) =>
-                        updateSelectedGame({ description: event.target.value })
-                      }
-                      rows={5}
-                      labelClassName={fieldLabelClassName}
-                      textareaClassName={fieldInputClassName}
-                    />
+                    <div className="space-y-2">
+                      <p className={fieldLabelClassName}>Описание</p>
+                      <TaskRichEditor
+                        value={
+                          selectedGame.descriptionRich ||
+                          selectedGame.description ||
+                          ''
+                        }
+                        directory={`games/${selectedGame.id || 'draft'}/description/editor`}
+                        disabled={!canEditSelectedGame || isSaving}
+                        placeholder="Введите описание игры. Можно использовать форматирование, картинки и аудио."
+                        onChange={({ html, plainText, media }) => {
+                          updateSelectedGame({
+                            descriptionRich: html,
+                            description:
+                              plainText || stripHtmlToPlainText(html || ''),
+                            descriptionMedia: media,
+                          })
+                        }}
+                      />
+                    </div>
 
                     {(selectedGameModerators.length > 0 || canEditSelectedGame) && (
                       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
