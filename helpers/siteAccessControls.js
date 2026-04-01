@@ -27,9 +27,7 @@ export const normalizeSiteAccessControls = (doc = null) => ({
 })
 
 export const getSiteAccessControlsByLocation = async (location) => {
-  if (!location || typeof location !== 'string') {
-    return SITE_ACCESS_DEFAULTS
-  }
+  void location
 
   try {
     const db = await dbConnectGlobal()

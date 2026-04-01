@@ -247,7 +247,9 @@ const ManageUsersPage = ({
   useEffect(() => {
     if (isFirstFiltersRenderRef.current) {
       isFirstFiltersRenderRef.current = false
-      return
+      if (safeInitialUsers.length > 0) {
+        return
+      }
     }
 
     let cancelled = false
@@ -302,7 +304,7 @@ const ManageUsersPage = ({
     return () => {
       cancelled = true
     }
-  }, [roleFilter, searchQuery, sortBy])
+  }, [roleFilter, safeInitialUsers.length, searchQuery, sortBy])
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -1523,29 +1525,27 @@ export async function getServerSideProps(context) {
   let initialUsers = []
   let initialHasMore = false
 
-  if (location) {
-    try {
-      const db = await dbConnectGlobal()
+  try {
+    const db = await dbConnectGlobal()
 
-      if (db) {
-        const result = await fetchAdminUsersForCabinet({
-          db,
-          offset: 0,
-          limit: USERS_PAGE_SIZE,
-          location,
-        })
-        initialUsers = Array.isArray(result)
-          ? result
-          : Array.isArray(result?.users)
-            ? result.users
-            : []
-        initialHasMore = Array.isArray(result)
-          ? result.length === USERS_PAGE_SIZE
-          : Boolean(result?.hasMore)
-      }
-    } catch (error) {
-      console.error('Failed to load users for admin cabinet', error)
+    if (db) {
+      const result = await fetchAdminUsersForCabinet({
+        db,
+        offset: 0,
+        limit: USERS_PAGE_SIZE,
+        location,
+      })
+      initialUsers = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.users)
+          ? result.users
+          : []
+      initialHasMore = Array.isArray(result)
+        ? result.length === USERS_PAGE_SIZE
+        : Boolean(result?.hasMore)
     }
+  } catch (error) {
+    console.error('Failed to load users for admin cabinet', error)
   }
 
   return {

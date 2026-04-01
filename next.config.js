@@ -12,14 +12,6 @@ module.exports = {
   env: {
     MODE: process.env.MODE ?? process.env.NODE_ENV,
   },
-  async rewrites() {
-    return [
-      {
-        source: '/cabinet/recovery',
-        destination: '/cabinet/register?intent=recovery',
-      },
-    ]
-  },
   // images: {
   //   domains: ['uniplatform.ru, dev.uniplatform.ru, localhost'],
   // },

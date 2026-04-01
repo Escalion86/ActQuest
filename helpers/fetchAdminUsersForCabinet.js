@@ -195,15 +195,119 @@ const fetchAdminUsersForCabinet = async ({
   if (normalizedRoleFilter) {
     usersQuery.role = normalizedRoleFilter
   }
-  const usersDocs = await UsersModel.find(usersQuery)
-    .sort({ name: 1, _id: 1 })
-    .lean()
+  const resolvedSortBy = normalizeSortBy(sortBy)
 
-  if (!usersDocs.length) {
-    return { users: [], hasMore: false }
+  // Основной сценарий (по умолчанию в UI): сортировка по дате регистрации.
+  // Выполняем пагинацию на уровне БД, чтобы не загружать весь массив пользователей.
+  let usersSlice
+  let hasMore
+
+  if (resolvedSortBy === 'registration_desc') {
+    const usersDocs = await UsersModel.find(usersQuery)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(queryOffset)
+      .limit(queryLimit + 1)
+      .lean()
+
+    if (!usersDocs.length) {
+      return { users: [], hasMore: false }
+    }
+
+    hasMore = usersDocs.length > queryLimit
+    usersSlice = hasMore ? usersDocs.slice(0, queryLimit) : usersDocs
+  } else {
+    // Для производных сортировок (рейтинг/кол-во игр) нужно считать поля после нормализации.
+    // Оставляем in-memory сортировку, но применяем её только для явно выбранных режимов.
+    const usersDocs = await UsersModel.find(usersQuery)
+      .sort({ name: 1, _id: 1 })
+      .lean()
+
+    if (!usersDocs.length) {
+      return { users: [], hasMore: false }
+    }
+
+    const membershipTelegramIdsForAll = Array.from(
+      new Set(
+        usersDocs
+          .map((userDoc) =>
+            Number.isFinite(userDoc?.telegramId) ? Number(userDoc.telegramId) : null
+          )
+          .filter((id) => id !== null)
+      )
+    )
+
+    const membershipsDocsForAll = membershipTelegramIdsForAll.length
+      ? await TeamsUsersModel.find({ userTelegramId: { $in: membershipTelegramIdsForAll } })
+          .select({ teamId: 1, userTelegramId: 1, role: 1 })
+          .lean()
+      : []
+
+    const teamIdsForAll = Array.from(
+      new Set(
+        membershipsDocsForAll
+          .map((doc) => toStringId(doc?.teamId))
+          .filter((teamId) => typeof teamId === 'string' && teamId.length > 0)
+      )
+    )
+
+    const teamsDocsForAll = teamIdsForAll.length
+      ? await TeamsModel.find({ _id: { $in: teamIdsForAll } })
+          .select({ _id: 1, name: 1, updatedAt: 1, gameStats: 1 })
+          .lean()
+      : []
+
+    const teamsMapForAll = teamsDocsForAll.reduce((acc, team) => {
+      const id = toStringId(team?._id)
+      if (id) {
+        acc[id] = {
+          id,
+          name: typeof team?.name === 'string' ? team.name : '',
+          updatedAt: team?.updatedAt ?? null,
+          gamesCount: Number.isFinite(Number(team?.gameStats?.playedGamesCount))
+            ? Number(team.gameStats.playedGamesCount)
+            : 0,
+        }
+      }
+      return acc
+    }, {})
+
+    const membershipsByUserForAll = membershipsDocsForAll.reduce((acc, doc) => {
+      const telegramId = Number.isFinite(doc?.userTelegramId)
+        ? String(doc.userTelegramId)
+        : null
+      const teamId = toStringId(doc?.teamId)
+
+      if (!telegramId || !teamId) {
+        return acc
+      }
+
+      if (!acc[telegramId]) {
+        acc[telegramId] = []
+      }
+
+      acc[telegramId].push({
+        teamId,
+        role: doc?.role === 'capitan' ? 'capitan' : 'participant',
+      })
+
+      return acc
+    }, {})
+
+    const allUsers = usersDocs.map((userDoc) =>
+      normalizeUserForAdmin({
+        userDoc,
+        membershipsByUser: membershipsByUserForAll,
+        teamsMap: teamsMapForAll,
+        location,
+      })
+    )
+
+    const sortedUsers = sortUsers(allUsers, resolvedSortBy)
+    const pagedUsers = sortedUsers.slice(queryOffset, queryOffset + queryLimit)
+    const pagedHasMore = sortedUsers.length > queryOffset + queryLimit
+
+    return { users: pagedUsers, hasMore: pagedHasMore }
   }
-
-  const usersSlice = usersDocs
 
   const membershipTelegramIds = Array.from(
     new Set(
@@ -281,11 +385,7 @@ const fetchAdminUsersForCabinet = async ({
         location,
       })
     )
-  const sortedUsers = sortUsers(users, sortBy)
-  const pagedUsers = sortedUsers.slice(queryOffset, queryOffset + queryLimit)
-  const hasMore = sortedUsers.length > queryOffset + queryLimit
-
-  return { users: pagedUsers, hasMore }
+  return { users, hasMore }
 }
 
 export default fetchAdminUsersForCabinet

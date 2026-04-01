@@ -886,10 +886,13 @@ html {
   background: linear-gradient(180deg, rgba(0, 209, 255, 0.9), rgba(122, 0, 255, 0.78));
 }
 
-/* Cabinet pages: hide global document scrolling, keep inner layout scrolling */
-html.aq-cabinet-lock-page-scroll,
-body.aq-cabinet-lock-page-scroll {
-  overflow: hidden;
+/* Cabinet pages: hide global document scrolling only on desktop.
+   On mobile we keep native page overscroll to allow pull-to-refresh. */
+@media (min-width: 960px) {
+  html.aq-cabinet-lock-page-scroll,
+  body.aq-cabinet-lock-page-scroll {
+    overflow: hidden;
+  }
 }
 
 /* Multi-line truncation */
@@ -956,24 +959,28 @@ body.aq-cabinet-lock-page-scroll {
   transition: opacity 120ms ease, transform 120ms ease;
 }
 
-.aq-neon-checkbox-input:focus-visible + .aq-neon-checkbox-box {
+.aq-neon-checkbox-input:focus-visible + .aq-neon-checkbox-box,
+.aq-neon-checkbox-input:focus-visible ~ .aq-neon-checkbox-box {
   outline: none;
   box-shadow: 0 0 0 2px rgba(0, 209, 255, 0.32), 0 0 0 1px rgba(122, 0, 255, 0.2) inset;
 }
 
-.aq-neon-checkbox-input:checked + .aq-neon-checkbox-box {
+.aq-neon-checkbox-input:checked + .aq-neon-checkbox-box,
+.aq-neon-checkbox-input:checked ~ .aq-neon-checkbox-box {
   border-color: rgba(0, 209, 255, 0.7);
   background: linear-gradient(180deg, rgba(12, 114, 196, 0.95) 0%, rgba(2, 67, 133, 0.95) 100%);
   color: #d9f6ff;
   box-shadow: 0 0 0 1px rgba(0, 209, 255, 0.22) inset, 0 0 16px rgba(0, 209, 255, 0.3);
 }
 
-.aq-neon-checkbox-input:checked + .aq-neon-checkbox-box .aq-neon-checkbox-icon {
+.aq-neon-checkbox-input:checked + .aq-neon-checkbox-box .aq-neon-checkbox-icon,
+.aq-neon-checkbox-input:checked ~ .aq-neon-checkbox-box .aq-neon-checkbox-icon {
   opacity: 1;
   transform: scale(1);
 }
 
-.aq-neon-checkbox-input:active + .aq-neon-checkbox-box {
+.aq-neon-checkbox-input:active + .aq-neon-checkbox-box,
+.aq-neon-checkbox-input:active ~ .aq-neon-checkbox-box {
   transform: scale(0.96);
 }
 
@@ -1002,7 +1009,8 @@ body.aq-cabinet-lock-page-scroll {
   box-shadow: 0 0 0 1px rgba(13, 53, 110, 0.65) inset;
 }
 
-.dark .aq-neon-checkbox-input:checked + .aq-neon-checkbox-box {
+.dark .aq-neon-checkbox-input:checked + .aq-neon-checkbox-box,
+.dark .aq-neon-checkbox-input:checked ~ .aq-neon-checkbox-box {
   border-color: rgba(0, 209, 255, 0.85);
   background: linear-gradient(180deg, rgba(0, 142, 222, 0.92) 0%, rgba(0, 96, 176, 0.92) 100%);
   color: #ebfbff;

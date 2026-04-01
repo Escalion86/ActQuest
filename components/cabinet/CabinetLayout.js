@@ -102,14 +102,19 @@ const gamesSubmenuItems = [
   {
     id: 'games-upcoming',
     label: 'Предстоящие игры',
-    href: '/cabinet/games?view=upcoming',
+    href: '/cabinet/games-upcoming',
   },
   {
     id: 'games-past',
     label: 'Прошедшие игры',
-    href: '/cabinet/games?view=past',
+    href: '/cabinet/games-past',
   },
 ]
+
+const isGamesRoutePath = (pathname) =>
+  pathname === '/cabinet/games' ||
+  pathname === '/cabinet/games-upcoming' ||
+  pathname === '/cabinet/games-past'
 
 const getInitials = (name, fallback) => {
   if (name) {
@@ -202,7 +207,7 @@ const CabinetLayout = ({
   const { data: session, update } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(
-    () => router.pathname === '/cabinet/games',
+    () => isGamesRoutePath(router.pathname),
   )
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(
     () => router.pathname.startsWith('/cabinet/admin'),
@@ -255,10 +260,17 @@ const CabinetLayout = ({
 
     return nextItems
   }, [role])
+  const gamesViewFromPath =
+    router.pathname === '/cabinet/games-upcoming'
+      ? 'upcoming'
+      : router.pathname === '/cabinet/games-past'
+        ? 'past'
+        : ''
   const gamesView =
-    typeof router.query?.view === 'string'
+    gamesViewFromPath ||
+    (typeof router.query?.view === 'string'
       ? router.query.view.toLowerCase()
-      : ''
+      : '')
 
   useIsomorphicLayoutEffect(() => {
     const initialTheme = resolveInitialTheme() ?? 'light'
@@ -637,11 +649,12 @@ const CabinetLayout = ({
                         <div className="pb-1 pr-3 space-y-1 pl-11">
                           {gamesSubmenuItems.map((subItem) => {
                             const isSubActive =
-                              router.pathname === '/cabinet/games' &&
-                              ((subItem.id === 'games-upcoming' &&
-                                gamesView === 'upcoming') ||
-                                (subItem.id === 'games-past' &&
-                                  gamesView === 'past'))
+                              router.pathname === subItem.href ||
+                              (router.pathname === '/cabinet/games' &&
+                                ((subItem.id === 'games-upcoming' &&
+                                  gamesView === 'upcoming') ||
+                                  (subItem.id === 'games-past' &&
+                                    gamesView === 'past')))
 
                             return (
                               <Link

@@ -1,11 +1,13 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import Head from 'next/head'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
+import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import CABINET_ROLE_LABELS from '@helpers/cabinetRoleLabels'
+import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import getSessionSafe from '@helpers/getSessionSafe'
 import isUserAdmin from '@helpers/isUserAdmin'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
@@ -50,6 +52,38 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
   const isAdmin = isUserAdmin({ role: effectiveRole })
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false)
+  const [selectedTeam, setSelectedTeam] = useState(null)
+  const [isTeamLoading, setIsTeamLoading] = useState(false)
+  const [teamLoadError, setTeamLoadError] = useState('')
+
+  const handleCloseTeamModal = useCallback(() => {
+    setIsTeamModalOpen(false)
+    setSelectedTeam(null)
+    setIsTeamLoading(false)
+    setTeamLoadError('')
+  }, [])
+
+  const handleOpenTeam = useCallback(async (team) => {
+    if (!team?.id) {
+      return
+    }
+
+    setIsTeamLoading(true)
+    setTeamLoadError('')
+    setIsTeamModalOpen(true)
+
+    try {
+      const detailedTeam = await fetchCabinetTeamDetails({ teamId: team.id })
+      setSelectedTeam(detailedTeam)
+    } catch (error) {
+      setTeamLoadError(error?.message || 'Не удалось загрузить команду')
+      setSelectedTeam(null)
+    } finally {
+      setIsTeamLoading(false)
+    }
+  }, [])
+
   const summarySections = useMemo(() => {
     const summary = safeInitialReports.summary
 
@@ -150,6 +184,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
                   <li key={team.id}>
                     <UserTeamCard
                       team={team}
+                      onOpen={handleOpenTeam}
                       metaText={`Участников: ${numberFormatter.format(team.membersCount)} · Сыграно игр: ${numberFormatter.format(team.gamesCount)}`}
                     />
                   </li>
@@ -186,7 +221,35 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
             <p className="text-sm text-slate-500">Недавних изменений не обнаружено.</p>
           )}
         </section>
+        <TeamDescriptionModal
+          isOpen={isTeamModalOpen && !isTeamLoading && Boolean(selectedTeam)}
+          onClose={handleCloseTeamModal}
+          selectedTeam={selectedTeam}
+        />
       </CabinetLayout>
+      {isTeamModalOpen && isTeamLoading ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900/95">
+            <p className="text-sm text-slate-500 dark:text-slate-300">
+              Загружаем данные команды...
+            </p>
+          </div>
+        </div>
+      ) : null}
+      {isTeamModalOpen && !isTeamLoading && teamLoadError ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-rose-300 bg-white p-6 shadow-xl dark:border-rose-500/50 dark:bg-slate-900/95">
+            <p className="text-sm text-rose-600 dark:text-rose-300">{teamLoadError}</p>
+            <button
+              type="button"
+              onClick={handleCloseTeamModal}
+              className="mt-4 inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      ) : null}
     </>
   )
 }

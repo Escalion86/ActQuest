@@ -15,19 +15,16 @@ import FeedbackToast from '@components/FeedbackToast'
 import NoticeBanner from '@components/NoticeBanner'
 import GameModals from '@components/modals/GameModals'
 import GameStatusModal from '@components/modals/GameStatusModal'
-import getSessionSafe from '@helpers/getSessionSafe'
 import extractErrorMessage from '@helpers/extractErrorMessage'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { toStringId } from '@helpers/idAndDate'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
-import fetchGamesForCabinet from '@helpers/fetchGamesForCabinet'
 import requestApiJson from '@helpers/requestApiJson'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { getNounTeams } from '@helpers/getNoun'
 import NeonCheckbox from '@components/NeonCheckbox'
-import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
 
 const GAME_STATUS_BADGE_STYLES = {
@@ -85,6 +82,9 @@ const DEFAULT_CREATE_GAME_CLONE_OPTIONS = {
   publication: true,
   prices: true,
 }
+
+const normalizeGamesViewValue = (value) =>
+  value === 'upcoming' || value === 'past' ? value : 'all'
 
 const toMinutes = (seconds) => {
   const numeric = Number(seconds)
@@ -605,6 +605,7 @@ const GamesPage = ({
   initialLocation,
   session: initialSession,
   availableModerators: initialAvailableModerators,
+  forcedView,
 }) => {
   const router = useRouter()
   const { activeSession } = useMergedSession(initialSession)
@@ -729,18 +730,18 @@ const GamesPage = ({
   const [pastGamesSeasonFilter, setPastGamesSeasonFilter] = useState(
     PAST_GAMES_SEASON_FILTER_ALL,
   )
-  const rawViewQuery = Array.isArray(router.query?.view)
+  const rawViewQueryFromRouter = Array.isArray(router.query?.view)
     ? router.query.view[0]
     : router.query?.view
-  const gamesView =
-    rawViewQuery === 'upcoming' || rawViewQuery === 'past'
-      ? rawViewQuery
-      : 'all'
+  const rawViewQuery =
+    typeof forcedView === 'string' && forcedView.trim().length > 0
+      ? forcedView
+      : rawViewQueryFromRouter
+  const gamesView = normalizeGamesViewValue(rawViewQuery)
   const isUpcomingView = gamesView === 'upcoming'
   const isPastView = gamesView === 'past'
   const shouldShowLocationFilter = isUpcomingView || isPastView
-  const isFilteredGamesView =
-    rawViewQuery === 'upcoming' || rawViewQuery === 'past'
+  const isFilteredGamesView = gamesView === 'upcoming' || gamesView === 'past'
   const defaultGamesFilterLocation = useMemo(() => {
     const byUser =
       typeof location === 'string' ? location.trim().toLowerCase() : ''
@@ -1453,6 +1454,49 @@ const GamesPage = ({
     isGamesFilterLocationHydrated,
     shouldShowLocationFilter,
   ])
+
+  useEffect(() => {
+    if (shouldShowLocationFilter) {
+      return
+    }
+
+    let cancelled = false
+
+    const loadFirstPage = async () => {
+      setIsLocationFilterLoading(true)
+      setLocationFilterError(null)
+
+      try {
+        await fetchGamesPage({
+          offset: 0,
+          replace: true,
+          locationValue: location,
+        })
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+
+        setGames([])
+        setPersistedGames([])
+        setSelectedGameId(null)
+        setHasMoreGames(false)
+        setLocationFilterError(
+          extractErrorMessage(error) || 'Не удалось загрузить список игр.',
+        )
+      } finally {
+        if (!cancelled) {
+          setIsLocationFilterLoading(false)
+        }
+      }
+    }
+
+    loadFirstPage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [fetchGamesPage, location, shouldShowLocationFilter])
 
   const handleLoadMoreGames = useCallback(async () => {
     if (isLoadingMoreGames || !hasMoreGames) {
@@ -5748,6 +5792,10 @@ GamesPage.propTypes = {
   ),
   initialHasMore: PropTypes.bool,
   initialLocation: PropTypes.string,
+  forcedView: PropTypes.oneOfType([
+    PropTypes.oneOf(['all', 'upcoming', 'past']),
+    PropTypes.oneOf([null]),
+  ]),
   session: PropTypes.object,
   availableModerators: PropTypes.arrayOf(moderatorShape),
 }
@@ -5756,105 +5804,33 @@ GamesPage.defaultProps = {
   initialGames: [],
   initialHasMore: false,
   initialLocation: null,
+  forcedView: null,
   session: null,
   availableModerators: [],
 }
 
-export async function getServerSideProps(context) {
-  const session = await getSessionSafe(context)
-
-  if (!session) {
-    const callbackTarget = context.resolvedUrl || '/cabinet/games'
-    return {
-      redirect: {
-        destination: `/cabinet/login?callbackUrl=${encodeURIComponent(callbackTarget)}`,
-        permanent: false,
-      },
-    }
-  }
-
-  const location = session?.user?.location ?? null
-  const userRole = session?.user?.role ?? 'client'
-  const rawTelegramId = session?.user?.telegramId
-  const numericTelegramId =
-    rawTelegramId === null || rawTelegramId === undefined
-      ? null
-      : Number(rawTelegramId)
-  const creatorTelegramId = Number.isFinite(numericTelegramId)
-    ? numericTelegramId
-    : null
-  const currentUserId =
-    session?.user?._id === null || session?.user?._id === undefined
-      ? null
-      : String(session.user._id)
-  const currentUserTelegramId = Number.isFinite(numericTelegramId)
-    ? numericTelegramId
-    : null
-  let initialGames = []
-  let initialHasMore = false
-  let availableGameModerators = []
-
-  if (location) {
-    try {
-      const db = await dbConnectGlobal()
-
-      if (db) {
-        const UsersModel = db.model('Users')
-        const gamesResult = await fetchGamesForCabinet({
-          db,
-          location,
-          userRole,
-          creatorTelegramId,
-          currentUserId,
-          currentUserTelegramId,
-          offset: 0,
-          limit: GAMES_PAGE_SIZE,
-          view: 'all',
-        })
-        initialGames = gamesResult.games
-        initialHasMore = gamesResult.hasMore
-
-        const moderatorsDocs = await UsersModel.find({ role: 'moder' })
-          .sort({ name: 1, username: 1 })
-          .select({ _id: 1, name: 1, username: 1, telegramId: 1 })
-          .lean()
-
-        availableGameModerators = moderatorsDocs
-          .map((moderator) => {
-            const id = moderator?._id ? moderator._id.toString() : null
-
-            if (!id) {
-              return null
-            }
-
-            const telegramId =
-              typeof moderator.telegramId === 'number'
-                ? moderator.telegramId.toString()
-                : moderator.telegramId
-
-            return {
-              id,
-              name: moderator.name ?? '',
-              username: moderator.username ?? '',
-              telegramId: telegramId ? String(telegramId) : '',
-            }
-          })
-          .filter(Boolean)
-      }
-    } catch (error) {
-      console.error('Failed to load games for cabinet', error)
-    }
-  }
-
+export const getGamesPageServerSideProps = async (
+  context,
+  forcedView = 'all',
+) => {
+  const resolvedView = normalizeGamesViewValue(forcedView)
   return {
     props: {
-      session,
-      initialGames,
-      initialHasMore,
-      initialLocation: location,
-      availableModerators: availableGameModerators,
+      session: null,
+      initialGames: [],
+      initialHasMore: false,
+      initialLocation: null,
+      forcedView: resolvedView,
+      availableModerators: [],
     },
   }
+}
+
+export async function getServerSideProps(context) {
+  const rawViewFromQuery = Array.isArray(context?.query?.view)
+    ? context.query.view[0]
+    : context?.query?.view
+  return getGamesPageServerSideProps(context, rawViewFromQuery)
 }
 
 export default GamesPage
