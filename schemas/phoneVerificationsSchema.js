@@ -7,7 +7,7 @@ const phoneVerificationsSchema = {
   flow: {
     type: String,
     required: true,
-    enum: ['register', 'recovery'],
+    enum: ['register', 'recovery', 'change_phone'],
     default: 'register',
     index: true,
   },

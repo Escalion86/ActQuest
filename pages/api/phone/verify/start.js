@@ -2,6 +2,9 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import normalizeAuthPhone from '@helpers/normalizeAuthPhone'
 import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
 import { startTelefonipReverseCall } from '@helpers/telefonipAuthCalls'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@pages/api/auth/[...nextauth]'
+import resolveSessionUserFilter from '@helpers/resolveSessionUserFilter'
 
 const START_RATE_LIMIT_MS = 60 * 1000
 const VERIFY_TTL_MS = 15 * 60 * 1000
@@ -31,7 +34,7 @@ export default async function handler(req, res) {
   if (!phone) {
     return errorJson(res, 400, 'phone', 'Укажите корректный номер телефона.')
   }
-  if (!['register', 'recovery'].includes(flow)) {
+  if (!['register', 'recovery', 'change_phone'].includes(flow)) {
     return errorJson(res, 400, 'flow', 'Некорректный тип операции.')
   }
 
@@ -62,6 +65,36 @@ export default async function handler(req, res) {
     const PhoneVerifications = globalDb.model('PhoneVerifications')
 
     const existingUser = await Users.findOne({ phone }).select({ _id: 1, passwordHash: 1 }).lean()
+
+    if (flow === 'change_phone') {
+      const session = await getServerSession(req, res, authOptions)
+      if (!session?.user) {
+        return errorJson(res, 401, 'auth', 'Необходима авторизация.')
+      }
+
+      const sessionFilter = resolveSessionUserFilter(session.user)
+      if (!sessionFilter) {
+        return errorJson(res, 400, 'auth', 'Не удалось определить пользователя.')
+      }
+
+      const currentUser = await Users.findOne(sessionFilter).select({ _id: 1, phone: 1 }).lean()
+      if (!currentUser?._id) {
+        return errorJson(res, 404, 'not_found', 'Пользователь не найден.')
+      }
+
+      if (Number(currentUser.phone) === phone) {
+        return errorJson(res, 400, 'phone', 'Указан текущий номер телефона.')
+      }
+
+      if (existingUser && String(existingUser._id) !== String(currentUser._id)) {
+        return errorJson(
+          res,
+          400,
+          'phone',
+          'Такой номер уже зарегистрирован в другом профиле.',
+        )
+      }
+    }
 
     if (flow === 'register' && existingUser?.passwordHash) {
       return errorJson(

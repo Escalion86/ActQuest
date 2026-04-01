@@ -45,7 +45,7 @@ export default async function handler(req, res) {
   if (!Number.isFinite(callId)) {
     return errorJson(res, 400, 'phone', 'Некорректный идентификатор звонка.')
   }
-  if (!['register', 'recovery'].includes(flow)) {
+  if (!['register', 'recovery', 'change_phone'].includes(flow)) {
     return errorJson(res, 400, 'flow', 'Некорректный тип операции.')
   }
 

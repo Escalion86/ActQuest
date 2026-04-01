@@ -33,16 +33,14 @@ import ensureRole from '@helpers/ensureRole'
 import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 import { USERS_ROLES } from '@helpers/constants'
 import { ensureDateISOString } from '@helpers/idAndDate'
+import {
+  formatPhoneInput,
+  normalizePhoneForSubmit,
+} from '@helpers/phoneInputMask'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
 
 const USERS_PAGE_SIZE = 10
-const preferenceOptions = [
-  'Городские квесты',
-  'Настольные сценарии',
-  'Корпоративные игры',
-  'Командные задания',
-]
 const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
 const modalItemTitleClass = 'aq-modal-item-title text-lg font-semibold'
 const modalItemSmallTitleClass = 'aq-modal-item-title text-sm font-semibold'
@@ -702,34 +700,6 @@ const ManageUsersPage = ({
     [selectedUserId]
   )
 
-  const togglePreference = useCallback(
-    (preference) => {
-      if (!selectedUserId) {
-        return
-      }
-
-      setFeedback(null)
-      setUsers((prevUsers) =>
-        prevUsers.map((user) => {
-          if (user.id !== selectedUserId) {
-            return user
-          }
-
-          const current = Array.isArray(user.preferences) ? user.preferences : []
-          const hasPreference = current.includes(preference)
-
-          return {
-            ...user,
-            preferences: hasPreference
-              ? current.filter((item) => item !== preference)
-              : [...current, preference],
-          }
-        })
-      )
-    },
-    [selectedUserId]
-  )
-
   const handleRoleChange = useCallback(
     (role) => {
       if (!selectedUserId) {
@@ -788,8 +758,8 @@ const ManageUsersPage = ({
           return null
         }
 
-        const digits = value.replace(/\D/g, '')
-        return digits.length > 0 ? Number(digits) : null
+        const digits = normalizePhoneForSubmit(value)
+        return digits.length === 11 ? Number(digits) : null
       }
 
       const payload = {
@@ -1268,7 +1238,7 @@ const ManageUsersPage = ({
               )}
 
               <FormSectionCard className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-3">
                   <CabinetInputField
                     id="user-edit-name"
                     label="Имя и фамилия"
@@ -1281,6 +1251,19 @@ const ManageUsersPage = ({
                     value={selectedUser.username || ''}
                     onChange={(event) => handleEditFieldChange('username', event.target.value)}
                     placeholder="Например, quest_master"
+                  />
+                  <CabinetInputField
+                    id="user-edit-phone"
+                    label="Телефон"
+                    type="tel"
+                    value={formatPhoneInput(selectedUser.phone || '')}
+                    onChange={(event) =>
+                      handleEditFieldChange(
+                        'phone',
+                        formatPhoneInput(event.target.value),
+                      )
+                    }
+                    placeholder="+7"
                   />
                 </div>
 
@@ -1308,35 +1291,6 @@ const ManageUsersPage = ({
                   rows={5}
                   placeholder="Расскажите об опыте, любимых форматах и роли в команде."
                 />
-
-                <div>
-                  <p className={modalItemSmallTitleClass}>
-                    Предпочитаемые форматы
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    {preferenceOptions.map((preference) => {
-                      const selectedPreferences = Array.isArray(selectedUser.preferences)
-                        ? selectedUser.preferences
-                        : []
-                      const isActive = selectedPreferences.includes(preference)
-
-                      return (
-                        <button
-                          key={preference}
-                          type="button"
-                          onClick={() => togglePreference(preference)}
-                          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                            isActive
-                              ? 'bg-primary text-white shadow-sm'
-                              : 'border border-slate-200 text-slate-600 hover:border-primary hover:text-primary dark:border-slate-600 dark:bg-slate-800/35 dark:text-slate-200 dark:hover:border-cyan-400 dark:hover:text-cyan-200'
-                          }`}
-                        >
-                          {preference}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
 
                 <CabinetSelectField
                   id="user-role"

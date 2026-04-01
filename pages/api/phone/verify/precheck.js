@@ -1,6 +1,9 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import normalizeAuthPhone from '@helpers/normalizeAuthPhone'
 import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@pages/api/auth/[...nextauth]'
+import resolveSessionUserFilter from '@helpers/resolveSessionUserFilter'
 
 const errorJson = (res, status, type, message) =>
   res.status(status).json({
@@ -27,7 +30,7 @@ export default async function handler(req, res) {
   if (!phone) {
     return errorJson(res, 400, 'phone', 'Укажите корректный номер телефона.')
   }
-  if (!['register', 'recovery'].includes(flow)) {
+  if (!['register', 'recovery', 'change_phone'].includes(flow)) {
     return errorJson(res, 400, 'flow', 'Некорректный тип операции.')
   }
 
@@ -59,6 +62,59 @@ export default async function handler(req, res) {
       .findOne({ phone })
       .select({ _id: 1, passwordHash: 1 })
       .lean()
+
+    if (flow === 'change_phone') {
+      const session = await getServerSession(req, res, authOptions)
+      if (!session?.user) {
+        return errorJson(res, 401, 'auth', 'Необходима авторизация.')
+      }
+
+      const sessionFilter = resolveSessionUserFilter(session.user)
+      if (!sessionFilter) {
+        return errorJson(res, 400, 'auth', 'Не удалось определить пользователя.')
+      }
+
+      const currentUser = await globalDb
+        .model('Users')
+        .findOne(sessionFilter)
+        .select({ _id: 1, phone: 1 })
+        .lean()
+
+      if (!currentUser?._id) {
+        return errorJson(res, 404, 'not_found', 'Пользователь не найден.')
+      }
+
+      if (Number(currentUser.phone) === phone) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            allowed: false,
+            reason: 'same_phone',
+            message: 'Вы указали текущий номер телефона.',
+          },
+        })
+      }
+
+      if (existingUser && String(existingUser._id) !== String(currentUser._id)) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            allowed: false,
+            reason: 'already_registered',
+            message: 'Такой номер уже зарегистрирован в другом профиле.',
+          },
+        })
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          allowed: true,
+          reason: null,
+          message: null,
+        },
+      })
+    }
 
     if (flow === 'register' && existingUser?.passwordHash) {
       return res.status(200).json({
