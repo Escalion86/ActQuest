@@ -95,7 +95,6 @@ const ManageUsersPage = ({
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [sortBy, setSortBy] = useState('registration_desc')
-  const didSkipInitialFetchRef = useRef(false)
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [hasMoreUsers, setHasMoreUsers] = useState(Boolean(initialHasMore))
@@ -263,19 +262,6 @@ const ManageUsersPage = ({
       return undefined
     }
 
-    if (
-      !didSkipInitialFetchRef.current &&
-      safeInitialUsers.length > 0 &&
-      !searchQuery &&
-      roleFilter === 'all' &&
-      sortBy === 'registration_desc'
-    ) {
-      didSkipInitialFetchRef.current = true
-      return undefined
-    }
-
-    didSkipInitialFetchRef.current = true
-
     let cancelled = false
 
     const loadUsersByFilters = async () => {
@@ -339,6 +325,7 @@ const ManageUsersPage = ({
     () => persistedUsers.find((user) => user.id === selectedUserId) ?? null,
     [persistedUsers, selectedUserId]
   )
+  const isUsersListLoading = isLoadingMoreUsers && users.length === 0
 
   useEffect(() => {
     setFeedback(null)
@@ -1137,6 +1124,10 @@ const ManageUsersPage = ({
                   </CabinetButton>
                 )}
               </div>
+            ) : isUsersListLoading ? (
+              <FormSectionCard className="p-6 text-sm text-center text-slate-500 dark:text-slate-300">
+                Загружаем список пользователей...
+              </FormSectionCard>
             ) : (
               <FormSectionCard className="p-6 text-sm text-center text-slate-500 dark:text-slate-300">
                 Пользователи не найдены. Измените параметры фильтра или сбросьте поиск.

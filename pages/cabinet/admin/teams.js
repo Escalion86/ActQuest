@@ -88,7 +88,6 @@ const AdminTeamsPage = ({
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] = useState(false)
   const copyTimeoutRef = useRef(null)
-  const didSkipInitialFetchRef = useRef(false)
 
   useEffect(() => {
     setTeams(safeInitialTeams)
@@ -497,6 +496,7 @@ const AdminTeamsPage = ({
       }
     })
   }, [teams])
+  const isTeamsListLoading = isSearchingTeams && teamsForList.length === 0
 
   const handleLoadMoreTeams = useCallback(async () => {
     if (isLoadingMoreTeams || !hasMoreTeams) {
@@ -547,19 +547,6 @@ const AdminTeamsPage = ({
     if (!isAdmin) {
       return undefined
     }
-
-    if (
-      !didSkipInitialFetchRef.current &&
-      safeInitialTeams.length > 0 &&
-      !searchQuery &&
-      visibilityFilter === 'all' &&
-      sortBy === 'registration_desc'
-    ) {
-      didSkipInitialFetchRef.current = true
-      return undefined
-    }
-
-    didSkipInitialFetchRef.current = true
 
     let isCancelled = false
 
@@ -615,13 +602,7 @@ const AdminTeamsPage = ({
     return () => {
       isCancelled = true
     }
-  }, [
-    isAdmin,
-    safeInitialTeams.length,
-    searchQuery,
-    sortBy,
-    visibilityFilter,
-  ])
+  }, [isAdmin, searchQuery, sortBy, visibilityFilter])
 
   if (!isAdmin) {
     return (
@@ -774,6 +755,10 @@ const AdminTeamsPage = ({
                 </CabinetButton>
               )}
             </div>
+          ) : isTeamsListLoading ? (
+            <FormSectionCard className="p-6 text-sm text-center text-slate-500 dark:text-slate-300">
+              Загружаем список команд...
+            </FormSectionCard>
           ) : (
             <FormSectionCard className="p-6 text-sm text-center text-slate-500 dark:text-slate-300">
               Команды не найдены. Измените параметры фильтра или сбросьте поиск.
