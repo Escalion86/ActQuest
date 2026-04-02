@@ -584,7 +584,7 @@ const ProfilePage = ({ initialProfile }) => {
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="flex flex-col gap-y-3">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                 Уведомления
               </label>
@@ -593,18 +593,11 @@ const ProfilePage = ({ initialProfile }) => {
                 checked={isPushSubscribed}
                 onChange={handlePushNotificationsToggle}
                 disabled={
-                  isPushProcessing ||
-                  pushConfigStatus === 'loading' ||
-                  !canControlPush ||
-                  !isPushConfigured
+                  isPushProcessing || !canControlPush || !isPushConfigured
                 }
                 label="Push-уведомления (включая уведомления, вы автоматически соглашаетесь на получение рассылки)"
                 description={
-                  pushConfigStatus === 'loading'
-                    ? 'Проверяем настройки уведомлений...'
-                    : isPushProcessing
-                      ? 'Обновляем настройки уведомлений...'
-                      : ''
+                  isPushProcessing ? 'Обновляем настройки уведомлений...' : ''
                 }
                 className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 dark:border-[#00D1FF]/25 dark:bg-[#050012]/55"
               />
@@ -622,10 +615,7 @@ const ProfilePage = ({ initialProfile }) => {
                 </NoticeBanner>
               ) : null}
               {pushFeedback?.type === 'error' ? (
-                <NoticeBanner
-                  tone="error"
-                  variant="neon"
-                >
+                <NoticeBanner tone="error" variant="neon">
                   {pushFeedback.message}
                 </NoticeBanner>
               ) : null}

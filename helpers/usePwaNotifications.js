@@ -127,6 +127,16 @@ const waitForServiceWorkerRegistration = async () => {
     return immediate
   }
 
+  // Если SW еще не зарегистрирован/не активен, пробуем инициировать регистрацию
+  // прямо в момент включения уведомлений, чтобы избежать гонки первой вкладки.
+  try {
+    if (typeof navigator.serviceWorker.register === 'function') {
+      await navigator.serviceWorker.register('/sw.js')
+    }
+  } catch (error) {
+    // Не прерываем поток: ниже остаются fallback-попытки через ready/getRegistration.
+  }
+
   let timeoutId = null
 
   const readyPromise = navigator.serviceWorker.ready
@@ -378,7 +388,7 @@ const usePwaNotifications = ({ location, session }) => {
       return { success: false }
     }
 
-    if (configStatus === 'loading') {
+    if (configStatus === 'loading' && !applicationServerKey) {
       return {
         success: false,
         message: CONFIG_LOADING_TRANSIENT_MESSAGE,
