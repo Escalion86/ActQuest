@@ -42,6 +42,12 @@ const normalizeUserForSession = (user, fallback = {}) => {
     languageCode: user?.languageCode ?? fallbackData.languageCode ?? null,
     isPremium: user?.isPremium ?? fallbackData.isPremium ?? false,
     role: user?.role ?? fallbackData.role ?? 'client',
+    location:
+      user?.location ??
+      user?.currentLocation ??
+      user?.accountLocation ??
+      fallbackData.location ??
+      null,
   }
 
   const rawId =
@@ -67,7 +73,7 @@ export const authOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.SECRET,
+  secret: process.env.NEXTAUTH_SECRET || process.env.SECRET,
   providers: [
     CredentialsProvider({
       id: 'telegram',
@@ -319,10 +325,15 @@ export const authOptions = {
         token.role = resolvedRole ?? token.role ?? 'client'
         token.authMethod =
           user.authMethod ?? (user.vkId ? 'vk' : user.phone ? 'phone' : 'telegram')
-        token.location = user.location
+        token.location =
+          user.location ??
+          user.currentLocation ??
+          user.accountLocation ??
+          token.location ??
+          null
         token.name = user.name
         token.username = user.username
-        token.photoUrl = user.photoUrl
+        token.photoUrl = user.photoUrl ?? token.photoUrl ?? null
         token.languageCode = user.languageCode
         token.isPremium = user.isPremium
         token.isTestAuth = Boolean(user.isTestAuth)

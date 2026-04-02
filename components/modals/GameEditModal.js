@@ -1445,6 +1445,52 @@ const GameEditModal = ({
                         label="Запись на игру открыта"
                         labelClassName="text-sm text-slate-600 dark:text-slate-200"
                       />
+                      <div className="rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
+                        <NeonCheckbox
+                          id="game-max-team-players-unlimited"
+                          checked={selectedGame.maxTeamPlayers === null}
+                          onChange={(eventOrChecked) =>
+                            debugCheckboxUpdate(
+                              'maxTeamPlayers',
+                              getCheckboxChecked(eventOrChecked),
+                              (checked) => ({
+                                maxTeamPlayers: checked
+                                  ? null
+                                  : Number(selectedGame.maxTeamPlayers) > 0
+                                    ? Number(selectedGame.maxTeamPlayers)
+                                    : 4,
+                              }),
+                            )
+                          }
+                          label="Размер команды: без ограничений"
+                          labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                        />
+                        <div className="mt-3">
+                          <CabinetNumberField
+                            id="game-max-team-players"
+                            label="Максимум игроков в команде"
+                            min={1}
+                            step={1}
+                            value={
+                              selectedGame.maxTeamPlayers === null
+                                ? ''
+                                : Number(selectedGame.maxTeamPlayers) || ''
+                            }
+                            disabled={selectedGame.maxTeamPlayers === null}
+                            onChange={(event) =>
+                              updateSelectedGame({
+                                maxTeamPlayers:
+                                  event.target.value === ''
+                                    ? null
+                                    : Math.max(1, Number(event.target.value) || 1),
+                              })
+                            }
+                            labelClassName={fieldLabelClassName}
+                            inputClassName={fieldInputClassName}
+                            placeholder="Например, 4"
+                          />
+                        </div>
+                      </div>
                     </div>
                     {Boolean(selectedGame.isRated ?? true) && (
                       <div className="mt-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">

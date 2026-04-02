@@ -155,6 +155,8 @@ const enrichSessionFromGlobalDb = async (session) => {
         vkId: 1,
         phone: 1,
         location: 1,
+        currentLocation: 1,
+        accountLocation: 1,
         role: 1,
         name: 1,
         username: 1,
@@ -179,7 +181,12 @@ const enrichSessionFromGlobalDb = async (session) => {
         telegramId: session.user.telegramId ?? userDoc.telegramId ?? null,
         vkId: session.user.vkId ?? userDoc.vkId ?? null,
         phone: session.user.phone ?? userDoc.phone ?? null,
-        location: session.user.location ?? userDoc.location ?? null,
+        location:
+          session.user.location ??
+          userDoc.currentLocation ??
+          userDoc.accountLocation ??
+          userDoc.location ??
+          null,
         role: session.user.role ?? userDoc.role ?? 'client',
         name: session.user.name ?? userDoc.name ?? null,
         username: session.user.username ?? userDoc.username ?? null,

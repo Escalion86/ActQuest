@@ -7,6 +7,7 @@ import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import CardActionIconButton, {
   EditCardIcon,
+  MegaphoneCardIcon,
   StatusCardIcon,
   TargetCardIcon,
   TeamCardIcon,
@@ -15,6 +16,7 @@ import FeedbackToast from '@components/FeedbackToast'
 import NoticeBanner from '@components/NoticeBanner'
 import GameModals from '@components/modals/GameModals'
 import GameStatusModal from '@components/modals/GameStatusModal'
+import GamePushBroadcastModal from '@components/modals/GamePushBroadcastModal'
 import extractErrorMessage from '@helpers/extractErrorMessage'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
@@ -264,6 +266,10 @@ const stripHtmlToPlainText = (value) =>
 const isActiveGameStatus = (status) =>
   (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
   'active'
+
+const isGameInProgressStatus = (status) =>
+  (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
+  'started'
 
 const getUserParticipationTeams = (game) =>
   (Array.isArray(game?.userParticipationTeams)
@@ -540,6 +546,7 @@ const buildUpdatePayload = (game) => {
     showTasks: Boolean(game.showTasks),
     hideResult: Boolean(game.hideResult),
     registrationOpen: Boolean(game.registrationOpen ?? true),
+    maxTeamPlayers: toNullableNumber(game.maxTeamPlayers),
     prices,
     finances,
     tasks,
@@ -705,6 +712,16 @@ const GamesPage = ({
   const [isRegisterSubmitting, setIsRegisterSubmitting] = useState(false)
   const [cancellingRegistrationGameIds, setCancellingRegistrationGameIds] =
     useState([])
+  const [isPushBroadcastModalOpen, setIsPushBroadcastModalOpen] =
+    useState(false)
+  const [pushBroadcastGameId, setPushBroadcastGameId] = useState('')
+  const [pushBroadcastMode, setPushBroadcastMode] = useState(
+    'announce_all_users',
+  )
+  const [pushBroadcastMessage, setPushBroadcastMessage] = useState('')
+  const [isPushBroadcastSubmitting, setIsPushBroadcastSubmitting] =
+    useState(false)
+  const [pushBroadcastFeedback, setPushBroadcastFeedback] = useState(null)
   const [isCreateGameModalOpen, setIsCreateGameModalOpen] = useState(false)
   const [newGameName, setNewGameName] = useState('')
   const [newGameIsRated, setNewGameIsRated] = useState(true)
@@ -924,6 +941,10 @@ const GamesPage = ({
   const statusModalGame = useMemo(
     () => games.find((game) => game.id === statusModalGameId) ?? null,
     [games, statusModalGameId],
+  )
+  const pushBroadcastModalGame = useMemo(
+    () => games.find((game) => game.id === pushBroadcastGameId) ?? null,
+    [games, pushBroadcastGameId],
   )
   const statusModalActions = useMemo(() => {
     if (!statusModalGame) {
@@ -1877,6 +1898,109 @@ const GamesPage = ({
     [resetRegisterForm],
   )
 
+  const handleOpenPushBroadcastModal = useCallback((game) => {
+    if (!game?.id) {
+      return
+    }
+
+    setPushBroadcastGameId(game.id)
+    setPushBroadcastMode('announce_all_users')
+    setPushBroadcastMessage('')
+    setPushBroadcastFeedback(null)
+    setIsPushBroadcastModalOpen(true)
+  }, [])
+
+  const handleClosePushBroadcastModal = useCallback(() => {
+    if (isPushBroadcastSubmitting) {
+      return
+    }
+
+    setIsPushBroadcastModalOpen(false)
+    setPushBroadcastFeedback(null)
+    setPushBroadcastMessage('')
+    setPushBroadcastMode('announce_all_users')
+    setPushBroadcastGameId('')
+  }, [isPushBroadcastSubmitting])
+
+  const handleSubmitPushBroadcast = useCallback(async () => {
+    if (!pushBroadcastModalGame?.id) {
+      setPushBroadcastFeedback({
+        type: 'error',
+        message: 'Игра для рассылки не найдена',
+      })
+      return
+    }
+
+    if (
+      pushBroadcastMode === 'custom_for_registered' &&
+      !pushBroadcastMessage.trim()
+    ) {
+      setPushBroadcastFeedback({
+        type: 'error',
+        message: 'Введите сообщение для зарегистрированных участников',
+      })
+      return
+    }
+
+    setIsPushBroadcastSubmitting(true)
+    setPushBroadcastFeedback(null)
+
+    try {
+      const { json } = await requestApiJson(
+        `/api/cabinet/games/${encodeURIComponent(
+          pushBroadcastModalGame.id,
+        )}/push-broadcast`,
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            mode: pushBroadcastMode,
+            message: pushBroadcastMessage.trim(),
+          }),
+          fallbackMessage: 'Не удалось отправить уведомления',
+        },
+      )
+
+      const usersMatched = Number(json?.data?.usersMatched) || 0
+      const notificationsCreated = Number(json?.data?.notificationsCreated) || 0
+      const pushDelivered = Number(json?.data?.pushDelivered) || 0
+
+      const successMessage =
+        pushBroadcastMode === 'announce_all_users'
+          ? `Анонс отправлен: получателей ${usersMatched}, уведомлений ${notificationsCreated}, push доставлено ${pushDelivered}`
+          : `Сообщение отправлено зарегистрированным командам: получателей ${usersMatched}, уведомлений ${notificationsCreated}, push доставлено ${pushDelivered}`
+
+      setPushBroadcastFeedback({
+        type: 'success',
+        message: successMessage,
+      })
+      setFeedback({ type: 'success', message: successMessage })
+      setIsPushBroadcastModalOpen(false)
+      setPushBroadcastMessage('')
+      setPushBroadcastMode('announce_all_users')
+      setPushBroadcastGameId('')
+    } catch (error) {
+      const message =
+        extractErrorMessage(error) || 'Не удалось отправить уведомления'
+
+      setPushBroadcastFeedback({
+        type: 'error',
+        message,
+      })
+      setFeedback({ type: 'error', message })
+    } finally {
+      setIsPushBroadcastSubmitting(false)
+    }
+  }, [
+    pushBroadcastMessage,
+    pushBroadcastModalGame?.id,
+    pushBroadcastMode,
+    setFeedback,
+  ])
+
   const isRegistrationCancellationInProgress = useCallback(
     (gameId) =>
       typeof gameId === 'string' &&
@@ -1946,20 +2070,60 @@ const GamesPage = ({
           limit: '200',
         })
 
-        const { response: existingResponse, json: existingJson } =
-          await requestApiJson(
-            `/api/${gameApiLocation}/custom?${existingParams.toString()}`,
-            {
-              fallbackMessage: 'Не удалось проверить регистрацию команды',
-              throwOnHttpError: false,
-            },
-          )
+        const locationCandidates = Array.from(
+          new Set(
+            [
+              game.location,
+              shouldShowLocationFilter ? gamesFilterLocation : null,
+              location,
+              registerApiLocation,
+            ]
+              .map((item) =>
+                typeof item === 'string' ? item.trim().toLowerCase() : '',
+              )
+              .filter(Boolean),
+          ),
+        )
 
-        if (!existingResponse.ok || existingJson?.success === false) {
-          throw new Error(
-            extractErrorMessage(existingJson?.error) ||
-              'Не удалось проверить регистрацию команды',
-          )
+        let existingJson = null
+        let existingCheckError = null
+        let resolvedApiLocationForCancellation = gameApiLocation
+
+        for (const candidateLocation of locationCandidates) {
+          try {
+            const { response: existingResponse, json: nextJson } =
+              await requestApiJson(
+                `/api/${candidateLocation}/custom?${existingParams.toString()}`,
+                {
+                  fallbackMessage: 'Не удалось проверить регистрацию команды',
+                  throwOnHttpError: false,
+                },
+              )
+
+            if (existingResponse.ok && nextJson?.success !== false) {
+              existingJson = nextJson
+              resolvedApiLocationForCancellation = candidateLocation
+              existingCheckError = null
+              break
+            }
+
+            existingCheckError =
+              extractErrorMessage(nextJson?.error) ||
+              `Не удалось проверить регистрацию команды (площадка: ${candidateLocation})`
+          } catch (error) {
+            existingCheckError =
+              extractErrorMessage(error) ||
+              `Не удалось проверить регистрацию команды (площадка: ${candidateLocation})`
+          }
+        }
+
+        if (!existingJson) {
+          setFeedback({
+            type: 'error',
+            message:
+              existingCheckError || 'Не удалось проверить регистрацию команды',
+          })
+          return
         }
 
         const captainTeamIds = new Set(
@@ -1977,7 +2141,7 @@ const GamesPage = ({
         }
 
         await requestApiJson(
-          `/api/${gameApiLocation}/custom?collection=gamesteams`,
+          `/api/${resolvedApiLocationForCancellation}/custom?collection=gamesteams`,
           {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
@@ -2396,6 +2560,7 @@ const GamesPage = ({
         showTasks: false,
         hideResult: false,
         registrationOpen: true,
+        maxTeamPlayers: null,
         prices: [],
         finances: [],
         tasks: [],
@@ -2453,6 +2618,9 @@ const GamesPage = ({
             ? [...normalizedSource.manyCodesPenalty]
             : [0, 0]
           baseDraft.individualStart = Boolean(normalizedSource.individualStart)
+          baseDraft.maxTeamPlayers = toNullableNumber(
+            normalizedSource.maxTeamPlayers,
+          )
         }
 
         if (createGameCloneOptions.captainRules) {
@@ -4451,6 +4619,8 @@ const GamesPage = ({
       const canEditThisGame = canOpenGameEditModal(game)
       const canManageStatusThisGame =
         canEditAllGames && canManageGameStatus(game)
+      const canBroadcastThisGame =
+        canManageThisGame && !isGameInProgressStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
       const visibleStatus = normalizeVisibleStatus(
@@ -4564,65 +4734,14 @@ const GamesPage = ({
                   hasParticipation ||
                   canJoinGame ||
                   canCancelRegistration ||
+                  canBroadcastThisGame ||
                   canEditThisGame ||
                   canManageThisGame ||
                   canManageStatusThisGame ||
                   canViewThisGameResults ||
                   canViewThisGameTasks) && (
-                  <div className="flex items-center justify-between gap-3 mt-3">
-                    <div className="flex items-center gap-2">
-                      {(canEditThisGame ||
-                        canManageThisGame ||
-                        canManageStatusThisGame) && (
-                        <>
-                          {canEditThisGame && (
-                            <CardActionIconButton
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                handleEditGameFromList(game)
-                              }}
-                              label="Редактировать игру"
-                            >
-                              <EditCardIcon />
-                            </CardActionIconButton>
-                          )}
-                          {canManageThisGame && (
-                            <CardActionIconButton
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                handleEditTasksFromList(game)
-                              }}
-                              label="Редактор заданий"
-                              title="Открыть редактор заданий"
-                            >
-                              <TargetCardIcon />
-                            </CardActionIconButton>
-                          )}
-                          {canManageStatusThisGame && (
-                            <CardActionIconButton
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                handleOpenStatusModal(game)
-                              }}
-                              label={getStatusActionLabel(game.status)}
-                              title={getStatusActionLabel(game.status)}
-                            >
-                              <StatusCardIcon status={game.status} />
-                            </CardActionIconButton>
-                          )}
-                          {canManageThisGame && (
-                            <CardActionIconButton
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                handleManageTeamsFromList(game)
-                              }}
-                              label="Управление командами"
-                            >
-                              <TeamCardIcon />
-                            </CardActionIconButton>
-                          )}
-                        </>
-                      )}
+                  <div className="mt-3 flex flex-col gap-2 phoneH:flex-row phoneH:items-center phoneH:justify-between">
+                    <div className="order-1 flex items-center gap-2 phoneH:order-2">
                       {hasUserTeamPlace && (
                         <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
                           Место: {userTeamPlace}
@@ -4645,7 +4764,7 @@ const GamesPage = ({
                     {(canJoinGame ||
                       canViewThisGameTasks ||
                       canViewThisGameResults) && (
-                      <div className="flex items-center gap-2">
+                      <div className="order-2 flex items-center gap-2 phoneH:order-3 phoneH:ml-auto">
                         {canJoinGame && (
                           <button
                             type="button"
@@ -4684,6 +4803,71 @@ const GamesPage = ({
                         )}
                       </div>
                     )}
+                    {(canEditThisGame ||
+                      canManageThisGame ||
+                      canManageStatusThisGame ||
+                      canBroadcastThisGame) && (
+                      <div className="order-3 flex items-center gap-2 self-start phoneH:order-1 phoneH:self-auto">
+                        {canEditThisGame && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleEditGameFromList(game)
+                            }}
+                            label="Редактировать игру"
+                          >
+                            <EditCardIcon />
+                          </CardActionIconButton>
+                        )}
+                        {canManageThisGame && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleEditTasksFromList(game)
+                            }}
+                            label="Редактор заданий"
+                            title="Открыть редактор заданий"
+                          >
+                            <TargetCardIcon />
+                          </CardActionIconButton>
+                        )}
+                        {canManageStatusThisGame && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleOpenStatusModal(game)
+                            }}
+                            label={getStatusActionLabel(game.status)}
+                            title={getStatusActionLabel(game.status)}
+                          >
+                            <StatusCardIcon status={game.status} />
+                          </CardActionIconButton>
+                        )}
+                        {canBroadcastThisGame && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleOpenPushBroadcastModal(game)
+                            }}
+                            label="Рассылка уведомлений"
+                            title="Открыть рассылку уведомлений"
+                          >
+                            <MegaphoneCardIcon />
+                          </CardActionIconButton>
+                        )}
+                        {canManageThisGame && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleManageTeamsFromList(game)
+                            }}
+                            label="Управление командами"
+                          >
+                            <TeamCardIcon />
+                          </CardActionIconButton>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -4706,6 +4890,7 @@ const GamesPage = ({
       handleEditGameFromList,
       handleEditTasksFromList,
       handleManageTeamsFromList,
+      handleOpenPushBroadcastModal,
       handleOpenRegisterModalForGame,
       handleOpenTasksViewFromGame,
       handleOpenResultsFromGame,
@@ -4729,6 +4914,8 @@ const GamesPage = ({
       const canEditThisGame = canOpenGameEditModal(game)
       const canManageStatusThisGame =
         canEditAllGames && canManageGameStatus(game)
+      const canBroadcastThisGame =
+        canManageThisGame && !isGameInProgressStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
       const visibleStatus = normalizeVisibleStatus(
@@ -4829,11 +5016,12 @@ const GamesPage = ({
                 hasParticipation ||
                 canJoinGame ||
                 canCancelRegistration ||
+                canBroadcastThisGame ||
                 canEditThisGame ||
                 canManageThisGame ||
                 canManageStatusThisGame) && (
-                <div className="flex items-end justify-between gap-2 mt-3">
-                  <div className="flex flex-col items-start gap-2">
+                <div className="mt-3 flex flex-col gap-2 phoneH:flex-row phoneH:items-end phoneH:justify-between">
+                  <div className="order-1 flex flex-col items-start gap-2 phoneH:order-1">
                     {canViewThisGameTasks && (
                       <button
                         type="button"
@@ -4892,7 +5080,7 @@ const GamesPage = ({
                   {(canEditThisGame ||
                     canManageThisGame ||
                     canManageStatusThisGame) && (
-                    <div className="flex items-center self-end gap-2 pointer-events-auto">
+                    <div className="order-3 flex items-center gap-2 self-start pointer-events-auto phoneH:order-2 phoneH:self-end">
                       {canEditThisGame && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -4931,6 +5119,19 @@ const GamesPage = ({
                           <StatusCardIcon status={game.status} />
                         </CardActionIconButton>
                       )}
+                      {canBroadcastThisGame && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleOpenPushBroadcastModal(game)
+                          }}
+                          label="Рассылка уведомлений"
+                          title="Открыть рассылку уведомлений"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <MegaphoneCardIcon />
+                        </CardActionIconButton>
+                      )}
                       {canManageThisGame && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -4966,6 +5167,7 @@ const GamesPage = ({
       handleEditGameFromList,
       handleEditTasksFromList,
       handleManageTeamsFromList,
+      handleOpenPushBroadcastModal,
       handleOpenRegisterModalForGame,
       handleOpenTasksViewFromGame,
       handleOpenResultsFromGame,
@@ -5633,6 +5835,18 @@ const GamesPage = ({
                   validationResult={statusValidationResult}
                   isSaving={isStatusChanging}
                 />
+                <GamePushBroadcastModal
+                  isOpen={isPushBroadcastModalOpen}
+                  onClose={handleClosePushBroadcastModal}
+                  gameName={pushBroadcastModalGame?.name || ''}
+                  mode={pushBroadcastMode}
+                  onChangeMode={setPushBroadcastMode}
+                  customMessage={pushBroadcastMessage}
+                  onChangeCustomMessage={setPushBroadcastMessage}
+                  isSubmitting={isPushBroadcastSubmitting}
+                  onSubmit={handleSubmitPushBroadcast}
+                  feedback={pushBroadcastFeedback}
+                />
               </div>
             </div>
           )}
@@ -5752,6 +5966,7 @@ GamesPage.propTypes = {
       showTasks: PropTypes.bool,
       hideResult: PropTypes.bool,
       registrationOpen: PropTypes.bool,
+      maxTeamPlayers: PropTypes.number,
       prices: PropTypes.arrayOf(priceShape),
       finances: PropTypes.arrayOf(financeShape),
       tasks: PropTypes.arrayOf(

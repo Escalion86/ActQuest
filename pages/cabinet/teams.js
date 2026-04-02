@@ -87,6 +87,14 @@ const TeamsPage = ({
       ? null
       : String(activeSession.user._id)
   const currentTelegramId = normalizeTelegramId(activeSession?.user?.telegramId)
+  const currentTelegramIdNumber = useMemo(() => {
+    if (!currentTelegramId) {
+      return null
+    }
+
+    const numeric = Number(currentTelegramId)
+    return Number.isFinite(numeric) ? numeric : null
+  }, [currentTelegramId])
 
   const [teams, setTeams] = useState(safeInitialTeams)
   const [persistedTeams, setPersistedTeams] = useState(safeInitialTeams)
@@ -109,6 +117,7 @@ const TeamsPage = ({
   const copyTimeoutRef = useRef(null)
   const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] = useState(false)
   const [isLeavingTeam, setIsLeavingTeam] = useState(false)
+  const [isDeletingTeam, setIsDeletingTeam] = useState(false)
   const snackbar = useSnackbar()
 
   const filterTeamsByCurrentUser = useCallback(
@@ -219,15 +228,17 @@ const TeamsPage = ({
 
   const isAdmin = userRole === 'admin' || userRole === 'dev'
   const isTeamCaptain = useMemo(() => {
-    if (!selectedTeam || !currentUserId) {
+    if (!selectedTeam || (!currentUserId && !currentTelegramId)) {
       return false
     }
 
     return selectedTeam.members?.some(
       (member) =>
-        member.isCaptain && member.userId === currentUserId
+        member.isCaptain &&
+        ((currentUserId && member.userId === currentUserId) ||
+          (currentTelegramId && member.telegramId === currentTelegramId))
     )
-  }, [currentUserId, selectedTeam])
+  }, [currentTelegramId, currentUserId, selectedTeam])
 
   const canManageSelectedTeam = isAdmin || isTeamCaptain
   const selectedTeamCurrentMember = useMemo(() => {
@@ -252,8 +263,9 @@ const TeamsPage = ({
 
   const canLeaveSelectedTeam =
     Boolean(selectedTeamCurrentMember) && !selectedTeamCurrentMember.isCaptain
+  const canDeleteSelectedTeam = Boolean(selectedTeam && isTeamCaptain)
   const canUseSelfServiceTeams =
-    Boolean(location) && Boolean(currentUserId)
+    Boolean(location) && Boolean(currentUserId || currentTelegramIdNumber !== null)
   const isTeamsLimitReached = visibleTeams.length >= MAX_TEAMS_PER_USER
   const canUseSelfServiceTeamsActions =
     canUseSelfServiceTeams && !isTeamsLimitReached
@@ -479,7 +491,7 @@ const TeamsPage = ({
       return
     }
 
-    if (!currentUserId) {
+    if (!currentUserId && currentTelegramIdNumber === null) {
       snackbar.error(
         'Чтобы управлять командами, требуется авторизованный пользователь.'
       )
@@ -524,7 +536,8 @@ const TeamsPage = ({
           body: JSON.stringify({
             data: {
               teamId: createdTeamId,
-              userId: currentUserId,
+              userId: currentUserId || null,
+              userTelegramId: currentTelegramIdNumber,
               role: 'capitan',
             },
           }),
@@ -570,6 +583,7 @@ const TeamsPage = ({
     }
   }, [
     canUseSelfServiceTeamsActions,
+    currentTelegramIdNumber,
     currentUserId,
     fetchTeamsSnapshot,
     isTeamsLimitReached,
@@ -951,13 +965,16 @@ const TeamsPage = ({
     }
 
     return visibleTeams.map((team) => {
+      const isCaptainForCurrentUser = (team.members ?? []).some(
+        (member) =>
+          member.isCaptain &&
+          ((currentUserId && member.userId === currentUserId) ||
+            (currentTelegramId && member.telegramId === currentTelegramId))
+      )
+
       const canManageTeam =
         isAdmin ||
-        (team.members ?? []).some(
-          (member) =>
-            member.isCaptain &&
-            member.userId === (currentUserId ?? '')
-        )
+        isCaptainForCurrentUser
 
       return {
         id: team.id,
@@ -968,9 +985,10 @@ const TeamsPage = ({
         ratingBadge: resolveRatingBadge(team.rating),
         open: Boolean(team.open),
         canManage: canManageTeam,
+        isCaptain: isCaptainForCurrentUser,
       }
     })
-  }, [currentUserId, isAdmin, visibleTeams])
+  }, [currentTelegramId, currentUserId, isAdmin, visibleTeams])
 
   const handleTeamCardClick = useCallback((team) => {
     if (!team) {
@@ -1109,6 +1127,52 @@ const TeamsPage = ({
     snackbar,
   ])
 
+  const handleDeleteSelectedTeam = useCallback(async () => {
+    if (!selectedTeam || !canDeleteSelectedTeam || isDeletingTeam) {
+      return
+    }
+
+    const playedGamesCount = Number(selectedTeam.gamesCount) || 0
+    const lossWarning =
+      playedGamesCount > 0
+        ? `\n\nКомандой сыграно игр: ${playedGamesCount}.\nУдаление команды может повлиять на рейтинг команды и участников.`
+        : '\n\nКоманда пока не имеет сыгранных игр.'
+
+    const isConfirmed = window.confirm(
+      `Удалить команду «${selectedTeam.name || 'Без названия'}»?${lossWarning}\n\nДействие необратимо.`,
+    )
+    if (!isConfirmed) {
+      return
+    }
+
+    setIsDeletingTeam(true)
+
+    try {
+      await requestApiJson(`/api/cabinet/teams/${selectedTeam.id}`, {
+        method: 'DELETE',
+        fallbackMessage: 'Не удалось удалить команду',
+      })
+
+      const deletedTeamId = selectedTeam.id
+      setTeams((prevTeams) => prevTeams.filter((team) => team.id !== deletedTeamId))
+      setPersistedTeams((prevTeams) =>
+        prevTeams.filter((team) => team.id !== deletedTeamId),
+      )
+      setSelectedTeamId((prevSelectedTeamId) =>
+        prevSelectedTeamId === deletedTeamId ? null : prevSelectedTeamId,
+      )
+      setIsEditModalOpen(false)
+      setIsTeamDescriptionModalOpen(false)
+
+      snackbar.success('Команда удалена')
+    } catch (error) {
+      console.error('Failed to delete team', error)
+      snackbar.error(error?.message || 'Не удалось удалить команду')
+    } finally {
+      setIsDeletingTeam(false)
+    }
+  }, [canDeleteSelectedTeam, isDeletingTeam, selectedTeam, snackbar])
+
   return (
     <>
       <Head>
@@ -1179,7 +1243,7 @@ const TeamsPage = ({
               </button>
             </div>
             {isTeamsLimitReached && (
-              <NoticeBanner tone="warning">
+              <NoticeBanner tone="warning" variant="neon">
                 Достигнут лимит команд: один игрок может состоять максимум в {MAX_TEAMS_PER_USER} командах.
               </NoticeBanner>
             )}
@@ -1221,6 +1285,11 @@ const TeamsPage = ({
                                 {team.ratingBadge}
                               </span>
                             ) : null}
+                            {team.isCaptain && (
+                              <span className="text-xs font-medium px-2 py-1 rounded-full border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/45 dark:bg-amber-500/10 dark:text-amber-200">
+                                Капитан
+                              </span>
+                            )}
                             <span
                               className={`text-xs font-medium px-2 py-1 rounded-full ${
                                 team.open
@@ -1300,6 +1369,9 @@ const TeamsPage = ({
           onSetCaptain={handleSetCaptain}
           onRemoveMember={handleRemoveMember}
           location={location}
+          canDeleteTeam={canDeleteSelectedTeam}
+          isDeletingTeam={isDeletingTeam}
+          onDeleteTeam={handleDeleteSelectedTeam}
         />
         <TeamCreateModal
           isOpen={isCreateModalOpen}

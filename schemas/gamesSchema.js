@@ -283,6 +283,11 @@ const gamesSchema = {
     type: Boolean,
     default: true,
   },
+  maxTeamPlayers: {
+    type: Number,
+    default: null,
+    min: 1,
+  },
   prices: {
     type: [{ id: String, name: { type: String, trim: true }, price: Number }],
     default: [],

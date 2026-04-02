@@ -195,6 +195,7 @@ const fetchGamesForCabinet = async ({
       showTasks: 1,
       hideResult: 1,
       registrationOpen: 1,
+      maxTeamPlayers: 1,
       prices: 1,
       finances: 1,
       tasks: 1,

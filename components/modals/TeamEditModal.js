@@ -100,6 +100,9 @@ const TeamEditModal = ({
   onRemoveMember,
   location,
   canEditCarSkin,
+  canDeleteTeam,
+  isDeletingTeam,
+  onDeleteTeam,
 }) => {
   if (!selectedTeam) {
     return null
@@ -132,6 +135,17 @@ const TeamEditModal = ({
       >
         Отменить изменения
       </CabinetButton>
+      {canDeleteTeam && (
+        <CabinetButton
+          onClick={onDeleteTeam}
+          disabled={isDeletingTeam || isSaving}
+          variant="secondary"
+          tone="danger"
+          className={isDeletingTeam ? 'cursor-wait' : ''}
+        >
+          {isDeletingTeam ? 'Удаление…' : 'Удалить команду'}
+        </CabinetButton>
+      )}
     </>
   )
 
@@ -386,6 +400,9 @@ TeamEditModal.propTypes = {
   onRemoveMember: PropTypes.func.isRequired,
   location: PropTypes.string,
   canEditCarSkin: PropTypes.bool,
+  canDeleteTeam: PropTypes.bool,
+  isDeletingTeam: PropTypes.bool,
+  onDeleteTeam: PropTypes.func,
 }
 
 TeamEditModal.defaultProps = {
@@ -393,6 +410,9 @@ TeamEditModal.defaultProps = {
   memberActionId: null,
   location: null,
   canEditCarSkin: false,
+  canDeleteTeam: false,
+  isDeletingTeam: false,
+  onDeleteTeam: undefined,
 }
 
 TeamCarSkinPreview.propTypes = {

@@ -9,12 +9,14 @@ import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import ImagesInput from '@components/cabinet/ImagesInput'
+import NeonCheckbox from '@components/NeonCheckbox'
 import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import { formatPhoneInput, normalizePhoneForSubmit } from '@helpers/phoneInputMask'
 import requestApiJson from '@helpers/requestApiJson'
+import usePwaNotifications from '@helpers/usePwaNotifications'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const ProfilePage = ({ initialProfile }) => {
@@ -40,7 +42,24 @@ const ProfilePage = ({ initialProfile }) => {
   const [phoneVerifyStatus, setPhoneVerifyStatus] = useState('pending')
   const [phoneModalError, setPhoneModalError] = useState(null)
   const [isPhoneModalSubmitting, setIsPhoneModalSubmitting] = useState(false)
+  const [pushFeedback, setPushFeedback] = useState(null)
   const phoneCheckInFlightRef = useRef(false)
+  const pushLocation =
+    typeof session?.user?.location === 'string' ? session.user.location : null
+  const {
+    isSupported: isPushSupported,
+    isConfigured: isPushConfigured,
+    isSubscribed: isPushSubscribed,
+    isProcessing: isPushProcessing,
+    error: pushError,
+    canControl: canControlPush,
+    configStatus: pushConfigStatus,
+    subscribe: subscribePush,
+    unsubscribe: unsubscribePush,
+  } = usePwaNotifications({
+    location: pushLocation,
+    session,
+  })
 
   useEffect(() => {
     setFormState(normalizedInitialProfile)
@@ -389,6 +408,33 @@ const ProfilePage = ({ initialProfile }) => {
     [safeFormState, session],
   )
 
+  const handlePushNotificationsToggle = useCallback(
+    async (event) => {
+      const shouldEnable = Boolean(event?.target?.checked)
+      setPushFeedback(null)
+
+      if (shouldEnable) {
+        const result = await subscribePush()
+        if (result?.success) {
+          setPushFeedback({
+            type: 'success',
+            message: 'Push-уведомления включены.',
+          })
+        }
+        return
+      }
+
+      const result = await unsubscribePush()
+      if (result?.success) {
+        setPushFeedback({
+          type: 'success',
+          message: 'Push-уведомления отключены.',
+        })
+      }
+    },
+    [subscribePush, unsubscribePush],
+  )
+
   return (
     <>
       <Head>
@@ -436,24 +482,77 @@ const ProfilePage = ({ initialProfile }) => {
               />
             </div>
 
-            <CabinetInputField
-              id="profile-phone"
-              label="Телефон"
-              type="tel"
-              value={formatPhoneInput(safeFormState.phone)}
-              disabled
-              placeholder="+7 900 000-00-00"
-              inputClassName="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 opacity-90 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-100 dark:placeholder:text-slate-400"
-            />
-            <div className="-mt-3 flex">
-              <CabinetButton
-                type="button"
-                variant="secondary"
-                tone="brand"
-                onClick={openPhoneModal}
+            <div className="space-y-2">
+              <label
+                htmlFor="profile-phone"
+                className="text-sm font-semibold text-slate-700 dark:text-slate-100"
               >
-                Изменить номер
-              </CabinetButton>
+                Телефон
+              </label>
+              <div className="flex flex-wrap items-end gap-3">
+                <input
+                  id="profile-phone"
+                  type="tel"
+                  value={formatPhoneInput(safeFormState.phone)}
+                  disabled
+                  placeholder="+7 900 000-00-00"
+                  className="w-full max-w-[16.5rem] cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 opacity-90 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-100 dark:placeholder:text-slate-400"
+                />
+                <CabinetButton
+                  type="button"
+                  variant="secondary"
+                  tone="brand"
+                  onClick={openPhoneModal}
+                >
+                  Изменить номер
+                </CabinetButton>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+                Уведомления
+              </label>
+              <NeonCheckbox
+                id="profile-push-notifications"
+                checked={isPushSubscribed}
+                onChange={handlePushNotificationsToggle}
+                disabled={
+                  isPushProcessing || !canControlPush || !isPushConfigured
+                }
+                label="Push-уведомления (включая уведомления, вы автоматически соглашаетесь на получение рассылки)"
+                description={
+                  isPushProcessing
+                    ? 'Обновляем настройки уведомлений...'
+                    : ''
+                }
+                className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 dark:border-[#00D1FF]/25 dark:bg-[#050012]/55"
+              />
+              {!isPushSupported ? (
+                <NoticeBanner tone="warning" variant="neon">
+                  Ваш браузер не поддерживает push-уведомления.
+                </NoticeBanner>
+              ) : null}
+              {isPushSupported &&
+              pushConfigStatus !== 'loading' &&
+              !isPushConfigured ? (
+                <NoticeBanner tone="warning" variant="neon">
+                  Push-уведомления временно недоступны: не настроен публичный ключ.
+                </NoticeBanner>
+              ) : null}
+              {pushFeedback ? (
+                <NoticeBanner
+                  tone={pushFeedback.type === 'error' ? 'error' : 'success'}
+                  variant="neon"
+                >
+                  {pushFeedback.message}
+                </NoticeBanner>
+              ) : null}
+              {pushError ? (
+                <NoticeBanner tone="error" variant="neon">
+                  {pushError}
+                </NoticeBanner>
+              ) : null}
             </div>
 
             <CabinetTextareaField

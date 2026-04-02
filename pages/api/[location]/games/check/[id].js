@@ -1,5 +1,6 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { getGameValidationErrors } from '@helpers/isGameHaveErrors'
+import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 
 export default async function handler(req, res) {
   const { query, method } = req
@@ -38,6 +39,47 @@ export default async function handler(req, res) {
     }
 
     const errors = getGameValidationErrors(game)
+    const maxTeamPlayers =
+      game?.maxTeamPlayers === null || game?.maxTeamPlayers === undefined
+        ? null
+        : Number(game.maxTeamPlayers)
+
+    if (Number.isFinite(maxTeamPlayers) && maxTeamPlayers > 0) {
+      const gameTeamsDocs = await db
+        .model('GamesTeams')
+        .find({ gameId: String(id) })
+        .select({ teamId: 1 })
+        .lean()
+
+      const teamIds = Array.from(
+        new Set(
+          (Array.isArray(gameTeamsDocs) ? gameTeamsDocs : [])
+            .map((entry) =>
+              entry?.teamId === null || entry?.teamId === undefined
+                ? ''
+                : String(entry.teamId).trim(),
+            )
+            .filter(Boolean),
+        ),
+      )
+
+      if (teamIds.length > 0) {
+        const teams = await fetchTeamsForCabinet({
+          db,
+          teamIds,
+          location: String(location).trim().toLowerCase(),
+        })
+
+        teams.forEach((team) => {
+          const membersCount = Number(team?.membersCount) || 0
+          if (membersCount > maxTeamPlayers) {
+            errors.push(
+              `Команда «${team?.name || team?.id || 'Без названия'}»: ${membersCount} игроков, лимит — ${maxTeamPlayers}.`,
+            )
+          }
+        })
+      }
+    }
 
     return res?.status(200).json({
       success: true,

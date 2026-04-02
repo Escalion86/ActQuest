@@ -323,6 +323,7 @@ const normalizeGameForCabinet = (game) => {
     showTasks: ensureBoolean(game.showTasks, false),
     hideResult: ensureBoolean(game.hideResult, false),
     registrationOpen: ensureBoolean(game.registrationOpen, true),
+    maxTeamPlayers: ensureNullableNumber(game.maxTeamPlayers),
     prices: normalizePrices(game.prices),
     finances: normalizeFinances(game.finances),
     tasks: normalizeTasks(game.tasks),

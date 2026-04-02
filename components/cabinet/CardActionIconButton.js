@@ -199,6 +199,35 @@ export const TargetCardIcon = () => (
   </svg>
 )
 
+export const MegaphoneCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M4.5 9.1V10.9C4.5 11.45 4.95 11.9 5.5 11.9H7.3L9.9 14V6L7.3 8.1H5.5C4.95 8.1 4.5 8.55 4.5 9.1Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M12.6 8.2C13.3 8.75 13.75 9.56 13.75 10.5C13.75 11.44 13.3 12.25 12.6 12.8"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M14.7 6.9C15.8 7.88 16.5 9.29 16.5 10.86C16.5 12.43 15.8 13.84 14.7 14.82"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
 const CardActionIconButton = ({
   as: Component,
   onClick,
