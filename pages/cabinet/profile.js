@@ -518,11 +518,16 @@ const ProfilePage = ({ initialProfile }) => {
                 checked={isPushSubscribed}
                 onChange={handlePushNotificationsToggle}
                 disabled={
-                  isPushProcessing || !canControlPush || !isPushConfigured
+                  isPushProcessing ||
+                  pushConfigStatus === 'loading' ||
+                  !canControlPush ||
+                  !isPushConfigured
                 }
                 label="Push-уведомления (включая уведомления, вы автоматически соглашаетесь на получение рассылки)"
                 description={
-                  isPushProcessing
+                  pushConfigStatus === 'loading'
+                    ? 'Проверяем настройки уведомлений...'
+                    : isPushProcessing
                     ? 'Обновляем настройки уведомлений...'
                     : ''
                 }

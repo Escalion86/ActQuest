@@ -334,6 +334,12 @@ const usePwaNotifications = ({ location, session }) => {
   }, [configStatus, isClient])
 
   useEffect(() => {
+    if (configStatus === 'success') {
+      setState((prev) => ({ ...prev, error: null }))
+    }
+  }, [configStatus])
+
+  useEffect(() => {
     syncSubscriptionState()
     return () => {
       if (abortControllerRef.current) {
