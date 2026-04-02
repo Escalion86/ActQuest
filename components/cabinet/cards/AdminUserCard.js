@@ -121,13 +121,12 @@ const AdminUserCard = ({
       <span>Игры: {user.gamesCount}</span>
     </div>
     <div className="mt-2 text-xs text-slate-500">
-      {Array.isArray(user.teams) && user.teams.length > 0 ? (
-        <p className="truncate">
-          Команды: {user.teams.map((team) => team?.name).filter(Boolean).join(', ')}
-        </p>
-      ) : (
-        <p>Команды: —</p>
-      )}
+      <p>Команды: {Array.isArray(user.teams) ? user.teams.length : 0}</p>
+      <p className="mt-1 truncate">
+        {Array.isArray(user.teams) && user.teams.length > 0
+          ? user.teams.map((team) => team?.name).filter(Boolean).join(', ')
+          : '—'}
+      </p>
     </div>
   </SelectableCard>
 )
