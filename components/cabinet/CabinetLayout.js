@@ -390,29 +390,6 @@ const CabinetLayout = ({
     setLocationPromptValue(fallbackLocation)
   }, [availableLocations, locationPromptValue, shouldForceLocationSelection])
 
-  useEffect(() => {
-    if (status !== 'unauthenticated') {
-      return
-    }
-
-    void redirectToLogin()
-  }, [redirectToLogin, status])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined
-    }
-
-    const handleAuthRequired = () => {
-      void redirectToLogin()
-    }
-
-    window.addEventListener('aq:auth-required', handleAuthRequired)
-    return () => {
-      window.removeEventListener('aq:auth-required', handleAuthRequired)
-    }
-  }, [redirectToLogin])
-
   const applyTheme = useCallback((nextTheme) => {
     const isDark = nextTheme === 'dark'
     if (typeof window !== 'undefined') {
@@ -463,6 +440,29 @@ const CabinetLayout = ({
       router.replace(`/cabinet/login${callbackQuery}`).catch(() => {})
     }
   }, [router])
+
+  useEffect(() => {
+    if (status !== 'unauthenticated') {
+      return
+    }
+
+    void redirectToLogin()
+  }, [redirectToLogin, status])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined
+    }
+
+    const handleAuthRequired = () => {
+      void redirectToLogin()
+    }
+
+    window.addEventListener('aq:auth-required', handleAuthRequired)
+    return () => {
+      window.removeEventListener('aq:auth-required', handleAuthRequired)
+    }
+  }, [redirectToLogin])
 
   const handleToggleGamesMenu = useCallback(() => {
     setIsGamesMenuOpen((prev) => {
