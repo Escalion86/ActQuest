@@ -16,6 +16,8 @@ const INITIAL_STATE = {
 }
 
 const SERVICE_WORKER_READY_TIMEOUT = 7000
+const CONFIG_LOADING_TRANSIENT_MESSAGE =
+  'Проверяем настройки уведомлений. Попробуйте ещё раз чуть позже.'
 
 const resolveRuntimeMode = () => {
   if (typeof process === 'undefined') {
@@ -340,6 +342,18 @@ const usePwaNotifications = ({ location, session }) => {
   }, [configStatus])
 
   useEffect(() => {
+    if (configStatus !== 'loading') {
+      setState((prev) => {
+        if (prev.error !== CONFIG_LOADING_TRANSIENT_MESSAGE) {
+          return prev
+        }
+
+        return { ...prev, error: null }
+      })
+    }
+  }, [configStatus])
+
+  useEffect(() => {
     syncSubscriptionState()
     return () => {
       if (abortControllerRef.current) {
@@ -365,8 +379,11 @@ const usePwaNotifications = ({ location, session }) => {
     }
 
     if (configStatus === 'loading') {
-      updateState({ error: 'Проверяем настройки уведомлений. Попробуйте ещё раз чуть позже.' })
-      return { success: false }
+      return {
+        success: false,
+        message: CONFIG_LOADING_TRANSIENT_MESSAGE,
+        transient: true,
+      }
     }
 
     if (!applicationServerKey) {

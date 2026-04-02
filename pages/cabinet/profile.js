@@ -10,11 +10,15 @@ import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NeonCheckbox from '@components/NeonCheckbox'
+import FeedbackToast from '@components/FeedbackToast'
 import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import getSessionSafe from '@helpers/getSessionSafe'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
-import { formatPhoneInput, normalizePhoneForSubmit } from '@helpers/phoneInputMask'
+import {
+  formatPhoneInput,
+  normalizePhoneForSubmit,
+} from '@helpers/phoneInputMask'
 import requestApiJson from '@helpers/requestApiJson'
 import usePwaNotifications from '@helpers/usePwaNotifications'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -43,6 +47,7 @@ const ProfilePage = ({ initialProfile }) => {
   const [phoneModalError, setPhoneModalError] = useState(null)
   const [isPhoneModalSubmitting, setIsPhoneModalSubmitting] = useState(false)
   const [pushFeedback, setPushFeedback] = useState(null)
+  const [toastEvent, setToastEvent] = useState(null)
   const phoneCheckInFlightRef = useRef(false)
   const pushLocation =
     typeof session?.user?.location === 'string' ? session.user.location : null
@@ -60,6 +65,13 @@ const ProfilePage = ({ initialProfile }) => {
     location: pushLocation,
     session,
   })
+  const resolvedPushError =
+    pushConfigStatus !== 'loading' &&
+    typeof pushError === 'string' &&
+    pushError.trim() ===
+      'Проверяем настройки уведомлений. Попробуйте ещё раз чуть позже.'
+      ? null
+      : pushError
 
   useEffect(() => {
     setFormState(normalizedInitialProfile)
@@ -125,21 +137,28 @@ const ProfilePage = ({ initialProfile }) => {
   }, [resetPhoneVerification])
 
   const precheckPhoneForChange = useCallback(async (digitsOnly) => {
-    const { response, json } = await requestApiJson('/api/phone/verify/precheck', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
+    const { response, json } = await requestApiJson(
+      '/api/phone/verify/precheck',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: digitsOnly,
+          flow: 'change_phone',
+        }),
+        fallbackMessage: 'Не удалось проверить номер телефона',
       },
-      body: JSON.stringify({
-        phone: digitsOnly,
-        flow: 'change_phone',
-      }),
-      fallbackMessage: 'Не удалось проверить номер телефона',
-    })
+    )
 
     if (!response.ok || json?.success === false) {
-      throw new Error(json?.error?.message || json?.error || 'Не удалось проверить номер телефона.')
+      throw new Error(
+        json?.error?.message ||
+          json?.error ||
+          'Не удалось проверить номер телефона.',
+      )
     }
 
     return json?.data || { allowed: true, reason: null, message: null }
@@ -160,7 +179,11 @@ const ProfilePage = ({ initialProfile }) => {
     })
 
     if (!response.ok || json?.success === false) {
-      throw new Error(json?.error?.message || json?.error || 'Не удалось запустить подтверждение номера.')
+      throw new Error(
+        json?.error?.message ||
+          json?.error ||
+          'Не удалось запустить подтверждение номера.',
+      )
     }
 
     setPhoneVerifyCallId(Number(json?.data?.id))
@@ -180,19 +203,22 @@ const ProfilePage = ({ initialProfile }) => {
 
     phoneCheckInFlightRef.current = true
     try {
-      const { response, json } = await requestApiJson('/api/phone/verify/check', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
+      const { response, json } = await requestApiJson(
+        '/api/phone/verify/check',
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: digitsOnly,
+            flow: 'change_phone',
+            callId,
+          }),
+          fallbackMessage: 'Не удалось проверить подтверждение номера',
         },
-        body: JSON.stringify({
-          phone: digitsOnly,
-          flow: 'change_phone',
-          callId,
-        }),
-        fallbackMessage: 'Не удалось проверить подтверждение номера',
-      })
+      )
 
       if (!response.ok || json?.success === false) {
         throw new Error(
@@ -208,7 +234,9 @@ const ProfilePage = ({ initialProfile }) => {
         setPhoneVerifyCallId(null)
         setPhoneVerifyAuthPhone(null)
         setPhoneVerifyImageUrl(null)
-        setPhoneModalError('Время подтверждения истекло. Запросите звонок повторно.')
+        setPhoneModalError(
+          'Время подтверждения истекло. Запросите звонок повторно.',
+        )
       }
 
       return nextStatus
@@ -219,21 +247,28 @@ const ProfilePage = ({ initialProfile }) => {
 
   const finalizePhoneChange = useCallback(
     async (digitsOnly, callId) => {
-      const { response, json } = await requestApiJson('/api/cabinet/users/change-phone', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
+      const { response, json } = await requestApiJson(
+        '/api/cabinet/users/change-phone',
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: digitsOnly,
+            callId,
+          }),
+          fallbackMessage: 'Не удалось обновить номер телефона',
         },
-        body: JSON.stringify({
-          phone: digitsOnly,
-          callId,
-        }),
-        fallbackMessage: 'Не удалось обновить номер телефона',
-      })
+      )
 
       if (!response.ok || json?.success === false) {
-        throw new Error(json?.error?.message || json?.error || 'Не удалось обновить номер телефона.')
+        throw new Error(
+          json?.error?.message ||
+            json?.error ||
+            'Не удалось обновить номер телефона.',
+        )
       }
 
       const normalized = normalizeUserProfile(json?.data)
@@ -261,7 +296,9 @@ const ProfilePage = ({ initialProfile }) => {
         return
       }
 
-      const currentPhoneDigits = normalizePhoneForSubmit(safeFormState.phone || '')
+      const currentPhoneDigits = normalizePhoneForSubmit(
+        safeFormState.phone || '',
+      )
       if (currentPhoneDigits && currentPhoneDigits === digitsOnly) {
         setPhoneModalError('Этот номер уже подтвержден в вашем профиле.')
         return
@@ -274,7 +311,9 @@ const ProfilePage = ({ initialProfile }) => {
         if (!phoneVerifyCallId) {
           const precheck = await precheckPhoneForChange(digitsOnly)
           if (precheck?.allowed === false) {
-            setPhoneModalError(precheck.message || 'Проверка номера не пройдена.')
+            setPhoneModalError(
+              precheck.message || 'Проверка номера не пройдена.',
+            )
             return
           }
 
@@ -288,7 +327,9 @@ const ProfilePage = ({ initialProfile }) => {
             : await checkPhoneVerification(digitsOnly, phoneVerifyCallId)
 
         if (verifyStatus !== 'ok') {
-          setPhoneModalError('Номер еще не подтвержден. Выполните звонок и попробуйте снова.')
+          setPhoneModalError(
+            'Номер еще не подтвержден. Выполните звонок и попробуйте снова.',
+          )
           return
         }
 
@@ -438,9 +479,19 @@ const ProfilePage = ({ initialProfile }) => {
           permission,
         })
         if (result?.success) {
-          setPushFeedback({
+          setPushFeedback(null)
+          setToastEvent({
+            id: `${Date.now()}-push-enabled`,
             type: 'success',
             message: 'Push-уведомления включены.',
+          })
+          return
+        }
+
+        if (typeof result?.message === 'string' && result.message.trim()) {
+          setPushFeedback({
+            type: 'error',
+            message: result.message.trim(),
           })
         }
         return
@@ -448,7 +499,9 @@ const ProfilePage = ({ initialProfile }) => {
 
       const result = await unsubscribePush()
       if (result?.success) {
-        setPushFeedback({
+        setPushFeedback(null)
+        setToastEvent({
+          id: `${Date.now()}-push-disabled`,
           type: 'success',
           message: 'Push-уведомления отключены.',
         })
@@ -518,7 +571,7 @@ const ProfilePage = ({ initialProfile }) => {
                   value={formatPhoneInput(safeFormState.phone)}
                   disabled
                   placeholder="+7 900 000-00-00"
-                  className="w-full max-w-[16.5rem] cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 opacity-90 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-100 dark:placeholder:text-slate-400"
+                  className="w-full max-w-[10rem] cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 opacity-90 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-100 dark:placeholder:text-slate-400"
                 />
                 <CabinetButton
                   type="button"
@@ -550,8 +603,8 @@ const ProfilePage = ({ initialProfile }) => {
                   pushConfigStatus === 'loading'
                     ? 'Проверяем настройки уведомлений...'
                     : isPushProcessing
-                    ? 'Обновляем настройки уведомлений...'
-                    : ''
+                      ? 'Обновляем настройки уведомлений...'
+                      : ''
                 }
                 className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 dark:border-[#00D1FF]/25 dark:bg-[#050012]/55"
               />
@@ -564,20 +617,21 @@ const ProfilePage = ({ initialProfile }) => {
               pushConfigStatus !== 'loading' &&
               !isPushConfigured ? (
                 <NoticeBanner tone="warning" variant="neon">
-                  Push-уведомления временно недоступны: не настроен публичный ключ.
+                  Push-уведомления временно недоступны: не настроен публичный
+                  ключ.
                 </NoticeBanner>
               ) : null}
-              {pushFeedback ? (
+              {pushFeedback?.type === 'error' ? (
                 <NoticeBanner
-                  tone={pushFeedback.type === 'error' ? 'error' : 'success'}
+                  tone="error"
                   variant="neon"
                 >
                   {pushFeedback.message}
                 </NoticeBanner>
               ) : null}
-              {pushError ? (
+              {resolvedPushError ? (
                 <NoticeBanner tone="error" variant="neon">
-                  {pushError}
+                  {resolvedPushError}
                 </NoticeBanner>
               ) : null}
             </div>
@@ -620,12 +674,13 @@ const ProfilePage = ({ initialProfile }) => {
           </form>
         </FormSectionCard>
       </CabinetLayout>
+      <FeedbackToast event={toastEvent} />
       <Modal
         isOpen={isPhoneModalOpen}
         onClose={closePhoneModal}
         title="Изменение номера телефона"
         compactMobile
-        footer={(
+        footer={
           <>
             <CabinetButton
               type="button"
@@ -652,7 +707,7 @@ const ProfilePage = ({ initialProfile }) => {
                   : 'Подтвердить номер'}
             </CabinetButton>
           </>
-        )}
+        }
       >
         <form
           id="profile-change-phone-form"
@@ -664,18 +719,25 @@ const ProfilePage = ({ initialProfile }) => {
             label="Новый номер телефона"
             type="tel"
             value={phoneDraft}
-            onChange={(event) => setPhoneDraft(formatPhoneInput(event.target.value))}
+            onChange={(event) =>
+              setPhoneDraft(formatPhoneInput(event.target.value))
+            }
             placeholder="+7"
             disabled={isPhoneModalSubmitting || Boolean(phoneVerifyCallId)}
           />
 
           {phoneVerifyCallId ? (
             <div className="rounded-xl border border-[#00D1FF]/25 bg-[#050012]/70 p-3 text-xs text-[#bfeeff] dark:text-[#bfeeff]">
-              <div>Позвоните по номеру ниже для подтверждения нового телефона:</div>
+              <div>
+                Позвоните по номеру ниже для подтверждения нового телефона:
+              </div>
               {phoneVerifyAuthPhone ? (
-                <div className="mt-2 flex flex-col items-start gap-1">
+                <div className="flex flex-col items-start gap-1 mt-2">
                   {(() => {
-                    const rawPhone = String(phoneVerifyAuthPhone || '').replace(/[^\d+]/g, '')
+                    const rawPhone = String(phoneVerifyAuthPhone || '').replace(
+                      /[^\d+]/g,
+                      '',
+                    )
                     const normalizedDisplayPhone = rawPhone.startsWith('+')
                       ? rawPhone
                       : `+${rawPhone.replace(/^\++/, '')}`
@@ -696,7 +758,7 @@ const ProfilePage = ({ initialProfile }) => {
                 </div>
               ) : null}
               {phoneVerifyImageUrl ? (
-                <div className="mt-3 hidden flex-col items-center justify-center gap-2 md:flex">
+                <div className="flex-col items-center justify-center hidden gap-2 mt-3 md:flex">
                   <img
                     src={phoneVerifyImageUrl}
                     alt="QR для подтверждения звонка"
