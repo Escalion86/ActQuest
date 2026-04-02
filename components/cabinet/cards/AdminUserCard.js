@@ -57,7 +57,16 @@ const AdminUserCard = ({
           loading="lazy"
         />
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+          <p
+            className="text-sm font-semibold text-slate-800 dark:text-slate-100"
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              wordBreak: 'break-word',
+            }}
+          >
             {user.name || 'Без имени'}
           </p>
         </div>
