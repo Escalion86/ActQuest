@@ -104,11 +104,16 @@ const ManageUsersPage = ({
   const [isUserViewModalOpen, setIsUserViewModalOpen] = useState(false)
   const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false)
   const [isUserGamesModalOpen, setIsUserGamesModalOpen] = useState(false)
+  const [isUserPushModalOpen, setIsUserPushModalOpen] = useState(false)
   const [isUserTeamModalOpen, setIsUserTeamModalOpen] = useState(false)
   const [isParticipationGameModalOpen, setIsParticipationGameModalOpen] = useState(false)
   const [isParticipationGameLoading, setIsParticipationGameLoading] = useState(false)
   const [selectedParticipationGame, setSelectedParticipationGame] = useState(null)
   const [selectedUserTeam, setSelectedUserTeam] = useState(null)
+  const [selectedUserForPush, setSelectedUserForPush] = useState(null)
+  const [userPushMessage, setUserPushMessage] = useState('')
+  const [isUserPushSubmitting, setIsUserPushSubmitting] = useState(false)
+  const [userPushFeedback, setUserPushFeedback] = useState(null)
   const [userGamesState, setUserGamesState] = useState({
     isLoading: false,
     error: null,
@@ -198,6 +203,17 @@ const ManageUsersPage = ({
       games: [],
     }))
   }, [])
+
+  const closeUserPushModal = useCallback(() => {
+    if (isUserPushSubmitting) {
+      return
+    }
+
+    setIsUserPushModalOpen(false)
+    setSelectedUserForPush(null)
+    setUserPushMessage('')
+    setUserPushFeedback(null)
+  }, [isUserPushSubmitting])
 
   const closeParticipationGameModal = useCallback(() => {
     setIsParticipationGameModalOpen(false)
@@ -341,6 +357,82 @@ const ManageUsersPage = ({
     setIsUserViewModalOpen(false)
     setIsUserEditModalOpen(true)
   }, [])
+
+  const handleOpenUserPushModal = useCallback((user) => {
+    if (!user?.id) {
+      return
+    }
+
+    setSelectedUserForPush(user)
+    setUserPushMessage('')
+    setUserPushFeedback(null)
+    setIsUserPushModalOpen(true)
+  }, [])
+
+  const handleSubmitUserPushMessage = useCallback(async () => {
+    if (!selectedUserForPush?.id) {
+      setUserPushFeedback({
+        type: 'error',
+        message: 'Пользователь не выбран',
+      })
+      return
+    }
+
+    const message = typeof userPushMessage === 'string' ? userPushMessage.trim() : ''
+    if (!message) {
+      setUserPushFeedback({
+        type: 'error',
+        message: 'Введите сообщение для отправки',
+      })
+      return
+    }
+
+    setIsUserPushSubmitting(true)
+    setUserPushFeedback(null)
+
+    try {
+      const { json } = await requestApiJson('/api/cabinet/admin/user-push', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: selectedUserForPush.id,
+          message,
+        }),
+        fallbackMessage: 'Не удалось отправить push-уведомление',
+      })
+
+      const created = Number(json?.data?.created || 0)
+      const delivered = Number(json?.data?.delivered || 0)
+
+      const successMessage =
+        created > 0
+          ? `Уведомление отправлено. Создано: ${created}, доставлено push: ${delivered}.`
+          : 'Сообщение сохранено, но push не доставлен (возможно, у пользователя нет активной подписки).'
+
+      setFeedback({
+        type: 'success',
+        message: successMessage,
+      })
+      setUserPushMessage('')
+      setIsUserPushModalOpen(false)
+      setSelectedUserForPush(null)
+    } catch (error) {
+      const messageText = error?.message || 'Не удалось отправить push-уведомление'
+      setUserPushFeedback({
+        type: 'error',
+        message: messageText,
+      })
+      setFeedback({
+        type: 'error',
+        message: messageText,
+      })
+    } finally {
+      setIsUserPushSubmitting(false)
+    }
+  }, [selectedUserForPush, setFeedback, userPushMessage])
 
   const fetchUserGames = useCallback(async (user) => {
     const params = new URLSearchParams()
@@ -1012,6 +1104,7 @@ const ManageUsersPage = ({
                           onOpenView={handleOpenUserViewModal}
                           onOpenGames={handleOpenUserGamesModal}
                           onOpenEdit={handleOpenUserEditModal}
+                          onOpenPush={handleOpenUserPushModal}
                         />
                       </li>
                     )
@@ -1343,6 +1436,49 @@ const ManageUsersPage = ({
               </FormSectionCard>
             </div>
           ) : null}
+        </Modal>
+        <Modal
+          isOpen={isUserPushModalOpen && Boolean(selectedUserForPush)}
+          onClose={closeUserPushModal}
+          title={`Push пользователю — ${selectedUserForPush?.name || 'Без имени'}`}
+          footer={(
+            <>
+              <CabinetButton
+                type="button"
+                variant="secondary"
+                tone="brand"
+                onClick={closeUserPushModal}
+                disabled={isUserPushSubmitting}
+              >
+                Отмена
+              </CabinetButton>
+              <CabinetButton
+                type="button"
+                variant="primary"
+                onClick={handleSubmitUserPushMessage}
+                disabled={isUserPushSubmitting}
+                className={isUserPushSubmitting ? 'cursor-wait' : ''}
+              >
+                {isUserPushSubmitting ? 'Отправка…' : 'Отправить'}
+              </CabinetButton>
+            </>
+          )}
+        >
+          <div className="space-y-4">
+            <CabinetTextareaField
+              id="admin-user-push-message"
+              label="Сообщение"
+              value={userPushMessage}
+              onChange={(event) => setUserPushMessage(event.target.value)}
+              rows={5}
+              placeholder="Введите сообщение для push-уведомления пользователю"
+            />
+            {userPushFeedback ? (
+              <NoticeBanner tone="error" variant="neon">
+                {userPushFeedback.message}
+              </NoticeBanner>
+            ) : null}
+          </div>
         </Modal>
         <Modal
           isOpen={isUserGamesModalOpen}

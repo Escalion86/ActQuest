@@ -1,7 +1,10 @@
 import PropTypes from 'prop-types'
 
 import SelectableCard from '@components/cabinet/SelectableCard'
-import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
+import CardActionIconButton, {
+  EditCardIcon,
+  MegaphoneCardIcon,
+} from '@components/cabinet/CardActionIconButton'
 import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 import CABINET_ROLE_LABELS from '@helpers/cabinetRoleLabels'
 
@@ -32,7 +35,13 @@ const GamesCardIcon = () => (
   </svg>
 )
 
-const AdminUserCard = ({ user, onOpenView, onOpenGames, onOpenEdit }) => (
+const AdminUserCard = ({
+  user,
+  onOpenView,
+  onOpenGames,
+  onOpenEdit,
+  onOpenPush,
+}) => (
   <SelectableCard
     as="button"
     onClick={() => onOpenView(user)}
@@ -80,6 +89,17 @@ const AdminUserCard = ({ user, onOpenView, onOpenGames, onOpenEdit }) => (
           >
             <EditCardIcon />
           </CardActionIconButton>
+          <CardActionIconButton
+            as="span"
+            onClick={(event) => {
+              event.stopPropagation()
+              onOpenPush(user)
+            }}
+            label="Отправить push-уведомление пользователю"
+            title="Отправить push-уведомление"
+          >
+            <MegaphoneCardIcon />
+          </CardActionIconButton>
         </div>
         {isPrivilegedRole(user.role) ? (
           <span className="px-2 py-1 text-xs font-semibold text-white bg-primary rounded-full">
@@ -123,6 +143,7 @@ AdminUserCard.propTypes = {
   onOpenView: PropTypes.func.isRequired,
   onOpenGames: PropTypes.func.isRequired,
   onOpenEdit: PropTypes.func.isRequired,
+  onOpenPush: PropTypes.func.isRequired,
 }
 
 export default AdminUserCard
