@@ -5,6 +5,20 @@ import isUserAdmin from '@helpers/isUserAdmin'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import sendMessage from 'telegram/sendMessage'
 
+const CITY_BOT_LOCATIONS = ['krsk', 'nrsk', 'ekb']
+const TELEGRAM_TOKEN_ENV_BY_LOCATION = {
+  krsk: 'TELEGRAM_KRSK_TOKEN',
+  nrsk: 'TELEGRAM_NRSK_TOKEN',
+  ekb: 'TELEGRAM_EKB_TOKEN',
+}
+
+const getConfiguredLocations = () =>
+  CITY_BOT_LOCATIONS.filter((locationKey) => {
+    const envKey = TELEGRAM_TOKEN_ENV_BY_LOCATION[locationKey]
+    const token = typeof envKey === 'string' ? process.env[envKey] : null
+    return typeof token === 'string' && token.trim().length > 0
+  })
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
@@ -18,14 +32,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ success: false, error: 'Недостаточно прав' })
   }
 
-  const location = session?.user?.location ?? null
   const requestedUserId = req.body?.userId ? String(req.body.userId) : null
-
-  if (!location) {
-    return res
-      .status(400)
-      .json({ success: false, error: 'Не удалось определить площадку' })
-  }
 
   if (!requestedUserId) {
     return res
@@ -61,7 +68,15 @@ export default async function handler(req, res) {
       })
     }
 
-    await sendMessage({
+    const configuredLocations = getConfiguredLocations()
+    if (configuredLocations.length === 0) {
+      return res.status(500).json({
+        success: false,
+        error: 'Не настроены Telegram токены городских ботов',
+      })
+    }
+
+    const messagePayload = {
       chat_id: Number(user.telegramId),
       text:
         'Администратор запросил подтверждение номера телефона для вашего аккаунта ActQuest.\n\n' +
@@ -77,8 +92,36 @@ export default async function handler(req, res) {
         ],
         one_time_keyboard: true,
       },
-      location,
+    }
+
+    const sendResults = await Promise.allSettled(
+      configuredLocations.map((locationKey) =>
+        sendMessage({
+          ...messagePayload,
+          location: locationKey,
+        })
+      )
+    )
+
+    const sentLocations = []
+    const failedLocations = []
+
+    sendResults.forEach((result, index) => {
+      const locationKey = configuredLocations[index]
+      if (result.status === 'fulfilled') {
+        sentLocations.push(locationKey)
+        return
+      }
+
+      failedLocations.push(locationKey)
     })
+
+    if (sentLocations.length === 0) {
+      return res.status(500).json({
+        success: false,
+        error: 'Не удалось отправить запрос номера ни в один городской бот',
+      })
+    }
 
     return res.status(200).json({
       success: true,
@@ -87,6 +130,8 @@ export default async function handler(req, res) {
         globalUserId: String(user._id),
         telegramId: Number(user.telegramId),
         phoneAlreadySet: Number.isFinite(Number(user.phone)),
+        sentLocations,
+        failedLocations,
       },
     })
   } catch (error) {

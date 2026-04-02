@@ -204,7 +204,7 @@ const CabinetLayout = ({
   showPageTitle,
 }) => {
   const router = useRouter()
-  const { data: session, update } = useSession()
+  const { data: session, status, update } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(
     () => isGamesRoutePath(router.pathname),
@@ -218,6 +218,7 @@ const CabinetLayout = ({
   const [locationPromptError, setLocationPromptError] = useState('')
   const [isRouteLoading, setIsRouteLoading] = useState(false)
   const routeLoadingTimeoutRef = useRef(null)
+  const authRedirectInProgressRef = useRef(false)
 
   const sessionRole = session?.user?.role ?? 'client'
   const { isDeveloper, effectiveRole, setRolePreview } =
@@ -389,6 +390,29 @@ const CabinetLayout = ({
     setLocationPromptValue(fallbackLocation)
   }, [availableLocations, locationPromptValue, shouldForceLocationSelection])
 
+  useEffect(() => {
+    if (status !== 'unauthenticated') {
+      return
+    }
+
+    void redirectToLogin()
+  }, [redirectToLogin, status])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined
+    }
+
+    const handleAuthRequired = () => {
+      void redirectToLogin()
+    }
+
+    window.addEventListener('aq:auth-required', handleAuthRequired)
+    return () => {
+      window.removeEventListener('aq:auth-required', handleAuthRequired)
+    }
+  }, [redirectToLogin])
+
   const applyTheme = useCallback((nextTheme) => {
     const isDark = nextTheme === 'dark'
     if (typeof window !== 'undefined') {
@@ -412,6 +436,33 @@ const CabinetLayout = ({
   const handleSignOut = async () => {
     await signOut({ redirect: true, callbackUrl: '/' })
   }
+
+  const redirectToLogin = useCallback(async () => {
+    if (authRedirectInProgressRef.current) {
+      return
+    }
+
+    authRedirectInProgressRef.current = true
+
+    const rawPath =
+      typeof router?.asPath === 'string' && router.asPath.startsWith('/')
+        ? router.asPath
+        : '/cabinet'
+    const callbackTarget =
+      rawPath && rawPath !== '/cabinet/login' ? rawPath : '/cabinet'
+    const callbackQuery = callbackTarget
+      ? `?callbackUrl=${encodeURIComponent(callbackTarget)}`
+      : ''
+
+    try {
+      await signOut({
+        redirect: true,
+        callbackUrl: `/cabinet/login${callbackQuery}`,
+      })
+    } catch {
+      router.replace(`/cabinet/login${callbackQuery}`).catch(() => {})
+    }
+  }, [router])
 
   const handleToggleGamesMenu = useCallback(() => {
     setIsGamesMenuOpen((prev) => {
