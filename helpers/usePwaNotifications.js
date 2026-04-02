@@ -349,7 +349,11 @@ const usePwaNotifications = ({ location, session }) => {
     }
   }, [location, session, syncSubscriptionState])
 
-  const subscribe = useCallback(async () => {
+  const subscribe = useCallback(async (options = {}) => {
+    const skipPermissionRequest = Boolean(options?.skipPermissionRequest)
+    const forcedPermission =
+      typeof options?.permission === 'string' ? options.permission : null
+
     if (!isSupported) {
       updateState({ error: 'Ваш браузер не поддерживает push-уведомления.' })
       return { success: false }
@@ -378,7 +382,13 @@ const usePwaNotifications = ({ location, session }) => {
     updateState({ isProcessing: true, error: null })
 
     try {
-      const permission = await Notification.requestPermission()
+      let permission = forcedPermission
+
+      if (!permission) {
+        permission = skipPermissionRequest
+          ? Notification.permission
+          : await Notification.requestPermission()
+      }
 
       if (permission !== 'granted') {
         debugLogRef.current('subscribe:permission-denied', {
@@ -391,7 +401,7 @@ const usePwaNotifications = ({ location, session }) => {
           error:
             permission === 'denied'
               ? 'Уведомления запрещены в настройках браузера.'
-              : 'Разрешите показ уведомлений, чтобы получать оповещения.',
+              : 'Браузер не дал разрешение на уведомления.',
         })
         return { success: false }
       }

@@ -414,7 +414,29 @@ const ProfilePage = ({ initialProfile }) => {
       setPushFeedback(null)
 
       if (shouldEnable) {
-        const result = await subscribePush()
+        let permission = null
+        if (
+          typeof window !== 'undefined' &&
+          window.Notification &&
+          window.Notification.permission === 'default'
+        ) {
+          permission = await window.Notification.requestPermission()
+          if (permission !== 'granted') {
+            setPushFeedback({
+              type: 'error',
+              message:
+                permission === 'denied'
+                  ? 'Уведомления запрещены в браузере для этого сайта.'
+                  : 'Браузер не показал или не подтвердил запрос разрешения на уведомления.',
+            })
+            return
+          }
+        }
+
+        const result = await subscribePush({
+          skipPermissionRequest: true,
+          permission,
+        })
         if (result?.success) {
           setPushFeedback({
             type: 'success',
