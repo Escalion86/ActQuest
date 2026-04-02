@@ -95,7 +95,7 @@ const ManageUsersPage = ({
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [sortBy, setSortBy] = useState('registration_desc')
-  const isFirstFiltersRenderRef = useRef(true)
+  const didSkipInitialFetchRef = useRef(false)
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [hasMoreUsers, setHasMoreUsers] = useState(Boolean(initialHasMore))
@@ -259,12 +259,22 @@ const ManageUsersPage = ({
   }, [setUserIdQuery, users])
 
   useEffect(() => {
-    if (isFirstFiltersRenderRef.current) {
-      isFirstFiltersRenderRef.current = false
-      if (safeInitialUsers.length > 0) {
-        return
-      }
+    if (!isAdmin) {
+      return undefined
     }
+
+    if (
+      !didSkipInitialFetchRef.current &&
+      safeInitialUsers.length > 0 &&
+      !searchQuery &&
+      roleFilter === 'all' &&
+      sortBy === 'registration_desc'
+    ) {
+      didSkipInitialFetchRef.current = true
+      return undefined
+    }
+
+    didSkipInitialFetchRef.current = true
 
     let cancelled = false
 
@@ -318,7 +328,7 @@ const ManageUsersPage = ({
     return () => {
       cancelled = true
     }
-  }, [roleFilter, safeInitialUsers.length, searchQuery, sortBy])
+  }, [isAdmin, roleFilter, safeInitialUsers.length, searchQuery, sortBy])
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,

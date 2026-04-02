@@ -88,7 +88,7 @@ const AdminTeamsPage = ({
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] = useState(false)
   const copyTimeoutRef = useRef(null)
-  const isFirstSearchRenderRef = useRef(true)
+  const didSkipInitialFetchRef = useRef(false)
 
   useEffect(() => {
     setTeams(safeInitialTeams)
@@ -544,10 +544,22 @@ const AdminTeamsPage = ({
   }, [hasMoreTeams, isLoadingMoreTeams, searchQuery, sortBy, teams.length, visibilityFilter])
 
   useEffect(() => {
-    if (isFirstSearchRenderRef.current) {
-      isFirstSearchRenderRef.current = false
-      return
+    if (!isAdmin) {
+      return undefined
     }
+
+    if (
+      !didSkipInitialFetchRef.current &&
+      safeInitialTeams.length > 0 &&
+      !searchQuery &&
+      visibilityFilter === 'all' &&
+      sortBy === 'registration_desc'
+    ) {
+      didSkipInitialFetchRef.current = true
+      return undefined
+    }
+
+    didSkipInitialFetchRef.current = true
 
     let isCancelled = false
 
@@ -603,7 +615,13 @@ const AdminTeamsPage = ({
     return () => {
       isCancelled = true
     }
-  }, [searchQuery, sortBy, visibilityFilter])
+  }, [
+    isAdmin,
+    safeInitialTeams.length,
+    searchQuery,
+    sortBy,
+    visibilityFilter,
+  ])
 
   if (!isAdmin) {
     return (
