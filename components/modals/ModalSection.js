@@ -1,11 +1,12 @@
 import PropTypes from 'prop-types'
 import cn from 'classnames'
 
-const ModalSection = ({ children, className }) => {
+const ModalSection = ({ children, className, noPadding }) => {
   return (
     <section
       className={cn(
-        'p-6 space-y-5 bg-white border shadow-sm dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl',
+        'space-y-5 bg-white border shadow-sm dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl',
+        noPadding ? 'p-0' : 'p-6',
         className,
       )}
     >
@@ -25,4 +26,3 @@ ModalSection.defaultProps = {
 }
 
 export default ModalSection
-

@@ -29,6 +29,7 @@ import { LOCATIONS } from '@server/serverConstants'
 import isUserAdmin from '@helpers/isUserAdmin'
 import canManageTransactions from '@helpers/canManageTransactions'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
+import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 
 const normalizeLocationName = (locationKey) => {
   const location = locationKey ? LOCATIONS[locationKey] : null
@@ -174,6 +175,21 @@ const resolveInitialTheme = () => {
 
 const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect
+const isClientSessionDebugEnabled =
+  process.env.NEXT_PUBLIC_SESSION_DEBUG === '1'
+const clientSessionDebugLog = (stage, payload = null) => {
+  if (!isClientSessionDebugEnabled || typeof window === 'undefined') {
+    return
+  }
+
+  const time = new Date().toISOString()
+  if (payload === null || payload === undefined) {
+    console.info(`[session-debug] ${time} ${stage}`)
+    return
+  }
+
+  console.info(`[session-debug] ${time} ${stage}`, payload)
+}
 
 const normalizePath = (value) => {
   if (!value || typeof value !== 'string') {
@@ -226,7 +242,7 @@ const CabinetLayout = ({
   const role = effectiveRole
   const userName =
     session?.user?.name || session?.user?.username || 'Пользователь'
-  const userAvatar = session?.user?.photoUrl ?? null
+  const userAvatar = getUserAvatarSrc(session?.user ?? null)
   const locationKey = session?.user?.location ?? null
   const hasUserIdentity =
     Boolean(session?.user?.globalUserId) ||
@@ -431,6 +447,12 @@ const CabinetLayout = ({
       ? `?callbackUrl=${encodeURIComponent(callbackTarget)}`
       : ''
 
+    clientSessionDebugLog('cabinet-layout:redirect-to-login', {
+      status,
+      asPath: router?.asPath ?? null,
+      callbackTarget,
+    })
+
     try {
       await signOut({
         redirect: true,
@@ -439,7 +461,21 @@ const CabinetLayout = ({
     } catch {
       router.replace(`/cabinet/login${callbackQuery}`).catch(() => {})
     }
-  }, [router])
+  }, [router, status])
+
+  useEffect(() => {
+    clientSessionDebugLog('cabinet-layout:session-status', {
+      status,
+      hasSession: Boolean(session?.user),
+      userId:
+        session?.user?.globalUserId ??
+        session?.user?._id ??
+        null,
+      role: session?.user?.role ?? null,
+      location: session?.user?.location ?? null,
+      path: router?.asPath ?? null,
+    })
+  }, [router?.asPath, session, status])
 
   useEffect(() => {
     if (status !== 'unauthenticated') {
@@ -454,7 +490,12 @@ const CabinetLayout = ({
       return undefined
     }
 
-    const handleAuthRequired = () => {
+    const handleAuthRequired = (event) => {
+      clientSessionDebugLog('cabinet-layout:auth-required-event', {
+        status,
+        path: router?.asPath ?? null,
+        detail: event?.detail ?? null,
+      })
       void redirectToLogin()
     }
 

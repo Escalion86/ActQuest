@@ -6,14 +6,15 @@
 - [~] В процессе
 - [ ] Не начато
 
-Актуализация статусов по коду: 2026-03-26.
+Актуализация статусов по коду: 2026-04-03.
 
 ## Последняя проверка
 
-Дата: 2026-03-26
+Дата: 2026-04-03
 
 Ключевые файлы-источники статусов:
 - `pages/api/auth/[...nextauth].js`
+- `server/auth/authOptions.js`
 - `helpers/authenticatePhoneUser.js`
 - `helpers/authenticateVkUser.js`
 - `helpers/authenticateTelegramUser.js`
@@ -27,6 +28,10 @@
 - `schemas/usersSchema.js`
 - `helpers/normalizeUserProfile.js`
 - `helpers/getUserAvatarSrc.js`
+- `docs/app-router-migration-roadmap.md`
+- `app/layout.js`
+- `app/migration-check/page.js`
+- `app/api/health/route.js`
 
 Шаблон обновления:
 - Обновить дату в этом блоке.
@@ -42,6 +47,7 @@
 - [~] Полная миграция регистрации от Telegram-only на телефон/OTP.
 - [x] Добавление входа через VK (One Tap).
 - [x] Интеграция загрузки изображений через escalioncloud.ru.
+- [~] Подготовка поэтапной миграции Next.js `pages` -> `app` router (создан roadmap, пилотный app-каркас, добавлен пилотный публичный маршрут `/legacy-pilot`, добавлены pilot cabinet-маршруты `/cabinet-app/games-upcoming`, `/cabinet-app/games-past`, `/cabinet-app/profile`, `/cabinet-app/teams`).
 
 ## Спринт 1: Основа новой аутентификации
 

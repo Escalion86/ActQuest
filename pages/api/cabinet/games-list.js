@@ -4,6 +4,21 @@ import { authOptions } from '@pages/api/auth/[...nextauth]'
 import fetchGamesForCabinet from '@helpers/fetchGamesForCabinet'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
+const isSessionDebugEnabled = process.env.SESSION_DEBUG === '1'
+const sessionDebugLog = (stage, payload = null) => {
+  if (!isSessionDebugEnabled) {
+    return
+  }
+
+  const time = new Date().toISOString()
+  if (payload === null || payload === undefined) {
+    console.info(`[session-debug] ${time} ${stage}`)
+    return
+  }
+
+  console.info(`[session-debug] ${time} ${stage}`, payload)
+}
+
 const parsePositiveInteger = (value, fallback) => {
   const numeric = Number(value)
   if (!Number.isFinite(numeric) || numeric < 0) {
@@ -39,8 +54,24 @@ export default async function handler(req, res) {
 
   const session = await getServerSession(req, res, authOptions)
   if (!session?.user) {
+    sessionDebugLog('games-list:unauthorized', {
+      url: req?.url ?? null,
+      hasCookieHeader: Boolean(req?.headers?.cookie),
+      cookieLength:
+        typeof req?.headers?.cookie === 'string'
+          ? req.headers.cookie.length
+          : 0,
+      userAgent: req?.headers?.['user-agent'] ?? null,
+    })
     return res.status(401).json({ success: false, error: 'Требуется авторизация' })
   }
+
+  sessionDebugLog('games-list:authorized', {
+    url: req?.url ?? null,
+    userId: session?.user?._id ?? session?.user?.globalUserId ?? null,
+    role: session?.user?.role ?? null,
+    location: session?.user?.location ?? null,
+  })
 
   const sessionRole = normalizeRole(session?.user?.role) ?? 'client'
   const previewRole = normalizeRole(req.query?.rolePreview)

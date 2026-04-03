@@ -33,6 +33,40 @@ const stripHtmlToPlainText = (value) =>
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 
+const normalizeComparablePlainText = (value) =>
+  String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+const hasMeaningfulRichMarkup = (value) =>
+  /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(String(value || ''))
+
+const normalizeComparableRichText = (richValue, plainValue) => {
+  const rich = typeof richValue === 'string' ? richValue.trim() : ''
+  if (!rich) {
+    return ''
+  }
+
+  const normalizedPlain = normalizeComparablePlainText(plainValue)
+  const normalizedRichPlain = normalizeComparablePlainText(
+    stripHtmlToPlainText(rich),
+  )
+
+  if (
+    normalizedRichPlain === normalizedPlain &&
+    !hasMeaningfulRichMarkup(rich)
+  ) {
+    return ''
+  }
+
+  return rich
+}
+
 const GameEditModal = ({
   selectedGame,
   isEditModalOpen,
@@ -149,13 +183,15 @@ const GameEditModal = ({
             : 'Сохранить и закрыть'
           : 'Закрыть'}
       </CabinetButton>
-      <CabinetButton
-        onClick={handleResetChanges}
-        disabled={!canEditSelectedGame || !isDirty}
-        variant="secondary"
-      >
-        Отменить изменения
-      </CabinetButton>
+      {isDirty && (
+        <CabinetButton
+          onClick={handleResetChanges}
+          disabled={!canEditSelectedGame}
+          variant="secondary"
+        >
+          Отменить изменения
+        </CabinetButton>
+      )}
     </>
   )
 
@@ -233,19 +269,6 @@ const GameEditModal = ({
                   )
                 }
                 label="Показать результаты"
-                labelClassName="text-sm text-slate-600 dark:text-slate-200"
-              />
-              <NeonCheckbox
-                id="game-registration-open-closed"
-                checked={Boolean(selectedGame.registrationOpen ?? true)}
-                onChange={(eventOrChecked) =>
-                  debugCheckboxUpdate(
-                    'registrationOpen',
-                    getCheckboxChecked(eventOrChecked),
-                    (checked) => ({ registrationOpen: checked }),
-                  )
-                }
-                label="Запись на игру открыта"
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
               />
             </div>
@@ -385,10 +408,50 @@ const GameEditModal = ({
                         disabled={!canEditSelectedGame || isSaving}
                         placeholder="Введите описание игры. Можно использовать форматирование, картинки и аудио."
                         onChange={({ html, plainText, media }) => {
+                          const nextDescription =
+                            plainText || stripHtmlToPlainText(html || '')
+                          const nextDescriptionRich =
+                            typeof html === 'string' ? html : ''
+                          const currentDescription =
+                            typeof selectedGame.description === 'string'
+                              ? selectedGame.description
+                              : ''
+                          const currentDescriptionRich =
+                            typeof selectedGame.descriptionRich === 'string'
+                              ? selectedGame.descriptionRich
+                              : ''
+
+                          const isSameDescription =
+                            normalizeComparablePlainText(nextDescription) ===
+                            normalizeComparablePlainText(currentDescription)
+                          const isSameDescriptionRich =
+                            normalizeComparableRichText(
+                              nextDescriptionRich,
+                              nextDescription,
+                            ) ===
+                            normalizeComparableRichText(
+                              currentDescriptionRich,
+                              currentDescription,
+                            )
+                          const isSameMedia =
+                            JSON.stringify(Array.isArray(media) ? media : []) ===
+                            JSON.stringify(
+                              Array.isArray(selectedGame.descriptionMedia)
+                                ? selectedGame.descriptionMedia
+                                : [],
+                            )
+
+                          if (
+                            isSameDescription &&
+                            isSameDescriptionRich &&
+                            isSameMedia
+                          ) {
+                            return
+                          }
+
                           updateSelectedGame({
-                            descriptionRich: html,
-                            description:
-                              plainText || stripHtmlToPlainText(html || ''),
+                            descriptionRich: nextDescriptionRich,
+                            description: nextDescription,
                             descriptionMedia: media,
                           })
                         }}
@@ -814,9 +877,68 @@ const GameEditModal = ({
                                       disabled={!canEditSelectedGame || isSaving}
                                       placeholder="Введите описание задания. Можно использовать форматирование, картинки и аудио."
                                       onChange={({ html, plainText, media }) => {
-                                        handleTaskFieldChange(task.id, 'taskRich', html)
-                                        handleTaskFieldChange(task.id, 'task', plainText)
-                                        handleTaskFieldChange(task.id, 'taskMedia', media)
+                                        const nextTaskText =
+                                          plainText ||
+                                          stripHtmlToPlainText(html || '')
+                                        const nextTaskRich =
+                                          typeof html === 'string' ? html : ''
+                                        const currentTaskText =
+                                          typeof task.task === 'string'
+                                            ? task.task
+                                            : ''
+                                        const currentTaskRich =
+                                          typeof task.taskRich === 'string'
+                                            ? task.taskRich
+                                            : ''
+                                        const isSameTaskText =
+                                          normalizeComparablePlainText(
+                                            nextTaskText,
+                                          ) ===
+                                          normalizeComparablePlainText(
+                                            currentTaskText,
+                                          )
+                                        const isSameTaskRich =
+                                          normalizeComparableRichText(
+                                            nextTaskRich,
+                                            nextTaskText,
+                                          ) ===
+                                          normalizeComparableRichText(
+                                            currentTaskRich,
+                                            currentTaskText,
+                                          )
+                                        const isSameTaskMedia =
+                                          JSON.stringify(
+                                            Array.isArray(media) ? media : [],
+                                          ) ===
+                                          JSON.stringify(
+                                            Array.isArray(task.taskMedia)
+                                              ? task.taskMedia
+                                              : [],
+                                          )
+
+                                        if (
+                                          isSameTaskText &&
+                                          isSameTaskRich &&
+                                          isSameTaskMedia
+                                        ) {
+                                          return
+                                        }
+
+                                        handleTaskFieldChange(
+                                          task.id,
+                                          'taskRich',
+                                          nextTaskRich,
+                                        )
+                                        handleTaskFieldChange(
+                                          task.id,
+                                          'task',
+                                          nextTaskText,
+                                        )
+                                        handleTaskFieldChange(
+                                          task.id,
+                                          'taskMedia',
+                                          media,
+                                        )
                                       }}
                                     />
                                   </div>
@@ -1024,8 +1146,60 @@ const GameEditModal = ({
                                                 disabled={!canEditSelectedGame || isSaving}
                                                 placeholder="Введите текст подсказки. Можно использовать форматирование, картинки и аудио."
                                                 onChange={({ html, plainText }) => {
-                                                  handleTaskClueChange(task.id, clue.id, 'clueRich', html)
-                                                  handleTaskClueChange(task.id, clue.id, 'clue', plainText)
+                                                  const nextClueText =
+                                                    plainText ||
+                                                    stripHtmlToPlainText(
+                                                      html || '',
+                                                    )
+                                                  const nextClueRich =
+                                                    typeof html === 'string'
+                                                      ? html
+                                                      : ''
+                                                  const currentClueText =
+                                                    typeof clue.clue === 'string'
+                                                      ? clue.clue
+                                                      : ''
+                                                  const currentClueRich =
+                                                    typeof clue.clueRich ===
+                                                    'string'
+                                                      ? clue.clueRich
+                                                      : ''
+                                                  const isSameClueText =
+                                                    normalizeComparablePlainText(
+                                                      nextClueText,
+                                                    ) ===
+                                                    normalizeComparablePlainText(
+                                                      currentClueText,
+                                                    )
+                                                  const isSameClueRich =
+                                                    normalizeComparableRichText(
+                                                      nextClueRich,
+                                                      nextClueText,
+                                                    ) ===
+                                                    normalizeComparableRichText(
+                                                      currentClueRich,
+                                                      currentClueText,
+                                                    )
+
+                                                  if (
+                                                    isSameClueText &&
+                                                    isSameClueRich
+                                                  ) {
+                                                    return
+                                                  }
+
+                                                  handleTaskClueChange(
+                                                    task.id,
+                                                    clue.id,
+                                                    'clueRich',
+                                                    nextClueRich,
+                                                  )
+                                                  handleTaskClueChange(
+                                                    task.id,
+                                                    clue.id,
+                                                    'clue',
+                                                    nextClueText,
+                                                  )
                                                 }}
                                               />
                                             </div>
@@ -1432,19 +1606,21 @@ const GameEditModal = ({
                         label="Показать результаты"
                         labelClassName="text-sm text-slate-600 dark:text-slate-200"
                       />
-                      <NeonCheckbox
-                        id="game-registration-open"
-                        checked={Boolean(selectedGame.registrationOpen ?? true)}
-                        onChange={(eventOrChecked) =>
-                          debugCheckboxUpdate(
-                            'registrationOpen',
-                            getCheckboxChecked(eventOrChecked),
-                            (checked) => ({ registrationOpen: checked }),
-                          )
-                        }
-                        label="Запись на игру открыта"
-                        labelClassName="text-sm text-slate-600 dark:text-slate-200"
-                      />
+                      {!isClosedGame && (
+                        <NeonCheckbox
+                          id="game-registration-open"
+                          checked={Boolean(selectedGame.registrationOpen ?? true)}
+                          onChange={(eventOrChecked) =>
+                            debugCheckboxUpdate(
+                              'registrationOpen',
+                              getCheckboxChecked(eventOrChecked),
+                              (checked) => ({ registrationOpen: checked }),
+                            )
+                          }
+                          label="Запись на игру открыта"
+                          labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                        />
+                      )}
                       <div className="rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
                         <NeonCheckbox
                           id="game-max-team-players-unlimited"

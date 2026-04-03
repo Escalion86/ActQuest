@@ -2134,7 +2134,7 @@ const Index2Page = () => {
   return (
     <>
       <Head>
-        <title>ActQuest | Index2</title>
+        <title>ActQuest</title>
       </Head>
 
       <div className="relative min-h-screen overflow-hidden bg-[#0B001A] text-slate-100">

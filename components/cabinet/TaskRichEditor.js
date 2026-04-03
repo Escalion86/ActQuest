@@ -8,7 +8,6 @@ import {
 } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
-import Underline from '@tiptap/extension-underline'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
 import FontFamily from '@tiptap/extension-font-family'
@@ -883,7 +882,6 @@ const TaskRichEditor = ({
         inline: false,
         allowBase64: false,
       }),
-      Underline,
       TextStyle,
       Color,
       FontFamily,

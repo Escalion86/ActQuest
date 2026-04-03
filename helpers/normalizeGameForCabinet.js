@@ -90,6 +90,34 @@ const normalizeStringArray = (values = []) => {
     .filter((item) => item !== '')
 }
 
+const normalizeMediaUrl = (value) => {
+  const prepared = ensureString(value, '').trim()
+  if (!prepared) {
+    return ''
+  }
+
+  if (
+    prepared.startsWith('/') ||
+    /^https?:\/\//i.test(prepared) ||
+    /^data:/i.test(prepared) ||
+    /^blob:/i.test(prepared)
+  ) {
+    return prepared
+  }
+
+  // Отбрасываем raw file_id и прочие не-URL значения (например Telegram file_id),
+  // чтобы браузер не пытался открыть их как относительный путь "/cabinet/...".
+  if (!prepared.includes('/') && !prepared.includes('.')) {
+    return ''
+  }
+
+  if (/^[a-z0-9/_\-.]+$/i.test(prepared)) {
+    return `/${prepared.replace(/^\/+/, '')}`
+  }
+
+  return ''
+}
+
 const normalizeTaskMedia = (media = []) => {
   if (!Array.isArray(media) || media.length === 0) {
     return []
@@ -100,7 +128,7 @@ const normalizeTaskMedia = (media = []) => {
       id: ensureString(item?.id, `task-media-${index}`),
       type:
         item?.type === 'audio' ? 'audio' : item?.type === 'video' ? 'video' : 'image',
-      url: ensureString(item?.url, ''),
+      url: normalizeMediaUrl(item?.url),
       mime: ensureString(item?.mime, ''),
       size: ensureNumber(item?.size, 0),
       duration: ensureNumber(item?.duration, 0),
@@ -303,7 +331,7 @@ const normalizeGameForCabinet = (game) => {
     description: ensureString(game.description, ''),
     descriptionRich: ensureString(game.descriptionRich, ''),
     descriptionMedia: normalizeTaskMedia(game.descriptionMedia),
-    image: ensureString(game.image, ''),
+    image: normalizeMediaUrl(game.image),
     startingPlace: ensureString(game.startingPlace, ''),
     finishingPlace: ensureString(game.finishingPlace, ''),
     taskDuration: ensureNumber(game.taskDuration, 3600),

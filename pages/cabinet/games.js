@@ -26,7 +26,6 @@ import requestApiJson from '@helpers/requestApiJson'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { getNounTeams } from '@helpers/getNoun'
-import NeonCheckbox from '@components/NeonCheckbox'
 import { LOCATIONS } from '@server/serverConstants'
 
 const GAME_STATUS_BADGE_STYLES = {
@@ -263,6 +262,136 @@ const stripHtmlToPlainText = (value) =>
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 
+const normalizePlainTextForComparison = (value) =>
+  String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+const hasMeaningfulRichMarkup = (value) =>
+  /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(String(value || ''))
+
+const normalizeRichParagraphContent = (value) =>
+  String(value || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim()
+
+const extractParagraphSegmentsFromRich = (rich) => {
+  const richValue = String(rich || '')
+  const paragraphPattern = /<p\b[^>]*>([\s\S]*?)<\/p>/gi
+  const segments = []
+  let match = paragraphPattern.exec(richValue)
+
+  while (match) {
+    segments.push(normalizeRichParagraphContent(match[1] || ''))
+    match = paragraphPattern.exec(richValue)
+  }
+
+  if (segments.length > 0) {
+    return segments
+  }
+
+  const normalized = normalizePlainTextForComparison(
+    stripHtmlToPlainText(richValue),
+  )
+  return normalized ? normalized.split('\n\n') : []
+}
+
+const extractParagraphSegmentsFromPlain = (plain) => {
+  const normalized = normalizePlainTextForComparison(plain)
+  return normalized ? normalized.split('\n\n') : []
+}
+
+const areParagraphSegmentsEqual = (left, right) => {
+  if (!Array.isArray(left) || !Array.isArray(right)) {
+    return false
+  }
+
+  if (left.length !== right.length) {
+    return false
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      return false
+    }
+  }
+
+  return true
+}
+
+const normalizeRichTextForComparison = (richValue, plainValue) => {
+  const rich = typeof richValue === 'string' ? richValue.trim() : ''
+  if (!rich) {
+    return ''
+  }
+
+  if (!hasMeaningfulRichMarkup(rich)) {
+    const richSegments = extractParagraphSegmentsFromRich(rich)
+    const plainSegments = extractParagraphSegmentsFromPlain(plainValue || '')
+
+    if (areParagraphSegmentsEqual(richSegments, plainSegments)) {
+      return ''
+    }
+  }
+
+  const normalizedPlain = normalizePlainTextForComparison(plainValue || '')
+  const normalizedRichPlain = normalizePlainTextForComparison(
+    stripHtmlToPlainText(rich),
+  )
+
+  if (
+    normalizedRichPlain === normalizedPlain &&
+    !hasMeaningfulRichMarkup(rich)
+  ) {
+    return ''
+  }
+
+  return rich
+}
+
+const normalizePayloadForComparison = (payload) => {
+  if (!payload || typeof payload !== 'object') {
+    return payload
+  }
+
+  const normalizedTasks = (Array.isArray(payload.tasks) ? payload.tasks : []).map(
+    (task) => ({
+      ...task,
+      task: normalizePlainTextForComparison(task?.task || ''),
+      taskRich: normalizeRichTextForComparison(task?.taskRich, task?.task),
+      clues: (Array.isArray(task?.clues) ? task.clues : []).map((clue) => ({
+        ...clue,
+        clue: normalizePlainTextForComparison(clue?.clue || ''),
+        clueRich: normalizeRichTextForComparison(clue?.clueRich, clue?.clue),
+      })),
+    }),
+  )
+
+  return {
+    ...payload,
+    description: normalizePlainTextForComparison(payload.description || ''),
+    descriptionRich: normalizeRichTextForComparison(
+      payload.descriptionRich,
+      payload.description,
+    ),
+    tasks: normalizedTasks,
+  }
+}
+
+
 const isActiveGameStatus = (status) =>
   (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
   'active'
@@ -270,6 +399,10 @@ const isActiveGameStatus = (status) =>
 const isGameInProgressStatus = (status) =>
   (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
   'started'
+
+const canJoinGameByStatus = (status) =>
+  (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
+  'active'
 
 const getUserParticipationTeams = (game) =>
   (Array.isArray(game?.userParticipationTeams)
@@ -308,13 +441,15 @@ const serializeGameForComparison = (game) => {
     return null
   }
 
+  const payload = buildUpdatePayload({
+    ...game,
+    prices: game.prices ?? [],
+    finances: game.finances ?? [],
+    tasks: game.tasks ?? [],
+  })
+
   return JSON.stringify(
-    buildUpdatePayload({
-      ...game,
-      prices: game.prices ?? [],
-      finances: game.finances ?? [],
-      tasks: game.tasks ?? [],
-    }),
+    normalizePayloadForComparison(payload),
   )
 }
 
@@ -652,6 +787,7 @@ const GamesPage = ({
   const [statusValidationResult, setStatusValidationResult] = useState(null)
   const [isStatusChanging, setIsStatusChanging] = useState(false)
   const [editingGame, setEditingGame] = useState(null)
+  const [editingBaselineGame, setEditingBaselineGame] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [toastEvent, setToastEvent] = useState(null)
   const setFeedback = useCallback((feedback) => {
@@ -747,6 +883,7 @@ const GamesPage = ({
   const [pastGamesSeasonFilter, setPastGamesSeasonFilter] = useState(
     PAST_GAMES_SEASON_FILTER_ALL,
   )
+  const [openedGamesFilterPanel, setOpenedGamesFilterPanel] = useState(null)
   const rawViewQueryFromRouter = Array.isArray(router.query?.view)
     ? router.query.view[0]
     : router.query?.view
@@ -759,6 +896,7 @@ const GamesPage = ({
   const isPastView = gamesView === 'past'
   const shouldShowLocationFilter = isUpcomingView || isPastView
   const isFilteredGamesView = gamesView === 'upcoming' || gamesView === 'past'
+  const canFilterCanceledGames = canEditAllGames
   const defaultGamesFilterLocation = useMemo(() => {
     const byUser =
       typeof location === 'string' ? location.trim().toLowerCase() : ''
@@ -1061,6 +1199,7 @@ const GamesPage = ({
     setExpandedTaskIds([])
     if (!isEditModalOpen && !isTasksModalOpen) {
       setEditingGame(null)
+      setEditingBaselineGame(null)
     }
     setIsStatusModalOpen(false)
     setStatusModalGameId('')
@@ -2744,7 +2883,9 @@ const GamesPage = ({
       setCreateGameMode(CREATE_GAME_MODE_EMPTY)
       setCloneSourceGameId('')
       setCreateGameCloneOptions(DEFAULT_CREATE_GAME_CLONE_OPTIONS)
-      setEditingGame(cloneGameDraft(createdGame))
+      const createdDraft = cloneGameDraft(createdGame)
+      setEditingGame(createdDraft)
+      setEditingBaselineGame(cloneGameDraft(createdDraft))
       setIsEditModalOpen(true)
     } catch (error) {
       console.error('Failed to create game', error)
@@ -2833,11 +2974,11 @@ const GamesPage = ({
           return true
         }
         if (status === 'canceled') {
-          return showCanceledGames
+          return canFilterCanceledGames && showCanceledGames
         }
         return false
       }),
-    [games, showCanceledGames],
+    [canFilterCanceledGames, games, showCanceledGames],
   )
 
   const pastGames = useMemo(
@@ -2903,6 +3044,25 @@ const GamesPage = ({
       { value: PAST_GAMES_SEASON_FILTER_NONRATED, label: 'Не рейтинговые' },
     ]
   }, [pastGamesBase])
+  const selectedGamesLocationOption = useMemo(
+    () =>
+      gameLocationOptions.find((item) => item.key === gamesFilterLocation) ??
+      null,
+    [gamesFilterLocation],
+  )
+  const selectedPastGamesSeasonOption = useMemo(
+    () =>
+      pastGamesSeasonOptions.find(
+        (option) => option.value === pastGamesSeasonFilter,
+      ) ?? null,
+    [pastGamesSeasonFilter, pastGamesSeasonOptions],
+  )
+  const gamesCityFilterLabel =
+    selectedGamesLocationOption?.label?.trim() || 'Город'
+  const gamesSeasonFilterLabel =
+    selectedPastGamesSeasonOption?.label?.trim() || 'Сезон'
+  const isCityFilterPanelOpen = openedGamesFilterPanel === 'city'
+  const isSeasonFilterPanelOpen = openedGamesFilterPanel === 'season'
 
   useEffect(() => {
     if (
@@ -2959,15 +3119,15 @@ const GamesPage = ({
   }, [currentUserDbId, selectedGame])
 
   const isDirty = useMemo(() => {
-    if (!editingGame || !persistedSelectedGame) {
+    if (!editingGame || !editingBaselineGame) {
       return false
     }
 
     return (
       serializeGameForComparison(editingGame) !==
-      serializeGameForComparison(persistedSelectedGame)
+      serializeGameForComparison(editingBaselineGame)
     )
-  }, [editingGame, persistedSelectedGame])
+  }, [editingBaselineGame, editingGame])
 
   const canEditSelectedGame = useMemo(() => {
     const gameForPermissions =
@@ -3162,11 +3322,11 @@ const GamesPage = ({
   ])
 
   const handleResetChanges = useCallback(() => {
-    if (!persistedSelectedGame) return
+    if (!editingBaselineGame) return
 
-    setEditingGame(cloneGameDraft(persistedSelectedGame))
+    setEditingGame(cloneGameDraft(editingBaselineGame))
     setFeedback(null)
-  }, [persistedSelectedGame])
+  }, [editingBaselineGame])
 
   const handleSaveChanges = useCallback(async () => {
     const gameToSave = editingGame ?? selectedGame
@@ -3215,6 +3375,7 @@ const GamesPage = ({
       )
       setFeedback({ type: 'success', message: 'Изменения сохранены' })
       setEditingGame(null)
+      setEditingBaselineGame(null)
       setIsEditModalOpen(false)
       setIsTasksModalOpen(false)
     } catch (error) {
@@ -3919,7 +4080,9 @@ const GamesPage = ({
       }
 
       setSelectedGameId(game.id)
-      setEditingGame(cloneGameDraft(game))
+      const draft = cloneGameDraft(game)
+      setEditingGame(draft)
+      setEditingBaselineGame(cloneGameDraft(draft))
       setIsTeamsModalOpen(false)
       setIsResultsModalOpen(false)
       setIsTasksViewModalOpen(false)
@@ -3937,7 +4100,9 @@ const GamesPage = ({
       }
 
       setSelectedGameId(game.id)
-      setEditingGame(cloneGameDraft(game))
+      const draft = cloneGameDraft(game)
+      setEditingGame(draft)
+      setEditingBaselineGame(cloneGameDraft(draft))
       setIsTeamsModalOpen(false)
       setIsResultsModalOpen(false)
       setIsTasksViewModalOpen(false)
@@ -4476,6 +4641,7 @@ const GamesPage = ({
     setIsEditModalOpen(false)
     if (!isTasksModalOpen) {
       setEditingGame(null)
+      setEditingBaselineGame(null)
     }
   }, [isSaving, isTasksModalOpen])
 
@@ -4487,6 +4653,7 @@ const GamesPage = ({
     setIsTasksModalOpen(false)
     if (!isEditModalOpen) {
       setEditingGame(null)
+      setEditingBaselineGame(null)
     }
   }, [isEditModalOpen, isSaving])
 
@@ -4637,7 +4804,7 @@ const GamesPage = ({
       )
       const canJoinGame =
         !hasParticipation &&
-        isActiveGameStatus(visibleStatus) &&
+        canJoinGameByStatus(visibleStatus) &&
         Boolean(game?.registrationOpen ?? true) &&
         Boolean(currentUserDbId)
       const canCancelRegistration =
@@ -4932,7 +5099,7 @@ const GamesPage = ({
       )
       const canJoinGame =
         !hasParticipation &&
-        isActiveGameStatus(visibleStatus) &&
+        canJoinGameByStatus(visibleStatus) &&
         Boolean(game?.registrationOpen ?? true) &&
         Boolean(currentUserDbId)
       const canCancelRegistration =
@@ -5020,67 +5187,75 @@ const GamesPage = ({
                 canEditThisGame ||
                 canManageThisGame ||
                 canManageStatusThisGame) && (
-                <div className="mt-3 flex flex-col gap-2 phoneH:flex-row phoneH:items-end phoneH:justify-between">
-                  <div className="order-1 flex flex-col items-start gap-2 phoneH:order-1">
-                    {canViewThisGameTasks && (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleOpenTasksViewFromGame(game)
-                        }}
-                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-violet-300/70 bg-violet-50/80 px-4 py-1.5 text-sm font-semibold text-violet-700 transition hover:border-violet-500 hover:bg-violet-100 dark:border-violet-500/45 dark:bg-violet-500/12 dark:text-violet-200 dark:hover:bg-violet-500/20"
-                      >
-                        Задания
-                      </button>
-                    )}
-                    {canViewThisGameResults && (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleOpenResultsFromGame(game)
-                        }}
-                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
-                      >
-                        Результаты
-                      </button>
-                    )}
-                    {hasUserTeamPlace && (
-                      <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
-                        Место: {userTeamPlace}
-                      </span>
-                    )}
-                    {canJoinGame && (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleOpenRegisterModalForGame(game)
-                        }}
-                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
-                      >
-                        Присоединиться
-                      </button>
-                    )}
-                    {canCancelRegistration && (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleCancelRegistrationFromGame(game)
-                        }}
-                        disabled={isCancellingRegistration}
-                        className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
-                      >
-                        Отменить регистрацию
-                      </button>
-                    )}
-                  </div>
+                <div className="mt-3 flex flex-col gap-2">
+                  {(canJoinGame ||
+                    canViewThisGameTasks ||
+                    canViewThisGameResults) && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                      {canJoinGame && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleOpenRegisterModalForGame(game)
+                          }}
+                          className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
+                        >
+                          Присоединиться
+                        </button>
+                      )}
+                      {canViewThisGameTasks && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleOpenTasksViewFromGame(game)
+                          }}
+                          className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-violet-300/70 bg-violet-50/80 px-4 py-1.5 text-sm font-semibold text-violet-700 transition hover:border-violet-500 hover:bg-violet-100 dark:border-violet-500/45 dark:bg-violet-500/12 dark:text-violet-200 dark:hover:bg-violet-500/20"
+                        >
+                          Задания
+                        </button>
+                      )}
+                      {canViewThisGameResults && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleOpenResultsFromGame(game)
+                          }}
+                          className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
+                        >
+                          Результаты
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {(hasUserTeamPlace || canCancelRegistration) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {hasUserTeamPlace && (
+                        <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
+                          Место: {userTeamPlace}
+                        </span>
+                      )}
+                      {canCancelRegistration && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleCancelRegistrationFromGame(game)
+                          }}
+                          disabled={isCancellingRegistration}
+                          className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
+                        >
+                          Отменить регистрацию
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {(canEditThisGame ||
                     canManageThisGame ||
                     canManageStatusThisGame) && (
-                    <div className="order-3 flex items-center gap-2 self-start pointer-events-auto phoneH:order-2 phoneH:self-end">
+                    <div className="flex items-center gap-2 self-start pointer-events-auto">
                       {canEditThisGame && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -5314,7 +5489,7 @@ const GamesPage = ({
     () =>
       Boolean(selectedGame?.id) &&
       selectedGameParticipationTeams.length === 0 &&
-      isActiveGameStatus(selectedGame?.status) &&
+      canJoinGameByStatus(selectedGame?.status) &&
       Boolean(selectedGame?.registrationOpen ?? true) &&
       Boolean(currentUserDbId),
     [currentUserDbId, selectedGame, selectedGameParticipationTeams.length],
@@ -5477,62 +5652,162 @@ const GamesPage = ({
                   Карточки
                 </button>
               </div>
-              <NeonCheckbox
-                id="games-show-canceled"
-                checked={showCanceledGames}
-                onChange={(event) => setShowCanceledGames(event.target.checked)}
-                className="items-center px-3 py-2 border rounded-xl border-slate-200 dark:border-slate-700"
-                boxClassName="mt-0"
-                label="Отменённые"
-                labelClassName="text-xs font-semibold text-slate-600 dark:text-slate-300"
-              />
             </div>
             {shouldShowLocationFilter && (
-              <div className="p-4 bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/80">
-                <label
-                  htmlFor="games-city-filter"
-                  className="text-xs font-semibold tracking-wide uppercase text-slate-500"
-                >
-                  Город для списка игр
-                </label>
-                <select
-                  id="games-city-filter"
-                  value={gamesFilterLocation}
-                  onChange={(event) =>
-                    setGamesFilterLocation(event.target.value)
-                  }
-                  className="w-full px-3 py-2 mt-2 text-sm border cursor-pointer rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700"
-                >
-                  {gameLocationOptions.map((item) => (
-                    <option key={item.key} value={item.key}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-                {isPastView && (
-                  <>
-                    <label
-                      htmlFor="games-past-season-filter"
-                      className="block mt-4 text-xs font-semibold tracking-wide uppercase text-slate-500"
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenedGamesFilterPanel((prev) =>
+                        prev === 'city' ? null : 'city',
+                      )
+                    }
+                    className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      isCityFilterPanelOpen
+                        ? 'bg-primary text-white'
+                        : 'border border-slate-200 bg-slate-100/90 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:bg-slate-800'
+                    }`}
+                    aria-expanded={isCityFilterPanelOpen}
+                    aria-controls="games-city-filter-panel"
+                  >
+                    {gamesCityFilterLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isPastView &&
+                      setOpenedGamesFilterPanel((prev) =>
+                        prev === 'season' ? null : 'season',
+                      )
+                    }
+                    disabled={!isPastView}
+                    className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      isSeasonFilterPanelOpen
+                        ? 'bg-primary text-white'
+                        : 'border border-slate-200 bg-slate-100/90 text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:bg-slate-800'
+                    }`}
+                    aria-expanded={isSeasonFilterPanelOpen}
+                    aria-controls="games-season-filter-panel"
+                  >
+                    {gamesSeasonFilterLabel}
+                  </button>
+                  {canFilterCanceledGames && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCanceledGames((prev) => !prev)}
+                      className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        showCanceledGames
+                          ? 'bg-rose-600 text-white hover:bg-rose-500 dark:bg-rose-500 dark:hover:bg-rose-400'
+                          : 'border border-slate-200 bg-slate-100/90 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:bg-slate-800'
+                      }`}
+                      aria-pressed={showCanceledGames}
                     >
-                      Сезон
-                    </label>
-                    <select
-                      id="games-past-season-filter"
-                      value={pastGamesSeasonFilter}
-                      onChange={(event) =>
-                        setPastGamesSeasonFilter(event.target.value)
-                      }
-                      className="w-full px-3 py-2 mt-2 text-sm border cursor-pointer rounded-xl border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700"
-                    >
-                      {pastGamesSeasonOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </>
+                      {showCanceledGames ? '✓ ' : ''}
+                      Отменённые
+                    </button>
+                  )}
+                </div>
+
+                {isCityFilterPanelOpen && (
+                  <div
+                    id="games-city-filter-panel"
+                    className="p-4 bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/80"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-primary dark:text-slate-100">
+                        Город
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setOpenedGamesFilterPanel(null)}
+                        className="text-sm font-semibold text-rose-500 transition hover:text-rose-400"
+                      >
+                        Скрыть
+                      </button>
+                    </div>
+                    <div className="mt-3 max-h-64 space-y-1 overflow-y-auto pr-1">
+                      {gameLocationOptions.map((item) => {
+                        const isSelected = gamesFilterLocation === item.key
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => {
+                              setGamesFilterLocation(item.key)
+                              setOpenedGamesFilterPanel(null)
+                            }}
+                            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
+                          >
+                            <span
+                              className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border text-xs font-bold ${
+                                isSelected
+                                  ? 'border-primary bg-primary text-white'
+                                  : 'border-slate-400 bg-transparent text-transparent dark:border-slate-500'
+                              }`}
+                              aria-hidden="true"
+                            >
+                              ✓
+                            </span>
+                            <span>{item.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )}
+
+                {isPastView && isSeasonFilterPanelOpen && (
+                  <div
+                    id="games-season-filter-panel"
+                    className="p-4 bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/80"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-primary dark:text-slate-100">
+                        Сезон
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPastGamesSeasonFilter(PAST_GAMES_SEASON_FILTER_ALL)
+                          setOpenedGamesFilterPanel(null)
+                        }}
+                        className="text-sm font-semibold text-rose-500 transition hover:text-rose-400"
+                      >
+                        Сбросить
+                      </button>
+                    </div>
+                    <div className="mt-3 max-h-64 space-y-1 overflow-y-auto pr-1">
+                      {pastGamesSeasonOptions.map((option) => {
+                        const isSelected = pastGamesSeasonFilter === option.value
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => {
+                              setPastGamesSeasonFilter(option.value)
+                              setOpenedGamesFilterPanel(null)
+                            }}
+                            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
+                          >
+                            <span
+                              className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border text-xs font-bold ${
+                                isSelected
+                                  ? 'border-primary bg-primary text-white'
+                                  : 'border-slate-400 bg-transparent text-transparent dark:border-slate-500'
+                              }`}
+                              aria-hidden="true"
+                            >
+                              ✓
+                            </span>
+                            <span>{option.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {locationFilterError && (
                   <p className="mt-2 text-xs text-rose-500">
                     {locationFilterError}
@@ -6029,12 +6304,48 @@ export const getGamesPageServerSideProps = async (
   forcedView = 'all',
 ) => {
   const resolvedView = normalizeGamesViewValue(forcedView)
+  const { getToken } = await import('next-auth/jwt')
+  const token = await getToken({
+    req: context?.req,
+    secret: process.env.NEXTAUTH_SECRET || process.env.SECRET,
+  })
+
+  const session = token
+    ? {
+        user: {
+          _id: token?.globalUserId ?? token?.userId ?? null,
+          globalUserId: token?.globalUserId ?? token?.userId ?? null,
+          telegramId: token?.telegramId ?? null,
+          role: token?.role ?? 'client',
+          location: token?.location ?? null,
+          name: token?.name ?? null,
+          username: token?.username ?? null,
+          photoUrl: token?.photoUrl ?? null,
+        },
+        expires: token?.exp
+          ? new Date(Number(token.exp) * 1000).toISOString()
+          : null,
+      }
+    : null
+
+  if (!session) {
+    const callbackTarget = context?.resolvedUrl || '/cabinet/games-upcoming'
+    return {
+      redirect: {
+        destination: `/cabinet/login?callbackUrl=${encodeURIComponent(
+          callbackTarget,
+        )}`,
+        permanent: false,
+      },
+    }
+  }
+
   return {
     props: {
-      session: null,
+      session,
       initialGames: [],
       initialHasMore: false,
-      initialLocation: null,
+      initialLocation: session?.user?.location ?? null,
       forcedView: resolvedView,
       availableModerators: [],
     },

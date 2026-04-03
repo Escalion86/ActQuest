@@ -5,6 +5,20 @@ import { authOptions } from '@pages/api/auth/[...nextauth]'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const AUTH_COOKIE_NAMES = ['next-auth.session-token', '__Secure-next-auth.session-token']
+const isSessionDebugEnabled = process.env.SESSION_DEBUG === '1'
+const sessionDebugLog = (stage, payload = null) => {
+  if (!isSessionDebugEnabled) {
+    return
+  }
+
+  const time = new Date().toISOString()
+  if (payload === null || payload === undefined) {
+    console.info(`[session-debug] ${time} ${stage}`)
+    return
+  }
+
+  console.info(`[session-debug] ${time} ${stage}`, payload)
+}
 
 const clearAuthCookies = (res) => {
   if (!res || typeof res.getHeader !== 'function' || typeof res.setHeader !== 'function') {
@@ -204,17 +218,35 @@ const enrichSessionFromGlobalDb = async (session) => {
 const getSessionSafe = async (context) => {
   const req = context?.req || context
   let session = null
+  const requestMeta = {
+    hasReq: Boolean(context?.req || context),
+    url: req?.url || null,
+    hasCookies: Boolean(req?.headers?.cookie),
+  }
+
+  sessionDebugLog('getSessionSafe:start', requestMeta)
 
   try {
     if (context?.req && context?.res) {
       session = await getServerSession(context.req, context.res, authOptions)
+      sessionDebugLog('getSessionSafe:getServerSession:done', {
+        hasSession: Boolean(session?.user),
+        userId: session?.user?._id ?? session?.user?.globalUserId ?? null,
+      })
     }
 
     if (!session) {
       session = await getSession(buildSessionContext(context))
+      sessionDebugLog('getSessionSafe:getSession:done', {
+        hasSession: Boolean(session?.user),
+        userId: session?.user?._id ?? session?.user?.globalUserId ?? null,
+      })
     }
   } catch (error) {
     console.error('Не удалось получить сессию пользователя', error)
+    sessionDebugLog('getSessionSafe:error:getSession', {
+      message: error?.message ?? null,
+    })
   }
 
   let token = null
@@ -227,18 +259,37 @@ const getSessionSafe = async (context) => {
         req,
         secret: process.env.SECRET,
       })
+      sessionDebugLog('getSessionSafe:getToken:done', {
+        hasToken: Boolean(token),
+        tokenUserId: token?.globalUserId ?? token?.userId ?? null,
+        tokenRole: token?.role ?? null,
+      })
     }
   } catch (tokenError) {
     console.error('Не удалось декодировать JWT токен пользователя', tokenError)
+    sessionDebugLog('getSessionSafe:error:getToken', {
+      message: tokenError?.message ?? null,
+    })
   }
 
   const resolvedSession = mergeSessionWithToken(session, token)
   if (resolvedSession) {
-    return enrichSessionFromGlobalDb(resolvedSession)
+    const enrichedSession = await enrichSessionFromGlobalDb(resolvedSession)
+    sessionDebugLog('getSessionSafe:resolved', {
+      hasSession: Boolean(enrichedSession?.user),
+      userId:
+        enrichedSession?.user?._id ??
+        enrichedSession?.user?.globalUserId ??
+        null,
+      role: enrichedSession?.user?.role ?? null,
+      location: enrichedSession?.user?.location ?? null,
+    })
+    return enrichedSession
   }
 
   // Не очищаем cookie автоматически: при временных сбоях получения сессии
   // это может вызывать ложный разлогин и пустые данные при client-navigation.
+  sessionDebugLog('getSessionSafe:resolved:null')
   return null
 }
 

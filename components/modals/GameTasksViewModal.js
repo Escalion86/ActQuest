@@ -53,14 +53,14 @@ const GameTasksViewModal = ({
 
   const tasks = useMemo(
     () => (Array.isArray(selectedGame?.tasks) ? selectedGame.tasks : []),
-    [selectedGame?.tasks]
+    [selectedGame?.tasks],
   )
 
   const toggleTask = useCallback((taskId) => {
     setExpandedTaskIds((prev) =>
       prev.includes(taskId)
         ? prev.filter((id) => id !== taskId)
-        : [...prev, taskId]
+        : [...prev, taskId],
     )
   }, [])
 
@@ -118,11 +118,12 @@ const GameTasksViewModal = ({
           </p>
           {hasCoordinates && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+              <p className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
                 Координаты
               </p>
               <p className="text-sm text-slate-700 dark:text-slate-200">
-                {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
+                {coordinates.latitude.toFixed(6)},{' '}
+                {coordinates.longitude.toFixed(6)}
               </p>
               <div className="flex flex-wrap gap-2">
                 <a
@@ -163,7 +164,7 @@ const GameTasksViewModal = ({
     return (
       <div className="space-y-3">
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+          <p className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
             Коды ответа
           </p>
           <div className="flex flex-wrap gap-2">
@@ -179,11 +180,12 @@ const GameTasksViewModal = ({
         </div>
         {hasCoordinates && (
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+            <p className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
               Координаты
             </p>
             <p className="text-sm text-slate-700 dark:text-slate-200">
-              {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}
+              {coordinates.latitude.toFixed(6)},{' '}
+              {coordinates.longitude.toFixed(6)}
             </p>
             <div className="flex flex-wrap gap-2">
               <a
@@ -237,20 +239,22 @@ const GameTasksViewModal = ({
               : 'Показать ответ'
 
             return (
-              <ModalSection key={taskId} className="overflow-hidden p-0">
+              <ModalSection key={taskId} className="overflow-hidden" noPadding>
                 <button
                   type="button"
                   onClick={() => toggleTask(taskId)}
-                  className="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-blue-50 dark:bg-slate-800/70 dark:text-white dark:hover:bg-sky-500/10"
+                  className="flex items-center justify-between w-full gap-3 px-4 py-3 text-sm font-semibold text-left transition bg-slate-50 text-slate-700 hover:bg-blue-50 dark:bg-slate-800/70 dark:text-white dark:hover:bg-sky-500/10"
                 >
                   <span>
                     {index + 1}. {task?.title || 'Без названия'}
                   </span>
-                  <span className="text-xs">{isExpanded ? 'Свернуть' : 'Развернуть'}</span>
+                  <span className="text-xs">
+                    {isExpanded ? 'Свернуть' : 'Развернуть'}
+                  </span>
                 </button>
 
                 {isExpanded && (
-                  <div className="space-y-4 px-4 py-4">
+                  <div className="px-4 py-4 space-y-4">
                     <div>
                       <ModalSectionTitle>Описание задания</ModalSectionTitle>
                       <div className="mt-2">
@@ -271,9 +275,9 @@ const GameTasksViewModal = ({
                         {visibleClues.map((clue, clueIndex) => (
                           <div
                             key={`${taskId}-clue-${clueIndex}`}
-                            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/70"
+                            className="px-3 py-2 border rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/70"
                           >
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+                            <p className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
                               Подсказка {clueIndex + 1}
                             </p>
                             <div className="mt-1">
@@ -292,7 +296,7 @@ const GameTasksViewModal = ({
                     )}
 
                     {revealState.answerOpened && (
-                      <div className="space-y-2 rounded-xl border border-emerald-300/60 bg-emerald-50/70 px-3 py-3 dark:border-emerald-500/35 dark:bg-emerald-500/10">
+                      <div className="px-3 py-3 space-y-2 border rounded-xl border-emerald-300/60 bg-emerald-50/70 dark:border-emerald-500/35 dark:bg-emerald-500/10">
                         <ModalSectionTitle>Ответ</ModalSectionTitle>
                         {renderAnswer(task)}
                       </div>
@@ -302,8 +306,10 @@ const GameTasksViewModal = ({
                       <div className="pt-1">
                         <button
                           type="button"
-                          onClick={() => revealNextStep({ ...task, id: taskId })}
-                          className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
+                          onClick={() =>
+                            revealNextStep({ ...task, id: taskId })
+                          }
+                          className="inline-flex items-center justify-center px-3 py-2 text-sm font-semibold transition border cursor-pointer rounded-xl border-cyan-300/70 bg-cyan-50 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-200 dark:hover:bg-cyan-500/20"
                         >
                           {actionLabel}
                         </button>
@@ -342,9 +348,9 @@ GameTasksViewModal.propTypes = {
           PropTypes.shape({
             clue: PropTypes.string,
             clueRich: PropTypes.string,
-          })
+          }),
         ),
-      })
+      }),
     ),
   }),
 }

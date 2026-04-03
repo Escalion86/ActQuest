@@ -726,12 +726,6 @@ const CabinetLoginPage = ({
         <h2 className="text-2xl font-semibold text-center text-white">
           Авторизация
         </h2>
-        {authCallbackSource ? (
-          <p className="mt-2 text-xs text-center break-words text-slate-400">
-            Запрошенный адрес: {authCallbackSource}
-          </p>
-        ) : null}
-
         <div className="mt-6 space-y-4">
           <div className="flex flex-col items-center gap-4">
             {isVkLoginOptionVisible ? (

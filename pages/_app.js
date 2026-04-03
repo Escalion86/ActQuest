@@ -11,7 +11,7 @@ const SITE_AUDIO_SRC = '/sounds/Cibircatacombs.mp3'
 
 function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   const router = useRouter()
-  const mode = process.env.MODE ?? process.env.NODE_ENV
+  const isProductionRuntime = process.env.NODE_ENV === 'production'
   const audioRef = useRef(null)
   const [isMuted, setIsMuted] = useState(false)
   const [hasStartedPlayback, setHasStartedPlayback] = useState(false)
@@ -96,18 +96,47 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
       return
     }
 
-    if (mode === 'production' && 'serviceWorker' in navigator) {
-      const register = async () => {
-        try {
-          await navigator.serviceWorker.register('/sw.js')
-        } catch (error) {
-          console.error('Service worker registration failed:', error)
-        }
-      }
-
-      register()
+    if (!('serviceWorker' in navigator)) {
+      return
     }
-  }, [mode])
+
+    const syncServiceWorkerMode = async () => {
+      try {
+        if (isProductionRuntime) {
+          await navigator.serviceWorker.register('/sw.js')
+          return
+        }
+
+        const registrations = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(
+          registrations.map(async (registration) => {
+            const scope = registration?.scope || ''
+            const scriptURL =
+              registration?.active?.scriptURL ||
+              registration?.installing?.scriptURL ||
+              registration?.waiting?.scriptURL ||
+              ''
+            if (scope.includes(window.location.origin) || scriptURL.includes('/sw.js')) {
+              await registration.unregister()
+            }
+          }),
+        )
+
+        if ('caches' in window) {
+          const cacheNames = await caches.keys()
+          await Promise.all(
+            cacheNames
+              .filter((name) => name.startsWith('actquest-cache-'))
+              .map((name) => caches.delete(name)),
+          )
+        }
+      } catch (error) {
+        console.error('Service worker sync failed:', error)
+      }
+    }
+
+    void syncServiceWorkerMode()
+  }, [isProductionRuntime])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -247,7 +276,6 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }) {
         <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/favicon.ico" />
-        <link rel="preload" as="audio" href={SITE_AUDIO_SRC} type="audio/mpeg" />
       </Head>
       <SessionProvider session={session} refetchInterval={5 * 60}>
         <SnackbarProvider

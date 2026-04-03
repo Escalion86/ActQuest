@@ -1,4 +1,6 @@
 import extractErrorMessage from '@helpers/extractErrorMessage'
+const isClientSessionDebugEnabled =
+  process.env.NEXT_PUBLIC_SESSION_DEBUG === '1'
 
 const parseJsonSafely = async (response) => {
   try {
@@ -21,7 +23,6 @@ const AUTH_REQUIRED_PATTERNS = [
   'необходима авториза',
   'необходимо войти',
   'unauthor',
-  'forbidden',
 ]
 
 const isAuthFailureResponse = (response, jsonPayload) => {
@@ -49,12 +50,16 @@ const isAuthFailureResponse = (response, jsonPayload) => {
   )
 }
 
-const emitAuthRequiredEvent = () => {
+const emitAuthRequiredEvent = (detail = null) => {
   if (typeof window === 'undefined') {
     return
   }
 
-  window.dispatchEvent(new CustomEvent('aq:auth-required'))
+  if (isClientSessionDebugEnabled) {
+    console.info('[session-debug] requestApiJson:auth-required', detail)
+  }
+
+  window.dispatchEvent(new CustomEvent('aq:auth-required', { detail }))
 }
 
 const requestApiJson = async (url, options = {}) => {
@@ -69,7 +74,15 @@ const requestApiJson = async (url, options = {}) => {
 
   const hasError = !response.ok || json?.success === false
   if (hasError && isAuthFailureResponse(response, json)) {
-    emitAuthRequiredEvent()
+    emitAuthRequiredEvent({
+      url,
+      method:
+        typeof fetchOptions?.method === 'string'
+          ? fetchOptions.method.toUpperCase()
+          : 'GET',
+      status: response?.status ?? null,
+      error: extractErrorMessage(json?.error ?? json, '') ?? '',
+    })
   }
 
   if (hasError && throwOnHttpError) {
