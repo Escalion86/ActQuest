@@ -283,10 +283,8 @@ const CabinetDashboard = ({
     String(effectiveRole ?? 'client').toLowerCase()
   )
   const canLeaveSelectedTeam = Boolean(selectedTeam?.membershipId) && !selectedTeam?.isCaptain
-  const userLocation = activeSession?.user?.location ?? null
-
   const handleLeaveSelectedTeam = useCallback(async () => {
-    if (!selectedTeam?.membershipId || !userLocation || selectedTeam?.isCaptain || isLeavingTeam) {
+    if (!selectedTeam?.membershipId || selectedTeam?.isCaptain || isLeavingTeam) {
       return
     }
 
@@ -299,7 +297,7 @@ const CabinetDashboard = ({
     setIsLeavingTeam(true)
 
     try {
-      await requestApiJson(`/api/${userLocation}/teamsusers/${selectedTeam.membershipId}`, {
+      await requestApiJson(`/api/cabinet/teams/members/${selectedTeam.membershipId}`, {
         method: 'DELETE',
         fallbackMessage: 'Не удалось выйти из команды',
       })
@@ -312,7 +310,7 @@ const CabinetDashboard = ({
     } finally {
       setIsLeavingTeam(false)
     }
-  }, [currentPath, isLeavingTeam, router, selectedTeam, userLocation])
+  }, [currentPath, isLeavingTeam, router, selectedTeam])
   const latestPlayedGame = dashboardData.personalProgressGames[0] ?? null
 
   if (!activeSession) {

@@ -277,11 +277,11 @@ export const loadCabinetAppOverview = async (session) => {
     })
     .slice(0, 30)
 
-  const completedGamesCount = personalProgressGames.length
+  const completedGamesCountFromProgress = personalProgressGames.length
   const averageFinishedPlace =
-    completedGamesCount > 0
+    completedGamesCountFromProgress > 0
       ? personalProgressGames.reduce((acc, game) => acc + Number(game.place || 0), 0) /
-        completedGamesCount
+        completedGamesCountFromProgress
       : null
 
   const hasUpcomingRegistration = (Array.isArray(upcomingGames) ? upcomingGames : []).some(
@@ -340,6 +340,14 @@ export const loadCabinetAppOverview = async (session) => {
     playedGames: 0,
     missedGames: 0,
   }
+
+  const playedGamesFromRating = Number.isFinite(Number(rating?.playedGames))
+    ? Number(rating.playedGames)
+    : 0
+  const completedGamesCount = Math.max(
+    completedGamesCountFromProgress,
+    playedGamesFromRating,
+  )
 
   const profileCompleted = Boolean(
     String(userDoc?.name ?? session?.user?.name ?? '').trim() &&

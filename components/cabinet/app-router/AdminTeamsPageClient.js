@@ -59,12 +59,10 @@ const buildTeamUpdatePayload = (team) => {
 const AdminTeamsPage = ({
   initialTeams,
   initialHasMore,
-  initialLocation,
   session: initialSession,
 }) => {
   const safeInitialTeams = Array.isArray(initialTeams) ? initialTeams : []
   const { activeSession } = useMergedSession(initialSession)
-  const location = activeSession?.user?.location ?? initialLocation ?? null
   const { effectiveRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
   )
@@ -201,7 +199,7 @@ const AdminTeamsPage = ({
     )
   }, [persistedSelectedTeam, selectedTeam])
 
-  const canManageSelectedTeam = isAdmin && Boolean(location)
+  const canManageSelectedTeam = isAdmin
 
   const updateSelectedTeam = useCallback(
     (updater) => {
@@ -681,12 +679,6 @@ const AdminTeamsPage = ({
             </NoticeBanner>
           )}
 
-          {!location && (
-            <NoticeBanner tone="warning" variant="neon">
-              Не удалось определить площадку пользователя. Редактирование команд недоступно.
-            </NoticeBanner>
-          )}
-
           {teamsForList.length > 0 ? (
             <div className="space-y-3">
               <ul className="space-y-3">
@@ -773,7 +765,6 @@ const AdminTeamsPage = ({
           memberActionId={memberActionId}
           onSetCaptain={handleSetCaptain}
           onRemoveMember={handleRemoveMember}
-          location={location}
           canEditCarSkin={isAdmin}
         />
         <TeamDescriptionModal
@@ -834,14 +825,12 @@ AdminTeamsPage.propTypes = {
       updatedAt: PropTypes.string,
     })
   ),
-  initialLocation: PropTypes.string,
   initialHasMore: PropTypes.bool,
   session: PropTypes.object,
 }
 
 AdminTeamsPage.defaultProps = {
   initialTeams: [],
-  initialLocation: null,
   initialHasMore: false,
   session: null,
 }

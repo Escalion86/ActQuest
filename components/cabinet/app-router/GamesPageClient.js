@@ -2511,14 +2511,6 @@ const GamesPage = ({
       return
     }
 
-    if (Boolean(newGameIsRated) && !createGameSeasonId) {
-      setCreateGameFeedback({
-        type: 'error',
-        message: 'Для рейтинговой игры выберите сезон или создайте новый',
-      })
-      return
-    }
-
     setIsCreatingGame(true)
     setCreateGameFeedback(null)
 
@@ -2673,14 +2665,6 @@ const GamesPage = ({
       baseDraft.seasonName = Boolean(baseDraft.isRated)
         ? selectedSeason?.name || ''
         : ''
-
-      if (Boolean(baseDraft.isRated) && !baseDraft.seasonId) {
-        setCreateGameFeedback({
-          type: 'error',
-          message: 'Для рейтинговой игры выберите сезон или создайте новый',
-        })
-        return
-      }
 
       const payload = {
         ...buildUpdatePayload({
@@ -3177,26 +3161,14 @@ const GamesPage = ({
 
   const handleSaveChanges = useCallback(async () => {
     const gameToSave = editingGame ?? selectedGame
-    const gameApiLocation =
-      gameToSave?.location ||
-      (shouldShowLocationFilter ? gamesFilterLocation : location)
-
-    if (!gameToSave || !gameApiLocation || !canEditSelectedGame) return
-
-    if (Boolean(gameToSave.isRated ?? true) && !gameToSave.seasonId) {
-      setFeedback({
-        type: 'error',
-        message: 'Для рейтинговой игры выберите сезон или создайте новый',
-      })
-      return
-    }
+    if (!gameToSave || !canEditSelectedGame) return
 
     setIsSaving(true)
     setFeedback(null)
 
     try {
       const { json } = await requestApiJson(
-        `/api/${gameApiLocation}/games/${gameToSave.id}`,
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameToSave.id)}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -3237,10 +3209,7 @@ const GamesPage = ({
   }, [
     canEditSelectedGame,
     editingGame,
-    gamesFilterLocation,
-    location,
     selectedGame,
-    shouldShowLocationFilter,
   ])
 
   const handleAddPrice = useCallback(() => {
@@ -4011,25 +3980,15 @@ const GamesPage = ({
         }
       }
 
-      const gameApiLocation =
-        statusModalGame.location ||
-        (shouldShowLocationFilter ? gamesFilterLocation : location)
-
-      if (!gameApiLocation) {
-        setFeedback({
-          type: 'error',
-          message: 'Не удалось определить локацию игры для смены статуса.',
-        })
-        return
-      }
-
       setIsStatusChanging(true)
       setFeedback(null)
 
       try {
         const runGameValidation = async () => {
           const { json } = await requestApiJson(
-            `/api/${gameApiLocation}/games/check/${statusModalGame.id}`,
+            `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
+              statusModalGame.id,
+            )}/check`,
             {
               fallbackMessage: 'Не удалось выполнить проверку игры',
             },
@@ -4084,7 +4043,9 @@ const GamesPage = ({
           }
 
           await requestApiJson(
-            `/api/${gameApiLocation}/games/start/${statusModalGame.id}`,
+            `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
+              statusModalGame.id,
+            )}/start`,
             {
               fallbackMessage: 'Не удалось обновить статус игры',
             },
@@ -4092,7 +4053,9 @@ const GamesPage = ({
           successMessage = 'Игра запущена'
         } else if (actionId === 'stop_game') {
           await requestApiJson(
-            `/api/${gameApiLocation}/games/stop/${statusModalGame.id}`,
+            `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
+              statusModalGame.id,
+            )}/stop`,
             {
               fallbackMessage: 'Не удалось обновить статус игры',
             },
@@ -4129,7 +4092,9 @@ const GamesPage = ({
           }
 
           await requestApiJson(
-            `/api/${gameApiLocation}/games/${statusModalGame.id}`,
+            `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
+              statusModalGame.id,
+            )}`,
             {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
@@ -4170,8 +4135,6 @@ const GamesPage = ({
       canEditAllGames,
       canManageGameStatus,
       fetchGamesPage,
-      gamesFilterLocation,
-      location,
       shouldShowLocationFilter,
       statusModalGame,
     ],

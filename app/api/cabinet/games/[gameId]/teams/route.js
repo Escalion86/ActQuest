@@ -37,6 +37,25 @@ const normalizeGameTeamEntry = (doc) => {
   return { id, teamId }
 }
 
+const isObjectIdLike = (value) =>
+  typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value.trim())
+
+const findGameByAnyId = async (GamesModel, rawGameId, select) => {
+  const normalized = toStringId(rawGameId)
+  if (!normalized) {
+    return null
+  }
+
+  if (isObjectIdLike(normalized)) {
+    const byObjectId = await GamesModel.findById(normalized).select(select).lean()
+    if (byObjectId?._id) {
+      return byObjectId
+    }
+  }
+
+  return GamesModel.findOne({ id: normalized }).select(select).lean()
+}
+
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
     return 'client'
@@ -117,11 +136,12 @@ export async function GET(request, { params }) {
       throw new Error('Соединение с базой данных не установлено')
     }
 
-    const game = await db
-      .model('Games')
-      .findById(normalizedGameId)
-      .select({ _id: 1, location: 1 })
-      .lean()
+    const GamesModel = db.model('Games')
+    const game = await findGameByAnyId(
+      GamesModel,
+      normalizedGameId,
+      { _id: 1, location: 1 },
+    )
 
     if (!game) {
       return NextResponse.json(
@@ -137,7 +157,10 @@ export async function GET(request, { params }) {
     const gameLocation = gameLocationRaw || null
 
     const GamesTeamsModel = db.model('GamesTeams')
-    const gameTeamsDocs = await GamesTeamsModel.find({ gameId: normalizedGameId })
+    const normalizedResolvedGameId = toStringId(game?._id)
+    const gameTeamsDocs = await GamesTeamsModel.find({
+      gameId: normalizedResolvedGameId,
+    })
       .select({ _id: 1, teamId: 1 })
       .lean()
 
@@ -214,15 +237,18 @@ export async function POST(request, { params }) {
     const TeamsUsersModel = db.model('TeamsUsers')
     const GamesTeamsModel = db.model('GamesTeams')
 
-    const game = await GamesModel.findById(gameId)
-      .select({ _id: 1, status: 1, registrationOpen: 1 })
-      .lean()
+    const game = await findGameByAnyId(
+      GamesModel,
+      gameId,
+      { _id: 1, status: 1, registrationOpen: 1 },
+    )
     if (!game?._id) {
       return NextResponse.json(
         { success: false, error: 'Игра не найдена' },
         { status: 404 },
       )
     }
+    const normalizedResolvedGameId = toStringId(game._id)
 
     const registrationError = ensureGameAllowsRegistration(game)
     if (registrationError) {
@@ -266,7 +292,10 @@ export async function POST(request, { params }) {
       }
     }
 
-    const existing = await GamesTeamsModel.findOne({ gameId, teamId })
+    const existing = await GamesTeamsModel.findOne({
+      gameId: normalizedResolvedGameId,
+      teamId,
+    })
       .select({ _id: 1 })
       .lean()
     if (existing?._id) {
@@ -276,13 +305,16 @@ export async function POST(request, { params }) {
       )
     }
 
-    const created = await GamesTeamsModel.create({ gameId, teamId })
+    const created = await GamesTeamsModel.create({
+      gameId: normalizedResolvedGameId,
+      teamId,
+    })
     return NextResponse.json(
       {
         success: true,
         data: {
           id: toStringId(created?._id),
-          gameId,
+          gameId: normalizedResolvedGameId,
           teamId,
         },
       },
@@ -331,13 +363,14 @@ export async function DELETE(request, { params }) {
     const TeamsUsersModel = db.model('TeamsUsers')
     const GamesTeamsModel = db.model('GamesTeams')
 
-    const game = await GamesModel.findById(gameId).select({ _id: 1 }).lean()
+    const game = await findGameByAnyId(GamesModel, gameId, { _id: 1 })
     if (!game?._id) {
       return NextResponse.json(
         { success: false, error: 'Игра не найдена' },
         { status: 404 },
       )
     }
+    const normalizedResolvedGameId = toStringId(game._id)
 
     const identity = resolveSessionIdentity(session)
     if (!isElevatedRole(identity.role)) {
@@ -372,7 +405,7 @@ export async function DELETE(request, { params }) {
     }
 
     const deleteResult = await GamesTeamsModel.deleteMany({
-      gameId,
+      gameId: normalizedResolvedGameId,
       teamId: { $in: teamIds },
     })
 
@@ -381,7 +414,7 @@ export async function DELETE(request, { params }) {
         success: true,
         data: {
           deletedCount: Number(deleteResult?.deletedCount || 0),
-          gameId,
+          gameId: normalizedResolvedGameId,
           teamIds,
         },
       },
