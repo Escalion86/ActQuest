@@ -902,3 +902,5 @@ const CabinetLoginPage = ({
   )
 }
 
+export default CabinetLoginPage
+

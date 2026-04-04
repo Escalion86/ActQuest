@@ -997,3 +997,5 @@ const CabinetRegisterPage = ({
   )
 }
 
+export default CabinetRegisterPage
+
