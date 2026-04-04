@@ -8,11 +8,11 @@
 
 ## Последняя проверка
 
-Дата: 2026-03-26
+Дата: 2026-04-04
 
 Ключевые файлы-источники статусов:
 - `utils/dbConnectGlobal.js`
-- `pages/api/auth/[...nextauth].js`
+- `app/api/auth/[...nextauth]/route.js`
 - `helpers/getSessionSafe.js`
 - `helpers/authenticatePhoneUser.js`
 - `helpers/authenticateVkUser.js`
@@ -22,8 +22,8 @@
 - `scripts/verifyGlobalMigration.js`
 - `schemas/usersSchema.js`
 - `helpers/fetchAdminUsersForCabinet.js`
-- `pages/api/cabinet/users/profile.js`
-- `pages/api/cabinet/users/location.js`
+- `app/api/cabinet/users/profile/route.js`
+- `app/api/cabinet/users/location/route.js`
 
 Шаблон обновления:
 - Обновить дату в этом блоке.

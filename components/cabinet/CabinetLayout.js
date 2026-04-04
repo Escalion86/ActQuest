@@ -8,7 +8,7 @@ import {
 } from 'react'
 import PropTypes from 'prop-types'
 import Link from 'next/link'
-import { useRouter } from 'next/router'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -177,6 +177,7 @@ const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect
 const isClientSessionDebugEnabled =
   process.env.NEXT_PUBLIC_SESSION_DEBUG === '1'
+const CABINET_USERS_API_BASE = '/api/cabinet/users'
 const clientSessionDebugLog = (stage, payload = null) => {
   if (!isClientSessionDebugEnabled || typeof window === 'undefined') {
     return
@@ -220,13 +221,15 @@ const CabinetLayout = ({
   showPageTitle,
 }) => {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { data: session, status, update } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(
-    () => isGamesRoutePath(router.pathname),
+    () => isGamesRoutePath(pathname),
   )
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(
-    () => router.pathname.startsWith('/cabinet/admin'),
+    () => pathname?.startsWith('/cabinet/admin'),
   )
   const [theme, setTheme] = useState(null)
   const [isLocationSaving, setIsLocationSaving] = useState(false)
@@ -277,17 +280,18 @@ const CabinetLayout = ({
 
     return nextItems
   }, [role])
+  const currentPath = `${pathname || ''}${
+    searchParams?.toString() ? `?${searchParams.toString()}` : ''
+  }`
   const gamesViewFromPath =
-    router.pathname === '/cabinet/games-upcoming'
+    pathname === '/cabinet/games-upcoming'
       ? 'upcoming'
-      : router.pathname === '/cabinet/games-past'
+      : pathname === '/cabinet/games-past'
         ? 'past'
         : ''
   const gamesView =
     gamesViewFromPath ||
-    (typeof router.query?.view === 'string'
-      ? router.query.view.toLowerCase()
-      : '')
+    (searchParams?.get('view') || '').toLowerCase()
 
   useIsomorphicLayoutEffect(() => {
     const initialTheme = resolveInitialTheme() ?? 'light'
@@ -332,34 +336,9 @@ const CabinetLayout = ({
   }, [])
 
   useEffect(() => {
-    const handleRouteChangeStart = () => {
-      startRouteLoading()
-    }
-
-    const handleRouteChangeComplete = () => {
-      stopRouteLoading()
-      closeSidebarOnMobile()
-    }
-
-    const handleRouteChangeError = () => {
-      stopRouteLoading()
-    }
-
-    router.events.on('routeChangeStart', handleRouteChangeStart)
-    router.events.on('routeChangeComplete', handleRouteChangeComplete)
-    router.events.on('routeChangeError', handleRouteChangeError)
-
-    return () => {
-      router.events.off('routeChangeStart', handleRouteChangeStart)
-      router.events.off('routeChangeComplete', handleRouteChangeComplete)
-      router.events.off('routeChangeError', handleRouteChangeError)
-      stopRouteLoading()
-    }
-  }, [closeSidebarOnMobile, router, startRouteLoading, stopRouteLoading])
-
-  useEffect(() => {
     stopRouteLoading()
-  }, [router.asPath, stopRouteLoading])
+    closeSidebarOnMobile()
+  }, [closeSidebarOnMobile, currentPath, stopRouteLoading])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -438,8 +417,8 @@ const CabinetLayout = ({
     authRedirectInProgressRef.current = true
 
     const rawPath =
-      typeof router?.asPath === 'string' && router.asPath.startsWith('/')
-        ? router.asPath
+      typeof currentPath === 'string' && currentPath.startsWith('/')
+        ? currentPath
         : '/cabinet'
     const callbackTarget =
       rawPath && rawPath !== '/cabinet/login' ? rawPath : '/cabinet'
@@ -449,7 +428,7 @@ const CabinetLayout = ({
 
     clientSessionDebugLog('cabinet-layout:redirect-to-login', {
       status,
-      asPath: router?.asPath ?? null,
+      asPath: currentPath || null,
       callbackTarget,
     })
 
@@ -459,9 +438,9 @@ const CabinetLayout = ({
         callbackUrl: `/cabinet/login${callbackQuery}`,
       })
     } catch {
-      router.replace(`/cabinet/login${callbackQuery}`).catch(() => {})
+      router.replace(`/cabinet/login${callbackQuery}`)
     }
-  }, [router, status])
+  }, [currentPath, router, status])
 
   useEffect(() => {
     clientSessionDebugLog('cabinet-layout:session-status', {
@@ -473,9 +452,9 @@ const CabinetLayout = ({
         null,
       role: session?.user?.role ?? null,
       location: session?.user?.location ?? null,
-      path: router?.asPath ?? null,
+      path: currentPath || null,
     })
-  }, [router?.asPath, session, status])
+  }, [currentPath, session, status])
 
   useEffect(() => {
     if (status !== 'unauthenticated') {
@@ -493,7 +472,7 @@ const CabinetLayout = ({
     const handleAuthRequired = (event) => {
       clientSessionDebugLog('cabinet-layout:auth-required-event', {
         status,
-        path: router?.asPath ?? null,
+        path: currentPath || null,
         detail: event?.detail ?? null,
       })
       void redirectToLogin()
@@ -503,7 +482,7 @@ const CabinetLayout = ({
     return () => {
       window.removeEventListener('aq:auth-required', handleAuthRequired)
     }
-  }, [redirectToLogin])
+  }, [currentPath, redirectToLogin, status])
 
   const handleToggleGamesMenu = useCallback(() => {
     setIsGamesMenuOpen((prev) => {
@@ -544,7 +523,7 @@ const CabinetLayout = ({
       }
 
       const target = normalizePath(href)
-      const current = normalizePath(router.asPath)
+      const current = normalizePath(currentPath)
 
       if (!target || !current || target === current) {
         return
@@ -552,7 +531,7 @@ const CabinetLayout = ({
 
       startRouteLoading()
     },
-    [closeSidebarOnMobile, router.asPath, startRouteLoading],
+    [closeSidebarOnMobile, currentPath, startRouteLoading],
   )
 
   const handleLocationChange = useCallback(
@@ -565,7 +544,7 @@ const CabinetLayout = ({
       try {
         setIsLocationSaving(true)
         setLocationPromptError('')
-        const response = await fetch('/api/cabinet/users/location', {
+        const response = await fetch(`${CABINET_USERS_API_BASE}/location`, {
           method: 'POST',
           headers: {
             Accept: 'application/json',
@@ -706,7 +685,7 @@ const CabinetLayout = ({
               {menuItems.map((item) => {
                 if (item.id === 'games') {
                   const isGamesSectionActive =
-                    activePage === item.id || router.pathname === item.href
+                    activePage === item.id || pathname === item.href
 
                   return (
                     <div key={item.id} className="space-y-1">
@@ -741,8 +720,8 @@ const CabinetLayout = ({
                         <div className="pb-1 pr-3 space-y-1 pl-11">
                           {gamesSubmenuItems.map((subItem) => {
                             const isSubActive =
-                              router.pathname === subItem.href ||
-                              (router.pathname === '/cabinet/games' &&
+                              pathname === subItem.href ||
+                              (pathname === '/cabinet/games' &&
                                 ((subItem.id === 'games-upcoming' &&
                                   gamesView === 'upcoming') ||
                                   (subItem.id === 'games-past' &&
@@ -773,7 +752,7 @@ const CabinetLayout = ({
 
                 if (item.id === 'admin') {
                   const isAdminSectionActive =
-                    router.pathname.startsWith('/cabinet/admin')
+                    pathname?.startsWith('/cabinet/admin')
 
                   return (
                     <div key={item.id} className="space-y-1">
@@ -818,7 +797,7 @@ const CabinetLayout = ({
                               return null
                             }
 
-                            const isSubActive = router.pathname === subItem.href
+                            const isSubActive = pathname === subItem.href
 
                             return (
                               <Link
@@ -844,7 +823,7 @@ const CabinetLayout = ({
                 }
 
                 const isActive =
-                  activePage === item.id || router.pathname === item.href
+                  activePage === item.id || pathname === item.href
 
                 return (
                   <Link

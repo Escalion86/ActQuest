@@ -6,7 +6,8 @@ const fetchCabinetTeamDetails = async ({ teamId }) => {
   }
 
   const params = new URLSearchParams({ teamId })
-  const { json } = await requestApiJson(`/api/cabinet/team-details?${params.toString()}`, {
+  const endpointBase = '/api/cabinet/team-details'
+  const { json } = await requestApiJson(`${endpointBase}?${params.toString()}`, {
     fallbackMessage: 'Не удалось загрузить команду',
   })
 

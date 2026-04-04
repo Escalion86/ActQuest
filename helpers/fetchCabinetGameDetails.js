@@ -13,7 +13,9 @@ const fetchCabinetGameDetails = async ({ gameId, location = null, rolePreview = 
     params.set('rolePreview', rolePreview.trim())
   }
 
-  const { json } = await requestApiJson(`/api/cabinet/game-details?${params.toString()}`, {
+  const endpointBase = '/api/cabinet/game-details'
+
+  const { json } = await requestApiJson(`${endpointBase}?${params.toString()}`, {
     fallbackMessage: 'Не удалось загрузить данные игры',
   })
 

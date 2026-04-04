@@ -2,6 +2,8 @@ import PropTypes from 'prop-types'
 
 import EntitySelectField from '@components/cabinet/EntitySelectField'
 
+const ADMIN_USERS_LIST_ENDPOINT = '/api/cabinet/admin/users-list'
+
 const mapUserOption = (item) => {
   const id = item?.id ? String(item.id) : ''
   if (!id) {
@@ -46,7 +48,7 @@ const UserSelectField = ({
       placeholder="Выберите пользователя"
       modalTitle="Выбор пользователя"
       searchPlaceholder="Поиск по имени, нику, телефону"
-      endpoint="/api/cabinet/admin/users-list"
+      endpoint={ADMIN_USERS_LIST_ENDPOINT}
       mapOption={mapUserOption}
       selectedOption={selectedOption}
       onSelect={onSelect}

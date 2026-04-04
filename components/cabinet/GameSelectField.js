@@ -2,6 +2,8 @@ import PropTypes from 'prop-types'
 
 import EntitySelectField from '@components/cabinet/EntitySelectField'
 
+const ADMIN_GAMES_LIST_ENDPOINT = '/api/cabinet/admin/games-list'
+
 const formatDate = (value) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -59,7 +61,7 @@ const GameSelectField = ({
       placeholder="Выберите игру"
       modalTitle="Выбор игры"
       searchPlaceholder="Поиск по названию и городу"
-      endpoint="/api/cabinet/admin/games-list"
+      endpoint={ADMIN_GAMES_LIST_ENDPOINT}
       mapOption={mapGameOption}
       selectedOption={selectedOption}
       onSelect={onSelect}

@@ -13,7 +13,9 @@ const fetchCabinetUserDetails = async ({ userId = '', telegramId = null }) => {
     throw new Error('Не передан идентификатор пользователя')
   }
 
-  const { json } = await requestApiJson(`/api/cabinet/user-details?${params.toString()}`, {
+  const endpointBase = '/api/cabinet/user-details'
+
+  const { json } = await requestApiJson(`${endpointBase}?${params.toString()}`, {
     fallbackMessage: 'Не удалось загрузить пользователя',
   })
 

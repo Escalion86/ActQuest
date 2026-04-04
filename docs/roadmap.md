@@ -6,7 +6,7 @@
 - [~] В процессе
 - [ ] Не начато
 
-Актуализация статусов по коду: 2026-04-03.
+Актуализация статусов по коду: 2026-04-04.
 
 ## Последняя проверка
 
@@ -30,8 +30,8 @@
 - `helpers/getUserAvatarSrc.js`
 - `docs/app-router-migration-roadmap.md`
 - `app/layout.js`
-- `app/migration-check/page.js`
 - `app/api/health/route.js`
+- `app/api/[location]/*`
 
 Шаблон обновления:
 - Обновить дату в этом блоке.
@@ -47,7 +47,7 @@
 - [~] Полная миграция регистрации от Telegram-only на телефон/OTP.
 - [x] Добавление входа через VK (One Tap).
 - [x] Интеграция загрузки изображений через escalioncloud.ru.
-- [~] Подготовка поэтапной миграции Next.js `pages` -> `app` router (создан roadmap, пилотный app-каркас, добавлен пилотный публичный маршрут `/legacy-pilot`, добавлены pilot cabinet-маршруты `/cabinet-app/games-upcoming`, `/cabinet-app/games-past`, `/cabinet-app/profile`, `/cabinet-app/teams`).
+- [~] Подготовка поэтапной миграции Next.js `pages` -> `app` router (создан roadmap, пилотный app-каркас; публичные маршруты `/`, `/legacy` и `not-found` переведены в `app`; реальные маршруты `/cabinet`, `/cabinet/login`, `/cabinet/register`, `/cabinet/recovery`, `/cabinet/games`, `/cabinet/games-upcoming`, `/cabinet/games-past`, `/cabinet/profile`, `/cabinet/teams`, `/cabinet/settings`, `/cabinet/developer`, `/cabinet/admin/users`, `/cabinet/admin/teams`, `/cabinet/admin/reports`, `/cabinet/admin/transactions` и `/cabinet/admin` переведены в `app`; legacy `pages/index.js`, `pages/404.js`, `pages/legacy/index.js`, `pages/cabinet/admin/*`, `pages/cabinet/index.js`, `pages/cabinet/login.js`, `pages/cabinet/register.js`, `pages/cabinet/recovery.js`, `pages/cabinet/games.js`, `pages/cabinet/settings.js`, `pages/cabinet/developer.js`, `pages/[location]/*`, `pages/_app.js`, `pages/_document.js` удалены; дополнительно перенесены `pages/api/vk-id/callback.js`, `pages/api/global/auth/vk-status.js`, `pages/api/escalioncloud/*`, `pages/api/webapp/*`, `pages/api/[location]/*`; критичные API переведены в `app/api/*` для auth/public/phone/cabinet/location; клиентские вызовы идут только на основные `/api/*`, временные fallback-слои `/api-pilot/*` и `/cabinet-app/*` удалены; служебные маршруты миграции `/legacy-pilot` и `/migration-check` удалены; App Router является единственным роутером проекта).
 
 ## Спринт 1: Основа новой аутентификации
 

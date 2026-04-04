@@ -215,8 +215,8 @@ const TeamDescriptionModal = ({
           ) : null}
           {selectedTeam.members?.length > 0 ? (
             <ul className="mt-4 space-y-3">
-              {selectedTeam.members.map((member) => (
-                <li key={member.id}>
+              {selectedTeam.members.map((member, memberIndex) => (
+                <li key={`${member.id || member.telegramId || 'member'}-${memberIndex}`}>
                   <TeamMemberCard member={member} onOpen={handleOpenMemberCard} />
                 </li>
               ))}
@@ -235,8 +235,8 @@ const TeamDescriptionModal = ({
               <p className="mt-2 text-xs text-rose-500">{gamePreviewError}</p>
             ) : null}
             <ul className="mt-4 space-y-3">
-              {selectedTeam.games.map((game) => (
-                <li key={game.id}>
+              {selectedTeam.games.map((game, gameIndex) => (
+                <li key={`${game.id || 'game'}-${game.location || ''}-${gameIndex}`}>
                   <ParticipationGameCard
                     game={game}
                     onOpen={() => handleOpenGameCard(game)}

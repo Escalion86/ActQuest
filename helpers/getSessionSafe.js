@@ -1,7 +1,7 @@
 import { getSession } from 'next-auth/react'
 import { getServerSession } from 'next-auth/next'
 import { getToken } from 'next-auth/jwt'
-import { authOptions } from '@pages/api/auth/[...nextauth]'
+import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const AUTH_COOKIE_NAMES = ['next-auth.session-token', '__Secure-next-auth.session-token']
