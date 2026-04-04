@@ -18,7 +18,7 @@ const pickFirst = (value) => (Array.isArray(value) ? value[0] : value)
 
 export default async function CabinetRegisterPage({ searchParams }) {
   const session = await getServerSession(authOptions)
-  const headersList = headers()
+  const headersList = await headers()
 
   const callbackState = resolveAuthCallbackFromSearchParams({
     searchParams,
