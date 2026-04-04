@@ -254,7 +254,7 @@ const AdminTeamsPage = ({
   }, [canManageSelectedTeam, persistedTeams, selectedTeamId])
 
   const handleSaveTeam = useCallback(async () => {
-    if (!selectedTeam || !location || !canManageSelectedTeam) {
+    if (!selectedTeam || !canManageSelectedTeam) {
       return
     }
 
@@ -262,7 +262,7 @@ const AdminTeamsPage = ({
     setFeedback(null)
 
     try {
-      const { json } = await requestApiJson(`/api/${location}/teams/${selectedTeam.id}`, {
+      const { json } = await requestApiJson(`/api/cabinet/teams/${selectedTeam.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: buildTeamUpdatePayload(selectedTeam) }),
@@ -297,7 +297,7 @@ const AdminTeamsPage = ({
     } finally {
       setIsSaving(false)
     }
-  }, [canManageSelectedTeam, location, selectedTeam, selectedTeamId])
+  }, [canManageSelectedTeam, selectedTeam, selectedTeamId])
 
   const handleModalPrimaryAction = useCallback(() => {
     if (!isDirty) {
@@ -336,7 +336,7 @@ const AdminTeamsPage = ({
 
   const handleRemoveMember = useCallback(
     async (memberId) => {
-      if (!selectedTeam || !canManageSelectedTeam || !location) {
+      if (!selectedTeam || !canManageSelectedTeam) {
         return
       }
 
@@ -357,7 +357,7 @@ const AdminTeamsPage = ({
       setFeedback(null)
 
       try {
-        await requestApiJson(`/api/${location}/teamsusers/${memberId}`, {
+        await requestApiJson(`/api/cabinet/teams/members/${memberId}`, {
           method: 'DELETE',
           fallbackMessage: 'Не удалось удалить участника',
         })
@@ -393,12 +393,12 @@ const AdminTeamsPage = ({
         setMemberActionId(null)
       }
     },
-    [canManageSelectedTeam, location, selectedTeam, selectedTeamId]
+    [canManageSelectedTeam, selectedTeam, selectedTeamId]
   )
 
   const handleSetCaptain = useCallback(
     async (memberId) => {
-      if (!selectedTeam || !canManageSelectedTeam || !location) {
+      if (!selectedTeam || !canManageSelectedTeam) {
         return
       }
 
@@ -414,7 +414,7 @@ const AdminTeamsPage = ({
 
       try {
         const requests = [
-          fetch(`/api/${location}/teamsusers/${memberId}`, {
+          fetch(`/api/cabinet/teams/members/${memberId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ data: { role: 'capitan' } }),
@@ -423,7 +423,7 @@ const AdminTeamsPage = ({
 
         if (currentCaptain) {
           requests.push(
-            fetch(`/api/${location}/teamsusers/${currentCaptain.id}`, {
+            fetch(`/api/cabinet/teams/members/${currentCaptain.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ data: { role: 'participant' } }),
@@ -479,7 +479,7 @@ const AdminTeamsPage = ({
         setMemberActionId(null)
       }
     },
-    [canManageSelectedTeam, location, selectedTeam, selectedTeamId]
+    [canManageSelectedTeam, selectedTeam, selectedTeamId]
   )
 
   const teamsForList = useMemo(() => {

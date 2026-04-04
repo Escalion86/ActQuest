@@ -213,25 +213,7 @@ const CabinetDashboard = ({
         ? initialDashboardData
         : {}
 
-    return {
-      ...source,
-    cityName: 'Город не выбран',
-    teamsCount: 0,
-    participantTeams: Array.isArray(source.participantTeams)
-      ? source.participantTeams
-      : [],
-    completedGamesCount: 0,
-    averageFinishedPlace: null,
-    upcomingGamesCount: 0,
-    pastGamesCount: 0,
-    hasTeam: false,
-    hasUpcomingRegistration: false,
-    profileCompleted: false,
-    nearestGame: null,
-    personalProgressGames: Array.isArray(source.personalProgressGames)
-      ? source.personalProgressGames
-      : [],
-    rating: {
+    const fallbackRating = {
       isEligible: false,
       rank: null,
       totalRanked: 0,
@@ -239,9 +221,50 @@ const CabinetDashboard = ({
       playersAbove: null,
       playedGames: 0,
       missedGames: 0,
-    },
-    recentActivity: Array.isArray(source.recentActivity) ? source.recentActivity : [],
-    chatUrl: '',
+    }
+
+    return {
+      cityName:
+        typeof source.cityName === 'string' && source.cityName.trim()
+          ? source.cityName
+          : 'Город не выбран',
+      teamsCount: Number.isFinite(Number(source.teamsCount))
+        ? Number(source.teamsCount)
+        : 0,
+      participantTeams: Array.isArray(source.participantTeams)
+        ? source.participantTeams
+        : [],
+      completedGamesCount: Number.isFinite(Number(source.completedGamesCount))
+        ? Number(source.completedGamesCount)
+        : 0,
+      averageFinishedPlace: Number.isFinite(Number(source.averageFinishedPlace))
+        ? Number(source.averageFinishedPlace)
+        : null,
+      upcomingGamesCount: Number.isFinite(Number(source.upcomingGamesCount))
+        ? Number(source.upcomingGamesCount)
+        : 0,
+      pastGamesCount: Number.isFinite(Number(source.pastGamesCount))
+        ? Number(source.pastGamesCount)
+        : 0,
+      hasTeam:
+        typeof source.hasTeam === 'boolean'
+          ? source.hasTeam
+          : Array.isArray(source.participantTeams) && source.participantTeams.length > 0,
+      hasUpcomingRegistration: Boolean(source.hasUpcomingRegistration),
+      profileCompleted: Boolean(source.profileCompleted),
+      nearestGame:
+        source.nearestGame && typeof source.nearestGame === 'object'
+          ? source.nearestGame
+          : null,
+      personalProgressGames: Array.isArray(source.personalProgressGames)
+        ? source.personalProgressGames
+        : [],
+      rating:
+        source.rating && typeof source.rating === 'object'
+          ? { ...fallbackRating, ...source.rating }
+          : fallbackRating,
+      recentActivity: Array.isArray(source.recentActivity) ? source.recentActivity : [],
+      chatUrl: typeof source.chatUrl === 'string' ? source.chatUrl : '',
     }
   }, [initialDashboardData])
   const [selectedTeamId, setSelectedTeamId] = useState(null)

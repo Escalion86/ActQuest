@@ -23,6 +23,7 @@ import useMergedSession from '@helpers/useMergedSession'
 const MAX_TEAMS_PER_USER = 3
 const CABINET_TEAMS_API_BASE = '/api/cabinet/teams'
 const CABINET_TEAMS_ENTITY_API_BASE = '/api/cabinet/teams'
+const CABINET_TEAM_MEMBERS_API_BASE = '/api/cabinet/teams/members'
 
 const resolveRatingBadge = (rating) =>
   rating?.isEligible && Number.isFinite(rating?.rank)
@@ -266,8 +267,9 @@ const TeamsPage = ({
   const canLeaveSelectedTeam =
     Boolean(selectedTeamCurrentMember) && !selectedTeamCurrentMember.isCaptain
   const canDeleteSelectedTeam = Boolean(selectedTeam && isTeamCaptain)
-  const canUseSelfServiceTeams =
-    Boolean(location) && Boolean(currentUserId || currentTelegramIdNumber !== null)
+  const canUseSelfServiceTeams = Boolean(
+    currentUserId || currentTelegramIdNumber !== null
+  )
   const isTeamsLimitReached = visibleTeams.length >= MAX_TEAMS_PER_USER
   const canUseSelfServiceTeamsActions =
     canUseSelfServiceTeams && !isTeamsLimitReached
@@ -301,11 +303,11 @@ const TeamsPage = ({
 
   const fetchTeamsSnapshot = useCallback(
     async (teamIds) => {
-      if (!location || !Array.isArray(teamIds) || teamIds.length === 0) {
+      if (!Array.isArray(teamIds) || teamIds.length === 0) {
         return []
       }
 
-      const params = new URLSearchParams({ location })
+      const params = new URLSearchParams()
       teamIds
         .map((id) => (typeof id === 'string' ? id : id?.toString?.() ?? ''))
         .filter((id) => id.length > 0)
@@ -321,7 +323,7 @@ const TeamsPage = ({
 
       return Array.isArray(json?.data) ? json.data : []
     },
-    [location]
+    []
   )
 
   const updateSelectedTeam = useCallback(
@@ -486,13 +488,6 @@ const TeamsPage = ({
       return
     }
 
-    if (!location) {
-      snackbar.error(
-        'Не удалось определить площадку пользователя. Создание команды недоступно.'
-      )
-      return
-    }
-
     if (!currentUserId && currentTelegramIdNumber === null) {
       snackbar.error(
         'Чтобы управлять командами, требуется авторизованный пользователь.'
@@ -511,11 +506,11 @@ const TeamsPage = ({
       })
 
       const { json } = await requestApiJson(
-        `/api/${location}/custom?collection=teams`,
+        CABINET_TEAMS_API_BASE,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: createPayload }),
+          body: JSON.stringify(createPayload),
           fallbackMessage: 'Не удалось создать команду',
         }
       )
@@ -529,23 +524,6 @@ const TeamsPage = ({
       if (!createdTeamId) {
         throw new Error('Не удалось получить идентификатор новой команды')
       }
-
-      await requestApiJson(
-        `/api/${location}/custom?collection=teamsusers`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            data: {
-              teamId: createdTeamId,
-              userId: currentUserId || null,
-              userTelegramId: currentTelegramIdNumber,
-              role: 'capitan',
-            },
-          }),
-          fallbackMessage: 'Не удалось добавить вас в новую команду',
-        }
-      )
 
       const [freshTeam] = await fetchTeamsSnapshot([createdTeamId])
 
@@ -589,7 +567,6 @@ const TeamsPage = ({
     currentUserId,
     fetchTeamsSnapshot,
     isTeamsLimitReached,
-    location,
     newTeamDescription,
     newTeamImage,
     newTeamName,
@@ -615,14 +592,7 @@ const TeamsPage = ({
       return
     }
 
-    if (!location) {
-      snackbar.error(
-        'Не удалось определить площадку пользователя. Вступление в команду недоступно.'
-      )
-      return
-    }
-
-    if (!currentUserId) {
+    if (!currentUserId && currentTelegramIdNumber === null) {
       snackbar.error(
         'Чтобы присоединяться к командам, требуется авторизованный пользователь.'
       )
@@ -637,7 +607,7 @@ const TeamsPage = ({
     setIsJoiningTeam(true)
 
     try {
-      const { json: teamJson } = await requestApiJson(`/api/${location}/teams/${trimmedTeamId}`, {
+      const { json: teamJson } = await requestApiJson(`${CABINET_TEAMS_ENTITY_API_BASE}/${trimmedTeamId}`, {
         fallbackMessage: 'Команда не найдена',
       })
 
@@ -652,17 +622,11 @@ const TeamsPage = ({
       }
 
       await requestApiJson(
-        `/api/${location}/custom?collection=teamsusers`,
+        CABINET_TEAM_MEMBERS_API_BASE,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            data: {
-              teamId: trimmedTeamId,
-              userId: currentUserId,
-              role: 'participant',
-            },
-          }),
+          body: JSON.stringify({ teamId: trimmedTeamId, role: 'participant' }),
           fallbackMessage: 'Не удалось присоединиться к команде',
         }
       )
@@ -702,10 +666,10 @@ const TeamsPage = ({
     }
   }, [
     canUseSelfServiceTeamsActions,
+    currentTelegramIdNumber,
     currentUserId,
     fetchTeamsSnapshot,
     isTeamsLimitReached,
-    location,
     joinTeamId,
     snackbar,
     sortTeamsByUpdatedAt,
@@ -713,7 +677,7 @@ const TeamsPage = ({
   ])
 
   const handleSaveTeam = useCallback(async () => {
-    if (!selectedTeam || !location || !canManageSelectedTeam) {
+    if (!selectedTeam || !canManageSelectedTeam) {
       return
     }
 
@@ -721,7 +685,7 @@ const TeamsPage = ({
 
     try {
       const { json } = await requestApiJson(
-        `/api/${location}/teams/${selectedTeam.id}`,
+        `${CABINET_TEAMS_ENTITY_API_BASE}/${selectedTeam.id}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -760,7 +724,6 @@ const TeamsPage = ({
     }
   }, [
     canManageSelectedTeam,
-    location,
     selectedTeam,
     selectedTeamId,
     snackbar,
@@ -780,7 +743,7 @@ const TeamsPage = ({
 
   const handleRemoveMember = useCallback(
     async (memberId) => {
-      if (!selectedTeam || !canManageSelectedTeam || !location) {
+      if (!selectedTeam || !canManageSelectedTeam) {
         return
       }
 
@@ -800,7 +763,7 @@ const TeamsPage = ({
 
       try {
         await requestApiJson(
-          `/api/${location}/teamsusers/${memberId}`,
+          `${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`,
           {
             method: 'DELETE',
             fallbackMessage: 'Не удалось удалить участника',
@@ -840,7 +803,6 @@ const TeamsPage = ({
     },
     [
       canManageSelectedTeam,
-      location,
       selectedTeam,
       selectedTeamId,
       snackbar,
@@ -849,7 +811,7 @@ const TeamsPage = ({
 
   const handleSetCaptain = useCallback(
     async (memberId) => {
-      if (!selectedTeam || !canManageSelectedTeam || !location) {
+      if (!selectedTeam || !canManageSelectedTeam) {
         return
       }
 
@@ -864,7 +826,7 @@ const TeamsPage = ({
 
       try {
         const requests = [
-          fetch(`/api/${location}/teamsusers/${memberId}`, {
+          fetch(`${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ data: { role: 'capitan' } }),
@@ -873,7 +835,7 @@ const TeamsPage = ({
 
         if (currentCaptain) {
           requests.push(
-            fetch(`/api/${location}/teamsusers/${currentCaptain.id}`, {
+            fetch(`${CABINET_TEAM_MEMBERS_API_BASE}/${currentCaptain.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ data: { role: 'participant' } }),
@@ -933,7 +895,6 @@ const TeamsPage = ({
     },
     [
       canManageSelectedTeam,
-      location,
       selectedTeam,
       selectedTeamId,
       snackbar,
@@ -1087,7 +1048,7 @@ const TeamsPage = ({
   ])
 
   const handleLeaveSelectedTeam = useCallback(async () => {
-    if (!location || !selectedTeam || !selectedTeamCurrentMember || selectedTeamCurrentMember.isCaptain) {
+    if (!selectedTeam || !selectedTeamCurrentMember || selectedTeamCurrentMember.isCaptain) {
       return
     }
 
@@ -1100,7 +1061,7 @@ const TeamsPage = ({
 
     try {
       await requestApiJson(
-        `/api/${location}/teamsusers/${selectedTeamCurrentMember.id}`,
+        `${CABINET_TEAM_MEMBERS_API_BASE}/${selectedTeamCurrentMember.id}`,
         {
           method: 'DELETE',
           fallbackMessage: 'Не удалось выйти из команды',
@@ -1120,7 +1081,6 @@ const TeamsPage = ({
     }
   }, [
     closeTeamDescriptionModal,
-    location,
     selectedTeam,
     selectedTeamCurrentMember,
     snackbar,
@@ -1179,15 +1139,8 @@ const TeamsPage = ({
         description="Следите за составом, назначайте капитанов и контролируйте участие в играх."
         activePage="teams"
       >
-        {selectedTeam && (!location || teamRestrictionMessage) ? (
+        {selectedTeam && teamRestrictionMessage ? (
           <div className="mb-6 space-y-4">
-            {!location && (
-              <NoticeBanner tone="warning" variant="neon">
-                Не удалось определить площадку пользователя. Сохранение
-                изменений недоступно.
-              </NoticeBanner>
-            )}
-
             {teamRestrictionMessage && (
               <NoticeBanner tone="warning" variant="neon">
                 {teamRestrictionMessage}
@@ -1208,7 +1161,7 @@ const TeamsPage = ({
                     ? undefined
                     : isTeamsLimitReached
                       ? `Достигнут лимит: не более ${MAX_TEAMS_PER_USER} команд`
-                      : 'Функция доступна после авторизации и выбора площадки'
+                      : 'Функция доступна после авторизации'
                 }
                 className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 ${
                   canUseSelfServiceTeamsActions
@@ -1227,7 +1180,7 @@ const TeamsPage = ({
                     ? undefined
                     : isTeamsLimitReached
                       ? `Достигнут лимит: не более ${MAX_TEAMS_PER_USER} команд`
-                      : 'Функция доступна после авторизации и выбора площадки'
+                      : 'Функция доступна после авторизации'
                 }
                 className={`inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 ${
                   canUseSelfServiceTeamsActions
@@ -1364,7 +1317,6 @@ const TeamsPage = ({
           memberActionId={memberActionId}
           onSetCaptain={handleSetCaptain}
           onRemoveMember={handleRemoveMember}
-          location={location}
           canDeleteTeam={canDeleteSelectedTeam}
           isDeletingTeam={isDeletingTeam}
           onDeleteTeam={handleDeleteSelectedTeam}

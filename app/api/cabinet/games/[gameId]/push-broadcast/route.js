@@ -191,7 +191,8 @@ export async function POST(request, { params }) {
     )
   }
 
-  const gameId = toStringId(params?.gameId)
+  const resolvedParams = await params
+  const gameId = toStringId(resolvedParams?.gameId)
   if (!gameId) {
     return NextResponse.json(
       { success: false, error: 'Не передан идентификатор игры' },

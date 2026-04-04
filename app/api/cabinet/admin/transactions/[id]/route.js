@@ -21,7 +21,10 @@ const checkAccess = async () => {
   return { ok: true, session }
 }
 
-const getId = (params) => (typeof params?.id === 'string' ? params.id : null)
+const getId = async (params) => {
+  const resolvedParams = await params
+  return typeof resolvedParams?.id === 'string' ? resolvedParams.id : null
+}
 
 export async function PUT(request, { params }) {
   const access = await checkAccess()
@@ -29,7 +32,7 @@ export async function PUT(request, { params }) {
     return access.response
   }
 
-  const id = getId(params)
+  const id = await getId(params)
   if (!id) {
     return NextResponse.json(
       { success: false, error: 'Не указан id транзакции' },
@@ -69,7 +72,7 @@ export async function DELETE(request, { params }) {
     return access.response
   }
 
-  const id = getId(params)
+  const id = await getId(params)
   if (!id) {
     return NextResponse.json(
       { success: false, error: 'Не указан id транзакции' },

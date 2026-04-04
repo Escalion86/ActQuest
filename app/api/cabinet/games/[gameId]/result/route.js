@@ -128,7 +128,8 @@ const buildResponseData = ({ gameId, game, result, rows }) => {
 
 const handleRequest = async ({ request, params, method }) => {
   const requestUrl = new URL(request.url)
-  const { gameId } = params
+  const resolvedParams = await params
+  const { gameId } = resolvedParams ?? {}
   const normalizedGameId = toStringId(gameId)
   const queryLocation =
     typeof requestUrl.searchParams.get('location') === 'string'

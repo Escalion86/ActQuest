@@ -19,21 +19,18 @@ export default async function CabinetSettingsPage() {
     )
   }
 
-  const location = session?.user?.location ?? null
   let initialSiteSettings = normalizeSiteSettings()
 
-  if (location) {
-    try {
-      const db = await dbConnectGlobal()
+  try {
+    const db = await dbConnectGlobal()
 
-      if (db) {
-        const SiteSettingsModel = db.model('SiteSettings')
-        const settingsDoc = await SiteSettingsModel.findOne({}).lean()
-        initialSiteSettings = normalizeSiteSettings(settingsDoc)
-      }
-    } catch (error) {
-      console.error('Failed to load site settings', error)
+    if (db) {
+      const SiteSettingsModel = db.model('SiteSettings')
+      const settingsDoc = await SiteSettingsModel.findOne({}).lean()
+      initialSiteSettings = normalizeSiteSettings(settingsDoc)
     }
+  } catch (error) {
+    console.error('Failed to load site settings', error)
   }
 
   return (

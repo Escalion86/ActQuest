@@ -30,7 +30,9 @@ export async function PUT(request, { params }) {
     )
   }
 
-  const userId = typeof params?.id === 'string' ? params.id.trim() : ''
+  const resolvedParams = await params
+  const userId =
+    typeof resolvedParams?.id === 'string' ? resolvedParams.id.trim() : ''
   if (!userId) {
     return NextResponse.json(
       { success: false, error: 'Не указан идентификатор пользователя' },

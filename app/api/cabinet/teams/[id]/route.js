@@ -32,6 +32,189 @@ const normalizeTelegramId = (value) => {
 
 const isElevatedRole = (role) => role === 'admin' || role === 'dev'
 
+export async function GET(request, { params }) {
+  const resolvedParams = await params
+  const teamId = normalizeStringId(resolvedParams?.id)
+  if (!teamId) {
+    return NextResponse.json(
+      { success: false, error: 'Не указан идентификатор команды' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: 'База данных недоступна' },
+        { status: 503 },
+      )
+    }
+
+    const team = await db
+      .model('Teams')
+      .findById(teamId)
+      .select({
+        _id: 1,
+        name: 1,
+        name_lowered: 1,
+        description: 1,
+        image: 1,
+        open: 1,
+        updatedAt: 1,
+      })
+      .lean()
+
+    if (!team?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Команда не найдена' },
+        { status: 404 },
+      )
+    }
+
+    return NextResponse.json({ success: true, data: team }, { status: 200 })
+  } catch (error) {
+    console.error('Failed to load team from cabinet (app)', error)
+    return NextResponse.json(
+      { success: false, error: 'Не удалось загрузить команду' },
+      { status: 500 },
+    )
+  }
+}
+
+export async function PUT(request, { params }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json(
+      { success: false, error: 'Необходима авторизация' },
+      { status: 401 },
+    )
+  }
+
+  const resolvedParams = await params
+  const teamId = normalizeStringId(resolvedParams?.id)
+  if (!teamId) {
+    return NextResponse.json(
+      { success: false, error: 'Не указан идентификатор команды' },
+      { status: 400 },
+    )
+  }
+
+  const userId = normalizeStringId(
+    session.user.globalUserId ?? session.user.userId ?? session.user._id,
+  )
+  const userTelegramId = normalizeTelegramId(session.user.telegramId)
+  const userRole =
+    typeof session.user.role === 'string'
+      ? session.user.role.trim().toLowerCase()
+      : ''
+
+  const body = await request.json().catch(() => ({}))
+  const payload = body?.data && typeof body.data === 'object' ? body.data : body
+  const name =
+    typeof payload?.name === 'string' ? payload.name.trim().slice(0, 120) : ''
+  const description =
+    typeof payload?.description === 'string'
+      ? payload.description.trim().slice(0, 2000)
+      : ''
+  const image = typeof payload?.image === 'string' ? payload.image : null
+  const open = typeof payload?.open === 'boolean' ? payload.open : true
+
+  if (!name) {
+    return NextResponse.json(
+      { success: false, error: 'Введите название команды' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) {
+      return NextResponse.json(
+        { success: false, error: 'База данных недоступна' },
+        { status: 503 },
+      )
+    }
+
+    const TeamsModel = db.model('Teams')
+    const TeamsUsersModel = db.model('TeamsUsers')
+
+    const team = await TeamsModel.findById(teamId).select({ _id: 1 }).lean()
+    if (!team?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Команда не найдена' },
+        { status: 404 },
+      )
+    }
+
+    if (!isElevatedRole(userRole)) {
+      const membershipOr = []
+      if (userId) {
+        membershipOr.push({ userId })
+      }
+      if (userTelegramId !== null) {
+        membershipOr.push({ userTelegramId })
+      }
+      if (membershipOr.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Недостаточно прав для изменения команды' },
+          { status: 403 },
+        )
+      }
+
+      const captainMembership = await TeamsUsersModel.findOne({
+        teamId,
+        role: 'capitan',
+        $or: membershipOr,
+      })
+        .select({ _id: 1 })
+        .lean()
+
+      if (!captainMembership?._id) {
+        return NextResponse.json(
+          { success: false, error: 'Изменять команду может только капитан' },
+          { status: 403 },
+        )
+      }
+    }
+
+    const updatedTeam = await TeamsModel.findByIdAndUpdate(
+      teamId,
+      {
+        $set: {
+          name,
+          name_lowered: name.toLowerCase(),
+          description,
+          image,
+          open,
+        },
+      },
+      { new: true },
+    )
+      .select({
+        _id: 1,
+        name: 1,
+        name_lowered: 1,
+        description: 1,
+        image: 1,
+        open: 1,
+        updatedAt: 1,
+      })
+      .lean()
+
+    return NextResponse.json(
+      { success: true, data: updatedTeam },
+      { status: 200 },
+    )
+  } catch (error) {
+    console.error('Failed to update team from cabinet (app)', error)
+    return NextResponse.json(
+      { success: false, error: 'Не удалось сохранить команду' },
+      { status: 500 },
+    )
+  }
+}
+
 export async function DELETE(request, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -41,7 +224,8 @@ export async function DELETE(request, { params }) {
     )
   }
 
-  const teamId = normalizeStringId(params?.id)
+  const resolvedParams = await params
+  const teamId = normalizeStringId(resolvedParams?.id)
   if (!teamId) {
     return NextResponse.json(
       { success: false, error: 'Не указан идентификатор команды' },

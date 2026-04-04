@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
 
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
+import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const toStringId = (value) => {
@@ -35,17 +37,65 @@ const normalizeGameTeamEntry = (doc) => {
   return { id, teamId }
 }
 
-export async function GET(request, { params }) {
-  const requestUrl = new URL(request.url)
-  const { gameId } = params
-  const location = requestUrl.searchParams.get('location')
-
-  if (!location || typeof location !== 'string') {
-    return NextResponse.json(
-      { success: false, error: 'Не передана площадка' },
-      { status: 400 },
-    )
+const normalizeRole = (value) => {
+  if (typeof value !== 'string') {
+    return 'client'
   }
+  const normalizedRaw = value.trim().toLowerCase()
+  const normalized = normalizedRaw === 'moderator' ? 'moder' : normalizedRaw
+  return ['client', 'moder', 'admin', 'dev'].includes(normalized)
+    ? normalized
+    : 'client'
+}
+
+const isElevatedRole = (role) => role === 'admin' || role === 'dev'
+
+const resolveSessionIdentity = (session) => {
+  const sessionUser = session?.user ?? {}
+  const userId = toStringId(
+    sessionUser.globalUserId ??
+      sessionUser.userId ??
+      sessionUser._id ??
+      sessionUser.id ??
+      null,
+  )
+  const telegramIdRaw = Number(sessionUser.telegramId)
+  const telegramId = Number.isFinite(telegramIdRaw) ? telegramIdRaw : null
+
+  return {
+    userId,
+    telegramId,
+    role: normalizeRole(sessionUser.role),
+  }
+}
+
+const resolveMembershipFilter = ({ userId, telegramId }) => {
+  const orFilter = []
+  if (userId) {
+    orFilter.push({ userId })
+  }
+  if (Number.isFinite(telegramId)) {
+    orFilter.push({ userTelegramId: telegramId })
+  }
+  return orFilter
+}
+
+const ensureGameAllowsRegistration = (game) => {
+  const status = String(game?.status ?? '')
+    .trim()
+    .toLowerCase()
+  if (status !== 'active') {
+    return 'Запись на эту игру закрыта'
+  }
+  if (game?.registrationOpen === false) {
+    return 'Запись на эту игру закрыта'
+  }
+  return null
+}
+
+export async function GET(request, { params }) {
+  const resolvedParams = await params
+  const { gameId } = resolvedParams ?? {}
 
   const normalizedGameId = toStringId(gameId)
 
@@ -80,17 +130,11 @@ export async function GET(request, { params }) {
       )
     }
 
-    const gameLocation =
+    const gameLocationRaw =
       typeof game.location === 'string'
         ? game.location.trim().toLowerCase()
         : null
-    const requestedLocation = location.trim().toLowerCase()
-    if (gameLocation && requestedLocation && gameLocation !== requestedLocation) {
-      return NextResponse.json(
-        { success: false, error: 'Игра недоступна для выбранной площадки' },
-        { status: 403 },
-      )
-    }
+    const gameLocation = gameLocationRaw || null
 
     const GamesTeamsModel = db.model('GamesTeams')
     const gameTeamsDocs = await GamesTeamsModel.find({ gameId: normalizedGameId })
@@ -107,9 +151,16 @@ export async function GET(request, { params }) {
       ? await fetchTeamsForCabinet({
           db,
           teamIds: uniqueTeamIds,
-          location: requestedLocation,
+          location: gameLocation,
         })
       : []
+
+    const allTeams = await fetchTeamsForCabinet({
+      db,
+      location: gameLocation,
+      limit: 500,
+      offset: 0,
+    })
 
     return NextResponse.json(
       {
@@ -117,6 +168,7 @@ export async function GET(request, { params }) {
         data: {
           entries,
           teams,
+          allTeams: Array.isArray(allTeams) ? allTeams : [],
         },
       },
       { status: 200 },
@@ -125,6 +177,220 @@ export async function GET(request, { params }) {
     console.error('Failed to load game teams for cabinet (app)', error)
     return NextResponse.json(
       { success: false, error: 'Не удалось загрузить команды игры' },
+      { status: 500 },
+    )
+  }
+}
+
+export async function POST(request, { params }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json(
+      { success: false, error: 'Требуется авторизация' },
+      { status: 401 },
+    )
+  }
+
+  const resolvedParams = await params
+  const gameId = toStringId(resolvedParams?.gameId)
+  const payload = await request.json().catch(() => ({}))
+  const teamId = toStringId(payload?.teamId)
+
+  if (!gameId || !teamId) {
+    return NextResponse.json(
+      { success: false, error: 'Не передан идентификатор игры или команды' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) {
+      throw new Error('Соединение с базой данных не установлено')
+    }
+
+    const GamesModel = db.model('Games')
+    const TeamsModel = db.model('Teams')
+    const TeamsUsersModel = db.model('TeamsUsers')
+    const GamesTeamsModel = db.model('GamesTeams')
+
+    const game = await GamesModel.findById(gameId)
+      .select({ _id: 1, status: 1, registrationOpen: 1 })
+      .lean()
+    if (!game?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Игра не найдена' },
+        { status: 404 },
+      )
+    }
+
+    const registrationError = ensureGameAllowsRegistration(game)
+    if (registrationError) {
+      return NextResponse.json(
+        { success: false, error: registrationError },
+        { status: 403 },
+      )
+    }
+
+    const team = await TeamsModel.findById(teamId).select({ _id: 1 }).lean()
+    if (!team?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Команда не найдена' },
+        { status: 404 },
+      )
+    }
+
+    const identity = resolveSessionIdentity(session)
+    const membershipOr = resolveMembershipFilter(identity)
+    if (!isElevatedRole(identity.role)) {
+      if (membershipOr.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Недостаточно прав для регистрации команды' },
+          { status: 403 },
+        )
+      }
+
+      const captainMembership = await TeamsUsersModel.findOne({
+        teamId,
+        role: 'capitan',
+        $or: membershipOr,
+      })
+        .select({ _id: 1 })
+        .lean()
+
+      if (!captainMembership?._id) {
+        return NextResponse.json(
+          { success: false, error: 'Регистрация доступна только капитану команды' },
+          { status: 403 },
+        )
+      }
+    }
+
+    const existing = await GamesTeamsModel.findOne({ gameId, teamId })
+      .select({ _id: 1 })
+      .lean()
+    if (existing?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Команда уже зарегистрирована на эту игру' },
+        { status: 409 },
+      )
+    }
+
+    const created = await GamesTeamsModel.create({ gameId, teamId })
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: toStringId(created?._id),
+          gameId,
+          teamId,
+        },
+      },
+      { status: 201 },
+    )
+  } catch (error) {
+    console.error('Failed to register team for game (app)', error)
+    return NextResponse.json(
+      { success: false, error: 'Не удалось зарегистрироваться на игру' },
+      { status: 500 },
+    )
+  }
+}
+
+export async function DELETE(request, { params }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json(
+      { success: false, error: 'Требуется авторизация' },
+      { status: 401 },
+    )
+  }
+
+  const resolvedParams = await params
+  const gameId = toStringId(resolvedParams?.gameId)
+  const payload = await request.json().catch(() => ({}))
+  const teamIdsRaw = Array.isArray(payload?.teamIds) ? payload.teamIds : []
+  const teamIds = Array.from(
+    new Set(teamIdsRaw.map((value) => toStringId(value)).filter(Boolean)),
+  )
+
+  if (!gameId || teamIds.length === 0) {
+    return NextResponse.json(
+      { success: false, error: 'Не передан идентификатор игры или команд' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) {
+      throw new Error('Соединение с базой данных не установлено')
+    }
+
+    const GamesModel = db.model('Games')
+    const TeamsUsersModel = db.model('TeamsUsers')
+    const GamesTeamsModel = db.model('GamesTeams')
+
+    const game = await GamesModel.findById(gameId).select({ _id: 1 }).lean()
+    if (!game?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Игра не найдена' },
+        { status: 404 },
+      )
+    }
+
+    const identity = resolveSessionIdentity(session)
+    if (!isElevatedRole(identity.role)) {
+      const membershipOr = resolveMembershipFilter(identity)
+      if (membershipOr.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Недостаточно прав для отмены регистрации' },
+          { status: 403 },
+        )
+      }
+
+      const captainMemberships = await TeamsUsersModel.find({
+        teamId: { $in: teamIds },
+        role: 'capitan',
+        $or: membershipOr,
+      })
+        .select({ teamId: 1 })
+        .lean()
+
+      const allowedTeamIds = new Set(
+        captainMemberships
+          .map((item) => toStringId(item?.teamId))
+          .filter(Boolean),
+      )
+      const hasForbiddenTeam = teamIds.some((teamIdValue) => !allowedTeamIds.has(teamIdValue))
+      if (hasForbiddenTeam) {
+        return NextResponse.json(
+          { success: false, error: 'Отмена регистрации доступна только капитану команды' },
+          { status: 403 },
+        )
+      }
+    }
+
+    const deleteResult = await GamesTeamsModel.deleteMany({
+      gameId,
+      teamId: { $in: teamIds },
+    })
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          deletedCount: Number(deleteResult?.deletedCount || 0),
+          gameId,
+          teamIds,
+        },
+      },
+      { status: 200 },
+    )
+  } catch (error) {
+    console.error('Failed to cancel team registration for game (app)', error)
+    return NextResponse.json(
+      { success: false, error: 'Не удалось отменить регистрацию команды' },
       { status: 500 },
     )
   }

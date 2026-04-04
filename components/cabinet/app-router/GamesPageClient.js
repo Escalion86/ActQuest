@@ -1820,14 +1820,6 @@ const GamesPage = ({
       return
     }
 
-    if (!registerApiLocation) {
-      setRegisterFeedback({
-        type: 'error',
-        message: 'Не удалось определить площадку выбранного города',
-      })
-      return
-    }
-
     if (!currentUserDbId) {
       setRegisterFeedback({
         type: 'error',
@@ -1852,60 +1844,13 @@ const GamesPage = ({
     setRegisterFeedback(null)
 
     try {
-      const { json: gameJson } = await requestApiJson(
-        `/api/${registerApiLocation}/custom?collection=games&id=${encodeURIComponent(
-          trimmedGameId,
-        )}`,
-        {
-          fallbackMessage: 'Игра не найдена',
-        },
-      )
-
-      const gameData = gameJson?.data ?? null
-      const gameStatus = (gameData?.status ?? '').toString().toLowerCase()
-      const isRegistrationOpen = gameData?.registrationOpen !== false
-
-      if (gameStatus && gameStatus !== 'active') {
-        throw new Error('Запись на эту игру закрыта')
-      }
-      if (!isRegistrationOpen) {
-        throw new Error('Запись на эту игру закрыта')
-      }
-
-      const existingParams = new URLSearchParams({
-        collection: 'gamesteams',
-        teamId: registerTeamId,
-        gameId: trimmedGameId,
-        limit: '1',
-      })
-
-      const { response: existingResponse, json: existingJson } =
-        await requestApiJson(
-          `/api/${registerApiLocation}/custom?${existingParams.toString()}`,
-          {
-            fallbackMessage: 'Не удалось проверить регистрацию команды',
-            throwOnHttpError: false,
-          },
-        )
-
-      if (
-        existingResponse.ok &&
-        Array.isArray(existingJson?.data) &&
-        existingJson.data.length > 0
-      ) {
-        throw new Error('Команда уже зарегистрирована на эту игру')
-      }
-
       await requestApiJson(
-        `/api/${registerApiLocation}/custom?collection=gamesteams`,
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(trimmedGameId)}/teams`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            data: {
-              teamId: registerTeamId,
-              gameId: trimmedGameId,
-            },
+            teamId: registerTeamId,
           }),
           fallbackMessage: 'Не удалось зарегистрироваться на игру',
         },
@@ -1998,7 +1943,6 @@ const GamesPage = ({
     }
   }, [
     currentUserDbId,
-    registerApiLocation,
     registerGameId,
     registerTeamId,
     registerTeams,
@@ -2160,19 +2104,6 @@ const GamesPage = ({
         return
       }
 
-      const gameApiLocation =
-        game.location ||
-        (shouldShowLocationFilter ? gamesFilterLocation : location) ||
-        registerApiLocation
-
-      if (!gameApiLocation) {
-        setFeedback({
-          type: 'error',
-          message: 'Не удалось определить площадку игры.',
-        })
-        return
-      }
-
       if (isRegistrationCancellationInProgress(game.id)) {
         return
       }
@@ -2197,88 +2128,21 @@ const GamesPage = ({
       )
 
       try {
-        const existingParams = new URLSearchParams({
-          collection: 'gamesteams',
-          gameId: game.id,
-          limit: '200',
-        })
-
-        const locationCandidates = Array.from(
-          new Set(
-            [
-              game.location,
-              shouldShowLocationFilter ? gamesFilterLocation : null,
-              location,
-              registerApiLocation,
-            ]
-              .map((item) =>
-                typeof item === 'string' ? item.trim().toLowerCase() : '',
-              )
-              .filter(Boolean),
-          ),
-        )
-
-        let existingJson = null
-        let existingCheckError = null
-        let resolvedApiLocationForCancellation = gameApiLocation
-
-        for (const candidateLocation of locationCandidates) {
-          try {
-            const { response: existingResponse, json: nextJson } =
-              await requestApiJson(
-                `/api/${candidateLocation}/custom?${existingParams.toString()}`,
-                {
-                  fallbackMessage: 'Не удалось проверить регистрацию команды',
-                  throwOnHttpError: false,
-                },
-              )
-
-            if (existingResponse.ok && nextJson?.success !== false) {
-              existingJson = nextJson
-              resolvedApiLocationForCancellation = candidateLocation
-              existingCheckError = null
-              break
-            }
-
-            existingCheckError =
-              extractErrorMessage(nextJson?.error) ||
-              `Не удалось проверить регистрацию команды (площадка: ${candidateLocation})`
-          } catch (error) {
-            existingCheckError =
-              extractErrorMessage(error) ||
-              `Не удалось проверить регистрацию команды (площадка: ${candidateLocation})`
-          }
-        }
-
-        if (!existingJson) {
-          setFeedback({
-            type: 'error',
-            message:
-              existingCheckError || 'Не удалось проверить регистрацию команды',
-          })
-          return
-        }
-
         const captainTeamIds = new Set(
           captainParticipations.map((entry) => entry.teamId).filter(Boolean),
         )
-        const gameTeamIdsToDelete = (
-          Array.isArray(existingJson?.data) ? existingJson.data : []
-        )
-          .filter((entry) => captainTeamIds.has(toStringId(entry?.teamId)))
-          .map((entry) => toStringId(entry?._id))
-          .filter(Boolean)
+        const teamIdsToDelete = Array.from(captainTeamIds)
 
-        if (gameTeamIdsToDelete.length === 0) {
+        if (teamIdsToDelete.length === 0) {
           throw new Error('Не найдены записи регистрации для удаления')
         }
 
         await requestApiJson(
-          `/api/${resolvedApiLocationForCancellation}/custom?collection=gamesteams`,
+          `${CABINET_GAMES_API_BASE}/${encodeURIComponent(game.id)}/teams`,
           {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ params: gameTeamIdsToDelete }),
+            body: JSON.stringify({ teamIds: teamIdsToDelete }),
             fallbackMessage: 'Не удалось отменить регистрацию команды',
           },
         )
@@ -2296,7 +2160,7 @@ const GamesPage = ({
             ...gameItem,
             teamsCount: Math.max(
               0,
-              (Number(gameItem.teamsCount) || 0) - gameTeamIdsToDelete.length,
+              (Number(gameItem.teamsCount) || 0) - teamIdsToDelete.length,
             ),
             userParticipationTeams: nextParticipationTeams,
             userTeamPlace:
@@ -2330,12 +2194,8 @@ const GamesPage = ({
       }
     },
     [
-      gamesFilterLocation,
       isRegistrationCancellationInProgress,
-      location,
-      registerApiLocation,
       setFeedback,
-      shouldShowLocationFilter,
     ],
   )
 
@@ -2701,16 +2561,12 @@ const GamesPage = ({
       }
 
       if (isCloneMode) {
-        const cloneSourceMeta = createGameCloneSourceOptions.find(
-          (game) => game.id === cloneSourceGameId,
-        )
-        const cloneSourceApiLocation =
-          cloneSourceMeta?.location || normalizedCreateLocation
+        const gameDetailsParams = new URLSearchParams({
+          gameId: cloneSourceGameId,
+        })
 
         const { json: sourceJson } = await requestApiJson(
-          `/api/${cloneSourceApiLocation}/custom?collection=games&id=${encodeURIComponent(
-            cloneSourceGameId,
-          )}`,
+          `/api/cabinet/game-details?${gameDetailsParams.toString()}`,
           {
             fallbackMessage: 'Не удалось загрузить игру-источник',
           },
@@ -2835,15 +2691,12 @@ const GamesPage = ({
         creatorTelegramId: currentUserTelegramIdNumber,
       }
 
-      const { json } = await requestApiJson(
-        `/api/${normalizedCreateLocation}/custom?collection=games`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: payload }),
-          fallbackMessage: 'Не удалось создать игру',
-        },
-      )
+      const { json } = await requestApiJson(CABINET_GAMES_API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: payload }),
+        fallbackMessage: 'Не удалось создать игру',
+      })
 
       const createdGame = normalizeGameForCabinet({
         ...json.data,
@@ -3767,12 +3620,10 @@ const GamesPage = ({
   }, [])
 
   const loadTeamsModalData = useCallback(async () => {
-    if (!selectedGame || !selectedGameApiLocation) {
+    if (!selectedGame) {
       setTeamsModalState({
         isLoading: false,
-        error: selectedGameApiLocation
-          ? 'Не выбрана игра для управления командами'
-          : 'Не удалось определить площадку',
+        error: 'Не выбрана игра для управления командами',
         gameTeams: [],
         availableTeams: [],
       })
@@ -3783,19 +3634,9 @@ const GamesPage = ({
     setTeamsModalState((prev) => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      const teamsParams = new URLSearchParams({
-        location: selectedGameApiLocation,
-      })
-      const [gameTeamsResponse, teamsResponse] = await Promise.all([
-        fetch(
-          `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
-            selectedGame.id,
-          )}/teams?${teamsParams.toString()}`,
-        ),
-        fetch(
-          `/api/${selectedGameApiLocation}/custom?collection=teams&limit=200&sort=name_lowered`,
-        ),
-      ])
+      const gameTeamsResponse = await fetch(
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(selectedGame.id)}/teams`,
+      )
 
       const gameTeamsJson = await gameTeamsResponse.json()
       if (!gameTeamsResponse.ok || gameTeamsJson?.success === false) {
@@ -3805,27 +3646,21 @@ const GamesPage = ({
         )
       }
 
-      const teamsJson = await teamsResponse.json()
-      if (!teamsResponse.ok || teamsJson?.success === false) {
-        throw new Error(
-          extractErrorMessage(teamsJson?.error) ||
-            'Не удалось загрузить список команд',
-        )
-      }
-
       const gameTeamsEntries = Array.isArray(gameTeamsJson?.data?.entries)
         ? gameTeamsJson.data.entries
         : []
       const linkedTeams = Array.isArray(gameTeamsJson?.data?.teams)
         ? gameTeamsJson.data.teams
         : []
-      const allTeamsData = Array.isArray(teamsJson.data) ? teamsJson.data : []
+      const allTeamsData = Array.isArray(gameTeamsJson?.data?.allTeams)
+        ? gameTeamsJson.data.allTeams
+        : []
 
       const allTeamIds = allTeamsData
         .map((team) => {
-          if (team?._id) {
+          if (team?._id || team?.id) {
             try {
-              return team._id.toString()
+              return String(team._id || team.id)
             } catch (error) {
               return ''
             }
@@ -3838,9 +3673,7 @@ const GamesPage = ({
       let detailedTeamsMap = {}
 
       if (allTeamIds.length > 0) {
-        const detailedParams = new URLSearchParams({
-          location: selectedGameApiLocation,
-        })
+        const detailedParams = new URLSearchParams()
         allTeamIds.forEach((id) => detailedParams.append('teamIds', id))
 
         try {
@@ -3920,8 +3753,9 @@ const GamesPage = ({
         .filter(Boolean)
 
       const allTeamsMap = allTeamsData.reduce((acc, team) => {
-        if (team?._id) {
-          const id = team._id.toString()
+        const rawId = team?._id || team?.id
+        if (rawId) {
+          const id = String(rawId)
           const detailedTeam = detailedTeamsMap[id] ?? null
           const membersCount = Number.isFinite(detailedTeam?.membersCount)
             ? detailedTeam.membersCount
@@ -3973,10 +3807,10 @@ const GamesPage = ({
       })
       setSelectedTeamToAdd('')
     }
-  }, [selectedGame, selectedGameApiLocation])
+  }, [selectedGame])
 
   const handleAddTeamToGame = useCallback(async () => {
-    if (!selectedGame || !selectedGameApiLocation || !selectedTeamToAdd) {
+    if (!selectedGame || !selectedTeamToAdd) {
       return
     }
 
@@ -3984,17 +3818,15 @@ const GamesPage = ({
     setTeamsModalState((prev) => ({ ...prev, error: null }))
 
     try {
-      await requestApiJson(`/api/${selectedGameApiLocation}/gamesteams`, {
+      await requestApiJson(
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(selectedGame.id)}/teams`,
+        {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          data: {
-            teamId: selectedTeamToAdd,
-            gameId: selectedGame.id,
-          },
-        }),
+        body: JSON.stringify({ teamId: selectedTeamToAdd }),
         fallbackMessage: 'Не удалось добавить команду',
-      })
+        },
+      )
 
       await loadTeamsModalData()
     } catch (error) {
@@ -4009,13 +3841,12 @@ const GamesPage = ({
   }, [
     loadTeamsModalData,
     selectedGame,
-    selectedGameApiLocation,
     selectedTeamToAdd,
   ])
 
   const handleRemoveTeamFromGame = useCallback(
     async (gameTeamId) => {
-      if (!gameTeamId || !selectedGameApiLocation) {
+      if (!gameTeamId || !selectedGame) {
         return
       }
 
@@ -4025,10 +3856,19 @@ const GamesPage = ({
       setTeamsModalState((prev) => ({ ...prev, error: null }))
 
       try {
+        const gameTeamEntry = teamsModalState.gameTeams.find(
+          (entry) => entry.id === gameTeamId,
+        )
+        if (!gameTeamEntry?.teamId) {
+          throw new Error('Не удалось определить команду для удаления')
+        }
+
         await requestApiJson(
-          `/api/${selectedGameApiLocation}/gamesteams/${gameTeamId}`,
+          `${CABINET_GAMES_API_BASE}/${encodeURIComponent(selectedGame.id)}/teams`,
           {
             method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teamIds: [gameTeamEntry.teamId] }),
             fallbackMessage: 'Не удалось удалить команду',
           },
         )
@@ -4044,7 +3884,7 @@ const GamesPage = ({
         setRemovingTeamIds((prev) => prev.filter((id) => id !== gameTeamId))
       }
     },
-    [loadTeamsModalData, selectedGameApiLocation],
+    [loadTeamsModalData, selectedGame, teamsModalState.gameTeams],
   )
 
   useEffect(() => {

@@ -12,10 +12,13 @@ export const runLocationLegacyHandler = ({
     defaultStatus,
     defaultJson,
     handler: async (req, res) => {
+      const resolvedParams = await params
       req.query = {
         ...req.query,
-        ...(params?.location ? { location: params.location } : {}),
-        ...(params?.id ? { id: params.id } : {}),
+        ...(resolvedParams?.location
+          ? { location: resolvedParams.location }
+          : {}),
+        ...(resolvedParams?.id ? { id: resolvedParams.id } : {}),
       }
 
       return handler(req, res)

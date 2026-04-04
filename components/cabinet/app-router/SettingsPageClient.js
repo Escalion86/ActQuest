@@ -48,13 +48,6 @@ const SettingsPage = ({ initialSiteSettings, session: initialSession }) => {
       return
     }
 
-    const location = activeSession?.user?.location ?? null
-
-    if (!location) {
-      setSaveState({ isSaving: false, isSaved: false, error: 'Не удалось определить город для сохранения настроек.' })
-      return
-    }
-
     setSaveState({ isSaving: true, isSaved: false, error: null })
 
     const normalizeField = (value) => {
@@ -74,18 +67,14 @@ const SettingsPage = ({ initialSiteSettings, session: initialSession }) => {
       enableVkOneTap: Boolean(siteSettings?.enableVkOneTap),
     }
 
-    const baseUrl = `/api/${location}/custom?collection=sitesettings`
-    const requestUrl = siteSettings?.id ? `${baseUrl}&id=${siteSettings.id}` : baseUrl
-    const method = siteSettings?.id ? 'PUT' : 'POST'
-
     try {
-      const { json } = await requestApiJson(requestUrl, {
-        method,
+      const { json } = await requestApiJson('/api/cabinet/settings', {
+        method: 'PUT',
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ data: payload }),
+        body: JSON.stringify(payload),
         fallbackMessage: 'Не удалось сохранить изменения',
       })
 
@@ -101,7 +90,7 @@ const SettingsPage = ({ initialSiteSettings, session: initialSession }) => {
         error: 'Не удалось сохранить настройки. Попробуйте ещё раз.',
       })
     }
-  }, [activeSession, isAdmin, siteSettings])
+  }, [isAdmin, siteSettings])
 
   if (!isAdmin) {
     return (

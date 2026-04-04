@@ -98,7 +98,6 @@ const TeamEditModal = ({
   memberActionId,
   onSetCaptain,
   onRemoveMember,
-  location,
   canEditCarSkin,
   canDeleteTeam,
   isDeletingTeam,
@@ -118,7 +117,7 @@ const TeamEditModal = ({
       <CabinetButton
         onClick={onModalPrimaryAction}
         disabled={
-          isSaving || (isDirty && (!canManageSelectedTeam || !location))
+          isSaving || (isDirty && !canManageSelectedTeam)
         }
         variant="primary"
       >
@@ -398,7 +397,6 @@ TeamEditModal.propTypes = {
   memberActionId: PropTypes.string,
   onSetCaptain: PropTypes.func.isRequired,
   onRemoveMember: PropTypes.func.isRequired,
-  location: PropTypes.string,
   canEditCarSkin: PropTypes.bool,
   canDeleteTeam: PropTypes.bool,
   isDeletingTeam: PropTypes.bool,
@@ -408,7 +406,6 @@ TeamEditModal.propTypes = {
 TeamEditModal.defaultProps = {
   selectedTeam: null,
   memberActionId: null,
-  location: null,
   canEditCarSkin: false,
   canDeleteTeam: false,
   isDeletingTeam: false,
