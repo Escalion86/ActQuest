@@ -107,11 +107,15 @@ const normalizeUserForAdmin = ({
     ? Number(userDoc.gameStats.playedGamesCount)
     : 0
 
+  const normalizedRoleRaw =
+    typeof userDoc?.role === 'string' ? userDoc.role.trim().toLowerCase() : ''
+  const normalizedRole = ensureRole(normalizedRoleRaw)
+
   return {
     ...baseProfile,
     globalUserId: userDoc?.globalUserId ? String(userDoc.globalUserId) : null,
     telegramId,
-    role: ensureRole(userDoc?.role),
+    role: normalizedRole,
     createdAt: ensureDateISOString(userDoc?.createdAt),
     updatedAt: ensureDateISOString(userDoc?.updatedAt),
     rating: resolveEntityRating({ entity: userDoc, location }),
@@ -162,7 +166,8 @@ const normalizeRoleFilter = (roleFilter) => {
     return null
   }
 
-  const normalized = roleFilter.trim().toLowerCase()
+  const normalizedRaw = roleFilter.trim().toLowerCase()
+  const normalized = normalizedRaw
   if (!normalized || normalized === 'all') {
     return null
   }

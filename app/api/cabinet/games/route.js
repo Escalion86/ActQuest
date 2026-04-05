@@ -9,7 +9,7 @@ const normalizeRole = (value) => {
     return 'client'
   }
   const normalizedRaw = value.trim().toLowerCase()
-  const normalized = normalizedRaw === 'moderator' ? 'moder' : normalizedRaw
+  const normalized = normalizedRaw
   return ['client', 'moder', 'admin', 'dev'].includes(normalized)
     ? normalized
     : 'client'

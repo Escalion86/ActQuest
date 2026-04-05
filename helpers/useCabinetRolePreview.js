@@ -11,7 +11,7 @@ const normalizeRole = (value) => {
   }
 
   const normalizedRaw = value.trim().toLowerCase()
-  const normalized = normalizedRaw === 'moderator' ? 'moder' : normalizedRaw
+  const normalized = normalizedRaw
   return ROLE_PREVIEW_OPTIONS.includes(normalized) ? normalized : null
 }
 

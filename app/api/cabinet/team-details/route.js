@@ -12,10 +12,6 @@ const normalizeRole = (value) => {
   }
 
   const normalized = value.trim().toLowerCase()
-  if (normalized === 'moderator') {
-    return 'moder'
-  }
-
   if (['client', 'moder', 'admin', 'dev'].includes(normalized)) {
     return normalized
   }

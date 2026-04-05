@@ -774,7 +774,7 @@ const GamesPage = ({
       : Number(currentUserTelegramId)
   const canEditAllGames = userRole === 'admin' || userRole === 'dev'
   const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
-  const canEditOwnGames = userRole === 'moder' || userRole === 'moderator'
+  const canEditOwnGames = userRole === 'moder'
   const safeInitialGames = Array.isArray(initialGames) ? initialGames : []
   const currentUserDbId =
     activeSession?.user?._id === null || activeSession?.user?._id === undefined

@@ -79,6 +79,12 @@ const ManageUsersPage = ({
   initialLocation,
   session: initialSession,
 }) => {
+  const normalizeRoleFilterValue = useCallback((value) => {
+    const normalizedRaw =
+      typeof value === 'string' ? value.trim().toLowerCase() : ''
+    return normalizedRaw
+  }, [])
+
   const safeInitialUsers = Array.isArray(initialUsers) ? initialUsers : []
   const router = useRouter()
   const pathname = usePathname()
@@ -1044,7 +1050,9 @@ const ManageUsersPage = ({
                   id="user-role-filter"
                   label="Роль"
                   value={roleFilter}
-                  onChange={(event) => setRoleFilter(event.target.value)}
+                  onChange={(event) =>
+                    setRoleFilter(normalizeRoleFilterValue(event.target.value))
+                  }
                   containerClassName="space-y-1"
                   labelClassName="text-xs font-semibold text-slate-500"
                   selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
