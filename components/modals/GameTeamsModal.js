@@ -103,10 +103,11 @@ const GameTeamsModal = ({
     <>
       <Modal
         isOpen={isTeamsModalOpen}
-        title={`Команды игры «${selectedGame.name || 'Без названия'}»`}
+        title={`Команды игры «${selectedGame?.name || 'Без названия'}»`}
         onClose={handleCloseTeamsModal}
       >
-        <div className="space-y-5">
+        {selectedGame ? (
+          <div className="space-y-5">
           {teamsModalState.error && (
             <NoticeBanner tone="error" variant="neon">
               {teamsModalState.error}
@@ -263,7 +264,12 @@ const GameTeamsModal = ({
               </p>
             )}
           </FormSectionCard>
-        </div>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-300">
+            Игра не выбрана. Закройте окно и выберите игру снова.
+          </p>
+        )}
       </Modal>
       <TeamDescriptionModal
         isOpen={isTeamDetailsModalOpen}
@@ -305,7 +311,7 @@ const availableTeamShape = PropTypes.shape({
 })
 
 GameTeamsModal.propTypes = {
-  selectedGame: PropTypes.shape({ name: PropTypes.string }).isRequired,
+  selectedGame: PropTypes.shape({ name: PropTypes.string }),
   isTeamsModalOpen: PropTypes.bool.isRequired,
   handleCloseTeamsModal: PropTypes.func.isRequired,
   teamsModalState: PropTypes.shape({
@@ -323,6 +329,7 @@ GameTeamsModal.propTypes = {
 }
 
 GameTeamsModal.defaultProps = {
+  selectedGame: null,
   selectedTeamToAdd: '',
 }
 

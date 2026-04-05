@@ -252,7 +252,19 @@ const execute = (request, params) =>
 
         return res.status(200).json({ success: true, data: updatedGame })
       } catch (error) {
-        console.error('Failed to update game', error)
+        console.error('Failed to update game', {
+          error,
+          gameId: id,
+          location,
+          updateKeys: Object.keys(updatePayload || {}),
+          hasTasks: Array.isArray(updatePayload?.tasks),
+          tasksCount: Array.isArray(updatePayload?.tasks)
+            ? updatePayload.tasks.length
+            : 0,
+          hasDescriptionRich:
+            typeof updatePayload?.descriptionRich === 'string' &&
+            updatePayload.descriptionRich.trim().length > 0,
+        })
 
         const errorName = typeof error?.name === 'string' ? error.name : ''
         const errorMessage =

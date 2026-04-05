@@ -17,39 +17,51 @@ export const proxyToLocationGameRoute = async ({
   method = 'GET',
   bodyText = null,
 }) => {
-  const resolved = await resolveGameLocationById(gameId)
-  if (resolved.error || !resolved.location || !resolved.gameId) {
+  try {
+    const resolved = await resolveGameLocationById(gameId)
+    if (resolved.error || !resolved.location || !resolved.gameId) {
+      return NextResponse.json(
+        { success: false, error: resolved.error || 'Не удалось определить площадку игры' },
+        { status: resolved.status || 400 },
+      )
+    }
+
+    const resolvedTargetPath = String(targetPath || '')
+      .replaceAll(':location', encodeURIComponent(resolved.location))
+      .replaceAll(':gameId', encodeURIComponent(resolved.gameId))
+
+    const targetUrl = new URL(resolvedTargetPath, request.nextUrl.origin)
+
+    const headers = new Headers()
+    headers.set('content-type', copyContentType(request.headers))
+    const cookie = request.headers.get('cookie')
+    if (cookie) {
+      headers.set('cookie', cookie)
+    }
+
+    const response = await fetch(targetUrl, {
+      method,
+      headers,
+      body: bodyText,
+      cache: 'no-store',
+    })
+
+    const contentType = response.headers.get('content-type') || 'application/json'
+    const payload = await response.text()
+
+    return new NextResponse(payload, {
+      status: response.status,
+      headers: { 'content-type': contentType },
+    })
+  } catch (error) {
+    const message =
+      typeof error?.message === 'string' && error.message.trim()
+        ? error.message.trim()
+        : 'Не удалось выполнить прокси-запрос к маршруту игры'
+
     return NextResponse.json(
-      { success: false, error: resolved.error || 'Не удалось определить площадку игры' },
-      { status: resolved.status || 400 },
+      { success: false, error: message },
+      { status: 500 },
     )
   }
-
-  const resolvedTargetPath = String(targetPath || '')
-    .replaceAll(':location', encodeURIComponent(resolved.location))
-    .replaceAll(':gameId', encodeURIComponent(resolved.gameId))
-
-  const targetUrl = new URL(resolvedTargetPath, request.nextUrl.origin)
-
-  const headers = new Headers()
-  headers.set('content-type', copyContentType(request.headers))
-  const cookie = request.headers.get('cookie')
-  if (cookie) {
-    headers.set('cookie', cookie)
-  }
-
-  const response = await fetch(targetUrl, {
-    method,
-    headers,
-    body: bodyText,
-    cache: 'no-store',
-  })
-
-  const contentType = response.headers.get('content-type') || 'application/json'
-  const payload = await response.text()
-
-  return new NextResponse(payload, {
-    status: response.status,
-    headers: { 'content-type': contentType },
-  })
 }

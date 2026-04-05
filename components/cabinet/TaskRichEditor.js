@@ -58,6 +58,24 @@ const MAX_VIDEO_SIZE_BYTES = 40 * 1024 * 1024
 const DEFAULT_PICKER_COLOR = '#111827'
 const NO_COLOR_TOKEN = '__no_color__'
 
+const getEditorViewSafe = (editorInstance) => {
+  if (!editorInstance) return null
+  try {
+    return editorInstance.view ?? null
+  } catch {
+    return null
+  }
+}
+
+const isEditorEmptySafe = (editorInstance) => {
+  if (!editorInstance) return false
+  try {
+    return Boolean(editorInstance.isEmpty)
+  } catch {
+    return false
+  }
+}
+
 const extractUrlCandidates = (value) => {
   if (!value) return []
 
@@ -283,7 +301,7 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
     if (!audio) return
 
     if (audio.paused) {
-      const editorRoot = editor?.view?.dom
+      const editorRoot = getEditorViewSafe(editor)?.dom
       if (editorRoot instanceof HTMLElement) {
         editorRoot
           .querySelectorAll('audio[data-aq-audio-native="true"]')
@@ -1231,7 +1249,7 @@ const TaskRichEditor = ({
   useEffect(() => {
     if (!editor || disabled) return undefined
 
-    const view = editor.view
+    const view = getEditorViewSafe(editor)
     if (!view?.dom) return undefined
 
     const resolveAudioMessagePos = (targetNode) => {
@@ -1668,7 +1686,7 @@ const TaskRichEditor = ({
         >
           <EditorContent editor={editor} />
 
-          {editor.isEmpty && placeholder ? (
+          {isEditorEmptySafe(editor) && placeholder ? (
             <p className="absolute text-sm pointer-events-none left-5 top-4 text-slate-400 dark:text-slate-500">
               {placeholder}
             </p>
