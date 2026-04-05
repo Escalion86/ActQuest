@@ -5715,10 +5715,9 @@ const GamesPage = ({
             )}
           </div>
 
-          {selectedGame && (
-            <div className="md:col-span-5">
-              <div className="space-y-6">
-                <GameModals
+          <div className="md:col-span-5">
+            <div className="space-y-6">
+              <GameModals
                   selectedGame={selectedGame}
                   editGame={editingGame}
                   isEditModalOpen={isEditModalOpen}
@@ -5846,9 +5845,11 @@ const GamesPage = ({
                   plannedStartLabel={plannedStartLabel}
                   canViewRestrictedGameInfo={canViewRestrictedGameInfo}
                   canViewGameResults={canViewGameResults}
-                  handleOpenResultsModal={() =>
-                    handleOpenResultsFromGame(selectedGame)
-                  }
+                  handleOpenResultsModal={() => {
+                    if (selectedGame) {
+                      handleOpenResultsFromGame(selectedGame)
+                    }
+                  }}
                   participationSummaryLabel={
                     selectedGameParticipationSummaryLabel
                   }
@@ -5892,33 +5893,32 @@ const GamesPage = ({
                   handleCloseResultsModal={handleCloseResultsModal}
                   resultsModalState={resultsModalState}
                 />
-                <GameStatusModal
-                  isOpen={isStatusModalOpen}
-                  onClose={handleCloseStatusModal}
-                  gameName={statusModalGame?.name || ''}
-                  currentStatusLabel={getGameStatusLabel(
-                    statusModalGame?.status || '',
-                  )}
-                  actions={statusModalActions}
-                  onAction={handleStatusAction}
-                  validationResult={statusValidationResult}
-                  isSaving={isStatusChanging}
-                />
-                <GamePushBroadcastModal
-                  isOpen={isPushBroadcastModalOpen}
-                  onClose={handleClosePushBroadcastModal}
-                  gameName={pushBroadcastModalGame?.name || ''}
-                  mode={pushBroadcastMode}
-                  onChangeMode={setPushBroadcastMode}
-                  customMessage={pushBroadcastMessage}
-                  onChangeCustomMessage={setPushBroadcastMessage}
-                  isSubmitting={isPushBroadcastSubmitting}
-                  onSubmit={handleSubmitPushBroadcast}
-                  feedback={pushBroadcastFeedback}
-                />
-              </div>
+              <GameStatusModal
+                isOpen={isStatusModalOpen}
+                onClose={handleCloseStatusModal}
+                gameName={statusModalGame?.name || ''}
+                currentStatusLabel={getGameStatusLabel(
+                  statusModalGame?.status || '',
+                )}
+                actions={statusModalActions}
+                onAction={handleStatusAction}
+                validationResult={statusValidationResult}
+                isSaving={isStatusChanging}
+              />
+              <GamePushBroadcastModal
+                isOpen={isPushBroadcastModalOpen}
+                onClose={handleClosePushBroadcastModal}
+                gameName={pushBroadcastModalGame?.name || ''}
+                mode={pushBroadcastMode}
+                onChangeMode={setPushBroadcastMode}
+                customMessage={pushBroadcastMessage}
+                onChangeCustomMessage={setPushBroadcastMessage}
+                isSubmitting={isPushBroadcastSubmitting}
+                onSubmit={handleSubmitPushBroadcast}
+                feedback={pushBroadcastFeedback}
+              />
             </div>
-          )}
+          </div>
         </section>
       </CabinetLayout>
     </>
