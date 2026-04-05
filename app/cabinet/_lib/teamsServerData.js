@@ -1,15 +1,6 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 
-const normalizeLocation = (value) => {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  const normalized = value.trim().toLowerCase()
-  return normalized || null
-}
-
 const toStringOrNull = (value) => {
   if (value === null || value === undefined) {
     return null
@@ -31,11 +22,6 @@ const toFiniteNumberOrNull = (value) => {
 export const loadCabinetAppTeams = async (session) => {
   const db = await dbConnectGlobal()
   if (!db) {
-    return []
-  }
-
-  const location = normalizeLocation(session?.user?.location)
-  if (!location) {
     return []
   }
 
@@ -74,7 +60,12 @@ export const loadCabinetAppTeams = async (session) => {
     return []
   }
 
-  const teams = await fetchTeamsForCabinet({ db, teamIds, location })
+  const teams = await fetchTeamsForCabinet({
+    db,
+    teamIds,
+    // Для страницы "Мои команды" показываем все команды пользователя,
+    // независимо от города команды.
+    location: null,
+  })
   return Array.isArray(teams) ? teams : []
 }
-

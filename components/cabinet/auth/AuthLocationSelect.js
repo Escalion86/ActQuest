@@ -6,6 +6,8 @@ const AuthLocationSelect = ({
   disabled,
   availableLocations,
   variant,
+  allowEmpty,
+  emptyLabel,
 }) => {
   const isNeon = variant === 'neon'
 
@@ -26,6 +28,11 @@ const AuthLocationSelect = ({
         onChange={onChange}
         disabled={disabled}
       >
+        {allowEmpty ? (
+          <option value="" disabled>
+            {emptyLabel}
+          </option>
+        ) : null}
         {availableLocations.map((item) => (
           <option key={item.key} value={item.key}>
             {item.townRu[0].toUpperCase() + item.townRu.slice(1)}
@@ -41,6 +48,8 @@ AuthLocationSelect.propTypes = {
   onChange: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
   variant: PropTypes.oneOf(['default', 'neon']),
+  allowEmpty: PropTypes.bool,
+  emptyLabel: PropTypes.string,
   availableLocations: PropTypes.arrayOf(
     PropTypes.shape({
       key: PropTypes.string.isRequired,
@@ -52,6 +61,8 @@ AuthLocationSelect.propTypes = {
 AuthLocationSelect.defaultProps = {
   disabled: false,
   variant: 'default',
+  allowEmpty: false,
+  emptyLabel: 'Выберите регион',
 }
 
 export default AuthLocationSelect

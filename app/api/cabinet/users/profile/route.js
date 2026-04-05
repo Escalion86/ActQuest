@@ -4,12 +4,35 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import resolveSessionUserFilter from '@helpers/resolveSessionUserFilter'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { LOCATIONS } from '@server/serverConstants'
 
 const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '')
 
 const sanitizeNullableText = (value) => {
   const normalized = sanitizeText(value)
   return normalized.length > 0 ? normalized : null
+}
+
+const normalizeRole = (value) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
+
+const resolveAllowedLocations = () =>
+  Object.entries(LOCATIONS)
+    .filter(([, value]) => !value?.hidden)
+    .map(([key]) => key)
+
+const sanitizeLocationList = (value, allowedLocations) => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .map((item) => sanitizeText(item).toLowerCase())
+        .filter((item) => item.length > 0 && allowedLocations.includes(item)),
+    ),
+  )
 }
 
 export async function PUT(request) {
@@ -59,6 +82,15 @@ export async function PUT(request) {
             ),
           )
         : [],
+    }
+
+    const role = normalizeRole(session?.user?.role)
+    const isAdminOrDeveloper = role === 'admin' || role === 'dev'
+    if (isAdminOrDeveloper) {
+      payload.adminEventPushLocations = sanitizeLocationList(
+        body.adminEventPushLocations,
+        resolveAllowedLocations(),
+      )
     }
 
     const updatedUser = await globalDb

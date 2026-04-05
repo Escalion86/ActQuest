@@ -155,6 +155,7 @@ const fetchGamesForCabinet = async ({
   const GamesTeamsModel = db.model('GamesTeams')
   const TeamsUsersModel = db.model('TeamsUsers')
   const TeamsModel = db.model('Teams')
+  const UsersModel = db.model('Users')
 
   const queryOffset = toPositiveInteger(offset, 0)
   const queryLimit = toPositiveInteger(limit, 10)
@@ -254,6 +255,40 @@ const fetchGamesForCabinet = async ({
   const gameIds = gamesFiltered
     .map((game) => (game?._id ? game._id.toString() : null))
     .filter(Boolean)
+  const creatorTelegramIds = Array.from(
+    new Set(
+      gamesFiltered
+        .map((game) => Number(game?.creatorTelegramId))
+        .filter((value) => Number.isFinite(value)),
+    ),
+  )
+
+  const creatorsByTelegramId =
+    creatorTelegramIds.length > 0
+      ? (
+          await UsersModel.find({ telegramId: { $in: creatorTelegramIds } })
+            .select({ _id: 1, name: 1, username: 1, phone: 1, telegramId: 1 })
+            .lean()
+        ).reduce((acc, userDoc) => {
+          const telegramId = Number(userDoc?.telegramId)
+          if (!Number.isFinite(telegramId)) {
+            return acc
+          }
+
+          acc[String(telegramId)] = {
+            _id: userDoc?._id,
+            name: typeof userDoc?.name === 'string' ? userDoc.name : '',
+            username:
+              typeof userDoc?.username === 'string' ? userDoc.username : '',
+            phone:
+              userDoc?.phone === null || userDoc?.phone === undefined
+                ? ''
+                : String(userDoc.phone),
+            telegramId,
+          }
+          return acc
+        }, {})
+      : {}
 
   let teamsCountMap = {}
   if (gameIds.length) {
@@ -403,6 +438,10 @@ const fetchGamesForCabinet = async ({
       const normalizedStatus =
         game?.status === 'closed' && !canSeeClosedStatus ? 'finished' : game?.status
       const gameId = game?._id ? game._id.toString() : null
+      const creatorTelegramIdNumber = Number(game?.creatorTelegramId)
+      const creatorKey = Number.isFinite(creatorTelegramIdNumber)
+        ? String(creatorTelegramIdNumber)
+        : null
 
       return normalizeGameForCabinet({
         ...game,
@@ -412,6 +451,7 @@ const fetchGamesForCabinet = async ({
         userParticipationTeams: gameId
           ? userParticipationTeamsByGameId[gameId] ?? []
           : [],
+        creator: creatorKey ? creatorsByTelegramId[creatorKey] ?? null : null,
       })
     })
 

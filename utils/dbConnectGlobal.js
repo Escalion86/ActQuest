@@ -13,6 +13,7 @@ import notificationsSchema from '@schemas/notificationsSchema'
 import gamesPaymentsSchema from '@schemas/gamesPaymentsSchema'
 import transactionsSchema from '@schemas/transactionsSchema'
 import seasonsSchema from '@schemas/seasonsSchema'
+import siteEventsSchema from '@schemas/siteEventsSchema'
 
 let globalConnections = global.mongooseGlobal
 
@@ -100,6 +101,9 @@ async function dbConnectGlobal() {
     ensureModel(globalConnections.global, 'Seasons', () =>
       mongoose.Schema(seasonsSchema, { timestamps: true }),
     )
+    ensureModel(globalConnections.global, 'SiteEvents', () =>
+      mongoose.Schema(siteEventsSchema, { timestamps: true }),
+    )
   }
 
   ensureModel(globalConnections.global, 'Games', () =>
@@ -107,6 +111,9 @@ async function dbConnectGlobal() {
   )
   ensureModel(globalConnections.global, 'Seasons', () =>
     mongoose.Schema(seasonsSchema, { timestamps: true }),
+  )
+  ensureModel(globalConnections.global, 'SiteEvents', () =>
+    mongoose.Schema(siteEventsSchema, { timestamps: true }),
   )
 
   return globalConnections.global.asPromise()

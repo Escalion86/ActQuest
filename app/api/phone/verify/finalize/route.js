@@ -5,6 +5,7 @@ import normalizeAuthPhone from '@helpers/normalizeAuthPhone'
 import registerPhoneUser from '@helpers/registerPhoneUser'
 import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
 import { createPasswordHash, validatePassword } from '@helpers/passwordHash'
+import logSiteEvent from '@helpers/logSiteEvent'
 
 const errorJson = (status, type, message) =>
   NextResponse.json(
@@ -40,6 +41,14 @@ export async function POST(request) {
   }
 
   try {
+    if (flow === 'register' && !location) {
+      return errorJson(
+        400,
+        'location',
+        'Выберите город, в котором хотите зарегистрироваться.',
+      )
+    }
+
     const controls = await getSiteAccessControlsByLocation(location)
     const isFlowAllowed =
       flow === 'register' ? controls.allowSiteRegistration : controls.allowSiteAuth
@@ -92,6 +101,16 @@ export async function POST(request) {
       }
 
       await PhoneVerifications.deleteMany({ phone, flow })
+
+      await logSiteEvent({
+        db: globalDb,
+        type: 'user_registered',
+        location,
+        message: 'Зарегистрирован новый пользователь',
+        targetUserId: registerResult?.user?.id ?? null,
+        actorUserId: registerResult?.user?.id ?? null,
+        actorTelegramId: registerResult?.user?.telegramId ?? null,
+      })
 
       return NextResponse.json(
         {

@@ -17,6 +17,12 @@ import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { LOCATIONS } from '@server/serverConstants'
 
+const CHAT_CITY_OPTIONS = [
+  { key: 'krsk', label: 'Чат Красноярска' },
+  { key: 'nrsk', label: 'Чат Норильска' },
+  { key: 'ekb', label: 'Чат Екатеринбурга' },
+]
+
 const normalizeLocationName = (locationKey) => {
   const location = locationKey ? LOCATIONS[locationKey] : null
   const rawName = location?.townRu ?? ''
@@ -265,6 +271,10 @@ const CabinetDashboard = ({
           : fallbackRating,
       recentActivity: Array.isArray(source.recentActivity) ? source.recentActivity : [],
       chatUrl: typeof source.chatUrl === 'string' ? source.chatUrl : '',
+      chatUrlsByLocation:
+        source.chatUrlsByLocation && typeof source.chatUrlsByLocation === 'object'
+          ? source.chatUrlsByLocation
+          : { krsk: '', nrsk: '', ekb: '' },
     }
   }, [initialDashboardData])
   const [selectedTeamId, setSelectedTeamId] = useState(null)
@@ -273,6 +283,7 @@ const CabinetDashboard = ({
   const [isPlayedGamePreviewOpen, setIsPlayedGamePreviewOpen] = useState(false)
   const [previewPlayedGame, setPreviewPlayedGame] = useState(null)
   const [isRatingInfoOpen, setIsRatingInfoOpen] = useState(false)
+  const [isChatLinksModalOpen, setIsChatLinksModalOpen] = useState(false)
   const [isLeavingTeam, setIsLeavingTeam] = useState(false)
   const [leaveTeamError, setLeaveTeamError] = useState('')
   const selectedTeam = useMemo(
@@ -312,6 +323,15 @@ const CabinetDashboard = ({
     }
   }, [currentPath, isLeavingTeam, router, selectedTeam])
   const latestPlayedGame = dashboardData.personalProgressGames[0] ?? null
+  const hasAnyCityChatUrl = useMemo(
+    () =>
+      CHAT_CITY_OPTIONS.some(
+        (item) =>
+          typeof dashboardData?.chatUrlsByLocation?.[item.key] === 'string' &&
+          dashboardData.chatUrlsByLocation[item.key].trim().length > 0,
+      ),
+    [dashboardData],
+  )
 
   if (!activeSession) {
     if (status === 'loading') {
@@ -646,20 +666,19 @@ const CabinetDashboard = ({
               )}
             </article>
 
-            {dashboardData.chatUrl ? (
+            {hasAnyCityChatUrl ? (
               <article className="rounded-2xl border border-cyan-300 bg-cyan-50 p-5 shadow-sm dark:border-cyan-500/30 dark:bg-cyan-500/10">
                 <h3 className="aq-modal-section-title text-base font-semibold">Чат проекта</h3>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-200">
                   Вопросы, анонсы и быстрые ответы команды ActQuest.
                 </p>
-                <a
-                  href={dashboardData.chatUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={() => setIsChatLinksModalOpen(true)}
                   className="mt-4 inline-flex cursor-pointer items-center justify-center rounded-lg border border-cyan-400 px-3 py-2 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-300/50 dark:text-cyan-100 dark:hover:bg-cyan-500/15"
                 >
                   Перейти в чат
-                </a>
+                </button>
               </article>
             ) : null}
           </div>
@@ -746,6 +765,42 @@ const CabinetDashboard = ({
             </a>
           </div>
         ) : null}
+      </Modal>
+      <Modal
+        isOpen={isChatLinksModalOpen}
+        onClose={() => setIsChatLinksModalOpen(false)}
+        title="Чаты проекта по городам"
+      >
+        <div className="space-y-3">
+          {CHAT_CITY_OPTIONS.map((item) => {
+            const href =
+              typeof dashboardData?.chatUrlsByLocation?.[item.key] === 'string'
+                ? dashboardData.chatUrlsByLocation[item.key].trim()
+                : ''
+            const isAvailable = Boolean(href)
+
+            return isAvailable ? (
+              <a
+                key={item.key}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex w-full cursor-pointer items-center justify-center rounded-lg border border-cyan-400 px-3 py-2 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-300/50 dark:text-cyan-100 dark:hover:bg-cyan-500/15"
+              >
+                {item.label}
+              </a>
+            ) : (
+              <button
+                key={item.key}
+                type="button"
+                disabled
+                className="inline-flex w-full cursor-not-allowed items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-400 dark:border-slate-700 dark:text-slate-500"
+              >
+                {item.label} (не задан)
+              </button>
+            )
+          })}
+        </div>
       </Modal>
       <Modal
         isOpen={isRatingInfoOpen}
@@ -874,6 +929,11 @@ CabinetDashboard.propTypes = {
       })
     ),
     chatUrl: PropTypes.string,
+    chatUrlsByLocation: PropTypes.shape({
+      krsk: PropTypes.string,
+      nrsk: PropTypes.string,
+      ekb: PropTypes.string,
+    }),
   }),
 }
 
@@ -903,6 +963,11 @@ CabinetDashboard.defaultProps = {
     },
     recentActivity: [],
     chatUrl: '',
+    chatUrlsByLocation: {
+      krsk: '',
+      nrsk: '',
+      ekb: '',
+    },
   },
 }
 

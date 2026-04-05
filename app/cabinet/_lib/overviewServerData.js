@@ -89,6 +89,11 @@ const buildBaseData = (location) => ({
   },
   recentActivity: [],
   chatUrl: '',
+  chatUrlsByLocation: {
+    krsk: '',
+    nrsk: '',
+    ekb: '',
+  },
 })
 
 export const loadCabinetAppOverview = async (session) => {
@@ -323,10 +328,14 @@ export const loadCabinetAppOverview = async (session) => {
   const settingsDoc = await db
     .model('SiteSettings')
     .findOne({})
-    .select({ chatUrl: 1 })
+    .select({ chatUrl: 1, chatUrlsByLocation: 1 })
     .lean()
 
   const siteSettings = normalizeSiteSettings(settingsDoc)
+  const chatUrlsByLocation =
+    siteSettings?.chatUrlsByLocation && typeof siteSettings.chatUrlsByLocation === 'object'
+      ? siteSettings.chatUrlsByLocation
+      : { krsk: '', nrsk: '', ekb: '' }
 
   const rating = resolveEntityRating({
     entity: userDoc ?? session?.user ?? null,
@@ -377,5 +386,10 @@ export const loadCabinetAppOverview = async (session) => {
     rating,
     recentActivity,
     chatUrl: siteSettings.chatUrl || '',
+    chatUrlsByLocation: {
+      krsk: typeof chatUrlsByLocation.krsk === 'string' ? chatUrlsByLocation.krsk : '',
+      nrsk: typeof chatUrlsByLocation.nrsk === 'string' ? chatUrlsByLocation.nrsk : '',
+      ekb: typeof chatUrlsByLocation.ekb === 'string' ? chatUrlsByLocation.ekb : '',
+    },
   }
 }

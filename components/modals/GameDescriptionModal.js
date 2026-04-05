@@ -104,6 +104,47 @@ const GameDescriptionModal = ({
                         </dd>
                       </div>
                     )}
+                    {selectedGame.showCreator && (
+                      <div>
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Контакт организатора
+                        </dt>
+                        <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                          {selectedGame?.creator?.name?.trim()
+                            ? selectedGame.creator.name
+                            : selectedGame?.creator?.username?.trim()
+                              ? `@${selectedGame.creator.username}`
+                              : 'Не указан'}
+                          {selectedGame?.creator?.username?.trim() &&
+                          selectedGame?.creator?.name?.trim() ? (
+                            <>
+                              {' '}
+                              (
+                              <a
+                                href={`https://t.me/${selectedGame.creator.username.trim()}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="cursor-pointer text-cyan-700 underline underline-offset-2 transition hover:text-cyan-600 dark:text-cyan-200 dark:hover:text-cyan-100"
+                              >
+                                @{selectedGame.creator.username.trim()}
+                              </a>
+                              )
+                            </>
+                          ) : null}
+                          {selectedGame?.creator?.phone?.trim() ? (
+                            <>
+                              <br />
+                              <a
+                                href={`tel:${selectedGame.creator.phone.trim()}`}
+                                className="cursor-pointer text-cyan-700 underline underline-offset-2 transition hover:text-cyan-600 dark:text-cyan-200 dark:hover:text-cyan-100"
+                              >
+                                {selectedGame.creator.phone.trim()}
+                              </a>
+                            </>
+                          ) : null}
+                        </dd>
+                      </div>
+                    )}
                   </dl>
                   {(participationSummaryLabel || canJoinGame || canCancelRegistration) && (
                     <div className="mt-4 flex flex-wrap items-center gap-2">

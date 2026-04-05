@@ -175,6 +175,19 @@ const normalizeRoleFilter = (roleFilter) => {
   return ensureRole(normalized)
 }
 
+const normalizeLocationFilter = (value) => {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const normalized = value.trim().toLowerCase()
+  if (!normalized || normalized === 'all') {
+    return null
+  }
+
+  return normalized
+}
+
 const fetchAdminUsersForCabinet = async ({
   db,
   offset = 0,
@@ -183,6 +196,7 @@ const fetchAdminUsersForCabinet = async ({
   roleFilter = 'all',
   sortBy = DEFAULT_SORT,
   location = null,
+  locationFilter = 'all',
 }) => {
   if (!db) {
     return { users: [], hasMore: false }
@@ -199,6 +213,24 @@ const fetchAdminUsersForCabinet = async ({
   const normalizedRoleFilter = normalizeRoleFilter(roleFilter)
   if (normalizedRoleFilter) {
     usersQuery.role = normalizedRoleFilter
+  }
+  const normalizedLocationFilter = normalizeLocationFilter(locationFilter)
+  if (normalizedLocationFilter) {
+    const locationCondition = {
+      $or: [
+        { currentLocation: normalizedLocationFilter },
+        { accountLocation: normalizedLocationFilter },
+      ],
+    }
+    if (Object.keys(usersQuery).length === 0) {
+      Object.assign(usersQuery, locationCondition)
+    } else {
+      const existingQuery = { ...usersQuery }
+      Object.keys(usersQuery).forEach((key) => {
+        delete usersQuery[key]
+      })
+      usersQuery.$and = [existingQuery, locationCondition]
+    }
   }
   const resolvedSortBy = normalizeSortBy(sortBy)
 

@@ -10,6 +10,14 @@ import useMergedSession from '@helpers/useMergedSession'
 
 const adminTools = [
   {
+    id: 'site-events',
+    title: 'События сайта',
+    description:
+      'Просматривайте последние ключевые действия: регистрации пользователей, операции с командами и записи на игры.',
+    action: 'Открыть события',
+    href: '/cabinet/admin/events',
+  },
+  {
     id: 'manage-users',
     title: 'Управление пользователями',
     description:

@@ -95,6 +95,7 @@ const ManageUsersPage = ({
     activeSession?.user?.role ?? 'client',
   )
   const isAdmin = isUserAdmin({ role: effectiveRole })
+  const isDeveloper = effectiveRole === 'dev'
 
   const [users, setUsers] = useState(safeInitialUsers)
   const [persistedUsers, setPersistedUsers] = useState(safeInitialUsers)
@@ -102,6 +103,7 @@ const ManageUsersPage = ({
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
+  const [locationFilter, setLocationFilter] = useState('all')
   const [sortBy, setSortBy] = useState('registration_desc')
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -237,6 +239,14 @@ const ManageUsersPage = ({
     return baseOptions
   }, [users])
 
+  const editRoleOptions = useMemo(
+    () =>
+      roleOptions.filter(
+        (option) => option.value !== 'dev' || isDeveloper,
+      ),
+    [isDeveloper, roleOptions],
+  )
+
   useEffect(() => {
     if (users.length === 0) {
       setSelectedUserId(null)
@@ -277,6 +287,9 @@ const ManageUsersPage = ({
         if (roleFilter && roleFilter !== 'all') {
           params.set('role', roleFilter)
         }
+        if (locationFilter && locationFilter !== 'all') {
+          params.set('location', locationFilter)
+        }
         const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`, {
           fallbackMessage: 'Не удалось загрузить пользователей',
         })
@@ -311,7 +324,7 @@ const ManageUsersPage = ({
     return () => {
       cancelled = true
     }
-  }, [isAdmin, roleFilter, safeInitialUsers.length, searchQuery, sortBy])
+  }, [isAdmin, locationFilter, roleFilter, safeInitialUsers.length, searchQuery, sortBy])
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -347,10 +360,19 @@ const ManageUsersPage = ({
       return
     }
 
+    if (!isDeveloper && user.role === 'dev') {
+      setFeedback({
+        type: 'error',
+        message:
+          'Только разработчик может изменять карточку пользователя с ролью «Разработчик».',
+      })
+      return
+    }
+
     setSelectedUserId(user.id)
     setIsUserViewModalOpen(false)
     setIsUserEditModalOpen(true)
-  }, [])
+  }, [isDeveloper])
 
   const handleOpenUserPushModal = useCallback((user) => {
     if (!user?.id) {
@@ -748,6 +770,7 @@ const ManageUsersPage = ({
       name: sanitizeText(selectedUser.name),
       username: sanitizeNullable(selectedUser.username),
       photoUrl: sanitizeNullable(selectedUser.photoUrl),
+      currentLocation: sanitizeNullable(selectedUser.currentLocation),
       about: sanitizeText(selectedUser.about),
       preferences: normalizePreferences(selectedUser.preferences),
     }) !== JSON.stringify({
@@ -755,6 +778,7 @@ const ManageUsersPage = ({
       name: sanitizeText(persistedSelectedUser.name),
       username: sanitizeNullable(persistedSelectedUser.username),
       photoUrl: sanitizeNullable(persistedSelectedUser.photoUrl),
+      currentLocation: sanitizeNullable(persistedSelectedUser.currentLocation),
       about: sanitizeText(persistedSelectedUser.about),
       preferences: normalizePreferences(persistedSelectedUser.preferences),
     })
@@ -787,6 +811,15 @@ const ManageUsersPage = ({
         return
       }
 
+      if (!isDeveloper && role === 'dev') {
+        setFeedback({
+          type: 'error',
+          message:
+            'Только разработчик может назначать роль «Разработчик».',
+        })
+        return
+      }
+
       setFeedback(null)
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
@@ -799,7 +832,7 @@ const ManageUsersPage = ({
         )
       )
     },
-    [selectedUserId]
+    [isDeveloper, selectedUserId]
   )
 
   const handleReset = useCallback(() => {
@@ -817,6 +850,24 @@ const ManageUsersPage = ({
 
   const handleSave = useCallback(async () => {
     if (!selectedUser || !persistedSelectedUser) {
+      return
+    }
+
+    if (!isDeveloper && persistedSelectedUser.role === 'dev') {
+      setFeedback({
+        type: 'error',
+        message:
+          'Только разработчик может изменять карточку пользователя с ролью «Разработчик».',
+      })
+      return
+    }
+
+    if (!isDeveloper && selectedUser.role === 'dev') {
+      setFeedback({
+        type: 'error',
+        message:
+          'Только разработчик может назначать роль «Разработчик».',
+      })
       return
     }
 
@@ -849,6 +900,7 @@ const ManageUsersPage = ({
         username: normalizeNullable(selectedUser.username),
         photoUrl: normalizeNullable(selectedUser.photoUrl),
         phone: normalizePhone(selectedUser.phone),
+        currentLocation: normalizeNullable(selectedUser.currentLocation),
         about: normalizeText(selectedUser.about),
         preferences: Array.isArray(selectedUser.preferences)
           ? Array.from(
@@ -903,7 +955,7 @@ const ManageUsersPage = ({
     } finally {
       setIsSaving(false)
     }
-  }, [isDirty, persistedSelectedUser, selectedUser])
+  }, [isDeveloper, isDirty, persistedSelectedUser, selectedUser])
 
   const handleRequestPhoneViaTelegram = useCallback(async () => {
     if (!selectedUser || !location || isRequestingPhone) {
@@ -972,6 +1024,9 @@ const ManageUsersPage = ({
       if (roleFilter && roleFilter !== 'all') {
         params.set('role', roleFilter)
       }
+      if (locationFilter && locationFilter !== 'all') {
+        params.set('location', locationFilter)
+      }
       const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`, {
         fallbackMessage: 'Не удалось загрузить пользователей',
       })
@@ -994,7 +1049,7 @@ const ManageUsersPage = ({
     } finally {
       setIsLoadingMoreUsers(false)
     }
-  }, [hasMoreUsers, isLoadingMoreUsers, roleFilter, searchQuery, sortBy, users.length])
+  }, [hasMoreUsers, isLoadingMoreUsers, locationFilter, roleFilter, searchQuery, sortBy, users.length])
 
   const filterOptions = useMemo(
     () => [
@@ -1002,6 +1057,26 @@ const ManageUsersPage = ({
       ...roleOptions.map((option) => ({ value: option.value, name: option.name })),
     ],
     [roleOptions]
+  )
+  const locationOptions = useMemo(
+    () =>
+      Object.entries(LOCATIONS)
+        .filter(([, value]) => !value?.hidden)
+        .map(([key, value]) => ({
+          value: key,
+          name:
+            typeof value?.townRu === 'string' && value.townRu.length > 0
+              ? value.townRu.charAt(0).toUpperCase() + value.townRu.slice(1)
+              : key,
+        })),
+    [],
+  )
+  const locationFilterOptions = useMemo(
+    () => [
+      { value: 'all', name: 'Все города' },
+      ...locationOptions,
+    ],
+    [locationOptions],
   )
 
   if (!isAdmin) {
@@ -1057,6 +1132,22 @@ const ManageUsersPage = ({
                   selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
                 >
                   {filterOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.name}
+                    </option>
+                  ))}
+              </CabinetSelectField>
+
+              <CabinetSelectField
+                  id="user-location-filter"
+                  label="Город"
+                  value={locationFilter}
+                  onChange={(event) => setLocationFilter(event.target.value)}
+                  containerClassName="space-y-1"
+                  labelClassName="text-xs font-semibold text-slate-500"
+                  selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+                >
+                  {locationFilterOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.name}
                     </option>
@@ -1262,6 +1353,12 @@ const ManageUsersPage = ({
                     </p>
                   </div>
                   <div>
+                    <p className="text-xs text-slate-500">Город</p>
+                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
+                      {resolveLocationLabel(selectedUser.currentLocation)}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-xs text-slate-500">Создан</p>
                     <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
                       {selectedUser.createdAt
@@ -1348,6 +1445,23 @@ const ManageUsersPage = ({
                     placeholder="+7"
                   />
                 </div>
+                <CabinetSelectField
+                  id="user-edit-location"
+                  label="Город пользователя"
+                  value={selectedUser.currentLocation || ''}
+                  onChange={(event) =>
+                    handleEditFieldChange('currentLocation', event.target.value)
+                  }
+                  labelClassName={modalItemSmallTitleClass}
+                  selectClassName="w-full px-4 py-3 text-sm border rounded-xl border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">Не указан</option>
+                  {locationOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.name}
+                    </option>
+                  ))}
+                </CabinetSelectField>
 
                 <div>
                   <label className={modalItemSmallTitleClass}>
@@ -1382,7 +1496,7 @@ const ManageUsersPage = ({
                   labelClassName={modalItemSmallTitleClass}
                   selectClassName="w-full px-4 py-3 text-sm border rounded-xl border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary"
                 >
-                  {roleOptions.map((option) => (
+                  {editRoleOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.name}
                     </option>
@@ -1544,6 +1658,7 @@ const userShape = PropTypes.shape({
   name: PropTypes.string,
   username: PropTypes.string,
   phone: PropTypes.string,
+  currentLocation: PropTypes.string,
   role: PropTypes.string,
   about: PropTypes.string,
   preferences: PropTypes.arrayOf(PropTypes.string),

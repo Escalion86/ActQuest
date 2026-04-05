@@ -124,10 +124,12 @@ const GameEditModal = ({
   selectedGameModerators,
   availableModeratorsForSelect,
   availableModeratorsMap,
+  availableOrganizersForSelect,
   selectedModeratorToAdd,
   setSelectedModeratorToAdd,
   handleAddModerator,
   handleRemoveModerator,
+  editGameLocationOptions,
   editGameSeasons,
   isEditGameSeasonsLoading,
   isEditGameSeasonCreating,
@@ -167,6 +169,12 @@ const GameEditModal = ({
       })
     }
   }
+  const organizersByTelegramId = new Map(
+    (Array.isArray(availableOrganizersForSelect)
+      ? availableOrganizersForSelect
+      : []
+    ).map((organizer) => [organizer.telegramId, organizer]),
+  )
 
   const modalFooter = (
     <>
@@ -336,6 +344,25 @@ const GameEditModal = ({
                             </option>
                           ))}
                       </CabinetSelectField>
+                      <CabinetSelectField
+                        id="game-location"
+                        label="Город"
+                        value={selectedGame.location || ''}
+                        onChange={(event) =>
+                          updateSelectedGame({ location: event.target.value || '' })
+                        }
+                        labelClassName={fieldLabelClassName}
+                        selectClassName={fieldSelectClassName}
+                      >
+                        {editGameLocationOptions.map((option) => (
+                          <option key={option.key} value={option.key}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </CabinetSelectField>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
                       <CabinetInputField
                         id="game-date"
                         label="Плановое начало"
@@ -457,6 +484,59 @@ const GameEditModal = ({
                         }}
                       />
                     </div>
+
+                    {(selectedGame?.creatorTelegramId ||
+                      availableOrganizersForSelect.length > 0 ||
+                      canEditSelectedGame) && (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                        <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Организатор игры</h3>
+                        <div className="mt-3">
+                          <CabinetSelectField
+                            id="edit-game-organizer"
+                            label={null}
+                            value={String(selectedGame?.creatorTelegramId || '')}
+                            onChange={(event) => {
+                              const nextTelegramId = String(event.target.value || '').trim()
+                              const nextOrganizer = organizersByTelegramId.get(nextTelegramId)
+                              updateSelectedGame({
+                                creatorTelegramId: nextTelegramId,
+                                creator: nextOrganizer
+                                  ? {
+                                      name: nextOrganizer.name || '',
+                                      username: nextOrganizer.username || '',
+                                      telegramId: nextOrganizer.telegramId || '',
+                                    }
+                                  : null,
+                              })
+                            }}
+                            containerClassName="w-full space-y-0"
+                            selectClassName="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
+                          >
+                            <option value="">Выберите организатора</option>
+                            {availableOrganizersForSelect.map((organizer) => {
+                              const labelParts = [organizer.name || 'Без имени']
+                              if (organizer.username) {
+                                labelParts.push(`@${organizer.username}`)
+                              }
+                              if (organizer.telegramId) {
+                                labelParts.push(`ID: ${organizer.telegramId}`)
+                              }
+
+                              return (
+                                <option key={organizer.telegramId} value={organizer.telegramId}>
+                                  {labelParts.join(' · ')}
+                                </option>
+                              )
+                            })}
+                          </CabinetSelectField>
+                          {availableOrganizersForSelect.length === 0 && (
+                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
+                              Нет доступных пользователей для выбора организатора.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {(selectedGameModerators.length > 0 || canEditSelectedGame) && (
                       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
@@ -1965,10 +2045,23 @@ GameEditModal.propTypes = {
   selectedGameModerators: PropTypes.array.isRequired,
   availableModeratorsForSelect: PropTypes.array.isRequired,
   availableModeratorsMap: PropTypes.instanceOf(Map).isRequired,
+  availableOrganizersForSelect: PropTypes.arrayOf(
+    PropTypes.shape({
+      telegramId: PropTypes.string.isRequired,
+      name: PropTypes.string,
+      username: PropTypes.string,
+    }),
+  ).isRequired,
   selectedModeratorToAdd: PropTypes.string.isRequired,
   setSelectedModeratorToAdd: PropTypes.func.isRequired,
   handleAddModerator: PropTypes.func.isRequired,
   handleRemoveModerator: PropTypes.func.isRequired,
+  editGameLocationOptions: PropTypes.arrayOf(
+    PropTypes.shape({
+      key: PropTypes.string.isRequired,
+      label: PropTypes.string.isRequired,
+    }),
+  ),
   editGameSeasons: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
@@ -1986,6 +2079,7 @@ GameEditModal.propTypes = {
 GameEditModal.defaultProps = {
   selectedGame: null,
   location: null,
+  editGameLocationOptions: [],
   editGameSeasons: [],
   isEditGameSeasonsLoading: false,
   isEditGameSeasonCreating: false,

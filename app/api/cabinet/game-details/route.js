@@ -104,6 +104,7 @@ export async function GET(request) {
     const GamesModel = db.model('Games')
     const GamesTeamsModel = db.model('GamesTeams')
     const TeamsUsersModel = db.model('TeamsUsers')
+    const UsersModel = db.model('Users')
 
     const gameDoc = await GamesModel.findOne(query)
       .select({
@@ -232,11 +233,19 @@ export async function GET(request) {
         ? 'finished'
         : gameDoc?.status
 
+    const creatorTelegramIdRaw = Number(gameDoc?.creatorTelegramId)
+    const creatorDoc = Number.isFinite(creatorTelegramIdRaw)
+      ? await UsersModel.findOne({ telegramId: creatorTelegramIdRaw })
+          .select({ _id: 1, name: 1, username: 1, phone: 1, telegramId: 1 })
+          .lean()
+      : null
+
     const normalizedGame = normalizeGameForCabinet({
       ...gameDoc,
       status: normalizedStatus,
       teamsCount,
       userTeamPlace,
+      creator: creatorDoc,
     })
 
     return NextResponse.json({ success: true, data: normalizedGame }, { status: 200 })

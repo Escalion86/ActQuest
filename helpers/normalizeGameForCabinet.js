@@ -217,6 +217,30 @@ const normalizeModerators = (moderators = []) => {
     .filter(Boolean)
 }
 
+const normalizeCreator = (creator) => {
+  if (!creator || typeof creator !== 'object') {
+    return null
+  }
+
+  const id = ensureString(creator?._id ?? creator?.id, '')
+  const name = ensureString(creator?.name, '')
+  const username = ensureString(creator?.username, '')
+  const phone = ensureString(creator?.phone, '')
+  const telegramId = ensureString(creator?.telegramId, '')
+
+  if (!id && !name && !username && !phone && !telegramId) {
+    return null
+  }
+
+  return {
+    id: id || null,
+    name,
+    username,
+    phone,
+    telegramId,
+  }
+}
+
 const normalizeUserParticipationTeams = (teams = []) => {
   if (!Array.isArray(teams) || teams.length === 0) {
     return []
@@ -365,6 +389,7 @@ const normalizeGameForCabinet = (game) => {
     updatedAt: ensureDateISOString(game.updatedAt),
     createdAt: ensureDateISOString(game.createdAt),
     creatorTelegramId: ensureString(game.creatorTelegramId, ''),
+    creator: normalizeCreator(game.creator),
     moderators: normalizeModerators(game.moderators),
   }
 }

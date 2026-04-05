@@ -3,7 +3,9 @@ import { getServerSession } from 'next-auth'
 
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import { authOptions } from '@server/auth/authOptions'
+import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import logSiteEvent from '@helpers/logSiteEvent'
 
 const toStringId = (value) => {
   if (value === null || value === undefined) {
@@ -68,6 +70,19 @@ const normalizeRole = (value) => {
 }
 
 const isElevatedRole = (role) => role === 'admin' || role === 'dev'
+const normalizeLocation = (value) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
+const resolveLocationLabel = (locationKey) => {
+  const normalized = normalizeLocation(locationKey)
+  if (!normalized) {
+    return 'выбранный город'
+  }
+  const townRu = LOCATIONS?.[normalized]?.townRu
+  if (!townRu || typeof townRu !== 'string') {
+    return normalized
+  }
+  return townRu
+}
 
 const resolveSessionIdentity = (session) => {
   const sessionUser = session?.user ?? {}
@@ -240,7 +255,7 @@ export async function POST(request, { params }) {
     const game = await findGameByAnyId(
       GamesModel,
       gameId,
-      { _id: 1, status: 1, registrationOpen: 1 },
+      { _id: 1, name: 1, status: 1, registrationOpen: 1, location: 1 },
     )
     if (!game?._id) {
       return NextResponse.json(
@@ -258,7 +273,9 @@ export async function POST(request, { params }) {
       )
     }
 
-    const team = await TeamsModel.findById(teamId).select({ _id: 1 }).lean()
+    const team = await TeamsModel.findById(teamId)
+      .select({ _id: 1, location: 1, name: 1 })
+      .lean()
     if (!team?._id) {
       return NextResponse.json(
         { success: false, error: 'Команда не найдена' },
@@ -290,6 +307,54 @@ export async function POST(request, { params }) {
           { status: 403 },
         )
       }
+
+      const gameLocation = normalizeLocation(game?.location)
+      const teamLocation = normalizeLocation(team?.location)
+      if (gameLocation && gameLocation !== teamLocation) {
+        const captainMemberships = await TeamsUsersModel.find({
+          role: 'capitan',
+          $or: membershipOr,
+        })
+          .select({ teamId: 1 })
+          .lean()
+
+        const captainTeamIds = Array.from(
+          new Set(
+            captainMemberships
+              .map((membership) => toStringId(membership?.teamId))
+              .filter(Boolean),
+          ),
+        )
+
+        const captainTeamsInGameLocation = captainTeamIds.length
+          ? await TeamsModel.find({
+              _id: { $in: captainTeamIds },
+              location: gameLocation,
+            })
+              .select({ _id: 1 })
+              .lean()
+          : []
+
+        if (!captainTeamsInGameLocation.length) {
+          const cityLabel = resolveLocationLabel(gameLocation)
+          return NextResponse.json(
+            {
+              success: false,
+              error: `У вас нет команд, где вы капитан, для города «${cityLabel}».`,
+            },
+            { status: 403 },
+          )
+        }
+
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Выбранная команда привязана к другому городу. Для регистрации выберите команду из того же города, что и игра.',
+          },
+          { status: 403 },
+        )
+      }
     }
 
     const existing = await GamesTeamsModel.findOne({
@@ -309,6 +374,20 @@ export async function POST(request, { params }) {
       gameId: normalizedResolvedGameId,
       teamId,
     })
+
+    await logSiteEvent({
+      db,
+      type: 'team_registered_to_game',
+      location: normalizeLocation(game?.location),
+      message: `Команда «${typeof team?.name === 'string' ? team.name : ''}» зарегистрирована на игру «${typeof game?.name === 'string' ? game.name : ''}»`,
+      actorUserId: identity.userId,
+      actorTelegramId: identity.telegramId,
+      teamId,
+      teamName: typeof team?.name === 'string' ? team.name : '',
+      gameId: normalizedResolvedGameId,
+      gameName: typeof game?.name === 'string' ? game.name : '',
+    })
+
     return NextResponse.json(
       {
         success: true,
@@ -360,10 +439,15 @@ export async function DELETE(request, { params }) {
     }
 
     const GamesModel = db.model('Games')
+    const TeamsModel = db.model('Teams')
     const TeamsUsersModel = db.model('TeamsUsers')
     const GamesTeamsModel = db.model('GamesTeams')
 
-    const game = await findGameByAnyId(GamesModel, gameId, { _id: 1 })
+    const game = await findGameByAnyId(GamesModel, gameId, {
+      _id: 1,
+      name: 1,
+      location: 1,
+    })
     if (!game?._id) {
       return NextResponse.json(
         { success: false, error: 'Игра не найдена' },
@@ -404,10 +488,54 @@ export async function DELETE(request, { params }) {
       }
     }
 
-    const deleteResult = await GamesTeamsModel.deleteMany({
+    const existingRegistrations = await GamesTeamsModel.find({
       gameId: normalizedResolvedGameId,
       teamId: { $in: teamIds },
     })
+      .select({ teamId: 1 })
+      .lean()
+    const deletedTeamIds = Array.from(
+      new Set(
+        existingRegistrations
+          .map((entry) => toStringId(entry?.teamId))
+          .filter(Boolean),
+      ),
+    )
+
+    const teamsForLog = await TeamsModel.find({ _id: { $in: deletedTeamIds } })
+      .select({ _id: 1, name: 1 })
+      .lean()
+    const teamNameById = teamsForLog.reduce((acc, item) => {
+      const id = toStringId(item?._id)
+      if (id) {
+        acc[id] = typeof item?.name === 'string' ? item.name : ''
+      }
+      return acc
+    }, {})
+
+    const deleteResult = await GamesTeamsModel.deleteMany({
+      gameId: normalizedResolvedGameId,
+      teamId: { $in: deletedTeamIds },
+    })
+
+    if (Number(deleteResult?.deletedCount || 0) > 0) {
+      await Promise.all(
+        deletedTeamIds.map((currentTeamId) =>
+          logSiteEvent({
+            db,
+            type: 'team_unregistered_from_game',
+            location: normalizeLocation(game?.location),
+            message: `Команда «${teamNameById[currentTeamId] || ''}» снята с регистрации на игру «${typeof game?.name === 'string' ? game.name : ''}»`,
+            actorUserId: identity.userId,
+            actorTelegramId: identity.telegramId,
+            teamId: currentTeamId,
+            teamName: teamNameById[currentTeamId] || '',
+            gameId: normalizedResolvedGameId,
+            gameName: typeof game?.name === 'string' ? game.name : '',
+          }),
+        ),
+      )
+    }
 
     return NextResponse.json(
       {

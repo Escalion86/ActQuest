@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 
 import registerPhoneUser from '@helpers/registerPhoneUser'
 import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
+import logSiteEvent from '@helpers/logSiteEvent'
 
 export async function POST(request) {
   const body = await request.json().catch(() => ({}))
@@ -12,6 +14,17 @@ export async function POST(request) {
       : null
 
   try {
+    if (!normalizedLocation) {
+      return NextResponse.json(
+        {
+          success: false,
+          errorCode: 'LOCATION_REQUIRED',
+          error: 'Выберите город, в котором хотите зарегистрироваться.',
+        },
+        { status: 400 },
+      )
+    }
+
     const controls = await getSiteAccessControlsByLocation(normalizedLocation)
     if (!controls.allowSiteRegistration) {
       return NextResponse.json(
@@ -39,6 +52,17 @@ export async function POST(request) {
         { status: 400 },
       )
     }
+
+    const db = await dbConnectGlobal()
+    await logSiteEvent({
+      db,
+      type: 'user_registered',
+      location: normalizedLocation,
+      message: 'Зарегистрирован новый пользователь',
+      targetUserId: result?.user?.id ?? null,
+      actorUserId: result?.user?.id ?? null,
+      actorTelegramId: result?.user?.telegramId ?? null,
+    })
 
     return NextResponse.json(
       {

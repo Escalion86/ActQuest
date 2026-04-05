@@ -73,7 +73,14 @@ export async function GET(request) {
 
     const teamsDocs = teamIds.length
       ? await TeamsModel.find({ _id: { $in: teamIds } })
-          .select({ _id: 1, name: 1, image: 1, updatedAt: 1, gameStats: 1 })
+          .select({
+            _id: 1,
+            name: 1,
+            image: 1,
+            location: 1,
+            updatedAt: 1,
+            gameStats: 1,
+          })
           .lean()
       : []
 
@@ -87,6 +94,7 @@ export async function GET(request) {
         id,
         name: typeof team?.name === 'string' ? team.name : '',
         image: typeof team?.image === 'string' ? team.image : '',
+        location: typeof team?.location === 'string' ? team.location : '',
         updatedAt: ensureDateISOString(team?.updatedAt),
         gamesCount: Number.isFinite(Number(team?.gameStats?.playedGamesCount))
           ? Number(team.gameStats.playedGamesCount)

@@ -25,6 +25,11 @@ const teamsSchema = {
     type: Boolean,
     default: true,
   },
+  location: {
+    type: String,
+    default: null,
+    trim: true,
+  },
   carSkin: {
     type: String,
     enum: TEAM_CAR_SKIN_VALUES,

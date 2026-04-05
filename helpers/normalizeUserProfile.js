@@ -25,6 +25,20 @@ const normalizePreferences = (value) => {
     .filter((item) => item.length > 0)
 }
 
+const normalizeLocations = (value) => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .map((item) => sanitizeString(item).trim().toLowerCase())
+        .filter((item) => item.length > 0),
+    ),
+  )
+}
+
 const normalizeAuthMethod = (value) => {
   const normalized = sanitizeString(value).trim().toLowerCase()
   if (normalized === 'phone' || normalized === 'vk' || normalized === 'telegram') {
@@ -76,6 +90,7 @@ const normalizeUserProfile = (doc = null) => {
     languageCode: sanitizeNullableString(profile.languageCode),
     isPremium: Boolean(profile.isPremium),
     rating: normalizeRating(profile.rating),
+    adminEventPushLocations: normalizeLocations(profile.adminEventPushLocations),
   }
 }
 

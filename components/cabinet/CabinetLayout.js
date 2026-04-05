@@ -78,6 +78,11 @@ const developerMenuItem = {
 
 const adminSubmenuItems = [
   {
+    id: 'admin-events',
+    label: 'События сайта',
+    href: '/cabinet/admin/events',
+  },
+  {
     id: 'admin-users',
     label: 'Управление пользователями',
     href: '/cabinet/admin/users',

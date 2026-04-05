@@ -28,14 +28,43 @@ const normalizeStringOrNull = (value) => {
   return trimmed.length > 0 ? trimmed : null
 }
 
+const SETTINGS_CITY_KEYS = ['krsk', 'nrsk', 'ekb']
+
+const normalizeLocationMap = (value) => {
+  const source =
+    value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+
+  return SETTINGS_CITY_KEYS.reduce((acc, key) => {
+    acc[key] = normalizeStringOrNull(source[key])
+    return acc
+  }, {})
+}
+
+const resolvePrimaryFromLocationMap = (map) => {
+  for (const key of SETTINGS_CITY_KEYS) {
+    const current = normalizeStringOrNull(map?.[key])
+    if (current) {
+      return current
+    }
+  }
+  return null
+}
+
 const resolvePayload = (rawBody) => {
   const body =
     rawBody && typeof rawBody === 'object' && rawBody.data && typeof rawBody.data === 'object'
       ? rawBody.data
       : rawBody
+  const supportPhonesByLocation = normalizeLocationMap(body?.supportPhonesByLocation)
+  const chatUrlsByLocation = normalizeLocationMap(body?.chatUrlsByLocation)
+  const legacySupportPhone = normalizeStringOrNull(body?.supportPhone)
+  const legacyChatUrl = normalizeStringOrNull(body?.chatUrl)
+
   return {
-    supportPhone: normalizeStringOrNull(body?.supportPhone),
-    chatUrl: normalizeStringOrNull(body?.chatUrl),
+    supportPhone: legacySupportPhone ?? resolvePrimaryFromLocationMap(supportPhonesByLocation),
+    chatUrl: legacyChatUrl ?? resolvePrimaryFromLocationMap(chatUrlsByLocation),
+    supportPhonesByLocation,
+    chatUrlsByLocation,
     allowSiteAuth: Boolean(body?.allowSiteAuth),
     allowSiteRegistration: Boolean(body?.allowSiteRegistration),
     enableVkOneTap: Boolean(body?.enableVkOneTap),

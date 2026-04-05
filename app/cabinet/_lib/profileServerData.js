@@ -51,6 +51,7 @@ export const loadCabinetAppProfile = async (session) => {
       accountLocation: session?.user?.location ?? null,
       phone: session?.user?.phone ?? '',
       photoUrl: session?.user?.photoUrl ?? '',
+      adminEventPushLocations: [],
     })
   }
 
@@ -65,6 +66,7 @@ export const loadCabinetAppProfile = async (session) => {
       accountLocation: session?.user?.location ?? null,
       phone: session?.user?.phone ?? '',
       photoUrl: session?.user?.photoUrl ?? '',
+      adminEventPushLocations: [],
     })
   }
 
@@ -89,6 +91,7 @@ export const loadCabinetAppProfile = async (session) => {
       languageCode: 1,
       isPremium: 1,
       rating: 1,
+      adminEventPushLocations: 1,
     })
     .lean()
 
@@ -102,9 +105,9 @@ export const loadCabinetAppProfile = async (session) => {
       accountLocation: session?.user?.location ?? null,
       phone: session?.user?.phone ?? '',
       photoUrl: session?.user?.photoUrl ?? '',
+      adminEventPushLocations: [],
     })
   }
 
   return normalizeUserProfile(userDoc)
 }
-

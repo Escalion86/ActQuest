@@ -35,6 +35,13 @@ export async function POST(request) {
 
   try {
     if (flow === 'register') {
+      if (!location) {
+        return errorJson(
+          400,
+          'location',
+          'Выберите город, в котором хотите зарегистрироваться.',
+        )
+      }
       const controls = await getSiteAccessControlsByLocation(location)
       if (!controls.allowSiteRegistration) {
         return errorJson(

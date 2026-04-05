@@ -19,6 +19,7 @@ import requestApiJson from '@helpers/requestApiJson'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
+import { LOCATIONS } from '@server/serverConstants'
 
 const TEAMS_PAGE_SIZE = 10
 const CABINET_ADMIN_API_BASE = '/api/cabinet/admin'
@@ -40,6 +41,7 @@ const serializeTeamForComparison = (team) => {
     image: team.image ?? '',
     open: Boolean(team.open),
     carSkin: normalizeTeamCarSkin(team.carSkin),
+    location: team.location ?? '',
   })
 }
 
@@ -53,6 +55,7 @@ const buildTeamUpdatePayload = (team) => {
     image: team.image ?? null,
     open: Boolean(team.open),
     carSkin: normalizeTeamCarSkin(team.carSkin),
+    location: team.location ?? '',
   }
 }
 
@@ -74,6 +77,7 @@ const AdminTeamsPage = ({
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [visibilityFilter, setVisibilityFilter] = useState('all')
+  const [locationFilter, setLocationFilter] = useState('all')
   const [sortBy, setSortBy] = useState('registration_desc')
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -85,6 +89,23 @@ const AdminTeamsPage = ({
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] = useState(false)
   const copyTimeoutRef = useRef(null)
+  const locationOptions = useMemo(
+    () =>
+      Object.entries(LOCATIONS)
+        .filter(([, value]) => !value?.hidden)
+        .map(([key, value]) => ({
+          value: key,
+          label:
+            typeof value?.townRu === 'string' && value.townRu.length > 0
+              ? value.townRu.charAt(0).toUpperCase() + value.townRu.slice(1)
+              : key,
+        })),
+    [],
+  )
+  const locationFilterOptions = useMemo(
+    () => [{ value: 'all', label: 'Все города' }, ...locationOptions],
+    [locationOptions],
+  )
 
   useEffect(() => {
     setTeams(safeInitialTeams)
@@ -515,6 +536,9 @@ const AdminTeamsPage = ({
       if (visibilityFilter && visibilityFilter !== 'all') {
         params.set('visibility', visibilityFilter)
       }
+      if (locationFilter && locationFilter !== 'all') {
+        params.set('location', locationFilter)
+      }
 
       const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/teams-list?${params.toString()}`, {
         fallbackMessage: 'Не удалось загрузить команды',
@@ -538,7 +562,7 @@ const AdminTeamsPage = ({
     } finally {
       setIsLoadingMoreTeams(false)
     }
-  }, [hasMoreTeams, isLoadingMoreTeams, searchQuery, sortBy, teams.length, visibilityFilter])
+  }, [hasMoreTeams, isLoadingMoreTeams, locationFilter, searchQuery, sortBy, teams.length, visibilityFilter])
 
   useEffect(() => {
     if (!isAdmin) {
@@ -562,6 +586,9 @@ const AdminTeamsPage = ({
         }
         if (visibilityFilter && visibilityFilter !== 'all') {
           params.set('visibility', visibilityFilter)
+        }
+        if (locationFilter && locationFilter !== 'all') {
+          params.set('location', locationFilter)
         }
 
         const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/teams-list?${params.toString()}`, {
@@ -599,7 +626,7 @@ const AdminTeamsPage = ({
     return () => {
       isCancelled = true
     }
-  }, [isAdmin, searchQuery, sortBy, visibilityFilter])
+  }, [isAdmin, locationFilter, searchQuery, sortBy, visibilityFilter])
 
   if (!isAdmin) {
     return (
@@ -653,6 +680,22 @@ const AdminTeamsPage = ({
                 <option value="all">Все команды</option>
                 <option value="open">Открытые</option>
                 <option value="closed">Закрытые</option>
+            </CabinetSelectField>
+
+            <CabinetSelectField
+                id="team-location-filter"
+                label="Город"
+                value={locationFilter}
+                onChange={(event) => setLocationFilter(event.target.value)}
+                containerClassName="space-y-1"
+                labelClassName="text-xs font-semibold text-slate-500"
+                selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                {locationFilterOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
             </CabinetSelectField>
 
             <CabinetSelectField
@@ -766,6 +809,7 @@ const AdminTeamsPage = ({
           onSetCaptain={handleSetCaptain}
           onRemoveMember={handleRemoveMember}
           canEditCarSkin={isAdmin}
+          locationOptions={locationOptions}
         />
         <TeamDescriptionModal
           isOpen={isTeamDescriptionModalOpen}
@@ -805,6 +849,7 @@ AdminTeamsPage.propTypes = {
       description: PropTypes.string,
       image: PropTypes.string,
       open: PropTypes.bool,
+      location: PropTypes.string,
       carSkin: PropTypes.string,
       members: PropTypes.arrayOf(teamMemberShape),
       membersCount: PropTypes.number,

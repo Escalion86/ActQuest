@@ -17,7 +17,7 @@ const normalizeRole = (value) => {
 
 const canCreateGames = (role) => {
   const normalizedRole = normalizeRole(role)
-  return normalizedRole === 'admin' || normalizedRole === 'dev' || normalizedRole === 'moder'
+  return normalizedRole === 'admin' || normalizedRole === 'dev'
 }
 
 const normalizeStringOrNull = (value) => {

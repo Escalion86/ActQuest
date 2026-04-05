@@ -19,6 +19,7 @@ import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
 import useSnackbar from '@helpers/useSnackbar'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
+import { LOCATIONS } from '@server/serverConstants'
 
 const MAX_TEAMS_PER_USER = 3
 const CABINET_TEAMS_API_BASE = '/api/cabinet/teams'
@@ -40,6 +41,7 @@ const serializeTeamForComparison = (team) => {
     description: team.description ?? '',
     image: team.image ?? '',
     open: Boolean(team.open),
+    location: team.location ?? '',
   })
 }
 
@@ -52,6 +54,7 @@ const buildTeamUpdatePayload = (team) => {
     description: team.description ?? '',
     image: team.image ?? null,
     open: Boolean(team.open),
+    location: team.location ?? '',
   }
 }
 
@@ -122,6 +125,19 @@ const TeamsPage = ({
   const [isLeavingTeam, setIsLeavingTeam] = useState(false)
   const [isDeletingTeam, setIsDeletingTeam] = useState(false)
   const snackbar = useSnackbar()
+  const locationOptions = useMemo(
+    () =>
+      Object.entries(LOCATIONS)
+        .filter(([, value]) => !value?.hidden)
+        .map(([key, value]) => ({
+          value: key,
+          label:
+            typeof value?.townRu === 'string' && value.townRu.length > 0
+              ? value.townRu.charAt(0).toUpperCase() + value.townRu.slice(1)
+              : key,
+        })),
+    [],
+  )
 
   const filterTeamsByCurrentUser = useCallback(
     (items) => {
@@ -1320,6 +1336,7 @@ const TeamsPage = ({
           canDeleteTeam={canDeleteSelectedTeam}
           isDeletingTeam={isDeletingTeam}
           onDeleteTeam={handleDeleteSelectedTeam}
+          locationOptions={locationOptions}
         />
         <TeamCreateModal
           isOpen={isCreateModalOpen}
@@ -1388,6 +1405,7 @@ TeamsPage.propTypes = {
       description: PropTypes.string,
       image: PropTypes.string,
       open: PropTypes.bool,
+      location: PropTypes.string,
       members: PropTypes.arrayOf(teamMemberShape),
       membersCount: PropTypes.number,
       captain: teamMemberShape,

@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
+import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import ImagesInput from '@components/cabinet/ImagesInput'
@@ -15,15 +16,26 @@ import FeedbackToast from '@components/FeedbackToast'
 import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
+import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import {
   formatPhoneInput,
   normalizePhoneForSubmit,
 } from '@helpers/phoneInputMask'
 import requestApiJson from '@helpers/requestApiJson'
 import usePwaNotifications from '@helpers/usePwaNotifications'
+import { LOCATIONS } from '@server/serverConstants'
 
 const CABINET_USERS_API_BASE = '/api/cabinet/users'
 const PHONE_VERIFY_API_BASE = '/api/phone/verify'
+const locationOptions = Object.entries(LOCATIONS)
+  .filter(([, value]) => !value?.hidden)
+  .map(([key, value]) => ({
+    value: key,
+    label:
+      typeof value?.townRu === 'string' && value.townRu.length > 0
+        ? value.townRu.charAt(0).toUpperCase() + value.townRu.slice(1)
+        : key,
+  }))
 
 const ProfilePage = ({ initialProfile }) => {
   const { data: session, update: updateSession } = useSession()
@@ -50,7 +62,12 @@ const ProfilePage = ({ initialProfile }) => {
   const [isPhoneModalSubmitting, setIsPhoneModalSubmitting] = useState(false)
   const [pushFeedback, setPushFeedback] = useState(null)
   const [toastEvent, setToastEvent] = useState(null)
+  const [isLocationSaving, setIsLocationSaving] = useState(false)
+  const [locationSaveError, setLocationSaveError] = useState(null)
   const phoneCheckInFlightRef = useRef(false)
+  const { effectiveRole } = useCabinetRolePreview(
+    session?.user?.role ?? 'client',
+  )
   const pushLocation =
     typeof session?.user?.location === 'string' ? session.user.location : null
   const {
@@ -102,6 +119,15 @@ const ProfilePage = ({ initialProfile }) => {
     () => normalizeUserProfile(formState),
     [formState],
   )
+  const selectedLocation =
+    (typeof session?.user?.location === 'string' && session.user.location) ||
+    safeFormState.currentLocation ||
+    ''
+  const isAdminOrDeveloper = useMemo(() => {
+    const role =
+      typeof effectiveRole === 'string' ? effectiveRole.trim().toLowerCase() : ''
+    return role === 'admin' || role === 'dev'
+  }, [effectiveRole])
   const resolvedProfileId = useMemo(() => {
     const idFromState =
       typeof safeFormState.id === 'string' ? safeFormState.id.trim() : ''
@@ -117,6 +143,48 @@ const ProfilePage = ({ initialProfile }) => {
 
     return idFromSession || null
   }, [safeFormState.id, session?.user?._id, session?.user?.globalUserId])
+
+  const handleLocationChange = useCallback(
+    async (event) => {
+      const nextLocation =
+        typeof event?.target?.value === 'string' ? event.target.value.trim() : ''
+      if (!nextLocation || nextLocation === selectedLocation || isLocationSaving) {
+        return
+      }
+
+      setLocationSaveError(null)
+      setIsLocationSaving(true)
+      try {
+        await requestApiJson(`${CABINET_USERS_API_BASE}/location`, {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ location: nextLocation }),
+          fallbackMessage: 'Не удалось обновить город',
+        })
+
+        setFormState((prev) => ({
+          ...normalizeUserProfile(prev),
+          currentLocation: nextLocation,
+        }))
+        setLastSavedState((prev) => ({
+          ...normalizeUserProfile(prev),
+          currentLocation: nextLocation,
+        }))
+
+        if (typeof updateSession === 'function') {
+          await updateSession({ location: nextLocation })
+        }
+      } catch (error) {
+        setLocationSaveError(error?.message || 'Не удалось обновить город')
+      } finally {
+        setIsLocationSaving(false)
+      }
+    },
+    [isLocationSaving, selectedLocation, updateSession],
+  )
 
   const resetPhoneVerification = useCallback((nextPhoneValue = '') => {
     setPhoneVerifyCallId(null)
@@ -423,6 +491,21 @@ const ProfilePage = ({ initialProfile }) => {
           : [],
       }
 
+      if (isAdminOrDeveloper) {
+        payload.adminEventPushLocations = Array.from(
+          new Set(
+            (Array.isArray(safeFormState.adminEventPushLocations)
+              ? safeFormState.adminEventPushLocations
+              : []
+            )
+              .map((item) => normalizeText(item).toLowerCase())
+              .filter((item) =>
+                locationOptions.some((option) => option.value === item),
+              ),
+          ),
+        )
+      }
+
       try {
         const { json } = await requestApiJson(`${CABINET_USERS_API_BASE}/profile`, {
           method: 'PUT',
@@ -448,8 +531,26 @@ const ProfilePage = ({ initialProfile }) => {
         })
       }
     },
-    [safeFormState, session],
+    [isAdminOrDeveloper, safeFormState],
   )
+
+  const toggleAdminPushLocation = useCallback((locationKey, enabled) => {
+    setFormState((prevState) => {
+      const current = normalizeUserProfile(prevState)
+      const currentList = Array.isArray(current.adminEventPushLocations)
+        ? current.adminEventPushLocations
+        : []
+      const nextList = enabled
+        ? Array.from(new Set([...currentList, locationKey]))
+        : currentList.filter((item) => item !== locationKey)
+
+      return {
+        ...current,
+        adminEventPushLocations: nextList,
+      }
+    })
+    setSaveState((prevState) => ({ ...prevState, isSaved: false, error: null }))
+  }, [])
 
   const handlePushNotificationsToggle = useCallback(
     async (event) => {
@@ -582,6 +683,27 @@ const ProfilePage = ({ initialProfile }) => {
                 </CabinetButton>
               </div>
             </div>
+            <CabinetSelectField
+              id="profile-location"
+              label="Город участия"
+              value={selectedLocation}
+              onChange={handleLocationChange}
+              disabled={isLocationSaving}
+            >
+              <option value="" disabled>
+                Выберите город
+              </option>
+              {locationOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </CabinetSelectField>
+            {locationSaveError ? (
+              <NoticeBanner tone="error" variant="neon">
+                {locationSaveError}
+              </NoticeBanner>
+            ) : null}
 
             <div className="flex flex-col gap-y-3">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-100">
@@ -622,6 +744,38 @@ const ProfilePage = ({ initialProfile }) => {
                 <NoticeBanner tone="error" variant="neon">
                   {resolvedPushError}
                 </NoticeBanner>
+              ) : null}
+
+              {isAdminOrDeveloper ? (
+                <div className="space-y-2 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 dark:border-[#00D1FF]/25 dark:bg-[#050012]/55">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-200">
+                    Уведомления администратора о событиях сайта
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Выберите города, по которым получать push о событиях из
+                    раздела «Администрирование → События сайта».
+                  </p>
+                  <div className="space-y-2">
+                    {locationOptions.map((option) => (
+                      <NeonCheckbox
+                        key={option.value}
+                        id={`profile-admin-events-location-${option.value}`}
+                        checked={(
+                          safeFormState.adminEventPushLocations ?? []
+                        ).includes(option.value)}
+                        onChange={(event) =>
+                          toggleAdminPushLocation(
+                            option.value,
+                            Boolean(event?.target?.checked),
+                          )
+                        }
+                        label={option.label}
+                        disabled={saveState.isSaving}
+                        className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 dark:border-[#00D1FF]/20 dark:bg-[#050012]/45"
+                      />
+                    ))}
+                  </div>
+                </div>
               ) : null}
             </div>
 
@@ -783,6 +937,7 @@ ProfilePage.propTypes = {
     phone: PropTypes.string,
     about: PropTypes.string,
     preferences: PropTypes.arrayOf(PropTypes.string),
+    adminEventPushLocations: PropTypes.arrayOf(PropTypes.string),
   }),
 }
 

@@ -86,6 +86,7 @@ const fetchTeamsForCabinet = async ({
   searchQuery = '',
   visibilityFilter = 'all',
   location = null,
+  teamLocationFilter = null,
   sortBy = DEFAULT_SORT,
   offset = 0,
   limit = null,
@@ -117,6 +118,10 @@ const fetchTeamsForCabinet = async ({
 
   const normalizedSearchQuery =
     typeof searchQuery === 'string' ? searchQuery.trim().toLowerCase().slice(0, 100) : ''
+  const normalizedTeamLocation =
+    typeof (teamLocationFilter ?? location) === 'string'
+      ? String(teamLocationFilter ?? location).trim().toLowerCase()
+      : ''
   const normalizedVisibilityFilter = normalizeVisibilityFilter(visibilityFilter)
   const baseFilter = Array.isArray(uniqueTeamIds) ? { _id: { $in: uniqueTeamIds } } : null
   const searchFilter = normalizedSearchQuery
@@ -133,7 +138,10 @@ const fetchTeamsForCabinet = async ({
       : normalizedVisibilityFilter === 'closed'
         ? { open: false }
         : null
-  const filterParts = [baseFilter, searchFilter, visibilityDbFilter].filter(Boolean)
+  const locationDbFilter = normalizedTeamLocation
+    ? { location: normalizedTeamLocation }
+    : null
+  const filterParts = [baseFilter, searchFilter, visibilityDbFilter, locationDbFilter].filter(Boolean)
   const teamFilter =
     filterParts.length > 1
       ? { $and: filterParts }

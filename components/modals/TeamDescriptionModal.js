@@ -8,9 +8,22 @@ import Modal from '@components/Modal'
 import fetchCabinetUserDetails from '@helpers/fetchCabinetUserDetails'
 import formatDate from '@helpers/formatDate'
 import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
+import { LOCATIONS } from '@server/serverConstants'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
 import UnifiedGameDescriptionModal from './UnifiedGameDescriptionModal'
+
+const resolveLocationLabel = (locationKey) => {
+  const key = typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
+  if (!key) {
+    return 'Не указан'
+  }
+  const rawName = LOCATIONS?.[key]?.townRu
+  if (!rawName || typeof rawName !== 'string') {
+    return key
+  }
+  return rawName.charAt(0).toUpperCase() + rawName.slice(1)
+}
 
 const TeamDescriptionModal = ({
   isOpen,
@@ -179,6 +192,12 @@ const TeamDescriptionModal = ({
               <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{selectedTeam.membersCount ?? 0}</dd>
             </div>
             <div>
+              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Город</dt>
+              <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                {resolveLocationLabel(selectedTeam.location)}
+              </dd>
+            </div>
+            <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Сыгранных игр</dt>
               <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">{selectedTeam.gamesCount ?? 0}</dd>
             </div>
@@ -338,6 +357,7 @@ TeamDescriptionModal.propTypes = {
     description: PropTypes.string,
     image: PropTypes.string,
     open: PropTypes.bool,
+    location: PropTypes.string,
     membersCount: PropTypes.number,
     gamesCount: PropTypes.number,
     rating: PropTypes.shape({

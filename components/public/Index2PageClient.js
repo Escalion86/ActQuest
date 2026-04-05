@@ -2212,12 +2212,23 @@ const Index2Page = () => {
                       inputGlitch ? 'input-glitch border-red-300/60' : ''
                     }`}
                   />
-                  <button
-                    type="submit"
-                    className="cursor-pointer rounded-xl border border-[#00D1FF]/50 bg-[#00D1FF]/10 px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.12em] text-[#b9f5ff] transition hover:bg-[#00D1FF]/20"
-                  >
-                    Ответить
-                  </button>
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    <button
+                      type="submit"
+                      className="cursor-pointer rounded-xl border border-[#00D1FF]/50 bg-[#00D1FF]/10 px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.12em] text-[#b9f5ff] transition hover:bg-[#00D1FF]/20"
+                    >
+                      Ответить
+                    </button>
+                    {wrongAttempts >= 2 && (
+                      <button
+                        type="button"
+                        onClick={handleGiveUp}
+                        className="cursor-pointer rounded-xl border border-[#7A00FF]/50 bg-[#7A00FF]/10 px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.12em] text-[#e9d6ff] transition hover:bg-[#7A00FF]/20"
+                      >
+                        Я сдаюсь
+                      </button>
+                    )}
+                  </div>
                 </form>
 
                 {riddleError && (
@@ -2249,15 +2260,6 @@ const Index2Page = () => {
                   </div>
                 )}
 
-                {wrongAttempts >= 3 && (
-                  <button
-                    type="button"
-                    onClick={handleGiveUp}
-                    className="mt-4 cursor-pointer rounded-xl border border-[#7A00FF]/50 bg-[#7A00FF]/10 px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.12em] text-[#e9d6ff] transition hover:bg-[#7A00FF]/20"
-                  >
-                    Я сдаюсь
-                  </button>
-                )}
               </div>
             )}
 

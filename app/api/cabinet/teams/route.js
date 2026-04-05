@@ -3,7 +3,9 @@ import { getServerSession } from 'next-auth'
 
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import { authOptions } from '@server/auth/authOptions'
+import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import logSiteEvent from '@helpers/logSiteEvent'
 
 const collectTeamIds = (searchParams) => {
   const rawIds = []
@@ -66,6 +68,12 @@ const normalizeRole = (value) => {
 }
 
 const isElevatedRole = (role) => role === 'admin' || role === 'dev'
+const resolveAllowedLocations = () =>
+  Object.entries(LOCATIONS)
+    .filter(([, value]) => !value?.hidden)
+    .map(([key]) => key)
+const normalizeLocation = (value) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
 
 export async function GET(request) {
   const requestUrl = new URL(request.url)
@@ -128,10 +136,25 @@ export async function POST(request) {
       : ''
   const image = typeof payload?.image === 'string' ? payload.image : null
   const open = typeof payload?.open === 'boolean' ? payload.open : true
+  const allowedLocations = resolveAllowedLocations()
+  const sessionLocation = normalizeLocation(session.user?.location)
+  const location = allowedLocations.includes(sessionLocation)
+    ? sessionLocation
+    : ''
 
   if (!name) {
     return NextResponse.json(
       { success: false, error: 'Введите название команды' },
+      { status: 400 },
+    )
+  }
+  if (!location) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          'Не удалось определить город пользователя. Выберите город в кабинете и повторите попытку.',
+      },
       { status: 400 },
     )
   }
@@ -170,6 +193,7 @@ export async function POST(request) {
       description,
       image,
       open,
+      location,
     })
 
     if (!isElevatedRole(actorRole)) {
@@ -181,16 +205,42 @@ export async function POST(request) {
       })
     }
 
+    const createdTeamId = toStringId(createdTeam?._id)
+    const createdTeamName =
+      typeof createdTeam?.name === 'string' ? createdTeam.name : name
+    const createdTeamLocation =
+      typeof createdTeam?.location === 'string' && createdTeam.location.trim()
+        ? createdTeam.location.trim().toLowerCase()
+        : location
+
+    await logSiteEvent({
+      db,
+      type: 'team_created',
+      location: createdTeamLocation,
+      message: `Создана команда «${createdTeamName}»`,
+      actorUserId,
+      actorTelegramId,
+      teamId: createdTeamId,
+      teamName: createdTeamName,
+      metadata: {
+        open: Boolean(createdTeam?.open ?? open),
+      },
+    })
+
     return NextResponse.json(
       {
         success: true,
         data: {
-          id: toStringId(createdTeam?._id),
-          _id: toStringId(createdTeam?._id),
-          name: createdTeam?.name ?? name,
+          id: createdTeamId,
+          _id: createdTeamId,
+          name: createdTeamName,
           description: createdTeam?.description ?? description,
           image: createdTeam?.image ?? image,
           open: Boolean(createdTeam?.open ?? open),
+          location:
+            typeof createdTeam?.location === 'string'
+              ? createdTeam.location
+              : location,
         },
       },
       { status: 201 },

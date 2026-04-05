@@ -44,12 +44,17 @@ export async function GET(request) {
       typeof requestUrl.searchParams.get('sortBy') === 'string'
         ? requestUrl.searchParams.get('sortBy')
         : 'registration_desc'
+    const locationFilter =
+      typeof requestUrl.searchParams.get('location') === 'string'
+        ? requestUrl.searchParams.get('location')
+        : 'all'
     const location =
       typeof session?.user?.location === 'string' ? session.user.location : null
 
     const { teams, hasMore } = await fetchTeamsForCabinet({
       db,
       location,
+      teamLocationFilter: locationFilter,
       sortBy,
       offset,
       limit,

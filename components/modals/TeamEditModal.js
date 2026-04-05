@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
+import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import ModalSection from '@components/modals/ModalSection'
 import ModalSectionTitle from '@components/modals/ModalSectionTitle'
@@ -102,6 +103,7 @@ const TeamEditModal = ({
   canDeleteTeam,
   isDeletingTeam,
   onDeleteTeam,
+  locationOptions,
 }) => {
   if (!selectedTeam) {
     return null
@@ -199,6 +201,21 @@ const TeamEditModal = ({
               </div>
             )}
           </div>
+          <CabinetSelectField
+            id="team-location"
+            label="Город команды"
+            value={selectedTeam.location || ''}
+            onChange={(event) => onTeamFieldChange('location', event.target.value)}
+            labelClassName={fieldLabelClassName}
+            selectClassName={fieldInputClassName}
+          >
+            <option value="">Не указан</option>
+            {locationOptions.map((locationOption) => (
+              <option key={locationOption.value} value={locationOption.value}>
+                {locationOption.label}
+              </option>
+            ))}
+          </CabinetSelectField>
 
           <CabinetTextareaField
             id="team-description"
@@ -368,6 +385,7 @@ TeamEditModal.propTypes = {
     description: PropTypes.string,
     image: PropTypes.string,
     open: PropTypes.bool,
+    location: PropTypes.string,
     carSkin: PropTypes.string,
     captain: PropTypes.shape({
       name: PropTypes.string,
@@ -401,6 +419,12 @@ TeamEditModal.propTypes = {
   canDeleteTeam: PropTypes.bool,
   isDeletingTeam: PropTypes.bool,
   onDeleteTeam: PropTypes.func,
+  locationOptions: PropTypes.arrayOf(
+    PropTypes.shape({
+      value: PropTypes.string.isRequired,
+      label: PropTypes.string.isRequired,
+    }),
+  ),
 }
 
 TeamEditModal.defaultProps = {
@@ -410,6 +434,7 @@ TeamEditModal.defaultProps = {
   canDeleteTeam: false,
   isDeletingTeam: false,
   onDeleteTeam: undefined,
+  locationOptions: [],
 }
 
 TeamCarSkinPreview.propTypes = {

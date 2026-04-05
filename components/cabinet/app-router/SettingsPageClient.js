@@ -14,6 +14,12 @@ import requestApiJson from '@helpers/requestApiJson'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 
+const SETTINGS_CITY_OPTIONS = [
+  { key: 'krsk', label: 'Красноярск' },
+  { key: 'nrsk', label: 'Норильск' },
+  { key: 'ekb', label: 'Екатеринбург' },
+]
+
 const ensureSiteSettings = (value) => {
   const fallback = normalizeSiteSettings()
   if (!value || typeof value !== 'object') {
@@ -59,9 +65,28 @@ const SettingsPage = ({ initialSiteSettings, session: initialSession }) => {
       return trimmed.length > 0 ? trimmed : null
     }
 
+    const normalizeLocationMap = (value) => {
+      const source =
+        value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+
+      return SETTINGS_CITY_OPTIONS.reduce((acc, item) => {
+        acc[item.key] = normalizeField(source[item.key])
+        return acc
+      }, {})
+    }
+
+    const supportPhonesByLocation = normalizeLocationMap(
+      siteSettings?.supportPhonesByLocation,
+    )
+    const chatUrlsByLocation = normalizeLocationMap(
+      siteSettings?.chatUrlsByLocation,
+    )
+
     const payload = {
-      supportPhone: normalizeField(siteSettings?.supportPhone),
-      chatUrl: normalizeField(siteSettings?.chatUrl),
+      supportPhone: supportPhonesByLocation.krsk ?? normalizeField(siteSettings?.supportPhone),
+      chatUrl: chatUrlsByLocation.krsk ?? normalizeField(siteSettings?.chatUrl),
+      supportPhonesByLocation,
+      chatUrlsByLocation,
       allowSiteAuth: Boolean(siteSettings?.allowSiteAuth),
       allowSiteRegistration: Boolean(siteSettings?.allowSiteRegistration),
       enableVkOneTap: Boolean(siteSettings?.enableVkOneTap),
@@ -118,23 +143,48 @@ const SettingsPage = ({ initialSiteSettings, session: initialSession }) => {
         activePage="settings"
       >
         <FormSectionCard className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <CabinetInputField
-              id="settings-support-phone"
-              label="Телефон поддержки"
-              type="tel"
-              value={siteSettings?.supportPhone ?? ''}
-              onChange={(event) => handleSettingsChange('supportPhone', event.target.value)}
-              placeholder="Например, +7 (900) 000-00-00"
-            />
-            <CabinetInputField
-              id="settings-chat-url"
-              label="Ссылка на чат проекта"
-              type="url"
-              value={siteSettings?.chatUrl ?? ''}
-              onChange={(event) => handleSettingsChange('chatUrl', event.target.value)}
-              placeholder="https://t.me/actquest"
-            />
+          <div className="space-y-4">
+            <h3 className="aq-modal-section-title text-base font-semibold">
+              Контакты по городам
+            </h3>
+            {SETTINGS_CITY_OPTIONS.map((city) => (
+              <div
+                key={city.key}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+              >
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  {city.label}
+                </p>
+                <div className="mt-3 grid gap-4 md:grid-cols-2">
+                  <CabinetInputField
+                    id={`settings-support-phone-${city.key}`}
+                    label="Телефон поддержки"
+                    type="tel"
+                    value={siteSettings?.supportPhonesByLocation?.[city.key] ?? ''}
+                    onChange={(event) =>
+                      handleSettingsChange('supportPhonesByLocation', {
+                        ...(siteSettings?.supportPhonesByLocation || {}),
+                        [city.key]: event.target.value,
+                      })
+                    }
+                    placeholder="Например, +7 (900) 000-00-00"
+                  />
+                  <CabinetInputField
+                    id={`settings-chat-url-${city.key}`}
+                    label="Ссылка на чат проекта"
+                    type="url"
+                    value={siteSettings?.chatUrlsByLocation?.[city.key] ?? ''}
+                    onChange={(event) =>
+                      handleSettingsChange('chatUrlsByLocation', {
+                        ...(siteSettings?.chatUrlsByLocation || {}),
+                        [city.key]: event.target.value,
+                      })
+                    }
+                    placeholder="https://t.me/..."
+                  />
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
@@ -227,6 +277,16 @@ SettingsPage.propTypes = {
     id: PropTypes.string,
     supportPhone: PropTypes.string,
     chatUrl: PropTypes.string,
+    supportPhonesByLocation: PropTypes.shape({
+      krsk: PropTypes.string,
+      nrsk: PropTypes.string,
+      ekb: PropTypes.string,
+    }),
+    chatUrlsByLocation: PropTypes.shape({
+      krsk: PropTypes.string,
+      nrsk: PropTypes.string,
+      ekb: PropTypes.string,
+    }),
     allowSiteAuth: PropTypes.bool,
     allowSiteRegistration: PropTypes.bool,
     enableVkOneTap: PropTypes.bool,

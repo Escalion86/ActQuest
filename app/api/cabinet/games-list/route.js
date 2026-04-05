@@ -94,7 +94,11 @@ export async function GET(request) {
   const locationFromQuery = hasLocationQueryParam ? query.get('location') : null
   const locationFromSession =
     typeof session?.user?.location === 'string' ? session.user.location : null
-  const locationBase = hasLocationQueryParam ? locationFromQuery : locationFromSession
+  const canSelectAnyLocation = userRole === 'admin' || userRole === 'dev'
+  const locationBase =
+    canSelectAnyLocation && hasLocationQueryParam
+      ? locationFromQuery
+      : locationFromSession
   const location = (locationBase || '').trim().toLowerCase()
   const normalizedLocation = location === 'all' ? null : location || null
 

@@ -136,10 +136,12 @@ const GameModals = ({
   selectedGameModerators,
   availableModeratorsForSelect,
   availableModeratorsMap,
+  availableOrganizersForSelect,
   selectedModeratorToAdd,
   setSelectedModeratorToAdd,
   handleAddModerator,
   handleRemoveModerator,
+  editGameLocationOptions,
   editGameSeasons,
   isEditGameSeasonsLoading,
   isEditGameSeasonCreating,
@@ -218,10 +220,12 @@ const GameModals = ({
       selectedGameModerators={selectedGameModerators}
       availableModeratorsForSelect={availableModeratorsForSelect}
       availableModeratorsMap={availableModeratorsMap}
+      availableOrganizersForSelect={availableOrganizersForSelect}
       selectedModeratorToAdd={selectedModeratorToAdd}
       setSelectedModeratorToAdd={setSelectedModeratorToAdd}
       handleAddModerator={handleAddModerator}
       handleRemoveModerator={handleRemoveModerator}
+      editGameLocationOptions={editGameLocationOptions}
       editGameSeasons={editGameSeasons}
       isEditGameSeasonsLoading={isEditGameSeasonsLoading}
       isEditGameSeasonCreating={isEditGameSeasonCreating}
@@ -287,10 +291,12 @@ const GameModals = ({
       selectedGameModerators={selectedGameModerators}
       availableModeratorsForSelect={availableModeratorsForSelect}
       availableModeratorsMap={availableModeratorsMap}
+      availableOrganizersForSelect={availableOrganizersForSelect}
       selectedModeratorToAdd={selectedModeratorToAdd}
       setSelectedModeratorToAdd={setSelectedModeratorToAdd}
       handleAddModerator={handleAddModerator}
       handleRemoveModerator={handleRemoveModerator}
+      editGameLocationOptions={editGameLocationOptions}
       editGameSeasons={editGameSeasons}
       isEditGameSeasonsLoading={isEditGameSeasonsLoading}
       isEditGameSeasonCreating={isEditGameSeasonCreating}
@@ -613,10 +619,23 @@ GameModals.propTypes = {
   selectedGameModerators: PropTypes.arrayOf(moderatorShape).isRequired,
   availableModeratorsForSelect: PropTypes.arrayOf(moderatorOptionShape).isRequired,
   availableModeratorsMap: PropTypes.instanceOf(Map).isRequired,
+  availableOrganizersForSelect: PropTypes.arrayOf(
+    PropTypes.shape({
+      telegramId: PropTypes.string.isRequired,
+      name: PropTypes.string,
+      username: PropTypes.string,
+    }),
+  ).isRequired,
   selectedModeratorToAdd: PropTypes.string.isRequired,
   setSelectedModeratorToAdd: PropTypes.func.isRequired,
   handleAddModerator: PropTypes.func.isRequired,
   handleRemoveModerator: PropTypes.func.isRequired,
+  editGameLocationOptions: PropTypes.arrayOf(
+    PropTypes.shape({
+      key: PropTypes.string.isRequired,
+      label: PropTypes.string.isRequired,
+    })
+  ),
   editGameSeasons: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
@@ -674,6 +693,7 @@ GameModals.defaultProps = {
   handleJoinGameFromDescription: undefined,
   handleCancelGameRegistrationFromDescription: undefined,
   isGameRegistrationSubmittingFromDescription: false,
+  editGameLocationOptions: [],
   editGameSeasons: [],
   isEditGameSeasonsLoading: false,
   isEditGameSeasonCreating: false,

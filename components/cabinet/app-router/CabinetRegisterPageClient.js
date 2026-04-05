@@ -27,8 +27,6 @@ const availableLocations = Object.entries(LOCATIONS)
   .filter(([, value]) => !value.hidden)
   .map(([key, value]) => ({ key, ...value }))
 
-const defaultLocation = availableLocations[0]?.key ?? 'dev'
-
 const mapPhoneVerifyStatusLabel = (status) => {
   const normalized = String(status || '').trim().toLowerCase()
   if (normalized === 'ok') return 'Номер подтвержден'
@@ -50,7 +48,7 @@ const CabinetRegisterPage = ({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [location, setLocation] = useState(
-    () => session?.user?.location || defaultLocation,
+    () => (session?.user?.location ? session.user.location : ''),
   )
   const [registerStep, setRegisterStep] = useState('phone')
   const [phoneInput, setPhoneInput] = useState('')
@@ -398,6 +396,11 @@ const CabinetRegisterPage = ({
             ? 'Восстановление пароля в этом регионе временно недоступно.'
             : 'Регистрация в этом регионе временно отключена.',
         )
+        return
+      }
+
+      if (!isRecoveryFlow && !location) {
+        setAuthError('Выберите город, в котором хотите зарегистрироваться.')
         return
       }
 
@@ -752,6 +755,8 @@ const CabinetRegisterPage = ({
               disabled={isSubmitting || isSiteAccessLoading}
               variant="neon"
               availableLocations={availableLocations}
+              allowEmpty
+              emptyLabel="Выберите город"
             />
           ) : null}
 
@@ -900,7 +905,9 @@ const CabinetRegisterPage = ({
 
               <button
                 type="submit"
-                disabled={isSubmitting || !isFlowAllowed}
+                disabled={
+                  isSubmitting || !isFlowAllowed || (!isRecoveryFlow && !location)
+                }
                 className="w-full cursor-pointer px-4 py-3 text-sm font-semibold transition border rounded-xl border-[#00D1FF]/50 bg-[#00D1FF]/12 text-[#baf3ff] hover:bg-[#00D1FF]/20 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting

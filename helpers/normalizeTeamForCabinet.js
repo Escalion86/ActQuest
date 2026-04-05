@@ -145,6 +145,7 @@ const normalizeTeamForCabinet = ({ team, members, games, location = null }) => {
     description: ensureString(team?.description, ''),
     image: ensureString(team?.image, ''),
     open: ensureBoolean(team?.open, true),
+    location: ensureString(team?.location, ''),
     carSkin: normalizeTeamCarSkin(team?.carSkin),
     members: normalizedMembers,
     membersCount: normalizedMembers.length,

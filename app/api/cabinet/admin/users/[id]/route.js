@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
+import { LOCATIONS } from '@server/serverConstants'
 import ensureRole from '@helpers/ensureRole'
 import isUserAdmin from '@helpers/isUserAdmin'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -20,6 +21,15 @@ const sanitizePhone = (value) => {
   const asNumber = Number(digits)
   return Number.isFinite(asNumber) ? asNumber : null
 }
+
+const normalizeRole = (value) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
+const resolveAllowedLocations = () =>
+  Object.entries(LOCATIONS)
+    .filter(([, value]) => !value?.hidden)
+    .map(([key]) => key)
+const normalizeLocation = (value) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
 
 export async function PUT(request, { params }) {
   const session = await getServerSession(authOptions)
@@ -49,7 +59,56 @@ export async function PUT(request, { params }) {
       )
     }
 
+    const actorRole = normalizeRole(session?.user?.role)
+    const isActorDeveloper = actorRole === 'dev'
+
+    const UsersModel = db.model('Users')
+    const existingUser = await UsersModel.findById(userId).select({ role: 1 }).lean()
+    if (!existingUser) {
+      return NextResponse.json(
+        { success: false, error: 'Пользователь не найден' },
+        { status: 404 },
+      )
+    }
+
     const body = await request.json().catch(() => ({}))
+    const nextRole = ensureRole(body.role)
+    const allowedLocations = resolveAllowedLocations()
+    const requestedLocation = normalizeLocation(body.currentLocation)
+    if (requestedLocation && !allowedLocations.includes(requestedLocation)) {
+      return NextResponse.json(
+        { success: false, error: 'Некорректный город пользователя' },
+        { status: 400 },
+      )
+    }
+    const currentLocation =
+      requestedLocation && allowedLocations.includes(requestedLocation)
+        ? requestedLocation
+        : null
+    const targetCurrentRole = normalizeRole(existingUser?.role)
+    const targetNextRole = normalizeRole(nextRole)
+
+    if (!isActorDeveloper && targetCurrentRole === 'dev') {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Только разработчик может изменять карточку пользователя с ролью «Разработчик».',
+        },
+        { status: 403 },
+      )
+    }
+
+    if (!isActorDeveloper && targetNextRole === 'dev') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Только разработчик может назначать роль «Разработчик».',
+        },
+        { status: 403 },
+      )
+    }
+
     const payload = {
       name: sanitizeText(body.name),
       username: sanitizeNullableText(body.username),
@@ -65,20 +124,13 @@ export async function PUT(request, { params }) {
             ),
           )
         : [],
-      role: ensureRole(body.role),
+      role: nextRole,
+      currentLocation,
     }
 
-    const updatedUser = await db
-      .model('Users')
+    const updatedUser = await UsersModel
       .findByIdAndUpdate(userId, { $set: payload }, { new: true })
       .lean()
-
-    if (!updatedUser) {
-      return NextResponse.json(
-        { success: false, error: 'Пользователь не найден' },
-        { status: 404 },
-      )
-    }
 
     return NextResponse.json(
       {

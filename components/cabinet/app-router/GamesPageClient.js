@@ -169,6 +169,19 @@ const gameLocationOptions = Object.entries(LOCATIONS)
       : key.toUpperCase(),
   }))
 
+const resolveLocationLabelByKey = (locationKey) => {
+  const normalized =
+    typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
+  if (!normalized) {
+    return 'выбранного города'
+  }
+  const townRu = LOCATIONS?.[normalized]?.townRu
+  if (!townRu || typeof townRu !== 'string') {
+    return normalized
+  }
+  return townRu
+}
+
 const isClosedStatus = (status) =>
   (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
   'closed'
@@ -692,6 +705,9 @@ const buildUpdatePayload = (game) => {
     finances,
     tasks,
     moderators: Array.from(moderatorsSet),
+    ...(Number.isFinite(Number(game.creatorTelegramId))
+      ? { creatorTelegramId: Number(game.creatorTelegramId) }
+      : {}),
   }
 }
 
@@ -900,8 +916,9 @@ const GamesPage = ({
   const gamesView = normalizeGamesViewValue(rawViewQuery)
   const isUpcomingView = gamesView === 'upcoming'
   const isPastView = gamesView === 'past'
-  const shouldShowLocationFilter = isUpcomingView || isPastView
-  const isFilteredGamesView = gamesView === 'upcoming' || gamesView === 'past'
+  const shouldShowLocationFilter =
+    canEditAllGames && (isUpcomingView || isPastView)
+  const isFilteredGamesView = isUpcomingView || isPastView
   const canFilterCanceledGames = canEditAllGames
   const defaultGamesFilterLocation = useMemo(() => {
     const byUser =
@@ -917,7 +934,9 @@ const GamesPage = ({
   const [isGamesFilterLocationHydrated, setIsGamesFilterLocationHydrated] =
     useState(false)
   const registerApiLocation = isFilteredGamesView
-    ? gamesFilterLocation
+    ? shouldShowLocationFilter
+      ? gamesFilterLocation
+      : location
     : location
   const createGameSeasons = useMemo(() => {
     const locationKey =
@@ -1758,25 +1777,44 @@ const GamesPage = ({
           ...team,
           id: toStringId(team?.id),
           name: typeof team?.name === 'string' ? team.name : '',
+          location:
+            typeof team?.location === 'string'
+              ? team.location.trim().toLowerCase()
+              : '',
         }))
         .filter((team) => typeof team.id === 'string' && team.id.length > 0)
 
-      if (teamsList.length === 0) {
+      const registerGameLocation =
+        typeof registerModalGame?.location === 'string'
+          ? registerModalGame.location.trim().toLowerCase()
+          : ''
+      const filteredTeamsList = registerGameLocation
+        ? teamsList.filter((team) => team.location === registerGameLocation)
+        : teamsList
+
+      if (filteredTeamsList.length === 0) {
         setRegisterTeams([])
         setRegisterTeamId('')
+        if (registerGameLocation) {
+          const cityLabel = resolveLocationLabelByKey(registerGameLocation)
+          setRegisterFeedback({
+            type: 'error',
+            message: `У вас нет команд, где вы капитан, для города «${cityLabel}».`,
+          })
+        }
         return
       }
 
-      teamsList.sort((first, second) => {
+      filteredTeamsList.sort((first, second) => {
         const firstName = (first?.name ?? '').toLowerCase()
         const secondName = (second?.name ?? '').toLowerCase()
         return firstName.localeCompare(secondName, 'ru')
       })
 
-      setRegisterTeams(teamsList)
+      setRegisterTeams(filteredTeamsList)
 
-      if (teamsList.length === 1) {
-        setRegisterTeamId(teamsList[0].id)
+      if (filteredTeamsList.length === 1) {
+        setRegisterTeamId(filteredTeamsList[0].id)
       }
     } catch (error) {
       console.error('Failed to load register teams', error)
@@ -1789,7 +1827,7 @@ const GamesPage = ({
     } finally {
       setIsRegisterTeamsLoading(false)
     }
-  }, [currentUserDbId, currentUserTelegramIdNumber])
+  }, [currentUserDbId, currentUserTelegramIdNumber, registerModalGame?.location])
 
   useEffect(() => {
     if (isRegisterModalOpen) {
@@ -5233,6 +5271,58 @@ const GamesPage = ({
     )
   }, [availableModerators, modalGame, selectedGameModerators])
 
+  const availableOrganizersForSelect = useMemo(() => {
+    const organizersMap = new Map()
+    const isOrganizerRoleAllowed = (roleValue) => {
+      if (typeof roleValue !== 'string') {
+        return true
+      }
+
+      const normalizedRole = roleValue.trim().toLowerCase()
+      return normalizedRole === 'admin' || normalizedRole === 'moder'
+    }
+
+    availableModerators.forEach((moderator) => {
+      if (!isOrganizerRoleAllowed(moderator?.role)) {
+        return
+      }
+
+      const telegramId = String(moderator?.telegramId || '').trim()
+      if (!telegramId) {
+        return
+      }
+
+      organizersMap.set(telegramId, {
+        telegramId,
+        name: typeof moderator?.name === 'string' ? moderator.name : '',
+        username:
+          typeof moderator?.username === 'string' ? moderator.username : '',
+      })
+    })
+
+    const currentOrganizerTelegramId = String(
+      modalGame?.creatorTelegramId || '',
+    ).trim()
+    const currentOrganizer = modalGame?.creator
+
+    if (currentOrganizerTelegramId && !organizersMap.has(currentOrganizerTelegramId)) {
+      organizersMap.set(currentOrganizerTelegramId, {
+        telegramId: currentOrganizerTelegramId,
+        name: typeof currentOrganizer?.name === 'string' ? currentOrganizer.name : '',
+        username:
+          typeof currentOrganizer?.username === 'string'
+            ? currentOrganizer.username
+            : '',
+      })
+    }
+
+    return Array.from(organizersMap.values()).sort((left, right) =>
+      String(left?.name || '').localeCompare(String(right?.name || ''), 'ru', {
+        sensitivity: 'base',
+      }),
+    )
+  }, [availableModerators, modalGame])
+
   const clueModeDetails = useMemo(() => {
     if (!modalGame) {
       return { modeLabel: '—', valueLabel: '—' }
@@ -5609,26 +5699,6 @@ const GamesPage = ({
                 )}
               </div>
             )}
-            {!shouldShowLocationFilter && (
-              <div className="flex items-start gap-3 p-4 border shadow-sm bg-violet-50 border-violet-100 rounded-2xl dark:bg-violet-500/10 dark:border-violet-500/40">
-                <span
-                  className="flex items-center justify-center font-semibold bg-white rounded-full shadow-sm h-9 w-9 shrink-0 text-violet-600 dark:bg-violet-500/40 dark:text-violet-100"
-                  aria-hidden="true"
-                >
-                  i
-                </span>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-violet-900 dark:text-violet-50">
-                    Ваши игры
-                  </p>
-                  <p className="text-xs leading-5 text-violet-700 dark:text-violet-200">
-                    Выберите игру, чтобы открыть ключевые настройки, управлять
-                    составами и следить за финансами.
-                  </p>
-                </div>
-              </div>
-            )}
-
             {selectedGame && !location && (
               <NoticeBanner tone="warning" variant="neon">
                 Не удалось определить площадку пользователя. Сохранение
@@ -5869,10 +5939,12 @@ const GamesPage = ({
                   selectedGameModerators={selectedGameModerators}
                   availableModeratorsForSelect={availableModeratorsForSelect}
                   availableModeratorsMap={availableModeratorsMap}
+                  availableOrganizersForSelect={availableOrganizersForSelect}
                   selectedModeratorToAdd={selectedModeratorToAdd}
                   setSelectedModeratorToAdd={setSelectedModeratorToAdd}
                   handleAddModerator={handleAddModerator}
                   handleRemoveModerator={handleRemoveModerator}
+                  editGameLocationOptions={gameLocationOptions}
                   editGameSeasons={editGameSeasons}
                   isEditGameSeasonsLoading={isEditGameSeasonsLoading}
                   isEditGameSeasonCreating={Boolean(

@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
+import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import logSiteEvent from '@helpers/logSiteEvent'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) {
@@ -31,6 +33,12 @@ const normalizeTelegramId = (value) => {
 }
 
 const isElevatedRole = (role) => role === 'admin' || role === 'dev'
+const resolveAllowedLocations = () =>
+  Object.entries(LOCATIONS)
+    .filter(([, value]) => !value?.hidden)
+    .map(([key]) => key)
+const normalizeLocation = (value) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
 
 export async function GET(request, { params }) {
   const resolvedParams = await params
@@ -61,6 +69,7 @@ export async function GET(request, { params }) {
         description: 1,
         image: 1,
         open: 1,
+        location: 1,
         updatedAt: 1,
       })
       .lean()
@@ -119,10 +128,20 @@ export async function PUT(request, { params }) {
       : ''
   const image = typeof payload?.image === 'string' ? payload.image : null
   const open = typeof payload?.open === 'boolean' ? payload.open : true
+  const rawLocation = typeof payload?.location === 'string' ? payload.location : ''
+  const normalizedLocation = normalizeLocation(rawLocation)
+  const allowedLocations = resolveAllowedLocations()
+  const shouldUpdateLocation = normalizedLocation.length > 0
 
   if (!name) {
     return NextResponse.json(
       { success: false, error: 'Введите название команды' },
+      { status: 400 },
+    )
+  }
+  if (shouldUpdateLocation && !allowedLocations.includes(normalizedLocation)) {
+    return NextResponse.json(
+      { success: false, error: 'Некорректный город команды' },
       { status: 400 },
     )
   }
@@ -187,6 +206,7 @@ export async function PUT(request, { params }) {
           description,
           image,
           open,
+          ...(shouldUpdateLocation ? { location: normalizedLocation } : {}),
         },
       },
       { new: true },
@@ -198,6 +218,7 @@ export async function PUT(request, { params }) {
         description: 1,
         image: 1,
         open: 1,
+        location: 1,
         updatedAt: 1,
       })
       .lean()
@@ -256,7 +277,9 @@ export async function DELETE(request, { params }) {
     const GamesTeamsModel = db.model('GamesTeams')
     const GamesModel = db.model('Games')
 
-    const team = await TeamsModel.findById(teamId).select({ _id: 1, name: 1 }).lean()
+    const team = await TeamsModel.findById(teamId)
+      .select({ _id: 1, name: 1, location: 1 })
+      .lean()
     if (!team?._id) {
       return NextResponse.json(
         { success: false, error: 'Команда не найдена' },
@@ -361,6 +384,22 @@ export async function DELETE(request, { params }) {
         { status: 400 },
       )
     }
+
+    await logSiteEvent({
+      db,
+      type: 'team_deleted',
+      location: normalizeLocation(team?.location),
+      message: `Удалена команда «${typeof team?.name === 'string' ? team.name : ''}»`,
+      actorUserId: userId || null,
+      actorTelegramId: userTelegramId,
+      teamId,
+      teamName: typeof team?.name === 'string' ? team.name : '',
+      metadata: {
+        removedMembersCount: Number(teamUsersDeleteResult?.deletedCount) || 0,
+        removedGameRegistrationsCount:
+          Number(gamesTeamsDeleteResult?.deletedCount) || 0,
+      },
+    })
 
     return NextResponse.json(
       {

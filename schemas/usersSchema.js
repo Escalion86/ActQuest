@@ -140,6 +140,10 @@ const usersSchema = {
     ],
     default: [],
   },
+  adminEventPushLocations: {
+    type: [String],
+    default: [],
+  },
 }
 
 export default usersSchema
