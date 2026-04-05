@@ -242,7 +242,6 @@ const ManageUsersPage = ({
       setSelectedUserId(null)
       setIsUserViewModalOpen(false)
       setIsUserEditModalOpen(false)
-      setUserIdQuery(null)
       return
     }
 
@@ -253,7 +252,7 @@ const ManageUsersPage = ({
 
       return users[0]?.id ?? null
     })
-  }, [setUserIdQuery, users])
+  }, [users])
 
   useEffect(() => {
     if (!isAdmin) {

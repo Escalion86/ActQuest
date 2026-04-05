@@ -4,7 +4,7 @@
 
 ActQuest — это единый репозиторий с:
 - Next.js сайтом (кабинет, админка, страницы игр),
-- API-слоем (`/pages/api`),
+- API-слоем (`/app/api`),
 - серверной бизнес-логикой (`/server`),
 - Telegram-ботом (`/telegram`).
 
@@ -16,8 +16,8 @@ ActQuest — это единый репозиторий с:
 
 ## Основные папки
 
-- `/pages` — UI-страницы Next.js.
-- `/pages/api` — API-эндпоинты.
+- `/app` — UI-страницы Next.js (App Router) и route handlers.
+- `/app/api` — API-эндпоинты (route handlers).
 - `/components` — React-компоненты.
 - `/server` — серверная логика (расчеты, сервисы, обновления метрик).
 - `/schemas` — Mongoose-схемы.
@@ -54,7 +54,7 @@ ActQuest — это единый репозиторий с:
 - Основные файлы:
   - `server/updateParticipantsRatings.js`
   - `server/updateParticipantsClosedStats.js`
-  - `pages/api/cabinet/dev/recalculate-ratings.js`
+  - `app/api/cabinet/dev/recalculate-ratings/route.js`
 - В рейтинге учитываются только `closed` + `isRated !== false`.
 - Для Dev-пересчета: перед метриками нужно пересобирать `teamsPlaces` и `computed` (если есть snapshots).
 - Глобальный рейтинг: без разделения по городам (location в snapshot может быть `null`).
@@ -75,11 +75,11 @@ ActQuest — это единый репозиторий с:
 
 ## UI/Frontend инварианты
 
-- Для страниц с карточкой + модалкой редактирования (`pages/cabinet/games.js`) черновик (`editing*`) хранить отдельно от выбранной карточки (`selected*Id`).
+- Для страниц с карточкой + модалкой редактирования (`components/cabinet/app-router/GamesPageClient.js`) черновик (`editing*`) хранить отдельно от выбранной карточки (`selected*Id`).
 - Нельзя сбрасывать `editing*` в эффектах на `selected*Id`, пока открыта модалка редактирования.
 - Перед изменением reset-эффектов проверять сценарий:
   - клик по карточке -> `Редактировать` -> ввод в поле.
-- Если есть role preview, учитывайте `moder` и `moderator` как эквивалентные роли модератора.
+- Если есть role preview, используйте только `moder` как роль модератора.
 
 ## Практика изменений
 
@@ -99,11 +99,11 @@ ActQuest — это единый репозиторий с:
 
 ## Что смотреть в первую очередь при новой задаче
 
-1. `pages/cabinet/games.js` — основной сценарий управления играми в кабинете.
-2. `pages/api/[location]/games/[id].js` — изменение игры и статусные переходы.
+1. `components/cabinet/app-router/GamesPageClient.js` — основной сценарий управления играми в кабинете.
+2. `app/api/[location]/games/[id]/route.js` — изменение игры и статусные переходы.
 3. `server/buildGameResultComputed.js` — расчет `teamsPlaces` + `computed`.
 4. `server/updateParticipantsRatings.js` и `server/updateParticipantsClosedStats.js` — рейтинг и gameStats.
-5. `pages/api/cabinet/dev/*` — dev-операции пересчета/массового закрытия.
+5. `app/api/cabinet/dev/*/route.js` — dev-операции пересчета/массового закрытия.
 
 ## Полезные команды
 
@@ -114,13 +114,13 @@ ActQuest — это единый репозиторий с:
 ## Troubleshooting (быстрая диагностика)
 
 1. Симптом: нельзя редактировать активную игру (поля не вводятся).
-- Проверить: `pages/cabinet/games.js` -> `canEditSelectedGame`, роль пользователя, `editingGame`.
+- Проверить: `components/cabinet/app-router/GamesPageClient.js` -> `canEditSelectedGame`, роль пользователя, `editingGame`.
 - Проверить, что `editingGame` не сбрасывается эффектом на `selectedGameId` при открытой модалке.
-- Проверить role preview: `helpers/useCabinetRolePreview.js` (поддержка `moder`/`moderator`).
+- Проверить role preview: `helpers/useCabinetRolePreview.js` (поддержка `client/moder/admin/dev`).
 
 2. Симптом: в прошедших играх “пусто”, но после refresh игры появляются/пропадают.
-- Проверить: гидрацию фильтра города в `pages/cabinet/games.js` (`isGamesFilterLocationHydrated`).
-- Проверить API-фильтрацию: `pages/api/cabinet/games-list.js`, `helpers/fetchGamesForCabinet.js`.
+- Проверить: гидрацию фильтра города в `components/cabinet/app-router/GamesPageClient.js` (`isGamesFilterLocationHydrated`).
+- Проверить API-фильтрацию: `app/api/cabinet/games-list/route.js`, `helpers/fetchGamesForCabinet.js`.
 - Проверить текущий `location` фильтр и роль (hidden-игры доступны не всем).
 
 3. Симптом: у игры нет кнопки “Результаты”.
@@ -139,7 +139,7 @@ ActQuest — это единый репозиторий с:
 - Проверить корректность `timeAddings` и штрафов/бонусов.
 
 6. Симптом: закрытие игры не обновляет `gameStats`/`rating`.
-- Проверить `pages/api/[location]/games/[id].js` (ветка перехода в `closed`).
+- Проверить `app/api/[location]/games/[id]/route.js` (ветка перехода в `closed`).
 - Проверить вызовы `updateParticipantsClosedStats` и `updateParticipantsRatings`.
 - Проверить, что `teamsPlaces` присутствует после пересборки результата.
 
