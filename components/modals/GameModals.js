@@ -154,10 +154,15 @@ const GameModals = ({
   isResultsModalOpen,
   handleCloseResultsModal,
   resultsModalState,
-}) => (
-  <>
-    <GameEditModal
-      selectedGame={editGame ?? selectedGame}
+}) => {
+  const gameForEdit = editGame ?? selectedGame
+  const hasSelectedGame = Boolean(selectedGame)
+
+  return (
+    <>
+    {gameForEdit ? (
+      <GameEditModal
+        selectedGame={gameForEdit}
       isEditModalOpen={isEditModalOpen}
       handleCloseEditModal={handleCloseEditModal}
       canEditSelectedGame={canEditSelectedGame}
@@ -221,10 +226,12 @@ const GameModals = ({
       isEditGameSeasonsLoading={isEditGameSeasonsLoading}
       isEditGameSeasonCreating={isEditGameSeasonCreating}
       handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
-    />
+      />
+    ) : null}
 
-    <GameEditModal
-      selectedGame={editGame ?? selectedGame}
+    {gameForEdit ? (
+      <GameEditModal
+        selectedGame={gameForEdit}
       isEditModalOpen={isTasksModalOpen}
       handleCloseEditModal={handleCloseTasksModal}
       canEditSelectedGame={canEditSelectedGame}
@@ -289,11 +296,13 @@ const GameModals = ({
       isEditGameSeasonCreating={isEditGameSeasonCreating}
       handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
       sectionMode="tasks"
-      modalTitleOverride={`Редактор заданий «${(editGame ?? selectedGame)?.name || 'Без названия'}»`}
-    />
+        modalTitleOverride={`Редактор заданий «${gameForEdit?.name || 'Без названия'}»`}
+      />
+    ) : null}
 
-    <GameTeamsModal
-      selectedGame={selectedGame}
+    {hasSelectedGame ? (
+      <GameTeamsModal
+        selectedGame={selectedGame}
       isTeamsModalOpen={isTeamsModalOpen}
       handleCloseTeamsModal={handleCloseTeamsModal}
       teamsModalState={teamsModalState}
@@ -302,8 +311,9 @@ const GameModals = ({
       setSelectedTeamToAdd={setSelectedTeamToAdd}
       handleAddTeamToGame={handleAddTeamToGame}
       isAddingTeam={isAddingTeam}
-      handleRemoveTeamFromGame={handleRemoveTeamFromGame}
-    />
+        handleRemoveTeamFromGame={handleRemoveTeamFromGame}
+      />
+    ) : null}
 
     <GameRegisterModal
       isRegisterModalOpen={isRegisterModalOpen}
@@ -354,8 +364,9 @@ const GameModals = ({
       createGameFeedback={createGameFeedback}
     />
 
-    <GameDescriptionModal
-      selectedGame={selectedGame}
+    {hasSelectedGame ? (
+      <GameDescriptionModal
+        selectedGame={selectedGame}
       isDescriptionModalOpen={isDescriptionModalOpen}
       handleCloseDescriptionModal={handleCloseDescriptionModal}
       gameTypeLabel={gameTypeLabel}
@@ -378,8 +389,9 @@ const GameModals = ({
       manyCodesPenaltyLabel={manyCodesPenaltyLabel}
       currencyFormatter={currencyFormatter}
       financesSummary={financesSummary}
-      balanceClass={balanceClass}
-    />
+        balanceClass={balanceClass}
+      />
+    ) : null}
 
     <GameResultsModal
       isResultsModalOpen={isResultsModalOpen}
@@ -387,13 +399,16 @@ const GameModals = ({
       resultsModalState={resultsModalState}
     />
 
-    <GameTasksViewModal
-      isTasksViewModalOpen={isTasksViewModalOpen}
-      handleCloseTasksViewModal={handleCloseTasksViewModal}
-      selectedGame={selectedGame}
-    />
+    {hasSelectedGame ? (
+      <GameTasksViewModal
+        isTasksViewModalOpen={isTasksViewModalOpen}
+        handleCloseTasksViewModal={handleCloseTasksViewModal}
+        selectedGame={selectedGame}
+      />
+    ) : null}
   </>
-)
+  )
+}
 
 const registerFeedbackShape = PropTypes.shape({
   type: PropTypes.string.isRequired,
