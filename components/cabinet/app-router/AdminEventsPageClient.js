@@ -1,12 +1,19 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useRouter } from 'next/navigation'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
+import TeamMemberCard from '@components/cabinet/cards/TeamMemberCard'
+import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
+import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
 import NoticeBanner from '@components/NoticeBanner'
+import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
+import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
+import fetchCabinetUserDetails from '@helpers/fetchCabinetUserDetails'
 import requestApiJson from '@helpers/requestApiJson'
 import isUserAdmin from '@helpers/isUserAdmin'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
@@ -23,6 +30,12 @@ const EVENT_TYPE_LABELS = {
   team_registered_to_game: 'Регистрация команды на игру',
   team_unregistered_from_game: 'Снятие команды с игры',
 }
+
+const USER_REGISTERED_EVENT = 'user_registered'
+const TEAM_CREATED_EVENT = 'team_created'
+const TEAM_DELETED_EVENT = 'team_deleted'
+const TEAM_REGISTERED_TO_GAME_EVENT = 'team_registered_to_game'
+const TEAM_UNREGISTERED_FROM_GAME_EVENT = 'team_unregistered_from_game'
 
 const resolveLocationLabel = (locationKey) => {
   if (typeof locationKey !== 'string' || !locationKey.trim()) {
@@ -78,6 +91,7 @@ const AdminEventsPageClient = ({
   session: initialSession,
 }) => {
   const { activeSession } = useMergedSession(initialSession)
+  const router = useRouter()
   const { effectiveRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
   )
@@ -95,6 +109,11 @@ const AdminEventsPageClient = ({
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [feedback, setFeedback] = useState(null)
+  const [userDetailsById, setUserDetailsById] = useState({})
+  const [teamDetailsById, setTeamDetailsById] = useState({})
+  const [gameDetailsById, setGameDetailsById] = useState({})
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false)
+  const [selectedTeamForModal, setSelectedTeamForModal] = useState(null)
 
   const locationOptions = useMemo(
     () =>
@@ -213,6 +232,145 @@ const AdminEventsPageClient = ({
       setIsLoadingMore(false)
     }
   }, [buildQuery, events.length, locationFilters])
+
+  useEffect(() => {
+    if (!Array.isArray(events) || events.length === 0) {
+      return
+    }
+
+    const userIdsToLoad = new Set()
+    const teamIdsToLoad = new Set()
+    const gamesToLoad = []
+
+    events.forEach((event) => {
+      const eventType = String(event?.type || '').trim().toLowerCase()
+      if (eventType === USER_REGISTERED_EVENT) {
+        const userId = String(event?.targetUserId || event?.actorUserId || '').trim()
+        if (userId && !userDetailsById[userId]) {
+          userIdsToLoad.add(userId)
+        }
+      }
+      if (
+        eventType === TEAM_CREATED_EVENT ||
+        eventType === TEAM_DELETED_EVENT ||
+        eventType === TEAM_REGISTERED_TO_GAME_EVENT ||
+        eventType === TEAM_UNREGISTERED_FROM_GAME_EVENT
+      ) {
+        const teamId = String(event?.teamId || '').trim()
+        if (teamId && !teamDetailsById[teamId]) {
+          teamIdsToLoad.add(teamId)
+        }
+      }
+      if (
+        eventType === TEAM_REGISTERED_TO_GAME_EVENT ||
+        eventType === TEAM_UNREGISTERED_FROM_GAME_EVENT
+      ) {
+        const gameId = String(event?.gameId || '').trim()
+        if (gameId && !gameDetailsById[gameId]) {
+          gamesToLoad.push({
+            gameId,
+            location: typeof event?.location === 'string' ? event.location : null,
+          })
+        }
+      }
+    })
+
+    if (userIdsToLoad.size > 0) {
+      Promise.all(
+        Array.from(userIdsToLoad).map(async (userId) => {
+          try {
+            const user = await fetchCabinetUserDetails({ userId })
+            return [userId, user]
+          } catch (_error) {
+            return [userId, null]
+          }
+        }),
+      ).then((entries) => {
+        setUserDetailsById((prev) => {
+          const next = { ...prev }
+          entries.forEach(([userId, user]) => {
+            if (user && !next[userId]) {
+              next[userId] = user
+            }
+          })
+          return next
+        })
+      })
+    }
+
+    if (teamIdsToLoad.size > 0) {
+      Promise.all(
+        Array.from(teamIdsToLoad).map(async (teamId) => {
+          try {
+            const team = await fetchCabinetTeamDetails({ teamId })
+            return [teamId, team]
+          } catch (_error) {
+            return [teamId, null]
+          }
+        }),
+      ).then((entries) => {
+        setTeamDetailsById((prev) => {
+          const next = { ...prev }
+          entries.forEach(([teamId, team]) => {
+            if (team && !next[teamId]) {
+              next[teamId] = team
+            }
+          })
+          return next
+        })
+      })
+    }
+
+    if (gamesToLoad.length > 0) {
+      Promise.all(
+        gamesToLoad.map(async ({ gameId, location }) => {
+          try {
+            const game = await fetchCabinetGameDetails({ gameId, location })
+            return [gameId, game]
+          } catch (_error) {
+            return [gameId, null]
+          }
+        }),
+      ).then((entries) => {
+        setGameDetailsById((prev) => {
+          const next = { ...prev }
+          entries.forEach(([gameId, game]) => {
+            if (game && !next[gameId]) {
+              next[gameId] = game
+            }
+          })
+          return next
+        })
+      })
+    }
+  }, [events, gameDetailsById, teamDetailsById, userDetailsById])
+
+  const handleOpenUserCard = useCallback(
+    (member) => {
+      const userId = typeof member?.id === 'string' ? member.id.trim() : ''
+      if (!userId) {
+        return
+      }
+      router.push(`/cabinet/admin/users?userId=${encodeURIComponent(userId)}`)
+    },
+    [router],
+  )
+
+  const handleOpenTeamCard = useCallback((team) => {
+    if (!team || typeof team.id !== 'string' || !team.id.trim()) {
+      return
+    }
+    const detailedTeam = teamDetailsById[team.id] || null
+    if (detailedTeam) {
+      setSelectedTeamForModal(detailedTeam)
+      setIsTeamModalOpen(true)
+    }
+  }, [teamDetailsById])
+
+  const closeTeamModal = useCallback(() => {
+    setIsTeamModalOpen(false)
+    setSelectedTeamForModal(null)
+  }, [])
 
   if (!isAdmin) {
     return (
@@ -338,10 +496,91 @@ const AdminEventsPageClient = ({
                 <span>Город: {resolveLocationLabel(event.location)}</span>
                 {event.teamName ? <span>Команда: {event.teamName}</span> : null}
                 {event.gameName ? <span>Игра: {event.gameName}</span> : null}
-                {event.actorUserId ? (
-                  <span>Инициатор ID: {event.actorUserId}</span>
-                ) : null}
               </div>
+              {String(event.type || '').toLowerCase() === USER_REGISTERED_EVENT ? (
+                <div className="mt-3">
+                  {(() => {
+                    const userId = String(event.targetUserId || event.actorUserId || '').trim()
+                    const user = userId ? userDetailsById[userId] : null
+                    if (!user) {
+                      return (
+                        <p className="text-xs text-slate-500 dark:text-slate-300">
+                          Загрузка карточки пользователя...
+                        </p>
+                      )
+                    }
+
+                    return (
+                      <TeamMemberCard
+                        member={{
+                          id: user.id || userId,
+                          name: user.name || 'Без имени',
+                          username: user.username || '',
+                          userRole: user.role || 'client',
+                          hasLinkedUser: true,
+                          phone: user.phone || '',
+                          isCaptain: false,
+                        }}
+                        onOpen={handleOpenUserCard}
+                      />
+                    )
+                  })()}
+                </div>
+              ) : null}
+              {[
+                TEAM_CREATED_EVENT,
+                TEAM_DELETED_EVENT,
+                TEAM_REGISTERED_TO_GAME_EVENT,
+                TEAM_UNREGISTERED_FROM_GAME_EVENT,
+              ].includes(String(event.type || '').toLowerCase()) ? (
+                <div className="mt-3 space-y-2">
+                  {(() => {
+                    const teamId = String(event.teamId || '').trim()
+                    const team = teamId ? teamDetailsById[teamId] : null
+                    const teamCard = team ? (
+                      <UserTeamCard
+                        team={{
+                          id: team.id || teamId,
+                          name: team.name || event.teamName || 'Без названия',
+                          image: team.image || '',
+                          isCaptain: false,
+                          gamesCount: Number(team.gamesCount) || 0,
+                        }}
+                        onOpen={handleOpenTeamCard}
+                        showCaptainBadge={false}
+                      />
+                    ) : (
+                      <p className="text-xs text-slate-500 dark:text-slate-300">
+                        Загрузка карточки команды...
+                      </p>
+                    )
+
+                    const eventType = String(event.type || '').toLowerCase()
+                    if (
+                      eventType !== TEAM_REGISTERED_TO_GAME_EVENT &&
+                      eventType !== TEAM_UNREGISTERED_FROM_GAME_EVENT
+                    ) {
+                      return teamCard
+                    }
+
+                    const gameId = String(event.gameId || '').trim()
+                    const game = gameId ? gameDetailsById[gameId] : null
+                    const gameName = game?.name || event.gameName || 'Игра'
+                    const gameDate = game?.dateStart
+                      ? formatDateTime(game.dateStart)
+                      : 'Дата не указана'
+
+                    return (
+                      <>
+                        {teamCard}
+                        <div className="text-xs text-slate-500 dark:text-slate-300">
+                          Игра: {gameName} · {gameDate}
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+              ) : null}
             </article>
           ))
         )}
@@ -358,6 +597,14 @@ const AdminEventsPageClient = ({
           </CabinetButton>
         </div>
       ) : null}
+      <TeamDescriptionModal
+        isOpen={isTeamModalOpen}
+        onClose={closeTeamModal}
+        selectedTeam={selectedTeamForModal}
+        canLeaveTeam={false}
+        isLeavingTeam={false}
+        onLeaveTeam={undefined}
+      />
     </CabinetLayout>
   )
 }

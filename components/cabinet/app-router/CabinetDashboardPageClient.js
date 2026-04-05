@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
+import ParticipationGameCard from '@components/cabinet/cards/ParticipationGameCard'
 import Modal from '@components/Modal'
 import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
@@ -558,21 +559,31 @@ const CabinetDashboard = ({
             <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
               <h3 className="aq-modal-section-title text-base font-semibold">Ближайшая игра</h3>
               {dashboardData.nearestGame ? (
-                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/80">
-                  <p className="aq-modal-item-title text-sm font-semibold">
-                    {dashboardData.nearestGame.name || 'Без названия'}
-                  </p>
-                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
-                    {dashboardData.nearestGame.dateStart
-                      ? new Date(dashboardData.nearestGame.dateStart).toLocaleString('ru-RU')
-                      : 'Дата старта уточняется'}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                    Статус: {getGameStatusLabel(dashboardData.nearestGame.status)}
-                  </p>
+                <div className="mt-4 space-y-3">
+                  <ParticipationGameCard
+                    game={{
+                      id: dashboardData.nearestGame.id || 'nearest-game',
+                      name: dashboardData.nearestGame.name || 'Без названия',
+                      status: dashboardData.nearestGame.status || '',
+                      dateStart: dashboardData.nearestGame.dateStart || null,
+                      teams: [],
+                    }}
+                    onOpen={() => {
+                      if (dashboardData.nearestGame?.id) {
+                        router.push(
+                          `/cabinet/games-upcoming?gameId=${encodeURIComponent(
+                            dashboardData.nearestGame.id,
+                          )}`,
+                        )
+                        return
+                      }
+                      router.push('/cabinet/games-upcoming')
+                    }}
+                    showTeam={false}
+                  />
                   <a
                     href="/cabinet/games-upcoming"
-                    className="mt-4 inline-flex cursor-pointer items-center justify-center rounded-lg border border-primary px-3 py-2 text-xs font-semibold text-primary transition hover:bg-blue-50 dark:hover:bg-sky-500/10"
+                    className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-primary bg-primary px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 dark:border-[#00D1FF]/60 dark:bg-[#00D1FF]/18 dark:text-[#e9fbff] dark:hover:bg-[#00D1FF]/28"
                   >
                     Открыть список игр
                   </a>

@@ -4,8 +4,22 @@ import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import TiptapContentView from '@components/cabinet/TiptapContentView'
 import formatDate from '@helpers/formatDate'
+import { LOCATIONS } from '@server/serverConstants'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
+
+const resolveLocationLabel = (locationKey) => {
+  const normalized =
+    typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
+  if (!normalized) {
+    return 'Не указан'
+  }
+  const townRu = LOCATIONS?.[normalized]?.townRu
+  if (typeof townRu !== 'string' || !townRu.trim()) {
+    return locationKey
+  }
+  return townRu.charAt(0).toUpperCase() + townRu.slice(1)
+}
 
 const GameDescriptionModal = ({
   selectedGame,
@@ -49,6 +63,10 @@ const GameDescriptionModal = ({
                       className="mt-4 max-h-[60vh] w-full rounded-xl object-contain"
                     />
                   )}
+                  <div className="mt-3 text-sm text-slate-700 dark:text-slate-300">
+                    <span className="font-semibold">Город проведения:</span>{' '}
+                    {resolveLocationLabel(selectedGame.location)}
+                  </div>
                   <dl className="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
                       <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Тип игры</dt>
