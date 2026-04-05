@@ -204,7 +204,7 @@ const execute = (request, params) =>
         }
 
         let updatedGame = await Games.findByIdAndUpdate(id, updateData, {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         })
 
@@ -232,7 +232,7 @@ const execute = (request, params) =>
             updatedGame = await Games.findByIdAndUpdate(
               id,
               { result: nextResult },
-              { new: true, runValidators: true },
+              { returnDocument: 'after', runValidators: true },
             )
 
             const finalGameForMetrics = updatedGame?.toObject ? updatedGame.toObject() : updatedGame

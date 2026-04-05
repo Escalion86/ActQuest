@@ -98,50 +98,27 @@ export const proxyToLocationGameRoute = async ({
       headers.set('cookie', cookie)
     }
 
-    try {
-      const response = await fetch(targetUrl, {
-        method,
-        headers,
-        body: bodyText,
-        cache: 'no-store',
-      })
+    const inProcessResponse = await invokeLocationRouteInProcess({
+      targetPath,
+      method,
+      targetUrl,
+      headers,
+      bodyText,
+      location: resolved.location,
+      gameId: resolved.gameId,
+    })
 
-      const contentType = response.headers.get('content-type') || 'application/json'
-      const payload = await response.text()
-
-      return new NextResponse(payload, {
-        status: response.status,
-        headers: { 'content-type': contentType },
-      })
-    } catch (fetchError) {
-      console.error('[cabinet-games-proxy] internal fetch failed, fallback to in-process route', {
-        targetPath,
-        method: toUpperMethod(method),
-        message: fetchError?.message || String(fetchError),
-      })
-
-      const fallbackResponse = await invokeLocationRouteInProcess({
-        targetPath,
-        method,
-        targetUrl,
-        headers,
-        bodyText,
-        location: resolved.location,
-        gameId: resolved.gameId,
-      })
-
-      if (fallbackResponse instanceof Response) {
-        return fallbackResponse
-      }
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Fallback route вернул некорректный ответ',
-        },
-        { status: 500 },
-      )
+    if (inProcessResponse instanceof Response) {
+      return inProcessResponse
     }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'In-process route вернул некорректный ответ',
+      },
+      { status: 500 },
+    )
   } catch (error) {
     console.error('[cabinet-games-proxy] proxy failed', {
       targetPath,
