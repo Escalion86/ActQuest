@@ -111,7 +111,7 @@ const computeTaskHtml = async ({
     const updateActiveNum = async (nextActiveNum, extraUpdates = {}) => {
       const updates = { activeNum: nextActiveNum, ...extraUpdates }
       const updatedTeam = await gamesTeamsModel
-        .findByIdAndUpdate(teamState._id, updates, { new: true })
+        .findByIdAndUpdate(teamState._id, updates, { returnDocument: 'after' })
         .lean()
 
       return updatedTeam ?? { ...teamState, ...updates }
@@ -536,3 +536,4 @@ const getTeamGameTaskState = async ({
 }
 
 export default getTeamGameTaskState
+

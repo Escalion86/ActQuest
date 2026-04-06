@@ -133,7 +133,7 @@ export async function POST(request) {
       if (Object.keys(updates).length > 0) {
         user = await db
           .model('Users')
-          .findOneAndUpdate({ telegramId }, { $set: updates }, { new: true })
+          .findOneAndUpdate({ telegramId }, { $set: updates }, { returnDocument: 'after' })
       }
     }
 
@@ -182,3 +182,4 @@ export async function POST(request) {
     )
   }
 }
+

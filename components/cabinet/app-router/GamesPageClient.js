@@ -24,6 +24,7 @@ import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { toStringId } from '@helpers/idAndDate'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import requestApiJson from '@helpers/requestApiJson'
+import { resolveGameEntryHrefFromGame } from '@helpers/resolveGameEntryHref'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { getNounTeams } from '@helpers/getNoun'
@@ -473,6 +474,7 @@ const serializeGameForComparison = (game) => {
 }
 
 const buildUpdatePayload = (game) => {
+  const isPhotoGame = game?.type === 'photo'
   const prices = (game.prices ?? []).map((price) => ({
     id: price.id,
     name: price.name,
@@ -526,7 +528,9 @@ const buildUpdatePayload = (game) => {
           title: typeof media?.title === 'string' ? media.title.trim() : '',
         }))
         .filter((media) => media.url !== ''),
-      taskBonusForComplite: Number(task.taskBonusForComplite) || 0,
+      taskBonusForComplite: isPhotoGame
+        ? Number(task.taskBonusForComplite) || 0
+        : 0,
       clues: (task.clues ?? []).map((clue) => {
         const clueRich = typeof clue.clueRich === 'string' ? clue.clueRich : ''
         const cluePlain =
@@ -546,19 +550,21 @@ const buildUpdatePayload = (game) => {
 
         return normalizedClue
       }),
-      subTasks: (task.subTasks ?? []).map((subTask) => {
-        const normalizedSubTask = {
-          name: typeof subTask.name === 'string' ? subTask.name : '',
-          task: typeof subTask.task === 'string' ? subTask.task : '',
-          bonus: Number(subTask.bonus) || 0,
-        }
+      subTasks: isPhotoGame
+        ? (task.subTasks ?? []).map((subTask) => {
+            const normalizedSubTask = {
+              name: typeof subTask.name === 'string' ? subTask.name : '',
+              task: typeof subTask.task === 'string' ? subTask.task : '',
+              bonus: Number(subTask.bonus) || 0,
+            }
 
-        if (subTask.mongoId) {
-          normalizedSubTask._id = subTask.mongoId
-        }
+            if (subTask.mongoId) {
+              normalizedSubTask._id = subTask.mongoId
+            }
 
-        return normalizedSubTask
-      }),
+            return normalizedSubTask
+          })
+        : [],
       images: sanitizeStringArray(task.images),
       codes: sanitizeStringArray(task.codes),
       coordinates: hasCoordinatesValue
@@ -858,6 +864,7 @@ const GamesPage = ({
     participantsCount: 0,
     computed: null,
     interactiveResultsUrl: null,
+    userParticipationTeamIds: [],
   })
   const [resultsCacheByGameId, setResultsCacheByGameId] = useState({})
   const [isGeneratingResults, setIsGeneratingResults] = useState(false)
@@ -3151,6 +3158,13 @@ const GamesPage = ({
     },
     [canEditSelectedGame, editingGame],
   )
+  const isEditingPhotoGame = useMemo(() => {
+    const type =
+      typeof (editingGame?.type ?? selectedGame?.type) === 'string'
+        ? String(editingGame?.type ?? selectedGame?.type).trim().toLowerCase()
+        : ''
+    return type === 'photo'
+  }, [editingGame?.type, selectedGame?.type])
 
   const handleCreateSeasonForEditGame = useCallback(async () => {
     const gameForEdit = editingGame ?? selectedGame
@@ -3386,10 +3400,13 @@ const GamesPage = ({
 
   const handleTaskNumberChange = useCallback(
     (taskId, field, value) => {
+      if (field === 'taskBonusForComplite' && !isEditingPhotoGame) {
+        return
+      }
       const numeric = Number(value)
       updateTask(taskId, { [field]: Number.isFinite(numeric) ? numeric : 0 })
     },
-    [updateTask],
+    [isEditingPhotoGame, updateTask],
   )
 
   const handleTaskOptionalNumberChange = useCallback(
@@ -3511,34 +3528,43 @@ const GamesPage = ({
 
   const handleAddSubTask = useCallback(
     (taskId) => {
+      if (!isEditingPhotoGame) {
+        return
+      }
       const newSubTask = createSubTask()
       updateTask(taskId, (task) => ({
         subTasks: [...(task.subTasks ?? []), newSubTask],
       }))
     },
-    [updateTask],
+    [isEditingPhotoGame, updateTask],
   )
 
   const handleSubTaskChange = useCallback(
     (taskId, subTaskId, field, value) => {
+      if (!isEditingPhotoGame) {
+        return
+      }
       updateTask(taskId, (task) => ({
         subTasks: (task.subTasks ?? []).map((subTask) =>
           subTask.id === subTaskId ? { ...subTask, [field]: value } : subTask,
         ),
       }))
     },
-    [updateTask],
+    [isEditingPhotoGame, updateTask],
   )
 
   const handleRemoveSubTask = useCallback(
     (taskId, subTaskId) => {
+      if (!isEditingPhotoGame) {
+        return
+      }
       updateTask(taskId, (task) => ({
         subTasks: (task.subTasks ?? []).filter(
           (subTask) => subTask.id !== subTaskId,
         ),
       }))
     },
-    [updateTask],
+    [isEditingPhotoGame, updateTask],
   )
 
   const handleAddPenaltyCode = useCallback(
@@ -4255,6 +4281,9 @@ const GamesPage = ({
         game.location ||
         (shouldShowLocationFilter ? gamesFilterLocation : location) ||
         ''
+      const userParticipationTeamIds = getUserParticipationTeams(game).map(
+        (entry) => entry.teamId,
+      )
 
       setResultsModalState({
         isLoading: true,
@@ -4266,6 +4295,7 @@ const GamesPage = ({
         participantsCount: 0,
         computed: null,
         interactiveResultsUrl: null,
+        userParticipationTeamIds,
       })
 
       try {
@@ -4296,6 +4326,7 @@ const GamesPage = ({
             json.data.interactiveResultsUrl.trim().length > 0
               ? json.data.interactiveResultsUrl.trim()
               : null,
+          userParticipationTeamIds,
         }
 
         setResultsCacheByGameId((prev) => ({
@@ -4319,6 +4350,7 @@ const GamesPage = ({
           participantsCount: 0,
           computed: null,
           interactiveResultsUrl: null,
+          userParticipationTeamIds,
         })
       }
     },
@@ -4411,6 +4443,9 @@ const GamesPage = ({
           json.data.interactiveResultsUrl.trim().length > 0
             ? json.data.interactiveResultsUrl.trim()
             : null,
+        userParticipationTeamIds: getUserParticipationTeams(selectedGame).map(
+          (entry) => entry.teamId,
+        ),
       }
 
       setResultsCacheByGameId((prev) => ({
@@ -4645,6 +4680,14 @@ const GamesPage = ({
       const canCancelRegistration =
         captainParticipationTeams.length > 0 &&
         isActiveGameStatus(visibleStatus)
+      const gameEnterHref = resolveGameEntryHrefFromGame({
+        game,
+        fallbackLocation: location,
+      })
+      const canEnterGame =
+        hasParticipation &&
+        isGameInProgressStatus(visibleStatus) &&
+        Boolean(gameEnterHref)
       const participationSummary = hasParticipation
         ? `Вы участвуете: ${participationTeams
             .map((entry) => entry.teamName || entry.teamId)
@@ -4734,6 +4777,7 @@ const GamesPage = ({
                 </div>
                 {(hasUserTeamPlace ||
                   hasParticipation ||
+                  canEnterGame ||
                   canJoinGame ||
                   canCancelRegistration ||
                   canBroadcastThisGame ||
@@ -4764,9 +4808,22 @@ const GamesPage = ({
                       )}
                     </div>
                     {(canJoinGame ||
+                      canEnterGame ||
                       canViewThisGameTasks ||
                       canViewThisGameResults) && (
                       <div className="order-2 flex items-center gap-2 phoneH:order-3 phoneH:ml-auto">
+                        {canEnterGame && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              router.push(gameEnterHref)
+                            }}
+                            className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-emerald-300/70 bg-emerald-50/80 px-4 py-1.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-100 dark:border-emerald-400/50 dark:bg-emerald-500/12 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+                          >
+                            Зайти в игру
+                          </button>
+                        )}
                         {canJoinGame && (
                           <button
                             type="button"
@@ -4940,6 +4997,14 @@ const GamesPage = ({
       const canCancelRegistration =
         captainParticipationTeams.length > 0 &&
         isActiveGameStatus(visibleStatus)
+      const gameEnterHref = resolveGameEntryHrefFromGame({
+        game,
+        fallbackLocation: location,
+      })
+      const canEnterGame =
+        hasParticipation &&
+        isGameInProgressStatus(visibleStatus) &&
+        Boolean(gameEnterHref)
       const participationSummary = hasParticipation
         ? `Вы участвуете: ${participationTeams
             .map((entry) => entry.teamName || entry.teamId)
@@ -5016,6 +5081,7 @@ const GamesPage = ({
                 canViewThisGameTasks ||
                 hasUserTeamPlace ||
                 hasParticipation ||
+                canEnterGame ||
                 canJoinGame ||
                 canCancelRegistration ||
                 canBroadcastThisGame ||
@@ -5024,9 +5090,22 @@ const GamesPage = ({
                 canManageStatusThisGame) && (
                 <div className="mt-3 flex flex-col gap-2">
                   {(canJoinGame ||
+                    canEnterGame ||
                     canViewThisGameTasks ||
                     canViewThisGameResults) && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                      {canEnterGame && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            router.push(gameEnterHref)
+                          }}
+                          className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-emerald-300/70 bg-emerald-50/80 px-4 py-1.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-100 dark:border-emerald-400/50 dark:bg-emerald-500/12 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+                        >
+                          Зайти в игру
+                        </button>
+                      )}
                       {canJoinGame && (
                         <button
                           type="button"
@@ -5388,6 +5467,22 @@ const GamesPage = ({
       isActiveGameStatus(selectedGame?.status),
     [selectedGame, selectedGameCaptainParticipationTeams.length],
   )
+  const selectedGameEnterHref = useMemo(
+    () =>
+      resolveGameEntryHrefFromGame({
+        game: selectedGame,
+        fallbackLocation: location,
+      }),
+    [location, selectedGame],
+  )
+  const canEnterSelectedGame = useMemo(
+    () =>
+      Boolean(selectedGame?.id) &&
+      selectedGameParticipationTeams.length > 0 &&
+      isGameInProgressStatus(selectedGame?.status) &&
+      Boolean(selectedGameEnterHref),
+    [selectedGame, selectedGameEnterHref, selectedGameParticipationTeams.length],
+  )
   const isSelectedGameRegistrationCancelling = useMemo(
     () =>
       Boolean(selectedGame?.id) &&
@@ -5409,6 +5504,12 @@ const GamesPage = ({
 
       handleCancelRegistrationFromGame(selectedGame)
     }, [handleCancelRegistrationFromGame, selectedGame])
+  const handleEnterSelectedGameFromDescription = useCallback(() => {
+    if (!selectedGameEnterHref) {
+      return
+    }
+    router.push(selectedGameEnterHref)
+  }, [router, selectedGameEnterHref])
 
   const breakDurationLabel = useMemo(() => {
     if (!modalGame) {
@@ -5924,11 +6025,15 @@ const GamesPage = ({
                     selectedGameParticipationSummaryLabel
                   }
                   canJoinGameFromDescription={canJoinSelectedGame}
+                  canEnterGameFromDescription={canEnterSelectedGame}
                   canCancelGameRegistrationFromDescription={
                     canCancelSelectedGameRegistration
                   }
                   handleJoinGameFromDescription={
                     handleJoinSelectedGameFromDescription
+                  }
+                  handleEnterGameFromDescription={
+                    handleEnterSelectedGameFromDescription
                   }
                   handleCancelGameRegistrationFromDescription={
                     handleCancelSelectedGameRegistrationFromDescription

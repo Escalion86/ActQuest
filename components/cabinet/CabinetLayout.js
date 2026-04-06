@@ -24,6 +24,7 @@ import {
   faMoon,
   faSun,
   faCode,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons'
 import { LOCATIONS } from '@server/serverConstants'
 import isUserAdmin from '@helpers/isUserAdmin'
@@ -230,11 +231,11 @@ const CabinetLayout = ({
   const searchParams = useSearchParams()
   const { data: session, status, update } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
-  const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(
-    () => isGamesRoutePath(pathname),
+  const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(() =>
+    isGamesRoutePath(pathname),
   )
-  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(
-    () => pathname?.startsWith('/cabinet/admin'),
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(() =>
+    pathname?.startsWith('/cabinet/admin'),
   )
   const [theme, setTheme] = useState(null)
   const [isLocationSaving, setIsLocationSaving] = useState(false)
@@ -295,8 +296,7 @@ const CabinetLayout = ({
         ? 'past'
         : ''
   const gamesView =
-    gamesViewFromPath ||
-    (searchParams?.get('view') || '').toLowerCase()
+    gamesViewFromPath || (searchParams?.get('view') || '').toLowerCase()
 
   useIsomorphicLayoutEffect(() => {
     const initialTheme = resolveInitialTheme() ?? 'light'
@@ -414,6 +414,29 @@ const CabinetLayout = ({
     await signOut({ redirect: true, callbackUrl: '/' })
   }
 
+  const handleExitImpersonateMode = async () => {
+    try {
+      const response = await fetch('/api/cabinet/dev/impersonate-user', {
+        method: 'DELETE',
+        headers: {
+          Accept: 'application/json',
+        },
+      })
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        console.error('Ошибка выхода из режима impersonate:', json?.error)
+        return
+      }
+
+      // Перенаправить на страницу профиля
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      router.push('/cabinet/profile')
+    } catch (error) {
+      console.error('Ошибка при выходе из режима impersonate:', error)
+    }
+  }
+
   const redirectToLogin = useCallback(async () => {
     if (authRedirectInProgressRef.current) {
       return
@@ -451,10 +474,7 @@ const CabinetLayout = ({
     clientSessionDebugLog('cabinet-layout:session-status', {
       status,
       hasSession: Boolean(session?.user),
-      userId:
-        session?.user?.globalUserId ??
-        session?.user?._id ??
-        null,
+      userId: session?.user?.globalUserId ?? session?.user?._id ?? null,
       role: session?.user?.role ?? null,
       location: session?.user?.location ?? null,
       path: currentPath || null,
@@ -649,7 +669,10 @@ const CabinetLayout = ({
 
   if (!theme) {
     return (
-      <div className="cabinet-neon min-h-screen bg-transparent" aria-hidden="true" />
+      <div
+        className="cabinet-neon min-h-screen bg-transparent"
+        aria-hidden="true"
+      />
     )
   }
 
@@ -701,7 +724,10 @@ const CabinetLayout = ({
                           isGamesSectionActive ? navActiveClass : navIdleClass
                         } ${isSidebarExpanded ? 'justify-start' : 'justify-center laptop:justify-start'}`}
                       >
-                        <FontAwesomeIcon icon={item.icon} className="w-5 h-5 shrink-0" />
+                        <FontAwesomeIcon
+                          icon={item.icon}
+                          className="w-5 h-5 shrink-0"
+                        />
                         <span
                           className={`${isSidebarExpanded ? 'opacity-100' : 'opacity-0 laptop:opacity-100'} transition-opacity duration-150`}
                         >
@@ -872,14 +898,30 @@ const CabinetLayout = ({
                   </select>
                 </div>
               ) : null}
+              {session?.user?.isDeveloperImpersonating ? (
+                <>
+                  <div className={`border-t my-3 ${sidebarFooterClass}`} />
+                  <button
+                    type="button"
+                    onClick={handleExitImpersonateMode}
+                    className={`mb-3 flex h-10 w-full cursor-pointer items-center justify-center rounded-xl border text-sm font-medium transition-colors duration-150 ${
+                      isDarkTheme
+                        ? 'border-amber-500/40 bg-amber-500/5 text-amber-600 dark:text-amber-400 hover:border-amber-500/60 hover:bg-amber-500/10'
+                        : 'border-amber-300/70 bg-amber-50 text-amber-900 hover:border-amber-400 hover:bg-amber-100'
+                    }`}
+                    title="Закрыть режим просмотра другого пользователя"
+                  >
+                    <FontAwesomeIcon icon={faXmark} className="mr-2 h-4 w-4" />
+                    Выход
+                  </button>
+                </>
+              ) : null}
               <button
                 type="button"
                 onClick={toggleTheme}
                 className={`mb-3 flex h-10 w-full cursor-pointer items-center justify-center rounded-xl border text-sm font-medium transition-colors duration-150 ${themeBtnClass}`}
                 aria-label={
-                  isDarkTheme
-                    ? 'Включить светлую тему'
-                    : 'Включить тёмную тему'
+                  isDarkTheme ? 'Включить светлую тему' : 'Включить тёмную тему'
                 }
               >
                 <FontAwesomeIcon

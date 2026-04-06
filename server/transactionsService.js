@@ -133,7 +133,7 @@ export const updateTransaction = async ({ db, transactionId, data }) => {
 
   const payload = buildTransactionPayload({ ...existing, ...data })
   const updated = await Transactions.findByIdAndUpdate(transactionId, payload, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   })
 
@@ -261,4 +261,5 @@ export const redeemCoupon = async ({ db, data }) => {
 
   return redeemed
 }
+
 

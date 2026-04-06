@@ -133,7 +133,7 @@ export async function POST(request) {
     const updatedUser = await Users.findOneAndUpdate(
       { phone },
       { $set: updatePayload },
-      { new: true },
+      { returnDocument: 'after' },
     ).lean()
 
     if (!updatedUser) {
@@ -174,3 +174,4 @@ export async function POST(request) {
     )
   }
 }
+

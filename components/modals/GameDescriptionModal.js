@@ -32,8 +32,10 @@ const GameDescriptionModal = ({
   handleOpenResultsModal,
   participationSummaryLabel,
   canJoinGame,
+  canEnterGame,
   canCancelRegistration,
   onJoinGame,
+  onEnterGame,
   onCancelRegistration,
   isRegistrationSubmitting,
   taskDurationLabel,
@@ -164,12 +166,21 @@ const GameDescriptionModal = ({
                       </div>
                     )}
                   </dl>
-                  {(participationSummaryLabel || canJoinGame || canCancelRegistration) && (
+                  {(participationSummaryLabel || canJoinGame || canEnterGame || canCancelRegistration) && (
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       {participationSummaryLabel && (
                         <span className="inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
                           {participationSummaryLabel}
                         </span>
+                      )}
+                      {canEnterGame && (
+                        <button
+                          type="button"
+                          onClick={onEnterGame}
+                          className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-emerald-300/70 bg-emerald-50/80 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500 hover:bg-emerald-100 dark:border-emerald-400/50 dark:bg-emerald-500/12 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+                        >
+                          Зайти в игру
+                        </button>
                       )}
                       {canJoinGame && (
                         <button
@@ -394,8 +405,10 @@ GameDescriptionModal.propTypes = {
   handleOpenResultsModal: PropTypes.func.isRequired,
   participationSummaryLabel: PropTypes.string,
   canJoinGame: PropTypes.bool,
+  canEnterGame: PropTypes.bool,
   canCancelRegistration: PropTypes.bool,
   onJoinGame: PropTypes.func,
+  onEnterGame: PropTypes.func,
   onCancelRegistration: PropTypes.func,
   isRegistrationSubmitting: PropTypes.bool,
   taskDurationLabel: PropTypes.string.isRequired,
@@ -421,8 +434,10 @@ GameDescriptionModal.defaultProps = {
   selectedGame: null,
   participationSummaryLabel: '',
   canJoinGame: false,
+  canEnterGame: false,
   canCancelRegistration: false,
   onJoinGame: undefined,
+  onEnterGame: undefined,
   onCancelRegistration: undefined,
   isRegistrationSubmitting: false,
   manyCodesLimitLabel: null,

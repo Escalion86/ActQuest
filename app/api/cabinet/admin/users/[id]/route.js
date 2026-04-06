@@ -129,7 +129,7 @@ export async function PUT(request, { params }) {
     }
 
     const updatedUser = await UsersModel
-      .findByIdAndUpdate(userId, { $set: payload }, { new: true })
+      .findByIdAndUpdate(userId, { $set: payload }, { returnDocument: 'after' })
       .lean()
 
     return NextResponse.json(
@@ -147,3 +147,4 @@ export async function PUT(request, { params }) {
     )
   }
 }
+

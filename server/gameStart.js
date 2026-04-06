@@ -6,6 +6,7 @@ import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 import createTaskProgressArrays from '@helpers/createTaskProgressArrays'
 import removeCluePenalties from '@helpers/removeCluePenalties'
+import { getGameValidationErrors } from '@helpers/isGameHaveErrors'
 
 const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
@@ -28,6 +29,16 @@ const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
           c: { c: 'editGameGeneral', gameId: jsonCommand.gameId },
         },
       ],
+    }
+  }
+
+  const validationErrors = getGameValidationErrors(game)
+  if (validationErrors.length > 0) {
+    return {
+      success: false,
+      error: 'Игра не прошла проверку',
+      errors: validationErrors,
+      message: `Запуск игры невозможен. Обнаружены ошибки:\n- ${validationErrors.join('\n- ')}`,
     }
   }
 

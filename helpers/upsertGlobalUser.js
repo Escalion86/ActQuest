@@ -81,10 +81,11 @@ const upsertGlobalUser = async ({
       $set: updatePayload,
       $setOnInsert: setOnInsertPayload,
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   ).lean()
 
   return user
 }
 
 export default upsertGlobalUser
+

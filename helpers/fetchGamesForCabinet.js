@@ -33,12 +33,19 @@ const sortGamesByView = (games, view) => {
     return items.sort((first, second) => {
       const firstDate = toDate(first?.dateStart)
       const secondDate = toDate(second?.dateStart)
-      const firstTime = firstDate ? firstDate.getTime() : Number.POSITIVE_INFINITY
-      const secondTime = secondDate ? secondDate.getTime() : Number.POSITIVE_INFINITY
+      const firstTime = firstDate
+        ? firstDate.getTime()
+        : Number.POSITIVE_INFINITY
+      const secondTime = secondDate
+        ? secondDate.getTime()
+        : Number.POSITIVE_INFINITY
       if (firstTime !== secondTime) {
         return firstTime - secondTime
       }
-      return String(first?.id || '').localeCompare(String(second?.id || ''), 'ru')
+      return String(first?.id || '').localeCompare(
+        String(second?.id || ''),
+        'ru',
+      )
     })
   }
 
@@ -46,12 +53,19 @@ const sortGamesByView = (games, view) => {
     return items.sort((first, second) => {
       const firstDate = toDate(first?.dateStart)
       const secondDate = toDate(second?.dateStart)
-      const firstTime = firstDate ? firstDate.getTime() : Number.NEGATIVE_INFINITY
-      const secondTime = secondDate ? secondDate.getTime() : Number.NEGATIVE_INFINITY
+      const firstTime = firstDate
+        ? firstDate.getTime()
+        : Number.NEGATIVE_INFINITY
+      const secondTime = secondDate
+        ? secondDate.getTime()
+        : Number.NEGATIVE_INFINITY
       if (firstTime !== secondTime) {
         return secondTime - firstTime
       }
-      return String(second?.id || '').localeCompare(String(first?.id || ''), 'ru')
+      return String(second?.id || '').localeCompare(
+        String(first?.id || ''),
+        'ru',
+      )
     })
   }
 
@@ -78,12 +92,7 @@ const resolveTeamsPlace = (teamsPlaces, teamId) => {
   return null
 }
 
-const buildGamesQuery = ({
-  location,
-  userRole,
-  creatorTelegramId,
-  view,
-}) => {
+const buildGamesQuery = ({ location, userRole, creatorTelegramId, view }) => {
   const normalizedLocation =
     typeof location === 'string' ? location.trim().toLowerCase() : null
 
@@ -217,7 +226,97 @@ const fetchGamesForCabinet = async ({
     .lean()
 
   const hasMore = gamesDocsRaw.length > queryLimit
-  const gamesDocs = gamesDocsRaw.slice(0, queryLimit)
+  let gamesDocs = gamesDocsRaw.slice(0, queryLimit)
+
+  // Нормализовать ID пользователя для поиска в обоих: текущих командах и исторических снимках
+  const currentUserIdString = toStringId(currentUserId)
+  const currentUserTelegramIdNumber = Number(currentUserTelegramId)
+  const hasUserId = Boolean(currentUserIdString)
+  const hasTelegramId = Number.isFinite(currentUserTelegramIdNumber)
+
+  // Поиск дополнительных игр по историческим снимкам участников (result.teamsUsers)
+  // Это позволяет найти игры, в которых пользователь участвовал, даже если он вышел из команды
+  if ((hasUserId || hasTelegramId) && query) {
+    const historyOrConditions = []
+    if (hasUserId) {
+      historyOrConditions.push({
+        'result.teamsUsers.userId': currentUserIdString,
+      })
+    }
+    if (hasTelegramId) {
+      historyOrConditions.push({
+        'result.teamsUsers.userTelegramId': currentUserTelegramIdNumber,
+      })
+    }
+
+    if (historyOrConditions.length > 0) {
+      const historyQuery = { ...query, $or: historyOrConditions }
+
+      const historicalGamesDocs = await GamesModel.find(historyQuery)
+        .sort(resolveGamesSort(view))
+        .select({
+          _id: 1,
+          name: 1,
+          status: 1,
+          dateStart: 1,
+          dateStartFact: 1,
+          dateEndFact: 1,
+          type: 1,
+          description: 1,
+          descriptionRich: 1,
+          descriptionMedia: 1,
+          image: 1,
+          startingPlace: 1,
+          finishingPlace: 1,
+          taskDuration: 1,
+          cluesDuration: 1,
+          clueEarlyAccessMode: 1,
+          clueEarlyPenalty: 1,
+          allowCaptainForceClue: 1,
+          allowCaptainFailTask: 1,
+          allowCaptainFinishBreak: 1,
+          breakDuration: 1,
+          taskFailurePenalty: 1,
+          manyCodesPenalty: 1,
+          individualStart: 1,
+          isRated: 1,
+          hidden: 1,
+          showCreator: 1,
+          showTasks: 1,
+          hideResult: 1,
+          registrationOpen: 1,
+          maxTeamPlayers: 1,
+          prices: 1,
+          finances: 1,
+          tasks: 1,
+          updatedAt: 1,
+          createdAt: 1,
+          creatorTelegramId: 1,
+          moderators: 1,
+          location: 1,
+          seasonId: 1,
+          seasonName: 1,
+          'result.computed': 1,
+          'result.teamsPlaces': 1,
+          'result.teamsUsers': 1,
+          'result.teams': 1,
+        })
+        .populate({
+          path: 'moderators',
+          select: { _id: 1, name: 1, username: 1, telegramId: 1 },
+        })
+        .lean()
+
+      // Объединить исходные docs и исторические документы с дедупликацией по _id
+      const existingGameIds = new Set(
+        gamesDocs.map((g) => g?._id?.toString()).filter(Boolean),
+      )
+      const additionalDocs = historicalGamesDocs.filter((game) => {
+        return !existingGameIds.has(game?._id?.toString())
+      })
+      gamesDocs = [...gamesDocs, ...additionalDocs]
+    }
+  }
 
   if (!gamesDocs.length) {
     return { games: [], hasMore }
@@ -290,7 +389,12 @@ const fetchGamesForCabinet = async ({
         }, {})
       : {}
 
+  // Инициализировать переменные для результатов пользователя
+  // (они могут быть заполнены в if/else блоках ниже)
+  let userTeamPlaceByGameId = {}
+  let userParticipationTeamsByGameId = {}
   let teamsCountMap = {}
+
   if (gameIds.length) {
     const gamesTeams = await GamesTeamsModel.find({ gameId: { $in: gameIds } })
       .select({ gameId: 1, teamId: 1 })
@@ -306,16 +410,12 @@ const fetchGamesForCabinet = async ({
       return acc
     }, {})
 
-    const currentUserIdString = toStringId(currentUserId)
-    const currentUserTelegramIdNumber = Number(currentUserTelegramId)
-    const hasUserId = Boolean(currentUserIdString)
-    const hasTelegramId = Number.isFinite(currentUserTelegramIdNumber)
-
-    let userTeamPlaceByGameId = {}
-    let userParticipationTeamsByGameId = {}
+    // Переменные currentUserIdString и currentUserTelegramIdNumber уже определены выше
     if (gamesTeams.length > 0 && (hasUserId || hasTelegramId)) {
       const teamIds = Array.from(
-        new Set(gamesTeams.map((doc) => toStringId(doc?.teamId)).filter(Boolean))
+        new Set(
+          gamesTeams.map((doc) => toStringId(doc?.teamId)).filter(Boolean),
+        ),
       )
 
       const membershipOr = []
@@ -326,14 +426,15 @@ const fetchGamesForCabinet = async ({
         membershipOr.push({ userTelegramId: currentUserTelegramIdNumber })
       }
 
-      const memberships = teamIds.length && membershipOr.length
-        ? await TeamsUsersModel.find({
-            teamId: { $in: teamIds },
-            $or: membershipOr,
-          })
-            .select({ teamId: 1, role: 1 })
-            .lean()
-        : []
+      const memberships =
+        teamIds.length && membershipOr.length
+          ? await TeamsUsersModel.find({
+              teamId: { $in: teamIds },
+              $or: membershipOr,
+            })
+              .select({ teamId: 1, role: 1 })
+              .lean()
+          : []
 
       const userMembershipByTeamId = memberships.reduce((acc, doc) => {
         const teamId = toStringId(doc?.teamId)
@@ -380,34 +481,33 @@ const fetchGamesForCabinet = async ({
         return acc
       }, {})
 
-      userParticipationTeamsByGameId = Object.entries(userTeamIdsByGameId).reduce(
-        (acc, [gameId, ids]) => {
-          const uniqueTeamIds = Array.from(new Set(Array.isArray(ids) ? ids : []))
-          if (uniqueTeamIds.length === 0) {
-            return acc
-          }
-
-          acc[gameId] = uniqueTeamIds.map((teamId) => {
-            const membership = userMembershipByTeamId[teamId] ?? {
-              teamId,
-              isCaptain: false,
-            }
-            const teamDoc = teamsById[teamId]
-
-            return {
-              teamId,
-              teamName:
-                typeof teamDoc?.name === 'string' && teamDoc.name.trim() !== ''
-                  ? teamDoc.name.trim()
-                  : `Команда ${teamId}`,
-              isCaptain: Boolean(membership?.isCaptain),
-            }
-          })
-
+      userParticipationTeamsByGameId = Object.entries(
+        userTeamIdsByGameId,
+      ).reduce((acc, [gameId, ids]) => {
+        const uniqueTeamIds = Array.from(new Set(Array.isArray(ids) ? ids : []))
+        if (uniqueTeamIds.length === 0) {
           return acc
-        },
-        {}
-      )
+        }
+
+        acc[gameId] = uniqueTeamIds.map((teamId) => {
+          const membership = userMembershipByTeamId[teamId] ?? {
+            teamId,
+            isCaptain: false,
+          }
+          const teamDoc = teamsById[teamId]
+
+          return {
+            teamId,
+            teamName:
+              typeof teamDoc?.name === 'string' && teamDoc.name.trim() !== ''
+                ? teamDoc.name.trim()
+                : `Команда ${teamId}`,
+            isCaptain: Boolean(membership?.isCaptain),
+          }
+        })
+
+        return acc
+      }, {})
 
       userTeamPlaceByGameId = gamesFiltered.reduce((acc, game) => {
         const gameId = toStringId(game?._id)
@@ -432,11 +532,192 @@ const fetchGamesForCabinet = async ({
         acc[gameId] = Math.min(...places)
         return acc
       }, {})
+
+      // Дополнить результаты данными из исторических снимков (result.teamsUsers)
+      // для игр, в которых пользователь участвовал, но больше не находится в той команде
+      gamesFiltered.forEach((game) => {
+        const gameId = toStringId(game?._id)
+        if (!gameId || userTeamPlaceByGameId[gameId] !== undefined) {
+          // Игра уже обработана или доступна через текущие членства
+          return
+        }
+
+        // Поиск пользователя в исторических снимках участников
+        const resultTeamsUsers = Array.isArray(game?.result?.teamsUsers)
+          ? game.result.teamsUsers
+          : []
+        const userTeamsFromSnapshot = resultTeamsUsers.filter((tu) => {
+          const matchesUserId =
+            currentUserIdString &&
+            toStringId(tu?.userId) === currentUserIdString
+          const matchesTelegramId =
+            Number.isFinite(currentUserTelegramIdNumber) &&
+            Number(tu?.userTelegramId) === currentUserTelegramIdNumber
+          return matchesUserId || matchesTelegramId
+        })
+
+        if (userTeamsFromSnapshot.length === 0) {
+          return
+        }
+
+        // Получить данные из snapshot: места команд и названия команд
+        const snapshotTeamIds = userTeamsFromSnapshot
+          .map((tu) => toStringId(tu?.teamId))
+          .filter(Boolean)
+
+        const resultTeams = Array.isArray(game?.result?.teams)
+          ? game.result.teams
+          : []
+        const resultTeamsById = resultTeams.reduce((acc, team) => {
+          const teamId = toStringId(team?.id)
+          if (teamId) {
+            acc[teamId] = team
+          }
+          return acc
+        }, {})
+
+        // Найти места команд
+        const places = snapshotTeamIds
+          .map((teamId) => resolveTeamsPlace(game?.result?.teamsPlaces, teamId))
+          .filter((place) => Number.isFinite(place))
+          .map(Number)
+
+        if (places.length > 0) {
+          userTeamPlaceByGameId[gameId] = Math.min(...places)
+        } else if (snapshotTeamIds.length > 0) {
+          // Если нет teamsPlaces, но есть команды в snapshot, установить дефолтное место
+          // Это может произойти для старых игр без пересчета результата
+          // Установим место равное количеству команд в результате (worst case scenario)
+          const resultTeamsCount = Array.isArray(game?.result?.teams)
+            ? game.result.teams.length
+            : null
+          if (Number.isFinite(resultTeamsCount)) {
+            userTeamPlaceByGameId[gameId] = resultTeamsCount
+          } else {
+            // Если даже это не известно, установить минимальное место
+            userTeamPlaceByGameId[gameId] = 1
+          }
+        }
+
+        // Добавить команды в userParticipationTeamsByGameId
+        userParticipationTeamsByGameId[gameId] = userTeamsFromSnapshot.map(
+          (tu) => {
+            const teamId = toStringId(tu?.teamId)
+            const snapshotTeam = teamId ? resultTeamsById[teamId] : null
+            const teamName =
+              snapshotTeam &&
+              typeof snapshotTeam?.name === 'string' &&
+              snapshotTeam.name.trim()
+                ? snapshotTeam.name.trim()
+                : teamId
+                  ? `Команда ${teamId}`
+                  : 'Неизвестная команда'
+
+            return {
+              teamId,
+              teamName,
+              isCaptain: tu?.role === 'capitan',
+            }
+          },
+        )
+      })
+    } else if (
+      currentUserIdString ||
+      Number.isFinite(currentUserTelegramIdNumber)
+    ) {
+      // Если нет текущих членств через GamesTeams, но есть ID пользователя,
+      // попробовать найти игры через исторические снимки
+      // Используем уже инициализованные переменные userTeamPlaceByGameId и userParticipationTeamsByGameId
+
+      gamesFiltered.forEach((game) => {
+        const gameId = toStringId(game?._id)
+        if (!gameId) {
+          return
+        }
+
+        const resultTeamsUsers = Array.isArray(game?.result?.teamsUsers)
+          ? game.result.teamsUsers
+          : []
+        const userTeamsFromSnapshot = resultTeamsUsers.filter((tu) => {
+          const matchesUserId =
+            currentUserIdString &&
+            toStringId(tu?.userId) === currentUserIdString
+          const matchesTelegramId =
+            Number.isFinite(currentUserTelegramIdNumber) &&
+            Number(tu?.userTelegramId) === currentUserTelegramIdNumber
+          return matchesUserId || matchesTelegramId
+        })
+
+        if (userTeamsFromSnapshot.length === 0) {
+          return
+        }
+
+        const resultTeams = Array.isArray(game?.result?.teams)
+          ? game.result.teams
+          : []
+        const resultTeamsById = resultTeams.reduce((acc, team) => {
+          const teamId = toStringId(team?.id)
+          if (teamId) {
+            acc[teamId] = team
+          }
+          return acc
+        }, {})
+
+        const snapshotTeamIds = userTeamsFromSnapshot
+          .map((tu) => toStringId(tu?.teamId))
+          .filter(Boolean)
+
+        const places = snapshotTeamIds
+          .map((teamId) => resolveTeamsPlace(game?.result?.teamsPlaces, teamId))
+          .filter((place) => Number.isFinite(place))
+          .map(Number)
+
+        if (places.length > 0) {
+          userTeamPlaceByGameId[gameId] = Math.min(...places)
+        } else if (snapshotTeamIds.length > 0) {
+          // Если нет teamsPlaces, но есть команды в snapshot, установить дефолтное место
+          // Это может произойти для старых игр без пересчета результата
+          // Установим место равное количеству команд в результате (worst case scenario)
+          const resultTeamsCount = Array.isArray(game?.result?.teams)
+            ? game.result.teams.length
+            : null
+          if (Number.isFinite(resultTeamsCount)) {
+            userTeamPlaceByGameId[gameId] = resultTeamsCount
+          } else {
+            // Если даже это не известно, установить минимальное место
+            userTeamPlaceByGameId[gameId] = 1
+          }
+        }
+
+        userParticipationTeamsByGameId[gameId] = userTeamsFromSnapshot.map(
+          (tu) => {
+            const teamId = toStringId(tu?.teamId)
+            const snapshotTeam = teamId ? resultTeamsById[teamId] : null
+            const teamName =
+              snapshotTeam &&
+              typeof snapshotTeam?.name === 'string' &&
+              snapshotTeam.name.trim()
+                ? snapshotTeam.name.trim()
+                : teamId
+                  ? `Команда ${teamId}`
+                  : 'Неизвестная команда'
+
+            return {
+              teamId,
+              teamName,
+              isCaptain: tu?.role === 'capitan',
+            }
+          },
+        )
+      })
     }
+    // Используемые переменные объявлены и заполнены выше (userTeamPlaceByGameId, userParticipationTeamsByGameId)
 
     const games = gamesFiltered.map((game) => {
       const normalizedStatus =
-        game?.status === 'closed' && !canSeeClosedStatus ? 'finished' : game?.status
+        game?.status === 'closed' && !canSeeClosedStatus
+          ? 'finished'
+          : game?.status
       const gameId = game?._id ? game._id.toString() : null
       const creatorTelegramIdNumber = Number(game?.creatorTelegramId)
       const creatorKey = Number.isFinite(creatorTelegramIdNumber)
@@ -446,12 +727,12 @@ const fetchGamesForCabinet = async ({
       return normalizeGameForCabinet({
         ...game,
         status: normalizedStatus,
-        teamsCount: gameId ? teamsCountMap[gameId] ?? 0 : 0,
-        userTeamPlace: gameId ? userTeamPlaceByGameId[gameId] ?? null : null,
+        teamsCount: gameId ? (teamsCountMap[gameId] ?? 0) : 0,
+        userTeamPlace: gameId ? (userTeamPlaceByGameId[gameId] ?? null) : null,
         userParticipationTeams: gameId
-          ? userParticipationTeamsByGameId[gameId] ?? []
+          ? (userParticipationTeamsByGameId[gameId] ?? [])
           : [],
-        creator: creatorKey ? creatorsByTelegramId[creatorKey] ?? null : null,
+        creator: creatorKey ? (creatorsByTelegramId[creatorKey] ?? null) : null,
       })
     })
 
@@ -460,12 +741,14 @@ const fetchGamesForCabinet = async ({
 
   const games = gamesFiltered.map((game) => {
     const normalizedStatus =
-      game?.status === 'closed' && !canSeeClosedStatus ? 'finished' : game?.status
+      game?.status === 'closed' && !canSeeClosedStatus
+        ? 'finished'
+        : game?.status
 
     return normalizeGameForCabinet({
       ...game,
       status: normalizedStatus,
-      teamsCount: game?._id ? teamsCountMap[game._id.toString()] ?? 0 : 0,
+      teamsCount: game?._id ? (teamsCountMap[game._id.toString()] ?? 0) : 0,
       userTeamPlace: null,
       userParticipationTeams: [],
     })

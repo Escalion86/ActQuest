@@ -18,6 +18,8 @@ import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
 import UnifiedGameDescriptionModal from '@components/modals/UnifiedGameDescriptionModal'
+import UserViewModal from '@components/cabinet/modals/UserViewModal'
+import UserEditModal from '@components/cabinet/modals/UserEditModal'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
 import fetchCabinetUserDetails from '@helpers/fetchCabinetUserDetails'
@@ -46,7 +48,8 @@ const CABINET_ADMIN_API_BASE = '/api/cabinet/admin'
 const CABINET_USERS_API_BASE = '/api/cabinet/users'
 
 const resolveLocationLabel = (locationKey) => {
-  const key = typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
+  const key =
+    typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
   if (!key) {
     return 'Не указан'
   }
@@ -99,7 +102,9 @@ const ManageUsersPage = ({
 
   const [users, setUsers] = useState(safeInitialUsers)
   const [persistedUsers, setPersistedUsers] = useState(safeInitialUsers)
-  const [selectedUserId, setSelectedUserId] = useState(safeInitialUsers[0]?.id ?? null)
+  const [selectedUserId, setSelectedUserId] = useState(
+    safeInitialUsers[0]?.id ?? null,
+  )
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
@@ -115,29 +120,35 @@ const ManageUsersPage = ({
   const [isUserGamesModalOpen, setIsUserGamesModalOpen] = useState(false)
   const [isUserPushModalOpen, setIsUserPushModalOpen] = useState(false)
   const [isUserTeamModalOpen, setIsUserTeamModalOpen] = useState(false)
-  const [isParticipationGameModalOpen, setIsParticipationGameModalOpen] = useState(false)
-  const [isParticipationGameLoading, setIsParticipationGameLoading] = useState(false)
-  const [selectedParticipationGame, setSelectedParticipationGame] = useState(null)
+  const [isParticipationGameModalOpen, setIsParticipationGameModalOpen] =
+    useState(false)
+  const [isParticipationGameLoading, setIsParticipationGameLoading] =
+    useState(false)
+  const [selectedParticipationGame, setSelectedParticipationGame] =
+    useState(null)
   const [selectedUserTeam, setSelectedUserTeam] = useState(null)
   const [selectedUserForPush, setSelectedUserForPush] = useState(null)
   const [userPushMessage, setUserPushMessage] = useState('')
   const [isUserPushSubmitting, setIsUserPushSubmitting] = useState(false)
   const [userPushFeedback, setUserPushFeedback] = useState(null)
-  const [userGamesState, setUserGamesState] = useState({
-    isLoading: false,
-    error: null,
-    userName: '',
-    games: [],
-  })
-  const [userGamesPreviewState, setUserGamesPreviewState] = useState({
-    isLoading: false,
-    error: null,
-    userId: null,
-    games: [],
-    total: 0,
-  })
+
+  // Отслеживаем предыдущий userId из URL чтобы избежать race condition при закрытии модалки
+  const prevUserIdFromUrlRef = useRef(null)
+  // Флаг чтобы отметить что мы намеренно закрываем модалку (не позволяет переоткрыть на race condition)
+  const isIntentionallyCLosingModalRef = useRef(false)
+  // Флаг чтобы отметить что мы намеренно открываем модалку (не позволяет закрыть на race condition)
+  const isIntentionallyOpeningModalRef = useRef(false)
 
   useEffect(() => {
+    // Если есть активный фильтр (поиск, ролль, город или сортировка), не перезаписывать список
+    const hasActiveFilter = searchQuery || roleFilter !== 'all' || locationFilter !== 'all' || sortBy !== 'registration_desc'
+    
+    if (hasActiveFilter) {
+      console.log('[AdminUsers] Active filter detected, not overwriting list with initial data: searchQuery:', searchQuery, 'filters:', {roleFilter, locationFilter, sortBy})
+      return
+    }
+
+    console.log('[AdminUsers] Initial effect triggered - safeInitialUsers.length:', safeInitialUsers.length, 'initialHasMore:', initialHasMore)
     setUsers(safeInitialUsers)
     setPersistedUsers(safeInitialUsers)
     setHasMoreUsers(Boolean(initialHasMore))
@@ -148,10 +159,11 @@ const ManageUsersPage = ({
 
       return safeInitialUsers[0]?.id ?? null
     })
-  }, [initialHasMore, safeInitialUsers])
+  }, [initialHasMore, safeInitialUsers, searchQuery, roleFilter, locationFilter, sortBy])
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
+      console.log('[AdminUsers] Setting searchQuery from searchInput:', searchInput)
       setSearchQuery(searchInput.trim())
     }, 450)
 
@@ -162,6 +174,14 @@ const ManageUsersPage = ({
 
   const setUserIdQuery = useCallback(
     (nextUserId) => {
+      console.log('[AdminUsers] setUserIdQuery called with:', nextUserId, 'current searchParams:', searchParams?.toString())
+      
+      // Если удаляем userId, отметить что это намеренное закрытие модалки
+      // Флаг НЕ сбрасывать - пусть остаётся пока эффект не обработает новый searchParams
+      if (!nextUserId) {
+        isIntentionallyCLosingModalRef.current = true
+      }
+      
       const nextQuery = new URLSearchParams(searchParams?.toString() || '')
       if (nextUserId) {
         nextQuery.set('userId', nextUserId)
@@ -172,12 +192,37 @@ const ManageUsersPage = ({
       const nextUrl = nextQuery.toString()
         ? `${pathname}?${nextQuery.toString()}`
         : pathname
+      console.log('[AdminUsers] Navigating to:', nextUrl)
       router.replace(nextUrl, { scroll: false })
     },
-    [pathname, router, searchParams]
+    [pathname, router, searchParams],
+  )
+
+  const updateSearchQueryInUrl = useCallback(
+    (nextSearchQuery) => {
+      console.log('[AdminUsers] updateSearchQueryInUrl called with:', nextSearchQuery, 'current searchParams:', searchParams?.toString())
+      const nextQuery = new URLSearchParams(searchParams?.toString() || '')
+      if (nextSearchQuery && nextSearchQuery.trim()) {
+        nextQuery.set('q', nextSearchQuery.trim())
+      } else {
+        nextQuery.delete('q')
+      }
+
+      const nextUrl = nextQuery.toString()
+        ? `${pathname}?${nextQuery.toString()}`
+        : pathname
+      console.log('[AdminUsers] Updating search in URL to:', nextUrl)
+      router.replace(nextUrl, { scroll: false })
+    },
+    [pathname, router, searchParams],
   )
 
   const closeUserEditModal = useCallback(() => {
+    setIsUserEditModalOpen(false)
+  }, [])
+
+  const onUserUpdated = useCallback(() => {
+    // Закрыть модалку редактирования после успешного обновления
     setIsUserEditModalOpen(false)
   }, [])
 
@@ -187,21 +232,21 @@ const ManageUsersPage = ({
   }, [])
 
   const closeUserViewModal = useCallback(() => {
+    console.log('[AdminUsers] Closing view modal, current searchInput:', searchInput, 'searchQuery:', searchQuery)
     setIsUserViewModalOpen(false)
     closeUserTeamModal()
     setUserIdQuery(null)
-  }, [closeUserTeamModal, setUserIdQuery])
+  }, [closeUserTeamModal, setUserIdQuery, searchInput, searchQuery])
 
-  const closeUserGamesModal = useCallback(() => {
-    setIsUserGamesModalOpen(false)
-    setUserGamesState((prev) => ({
-      ...prev,
-      isLoading: false,
-      error: null,
-      userName: '',
-      games: [],
-    }))
-  }, [])
+  useEffect(() => {
+    console.log('[AdminUsers] searchQuery changed:', searchQuery, 'current URL q param:', searchParams?.get('q'))
+    // Синхронизируем searchQuery с URL параметром q
+    const urlQParam = searchParams?.get('q') ?? ''
+    if (searchQuery !== urlQParam) {
+      console.log('[AdminUsers] searchQuery differs from URL, updating - old:', urlQParam, 'new:', searchQuery)
+      updateSearchQueryInUrl(searchQuery)
+    }
+  }, [searchQuery, searchParams, updateSearchQueryInUrl])
 
   const closeUserPushModal = useCallback(() => {
     if (isUserPushSubmitting) {
@@ -231,7 +276,10 @@ const ManageUsersPage = ({
 
     users.forEach((user) => {
       if (user.role && !knownRoles.has(user.role)) {
-        baseOptions.push({ value: user.role, name: CABINET_ROLE_LABELS[user.role] ?? user.role })
+        baseOptions.push({
+          value: user.role,
+          name: CABINET_ROLE_LABELS[user.role] ?? user.role,
+        })
         knownRoles.add(user.role)
       }
     })
@@ -240,38 +288,129 @@ const ManageUsersPage = ({
   }, [users])
 
   const editRoleOptions = useMemo(
-    () =>
-      roleOptions.filter(
-        (option) => option.value !== 'dev' || isDeveloper,
-      ),
+    () => roleOptions.filter((option) => option.value !== 'dev' || isDeveloper),
     [isDeveloper, roleOptions],
   )
 
+  // Эффект для закрытия модалей только если список пользователей пустой
   useEffect(() => {
+    console.log('[AdminUsers] Effect: checking if users list is empty - users.length:', users.length)
+    
     if (users.length === 0) {
+      console.log('[AdminUsers] No users (length=0), clearing selectedUserId and closing modals')
       setSelectedUserId(null)
       setIsUserViewModalOpen(false)
       setIsUserEditModalOpen(false)
+    }
+  }, [users.length]) // Зависит только от длины, чтобы не создавать цикл
+
+  // Эффект для выбора пользователя из списка (если нет открытой модали)
+  useEffect(() => {
+    console.log('[AdminUsers] Effect: users or selectedUserId changed - users.length:', users.length, 'selectedUserId:', selectedUserId)
+    
+    if (users.length === 0) {
+      console.log('[AdminUsers] Empty users list, skipping selection')
       return
     }
 
-    setSelectedUserId((prev) => {
-      if (prev && users.some((user) => user.id === prev)) {
-        return prev
-      }
+    // Если модаль открыта, не меняем выбор
+    if (isUserViewModalOpen || isUserEditModalOpen) {
+      console.log('[AdminUsers] Modal is open, not changing selection')
+      return
+    }
 
-      return users[0]?.id ?? null
-    })
-  }, [users])
+    // Если пользователь уже выбран и он есть в списке, то ничего не меняем
+    if (selectedUserId && users.some((user) => user.id === selectedUserId)) {
+      console.log('[AdminUsers] Selected user still in list, keeping selection:', selectedUserId)
+      return
+    }
+
+    // Выбираем первого пользователя
+    console.log('[AdminUsers] Selecting first user from new list')
+    setSelectedUserId(users[0]?.id ?? null)
+  }, [users, selectedUserId, isUserViewModalOpen, isUserEditModalOpen])
+
+  // Загрузить пользователя из URL параметра userId при загрузке страницы
+  useEffect(() => {
+    if (!isAdmin) {
+      return undefined
+    }
+
+    const userIdFromUrl = searchParams?.get('userId')
+    if (!userIdFromUrl) {
+      return undefined
+    }
+
+    // Проверить, загружен ли этот пользователь уже
+    const userAlreadyLoaded = persistedUsers.some(
+      (user) => user.id === userIdFromUrl,
+    )
+    if (userAlreadyLoaded) {
+      setSelectedUserId(userIdFromUrl)
+      setIsUserViewModalOpen(true)
+      return undefined
+    }
+
+    let cancelled = false
+
+    const loadUserFromUrl = async () => {
+      try {
+        const userData = await fetchCabinetUserDetails({
+          userId: userIdFromUrl,
+        })
+
+        if (cancelled) {
+          return
+        }
+
+        if (userData && userData.id) {
+          setPersistedUsers((prev) => {
+            const alreadyExists = prev.some((user) => user.id === userData.id)
+            if (alreadyExists) {
+              return prev
+            }
+            return [userData, ...prev]
+          })
+          setUsers((prev) => {
+            const alreadyExists = prev.some((user) => user.id === userData.id)
+            if (alreadyExists) {
+              return prev
+            }
+            return [userData, ...prev]
+          })
+          setSelectedUserId(userData.id)
+          setIsUserViewModalOpen(true)
+        }
+      } catch (error) {
+        console.error('Failed to load user from URL', error)
+      }
+    }
+
+    loadUserFromUrl()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin, searchParams])
 
   useEffect(() => {
     if (!isAdmin) {
       return undefined
     }
 
+    console.log('[AdminUsers] Effect on loadUsersByFilters triggered - checking dependencies:', {
+      isAdmin,
+      locationFilter,
+      roleFilter,
+      searchQuery,
+      sortBy,
+      'safeInitialUsers.length': safeInitialUsers.length,
+    })
+
     let cancelled = false
 
     const loadUsersByFilters = async () => {
+      console.log('[AdminUsers] Loading users with filters:', { searchQuery, roleFilter, locationFilter, sortBy })
       setIsLoadingMoreUsers(true)
       setFeedback(null)
 
@@ -290,9 +429,12 @@ const ManageUsersPage = ({
         if (locationFilter && locationFilter !== 'all') {
           params.set('location', locationFilter)
         }
-        const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`, {
-          fallbackMessage: 'Не удалось загрузить пользователей',
-        })
+        const { json } = await requestApiJson(
+          `${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`,
+          {
+            fallbackMessage: 'Не удалось загрузить пользователей',
+          },
+        )
 
         if (cancelled) {
           return
@@ -300,6 +442,7 @@ const ManageUsersPage = ({
 
         const nextUsers = Array.isArray(json?.data) ? json.data : []
         const nextHasMore = Boolean(json?.meta?.hasMore)
+        console.log('[AdminUsers] Loaded users:', nextUsers.length, 'hasMore:', nextHasMore, 'current selectedUserId:', selectedUserId)
         setUsers(nextUsers)
         setPersistedUsers(nextUsers)
         setHasMoreUsers(nextHasMore)
@@ -324,18 +467,33 @@ const ManageUsersPage = ({
     return () => {
       cancelled = true
     }
-  }, [isAdmin, locationFilter, roleFilter, safeInitialUsers.length, searchQuery, sortBy])
+  }, [
+    isAdmin,
+    locationFilter,
+    roleFilter,
+    safeInitialUsers.length,
+    searchQuery,
+    sortBy,
+  ])
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
-    [selectedUserId, users]
+    [selectedUserId, users],
   )
 
   const persistedSelectedUser = useMemo(
     () => persistedUsers.find((user) => user.id === selectedUserId) ?? null,
-    [persistedUsers, selectedUserId]
+    [persistedUsers, selectedUserId],
   )
   const isUsersListLoading = isLoadingMoreUsers && users.length === 0
+
+  useEffect(() => {
+    console.log('[AdminUsers] Modal state changed - View:', isUserViewModalOpen, 'Edit:', isUserEditModalOpen, 'selectedUserId:', selectedUserId)
+  }, [isUserViewModalOpen, isUserEditModalOpen])
+
+  useEffect(() => {
+    console.log('[AdminUsers] selectedUserId changed:', selectedUserId, 'isUserViewModalOpen:', isUserViewModalOpen, 'isUserEditModalOpen:', isUserEditModalOpen)
+  }, [selectedUserId, isUserViewModalOpen, isUserEditModalOpen])
 
   useEffect(() => {
     setFeedback(null)
@@ -347,32 +505,39 @@ const ManageUsersPage = ({
         return
       }
 
+      console.log('[AdminUsers] Opening view modal for user:', user.id, user.name)
+      // Отметить что мы намеренно открываем модалку (флаг не сбрасывать до обновления URL)
+      isIntentionallyOpeningModalRef.current = true
       setSelectedUserId(user.id)
       setIsUserEditModalOpen(false)
       setIsUserViewModalOpen(true)
+      console.log('[AdminUsers] Setting URL query with userId:', user.id)
       setUserIdQuery(user.id)
     },
-    [setUserIdQuery]
+    [setUserIdQuery],
   )
 
-  const handleOpenUserEditModal = useCallback((user) => {
-    if (!user) {
-      return
-    }
+  const handleOpenUserEditModal = useCallback(
+    (user) => {
+      if (!user) {
+        return
+      }
 
-    if (!isDeveloper && user.role === 'dev') {
-      setFeedback({
-        type: 'error',
-        message:
-          'Только разработчик может изменять карточку пользователя с ролью «Разработчик».',
-      })
-      return
-    }
+      if (!isDeveloper && user.role === 'dev') {
+        setFeedback({
+          type: 'error',
+          message:
+            'Только разработчик может изменять карточку пользователя с ролью «Разработчик».',
+        })
+        return
+      }
 
-    setSelectedUserId(user.id)
-    setIsUserViewModalOpen(false)
-    setIsUserEditModalOpen(true)
-  }, [isDeveloper])
+      setSelectedUserId(user.id)
+      setIsUserViewModalOpen(false)
+      setIsUserEditModalOpen(true)
+    },
+    [isDeveloper],
+  )
 
   const handleOpenUserPushModal = useCallback((user) => {
     if (!user?.id) {
@@ -394,7 +559,8 @@ const ManageUsersPage = ({
       return
     }
 
-    const message = typeof userPushMessage === 'string' ? userPushMessage.trim() : ''
+    const message =
+      typeof userPushMessage === 'string' ? userPushMessage.trim() : ''
     if (!message) {
       setUserPushFeedback({
         type: 'error',
@@ -407,18 +573,21 @@ const ManageUsersPage = ({
     setUserPushFeedback(null)
 
     try {
-      const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/user-push`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
+      const { json } = await requestApiJson(
+        `${CABINET_ADMIN_API_BASE}/user-push`,
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: selectedUserForPush.id,
+            message,
+          }),
+          fallbackMessage: 'Не удалось отправить push-уведомление',
         },
-        body: JSON.stringify({
-          userId: selectedUserForPush.id,
-          message,
-        }),
-        fallbackMessage: 'Не удалось отправить push-уведомление',
-      })
+      )
 
       const created = Number(json?.data?.created || 0)
       const delivered = Number(json?.data?.delivered || 0)
@@ -436,7 +605,8 @@ const ManageUsersPage = ({
       setIsUserPushModalOpen(false)
       setSelectedUserForPush(null)
     } catch (error) {
-      const messageText = error?.message || 'Не удалось отправить push-уведомление'
+      const messageText =
+        error?.message || 'Не удалось отправить push-уведомление'
       setUserPushFeedback({
         type: 'error',
         message: messageText,
@@ -449,81 +619,6 @@ const ManageUsersPage = ({
       setIsUserPushSubmitting(false)
     }
   }, [selectedUserForPush, setFeedback, userPushMessage])
-
-  const fetchUserGames = useCallback(async (user) => {
-    const params = new URLSearchParams()
-    if (typeof user?.id === 'string' && user.id) {
-      params.set('userId', user.id)
-    }
-    if (typeof user?.telegramId === 'string' && user.telegramId) {
-      params.set('telegramId', user.telegramId)
-    }
-
-    const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/user-games?${params.toString()}`, {
-      fallbackMessage: 'Не удалось загрузить игры пользователя',
-    })
-
-    const gamesRaw = Array.isArray(json?.data) ? json.data : []
-    const games = gamesRaw.sort((first, second) => {
-      const firstTime = first?.dateStart ? new Date(first.dateStart).getTime() : 0
-      const secondTime = second?.dateStart ? new Date(second.dateStart).getTime() : 0
-      return secondTime - firstTime
-    })
-
-    return games
-  }, [])
-
-  const handleOpenUserGamesModal = useCallback(
-    async (user) => {
-      if (!user) {
-        return
-      }
-
-      setIsUserGamesModalOpen(true)
-      const previewReady =
-        userGamesPreviewState.userId === user.id &&
-        !userGamesPreviewState.isLoading &&
-        !userGamesPreviewState.error &&
-        Array.isArray(userGamesPreviewState.games)
-
-      if (previewReady) {
-        setUserGamesState({
-          isLoading: false,
-          error: null,
-          userName: user.name || 'Без имени',
-          games: userGamesPreviewState.games,
-        })
-        return
-      }
-
-      setUserGamesState({
-        isLoading: true,
-        error: null,
-        userName: user.name || 'Без имени',
-        games: [],
-      })
-
-      try {
-        const games = await fetchUserGames(user)
-
-        setUserGamesState({
-          isLoading: false,
-          error: null,
-          userName: user.name || 'Без имени',
-          games,
-        })
-      } catch (error) {
-        console.error('Failed to load user games', error)
-        setUserGamesState({
-          isLoading: false,
-          error: error?.message || 'Не удалось загрузить игры пользователя',
-          userName: user.name || 'Без имени',
-          games: [],
-        })
-      }
-    },
-    [fetchUserGames, userGamesPreviewState]
-  )
 
   const handleOpenParticipationGame = useCallback(
     async (gameOrId) => {
@@ -538,26 +633,19 @@ const ManageUsersPage = ({
       }
 
       const gameFromState =
-        (Array.isArray(userGamesState.games)
-          ? userGamesState.games.find((item) => item.id === gameId)
-          : null) ||
-        (Array.isArray(userGamesPreviewState.games)
-          ? userGamesPreviewState.games.find((item) => item.id === gameId)
-          : null) ||
-        (gameOrId && typeof gameOrId === 'object' ? gameOrId : null)
-
-      if (!gameFromState) {
-        setFeedback({
-          type: 'error',
-          message: 'Не удалось открыть игру: данные отсутствуют',
-        })
-        return
-      }
+        gameOrId && typeof gameOrId === 'object' ? gameOrId : null
 
       const hasDetailedFields =
-        Object.prototype.hasOwnProperty.call(gameFromState, 'descriptionRich') ||
-        Object.prototype.hasOwnProperty.call(gameFromState, 'startingPlace') ||
-        Object.prototype.hasOwnProperty.call(gameFromState, 'prices')
+        gameFromState &&
+        (Object.prototype.hasOwnProperty.call(
+          gameFromState,
+          'descriptionRich',
+        ) ||
+          Object.prototype.hasOwnProperty.call(
+            gameFromState,
+            'startingPlace',
+          ) ||
+          Object.prototype.hasOwnProperty.call(gameFromState, 'prices'))
 
       setIsUserTeamModalOpen(false)
       setIsParticipationGameLoading(true)
@@ -565,7 +653,10 @@ const ManageUsersPage = ({
       try {
         const detailedGame = hasDetailedFields
           ? gameFromState
-          : await fetchCabinetGameDetails({ gameId, location: gameFromState.location || location || null })
+          : await fetchCabinetGameDetails({
+              gameId,
+              location: location || null,
+            })
         setSelectedParticipationGame(detailedGame)
         setIsParticipationGameModalOpen(true)
       } catch (error) {
@@ -577,7 +668,7 @@ const ManageUsersPage = ({
         setIsParticipationGameLoading(false)
       }
     },
-    [location, userGamesPreviewState.games, userGamesState.games]
+    [location],
   )
 
   const ensureUserInState = useCallback((userPatch) => {
@@ -606,11 +697,11 @@ const ManageUsersPage = ({
       }
 
       if (exists) {
-        return prevUsers.map((item) => (
+        return prevUsers.map((item) =>
           item.id === userPatch.id
             ? { ...item, ...fallbackUser, ...userPatch }
-            : item
-        ))
+            : item,
+        )
       }
 
       return [{ ...fallbackUser, ...userPatch }, ...prevUsers]
@@ -619,28 +710,25 @@ const ManageUsersPage = ({
     return userPatch.id
   }, [])
 
-  const handleOpenUserTeamModal = useCallback(
-    async (team) => {
-      if (!team?.id) {
-        return
-      }
+  const handleOpenUserTeamModal = useCallback(async (team) => {
+    if (!team?.id) {
+      return
+    }
 
-      setFeedback(null)
+    setFeedback(null)
 
-      try {
-        const detailedTeam = await fetchCabinetTeamDetails({ teamId: team.id })
+    try {
+      const detailedTeam = await fetchCabinetTeamDetails({ teamId: team.id })
 
-        setSelectedUserTeam(detailedTeam)
-        setIsUserTeamModalOpen(true)
-      } catch (error) {
-        setFeedback({
-          type: 'error',
-          message: error?.message || 'Не удалось загрузить команду',
-        })
-      }
-    },
-    []
-  )
+      setSelectedUserTeam(detailedTeam)
+      setIsUserTeamModalOpen(true)
+    } catch (error) {
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось загрузить команду',
+      })
+    }
+  }, [])
 
   const handleOpenMemberProfile = useCallback(
     async (member) => {
@@ -648,9 +736,10 @@ const ManageUsersPage = ({
         return
       }
 
-      const nextUserId = typeof member.userId === 'string' && member.userId
-        ? member.userId
-        : null
+      const nextUserId =
+        typeof member.userId === 'string' && member.userId
+          ? member.userId
+          : null
 
       if (!nextUserId) {
         return
@@ -673,7 +762,7 @@ const ManageUsersPage = ({
           username: member.username || '',
           phone: member.phone || '',
           role: member.userRole || 'client',
-        }
+        },
       )
 
       setSelectedUserId(nextUserId)
@@ -682,106 +771,111 @@ const ManageUsersPage = ({
       setIsUserViewModalOpen(true)
       setUserIdQuery(nextUserId)
     },
-    [ensureUserInState, setUserIdQuery]
+    [ensureUserInState, setUserIdQuery],
   )
 
   useEffect(() => {
-    if (!isUserViewModalOpen || !selectedUser) {
+    console.log('[AdminUsers] useEffect on searchParams - URL userId:', searchParams?.get('userId'), 'modal open:', isUserViewModalOpen, 'selectedUserId:', selectedUserId, 'intentionalClose flag:', isIntentionallyCLosingModalRef.current, 'intentionalOpen flag:', isIntentionallyOpeningModalRef.current)
+    
+    // Если в процессе намеренного закрытия, просто закрыть модалку и не открывать её заново
+    if (isIntentionallyCLosingModalRef.current) {
+      console.log('[AdminUsers] In intentional close mode, closing modal')
+      setIsUserViewModalOpen(false)
+      const userIdFromQuery = searchParams?.get('userId')
+      // Сбросить флаг когда userId будет удален из URL
+      if (!userIdFromQuery) {
+        console.log('[AdminUsers] userId removed from URL, resetting intentional close flag')
+        isIntentionallyCLosingModalRef.current = false
+      }
       return
     }
-
-    let cancelled = false
-
-    setUserGamesPreviewState({
-      isLoading: true,
-      error: null,
-      userId: selectedUser.id,
-      games: [],
-      total: Number(selectedUser.gamesCount) || 0,
-    })
-
-    fetchUserGames(selectedUser)
-      .then((games) => {
-        if (cancelled) {
-          return
-        }
-        setUserGamesPreviewState({
-          isLoading: false,
-          error: null,
-          userId: selectedUser.id,
-          games,
-          total: games.length,
-        })
-      })
-      .catch((error) => {
-        if (cancelled) {
-          return
-        }
-        setUserGamesPreviewState({
-          isLoading: false,
-          error: error?.message || 'Не удалось загрузить игры пользователя',
-          userId: selectedUser.id,
-          games: [],
-          total: Number(selectedUser.gamesCount) || 0,
-        })
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [fetchUserGames, isUserViewModalOpen, selectedUser])
-
-  useEffect(() => {
+    
     const userIdFromQuery = searchParams?.get('userId')
+    const wasUserIdInUrl = prevUserIdFromUrlRef.current !== null
+    const isUserIdRemovedFromUrl = wasUserIdInUrl && !userIdFromQuery
+
+    // Обновляем ref для следующего вызова
+    prevUserIdFromUrlRef.current = userIdFromQuery
 
     if (!userIdFromQuery || typeof userIdFromQuery !== 'string') {
+      // Если в процессе намеренного открытия, НЕ закрывать модалку даже если userId нету в URL
+      // (URL скоро обновится с новым userId)
+      if (isIntentionallyOpeningModalRef.current) {
+        console.log('[AdminUsers] In intentional open mode, keeping modal open despite missing userId in URL')
+        return
+      }
+      
+      console.log('[AdminUsers] No userId in URL, closing modal')
       setIsUserViewModalOpen(false)
       return
     }
 
-    const exists = users.some((user) => user.id === userIdFromQuery)
-    if (!exists) {
-      setIsUserViewModalOpen(false)
+    // Если userId появился в URL и мы были в режиме "намеренного открытия", сбросить флаг
+    if (isIntentionallyOpeningModalRef.current) {
+      console.log('[AdminUsers] userId appeared in URL, resetting intentional open flag')
+      isIntentionallyOpeningModalRef.current = false
+    }
+
+    // Если модаль уже открыта с этим пользователем, ничего не меняем
+    if (isUserViewModalOpen && selectedUserId === userIdFromQuery) {
+      console.log('[AdminUsers] Modal already open with correct user, keeping it open')
       return
     }
 
+    // Если пользователь уже выбран но модаль не открыта, открываем
+    if (selectedUserId === userIdFromQuery && !isUserViewModalOpen) {
+      console.log('[AdminUsers] User already selected, opening modal')
+      setIsUserViewModalOpen(true)
+      return
+    }
+
+    // Иначе обновляем выбор и открываем модаль
+    console.log('[AdminUsers] Setting new user and opening modal:', userIdFromQuery)
     setSelectedUserId(userIdFromQuery)
     setIsUserEditModalOpen(false)
     setIsUserViewModalOpen(true)
-  }, [searchParams, users])
+  }, [searchParams, isUserViewModalOpen, selectedUserId])
 
   const isDirty = useMemo(() => {
     if (!selectedUser || !persistedSelectedUser) {
       return false
     }
 
-    const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '')
+    const sanitizeText = (value) =>
+      typeof value === 'string' ? value.trim() : ''
     const sanitizeNullable = (value) => {
       const normalized = sanitizeText(value)
       return normalized.length > 0 ? normalized : null
     }
     const normalizePreferences = (value) =>
       Array.isArray(value)
-        ? Array.from(new Set(value.map((item) => sanitizeText(item)).filter(Boolean))).sort()
+        ? Array.from(
+            new Set(value.map((item) => sanitizeText(item)).filter(Boolean)),
+          ).sort()
         : []
 
-    return JSON.stringify({
-      role: selectedUser.role,
-      name: sanitizeText(selectedUser.name),
-      username: sanitizeNullable(selectedUser.username),
-      photoUrl: sanitizeNullable(selectedUser.photoUrl),
-      currentLocation: sanitizeNullable(selectedUser.currentLocation),
-      about: sanitizeText(selectedUser.about),
-      preferences: normalizePreferences(selectedUser.preferences),
-    }) !== JSON.stringify({
-      role: persistedSelectedUser.role,
-      name: sanitizeText(persistedSelectedUser.name),
-      username: sanitizeNullable(persistedSelectedUser.username),
-      photoUrl: sanitizeNullable(persistedSelectedUser.photoUrl),
-      currentLocation: sanitizeNullable(persistedSelectedUser.currentLocation),
-      about: sanitizeText(persistedSelectedUser.about),
-      preferences: normalizePreferences(persistedSelectedUser.preferences),
-    })
+    return (
+      JSON.stringify({
+        role: selectedUser.role,
+        name: sanitizeText(selectedUser.name),
+        username: sanitizeNullable(selectedUser.username),
+        photoUrl: sanitizeNullable(selectedUser.photoUrl),
+        currentLocation: sanitizeNullable(selectedUser.currentLocation),
+        about: sanitizeText(selectedUser.about),
+        preferences: normalizePreferences(selectedUser.preferences),
+      }) !==
+      JSON.stringify({
+        role: persistedSelectedUser.role,
+        name: sanitizeText(persistedSelectedUser.name),
+        username: sanitizeNullable(persistedSelectedUser.username),
+        photoUrl: sanitizeNullable(persistedSelectedUser.photoUrl),
+        currentLocation: sanitizeNullable(
+          persistedSelectedUser.currentLocation,
+        ),
+        about: sanitizeText(persistedSelectedUser.about),
+        preferences: normalizePreferences(persistedSelectedUser.preferences),
+      })
+    )
   }, [persistedSelectedUser, selectedUser])
 
   const handleEditFieldChange = useCallback(
@@ -798,11 +892,11 @@ const ManageUsersPage = ({
                 ...user,
                 [field]: value,
               }
-            : user
-        )
+            : user,
+        ),
       )
     },
-    [selectedUserId]
+    [selectedUserId],
   )
 
   const handleRoleChange = useCallback(
@@ -814,8 +908,7 @@ const ManageUsersPage = ({
       if (!isDeveloper && role === 'dev') {
         setFeedback({
           type: 'error',
-          message:
-            'Только разработчик может назначать роль «Разработчик».',
+          message: 'Только разработчик может назначать роль «Разработчик».',
         })
         return
       }
@@ -828,11 +921,11 @@ const ManageUsersPage = ({
                 ...user,
                 role,
               }
-            : user
-        )
+            : user,
+        ),
       )
     },
-    [isDeveloper, selectedUserId]
+    [isDeveloper, selectedUserId],
   )
 
   const handleReset = useCallback(() => {
@@ -843,7 +936,9 @@ const ManageUsersPage = ({
     const snapshot = cloneUser(persistedSelectedUser)
 
     setUsers((prevUsers) =>
-      prevUsers.map((user) => (user.id === selectedUserId && snapshot ? snapshot : user))
+      prevUsers.map((user) =>
+        user.id === selectedUserId && snapshot ? snapshot : user,
+      ),
     )
     setFeedback(null)
   }, [persistedSelectedUser, selectedUserId])
@@ -865,8 +960,7 @@ const ManageUsersPage = ({
     if (!isDeveloper && selectedUser.role === 'dev') {
       setFeedback({
         type: 'error',
-        message:
-          'Только разработчик может назначать роль «Разработчик».',
+        message: 'Только разработчик может назначать роль «Разработчик».',
       })
       return
     }
@@ -913,15 +1007,18 @@ const ManageUsersPage = ({
           : [],
       }
 
-      const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/users/${selectedUser.id}`, {
-        method: 'PUT',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
+      const { json } = await requestApiJson(
+        `${CABINET_ADMIN_API_BASE}/users/${selectedUser.id}`,
+        {
+          method: 'PUT',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          fallbackMessage: 'Не удалось сохранить изменения',
         },
-        body: JSON.stringify(payload),
-        fallbackMessage: 'Не удалось сохранить изменения',
-      })
+      )
 
       const updatedDoc = json.data ?? {}
       const baseProfile = normalizeUserProfile(updatedDoc)
@@ -932,15 +1029,22 @@ const ManageUsersPage = ({
           ? String(updatedDoc.telegramId)
           : selectedUser.telegramId,
         role: ensureRole(updatedDoc?.role),
-        createdAt: ensureDateISOString(updatedDoc?.createdAt) ?? selectedUser.createdAt,
-        updatedAt: ensureDateISOString(updatedDoc?.updatedAt) ?? new Date().toISOString(),
+        createdAt:
+          ensureDateISOString(updatedDoc?.createdAt) ?? selectedUser.createdAt,
+        updatedAt:
+          ensureDateISOString(updatedDoc?.updatedAt) ??
+          new Date().toISOString(),
       }
 
       setUsers((prevUsers) =>
-        prevUsers.map((user) => (user.id === selectedUser.id ? updatedUser : user))
+        prevUsers.map((user) =>
+          user.id === selectedUser.id ? updatedUser : user,
+        ),
       )
       setPersistedUsers((prevUsers) =>
-        prevUsers.map((user) => (user.id === selectedUser.id ? cloneUser(updatedUser) : user))
+        prevUsers.map((user) =>
+          user.id === selectedUser.id ? cloneUser(updatedUser) : user,
+        ),
       )
       setFeedback({
         type: 'success',
@@ -996,8 +1100,7 @@ const ManageUsersPage = ({
       setFeedback({
         type: 'error',
         message:
-          error?.message ||
-          'Не удалось отправить запрос номера через Telegram',
+          error?.message || 'Не удалось отправить запрос номера через Telegram',
       })
     } finally {
       setIsRequestingPhone(false)
@@ -1027,9 +1130,12 @@ const ManageUsersPage = ({
       if (locationFilter && locationFilter !== 'all') {
         params.set('location', locationFilter)
       }
-      const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`, {
-        fallbackMessage: 'Не удалось загрузить пользователей',
-      })
+      const { json } = await requestApiJson(
+        `${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`,
+        {
+          fallbackMessage: 'Не удалось загрузить пользователей',
+        },
+      )
 
       const nextUsers = Array.isArray(json?.data) ? json.data : []
       const nextHasMore = Boolean(json?.meta?.hasMore)
@@ -1044,19 +1150,31 @@ const ManageUsersPage = ({
       console.error('Failed to load more users', error)
       setFeedback({
         type: 'error',
-        message: error?.message || 'Не удалось загрузить дополнительных пользователей',
+        message:
+          error?.message || 'Не удалось загрузить дополнительных пользователей',
       })
     } finally {
       setIsLoadingMoreUsers(false)
     }
-  }, [hasMoreUsers, isLoadingMoreUsers, locationFilter, roleFilter, searchQuery, sortBy, users.length])
+  }, [
+    hasMoreUsers,
+    isLoadingMoreUsers,
+    locationFilter,
+    roleFilter,
+    searchQuery,
+    sortBy,
+    users.length,
+  ])
 
   const filterOptions = useMemo(
     () => [
       { value: 'all', name: 'Все роли' },
-      ...roleOptions.map((option) => ({ value: option.value, name: option.name })),
+      ...roleOptions.map((option) => ({
+        value: option.value,
+        name: option.name,
+      })),
     ],
-    [roleOptions]
+    [roleOptions],
   )
   const locationOptions = useMemo(
     () =>
@@ -1072,25 +1190,22 @@ const ManageUsersPage = ({
     [],
   )
   const locationFilterOptions = useMemo(
-    () => [
-      { value: 'all', name: 'Все города' },
-      ...locationOptions,
-    ],
+    () => [{ value: 'all', name: 'Все города' }, ...locationOptions],
     [locationOptions],
   )
 
   if (!isAdmin) {
     return (
       <>
-<CabinetLayout
+        <CabinetLayout
           title="Управление пользователями"
           description="Доступ ограничен: административные права отсутствуют."
           activePage="admin"
         >
           <FormSectionCard>
             <p className="text-sm text-slate-600 dark:text-slate-200">
-              У вас нет доступа к управлению пользователями. Если вы считаете, что это ошибка, обратитесь к
-              главному организатору.
+              У вас нет доступа к управлению пользователями. Если вы считаете,
+              что это ошибка, обратитесь к главному организатору.
             </p>
           </FormSectionCard>
         </CabinetLayout>
@@ -1100,13 +1215,13 @@ const ManageUsersPage = ({
 
   return (
     <>
-<CabinetLayout
+      <CabinetLayout
         title="Управление пользователями"
         description="Просматривайте профили участников, управляйте их ролями и отслеживайте активность."
         activePage="admin"
       >
         <section className="grid gap-6 md:grid-cols-5">
-          <div className="md:col-span-5 space-y-4">
+          <div className="space-y-4 md:col-span-5">
             <FormSectionCard className="p-4 space-y-3">
               <CabinetInputField
                 id="user-search"
@@ -1121,51 +1236,51 @@ const ManageUsersPage = ({
               />
 
               <CabinetSelectField
-                  id="user-role-filter"
-                  label="Роль"
-                  value={roleFilter}
-                  onChange={(event) =>
-                    setRoleFilter(normalizeRoleFilterValue(event.target.value))
-                  }
-                  containerClassName="space-y-1"
-                  labelClassName="text-xs font-semibold text-slate-500"
-                  selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-                >
-                  {filterOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.name}
-                    </option>
-                  ))}
+                id="user-role-filter"
+                label="Роль"
+                value={roleFilter}
+                onChange={(event) =>
+                  setRoleFilter(normalizeRoleFilterValue(event.target.value))
+                }
+                containerClassName="space-y-1"
+                labelClassName="text-xs font-semibold text-slate-500"
+                selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                {filterOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.name}
+                  </option>
+                ))}
               </CabinetSelectField>
 
               <CabinetSelectField
-                  id="user-location-filter"
-                  label="Город"
-                  value={locationFilter}
-                  onChange={(event) => setLocationFilter(event.target.value)}
-                  containerClassName="space-y-1"
-                  labelClassName="text-xs font-semibold text-slate-500"
-                  selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-                >
-                  {locationFilterOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.name}
-                    </option>
-                  ))}
+                id="user-location-filter"
+                label="Город"
+                value={locationFilter}
+                onChange={(event) => setLocationFilter(event.target.value)}
+                containerClassName="space-y-1"
+                labelClassName="text-xs font-semibold text-slate-500"
+                selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                {locationFilterOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.name}
+                  </option>
+                ))}
               </CabinetSelectField>
 
               <CabinetSelectField
-                  id="user-sort"
-                  label="Сортировка"
-                  value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value)}
-                  containerClassName="space-y-1"
-                  labelClassName="text-xs font-semibold text-slate-500"
-                  selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-                >
-                  <option value="rating">По рейтингу</option>
-                  <option value="games_desc">По количеству игр</option>
-                  <option value="registration_desc">По дате регистрации</option>
+                id="user-sort"
+                label="Сортировка"
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value)}
+                containerClassName="space-y-1"
+                labelClassName="text-xs font-semibold text-slate-500"
+                selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                <option value="rating">По рейтингу</option>
+                <option value="games_desc">По количеству игр</option>
+                <option value="registration_desc">По дате регистрации</option>
               </CabinetSelectField>
             </FormSectionCard>
 
@@ -1178,7 +1293,6 @@ const ManageUsersPage = ({
                         <AdminUserCard
                           user={user}
                           onOpenView={handleOpenUserViewModal}
-                          onOpenGames={handleOpenUserGamesModal}
                           onOpenEdit={handleOpenUserEditModal}
                           onOpenPush={handleOpenUserPushModal}
                         />
@@ -1194,12 +1308,10 @@ const ManageUsersPage = ({
                     tone={isLoadingMoreUsers ? 'neutral' : 'cyan'}
                     size="md"
                     className={`w-full ${
-                      isLoadingMoreUsers
-                        ? 'cursor-wait'
-                        : 'cursor-pointer'
+                      isLoadingMoreUsers ? 'cursor-wait' : 'cursor-pointer'
                     }`}
                   >
-                  {isLoadingMoreUsers ? 'Загружаем…' : 'Загрузить ещё'}
+                    {isLoadingMoreUsers ? 'Загружаем…' : 'Загрузить ещё'}
                   </CabinetButton>
                 )}
               </div>
@@ -1209,342 +1321,34 @@ const ManageUsersPage = ({
               </FormSectionCard>
             ) : (
               <FormSectionCard className="p-6 text-sm text-center text-slate-500 dark:text-slate-300">
-                Пользователи не найдены. Измените параметры фильтра или сбросьте поиск.
+                Пользователи не найдены. Измените параметры фильтра или сбросьте
+                поиск.
               </FormSectionCard>
             )}
           </div>
-
         </section>
-        <Modal
-          isOpen={isUserViewModalOpen && Boolean(selectedUser)}
+
+        <UserViewModal
+          userId={selectedUserId}
+          isOpen={isUserViewModalOpen}
           onClose={closeUserViewModal}
-          title={`Пользователь — ${selectedUser?.name || 'Без имени'}`}
-        >
-          {selectedUser ? (
-            <div className="space-y-6">
-              {feedback && (
-                <NoticeBanner
-                  tone={feedback.type === 'success' ? 'success' : 'error'}
-                  variant="neon"
-                >
-                  {feedback.message}
-                </NoticeBanner>
-              )}
+          onOpenTeam={handleOpenUserTeamModal}
+          user={selectedUser}
+        />
 
-              <FormSectionCard className="space-y-6">
-                <div className="flex items-start gap-3">
-                  <img
-                    src={getUserAvatarSrc(selectedUser)}
-                    alt={selectedUser.name || 'Аватар пользователя'}
-                    className="h-[200px] w-[200px] shrink-0 rounded-full border border-slate-200 object-cover dark:border-slate-700"
-                    loading="lazy"
-                  />
-                  <div className="min-w-0">
-                    <h2 className={modalItemTitleClass}>
-                      {selectedUser.name || 'Без имени'}
-                    </h2>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl dark:bg-sky-500/10 dark:border-sky-500/30">
-                    <p className="text-xs text-blue-600 dark:text-sky-300">Команд</p>
-                    <p className="mt-1 text-xl font-semibold text-primary dark:text-sky-100">{selectedUser.teamsCount}</p>
-                  </div>
-                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl dark:bg-emerald-500/10 dark:border-emerald-500/30">
-                    <p className="text-xs text-emerald-600 dark:text-emerald-300">Игры</p>
-                    <p className="mt-1 text-xl font-semibold text-emerald-700 dark:text-emerald-100">{selectedUser.gamesCount}</p>
-                  </div>
-                  <div className="p-4 bg-slate-50 border border-slate-200 dark:bg-slate-800/70 dark:border-slate-700 rounded-xl">
-                    <p className="text-xs text-slate-600 dark:text-slate-300">Последнее обновление</p>
-                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
-                      {selectedUser.updatedAt
-                        ? formatRelativeTimeFromNow(selectedUser.updatedAt)
-                        : 'Неизвестно'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
-                  <p className="text-xs text-amber-700 dark:text-amber-300">Рейтинг пользователя</p>
-                  {selectedUser.rating?.isEligible && Number.isFinite(selectedUser.rating?.rank) ? (
-                    <p className="mt-1 text-sm font-semibold text-amber-800 dark:text-amber-100">
-                      #{selectedUser.rating.rank} · {Number(selectedUser.rating?.finalScore || 0).toFixed(2)}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-sm text-amber-700 dark:text-amber-200">
-                      Недостаточно данных для рейтинга
-                    </p>
-                  )}
-                </div>
-
-              </FormSectionCard>
-
-              <FormSectionCard className="space-y-4">
-                <h3 className={modalSectionTitleClass}>Команды пользователя</h3>
-
-                {selectedUser.teams.length > 0 ? (
-                  <ul className="space-y-3">
-                    {selectedUser.teams.map((team) => (
-                      <li key={team.id}>
-                        <UserTeamCard team={team} onOpen={handleOpenUserTeamModal} />
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-slate-500">
-                    Пользователь ещё не вступил ни в одну команду.
-                  </p>
-                )}
-              </FormSectionCard>
-
-              <FormSectionCard className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className={modalSectionTitleClass}>Игры участия</h3>
-                  <span className="text-xs text-slate-500 dark:text-slate-300">
-                    Сыграно игр: {Number(userGamesPreviewState.total || selectedUser.gamesCount || 0)}
-                  </span>
-                </div>
-
-                {userGamesPreviewState.isLoading ? (
-                  <p className="text-sm text-slate-500">Загружаем игры пользователя...</p>
-                ) : userGamesPreviewState.error ? (
-                  <p className="text-sm text-rose-500">{userGamesPreviewState.error}</p>
-                ) : userGamesPreviewState.games.length > 0 ? (
-                  <>
-                    <ul className="space-y-3">
-                      {userGamesPreviewState.games.slice(0, 3).map((game) => (
-                        <li key={game.id}>
-                          <ParticipationGameCard game={game} onOpen={handleOpenParticipationGame} />
-                        </li>
-                      ))}
-                    </ul>
-                    {userGamesPreviewState.games.length > 3 && (
-                      <div className="flex items-center justify-between gap-3">
-                        <CabinetButton
-                          onClick={() => handleOpenUserGamesModal(selectedUser)}
-                          variant="secondary"
-                          tone="cyan"
-                          size="sm"
-                        >
-                          Посмотреть все
-                        </CabinetButton>
-                        <span className="text-xs text-slate-500 dark:text-slate-300">
-                          Всего: {userGamesPreviewState.games.length}
-                        </span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-slate-500">
-                    У пользователя пока нет игр участия через команды.
-                  </p>
-                )}
-              </FormSectionCard>
-
-              <FormSectionCard className="space-y-4">
-                <h3 className={modalSectionTitleClass}>Дополнительная информация</h3>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <p className="text-xs text-slate-500">Телефон</p>
-                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
-                      {selectedUser.phone || 'Не указан'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Город</p>
-                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
-                      {resolveLocationLabel(selectedUser.currentLocation)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Создан</p>
-                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
-                      {selectedUser.createdAt
-                        ? formatRelativeTimeFromNow(selectedUser.createdAt)
-                        : 'Неизвестно'}
-                    </p>
-                  </div>
-                </div>
-
-                {selectedUser.preferences && selectedUser.preferences.length > 0 && (
-                  <div>
-                    <p className="text-xs text-slate-500">Предпочтения</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {selectedUser.preferences.map((preference) => (
-                        <span
-                          key={preference}
-                          className="px-3 py-1 text-xs font-medium text-primary bg-blue-50 border border-blue-200 rounded-full dark:bg-sky-500/10 dark:border-sky-500/30 dark:text-sky-200"
-                        >
-                          {preference}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <p className="text-xs text-slate-500">О себе</p>
-                  <p className="mt-1 text-sm text-slate-500 whitespace-pre-line">
-                    {selectedUser.about?.trim() || 'Пользователь пока не добавил описание профиля.'}
-                  </p>
-                </div>
-              </FormSectionCard>
-            </div>
-          ) : null}
-        </Modal>
-        <Modal
-          isOpen={isUserEditModalOpen && Boolean(selectedUser)}
+        <UserEditModal
+          userId={selectedUserId}
+          isOpen={isUserEditModalOpen}
           onClose={closeUserEditModal}
-          title={`Редактирование — ${selectedUser?.name || 'Без имени'}`}
-        >
-          {selectedUser ? (
-            <div className="space-y-6">
-              {!location && (
-                <NoticeBanner tone="warning" variant="neon">
-                  Не удалось определить площадку пользователя. Сохранение изменений недоступно.
-                </NoticeBanner>
-              )}
+          onUserUpdated={onUserUpdated}
+          user={selectedUser}
+        />
 
-              {feedback && (
-                <NoticeBanner
-                  tone={feedback.type === 'success' ? 'success' : 'error'}
-                  variant="neon"
-                >
-                  {feedback.message}
-                </NoticeBanner>
-              )}
-
-              <FormSectionCard className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <CabinetInputField
-                    id="user-edit-name"
-                    label="Имя и фамилия"
-                    value={selectedUser.name || ''}
-                    onChange={(event) => handleEditFieldChange('name', event.target.value)}
-                  />
-                  <CabinetInputField
-                    id="user-edit-username"
-                    label="Никнейм в ActQuest"
-                    value={selectedUser.username || ''}
-                    onChange={(event) => handleEditFieldChange('username', event.target.value)}
-                    placeholder="Например, quest_master"
-                  />
-                  <CabinetInputField
-                    id="user-edit-phone"
-                    label="Телефон"
-                    type="tel"
-                    value={formatPhoneInput(selectedUser.phone || '')}
-                    onChange={(event) =>
-                      handleEditFieldChange(
-                        'phone',
-                        formatPhoneInput(event.target.value),
-                      )
-                    }
-                    placeholder="+7"
-                  />
-                </div>
-                <CabinetSelectField
-                  id="user-edit-location"
-                  label="Город пользователя"
-                  value={selectedUser.currentLocation || ''}
-                  onChange={(event) =>
-                    handleEditFieldChange('currentLocation', event.target.value)
-                  }
-                  labelClassName={modalItemSmallTitleClass}
-                  selectClassName="w-full px-4 py-3 text-sm border rounded-xl border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary"
-                >
-                  <option value="">Не указан</option>
-                  {locationOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.name}
-                    </option>
-                  ))}
-                </CabinetSelectField>
-
-                <div>
-                  <label className={modalItemSmallTitleClass}>
-                    Фото профиля
-                  </label>
-                  <ImagesInput
-                    images={selectedUser.photoUrl ? [selectedUser.photoUrl] : []}
-                    onChange={(nextImages) =>
-                      handleEditFieldChange('photoUrl', nextImages?.[0] ?? '')
-                    }
-                    directory="users"
-                    imageName={selectedUser.id || 'user'}
-                    maxImages={1}
-                    previewShape="circle"
-                  />
-                </div>
-
-                <CabinetTextareaField
-                  id="user-edit-about"
-                  label="О себе"
-                  value={selectedUser.about || ''}
-                  onChange={(event) => handleEditFieldChange('about', event.target.value)}
-                  rows={5}
-                  placeholder="Расскажите об опыте, любимых форматах и роли в команде."
-                />
-
-                <CabinetSelectField
-                  id="user-role"
-                  label="Роль в системе"
-                  value={selectedUser.role}
-                  onChange={(event) => handleRoleChange(event.target.value)}
-                  labelClassName={modalItemSmallTitleClass}
-                  selectClassName="w-full px-4 py-3 text-sm border rounded-xl border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary"
-                >
-                  {editRoleOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.name}
-                    </option>
-                  ))}
-                </CabinetSelectField>
-
-                <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                  <CabinetButton
-                    onClick={handleSave}
-                    disabled={!isDirty || isSaving}
-                    variant="primary"
-                    className={isSaving ? 'cursor-wait' : ''}
-                  >
-                    {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
-                  </CabinetButton>
-                  <CabinetButton
-                    onClick={handleReset}
-                    disabled={!isDirty}
-                    variant="secondary"
-                    tone="brand"
-                  >
-                    Отменить
-                  </CabinetButton>
-                  <CabinetButton
-                    onClick={handleRequestPhoneViaTelegram}
-                    disabled={
-                      !location ||
-                      !selectedUser.telegramId ||
-                      isRequestingPhone
-                    }
-                    variant="secondary"
-                    tone="success"
-                    className={isRequestingPhone ? 'cursor-wait' : ''}
-                  >
-                    {isRequestingPhone
-                      ? 'Отправка...'
-                      : 'Запросить номер телефона через Telegram'}
-                  </CabinetButton>
-                </div>
-              </FormSectionCard>
-            </div>
-          ) : null}
-        </Modal>
         <Modal
           isOpen={isUserPushModalOpen && Boolean(selectedUserForPush)}
           onClose={closeUserPushModal}
           title={`Push пользователю — ${selectedUserForPush?.name || 'Без имени'}`}
-          footer={(
+          footer={
             <>
               <CabinetButton
                 type="button"
@@ -1565,7 +1369,7 @@ const ManageUsersPage = ({
                 {isUserPushSubmitting ? 'Отправка…' : 'Отправить'}
               </CabinetButton>
             </>
-          )}
+          }
         >
           <div className="space-y-4">
             <CabinetTextareaField
@@ -1583,9 +1387,8 @@ const ManageUsersPage = ({
             ) : null}
           </div>
         </Modal>
-        <Modal
+        {/* <Modal
           isOpen={isUserGamesModalOpen}
-          onClose={closeUserGamesModal}
           title={`Игры участия — ${userGamesState.userName || 'Пользователь'}`}
         >
           {userGamesState.isLoading ? (
@@ -1611,7 +1414,7 @@ const ManageUsersPage = ({
               У пользователя пока нет игр участия через команды.
             </p>
           )}
-        </Modal>
+        </Modal> */}
         <TeamDescriptionModal
           isOpen={isUserTeamModalOpen}
           onClose={closeUserTeamModal}
@@ -1624,7 +1427,9 @@ const ManageUsersPage = ({
           onClose={() => setIsParticipationGameLoading(false)}
           title="Игра"
         >
-          <p className="text-sm text-slate-500">Загружаем подробности игры...</p>
+          <p className="text-sm text-slate-500">
+            Загружаем подробности игры...
+          </p>
         </Modal>
         <UnifiedGameDescriptionModal
           selectedGame={selectedParticipationGame}
@@ -1633,7 +1438,7 @@ const ManageUsersPage = ({
           canViewRestrictedGameInfo
           canViewGameResults={Boolean(
             selectedParticipationGame?.status === 'closed' ||
-            selectedParticipationGame?.status === 'finished'
+            selectedParticipationGame?.status === 'finished',
           )}
         />
       </CabinetLayout>

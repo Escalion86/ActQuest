@@ -11,7 +11,7 @@ const getTaskBodyHtml = ({ taskTextValue, taskRichValue, format }) => {
     typeof taskRichValue === 'string' &&
     taskRichValue.trim().length > 0
   ) {
-    return sanitize(taskRichValue)
+    return `<blockquote>${sanitize(taskRichValue)}</blockquote>`
   }
 
   return `<blockquote>${linkifyText(taskTextValue)}</blockquote>`
@@ -164,6 +164,8 @@ const taskText = ({
     format,
   })
 
+  const webHiddenCountdown = `<span style="display:none" aria-hidden="true">${countdownValue}</span>`
+
   return `<b>Задание №${taskNum + 1}${
     taskEntry.isBonusTask ? ' (БОНУСНОЕ)' : ''
   }:</b>\n${taskBodyHtml}${cluesText}${
@@ -241,7 +243,11 @@ const taskText = ({
     game.type === 'photo' && photos && photos[taskNum]?.photos?.length > 0
       ? `\n\n<b>Получено фото-ответов</b>: ${photos[taskNum]?.photos.length} шт.`
       : ''
-  }${addingsSummary}\n\n<b>${countdownLabel}</b>: ${countdownValue}${
+  }${addingsSummary}${
+    format === 'web'
+      ? `\n\n${webHiddenCountdown}`
+      : `\n\n<b>${countdownLabel}</b>: ${countdownValue}`
+  }${
     includeActionPrompt ? `\n\n${actionPrompt}` : ''
   }`
 }

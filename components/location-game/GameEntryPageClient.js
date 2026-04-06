@@ -35,6 +35,26 @@ const splitDescription = (value) => {
     .filter(Boolean)
 }
 
+const formatCityName = (locationKey) => {
+  if (!locationKey || typeof locationKey !== 'string') {
+    return 'Не указан'
+  }
+
+  const normalized = locationKey.trim().toLowerCase()
+  if (normalized === 'krsk' || normalized === 'dev') {
+    return 'Красноярск'
+  }
+  if (normalized === 'nrsk') {
+    return 'Норильск'
+  }
+  if (normalized === 'ekb') {
+    return 'Екатеринбург'
+  }
+
+  const safe = locationKey.trim()
+  return safe ? safe.charAt(0).toUpperCase() + safe.slice(1) : 'Не указан'
+}
+
 function GameEntryPage({
   location,
   game,
@@ -118,6 +138,7 @@ function GameEntryPage({
   )
 
   const statusLabel = statusLabels[status] ?? 'Статус неизвестен'
+  const cityName = useMemo(() => formatCityName(location), [location])
   const participantTeam = useMemo(
     () => (participantTeams.length > 0 ? participantTeams[0] : null),
     [participantTeams]
@@ -184,12 +205,6 @@ function GameEntryPage({
                     {statusLabel}
                   </span>
                 </div>
-                <div className="text-sm text-gray-500 dark:text-slate-400">
-                  Локация:{' '}
-                  <span className="font-medium text-gray-700 dark:text-slate-200">
-                    {location}
-                  </span>
-                </div>
                 <TiptapContentView
                   html={descriptionRich}
                   text={descriptionParts.join('\n')}
@@ -198,6 +213,14 @@ function GameEntryPage({
                   emptyText=""
                 />
                 <div className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2 dark:text-slate-300">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
+                      Город
+                    </span>
+                    <span className="font-medium text-gray-800 dark:text-slate-100">
+                      {cityName}
+                    </span>
+                  </div>
                   {plannedStart ? (
                     <div className="flex flex-col">
                       <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
@@ -307,7 +330,7 @@ function GameEntryPage({
                     </div>
                     {canEnterGame ? (
                       <Link
-                        href={`/${location}/game/${game?._id}/${participantTeamId}`}
+                        href={`/game/${game?._id}/process/${participantTeamId}`}
                         className="inline-flex items-center justify-center px-6 py-3 text-sm font-extrabold tracking-wide text-white transition bg-blue-600 rounded-xl hover:bg-blue-700"
                       >
                         ЗАЙТИ В ИГРУ

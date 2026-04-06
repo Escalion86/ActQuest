@@ -9,39 +9,15 @@ import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 import CABINET_ROLE_LABELS from '@helpers/cabinetRoleLabels'
 
 const resolveRatingBadge = (rating) =>
-  rating?.isEligible && Number.isFinite(rating?.rank)
-    ? `#${rating.rank}`
-    : null
+  rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
 
 const isPrivilegedRole = (role) => {
-  const normalizedRole = typeof role === 'string' ? role.trim().toLowerCase() : ''
+  const normalizedRole =
+    typeof role === 'string' ? role.trim().toLowerCase() : ''
   return normalizedRole === 'admin' || normalizedRole === 'dev'
 }
 
-const GamesCardIcon = () => (
-  <svg
-    className="h-4 w-4"
-    viewBox="0 0 20 20"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
-  >
-    <path
-      d="M5 5h10M5 10h10M5 15h10"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-    />
-  </svg>
-)
-
-const AdminUserCard = ({
-  user,
-  onOpenView,
-  onOpenGames,
-  onOpenEdit,
-  onOpenPush,
-}) => (
+const AdminUserCard = ({ user, onOpenView, onOpenEdit, onOpenPush }) => (
   <SelectableCard
     as="button"
     onClick={() => onOpenView(user)}
@@ -82,16 +58,6 @@ const AdminUserCard = ({
             as="span"
             onClick={(event) => {
               event.stopPropagation()
-              onOpenGames(user)
-            }}
-            label="Показать игры участия"
-          >
-            <GamesCardIcon />
-          </CardActionIconButton>
-          <CardActionIconButton
-            as="span"
-            onClick={(event) => {
-              event.stopPropagation()
               onOpenEdit(user)
             }}
             label="Редактировать пользователя"
@@ -124,7 +90,10 @@ const AdminUserCard = ({
       <p>Команды: {Array.isArray(user.teams) ? user.teams.length : 0}</p>
       <p className="mt-1 truncate">
         {Array.isArray(user.teams) && user.teams.length > 0
-          ? user.teams.map((team) => team?.name).filter(Boolean).join(', ')
+          ? user.teams
+              .map((team) => team?.name)
+              .filter(Boolean)
+              .join(', ')
           : '—'}
       </p>
     </div>
@@ -145,11 +114,10 @@ AdminUserCard.propTypes = {
       PropTypes.shape({
         id: PropTypes.string,
         name: PropTypes.string,
-      })
+      }),
     ),
   }).isRequired,
   onOpenView: PropTypes.func.isRequired,
-  onOpenGames: PropTypes.func.isRequired,
   onOpenEdit: PropTypes.func.isRequired,
   onOpenPush: PropTypes.func.isRequired,
 }

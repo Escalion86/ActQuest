@@ -108,7 +108,7 @@ export async function POST() {
         const updatedGame = await Games.findByIdAndUpdate(
           game._id,
           { result: nextResult },
-          { new: true, runValidators: true },
+          { returnDocument: 'after', runValidators: true },
         ).lean()
 
         if (updatedGame) {
@@ -158,3 +158,4 @@ export async function POST() {
     )
   }
 }
+

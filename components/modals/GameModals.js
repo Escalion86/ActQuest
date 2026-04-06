@@ -129,8 +129,10 @@ const GameModals = ({
   handleOpenResultsModal,
   participationSummaryLabel,
   canJoinGameFromDescription,
+  canEnterGameFromDescription,
   canCancelGameRegistrationFromDescription,
   handleJoinGameFromDescription,
+  handleEnterGameFromDescription,
   handleCancelGameRegistrationFromDescription,
   isGameRegistrationSubmittingFromDescription,
   selectedGameModerators,
@@ -382,8 +384,10 @@ const GameModals = ({
       handleOpenResultsModal={handleOpenResultsModal}
       participationSummaryLabel={participationSummaryLabel}
       canJoinGame={canJoinGameFromDescription}
+      canEnterGame={canEnterGameFromDescription}
       canCancelRegistration={canCancelGameRegistrationFromDescription}
       onJoinGame={handleJoinGameFromDescription}
+      onEnterGame={handleEnterGameFromDescription}
       onCancelRegistration={handleCancelGameRegistrationFromDescription}
       isRegistrationSubmitting={isGameRegistrationSubmittingFromDescription}
       taskDurationLabel={taskDurationLabel}
@@ -612,8 +616,10 @@ GameModals.propTypes = {
   handleOpenResultsModal: PropTypes.func.isRequired,
   participationSummaryLabel: PropTypes.string,
   canJoinGameFromDescription: PropTypes.bool,
+  canEnterGameFromDescription: PropTypes.bool,
   canCancelGameRegistrationFromDescription: PropTypes.bool,
   handleJoinGameFromDescription: PropTypes.func,
+  handleEnterGameFromDescription: PropTypes.func,
   handleCancelGameRegistrationFromDescription: PropTypes.func,
   isGameRegistrationSubmittingFromDescription: PropTypes.bool,
   selectedGameModerators: PropTypes.arrayOf(moderatorShape).isRequired,
@@ -668,6 +674,7 @@ GameModals.propTypes = {
     participantsCount: PropTypes.number,
     computed: PropTypes.object,
     interactiveResultsUrl: PropTypes.string,
+    userParticipationTeamIds: PropTypes.arrayOf(PropTypes.string),
   }).isRequired,
 }
 
@@ -689,8 +696,10 @@ GameModals.defaultProps = {
   createGameFeedback: null,
   participationSummaryLabel: '',
   canJoinGameFromDescription: false,
+  canEnterGameFromDescription: false,
   canCancelGameRegistrationFromDescription: false,
   handleJoinGameFromDescription: undefined,
+  handleEnterGameFromDescription: undefined,
   handleCancelGameRegistrationFromDescription: undefined,
   isGameRegistrationSubmittingFromDescription: false,
   editGameLocationOptions: [],

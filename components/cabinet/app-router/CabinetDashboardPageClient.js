@@ -14,6 +14,7 @@ import { toStringId } from '@helpers/idAndDate'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
 import requestApiJson from '@helpers/requestApiJson'
 import resolveEntityRating from '@helpers/resolveEntityRating'
+import { resolveGameEntryHref } from '@helpers/resolveGameEntryHref'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { LOCATIONS } from '@server/serverConstants'
@@ -259,6 +260,10 @@ const CabinetDashboard = ({
           : Array.isArray(source.participantTeams) && source.participantTeams.length > 0,
       hasUpcomingRegistration: Boolean(source.hasUpcomingRegistration),
       profileCompleted: Boolean(source.profileCompleted),
+      inProgressGame:
+        source.inProgressGame && typeof source.inProgressGame === 'object'
+          ? source.inProgressGame
+          : null,
       nearestGame:
         source.nearestGame && typeof source.nearestGame === 'object'
           ? source.nearestGame
@@ -557,6 +562,54 @@ const CabinetDashboard = ({
             </article>
 
             <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+              {dashboardData.inProgressGame ? (
+                <div className="mb-5 rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-500/40 dark:bg-emerald-500/12">
+                  <h3 className="aq-modal-section-title text-base font-semibold text-emerald-700 dark:text-emerald-200">
+                    Игра в процессе
+                  </h3>
+                  <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-100/80">
+                    Вы уже зарегистрированы. Можно сразу перейти к прохождению.
+                  </p>
+                  <div className="mt-3 space-y-3">
+                    <ParticipationGameCard
+                      game={{
+                        id: dashboardData.inProgressGame.id || 'in-progress-game',
+                        name: dashboardData.inProgressGame.name || 'Без названия',
+                        status: dashboardData.inProgressGame.status || 'started',
+                        dateStart: dashboardData.inProgressGame.dateStart || null,
+                        teams: dashboardData.inProgressGame.userTeamName
+                          ? [dashboardData.inProgressGame.userTeamName]
+                          : [],
+                      }}
+                      onOpen={() => {
+                        router.push(
+                          resolveGameEntryHref({
+                            gameId: dashboardData.inProgressGame?.id,
+                            teamId: dashboardData.inProgressGame?.userTeamId,
+                            location:
+                              dashboardData.inProgressGame?.location ||
+                              activeSession?.user?.location ||
+                              '',
+                          }),
+                        )
+                      }}
+                    />
+                    <a
+                      href={resolveGameEntryHref({
+                        gameId: dashboardData.inProgressGame?.id,
+                        teamId: dashboardData.inProgressGame?.userTeamId,
+                        location:
+                          dashboardData.inProgressGame?.location ||
+                          activeSession?.user?.location ||
+                          '',
+                      })}
+                      className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-emerald-500 bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600 dark:border-emerald-400 dark:bg-emerald-500/90 dark:text-emerald-50 dark:hover:bg-emerald-500"
+                    >
+                      Зайти в игру
+                    </a>
+                  </div>
+                </div>
+              ) : null}
               <h3 className="aq-modal-section-title text-base font-semibold">Ближайшая игра</h3>
               {dashboardData.nearestGame ? (
                 <div className="mt-4 space-y-3">
@@ -906,6 +959,15 @@ CabinetDashboard.propTypes = {
     hasTeam: PropTypes.bool,
     hasUpcomingRegistration: PropTypes.bool,
     profileCompleted: PropTypes.bool,
+    inProgressGame: PropTypes.shape({
+      id: PropTypes.string,
+      name: PropTypes.string,
+      status: PropTypes.string,
+      dateStart: PropTypes.string,
+      location: PropTypes.string,
+      userTeamId: PropTypes.string,
+      userTeamName: PropTypes.string,
+    }),
     nearestGame: PropTypes.shape({
       id: PropTypes.string,
       name: PropTypes.string,
@@ -961,6 +1023,7 @@ CabinetDashboard.defaultProps = {
     hasTeam: false,
     hasUpcomingRegistration: false,
     profileCompleted: false,
+    inProgressGame: null,
     nearestGame: null,
     personalProgressGames: [],
     rating: {

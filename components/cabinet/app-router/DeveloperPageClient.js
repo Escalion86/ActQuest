@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetButton from '@components/cabinet/CabinetButton'
@@ -33,6 +34,7 @@ const broadcastLocationOptions = [
 ]
 
 const DeveloperPage = ({ session: initialSession }) => {
+  const router = useRouter()
   const { activeSession } = useMergedSession(initialSession)
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [isClosingFinished, setIsClosingFinished] = useState(false)
@@ -44,12 +46,19 @@ const DeveloperPage = ({ session: initialSession }) => {
   const [broadcastResult, setBroadcastResult] = useState(null)
   const [broadcastError, setBroadcastError] = useState('')
   const [isBroadcasting, setIsBroadcasting] = useState(false)
-  const [isLoadingUsersWithoutPhone, setIsLoadingUsersWithoutPhone] = useState(false)
+  const [isLoadingUsersWithoutPhone, setIsLoadingUsersWithoutPhone] =
+    useState(false)
   const [usersWithoutPhoneResult, setUsersWithoutPhoneResult] = useState(null)
   const [usersWithoutPhoneError, setUsersWithoutPhoneError] = useState('')
   const [requestingPhoneByUserId, setRequestingPhoneByUserId] = useState({})
-  const [requestPhoneFeedbackByUserId, setRequestPhoneFeedbackByUserId] = useState({})
+  const [requestPhoneFeedbackByUserId, setRequestPhoneFeedbackByUserId] =
+    useState({})
   const [error, setError] = useState('')
+
+  // Состояния для режима impersonate
+  const [impersonateUserId, setImpersonateUserId] = useState('')
+  const [impersonateError, setImpersonateError] = useState('')
+  const [isImpersonating, setIsImpersonating] = useState(false)
 
   const handleRecalculate = async () => {
     if (isRecalculating) {
@@ -61,12 +70,15 @@ const DeveloperPage = ({ session: initialSession }) => {
     setResult(null)
 
     try {
-      const response = await fetch(`${CABINET_DEV_API_BASE}/recalculate-ratings`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
+      const response = await fetch(
+        `${CABINET_DEV_API_BASE}/recalculate-ratings`,
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+          },
         },
-      })
+      )
 
       const json = await response.json()
       if (!response.ok || json?.success === false) {
@@ -91,12 +103,15 @@ const DeveloperPage = ({ session: initialSession }) => {
     setCloseFinishedResult(null)
 
     try {
-      const response = await fetch(`${CABINET_DEV_API_BASE}/close-finished-games`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
+      const response = await fetch(
+        `${CABINET_DEV_API_BASE}/close-finished-games`,
+        {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+          },
         },
-      })
+      )
 
       const json = await response.json()
       if (!response.ok || json?.success === false) {
@@ -161,7 +176,9 @@ const DeveloperPage = ({ session: initialSession }) => {
 
       setBroadcastResult(json?.data ?? null)
     } catch (requestError) {
-      setBroadcastError(requestError?.message || 'Не удалось отправить рассылку')
+      setBroadcastError(
+        requestError?.message || 'Не удалось отправить рассылку',
+      )
     } finally {
       setIsBroadcasting(false)
     }
@@ -177,22 +194,28 @@ const DeveloperPage = ({ session: initialSession }) => {
     setUsersWithoutPhoneResult(null)
 
     try {
-      const response = await fetch(`${CABINET_DEV_API_BASE}/users-without-phone`, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
+      const response = await fetch(
+        `${CABINET_DEV_API_BASE}/users-without-phone`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
         },
-      })
+      )
 
       const json = await response.json()
       if (!response.ok || json?.success === false) {
-        throw new Error(json?.error || 'Не удалось проверить пользователей без телефона')
+        throw new Error(
+          json?.error || 'Не удалось проверить пользователей без телефона',
+        )
       }
 
       setUsersWithoutPhoneResult(json?.data ?? null)
     } catch (requestError) {
       setUsersWithoutPhoneError(
-        requestError?.message || 'Не удалось проверить пользователей без телефона'
+        requestError?.message ||
+          'Не удалось проверить пользователей без телефона',
       )
     } finally {
       setIsLoadingUsersWithoutPhone(false)
@@ -247,10 +270,95 @@ const DeveloperPage = ({ session: initialSession }) => {
     }
   }
 
-  if (!isDeveloperRole(activeSession?.user?.role)) {
+  // Функция для входа в режим impersonate
+  const handleImpersonate = async () => {
+    const userId = impersonateUserId.trim()
+    if (!userId) {
+      setImpersonateError('Введите ID пользователя')
+      return
+    }
+
+    if (isImpersonating) {
+      return
+    }
+
+    setIsImpersonating(true)
+    setImpersonateError('')
+
+    try {
+      const response = await fetch(`${CABINET_DEV_API_BASE}/impersonate-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      })
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(
+          json?.error || 'Не удалось переключиться на пользователя',
+        )
+      }
+
+      // Подождать, чтобы куки установилась на сервере
+      await new Promise((resolve) => setTimeout(resolve, 800))
+
+      // Перенаправить на страницу профиля целевого пользователя
+      router.push('/cabinet/profile')
+    } catch (requestError) {
+      setImpersonateError(
+        requestError?.message || 'Ошибка переключения пользователя',
+      )
+    } finally {
+      setIsImpersonating(false)
+    }
+  }
+
+  // Функция для выхода из режима impersonate
+  const handleCancelImpersonate = async () => {
+    if (isImpersonating) {
+      return
+    }
+
+    setIsImpersonating(true)
+    setImpersonateError('')
+
+    try {
+      const response = await fetch(`${CABINET_DEV_API_BASE}/impersonate-user`, {
+        method: 'DELETE',
+        headers: {
+          Accept: 'application/json',
+        },
+      })
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(json?.error || 'Не удалось выйти из режима просмотра')
+      }
+
+      // Подождать, чтобы куки удалилась на сервере
+      await new Promise((resolve) => setTimeout(resolve, 800))
+
+      // Перенаправить на страницу профиля
+      router.push('/cabinet/profile')
+    } catch (requestError) {
+      setImpersonateError(
+        requestError?.message || 'Ошибка выхода из режима просмотра',
+      )
+    } finally {
+      setIsImpersonating(false)
+    }
+  }
+
+  // Использовать сессию как есть
+  const displaySession = activeSession
+
+  if (!isDeveloperRole(displaySession?.user?.role)) {
     return (
       <>
-<CabinetLayout
+        <CabinetLayout
           title="Разработчик"
           description="Доступ только для разработчика."
           activePage="developer"
@@ -267,18 +375,101 @@ const DeveloperPage = ({ session: initialSession }) => {
 
   return (
     <>
-<CabinetLayout
+      <CabinetLayout
         title="Разработчик"
         description="Сервисные операции для полного обслуживания системы."
         activePage="developer"
       >
+        {/* Баннер режима impersonate */}
+        {displaySession?.user?.isDeveloperImpersonating ? (
+          <div className="mb-6 rounded-2xl border border-amber-300/70 bg-amber-50 p-6 dark:border-amber-500/50 dark:bg-amber-500/10">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="font-semibold text-amber-900 dark:text-amber-200">
+                  ⚠️ Режим просмотра кабинета другого пользователя
+                </h4>
+                <p className="mt-2 text-sm text-amber-800 dark:text-amber-300">
+                  Вы просматриваете кабинет пользователя:{' '}
+                  <strong>
+                    {displaySession?.user?.name ||
+                      displaySession?.user?.username ||
+                      'Unknown'}
+                  </strong>
+                </p>
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                  User ID: {displaySession?.user?.globalUserId}
+                </p>
+              </div>
+              <CabinetButton
+                size="sm"
+                variant="secondary"
+                tone="neutral"
+                onClick={handleCancelImpersonate}
+                disabled={isImpersonating}
+              >
+                {isImpersonating ? 'Выход...' : 'Выход из режима'}
+              </CabinetButton>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Секция для выбора пользователя */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Просмотр кабинета пользователя
+          </h3>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Выберите пользователя и посмотрите, как выглядит его кабинет. Это
+            полезно для отладки и проверки правильности отображения информации.
+          </p>
+
+          {!displaySession?.user?.isDeveloperImpersonating ? (
+            <div className="mt-4 space-y-3">
+              <div>
+                <label
+                  htmlFor="impersonate-user-id"
+                  className="text-sm font-semibold text-slate-700 dark:text-slate-100"
+                >
+                  ID пользователя
+                </label>
+                <input
+                  id="impersonate-user-id"
+                  type="text"
+                  placeholder="Введите MongoDB ID пользователя..."
+                  value={impersonateUserId}
+                  onChange={(e) => setImpersonateUserId(e.target.value)}
+                  disabled={isImpersonating}
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
+                />
+              </div>
+
+              {impersonateError ? (
+                <p className="rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+                  {impersonateError}
+                </p>
+              ) : null}
+
+              <div>
+                <CabinetButton
+                  onClick={handleImpersonate}
+                  variant="primary"
+                  tone="cyan"
+                  disabled={isImpersonating || !impersonateUserId.trim()}
+                >
+                  {isImpersonating ? 'Переключаемся...' : 'Посмотреть кабинет'}
+                </CabinetButton>
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             Полный пересчёт рейтингов
           </h3>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Пересчитывает рейтинг всех игроков и команд по всем завершённым и закрытым рейтинговым играм,
-            затем обновляет данные в базе.
+            Пересчитывает рейтинг всех игроков и команд по всем завершённым и
+            закрытым рейтинговым играм, затем обновляет данные в базе.
           </p>
           <div className="mt-4">
             <CabinetButton
@@ -287,7 +478,9 @@ const DeveloperPage = ({ session: initialSession }) => {
               tone="brand"
               disabled={isRecalculating}
             >
-              {isRecalculating ? 'Выполняется пересчёт...' : 'Пересчитать рейтинг игроков и команд'}
+              {isRecalculating
+                ? 'Выполняется пересчёт...'
+                : 'Пересчитать рейтинг игроков и команд'}
             </CabinetButton>
           </div>
 
@@ -300,13 +493,31 @@ const DeveloperPage = ({ session: initialSession }) => {
           {result ? (
             <div className="mt-4 rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-200">
               <p>Пересчёт завершён.</p>
-              <p className="mt-1">Игр обработано: {result.gamesProcessed ?? 0}</p>
-              <p className="mt-1">Игры с достроенным результатом: {result.gamesWithRebuiltResults ?? 0}</p>
-              <p className="mt-1">Пропущено без snapshot: {result.gamesSkippedNoSnapshots ?? 0}</p>
-              <p className="mt-1">Операций обновления gameStats игроков: {result.usersStatsUpdatedOperations ?? 0}</p>
-              <p className="mt-1">Операций обновления gameStats команд: {result.teamsStatsUpdatedOperations ?? 0}</p>
-              <p className="mt-1">Операций обновления игроков: {result.usersUpdatedOperations ?? 0}</p>
-              <p className="mt-1">Операций обновления команд: {result.teamsUpdatedOperations ?? 0}</p>
+              <p className="mt-1">
+                Игр обработано: {result.gamesProcessed ?? 0}
+              </p>
+              <p className="mt-1">
+                Игры с достроенным результатом:{' '}
+                {result.gamesWithRebuiltResults ?? 0}
+              </p>
+              <p className="mt-1">
+                Пропущено без snapshot: {result.gamesSkippedNoSnapshots ?? 0}
+              </p>
+              <p className="mt-1">
+                Операций обновления gameStats игроков:{' '}
+                {result.usersStatsUpdatedOperations ?? 0}
+              </p>
+              <p className="mt-1">
+                Операций обновления gameStats команд:{' '}
+                {result.teamsStatsUpdatedOperations ?? 0}
+              </p>
+              <p className="mt-1">
+                Операций обновления игроков:{' '}
+                {result.usersUpdatedOperations ?? 0}
+              </p>
+              <p className="mt-1">
+                Операций обновления команд: {result.teamsUpdatedOperations ?? 0}
+              </p>
             </div>
           ) : null}
         </section>
@@ -339,7 +550,10 @@ const DeveloperPage = ({ session: initialSession }) => {
 
           {usersWithoutPhoneResult ? (
             <div className="mt-4 rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-200">
-              <p>Найдено пользователей без телефона: {usersWithoutPhoneResult.usersCount ?? 0}</p>
+              <p>
+                Найдено пользователей без телефона:{' '}
+                {usersWithoutPhoneResult.usersCount ?? 0}
+              </p>
 
               {Array.isArray(usersWithoutPhoneResult.users) &&
               usersWithoutPhoneResult.users.length > 0 ? (
@@ -350,18 +564,24 @@ const DeveloperPage = ({ session: initialSession }) => {
                       className="rounded-lg border border-emerald-300/70 bg-white/80 px-3 py-2 text-xs text-slate-700 dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-slate-200"
                     >
                       <p className="font-semibold">
-                        {user.name || 'Без имени'} {user.username ? `(@${user.username})` : ''}
+                        {user.name || 'Без имени'}{' '}
+                        {user.username ? `(@${user.username})` : ''}
                       </p>
                       <p className="mt-1">
-                        Telegram ID: {user.telegramId ?? '—'} · Роль: {user.role || 'client'} ·
-                        Город: {user.accountLocation || '—'}
+                        Telegram ID: {user.telegramId ?? '—'} · Роль:{' '}
+                        {user.role || 'client'} · Город:{' '}
+                        {user.accountLocation || '—'}
                       </p>
                       <div className="mt-2 flex items-center gap-2">
                         <CabinetButton
                           size="sm"
                           variant="secondary"
                           tone="cyan"
-                          disabled={!user.id || !user.telegramId || requestingPhoneByUserId[user.id]}
+                          disabled={
+                            !user.id ||
+                            !user.telegramId ||
+                            requestingPhoneByUserId[user.id]
+                          }
                           onClick={() => handleRequestPhoneForUser(user.id)}
                         >
                           {requestingPhoneByUserId[user.id]
@@ -378,7 +598,9 @@ const DeveloperPage = ({ session: initialSession }) => {
                   ))}
                 </div>
               ) : (
-                <p className="mt-2 text-xs">Все проверенные пользователи имеют телефон.</p>
+                <p className="mt-2 text-xs">
+                  Все проверенные пользователи имеют телефон.
+                </p>
               )}
             </div>
           ) : null}
@@ -389,7 +611,8 @@ const DeveloperPage = ({ session: initialSession }) => {
             Закрытие всех завершённых игр
           </h3>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Принудительно переводит все игры со статусом <code>finished</code> в <code>closed</code>.
+            Принудительно переводит все игры со статусом <code>finished</code> в{' '}
+            <code>closed</code>.
           </p>
           <div className="mt-4">
             <CabinetButton
@@ -398,20 +621,41 @@ const DeveloperPage = ({ session: initialSession }) => {
               tone="danger"
               disabled={isClosingFinished}
             >
-              {isClosingFinished ? 'Закрываем игры...' : 'Закрыть завершенные игры'}
+              {isClosingFinished
+                ? 'Закрываем игры...'
+                : 'Закрыть завершенные игры'}
             </CabinetButton>
           </div>
 
           {closeFinishedResult ? (
             <div className="mt-4 rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-200">
               <p>Операция завершена.</p>
-              <p className="mt-1">Найдено игр в статусе finished: {closeFinishedResult.finishedGamesFound ?? 0}</p>
-              <p className="mt-1">Переведено в closed: {closeFinishedResult.gamesClosed ?? 0}</p>
-              <p className="mt-1">С достроенным результатом: {closeFinishedResult.gamesWithRebuiltResults ?? 0}</p>
-              <p className="mt-1">Без snapshot: {closeFinishedResult.gamesWithoutSnapshots ?? 0}</p>
-              <p className="mt-1">Пропущено в пересчёте метрик: {closeFinishedResult.gamesSkippedMetrics ?? 0}</p>
-              <p className="mt-1">Операций обновления игроков: {closeFinishedResult.usersUpdatedOperations ?? 0}</p>
-              <p className="mt-1">Операций обновления команд: {closeFinishedResult.teamsUpdatedOperations ?? 0}</p>
+              <p className="mt-1">
+                Найдено игр в статусе finished:{' '}
+                {closeFinishedResult.finishedGamesFound ?? 0}
+              </p>
+              <p className="mt-1">
+                Переведено в closed: {closeFinishedResult.gamesClosed ?? 0}
+              </p>
+              <p className="mt-1">
+                С достроенным результатом:{' '}
+                {closeFinishedResult.gamesWithRebuiltResults ?? 0}
+              </p>
+              <p className="mt-1">
+                Без snapshot: {closeFinishedResult.gamesWithoutSnapshots ?? 0}
+              </p>
+              <p className="mt-1">
+                Пропущено в пересчёте метрик:{' '}
+                {closeFinishedResult.gamesSkippedMetrics ?? 0}
+              </p>
+              <p className="mt-1">
+                Операций обновления игроков:{' '}
+                {closeFinishedResult.usersUpdatedOperations ?? 0}
+              </p>
+              <p className="mt-1">
+                Операций обновления команд:{' '}
+                {closeFinishedResult.teamsUpdatedOperations ?? 0}
+              </p>
             </div>
           ) : null}
         </section>
@@ -421,8 +665,8 @@ const DeveloperPage = ({ session: initialSession }) => {
             Рассылка подписчикам Telegram-ботов
           </h3>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Отправляет текстовое сообщение пользователям, подписанным на выбранный город-бот,
-            либо сразу во все города.
+            Отправляет текстовое сообщение пользователям, подписанным на
+            выбранный город-бот, либо сразу во все города.
           </p>
           <div className="mt-4">
             <CabinetButton
@@ -510,18 +754,38 @@ const DeveloperPage = ({ session: initialSession }) => {
             {broadcastResult ? (
               <div className="rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-200">
                 <p>Рассылка завершена.</p>
-                <p className="mt-1">Локация: {broadcastResult.requestedLocation || 'all'}</p>
-                <p className="mt-1">Найдено получателей по данным игр и команд выбранного города: {broadcastResult.usersMatched ?? 0}</p>
-                <p className="mt-1">Уникальных получателей: {broadcastResult.uniqueRecipients ?? 0}</p>
-                <p className="mt-1">Пропущено без Telegram ID: {broadcastResult.skippedNoTelegram ?? 0}</p>
-                <p className="mt-1">Пропущено без привязки к боту: {broadcastResult.skippedNoLocation ?? 0}</p>
-                <p className="mt-1">Успешно отправлено: {broadcastResult.sent ?? 0}</p>
-                <p className="mt-1">Ошибок отправки: {broadcastResult.failed ?? 0}</p>
+                <p className="mt-1">
+                  Локация: {broadcastResult.requestedLocation || 'all'}
+                </p>
+                <p className="mt-1">
+                  Найдено получателей по данным игр и команд выбранного города:{' '}
+                  {broadcastResult.usersMatched ?? 0}
+                </p>
+                <p className="mt-1">
+                  Уникальных получателей:{' '}
+                  {broadcastResult.uniqueRecipients ?? 0}
+                </p>
+                <p className="mt-1">
+                  Пропущено без Telegram ID:{' '}
+                  {broadcastResult.skippedNoTelegram ?? 0}
+                </p>
+                <p className="mt-1">
+                  Пропущено без привязки к боту:{' '}
+                  {broadcastResult.skippedNoLocation ?? 0}
+                </p>
+                <p className="mt-1">
+                  Успешно отправлено: {broadcastResult.sent ?? 0}
+                </p>
+                <p className="mt-1">
+                  Ошибок отправки: {broadcastResult.failed ?? 0}
+                </p>
 
                 {Array.isArray(broadcastResult.sentTelegramIds) &&
                 broadcastResult.sentTelegramIds.length > 0 ? (
                   <div className="mt-3 rounded-lg border border-emerald-300/70 bg-white/80 p-3 text-xs text-slate-700 dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-slate-200">
-                    <p className="font-semibold">Telegram ID получателей (успешно):</p>
+                    <p className="font-semibold">
+                      Telegram ID получателей (успешно):
+                    </p>
                     <div className="mt-2 max-h-24 overflow-y-auto break-all">
                       {broadcastResult.sentTelegramIds.join(', ')}
                     </div>
@@ -537,4 +801,3 @@ const DeveloperPage = ({ session: initialSession }) => {
 }
 
 export default DeveloperPage
-

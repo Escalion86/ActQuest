@@ -122,6 +122,27 @@ const GameResultsModal = ({
           finalDisplay: null,
         }))
 
+  const userParticipationTeamIds = useMemo(
+    () =>
+      new Set(
+        (Array.isArray(resultsModalState?.userParticipationTeamIds)
+          ? resultsModalState.userParticipationTeamIds
+          : []
+        )
+          .map((item) => String(item || '').trim())
+          .filter(Boolean),
+      ),
+    [resultsModalState?.userParticipationTeamIds],
+  )
+
+  const hasCurrentUserTeamInTable = useMemo(
+    () =>
+      rankingRows.some((row) =>
+        userParticipationTeamIds.has(String(row.teamId || '').trim()),
+      ),
+    [rankingRows, userParticipationTeamIds],
+  )
+
   const teamsWithAdjustments =
     computedTeams.length > 0
       ? computedTeams.filter((team) => Array.isArray(team?.addings) && team.addings.length > 0)
@@ -281,7 +302,20 @@ const GameResultsModal = ({
                           <td className="px-3 py-2 text-slate-700 dark:text-slate-200">
                             {Number.isFinite(Number(row.place)) ? row.place : '—'}
                           </td>
-                          <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{row.teamName}</td>
+                          <td className="px-3 py-2 text-slate-700 dark:text-slate-200">
+                            {userParticipationTeamIds.has(
+                              String(row.teamId || '').trim(),
+                            ) ? (
+                              <span
+                                className="mr-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-cyan-300 bg-cyan-50 text-[10px] font-bold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200"
+                                title="Команда, в которой вы участвовали"
+                                aria-label="Ваша команда"
+                              >
+                                ●
+                              </span>
+                            ) : null}
+                            {row.teamName}
+                          </td>
                           <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{row.baseDisplay || '—'}</td>
                           <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{row.finalDisplay || '—'}</td>
                         </tr>
@@ -294,6 +328,17 @@ const GameResultsModal = ({
                   Для этой игры пока нет сформированных результатов.
                 </p>
               )}
+              {hasCurrentUserTeamInTable ? (
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-300">
+                  <span
+                    className="mr-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-cyan-300 bg-cyan-50 text-[10px] font-bold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200"
+                    aria-hidden="true"
+                  >
+                    ●
+                  </span>
+                  Команда, в которой вы участвовали.
+                </p>
+              ) : null}
             </ModalSection>
 
             {highlights && (
@@ -522,6 +567,7 @@ GameResultsModal.propTypes = {
     participantsCount: PropTypes.number,
     computed: PropTypes.object,
     interactiveResultsUrl: PropTypes.oneOfType([PropTypes.string, PropTypes.oneOf([null])]),
+    userParticipationTeamIds: PropTypes.arrayOf(PropTypes.string),
   }).isRequired,
 }
 

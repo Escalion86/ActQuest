@@ -44,6 +44,14 @@ const mergeSessions = (initialSession, session) => {
         session?.user?.photoUrl,
         initialSession?.user?.photoUrl,
       ),
+      isDeveloperImpersonating:
+        session?.user?.isDeveloperImpersonating ??
+        initialSession?.user?.isDeveloperImpersonating ??
+        false,
+      developerUserId:
+        session?.user?.developerUserId ??
+        initialSession?.user?.developerUserId ??
+        null,
     },
   }
 }
@@ -53,7 +61,7 @@ const useMergedSession = (initialSession = null) => {
 
   const activeSession = useMemo(
     () => mergeSessions(initialSession, session),
-    [initialSession, session]
+    [initialSession, session],
   )
 
   return {

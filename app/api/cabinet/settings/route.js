@@ -135,7 +135,7 @@ export async function PUT(request) {
       ? await SiteSettingsModel.findByIdAndUpdate(
           existing._id,
           { $set: payload },
-          { new: true },
+          { returnDocument: 'after' },
         ).lean()
       : await SiteSettingsModel.create(payload)
 
@@ -151,3 +151,4 @@ export async function PUT(request) {
     )
   }
 }
+

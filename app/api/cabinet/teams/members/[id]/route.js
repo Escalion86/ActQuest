@@ -236,7 +236,7 @@ export async function PUT(request, { params }) {
     const updated = await TeamsUsersModel.findByIdAndUpdate(
       membershipId,
       { $set: { role: nextRole } },
-      { new: true },
+      { returnDocument: 'after' },
     )
       .select({ _id: 1, teamId: 1, role: 1, userId: 1, userTelegramId: 1 })
       .lean()
@@ -250,3 +250,4 @@ export async function PUT(request, { params }) {
     )
   }
 }
+

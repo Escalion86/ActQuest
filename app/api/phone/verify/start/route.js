@@ -165,7 +165,7 @@ export async function POST(request) {
       },
       {
         upsert: true,
-        new: true,
+        returnDocument: 'after',
         setDefaultsOnInsert: true,
       },
     )
@@ -191,3 +191,4 @@ export async function POST(request) {
     )
   }
 }
+

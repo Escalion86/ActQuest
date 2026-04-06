@@ -209,7 +209,7 @@ export async function PUT(request, { params }) {
           ...(shouldUpdateLocation ? { location: normalizedLocation } : {}),
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     )
       .select({
         _id: 1,
@@ -425,3 +425,4 @@ export async function DELETE(request, { params }) {
     )
   }
 }
+

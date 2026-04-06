@@ -95,7 +95,7 @@ export async function PUT(request) {
 
     const updatedUser = await globalDb
       .model('Users')
-      .findOneAndUpdate(filter, { $set: payload }, { new: true })
+      .findOneAndUpdate(filter, { $set: payload }, { returnDocument: 'after' })
       .lean()
 
     if (!updatedUser) {
@@ -123,3 +123,4 @@ export async function PUT(request) {
     )
   }
 }
+

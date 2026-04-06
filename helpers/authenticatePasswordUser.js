@@ -104,7 +104,7 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
 
     const refreshedUser = await globalDb
       .model('Users')
-      .findByIdAndUpdate(user._id, { $set: updates }, { new: true })
+      .findByIdAndUpdate(user._id, { $set: updates }, { returnDocument: 'after' })
       .lean()
 
     await syncLegacyUserByLocation({
@@ -145,3 +145,4 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
 }
 
 export default authenticatePasswordUser
+

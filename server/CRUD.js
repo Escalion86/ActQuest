@@ -338,7 +338,7 @@ export default async function handler(Schema, req, res, params = null) {
           }
 
           data = await db.model(Schema).findByIdAndUpdate(id, payload, {
-            new: true,
+            returnDocument: 'after',
             runValidators: true,
           })
 
@@ -560,3 +560,4 @@ export default async function handler(Schema, req, res, params = null) {
       break
   }
 }
+

@@ -34,13 +34,9 @@ export async function GET(request) {
       throw new Error('Не удалось подключиться к базе данных')
     }
 
-    const location =
-      typeof session?.user?.location === 'string' ? session.user.location : null
-
     const teams = await fetchTeamsForCabinet({
       db,
       teamIds: [teamId],
-      location,
       sortBy: 'registration_desc',
       limit: 1,
       offset: 0,

@@ -168,6 +168,23 @@ const areTaskPayloadsEqual = (prev, next) =>
   prev.result === next.result &&
   prev.postCompletionMessage === next.postCompletionMessage
 
+const stripPhotoOnlySectionsForClassic = (html, gameType) => {
+  if (typeof html !== 'string' || !html) {
+    return ''
+  }
+
+  if (String(gameType || '').trim().toLowerCase() === 'photo') {
+    return html
+  }
+
+  return html
+    .replace(
+      /\n*<b>За выполнение основного задания<\/b>:[\s\S]*?(?=\n\n<b>|$)/gi,
+      ''
+    )
+    .replace(/\n*<b>Доп\. задания<\/b>:[\s\S]*?(?=\n\n<b>|$)/gi, '')
+}
+
 const resolveThemePreference = () => {
   if (typeof window === 'undefined') {
     return 'light'
@@ -237,6 +254,7 @@ function GameTeamPage({
   )
   const [isTaskRefreshing, setIsTaskRefreshing] = useState(false)
   const [taskRefreshError, setTaskRefreshError] = useState(null)
+  const [countdownPanel, setCountdownPanel] = useState(null)
   const [
     shouldClearMessagesForActiveTask,
     setShouldClearMessagesForActiveTask,
@@ -352,7 +370,7 @@ function GameTeamPage({
     if (!shouldClearMessageParam) return
     if (hasClearedMessageRef.current) return
 
-    const cleanPath = `/${location}/game/${gameId}/${teamId}`
+    const cleanPath = `/game/${gameId}/process/${teamId}`
     hasClearedMessageRef.current = true
     router.replace(cleanPath, { scroll: false })
   }, [
@@ -450,7 +468,7 @@ function GameTeamPage({
   )
 
   const handleLeaveGame = useCallback(() => {
-    router.push(`/${location}/game/${gameId}`)
+    router.push(`/game/${gameId}`)
   }, [gameId, location, router])
 
   const handleSubmit = async (event) => {
@@ -462,7 +480,7 @@ function GameTeamPage({
     try {
       hasClearedMessageRef.current = false
       await router.push(
-        `/${location}/game/${gameId}/${teamId}?message=${encodeURIComponent(trimmedAnswer)}`,
+        `/game/${gameId}/process/${teamId}?message=${encodeURIComponent(trimmedAnswer)}`,
       )
     } finally {
       setIsSubmitting(false)
@@ -496,10 +514,19 @@ function GameTeamPage({
     [game?.dateEndFact, isGameFinished, locationTimeZone]
   )
   const cityName = useMemo(() => formatCityName(location), [location])
+  const gameTypeLabel = useMemo(() => {
+    const typeValue = String(game?.type || '')
+      .trim()
+      .toLowerCase()
+    return typeValue === 'photo' ? 'Фотоквест' : 'Автоквест'
+  }, [game?.type])
 
   const formattedTaskMessage = useMemo(
-    () => transformHtml(currentTaskHtml ?? ''),
-    [currentTaskHtml]
+    () =>
+      transformHtml(
+        stripPhotoOnlySectionsForClassic(currentTaskHtml ?? '', game?.type),
+      ),
+    [currentTaskHtml, game?.type]
   )
   const normalizedTaskMessage = useMemo(
     () => normalizeForComparison(currentTaskHtml),
@@ -675,7 +702,10 @@ function GameTeamPage({
       container.querySelectorAll('[data-task-countdown]')
     )
 
-    if (nodes.length === 0) return
+    if (nodes.length === 0) {
+      setCountdownPanel(null)
+      return
+    }
 
     let countdowns = nodes.map((element) => {
       const targetAttr = element.getAttribute('data-target')
@@ -695,6 +725,7 @@ function GameTeamPage({
 
     const updateCountdowns = () => {
       const now = Date.now()
+      let panelState = null
 
       countdowns = countdowns.map((item) => {
         const { element, target, initialSeconds, startTimestamp } = item
@@ -714,6 +745,25 @@ function GameTeamPage({
 
         element.textContent = formatCountdownSeconds(remainingSeconds)
 
+        if (!panelState) {
+          const countdownType = String(
+            element.getAttribute('data-task-countdown') || ''
+          )
+            .trim()
+            .toLowerCase()
+          const label =
+            countdownType === 'hint'
+              ? 'До следующей подсказки'
+              : countdownType === 'break'
+                ? 'До окончания перерыва'
+                : 'До завершения задания'
+
+          panelState = {
+            label,
+            value: formatCountdownSeconds(remainingSeconds),
+          }
+        }
+
         if (item.refreshOnComplete && remainingSeconds <= 0) {
           const lastRefreshAt = refreshRequestedRef.current || 0
           const MIN_REFRESH_INTERVAL = 3000
@@ -729,7 +779,7 @@ function GameTeamPage({
                 const fallbackPath =
                   pathname && pathname.length > 0
                     ? pathname
-                    : `/${location}/game/${gameId}/${teamId}`
+                    : `/game/${gameId}/process/${teamId}`
                 router.replace(fallbackPath, { scroll: false })
               }
             }
@@ -745,6 +795,18 @@ function GameTeamPage({
             : now,
         }
       })
+
+      setCountdownPanel((prev) => {
+        if (!panelState) return null
+        if (
+          prev &&
+          prev.label === panelState.label &&
+          prev.value === panelState.value
+        ) {
+          return prev
+        }
+        return panelState
+      })
     }
 
     updateCountdowns()
@@ -753,7 +815,16 @@ function GameTeamPage({
     return () => {
       window.clearInterval(intervalId)
     }
-  }, [formattedTaskMessage, handleTaskRefresh, isClient, router, pathname, location, gameId, teamId])
+  }, [
+    formattedTaskMessage,
+    handleTaskRefresh,
+    isClient,
+    router,
+    pathname,
+    location,
+    gameId,
+    teamId,
+  ])
 
   return (
     <>
@@ -829,6 +900,14 @@ function GameTeamPage({
                           </span>
                           <span className="font-medium text-gray-800 dark:text-slate-100">
                             {team?.name || 'Команда без названия'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
+                            Тип квеста
+                          </span>
+                          <span className="font-medium text-gray-800 dark:text-slate-100">
+                            {gameTypeLabel}
                           </span>
                         </div>
                         {plannedStart ? (
@@ -999,13 +1078,21 @@ function GameTeamPage({
                     />
                   </button>
                 </div>
+                {countdownPanel ? (
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-3 py-1.5 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-100">
+                    <span>{countdownPanel.label}:</span>
+                    <span className="font-mono tracking-wide">
+                      {countdownPanel.value}
+                    </span>
+                  </div>
+                ) : null}
                 {taskRefreshError ? (
                   <p className="mt-3 text-sm text-red-600 dark:text-red-300">
                     {taskRefreshError}
                   </p>
                 ) : null}
                 <div
-                  className="mt-4 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200 aq-task-content"
+                  className="mt-4 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200 aq-task-content [&_blockquote]:mt-3 [&_blockquote]:rounded-2xl [&_blockquote]:border [&_blockquote]:border-cyan-300/70 [&_blockquote]:bg-cyan-50/80 [&_blockquote]:px-4 [&_blockquote]:py-3 [&_blockquote]:text-gray-800 dark:[&_blockquote]:border-cyan-500/40 dark:[&_blockquote]:bg-slate-800/80 dark:[&_blockquote]:text-slate-100"
                   ref={taskContentRef}
                   dangerouslySetInnerHTML={{ __html: formattedTaskMessage }}
                 />
@@ -1021,7 +1108,7 @@ function GameTeamPage({
                   {displayedResultMessages.map((html, index) => (
                     <div
                       key={`result-message-${index}`}
-                      className="text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200 aq-task-content"
+                      className="rounded-2xl border border-violet-300/60 bg-violet-50/75 px-4 py-3 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:border-violet-500/35 dark:bg-violet-500/12 dark:text-slate-200 aq-task-content [&_blockquote]:mt-2 [&_blockquote]:rounded-2xl [&_blockquote]:border [&_blockquote]:border-violet-300/70 [&_blockquote]:bg-violet-50/90 [&_blockquote]:px-3 [&_blockquote]:py-2 dark:[&_blockquote]:border-violet-500/35 dark:[&_blockquote]:bg-slate-800/70"
                       dangerouslySetInnerHTML={{ __html: html }}
                     />
                   ))}

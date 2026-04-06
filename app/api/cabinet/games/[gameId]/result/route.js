@@ -100,13 +100,7 @@ const resolveInteractiveResultsUrl = ({ gameId, game, result }) => {
     return explicitUrl.trim()
   }
 
-  const gameLocation =
-    typeof game?.location === 'string' ? game.location.trim().toLowerCase() : ''
-  if (!gameLocation) {
-    return null
-  }
-
-  return `/${gameLocation}/game/result/${encodeURIComponent(gameId)}`
+  return `/game/${encodeURIComponent(gameId)}/result`
 }
 
 const buildResponseData = ({ gameId, game, result, rows }) => {
@@ -242,7 +236,7 @@ const handleRequest = async ({ request, params, method }) => {
       const updatedGame = await db.model('Games').findByIdAndUpdate(
         normalizedGameId,
         { result: nextResult },
-        { new: true, runValidators: true },
+        { returnDocument: 'after', runValidators: true },
       ).lean()
 
       let ratingsUpdateInfo = {
@@ -306,3 +300,4 @@ export async function GET(request, context) {
 export async function POST(request, context) {
   return handleRequest({ request, params: context.params, method: 'POST' })
 }
+

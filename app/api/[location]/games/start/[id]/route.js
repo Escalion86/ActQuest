@@ -114,6 +114,15 @@ export async function GET(request, { params }) {
 
           const { default: gameStart } = await import('@server/gameStart')
           const result = await gameStart({ jsonCommand, location, db })
+          if (result?.success === false) {
+            return res.status(400).json({
+              success: false,
+              error: result?.error || result?.message || 'Игра не прошла проверку',
+              data: {
+                errors: Array.isArray(result?.errors) ? result.errors : [],
+              },
+            })
+          }
           const message = result.message
 
           try {

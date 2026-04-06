@@ -73,7 +73,7 @@ export async function POST(request) {
     const updatedUser = await Users.findOneAndUpdate(
       filter,
       { $set: { currentLocation: location } },
-      { new: true },
+      { returnDocument: 'after' },
     ).lean()
 
     if (!updatedUser) {
@@ -105,3 +105,4 @@ export async function POST(request) {
     )
   }
 }
+

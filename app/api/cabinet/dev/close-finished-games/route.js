@@ -104,7 +104,7 @@ export async function POST() {
           status: 'closed',
           result: game.result,
         },
-        { new: true, runValidators: true },
+        { returnDocument: 'after', runValidators: true },
       ).lean()
 
       if (!updatedGame) {
@@ -165,3 +165,4 @@ export async function POST() {
     )
   }
 }
+

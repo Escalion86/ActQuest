@@ -76,6 +76,7 @@ const buildBaseData = (location) => ({
   hasTeam: false,
   hasUpcomingRegistration: false,
   profileCompleted: false,
+  inProgressGame: null,
   nearestGame: null,
   personalProgressGames: [],
   rating: {
@@ -246,6 +247,26 @@ export const loadCabinetAppOverview = async (session) => {
   })
 
   const nearestGame = Array.isArray(upcomingGames) ? upcomingGames[0] : null
+  const inProgressCandidates = [...(Array.isArray(upcomingGames) ? upcomingGames : []), ...(Array.isArray(pastGames) ? pastGames : [])]
+    .filter((game) => {
+      const status = String(game?.status ?? '').trim().toLowerCase()
+      return (
+        status === 'started' &&
+        Array.isArray(game?.userParticipationTeams) &&
+        game.userParticipationTeams.length > 0
+      )
+    })
+    .sort((first, second) => {
+      const firstTime = toISOStringOrNull(first?.dateStart)
+        ? new Date(first.dateStart).getTime()
+        : Number.NEGATIVE_INFINITY
+      const secondTime = toISOStringOrNull(second?.dateStart)
+        ? new Date(second.dateStart).getTime()
+        : Number.NEGATIVE_INFINITY
+      return secondTime - firstTime
+    })
+
+  const inProgressGame = inProgressCandidates[0] ?? null
 
   const personalProgressGames = (Array.isArray(pastGames) ? pastGames : [])
     .map((game) => {
@@ -374,6 +395,25 @@ export const loadCabinetAppOverview = async (session) => {
     hasTeam: participantTeams.length > 0,
     hasUpcomingRegistration,
     profileCompleted,
+    inProgressGame: inProgressGame
+      ? {
+          id: inProgressGame.id || null,
+          name: inProgressGame.name || 'Без названия',
+          status: inProgressGame.status || 'started',
+          dateStart: inProgressGame.dateStart || null,
+          location: inProgressGame.location || location || '',
+          userTeamId:
+            Array.isArray(inProgressGame.userParticipationTeams) &&
+            inProgressGame.userParticipationTeams[0]?.teamId
+              ? String(inProgressGame.userParticipationTeams[0].teamId)
+              : null,
+          userTeamName:
+            Array.isArray(inProgressGame.userParticipationTeams) &&
+            typeof inProgressGame.userParticipationTeams[0]?.teamName === 'string'
+              ? inProgressGame.userParticipationTeams[0].teamName.trim()
+              : '',
+        }
+      : null,
     nearestGame: nearestGame
       ? {
           id: nearestGame.id || null,

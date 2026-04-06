@@ -1,4 +1,5 @@
 import CredentialsProvider from 'next-auth/providers/credentials'
+import { cookies } from 'next/headers'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import authenticateTelegramUser from '@helpers/authenticateTelegramUser'
 import authenticateVkUser from '@helpers/authenticateVkUser'
@@ -7,8 +8,7 @@ import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
 import { exchangeVkCode, fetchVkUserInfo } from '@helpers/vkIdAuth'
 
 const isVkDebugEnabled =
-  process.env.VK_AUTH_DEBUG === 'true' ||
-  process.env.VK_DEBUG_LOGS === 'true'
+  process.env.VK_AUTH_DEBUG === 'true' || process.env.VK_DEBUG_LOGS === 'true'
 const isSessionDebugEnabled = process.env.SESSION_DEBUG === '1'
 const sessionDebugLog = (stage, payload = null) => {
   if (!isSessionDebugEnabled) {
@@ -137,7 +137,9 @@ export const authOptions = {
         const location = normalizeLocation(credentials?.location)
         const rawData = credentials?.data
         const code = credentials?.code ? String(credentials.code) : null
-        const deviceId = credentials?.deviceId ? String(credentials.deviceId) : null
+        const deviceId = credentials?.deviceId
+          ? String(credentials.deviceId)
+          : null
         const accessTokenFromClient = credentials?.accessToken
           ? String(credentials.accessToken)
           : null
@@ -202,9 +204,7 @@ export const authOptions = {
 
             const vkUser = userInfoResult?.data?.user || {}
             const vkId =
-              vkUser?.user_id ||
-              exchangeResult?.data?.user_id ||
-              null
+              vkUser?.user_id || exchangeResult?.data?.user_id || null
 
             if (!vkId) {
               throw new Error('VK_PROFILE_INVALID')
@@ -248,7 +248,9 @@ export const authOptions = {
                     : [],
               })
             }
-            throw new Error(result.errorCode || result.errorMessage || 'VK_AUTH_FAILED')
+            throw new Error(
+              result.errorCode || result.errorMessage || 'VK_AUTH_FAILED',
+            )
           }
 
           return { ...result.user, authMethod: 'vk' }
@@ -310,6 +312,7 @@ export const authOptions = {
         trigger: trigger ?? null,
         tokenUserId: token?.globalUserId ?? token?.userId ?? null,
       })
+
       if (user) {
         const resolvedGlobalUserId = ensureSerializableId(
           user.globalUserId ?? user.id ?? user._id ?? null,
@@ -342,7 +345,8 @@ export const authOptions = {
         token.phone = user.phone ?? null
         token.role = resolvedRole ?? token.role ?? 'client'
         token.authMethod =
-          user.authMethod ?? (user.vkId ? 'vk' : user.phone ? 'phone' : 'telegram')
+          user.authMethod ??
+          (user.vkId ? 'vk' : user.phone ? 'phone' : 'telegram')
         token.location =
           user.location ??
           user.currentLocation ??
@@ -359,11 +363,12 @@ export const authOptions = {
 
       if (trigger === 'update') {
         const nextLocation =
-          session?.location ??
-          session?.user?.location ??
-          null
+          session?.location ?? session?.user?.location ?? null
 
-        if (typeof nextLocation === 'string' && nextLocation.trim().length > 0) {
+        if (
+          typeof nextLocation === 'string' &&
+          nextLocation.trim().length > 0
+        ) {
           token.location = nextLocation.trim()
         }
       }
@@ -375,12 +380,101 @@ export const authOptions = {
       })
       return token
     },
-    async session({ session, token }) {
+    async session({ session, token, req }) {
       sessionDebugLog('nextauth:session:start', {
         tokenUserId: token?.globalUserId ?? token?.userId ?? null,
         tokenRole: token?.role ?? null,
       })
       if (!session?.user) session.user = {}
+
+      // Проверить режим impersonate для разработчиков
+      let targetUserId = null
+      let isDeveloperImpersonating = false
+
+      if (token?.role === 'dev') {
+        try {
+          // Вариант 1: Попробуем читать из req.headers
+          let cookieDeveloperImpersonate = null
+
+          if (req?.headers) {
+            try {
+              // Try req.headers.get() (modern approach)
+              if (typeof req.headers.get === 'function') {
+                const cookieHeader = req.headers.get('cookie') || ''
+                if (cookieHeader) {
+                  const cookies = cookieHeader
+                    .split(';')
+                    .reduce((acc, cookie) => {
+                      const [key, value] = cookie.trim().split('=')
+                      if (key && value) {
+                        acc[key] = decodeURIComponent(value)
+                      }
+                      return acc
+                    }, {})
+                  cookieDeveloperImpersonate = cookies['dev-impersonate']
+                }
+              }
+
+              // Fallback: req.headers.cookie (older approach)
+              if (
+                !cookieDeveloperImpersonate &&
+                typeof req.headers.cookie === 'string'
+              ) {
+                const cookies = req.headers.cookie
+                  .split(';')
+                  .reduce((acc, cookie) => {
+                    const [key, value] = cookie.trim().split('=')
+                    if (key && value) {
+                      acc[key] = decodeURIComponent(value)
+                    }
+                    return acc
+                  }, {})
+                cookieDeveloperImpersonate = cookies['dev-impersonate']
+              }
+            } catch (headerError) {
+              sessionDebugLog('nextauth:session:impersonate:header-error', {
+                error: headerError?.message ?? 'Unknown',
+              })
+            }
+          }
+
+          // Вариант 2: Fallback на cookies() из next/headers (если Вариант 1 не сработал)
+          if (!cookieDeveloperImpersonate) {
+            try {
+              const cookieStore = await cookies()
+              cookieDeveloperImpersonate =
+                cookieStore?.get('dev-impersonate')?.value
+              sessionDebugLog('nextauth:session:impersonate:cookies-store', {
+                found: Boolean(cookieDeveloperImpersonate),
+              })
+            } catch (cookiesError) {
+              sessionDebugLog(
+                'nextauth:session:impersonate:cookies-store-error',
+                {
+                  error: cookiesError?.message ?? 'Unknown',
+                },
+              )
+            }
+          }
+
+          sessionDebugLog('nextauth:session:impersonate:cookie-read', {
+            cookieFound: Boolean(cookieDeveloperImpersonate),
+          })
+
+          if (cookieDeveloperImpersonate) {
+            const [userId] = cookieDeveloperImpersonate.split('|')
+            if (userId) {
+              targetUserId = userId
+              isDeveloperImpersonating = true
+              sessionDebugLog('nextauth:session:impersonate:detected', {
+                targetUserId,
+              })
+            }
+          }
+        } catch (error) {
+          console.error('Error reading impersonate cookie:', error)
+        }
+      }
 
       const fallbackUser = {
         _id: token.globalUserId ?? token.userId ?? null,
@@ -401,30 +495,95 @@ export const authOptions = {
 
       try {
         let user = null
+        let userIdToLoad = isDeveloperImpersonating
+          ? targetUserId
+          : token.globalUserId || token.userId
+
+        sessionDebugLog('nextauth:session:load-user', {
+          isDeveloperImpersonating,
+          targetUserId,
+          userIdToLoad,
+          tokenUserId: token.globalUserId || token.userId,
+        })
 
         const globalDb = await dbConnectGlobal()
         if (globalDb) {
-          if (token.globalUserId || token.userId) {
+          if (userIdToLoad) {
             try {
-              user = await globalDb
-                .model('Users')
-                .findById(token.globalUserId || token.userId)
-                .lean()
+              user = await globalDb.model('Users').findById(userIdToLoad).lean()
+
+              sessionDebugLog('nextauth:session:load-user:result', {
+                userIdToLoad,
+                userFound: Boolean(user),
+                userRole: user?.role ?? null,
+                userName: user?.username ?? null,
+              })
             } catch (idError) {
+              sessionDebugLog('nextauth:session:load-user:error', {
+                userIdToLoad,
+                error: idError?.message ?? 'Unknown error',
+              })
               // ignore
             }
           }
 
           if (
             !user &&
+            !isDeveloperImpersonating &&
             typeof token.phone !== 'undefined' &&
             token.phone !== null
           ) {
-            user = await globalDb.model('Users').findOne({ phone: token.phone }).lean()
+            user = await globalDb
+              .model('Users')
+              .findOne({ phone: token.phone })
+              .lean()
           }
         }
 
         session.user = normalizeUserForSession(user, fallbackUser)
+
+        // Если разработчик импер сонирует, добавить индикатор
+        if (isDeveloperImpersonating) {
+          session.user.isDeveloperImpersonating = true
+          session.user.developerUserId = token.globalUserId ?? token.userId
+
+          // КРИТИЧНО: В режиме impersonate, переписать данные целевого пользователя,
+          // игнорируя fallbackUser (который имеет данные разработчика)
+          if (user) {
+            session.user.role = user.role ?? 'client'
+            session.user.globalUserId = ensureSerializableId(
+              user._id ?? user.id ?? null,
+            )
+            session.user.photoUrl = user.photoUrl ?? null
+            session.user.name = user.name ?? null
+            session.user.username = user.username ?? null
+            session.user.phone = user.phone ?? null
+            session.user.telegramId = user.telegramId ?? null
+            session.user.vkId = user.vkId ?? null
+          }
+        } else {
+          // Явно обнулить флаг если режима impersonate нет
+          session.user.isDeveloperImpersonating = false
+          delete session.user.developerUserId
+        }
+
+        sessionDebugLog('nextauth:session:after-normalize', {
+          sessionUserRole: session?.user?.role ?? null,
+          isDeveloperImpersonating:
+            session?.user?.isDeveloperImpersonating ?? false,
+          sessionUserId:
+            session?.user?.globalUserId ?? session?.user?._id ?? null,
+        })
+
+        if (isDeveloperImpersonating) {
+          sessionDebugLog('nextauth:session:after-impersonate-override', {
+            sessionUserRole: session?.user?.role ?? null,
+            sessionUserId:
+              session?.user?.globalUserId ?? session?.user?._id ?? null,
+            isDeveloperImpersonating:
+              session?.user?.isDeveloperImpersonating ?? false,
+          })
+        }
       } catch (error) {
         console.error('Session callback error', error)
         session.user = normalizeUserForSession(null, fallbackUser)
@@ -442,11 +601,12 @@ export const authOptions = {
 
       sessionDebugLog('nextauth:session:done', {
         sessionUserId:
-          session?.user?.globalUserId ??
-          session?.user?._id ??
-          null,
+          session?.user?.globalUserId ?? session?.user?._id ?? null,
         role: session?.user?.role ?? null,
         location: session?.user?.location ?? null,
+        isDeveloperImpersonating:
+          session?.user?.isDeveloperImpersonating ?? false,
+        developerUserId: session?.user?.developerUserId ?? null,
       })
       return session
     },
@@ -455,4 +615,3 @@ export const authOptions = {
     signIn: '/cabinet/login',
   },
 }
-

@@ -91,7 +91,7 @@ export async function POST(request) {
           phone,
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     ).lean()
 
     await PhoneVerifications.deleteMany({ phone, flow: FLOW })
@@ -108,3 +108,4 @@ export async function POST(request) {
     return errorJson(500, 'Не удалось обновить номер телефона. Попробуйте позже.')
   }
 }
+

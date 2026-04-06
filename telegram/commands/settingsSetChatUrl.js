@@ -18,7 +18,7 @@ const settingsSetChatUrl = async ({
         chatUrl: null,
       },
       {
-        new: true,
+        returnDocument: 'after',
         upsert: true,
       }
     )
@@ -58,7 +58,7 @@ const settingsSetChatUrl = async ({
       chatUrl: jsonCommand.message,
     },
     {
-      new: true,
+      returnDocument: 'after',
       upsert: true,
     }
   )
@@ -71,3 +71,4 @@ const settingsSetChatUrl = async ({
 }
 
 export default settingsSetChatUrl
+

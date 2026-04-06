@@ -11,7 +11,7 @@ import moment from 'moment-timezone'
 import check from 'telegram/func/check'
 import getGame from 'telegram/func/getGame'
 
-const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
+const editGameGeneral = async ({ telegramId, jsonCommand, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -249,11 +249,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
           hide: game.status !== 'finished' || !game.result,
         },
         {
-          url:
-            'https://actquest.ru/' +
-            location +
-            '/game/result/' +
-            jsonCommand.gameId,
+          url: 'https://actquest.ru/game/' + jsonCommand.gameId + '/result',
           text: '\u{1F30F} на сайте',
           hide: game.status !== 'finished' || !game.result,
         },
@@ -269,11 +265,7 @@ const editGameGeneral = async ({ telegramId, jsonCommand, location, db }) => {
         hide: game.type !== 'photo' || game.status === 'active',
       },
       {
-        url:
-          'https://actquest.ru/' +
-          location +
-          '/game/location/' +
-          jsonCommand.gameId,
+        url: 'https://actquest.ru/game/' + jsonCommand.gameId + '/location',
         text: '\u{1F30F} Задания и команды на карте',
         hide: game.status === 'finished',
       },
