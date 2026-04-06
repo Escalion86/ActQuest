@@ -6,8 +6,19 @@ import { usePathname } from 'next/navigation'
 import { SessionProvider } from 'next-auth/react'
 import { Provider as JotaiProvider } from 'jotai'
 import { SnackbarProvider } from 'lib/notistack'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const SITE_AUDIO_SRC = '/sounds/Cibircatacombs.mp3'
+
+// Инициализируем QueryClient один раз
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 минут
+      gcTime: 1000 * 60 * 10, // 10 минут (ранее cacheTime)
+    },
+  },
+})
 
 export default function AppProviders({ children }) {
   const pathname = usePathname()
@@ -111,7 +122,10 @@ export default function AppProviders({ children }) {
               registration?.installing?.scriptURL ||
               registration?.waiting?.scriptURL ||
               ''
-            if (scope.includes(window.location.origin) || scriptURL.includes('/sw.js')) {
+            if (
+              scope.includes(window.location.origin) ||
+              scriptURL.includes('/sw.js')
+            ) {
               await registration.unregister()
             }
           }),
@@ -263,95 +277,102 @@ export default function AppProviders({ children }) {
         autoHideDuration={4000}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <JotaiProvider>
-          <audio
-            ref={audioRef}
-            src={SITE_AUDIO_SRC}
-            loop
-            preload="metadata"
-            playsInline
-            onCanPlay={() => setIsAudioReady(true)}
-            onCanPlayThrough={() => setIsAudioReady(true)}
-            onLoadedMetadata={() => setIsAudioReady(true)}
-          />
-          {children}
-          {showAudioUnlockHint ? (
-            <div className="fixed bottom-20 right-5 z-[9999] w-[min(92vw,320px)] rounded-2xl border border-[#00D1FF]/40 bg-[#0B001A]/88 p-3 text-[#d7f7ff] shadow-[0_0_24px_rgba(0,209,255,0.2)] backdrop-blur-sm">
-              <p className="text-sm leading-snug">
-                Браузер заблокировал автозапуск музыки. Нажмите, чтобы включить звук.
-              </p>
-              <div className="mt-2 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleEnableAudio}
-                  className="inline-flex items-center justify-center rounded-xl border border-[#00D1FF]/55 bg-[#102040] px-3 py-1.5 text-xs font-semibold text-[#baf3ff] transition hover:bg-[#17325f]"
-                >
-                  Включить звук
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsAudioHintDismissed(true)}
-                  className="inline-flex items-center justify-center rounded-xl border border-[#6b7280]/50 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/5"
-                >
-                  Скрыть
-                </button>
+        <QueryClientProvider client={queryClient}>
+          <JotaiProvider>
+            <audio
+              ref={audioRef}
+              src={SITE_AUDIO_SRC}
+              loop
+              preload="metadata"
+              playsInline
+              onCanPlay={() => setIsAudioReady(true)}
+              onCanPlayThrough={() => setIsAudioReady(true)}
+              onLoadedMetadata={() => setIsAudioReady(true)}
+            />
+            {children}
+            {showAudioUnlockHint ? (
+              <div className="fixed bottom-20 right-5 z-[9999] w-[min(92vw,320px)] rounded-2xl border border-[#00D1FF]/40 bg-[#0B001A]/88 p-3 text-[#d7f7ff] shadow-[0_0_24px_rgba(0,209,255,0.2)] backdrop-blur-sm">
+                <p className="text-sm leading-snug">
+                  Браузер заблокировал автозапуск музыки. Нажмите, чтобы
+                  включить звук.
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleEnableAudio}
+                    className="inline-flex items-center justify-center rounded-xl border border-[#00D1FF]/55 bg-[#102040] px-3 py-1.5 text-xs font-semibold text-[#baf3ff] transition hover:bg-[#17325f]"
+                  >
+                    Включить звук
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAudioHintDismissed(true)}
+                    className="inline-flex items-center justify-center rounded-xl border border-[#6b7280]/50 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/5"
+                  >
+                    Скрыть
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : null}
-          {!isCabinetRoute && isAudioReady && (
-            <button
-              type="button"
-              onClick={handleAudioToggle}
-              className="fixed bottom-5 right-5 z-[9999] inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-[#00D1FF]/50 bg-[#0B001A]/80 text-[#baf3ff] shadow-[0_0_18px_rgba(0,209,255,0.24)] backdrop-blur-sm transition hover:bg-[#12012a]"
-              aria-label={isMuted ? 'Включить музыку' : 'Выключить музыку'}
-              title={isMuted ? 'Включить музыку' : 'Выключить музыку'}
-              data-audio-error={lastAudioError || undefined}
-            >
-              {isMuted ? (
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M4 9H8L13 5V19L8 15H4V9Z"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinejoin="round"
-                  />
-                  <path d="M3 3L21 21" stroke="currentColor" strokeWidth="1.8" />
-                </svg>
-              ) : (
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M4 9H8L13 5V19L8 15H4V9Z"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M16 9C17.3 10.3 17.3 13.7 16 15"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M18.5 6.5C21.2 9.2 21.2 14.8 18.5 17.5"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              )}
-            </button>
-          )}
-        </JotaiProvider>
+            ) : null}
+            {!isCabinetRoute && isAudioReady && (
+              <button
+                type="button"
+                onClick={handleAudioToggle}
+                className="fixed bottom-5 right-5 z-[9999] inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-[#00D1FF]/50 bg-[#0B001A]/80 text-[#baf3ff] shadow-[0_0_18px_rgba(0,209,255,0.24)] backdrop-blur-sm transition hover:bg-[#12012a]"
+                aria-label={isMuted ? 'Включить музыку' : 'Выключить музыку'}
+                title={isMuted ? 'Включить музыку' : 'Выключить музыку'}
+                data-audio-error={lastAudioError || undefined}
+              >
+                {isMuted ? (
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M4 9H8L13 5V19L8 15H4V9Z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M3 3L21 21"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M4 9H8L13 5V19L8 15H4V9Z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M16 9C17.3 10.3 17.3 13.7 16 15"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M18.5 6.5C21.2 9.2 21.2 14.8 18.5 17.5"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+              </button>
+            )}
+          </JotaiProvider>
+        </QueryClientProvider>
       </SnackbarProvider>
     </SessionProvider>
   )

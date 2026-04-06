@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
@@ -9,8 +10,10 @@ import ParticipationGameCard from '@components/cabinet/cards/ParticipationGameCa
 import NoticeBanner from '@components/NoticeBanner'
 import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import fetchCabinetUserDetails from '@helpers/fetchCabinetUserDetails'
+import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
 import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 import requestApiJson from '@helpers/requestApiJson'
+import UnifiedGameDescriptionModal from '@components/modals/UnifiedGameDescriptionModal'
 import { LOCATIONS } from '@server/serverConstants'
 
 const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
@@ -31,10 +34,18 @@ const resolveLocationLabel = (locationKey) => {
   return rawName.charAt(0).toUpperCase() + rawName.slice(1)
 }
 
-const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam, user: userProp }) => {
-  const [user, setUser] = useState(userProp || null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(null)
+const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam }) => {
+  const {
+    data: user,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['user', userId],
+    queryFn: () => fetchCabinetUserDetails({ userId }),
+    enabled: isOpen && !!userId,
+    staleTime: 1000 * 60 * 5, // 5 минут
+  })
+
   const [userTeamModalOpen, setUserTeamModalOpen] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState(null)
   const [userGamesState, setUserGamesState] = useState({
@@ -42,57 +53,9 @@ const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam, user: userProp }) 
     error: null,
     games: [],
   })
-
-  // Загрузить данные пользователя при открытии или изменении userId
-  useEffect(() => {
-    console.log('[UserViewModal] useEffect - isOpen:', isOpen, 'userId:', userId, 'userProp provided:', !!userProp)
-    
-    // Если пользователь передан пропсом, использовать его сразу (без загрузки)
-    if (userProp) {
-      console.log('[UserViewModal] Using user from prop, no loading needed')
-      setUser(userProp)
-      setIsLoading(false)
-      return
-    }
-    
-    if (!isOpen || !userId) {
-      console.log('[UserViewModal] Skipping load - isOpen:', isOpen, 'userId:', userId)
-      return undefined
-    }
-
-    console.log('[UserViewModal] Starting load for userId:', userId)
-    let cancelled = false
-
-    const loadUser = async () => {
-      setIsLoading(true)
-      setError(null)
-      setUser(null)
-
-      try {
-        const userData = await fetchCabinetUserDetails({ userId })
-
-        if (!cancelled) {
-          console.log('[UserViewModal] Loaded user data:', userData.id, userData.name)
-          setUser(userData)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err?.message || 'Не удалось загрузить пользователя')
-          console.error('Failed to load user:', err)
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    loadUser()
-
-    return () => {
-      cancelled = true
-    }
-  }, [isOpen, userId, userProp])
+  const [showAllGames, setShowAllGames] = useState(false)
+  const [isGameDetailsModalOpen, setIsGameDetailsModalOpen] = useState(false)
+  const [selectedGameDetails, setSelectedGameDetails] = useState(null)
 
   const loadUserGames = useCallback(async () => {
     if (!user) {
@@ -154,11 +117,45 @@ const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam, user: userProp }) 
     setSelectedTeam(null)
   }, [])
 
-  console.log('[UserViewModal] Rendering - user:', user?.id, 'isOpen:', isOpen, 'isLoading:', isLoading)
+  const handleCloseModal = useCallback(() => {
+    setShowAllGames(false)
+    onClose()
+  }, [onClose])
+
+  const handleOpenGameDetails = useCallback((game) => {
+    setSelectedGameDetails(game)
+    setIsGameDetailsModalOpen(true)
+  }, [])
+
+  const handleCloseGameDetailsModal = useCallback(() => {
+    setIsGameDetailsModalOpen(false)
+    setSelectedGameDetails(null)
+  }, [])
+
+  // Загружаем полные данные игры с помощью React Query
+  const { data: gameDetails, isLoading: isGameLoading } = useQuery({
+    queryKey: ['game', selectedGameDetails?.id, selectedGameDetails?.location],
+    queryFn: () =>
+      fetchCabinetGameDetails({
+        gameId: selectedGameDetails?.id,
+        location: selectedGameDetails?.location,
+      }),
+    enabled: isGameDetailsModalOpen && !!selectedGameDetails?.id,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  console.log(
+    '[UserViewModal] Rendering - user:',
+    user?.id,
+    'isOpen:',
+    isOpen,
+    'isLoading:',
+    isLoading,
+  )
 
   if (!user && !isLoading && error) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Ошибка загрузки">
+      <Modal isOpen={isOpen} onClose={handleCloseModal} title="Ошибка загрузки">
         <NoticeBanner tone="error" variant="neon">
           {error}
         </NoticeBanner>
@@ -169,13 +166,22 @@ const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam, user: userProp }) 
   const displayName = user?.name || 'Без имени'
 
   const shouldBeOpen = isOpen && (isLoading || user)
-  console.log('[UserViewModal] Modal shouldBeOpen:', shouldBeOpen, 'isOpen:', isOpen, 'isLoading:', isLoading, 'user:', user?.id)
+  console.log(
+    '[UserViewModal] Modal shouldBeOpen:',
+    shouldBeOpen,
+    'isOpen:',
+    isOpen,
+    'isLoading:',
+    isLoading,
+    'user:',
+    user?.id,
+  )
 
   return (
     <>
       <Modal
         isOpen={shouldBeOpen}
-        onClose={onClose}
+        onClose={handleCloseModal}
         title={`Пользователь — ${displayName}`}
       >
         {isLoading ? (
@@ -272,13 +278,32 @@ const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam, user: userProp }) 
               ) : userGamesState.error ? (
                 <p className="text-sm text-rose-500">{userGamesState.error}</p>
               ) : userGamesState.games.length > 0 ? (
-                <ul className="space-y-3">
-                  {userGamesState.games.slice(0, 5).map((game) => (
-                    <li key={game.id}>
-                      <ParticipationGameCard game={game} />
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-3">
+                  <ul className="space-y-3">
+                    {(showAllGames
+                      ? userGamesState.games
+                      : userGamesState.games.slice(0, 5)
+                    ).map((game) => (
+                      <li key={game.id}>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenGameDetails(game)}
+                          className="w-full text-left hover:opacity-80 transition-opacity focus:outline-none"
+                        >
+                          <ParticipationGameCard game={game} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {!showAllGames && userGamesState.games.length > 5 && (
+                    <button
+                      onClick={() => setShowAllGames(true)}
+                      className="w-full text-xs text-primary hover:underline font-medium py-2 dark:text-sky-300"
+                    >
+                      Показать остальные {userGamesState.games.length - 5} игр
+                    </button>
+                  )}
+                </div>
               ) : (
                 <p className="text-sm text-slate-500">
                   Загравливайте игры, чтобы увидеть историю участия
@@ -303,9 +328,18 @@ const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam, user: userProp }) 
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <p className="text-xs text-slate-500">Телефон</p>
+                  <p className="text-xs text-slate-500">Сыграно игр</p>
                   <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
-                    {user.phone || 'Не указан'}
+                    {user.gamesCount || 0}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Рейтинг</p>
+                  <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
+                    {user.rating?.isEligible &&
+                    Number.isFinite(user.rating?.rank)
+                      ? `#${user.rating.rank} (${Number(user.rating?.finalScore || 0).toFixed(2)})`
+                      : 'Нет рейтинга'}
                   </p>
                 </div>
                 <div>
@@ -360,6 +394,18 @@ const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam, user: userProp }) 
           {/* onOpenTeam должна сама открыть систему модалей для команды если нужно */}
         </div>
       )}
+
+      {/* Модальное окно для просмотра деталей игры */}
+      {selectedGameDetails && (
+        <UnifiedGameDescriptionModal
+          selectedGame={isGameLoading ? null : gameDetails}
+          isOpen={isGameDetailsModalOpen}
+          onClose={handleCloseGameDetailsModal}
+          canViewRestrictedGameInfo={true}
+          canViewGameResults={true}
+          onOpenTeam={onOpenTeam}
+        />
+      )}
     </>
   )
 }
@@ -369,17 +415,10 @@ UserViewModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onOpenTeam: PropTypes.func,
-  user: PropTypes.shape({
-    id: PropTypes.string,
-    name: PropTypes.string,
-    phone: PropTypes.string,
-    photoUrl: PropTypes.string,
-  }),
 }
 
 UserViewModal.defaultProps = {
   userId: null,
-  user: null,
   onOpenTeam: null,
 }
 

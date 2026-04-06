@@ -79,7 +79,9 @@ const resolveTeamsPlace = (teamsPlaces, teamId) => {
 }
 
 const resolveUserTeamIdFromResult = (gameResult, userId, telegramId) => {
-  const teamsUsers = Array.isArray(gameResult?.teamsUsers) ? gameResult.teamsUsers : []
+  const teamsUsers = Array.isArray(gameResult?.teamsUsers)
+    ? gameResult.teamsUsers
+    : []
   if (!teamsUsers.length) {
     return null
   }
@@ -106,7 +108,8 @@ const resolveTeamNameFromResult = (gameResult, teamId) => {
 
   const teams = Array.isArray(gameResult?.teams) ? gameResult.teams : []
   const matchedTeam = teams.find((team) => toStringId(team?._id) === teamId)
-  const teamName = typeof matchedTeam?.name === 'string' ? matchedTeam.name.trim() : ''
+  const teamName =
+    typeof matchedTeam?.name === 'string' ? matchedTeam.name.trim() : ''
   return teamName || null
 }
 
@@ -151,7 +154,9 @@ const resolveParticipantRatingKey = (userId, telegramId) => {
 
 const buildPlayerRatingMetrics = ({ places = [], missedGames = 0 }) => {
   const normalizedPlaces = Array.isArray(places)
-    ? places.map((value) => Number(value)).filter((value) => Number.isFinite(value))
+    ? places
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value))
     : []
   const playedGames = normalizedPlaces.length
   const normalizedMissedGames = Number.isFinite(Number(missedGames))
@@ -159,15 +164,18 @@ const buildPlayerRatingMetrics = ({ places = [], missedGames = 0 }) => {
     : 0
   const averagePlace = playedGames ? getAverage(normalizedPlaces) : null
   const stdDevPlace =
-    playedGames && Number.isFinite(averagePlace) ? getStdDev(normalizedPlaces, averagePlace) : 0
+    playedGames && Number.isFinite(averagePlace)
+      ? getStdDev(normalizedPlaces, averagePlace)
+      : 0
   const attendanceDenominator = playedGames + normalizedMissedGames
-  const attendance = attendanceDenominator > 0 ? playedGames / attendanceDenominator : 1
-  const baseScore =
-    Number.isFinite(averagePlace)
-      ? averagePlace + RATING_STABILITY_WEIGHT * stdDevPlace
-      : null
-  const missPenalty =
-    Number.isFinite(baseScore) ? (1 - attendance) * RATING_MISS_PENALTY_WEIGHT : null
+  const attendance =
+    attendanceDenominator > 0 ? playedGames / attendanceDenominator : 1
+  const baseScore = Number.isFinite(averagePlace)
+    ? averagePlace + RATING_STABILITY_WEIGHT * stdDevPlace
+    : null
+  const missPenalty = Number.isFinite(baseScore)
+    ? (1 - attendance) * RATING_MISS_PENALTY_WEIGHT
+    : null
   const finalScore = Number.isFinite(baseScore) ? baseScore + missPenalty : null
 
   return {
@@ -180,7 +188,8 @@ const buildPlayerRatingMetrics = ({ places = [], missedGames = 0 }) => {
     baseScore,
     missPenalty,
     finalScore,
-    isEligible: playedGames >= RATING_MIN_PLAYED_GAMES && Number.isFinite(finalScore),
+    isEligible:
+      playedGames >= RATING_MIN_PLAYED_GAMES && Number.isFinite(finalScore),
   }
 }
 
@@ -257,7 +266,8 @@ const CabinetDashboard = ({
       hasTeam:
         typeof source.hasTeam === 'boolean'
           ? source.hasTeam
-          : Array.isArray(source.participantTeams) && source.participantTeams.length > 0,
+          : Array.isArray(source.participantTeams) &&
+            source.participantTeams.length > 0,
       hasUpcomingRegistration: Boolean(source.hasUpcomingRegistration),
       profileCompleted: Boolean(source.profileCompleted),
       inProgressGame:
@@ -275,10 +285,13 @@ const CabinetDashboard = ({
         source.rating && typeof source.rating === 'object'
           ? { ...fallbackRating, ...source.rating }
           : fallbackRating,
-      recentActivity: Array.isArray(source.recentActivity) ? source.recentActivity : [],
+      recentActivity: Array.isArray(source.recentActivity)
+        ? source.recentActivity
+        : [],
       chatUrl: typeof source.chatUrl === 'string' ? source.chatUrl : '',
       chatUrlsByLocation:
-        source.chatUrlsByLocation && typeof source.chatUrlsByLocation === 'object'
+        source.chatUrlsByLocation &&
+        typeof source.chatUrlsByLocation === 'object'
           ? source.chatUrlsByLocation
           : { krsk: '', nrsk: '', ekb: '' },
     }
@@ -293,15 +306,23 @@ const CabinetDashboard = ({
   const [isLeavingTeam, setIsLeavingTeam] = useState(false)
   const [leaveTeamError, setLeaveTeamError] = useState('')
   const selectedTeam = useMemo(
-    () => dashboardData.participantTeams.find((team) => team.id === selectedTeamId) ?? null,
-    [dashboardData.participantTeams, selectedTeamId]
+    () =>
+      dashboardData.participantTeams.find(
+        (team) => team.id === selectedTeamId,
+      ) ?? null,
+    [dashboardData.participantTeams, selectedTeamId],
   )
   const isPrivilegedTeamEditor = ['admin', 'dev'].includes(
-    String(effectiveRole ?? 'client').toLowerCase()
+    String(effectiveRole ?? 'client').toLowerCase(),
   )
-  const canLeaveSelectedTeam = Boolean(selectedTeam?.membershipId) && !selectedTeam?.isCaptain
+  const canLeaveSelectedTeam =
+    Boolean(selectedTeam?.membershipId) && !selectedTeam?.isCaptain
   const handleLeaveSelectedTeam = useCallback(async () => {
-    if (!selectedTeam?.membershipId || selectedTeam?.isCaptain || isLeavingTeam) {
+    if (
+      !selectedTeam?.membershipId ||
+      selectedTeam?.isCaptain ||
+      isLeavingTeam
+    ) {
       return
     }
 
@@ -314,10 +335,13 @@ const CabinetDashboard = ({
     setIsLeavingTeam(true)
 
     try {
-      await requestApiJson(`/api/cabinet/teams/members/${selectedTeam.membershipId}`, {
-        method: 'DELETE',
-        fallbackMessage: 'Не удалось выйти из команды',
-      })
+      await requestApiJson(
+        `/api/cabinet/teams/members/${selectedTeam.membershipId}`,
+        {
+          method: 'DELETE',
+          fallbackMessage: 'Не удалось выйти из команды',
+        },
+      )
 
       setIsTeamDescriptionOpen(false)
       router.replace(currentPath, { scroll: false })
@@ -343,7 +367,9 @@ const CabinetDashboard = ({
     if (status === 'loading') {
       return (
         <div className="flex min-h-screen items-center justify-center bg-slate-900 text-white">
-          <span className="text-sm font-semibold uppercase tracking-widest">Загрузка кабинета…</span>
+          <span className="text-sm font-semibold uppercase tracking-widest">
+            Загрузка кабинета…
+          </span>
         </div>
       )
     }
@@ -351,9 +377,10 @@ const CabinetDashboard = ({
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-900 text-white">
         <div className="space-y-4 text-center">
-<p className="text-lg font-semibold">Сессия не найдена</p>
+          <p className="text-lg font-semibold">Сессия не найдена</p>
           <p className="text-sm text-slate-200">
-            Похоже, вы не авторизованы. Пожалуйста, перейдите на страницу входа и попробуйте снова.
+            Похоже, вы не авторизованы. Пожалуйста, перейдите на страницу входа
+            и попробуйте снова.
           </p>
           <a
             href="/cabinet/login"
@@ -368,7 +395,7 @@ const CabinetDashboard = ({
 
   return (
     <>
-<CabinetLayout
+      <CabinetLayout
         title="Обзор"
         description="Ваш личный статус, ближайшие игры и быстрый доступ к ключевым действиям."
         activePage="dashboard"
@@ -376,16 +403,22 @@ const CabinetDashboard = ({
         <section className="grid gap-6 md:grid-cols-5">
           <div className="space-y-6 md:col-span-3">
             <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-              <h3 className="aq-modal-section-title text-base font-semibold">Личный прогресс</h3>
+              <h3 className="aq-modal-section-title text-base font-semibold">
+                Личный прогресс
+              </h3>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/80">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Завершено игр</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Завершено игр
+                  </p>
                   <p className="mt-1 text-lg font-semibold text-primary dark:text-slate-100">
                     {dashboardData.completedGamesCount}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/80">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Среднее место</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Среднее место
+                  </p>
                   <p className="mt-1 text-lg font-semibold text-primary dark:text-slate-100">
                     {dashboardData.averageFinishedPlace
                       ? dashboardData.averageFinishedPlace.toFixed(2)
@@ -395,7 +428,9 @@ const CabinetDashboard = ({
               </div>
               <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/80">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Рейтинг игрока</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Рейтинг игрока
+                  </p>
                   <button
                     type="button"
                     onClick={() => setIsRatingInfoOpen(true)}
@@ -409,14 +444,17 @@ const CabinetDashboard = ({
                 {dashboardData.rating?.isEligible ? (
                   <>
                     <p className="mt-1 text-lg font-semibold text-primary dark:text-slate-100">
-                      #{dashboardData.rating.rank} из {dashboardData.rating.totalRanked}
+                      #{dashboardData.rating.rank} из{' '}
+                      {dashboardData.rating.totalRanked}
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                      Рейтинговый балл: {dashboardData.rating.finalScore.toFixed(2)} ·
-                      Выше вас: {dashboardData.rating.playersAbove}
+                      Рейтинговый балл:{' '}
+                      {dashboardData.rating.finalScore.toFixed(2)} · Выше вас:{' '}
+                      {dashboardData.rating.playersAbove}
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                      Сыграно: {dashboardData.rating.playedGames} · Пропущено: {dashboardData.rating.missedGames}
+                      Сыграно: {dashboardData.rating.playedGames} · Пропущено:{' '}
+                      {dashboardData.rating.missedGames}
                     </p>
                     <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-300">
                       Учтены только закрытые рейтинговые игры.
@@ -428,8 +466,9 @@ const CabinetDashboard = ({
                       Недостаточно данных для рейтинга
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                      Нужно минимум {RATING_MIN_PLAYED_GAMES} закрытые рейтинговые игры.
-                      Сейчас сыграно: {dashboardData.rating?.playedGames ?? 0}
+                      Нужно минимум {RATING_MIN_PLAYED_GAMES} закрытые
+                      рейтинговые игры. Сейчас сыграно:{' '}
+                      {dashboardData.rating?.playedGames ?? 0}
                     </p>
                   </>
                 )}
@@ -437,7 +476,9 @@ const CabinetDashboard = ({
             </article>
 
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-              <h3 className="aq-modal-section-title text-base font-semibold">Мои команды</h3>
+              <h3 className="aq-modal-section-title text-base font-semibold">
+                Мои команды
+              </h3>
               {leaveTeamError ? (
                 <p className="mt-3 rounded-xl border border-rose-300/70 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
                   {leaveTeamError}
@@ -447,7 +488,8 @@ const CabinetDashboard = ({
                 <ul className="mt-4 grid gap-3">
                   {dashboardData.participantTeams.map((team) => {
                     const teamRatingBadge = resolveTeamRatingBadge(team.rating)
-                    const canManageTeam = isPrivilegedTeamEditor || team.isCaptain
+                    const canManageTeam =
+                      isPrivilegedTeamEditor || team.isCaptain
 
                     return (
                       <li key={team.id}>
@@ -483,18 +525,18 @@ const CabinetDashboard = ({
                                 </p>
                               </div>
                             </div>
-                              {canManageTeam ? (
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation()
-                                    router.push(
-                                      `/cabinet/teams?teamId=${encodeURIComponent(team.id)}&mode=edit`,
-                                    )
-                                  }}
-                                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cyan-300 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 dark:border-[#00D1FF]/35 dark:text-[#b3ecff] dark:hover:border-[#00D1FF]/65 dark:hover:bg-[#00D1FF]/10 dark:hover:text-[#e1f8ff]"
-                                  aria-label="Открыть управление командой"
-                                  title="Открыть управление командой"
+                            {canManageTeam ? (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  router.push(
+                                    `/cabinet/teams?teamId=${encodeURIComponent(team.id)}&mode=edit`,
+                                  )
+                                }}
+                                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cyan-300 text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 dark:border-[#00D1FF]/35 dark:text-[#b3ecff] dark:hover:border-[#00D1FF]/65 dark:hover:bg-[#00D1FF]/10 dark:hover:text-[#e1f8ff]"
+                                aria-label="Открыть управление командой"
+                                title="Открыть управление командой"
                               >
                                 <svg
                                   className="h-4 w-4"
@@ -557,7 +599,9 @@ const CabinetDashboard = ({
                   })}
                 </ul>
               ) : (
-                <p className="mt-3 text-xs text-slate-500 dark:text-slate-300">Вы пока не состоите в командах</p>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-300">
+                  Вы пока не состоите в командах
+                </p>
               )}
             </article>
 
@@ -573,10 +617,14 @@ const CabinetDashboard = ({
                   <div className="mt-3 space-y-3">
                     <ParticipationGameCard
                       game={{
-                        id: dashboardData.inProgressGame.id || 'in-progress-game',
-                        name: dashboardData.inProgressGame.name || 'Без названия',
-                        status: dashboardData.inProgressGame.status || 'started',
-                        dateStart: dashboardData.inProgressGame.dateStart || null,
+                        id:
+                          dashboardData.inProgressGame.id || 'in-progress-game',
+                        name:
+                          dashboardData.inProgressGame.name || 'Без названия',
+                        status:
+                          dashboardData.inProgressGame.status || 'started',
+                        dateStart:
+                          dashboardData.inProgressGame.dateStart || null,
                         teams: dashboardData.inProgressGame.userTeamName
                           ? [dashboardData.inProgressGame.userTeamName]
                           : [],
@@ -610,7 +658,9 @@ const CabinetDashboard = ({
                   </div>
                 </div>
               ) : null}
-              <h3 className="aq-modal-section-title text-base font-semibold">Ближайшая игра</h3>
+              <h3 className="aq-modal-section-title text-base font-semibold">
+                Ближайшая игра
+              </h3>
               {dashboardData.nearestGame ? (
                 <div className="mt-4 space-y-3">
                   <ParticipationGameCard
@@ -638,18 +688,21 @@ const CabinetDashboard = ({
                     href="/cabinet/games-upcoming"
                     className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-primary bg-primary px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 dark:border-[#00D1FF]/60 dark:bg-[#00D1FF]/18 dark:text-[#e9fbff] dark:hover:bg-[#00D1FF]/28"
                   >
-                    Открыть список игр
+                    Открыть список предстоящих игр
                   </a>
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-slate-500 dark:text-slate-300">
-                  Пока нет зарегистрированных предстоящих игр. Выберите игру и присоединитесь к старту.
+                  Пока нет зарегистрированных предстоящих игр. Выберите игру и
+                  присоединитесь к старту.
                 </p>
               )}
             </article>
 
             <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-              <h3 className="aq-modal-section-title text-base font-semibold">Последняя сыгранная игра</h3>
+              <h3 className="aq-modal-section-title text-base font-semibold">
+                Последняя сыгранная игра
+              </h3>
               {latestPlayedGame ? (
                 <>
                   <button
@@ -676,8 +729,12 @@ const CabinetDashboard = ({
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="aq-modal-item-title truncate text-sm font-semibold">{latestPlayedGame.gameName}</p>
-                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{latestPlayedGame.dateLabel}</p>
+                          <p className="aq-modal-item-title truncate text-sm font-semibold">
+                            {latestPlayedGame.gameName}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+                            {latestPlayedGame.dateLabel}
+                          </p>
                           {latestPlayedGame.teamName ? (
                             <p className="mt-1 text-xs font-semibold text-cyan-700 dark:text-cyan-200">
                               {latestPlayedGame.teamName}
@@ -686,7 +743,9 @@ const CabinetDashboard = ({
                         </div>
                       </div>
                       <span className="inline-flex shrink-0 items-center rounded-full border border-cyan-300 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                        {latestPlayedGame.place ? `${latestPlayedGame.place} место` : 'Без места'}
+                        {latestPlayedGame.place
+                          ? `${latestPlayedGame.place} место`
+                          : 'Без места'}
                       </span>
                     </div>
                   </button>
@@ -704,12 +763,13 @@ const CabinetDashboard = ({
                 </p>
               )}
             </article>
-
           </div>
 
           <div className="space-y-6 md:col-span-2">
             <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-              <h3 className="aq-modal-section-title text-base font-semibold">Последние события</h3>
+              <h3 className="aq-modal-section-title text-base font-semibold">
+                Последние события
+              </h3>
               {dashboardData.recentActivity.length > 0 ? (
                 <ul className="mt-4 space-y-3">
                   {dashboardData.recentActivity.map((item) => (
@@ -717,22 +777,31 @@ const CabinetDashboard = ({
                       key={item.id}
                       className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
                     >
-                      <p className="aq-modal-item-title text-sm font-semibold">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{item.details}</p>
-                      <p className="mt-2 text-xs text-slate-400">{formatRelativeTimeFromNow(item.timestamp)}</p>
+                      <p className="aq-modal-item-title text-sm font-semibold">
+                        {item.title}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+                        {item.details}
+                      </p>
+                      <p className="mt-2 text-xs text-slate-400">
+                        {formatRelativeTimeFromNow(item.timestamp)}
+                      </p>
                     </li>
                   ))}
                 </ul>
               ) : (
                 <p className="mt-4 text-sm text-slate-500 dark:text-slate-300">
-                  Событий пока нет. Как только появится активность, она отобразится здесь.
+                  Событий пока нет. Как только появится активность, она
+                  отобразится здесь.
                 </p>
               )}
             </article>
 
             {hasAnyCityChatUrl ? (
               <article className="rounded-2xl border border-cyan-300 bg-cyan-50 p-5 shadow-sm dark:border-cyan-500/30 dark:bg-cyan-500/10">
-                <h3 className="aq-modal-section-title text-base font-semibold">Чат проекта</h3>
+                <h3 className="aq-modal-section-title text-base font-semibold">
+                  Чат проекта
+                </h3>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-200">
                   Вопросы, анонсы и быстрые ответы команды ActQuest.
                 </p>
@@ -769,8 +838,12 @@ const CabinetDashboard = ({
                 className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
               >
                 <div className="min-w-0">
-                  <p className="aq-modal-item-title truncate text-sm font-semibold">{item.gameName}</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{item.dateLabel}</p>
+                  <p className="aq-modal-item-title truncate text-sm font-semibold">
+                    {item.gameName}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+                    {item.dateLabel}
+                  </p>
                   {item.teamName ? (
                     <p className="mt-1 text-xs font-semibold text-cyan-700 dark:text-cyan-200">
                       {item.teamName}
@@ -810,15 +883,22 @@ const CabinetDashboard = ({
               )}
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-700 dark:bg-slate-800/80">
-              <p className="aq-modal-item-title text-sm font-semibold">{previewPlayedGame.gameName}</p>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">{previewPlayedGame.dateLabel}</p>
+              <p className="aq-modal-item-title text-sm font-semibold">
+                {previewPlayedGame.gameName}
+              </p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
+                {previewPlayedGame.dateLabel}
+              </p>
               {previewPlayedGame.teamName ? (
                 <p className="mt-1 text-xs font-semibold text-cyan-700 dark:text-cyan-200">
                   Команда: {previewPlayedGame.teamName}
                 </p>
               ) : null}
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
-                Результат: {previewPlayedGame.place ? `${previewPlayedGame.place} место` : 'Без места'}
+                Результат:{' '}
+                {previewPlayedGame.place
+                  ? `${previewPlayedGame.place} место`
+                  : 'Без места'}
               </p>
             </div>
             <a
@@ -872,24 +952,24 @@ const CabinetDashboard = ({
         title="Как считается рейтинг"
       >
         <div className="space-y-3 text-sm text-slate-600 dark:text-slate-200">
+          <p>Рейтинг считается только по закрытым рейтинговым играм.</p>
+          <p>Базовая оценка: среднее место игрока. Чем меньше, тем лучше.</p>
           <p>
-            Рейтинг считается только по закрытым рейтинговым играм.
+            Дополнительно учитывается стабильность: если места сильно скачут,
+            добавляется небольшой штраф.
           </p>
           <p>
-            Базовая оценка: среднее место игрока. Чем меньше, тем лучше.
+            Пропуски считаются только начиная с первой рейтинговой игры, где
+            игрок реально участвовал. Игры до первого участия в рейтинг не
+            влияют.
           </p>
           <p>
-            Дополнительно учитывается стабильность: если места сильно скачут, добавляется небольшой штраф.
-          </p>
-          <p>
-            Пропуски считаются только начиная с первой рейтинговой игры, где игрок реально участвовал.
-            Игры до первого участия в рейтинг не влияют.
-          </p>
-          <p>
-            Итоговый рейтинг строится по возрастанию балла. Меньший балл означает более высокое место в рейтинге.
+            Итоговый рейтинг строится по возрастанию балла. Меньший балл
+            означает более высокое место в рейтинге.
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-300">
-            Для попадания в рейтинг нужно минимум {RATING_MIN_PLAYED_GAMES} закрытые рейтинговые игры.
+            Для попадания в рейтинг нужно минимум {RATING_MIN_PLAYED_GAMES}{' '}
+            закрытые рейтинговые игры.
           </p>
         </div>
       </Modal>
@@ -937,9 +1017,12 @@ CabinetDashboard.propTypes = {
             userRole: PropTypes.string,
             hasLinkedUser: PropTypes.bool,
             phone: PropTypes.string,
-            telegramId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+            telegramId: PropTypes.oneOfType([
+              PropTypes.string,
+              PropTypes.number,
+            ]),
             isCaptain: PropTypes.bool,
-          })
+          }),
         ),
         games: PropTypes.arrayOf(
           PropTypes.shape({
@@ -948,9 +1031,9 @@ CabinetDashboard.propTypes = {
             status: PropTypes.string,
             dateStart: PropTypes.string,
             hidden: PropTypes.bool,
-          })
+          }),
         ),
-      })
+      }),
     ),
     completedGamesCount: PropTypes.number,
     averageFinishedPlace: PropTypes.number,
@@ -982,7 +1065,7 @@ CabinetDashboard.propTypes = {
         dateLabel: PropTypes.string.isRequired,
         teamName: PropTypes.string,
         place: PropTypes.number,
-      })
+      }),
     ),
     rating: PropTypes.shape({
       isEligible: PropTypes.bool.isRequired,
@@ -999,7 +1082,7 @@ CabinetDashboard.propTypes = {
         title: PropTypes.string.isRequired,
         details: PropTypes.string.isRequired,
         timestamp: PropTypes.string.isRequired,
-      })
+      }),
     ),
     chatUrl: PropTypes.string,
     chatUrlsByLocation: PropTypes.shape({
@@ -1046,4 +1129,3 @@ CabinetDashboard.defaultProps = {
 }
 
 export default CabinetDashboard
-

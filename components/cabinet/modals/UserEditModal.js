@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import PropTypes from 'prop-types'
 import Modal from '@components/Modal'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
@@ -12,6 +13,7 @@ import ImagesInput from '@components/cabinet/ImagesInput'
 import NoticeBanner from '@components/NoticeBanner'
 import fetchCabinetUserDetails from '@helpers/fetchCabinetUserDetails'
 import requestApiJson from '@helpers/requestApiJson'
+import useOptimisticMutation from '@helpers/useOptimisticMutation'
 import {
   formatPhoneInput,
   normalizePhoneForSubmit,
@@ -20,92 +22,35 @@ import { LOCATIONS } from '@server/serverConstants'
 
 const modalItemSmallTitleClass = 'aq-modal-item-title text-sm font-semibold'
 
-const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp }) => {
-  const [user, setUser] = useState(userProp || null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState(null)
+const cloneUser = (user) => JSON.parse(JSON.stringify(user))
+
+const UserEditModal = ({ userId, isOpen, onClose }) => {
+  const {
+    data: user,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['user', userId],
+    queryFn: () => fetchCabinetUserDetails({ userId }),
+    enabled: isOpen && !!userId,
+    staleTime: 1000 * 60 * 5, // 5 минут
+  })
+
+  const [editingUser, setEditingUser] = useState(null)
   const [feedback, setFeedback] = useState(null)
 
-  // Загрузить данные пользователя при открытии или изменении userId
-  useEffect(() => {
-    // Если пользователь передан пропсом, использовать его сразу (без загрузки)
-    if (userProp) {
-      console.log('[UserEditModal] Using user from prop, no loading needed')
-      setUser(userProp)
-      setIsLoading(false)
-      return
-    }
-    
-    if (!isOpen || !userId) {
-      return undefined
-    }
-
-    let cancelled = false
-
-    const loadUser = async () => {
-      setIsLoading(true)
-      setError(null)
-      setUser(null)
-      setFeedback(null)
-
-      try {
-        const userData = await fetchCabinetUserDetails({ userId })
-
-        if (!cancelled) {
-          setUser(userData)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err?.message || 'Не удалось загрузить пользователя')
-          console.error('Failed to load user:', err)
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    loadUser()
-
-    return () => {
-      cancelled = true
-    }
-  }, [isOpen, userId, userProp])
+  const initializedEditingUser = editingUser ?? (user ? cloneUser(user) : null)
 
   const handleFieldChange = useCallback((field, value) => {
-    setUser((prev) => (prev ? { ...prev, [field]: value } : null))
+    setEditingUser((prev) => (prev ? { ...prev, [field]: value } : null))
     setFeedback(null)
   }, [])
 
-  const handleSave = useCallback(async () => {
-    if (!user) {
-      return
-    }
-
-    setIsSaving(true)
-    setFeedback(null)
-
-    try {
-      const phone = user.phone || ''
-      const normalizedPhone = phone.trim() ? normalizePhoneForSubmit(phone) : ''
-
-      const payload = {
-        name: typeof user.name === 'string' ? user.name.trim() : '',
-        username: typeof user.username === 'string' ? user.username.trim() : '',
-        phone: normalizedPhone,
-        currentLocation:
-          typeof user.currentLocation === 'string'
-            ? user.currentLocation.trim()
-            : '',
-        photoUrl: typeof user.photoUrl === 'string' ? user.photoUrl : '',
-        about: typeof user.about === 'string' ? user.about.trim() : '',
-        role: typeof user.role === 'string' ? user.role.trim() : 'client',
-      }
-
+  const updateUserMutation = useOptimisticMutation({
+    queryKey: ['user', userId],
+    mutationFn: async (payload) => {
       const { json } = await requestApiJson(
-        `/api/cabinet/admin/users/${user.id}`,
+        `/api/cabinet/admin/users/${userId}`,
         {
           method: 'PATCH',
           headers: {
@@ -115,46 +60,70 @@ const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp 
           fallbackMessage: 'Не удалось сохранить изменения',
         },
       )
-
+      return json?.data || payload
+    },
+    updateCache: (oldUser, payload) => {
+      if (!oldUser) return oldUser
+      return { ...oldUser, ...payload }
+    },
+    onSuccess: () => {
       setFeedback({
         type: 'success',
         message: 'Пользователь успешно обновлен',
       })
-
-      if (onUserUpdated) {
-        onUserUpdated(json?.data || user)
-      }
-    } catch (err) {
+      setEditingUser(null)
+    },
+    onError: (err) => {
       setFeedback({
         type: 'error',
         message: err?.message || 'Не удалось сохранить изменения',
       })
-      console.error('Failed to save user:', err)
-    } finally {
-      setIsSaving(false)
-    }
-  }, [user, onUserUpdated])
+    },
+  })
 
-  const handleReset = useCallback(async () => {
-    if (!userId) {
+  const handleSave = useCallback(async () => {
+    if (!initializedEditingUser || !user) {
       return
     }
 
-    setIsLoading(true)
-    try {
-      const userData = await fetchCabinetUserDetails({ userId })
-      setUser(userData)
-      setFeedback(null)
-    } catch (err) {
-      setFeedback({
-        type: 'error',
-        message: 'Не удалось перезагрузить данные',
-      })
-      console.error('Failed to reload user:', err)
-    } finally {
-      setIsLoading(false)
+    const phone = initializedEditingUser.phone || ''
+    const normalizedPhone = phone.trim() ? normalizePhoneForSubmit(phone) : ''
+
+    const payload = {
+      name:
+        typeof initializedEditingUser.name === 'string'
+          ? initializedEditingUser.name.trim()
+          : '',
+      username:
+        typeof initializedEditingUser.username === 'string'
+          ? initializedEditingUser.username.trim()
+          : '',
+      phone: normalizedPhone,
+      currentLocation:
+        typeof initializedEditingUser.currentLocation === 'string'
+          ? initializedEditingUser.currentLocation.trim()
+          : '',
+      photoUrl:
+        typeof initializedEditingUser.photoUrl === 'string'
+          ? initializedEditingUser.photoUrl
+          : '',
+      about:
+        typeof initializedEditingUser.about === 'string'
+          ? initializedEditingUser.about.trim()
+          : '',
+      role:
+        typeof initializedEditingUser.role === 'string'
+          ? initializedEditingUser.role.trim()
+          : 'client',
     }
-  }, [userId])
+
+    updateUserMutation.mutate(payload)
+  }, [initializedEditingUser, user, updateUserMutation])
+
+  const handleReset = useCallback(() => {
+    setEditingUser(null)
+    setFeedback(null)
+  }, [])
 
   const locationOptions = useMemo(
     () =>
@@ -165,22 +134,18 @@ const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp 
     [],
   )
 
-  if (!user && !isLoading && error) {
-    return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Ошибка загрузки">
-        <NoticeBanner tone="error" variant="neon">
-          {error}
-        </NoticeBanner>
-      </Modal>
-    )
-  }
+  const handleClose = useCallback(() => {
+    setEditingUser(null)
+    setFeedback(null)
+    onClose()
+  }, [onClose])
 
-  const displayName = user?.name || 'Без имени'
+  const displayName = initializedEditingUser?.name || 'Без имени'
 
   return (
     <Modal
-      isOpen={isOpen && (isLoading || user)}
-      onClose={onClose}
+      isOpen={isOpen && (isLoading || initializedEditingUser)}
+      onClose={handleClose}
       title={`Редактирование — ${displayName}`}
     >
       {isLoading ? (
@@ -189,7 +154,13 @@ const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp 
             Загружаем данные пользователя...
           </p>
         </div>
-      ) : user ? (
+      ) : error ? (
+        <NoticeBanner tone="error" variant="neon">
+          {error instanceof Error
+            ? error.message
+            : 'Не удалось загрузить данные'}
+        </NoticeBanner>
+      ) : initializedEditingUser ? (
         <div className="space-y-6">
           {feedback && (
             <NoticeBanner
@@ -205,13 +176,13 @@ const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp 
               <CabinetInputField
                 id="user-edit-name"
                 label="Имя и фамилия"
-                value={user.name || ''}
+                value={initializedEditingUser.name || ''}
                 onChange={(e) => handleFieldChange('name', e.target.value)}
               />
               <CabinetInputField
                 id="user-edit-username"
                 label="Никнейм в ActQuest"
-                value={user.username || ''}
+                value={initializedEditingUser.username || ''}
                 onChange={(e) => handleFieldChange('username', e.target.value)}
                 placeholder="Например, quest_master"
               />
@@ -219,7 +190,7 @@ const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp 
                 id="user-edit-phone"
                 label="Телефон"
                 type="tel"
-                value={formatPhoneInput(user.phone || '')}
+                value={formatPhoneInput(initializedEditingUser.phone || '')}
                 onChange={(e) =>
                   handleFieldChange('phone', formatPhoneInput(e.target.value))
                 }
@@ -230,7 +201,7 @@ const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp 
             <CabinetSelectField
               id="user-edit-location"
               label="Город пользователя"
-              value={user.currentLocation || ''}
+              value={initializedEditingUser.currentLocation || ''}
               onChange={(e) =>
                 handleFieldChange('currentLocation', e.target.value)
               }
@@ -248,12 +219,16 @@ const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp 
             <div>
               <label className={modalItemSmallTitleClass}>Фото профиля</label>
               <ImagesInput
-                images={user.photoUrl ? [user.photoUrl] : []}
+                images={
+                  initializedEditingUser.photoUrl
+                    ? [initializedEditingUser.photoUrl]
+                    : []
+                }
                 onChange={(images) =>
                   handleFieldChange('photoUrl', images?.[0] ?? '')
                 }
                 directory="users"
-                imageName={user.id || 'user'}
+                imageName={initializedEditingUser.id || 'user'}
                 maxImages={1}
                 previewShape="circle"
               />
@@ -262,7 +237,7 @@ const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp 
             <CabinetTextareaField
               id="user-edit-about"
               label="О себе"
-              value={user.about || ''}
+              value={initializedEditingUser.about || ''}
               onChange={(e) => handleFieldChange('about', e.target.value)}
               rows={5}
               placeholder="Расскажите об опыте, любимых форматах и роли в команде."
@@ -271,7 +246,7 @@ const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp 
             <CabinetSelectField
               id="user-role"
               label="Роль в системе"
-              value={user.role || 'client'}
+              value={initializedEditingUser.role || 'client'}
               onChange={(e) => handleFieldChange('role', e.target.value)}
               labelClassName={modalItemSmallTitleClass}
               selectClassName="w-full px-4 py-3 text-sm border rounded-xl border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 focus:border-primary focus:ring-1 focus:ring-primary"
@@ -284,15 +259,17 @@ const UserEditModal = ({ userId, isOpen, onClose, onUserUpdated, user: userProp 
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <CabinetButton
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={updateUserMutation.isPending}
                 variant="primary"
-                className={isSaving ? 'cursor-wait' : ''}
+                className={updateUserMutation.isPending ? 'cursor-wait' : ''}
               >
-                {isSaving ? 'Сохранение…' : 'Сохранить изменения'}
+                {updateUserMutation.isPending
+                  ? 'Сохранение…'
+                  : 'Сохранить изменения'}
               </CabinetButton>
               <CabinetButton
                 onClick={handleReset}
-                disabled={isSaving}
+                disabled={updateUserMutation.isPending}
                 variant="secondary"
                 tone="brand"
               >
@@ -310,19 +287,10 @@ UserEditModal.propTypes = {
   userId: PropTypes.string,
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  onUserUpdated: PropTypes.func,
-  user: PropTypes.shape({
-    id: PropTypes.string,
-    name: PropTypes.string,
-    phone: PropTypes.string,
-    photoUrl: PropTypes.string,
-  }),
 }
 
 UserEditModal.defaultProps = {
   userId: null,
-  onUserUpdated: null,
-  user: null,
 }
 
 export default UserEditModal

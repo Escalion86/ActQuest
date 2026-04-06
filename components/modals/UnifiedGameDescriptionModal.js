@@ -29,14 +29,22 @@ const UnifiedGameDescriptionModal = ({
   canViewRestrictedGameInfo,
   canViewGameResults,
   onOpenResults,
+  onOpenTeam,
 }) => {
   const currencyFormatter = useMemo(
-    () => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }),
-    []
+    () =>
+      new Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'RUB',
+        maximumFractionDigits: 0,
+      }),
+    [],
   )
 
   const gameTypeLabel = useMemo(() => {
-    const option = GAME_TYPE_OPTIONS.find((item) => item.value === selectedGame?.type)
+    const option = GAME_TYPE_OPTIONS.find(
+      (item) => item.value === selectedGame?.type,
+    )
     return option?.label ?? selectedGame?.type ?? '—'
   }, [selectedGame?.type])
 
@@ -79,13 +87,16 @@ const UnifiedGameDescriptionModal = ({
       return { modeLabel: '—', valueLabel: '—' }
     }
 
-    const option = CLUE_EARLY_MODE_OPTIONS.find((item) => item.value === selectedGame.clueEarlyAccessMode)
+    const option = CLUE_EARLY_MODE_OPTIONS.find(
+      (item) => item.value === selectedGame.clueEarlyAccessMode,
+    )
     const minutes = toMinutes(selectedGame.clueEarlyPenalty)
 
     if (selectedGame.clueEarlyAccessMode === 'penalty') {
       return {
         modeLabel: option?.label ?? '—',
-        valueLabel: minutes > 0 ? `Штраф ${minutes} мин` : 'Штраф не применяется',
+        valueLabel:
+          minutes > 0 ? `Штраф ${minutes} мин` : 'Штраф не применяется',
       }
     }
 
@@ -154,13 +165,14 @@ const UnifiedGameDescriptionModal = ({
         }
         return acc
       },
-      { income: 0, expense: 0 }
+      { income: 0, expense: 0 },
     )
 
     return { income, expense, balance: income - expense }
   }, [selectedGame?.finances])
 
-  const balanceClass = financesSummary.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'
+  const balanceClass =
+    financesSummary.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'
 
   return (
     <GameDescriptionModal
@@ -171,7 +183,10 @@ const UnifiedGameDescriptionModal = ({
       plannedStartLabel={plannedStartLabel}
       canViewRestrictedGameInfo={canViewRestrictedGameInfo}
       canViewGameResults={canViewGameResults}
-      handleOpenResultsModal={typeof onOpenResults === 'function' ? onOpenResults : () => {}}
+      handleOpenResultsModal={
+        typeof onOpenResults === 'function' ? onOpenResults : () => {}
+      }
+      onOpenTeam={onOpenTeam}
       taskDurationLabel={taskDurationLabel}
       cluesDurationLabel={cluesDurationLabel}
       clueModeDetails={clueModeDetails}
@@ -199,6 +214,7 @@ UnifiedGameDescriptionModal.propTypes = {
   canViewRestrictedGameInfo: PropTypes.bool,
   canViewGameResults: PropTypes.bool,
   onOpenResults: PropTypes.func,
+  onOpenTeam: PropTypes.func,
 }
 
 UnifiedGameDescriptionModal.defaultProps = {
@@ -206,6 +222,7 @@ UnifiedGameDescriptionModal.defaultProps = {
   canViewRestrictedGameInfo: true,
   canViewGameResults: false,
   onOpenResults: undefined,
+  onOpenTeam: undefined,
 }
 
 export default memo(UnifiedGameDescriptionModal)

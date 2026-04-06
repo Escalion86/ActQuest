@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import PropTypes from 'prop-types'
+import { useQuery } from '@tanstack/react-query'
 
 import Modal from '@components/Modal'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
@@ -15,49 +16,18 @@ const modalSectionTitleClass =
   'font-semibold text-sm text-slate-700 dark:text-slate-200'
 
 const TeamViewModal = ({ teamId, isOpen, onClose, onOpenMember }) => {
-  const [team, setTeam] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    if (!isOpen || !teamId) {
-      return
-    }
-
-    let cancelled = false
-
-    const loadTeam = async () => {
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        const detailedTeam = await fetchCabinetTeamDetails({ teamId })
-
-        if (!cancelled) {
-          setTeam(detailedTeam)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err?.message || 'Не удалось загрузить команду')
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    loadTeam()
-
-    return () => {
-      cancelled = true
-    }
-  }, [isOpen, teamId])
+  const {
+    data: team,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['team', teamId],
+    queryFn: () => fetchCabinetTeamDetails({ teamId }),
+    enabled: isOpen && !!teamId,
+    staleTime: 1000 * 60 * 5,
+  })
 
   const handleClose = useCallback(() => {
-    setTeam(null)
-    setError(null)
-    setIsLoading(false)
     onClose()
   }, [onClose])
 

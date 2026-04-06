@@ -387,18 +387,18 @@ const normalizePayloadForComparison = (payload) => {
     return payload
   }
 
-  const normalizedTasks = (Array.isArray(payload.tasks) ? payload.tasks : []).map(
-    (task) => ({
-      ...task,
-      task: normalizePlainTextForComparison(task?.task || ''),
-      taskRich: normalizeRichTextForComparison(task?.taskRich, task?.task),
-      clues: (Array.isArray(task?.clues) ? task.clues : []).map((clue) => ({
-        ...clue,
-        clue: normalizePlainTextForComparison(clue?.clue || ''),
-        clueRich: normalizeRichTextForComparison(clue?.clueRich, clue?.clue),
-      })),
-    }),
-  )
+  const normalizedTasks = (
+    Array.isArray(payload.tasks) ? payload.tasks : []
+  ).map((task) => ({
+    ...task,
+    task: normalizePlainTextForComparison(task?.task || ''),
+    taskRich: normalizeRichTextForComparison(task?.taskRich, task?.task),
+    clues: (Array.isArray(task?.clues) ? task.clues : []).map((clue) => ({
+      ...clue,
+      clue: normalizePlainTextForComparison(clue?.clue || ''),
+      clueRich: normalizeRichTextForComparison(clue?.clueRich, clue?.clue),
+    })),
+  }))
 
   return {
     ...payload,
@@ -410,7 +410,6 @@ const normalizePayloadForComparison = (payload) => {
     tasks: normalizedTasks,
   }
 }
-
 
 const isActiveGameStatus = (status) =>
   (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
@@ -468,9 +467,7 @@ const serializeGameForComparison = (game) => {
     tasks: game.tasks ?? [],
   })
 
-  return JSON.stringify(
-    normalizePayloadForComparison(payload),
-  )
+  return JSON.stringify(normalizePayloadForComparison(payload))
 }
 
 const buildUpdatePayload = (game) => {
@@ -841,6 +838,7 @@ const GamesPage = ({
   }, [])
   const [expandedTaskIds, setExpandedTaskIds] = useState([])
   const [isTeamsModalOpen, setIsTeamsModalOpen] = useState(false)
+  const [isTeamsModalReadOnly, setIsTeamsModalReadOnly] = useState(false)
   const [teamsModalState, setTeamsModalState] = useState({
     isLoading: false,
     error: null,
@@ -882,9 +880,8 @@ const GamesPage = ({
   const [isPushBroadcastModalOpen, setIsPushBroadcastModalOpen] =
     useState(false)
   const [pushBroadcastGameId, setPushBroadcastGameId] = useState('')
-  const [pushBroadcastMode, setPushBroadcastMode] = useState(
-    'announce_all_users',
-  )
+  const [pushBroadcastMode, setPushBroadcastMode] =
+    useState('announce_all_users')
   const [pushBroadcastMessage, setPushBroadcastMessage] = useState('')
   const [isPushBroadcastSubmitting, setIsPushBroadcastSubmitting] =
     useState(false)
@@ -1775,9 +1772,8 @@ const GamesPage = ({
         )
       }
 
-      const teamsList = (Array.isArray(userJson?.data?.teams)
-        ? userJson.data.teams
-        : []
+      const teamsList = (
+        Array.isArray(userJson?.data?.teams) ? userJson.data.teams : []
       )
         .filter((team) => Boolean(team?.isCaptain))
         .map((team) => ({
@@ -1834,7 +1830,11 @@ const GamesPage = ({
     } finally {
       setIsRegisterTeamsLoading(false)
     }
-  }, [currentUserDbId, currentUserTelegramIdNumber, registerModalGame?.location])
+  }, [
+    currentUserDbId,
+    currentUserTelegramIdNumber,
+    registerModalGame?.location,
+  ])
 
   useEffect(() => {
     if (isRegisterModalOpen) {
@@ -2238,10 +2238,7 @@ const GamesPage = ({
         )
       }
     },
-    [
-      isRegistrationCancellationInProgress,
-      setFeedback,
-    ],
+    [isRegistrationCancellationInProgress, setFeedback],
   )
 
   const handleOpenCreateGameModal = useCallback(() => {
@@ -3161,7 +3158,9 @@ const GamesPage = ({
   const isEditingPhotoGame = useMemo(() => {
     const type =
       typeof (editingGame?.type ?? selectedGame?.type) === 'string'
-        ? String(editingGame?.type ?? selectedGame?.type).trim().toLowerCase()
+        ? String(editingGame?.type ?? selectedGame?.type)
+            .trim()
+            .toLowerCase()
         : ''
     return type === 'photo'
   }, [editingGame?.type, selectedGame?.type])
@@ -3258,11 +3257,7 @@ const GamesPage = ({
     } finally {
       setIsSaving(false)
     }
-  }, [
-    canEditSelectedGame,
-    editingGame,
-    selectedGame,
-  ])
+  }, [canEditSelectedGame, editingGame, selectedGame])
 
   const handleAddPrice = useCallback(() => {
     if (!canEditSelectedGame) return
@@ -3854,10 +3849,10 @@ const GamesPage = ({
       await requestApiJson(
         `${CABINET_GAMES_API_BASE}/${encodeURIComponent(selectedGame.id)}/teams`,
         {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId: selectedTeamToAdd }),
-        fallbackMessage: 'Не удалось добавить команду',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamId: selectedTeamToAdd }),
+          fallbackMessage: 'Не удалось добавить команду',
         },
       )
 
@@ -3871,11 +3866,7 @@ const GamesPage = ({
     } finally {
       setIsAddingTeam(false)
     }
-  }, [
-    loadTeamsModalData,
-    selectedGame,
-    selectedTeamToAdd,
-  ])
+  }, [loadTeamsModalData, selectedGame, selectedTeamToAdd])
 
   const handleRemoveTeamFromGame = useCallback(
     async (gameTeamId) => {
@@ -4204,20 +4195,30 @@ const GamesPage = ({
     ],
   )
 
-  const handleManageTeamsFromList = useCallback(
-    (game) => {
-      if (!game || !canManageGame(game)) {
-        return
-      }
+  const handleManageTeamsFromList = useCallback((game, isReadOnly = false) => {
+    if (!game) {
+      return
+    }
 
-      setSelectedGameId(game.id)
-      setIsResultsModalOpen(false)
-      setIsTasksViewModalOpen(false)
-      setIsDescriptionModalOpen(false)
-      setIsTeamsModalOpen(true)
-    },
-    [canManageGame],
-  )
+    setIsTeamsModalReadOnly(isReadOnly)
+    setSelectedGameId(game.id)
+    setIsResultsModalOpen(false)
+    setIsTasksViewModalOpen(false)
+    setIsDescriptionModalOpen(false)
+    setIsTeamsModalOpen(true)
+  }, [])
+
+  const handleViewGameTeamsFromList = useCallback((game) => {
+    if (!game) {
+      return
+    }
+
+    setSelectedGameId(game.id)
+    setIsResultsModalOpen(false)
+    setIsTasksViewModalOpen(false)
+    setIsDescriptionModalOpen(false)
+    setIsTeamsModalOpen(true)
+  }, [])
 
   const canViewResultsForGame = useCallback((game) => {
     if (!game || Boolean(game.hideResult)) {
@@ -4660,6 +4661,8 @@ const GamesPage = ({
         canManageThisGame && !isGameInProgressStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
+      const canViewGameTeams =
+        typeof game?.status === 'string' && game.status !== 'canceled'
       const visibleStatus = normalizeVisibleStatus(
         game.status,
         canSeeClosedStatus,
@@ -4914,17 +4917,32 @@ const GamesPage = ({
                             <MegaphoneCardIcon />
                           </CardActionIconButton>
                         )}
-                        {canManageThisGame && (
-                          <CardActionIconButton
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              handleManageTeamsFromList(game)
-                            }}
-                            label="Управление командами"
-                          >
-                            <TeamCardIcon />
-                          </CardActionIconButton>
-                        )}
+                      </div>
+                    )}
+                    {canViewGameTeams && !canManageThisGame && (
+                      <div className="flex items-center gap-2">
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleManageTeamsFromList(game, true)
+                          }}
+                          label="Просмотр команд"
+                        >
+                          <TeamCardIcon />
+                        </CardActionIconButton>
+                      </div>
+                    )}
+                    {canManageThisGame && canViewGameTeams && (
+                      <div className="flex items-center gap-2">
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleManageTeamsFromList(game, false)
+                          }}
+                          label="Управление командами"
+                        >
+                          <TeamCardIcon />
+                        </CardActionIconButton>
                       </div>
                     )}
                   </div>
@@ -4949,6 +4967,7 @@ const GamesPage = ({
       handleEditGameFromList,
       handleEditTasksFromList,
       handleManageTeamsFromList,
+      handleViewGameTeamsFromList,
       handleOpenPushBroadcastModal,
       handleOpenRegisterModalForGame,
       handleOpenTasksViewFromGame,
@@ -4977,6 +4996,8 @@ const GamesPage = ({
         canManageThisGame && !isGameInProgressStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
+      const canViewGameTeams =
+        typeof game?.status === 'string' && game.status !== 'canceled'
       const visibleStatus = normalizeVisibleStatus(
         game.status,
         canSeeClosedStatus,
@@ -5221,18 +5242,34 @@ const GamesPage = ({
                           <MegaphoneCardIcon />
                         </CardActionIconButton>
                       )}
-                      {canManageThisGame && (
-                        <CardActionIconButton
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleManageTeamsFromList(game)
-                          }}
-                          label="Управление командами"
-                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                        >
-                          <TeamCardIcon />
-                        </CardActionIconButton>
-                      )}
+                    </div>
+                  )}
+                  {canViewGameTeams && !canManageThisGame && (
+                    <div className="flex items-center gap-2">
+                      <CardActionIconButton
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleManageTeamsFromList(game, true)
+                        }}
+                        label="Просмотр команд"
+                        className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                      >
+                        <TeamCardIcon />
+                      </CardActionIconButton>
+                    </div>
+                  )}
+                  {canManageThisGame && canViewGameTeams && (
+                    <div className="flex items-center gap-2">
+                      <CardActionIconButton
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleManageTeamsFromList(game, false)
+                        }}
+                        label="Управление командами"
+                        className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                      >
+                        <TeamCardIcon />
+                      </CardActionIconButton>
                     </div>
                   )}
                 </div>
@@ -5256,6 +5293,7 @@ const GamesPage = ({
       handleEditGameFromList,
       handleEditTasksFromList,
       handleManageTeamsFromList,
+      handleViewGameTeamsFromList,
       handleOpenPushBroadcastModal,
       handleOpenRegisterModalForGame,
       handleOpenTasksViewFromGame,
@@ -5384,10 +5422,16 @@ const GamesPage = ({
     ).trim()
     const currentOrganizer = modalGame?.creator
 
-    if (currentOrganizerTelegramId && !organizersMap.has(currentOrganizerTelegramId)) {
+    if (
+      currentOrganizerTelegramId &&
+      !organizersMap.has(currentOrganizerTelegramId)
+    ) {
       organizersMap.set(currentOrganizerTelegramId, {
         telegramId: currentOrganizerTelegramId,
-        name: typeof currentOrganizer?.name === 'string' ? currentOrganizer.name : '',
+        name:
+          typeof currentOrganizer?.name === 'string'
+            ? currentOrganizer.name
+            : '',
         username:
           typeof currentOrganizer?.username === 'string'
             ? currentOrganizer.username
@@ -5481,7 +5525,11 @@ const GamesPage = ({
       selectedGameParticipationTeams.length > 0 &&
       isGameInProgressStatus(selectedGame?.status) &&
       Boolean(selectedGameEnterHref),
-    [selectedGame, selectedGameEnterHref, selectedGameParticipationTeams.length],
+    [
+      selectedGame,
+      selectedGameEnterHref,
+      selectedGameParticipationTeams.length,
+    ],
   )
   const isSelectedGameRegistrationCancelling = useMemo(
     () =>
@@ -5588,7 +5636,7 @@ const GamesPage = ({
 
   return (
     <>
-<CabinetLayout
+      <CabinetLayout
         title={pageTitle}
         description={pageDescription}
         activePage="games"
@@ -5764,7 +5812,8 @@ const GamesPage = ({
                     </div>
                     <div className="mt-3 max-h-64 space-y-1 overflow-y-auto pr-1">
                       {pastGamesSeasonOptions.map((option) => {
-                        const isSelected = pastGamesSeasonFilter === option.value
+                        const isSelected =
+                          pastGamesSeasonFilter === option.value
                         return (
                           <button
                             key={option.value}
@@ -5889,187 +5938,187 @@ const GamesPage = ({
           <div className="md:col-span-5">
             <div className="space-y-6">
               <GameModals
-                  selectedGame={selectedGame}
-                  editGame={editingGame}
-                  isEditModalOpen={isEditModalOpen}
-                  handleCloseEditModal={handleCloseEditModal}
-                  isTasksModalOpen={isTasksModalOpen}
-                  handleCloseTasksModal={handleCloseTasksModal}
-                  canEditSelectedGame={canEditSelectedGame}
-                  isSaving={isSaving}
-                  location={selectedGameApiLocation}
-                  isDirty={isDirty}
-                  handleModalPrimaryAction={handleModalPrimaryAction}
-                  handleTasksModalPrimaryAction={handleTasksModalPrimaryAction}
-                  handleResetChanges={handleResetChanges}
-                  updateSelectedGame={updateSelectedGame}
-                  GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
-                  CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
-                  toMinutes={toMinutes}
-                  toSeconds={toSeconds}
-                  handleAddTask={handleAddTask}
-                  handleRemoveTask={handleRemoveTask}
-                  handleTaskFieldChange={handleTaskFieldChange}
-                  handleTaskNumberChange={handleTaskNumberChange}
-                  handleTaskOptionalNumberChange={
-                    handleTaskOptionalNumberChange
+                selectedGame={selectedGame}
+                editGame={editingGame}
+                isEditModalOpen={isEditModalOpen}
+                handleCloseEditModal={handleCloseEditModal}
+                isTasksModalOpen={isTasksModalOpen}
+                handleCloseTasksModal={handleCloseTasksModal}
+                canEditSelectedGame={canEditSelectedGame}
+                isSaving={isSaving}
+                location={selectedGameApiLocation}
+                isDirty={isDirty}
+                handleModalPrimaryAction={handleModalPrimaryAction}
+                handleTasksModalPrimaryAction={handleTasksModalPrimaryAction}
+                handleResetChanges={handleResetChanges}
+                updateSelectedGame={updateSelectedGame}
+                GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
+                CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
+                toMinutes={toMinutes}
+                toSeconds={toSeconds}
+                handleAddTask={handleAddTask}
+                handleRemoveTask={handleRemoveTask}
+                handleTaskFieldChange={handleTaskFieldChange}
+                handleTaskNumberChange={handleTaskNumberChange}
+                handleTaskOptionalNumberChange={handleTaskOptionalNumberChange}
+                handleTaskCheckboxChange={handleTaskCheckboxChange}
+                handleTaskCoordinateChange={handleTaskCoordinateChange}
+                handleAddTaskCode={handleAddTaskCode}
+                handleTaskCodeChange={handleTaskCodeChange}
+                handleRemoveTaskCode={handleRemoveTaskCode}
+                handleAddTaskImage={handleAddTaskImage}
+                handleTaskImageChange={handleTaskImageChange}
+                handleRemoveTaskImage={handleRemoveTaskImage}
+                handleAddClue={handleAddClue}
+                handleTaskClueChange={handleTaskClueChange}
+                handleRemoveClue={handleRemoveClue}
+                handleAddSubTask={handleAddSubTask}
+                handleSubTaskChange={handleSubTaskChange}
+                handleRemoveSubTask={handleRemoveSubTask}
+                handleAddPenaltyCode={handleAddPenaltyCode}
+                handlePenaltyCodeChange={handlePenaltyCodeChange}
+                handleRemovePenaltyCode={handleRemovePenaltyCode}
+                handleAddBonusCode={handleAddBonusCode}
+                handleBonusCodeChange={handleBonusCodeChange}
+                handleRemoveBonusCode={handleRemoveBonusCode}
+                handleAddPrice={handleAddPrice}
+                handlePriceChange={handlePriceChange}
+                handleRemovePrice={handleRemovePrice}
+                handleAddFinance={handleAddFinance}
+                handleFinanceChange={handleFinanceChange}
+                handleRemoveFinance={handleRemoveFinance}
+                canGenerateResults={canGenerateResults}
+                isGeneratingResults={isGeneratingResults}
+                handleGenerateResults={handleGenerateResults}
+                currencyFormatter={currencyFormatter}
+                financesSummary={financesSummary}
+                balanceClass={balanceClass}
+                expandedTaskIds={expandedTaskIds}
+                toggleTaskExpansion={toggleTaskExpansion}
+                isTeamsModalOpen={isTeamsModalOpen}
+                handleCloseTeamsModal={handleCloseTeamsModal}
+                teamsModalState={teamsModalState}
+                removingTeamIds={removingTeamIds}
+                selectedTeamToAdd={selectedTeamToAdd}
+                setSelectedTeamToAdd={setSelectedTeamToAdd}
+                handleAddTeamToGame={handleAddTeamToGame}
+                isAddingTeam={isAddingTeam}
+                handleRemoveTeamFromGame={handleRemoveTeamFromGame}
+                isTeamsModalReadOnly={isTeamsModalReadOnly}
+                isRegisterModalOpen={isRegisterModalOpen}
+                handleCloseRegisterModal={handleCloseRegisterModal}
+                isRegisterSubmitting={isRegisterSubmitting}
+                handleSubmitRegister={handleSubmitRegister}
+                registerTeamId={registerTeamId}
+                registerGameId={registerGameId}
+                setRegisterTeamId={setRegisterTeamId}
+                setRegisterGameId={setRegisterGameId}
+                isRegisterModalFromCard={isRegisterModalFromCard}
+                registerModalGameName={registerModalGameName}
+                shouldHideRegisterGameIdField={Boolean(isRegisterModalFromCard)}
+                registerFeedback={registerFeedback}
+                isRegisterTeamsLoading={isRegisterTeamsLoading}
+                registerTeams={registerTeams}
+                currentUserId={currentUserDbId}
+                currentUserRole={userRole}
+                isCreateGameModalOpen={isCreateGameModalOpen}
+                handleCloseCreateGameModal={handleCloseCreateGameModal}
+                isCreatingGame={isCreatingGame}
+                handleCreateGame={handleCreateGame}
+                newGameName={newGameName}
+                setNewGameName={setNewGameName}
+                newGameIsRated={newGameIsRated}
+                setNewGameIsRated={setNewGameIsRated}
+                createGameMode={createGameMode}
+                setCreateGameMode={setCreateGameMode}
+                cloneSourceGameId={cloneSourceGameId}
+                setCloneSourceGameId={setCloneSourceGameId}
+                createGameCloneSourceOptions={createGameCloneSourceOptions}
+                isCloneSourceGamesLoading={isCloneSourceGamesLoading}
+                createGameLocation={createGameLocation}
+                setCreateGameLocation={handleCreateGameLocationChange}
+                createGameSeasonId={createGameSeasonId}
+                setCreateGameSeasonId={setCreateGameSeasonId}
+                createGameSeasons={createGameSeasons}
+                isCreateGameSeasonsLoading={isCreateGameSeasonsLoading}
+                isCreateGameSeasonCreating={Boolean(
+                  createGameLocation &&
+                  creatingSeasonByLocation[
+                    String(createGameLocation).trim().toLowerCase()
+                  ],
+                )}
+                handleCreateSeasonForCreateGame={
+                  handleCreateSeasonForCreateGame
+                }
+                createGameLocationOptions={gameLocationOptions}
+                createGameCloneOptions={createGameCloneOptions}
+                handleChangeCreateGameCloneOption={
+                  handleChangeCreateGameCloneOption
+                }
+                isCreateGameActionDisabled={isCreateGameActionDisabled}
+                createGameFeedback={createGameFeedback}
+                isDescriptionModalOpen={isDescriptionModalOpen}
+                handleCloseDescriptionModal={handleCloseDescriptionModal}
+                isTasksViewModalOpen={isTasksViewModalOpen}
+                handleCloseTasksViewModal={handleCloseTasksViewModal}
+                gameTypeLabel={gameTypeLabel}
+                plannedStartLabel={plannedStartLabel}
+                canViewRestrictedGameInfo={canViewRestrictedGameInfo}
+                canViewGameResults={canViewGameResults}
+                handleOpenResultsModal={() => {
+                  if (selectedGame) {
+                    handleOpenResultsFromGame(selectedGame)
                   }
-                  handleTaskCheckboxChange={handleTaskCheckboxChange}
-                  handleTaskCoordinateChange={handleTaskCoordinateChange}
-                  handleAddTaskCode={handleAddTaskCode}
-                  handleTaskCodeChange={handleTaskCodeChange}
-                  handleRemoveTaskCode={handleRemoveTaskCode}
-                  handleAddTaskImage={handleAddTaskImage}
-                  handleTaskImageChange={handleTaskImageChange}
-                  handleRemoveTaskImage={handleRemoveTaskImage}
-                  handleAddClue={handleAddClue}
-                  handleTaskClueChange={handleTaskClueChange}
-                  handleRemoveClue={handleRemoveClue}
-                  handleAddSubTask={handleAddSubTask}
-                  handleSubTaskChange={handleSubTaskChange}
-                  handleRemoveSubTask={handleRemoveSubTask}
-                  handleAddPenaltyCode={handleAddPenaltyCode}
-                  handlePenaltyCodeChange={handlePenaltyCodeChange}
-                  handleRemovePenaltyCode={handleRemovePenaltyCode}
-                  handleAddBonusCode={handleAddBonusCode}
-                  handleBonusCodeChange={handleBonusCodeChange}
-                  handleRemoveBonusCode={handleRemoveBonusCode}
-                  handleAddPrice={handleAddPrice}
-                  handlePriceChange={handlePriceChange}
-                  handleRemovePrice={handleRemovePrice}
-                  handleAddFinance={handleAddFinance}
-                  handleFinanceChange={handleFinanceChange}
-                  handleRemoveFinance={handleRemoveFinance}
-                  canGenerateResults={canGenerateResults}
-                  isGeneratingResults={isGeneratingResults}
-                  handleGenerateResults={handleGenerateResults}
-                  currencyFormatter={currencyFormatter}
-                  financesSummary={financesSummary}
-                  balanceClass={balanceClass}
-                  expandedTaskIds={expandedTaskIds}
-                  toggleTaskExpansion={toggleTaskExpansion}
-                  isTeamsModalOpen={isTeamsModalOpen}
-                  handleCloseTeamsModal={handleCloseTeamsModal}
-                  teamsModalState={teamsModalState}
-                  removingTeamIds={removingTeamIds}
-                  selectedTeamToAdd={selectedTeamToAdd}
-                  setSelectedTeamToAdd={setSelectedTeamToAdd}
-                  handleAddTeamToGame={handleAddTeamToGame}
-                  isAddingTeam={isAddingTeam}
-                  handleRemoveTeamFromGame={handleRemoveTeamFromGame}
-                  isRegisterModalOpen={isRegisterModalOpen}
-                  handleCloseRegisterModal={handleCloseRegisterModal}
-                  isRegisterSubmitting={isRegisterSubmitting}
-                  handleSubmitRegister={handleSubmitRegister}
-                  registerTeamId={registerTeamId}
-                  registerGameId={registerGameId}
-                  setRegisterTeamId={setRegisterTeamId}
-                  setRegisterGameId={setRegisterGameId}
-                  isRegisterModalFromCard={isRegisterModalFromCard}
-                  registerModalGameName={registerModalGameName}
-                  shouldHideRegisterGameIdField={Boolean(isRegisterModalFromCard)}
-                  registerFeedback={registerFeedback}
-                  isRegisterTeamsLoading={isRegisterTeamsLoading}
-                  registerTeams={registerTeams}
-                  currentUserId={currentUserDbId}
-                  isCreateGameModalOpen={isCreateGameModalOpen}
-                  handleCloseCreateGameModal={handleCloseCreateGameModal}
-                  isCreatingGame={isCreatingGame}
-                  handleCreateGame={handleCreateGame}
-                  newGameName={newGameName}
-                  setNewGameName={setNewGameName}
-                  newGameIsRated={newGameIsRated}
-                  setNewGameIsRated={setNewGameIsRated}
-                  createGameMode={createGameMode}
-                  setCreateGameMode={setCreateGameMode}
-                  cloneSourceGameId={cloneSourceGameId}
-                  setCloneSourceGameId={setCloneSourceGameId}
-                  createGameCloneSourceOptions={createGameCloneSourceOptions}
-                  isCloneSourceGamesLoading={isCloneSourceGamesLoading}
-                  createGameLocation={createGameLocation}
-                  setCreateGameLocation={handleCreateGameLocationChange}
-                  createGameSeasonId={createGameSeasonId}
-                  setCreateGameSeasonId={setCreateGameSeasonId}
-                  createGameSeasons={createGameSeasons}
-                  isCreateGameSeasonsLoading={isCreateGameSeasonsLoading}
-                  isCreateGameSeasonCreating={Boolean(
-                    createGameLocation &&
-                    creatingSeasonByLocation[
-                      String(createGameLocation).trim().toLowerCase()
-                    ],
-                  )}
-                  handleCreateSeasonForCreateGame={
-                    handleCreateSeasonForCreateGame
-                  }
-                  createGameLocationOptions={gameLocationOptions}
-                  createGameCloneOptions={createGameCloneOptions}
-                  handleChangeCreateGameCloneOption={
-                    handleChangeCreateGameCloneOption
-                  }
-                  isCreateGameActionDisabled={isCreateGameActionDisabled}
-                  createGameFeedback={createGameFeedback}
-                  isDescriptionModalOpen={isDescriptionModalOpen}
-                  handleCloseDescriptionModal={handleCloseDescriptionModal}
-                  isTasksViewModalOpen={isTasksViewModalOpen}
-                  handleCloseTasksViewModal={handleCloseTasksViewModal}
-                  gameTypeLabel={gameTypeLabel}
-                  plannedStartLabel={plannedStartLabel}
-                  canViewRestrictedGameInfo={canViewRestrictedGameInfo}
-                  canViewGameResults={canViewGameResults}
-                  handleOpenResultsModal={() => {
-                    if (selectedGame) {
-                      handleOpenResultsFromGame(selectedGame)
-                    }
-                  }}
-                  participationSummaryLabel={
-                    selectedGameParticipationSummaryLabel
-                  }
-                  canJoinGameFromDescription={canJoinSelectedGame}
-                  canEnterGameFromDescription={canEnterSelectedGame}
-                  canCancelGameRegistrationFromDescription={
-                    canCancelSelectedGameRegistration
-                  }
-                  handleJoinGameFromDescription={
-                    handleJoinSelectedGameFromDescription
-                  }
-                  handleEnterGameFromDescription={
-                    handleEnterSelectedGameFromDescription
-                  }
-                  handleCancelGameRegistrationFromDescription={
-                    handleCancelSelectedGameRegistrationFromDescription
-                  }
-                  isGameRegistrationSubmittingFromDescription={
-                    isSelectedGameRegistrationCancelling
-                  }
-                  selectedGameModerators={selectedGameModerators}
-                  availableModeratorsForSelect={availableModeratorsForSelect}
-                  availableModeratorsMap={availableModeratorsMap}
-                  availableOrganizersForSelect={availableOrganizersForSelect}
-                  selectedModeratorToAdd={selectedModeratorToAdd}
-                  setSelectedModeratorToAdd={setSelectedModeratorToAdd}
-                  handleAddModerator={handleAddModerator}
-                  handleRemoveModerator={handleRemoveModerator}
-                  editGameLocationOptions={gameLocationOptions}
-                  editGameSeasons={editGameSeasons}
-                  isEditGameSeasonsLoading={isEditGameSeasonsLoading}
-                  isEditGameSeasonCreating={Boolean(
-                    editingGame?.location &&
-                    creatingSeasonByLocation[
-                      String(editingGame.location).trim().toLowerCase()
-                    ],
-                  )}
-                  handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
-                  taskDurationLabel={taskDurationLabel}
-                  cluesDurationLabel={cluesDurationLabel}
-                  clueModeDetails={clueModeDetails}
-                  breakDurationLabel={breakDurationLabel}
-                  taskFailurePenaltyLabel={taskFailurePenaltyLabel}
-                  manyCodesLimitLabel={manyCodesLimitLabel}
-                  manyCodesPenaltyLabel={manyCodesPenaltyLabel}
-                  isResultsModalOpen={isResultsModalOpen}
-                  handleCloseResultsModal={handleCloseResultsModal}
-                  resultsModalState={resultsModalState}
-                />
+                }}
+                participationSummaryLabel={
+                  selectedGameParticipationSummaryLabel
+                }
+                canJoinGameFromDescription={canJoinSelectedGame}
+                canEnterGameFromDescription={canEnterSelectedGame}
+                canCancelGameRegistrationFromDescription={
+                  canCancelSelectedGameRegistration
+                }
+                handleJoinGameFromDescription={
+                  handleJoinSelectedGameFromDescription
+                }
+                handleEnterGameFromDescription={
+                  handleEnterSelectedGameFromDescription
+                }
+                handleCancelGameRegistrationFromDescription={
+                  handleCancelSelectedGameRegistrationFromDescription
+                }
+                isGameRegistrationSubmittingFromDescription={
+                  isSelectedGameRegistrationCancelling
+                }
+                selectedGameModerators={selectedGameModerators}
+                availableModeratorsForSelect={availableModeratorsForSelect}
+                availableModeratorsMap={availableModeratorsMap}
+                availableOrganizersForSelect={availableOrganizersForSelect}
+                selectedModeratorToAdd={selectedModeratorToAdd}
+                setSelectedModeratorToAdd={setSelectedModeratorToAdd}
+                handleAddModerator={handleAddModerator}
+                handleRemoveModerator={handleRemoveModerator}
+                editGameLocationOptions={gameLocationOptions}
+                editGameSeasons={editGameSeasons}
+                isEditGameSeasonsLoading={isEditGameSeasonsLoading}
+                isEditGameSeasonCreating={Boolean(
+                  editingGame?.location &&
+                  creatingSeasonByLocation[
+                    String(editingGame.location).trim().toLowerCase()
+                  ],
+                )}
+                handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+                taskDurationLabel={taskDurationLabel}
+                cluesDurationLabel={cluesDurationLabel}
+                clueModeDetails={clueModeDetails}
+                breakDurationLabel={breakDurationLabel}
+                taskFailurePenaltyLabel={taskFailurePenaltyLabel}
+                manyCodesLimitLabel={manyCodesLimitLabel}
+                manyCodesPenaltyLabel={manyCodesPenaltyLabel}
+                isResultsModalOpen={isResultsModalOpen}
+                handleCloseResultsModal={handleCloseResultsModal}
+                resultsModalState={resultsModalState}
+              />
               <GameStatusModal
                 isOpen={isStatusModalOpen}
                 onClose={handleCloseStatusModal}
@@ -6271,4 +6320,3 @@ GamesPage.defaultProps = {
 }
 
 export default GamesPage
-

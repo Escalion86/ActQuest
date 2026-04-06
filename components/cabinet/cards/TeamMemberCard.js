@@ -40,8 +40,16 @@ const TeamMemberCard = ({ member, onOpen }) => (
           {member.username ? (
             <p className="mt-1 text-xs text-slate-500">@{member.username}</p>
           ) : null}
-          {member.phone ? (
-            <p className="mt-1 text-xs text-slate-500">Телефон: {member.phone}</p>
+          {member.userGamesCount !== undefined || member.rating ? (
+            <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+              {member.userGamesCount !== undefined && (
+                <span>Игр: {member.userGamesCount}</span>
+              )}
+              {member.rating?.isEligible &&
+                Number.isFinite(member.rating?.rank) && (
+                  <span>#{member.rating.rank}</span>
+                )}
+            </div>
           ) : null}
           {!member.hasLinkedUser ? (
             <p className="mt-1 text-xs text-amber-600">
@@ -56,18 +64,21 @@ const TeamMemberCard = ({ member, onOpen }) => (
             Капитан
           </span>
         ) : null}
-        {member.userRole ? (() => {
-          const normalizedRole = String(member.userRole).toLowerCase()
-          const roleLabel = systemRoleLabels[normalizedRole] ?? member.userRole
-          if (normalizedRole === 'client' || roleLabel === 'Участник') {
-            return null
-          }
-          return (
-            <span className="inline-flex items-center rounded-full border border-slate-300/70 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-500/40 dark:bg-slate-500/12 dark:text-slate-200">
-              {roleLabel}
-            </span>
-          )
-        })() : null}
+        {member.userRole
+          ? (() => {
+              const normalizedRole = String(member.userRole).toLowerCase()
+              const roleLabel =
+                systemRoleLabels[normalizedRole] ?? member.userRole
+              if (normalizedRole === 'client' || roleLabel === 'Участник') {
+                return null
+              }
+              return (
+                <span className="inline-flex items-center rounded-full border border-slate-300/70 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-500/40 dark:bg-slate-500/12 dark:text-slate-200">
+                  {roleLabel}
+                </span>
+              )
+            })()
+          : null}
       </div>
     </div>
   </SelectableCard>

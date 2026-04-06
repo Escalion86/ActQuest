@@ -266,11 +266,24 @@ const AdminEventsPageClient = ({
     const invalidTeamIds = new Set()
 
     events.forEach((event) => {
-      const eventType = String(event?.type || '').trim().toLowerCase()
+      const eventType = String(event?.type || '')
+        .trim()
+        .toLowerCase()
       if (eventType === USER_REGISTERED_EVENT) {
-        const userId = String(event?.targetUserId || event?.actorUserId || '').trim()
+        const userId = String(
+          event?.targetUserId || event?.actorUserId || '',
+        ).trim()
         if (userId && !hasOwn(userDetailsById, userId)) {
           userIdsToLoad.add(userId)
+        }
+      }
+      if (
+        eventType === TEAM_CREATED_EVENT ||
+        eventType === TEAM_DELETED_EVENT
+      ) {
+        const actorUserId = String(event?.actorUserId || '').trim()
+        if (actorUserId && !hasOwn(userDetailsById, actorUserId)) {
+          userIdsToLoad.add(actorUserId)
         }
       }
       if (
@@ -296,7 +309,8 @@ const AdminEventsPageClient = ({
         if (gameId && !hasOwn(gameDetailsById, gameId)) {
           gamesToLoad.push({
             gameId,
-            location: typeof event?.location === 'string' ? event.location : null,
+            location:
+              typeof event?.location === 'string' ? event.location : null,
           })
         }
       }
@@ -441,16 +455,19 @@ const AdminEventsPageClient = ({
     [userDetailsById],
   )
 
-  const handleOpenTeamCard = useCallback((team) => {
-    if (!team || typeof team.id !== 'string' || !team.id.trim()) {
-      return
-    }
-    const detailedTeam = teamDetailsById[team.id] || null
-    if (detailedTeam) {
-      setSelectedTeamForModal(detailedTeam)
-      setIsTeamModalOpen(true)
-    }
-  }, [teamDetailsById])
+  const handleOpenTeamCard = useCallback(
+    (team) => {
+      if (!team || typeof team.id !== 'string' || !team.id.trim()) {
+        return
+      }
+      const detailedTeam = teamDetailsById[team.id] || null
+      if (detailedTeam) {
+        setSelectedTeamForModal(detailedTeam)
+        setIsTeamModalOpen(true)
+      }
+    },
+    [teamDetailsById],
+  )
 
   const closeTeamModal = useCallback(() => {
     setIsTeamModalOpen(false)
@@ -533,7 +550,9 @@ const AdminEventsPageClient = ({
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => void handleToggleLocationFilter(option.value)}
+                    onClick={() =>
+                      void handleToggleLocationFilter(option.value)
+                    }
                     className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
                   >
                     <span
@@ -588,12 +607,17 @@ const AdminEventsPageClient = ({
                 {event.teamName ? <span>Команда: {event.teamName}</span> : null}
                 {event.gameName ? <span>Игра: {event.gameName}</span> : null}
               </div>
-              {String(event.type || '').toLowerCase() === USER_REGISTERED_EVENT ? (
+              {String(event.type || '').toLowerCase() ===
+              USER_REGISTERED_EVENT ? (
                 <div className="mt-3">
                   {(() => {
-                    const userId = String(event.targetUserId || event.actorUserId || '').trim()
+                    const userId = String(
+                      event.targetUserId || event.actorUserId || '',
+                    ).trim()
                     const user = userId ? userDetailsById[userId] : null
-                    const isResolved = userId ? hasOwn(userDetailsById, userId) : false
+                    const isResolved = userId
+                      ? hasOwn(userDetailsById, userId)
+                      : false
                     if (!isResolved) {
                       return (
                         <p className="text-xs text-slate-500 dark:text-slate-300">
@@ -636,7 +660,9 @@ const AdminEventsPageClient = ({
                   {(() => {
                     const teamId = String(event.teamId || '').trim()
                     const team = teamId ? teamDetailsById[teamId] : null
-                    const isResolved = teamId ? hasOwn(teamDetailsById, teamId) : false
+                    const isResolved = teamId
+                      ? hasOwn(teamDetailsById, teamId)
+                      : false
                     const teamCard = !isResolved ? (
                       <p className="text-xs text-slate-500 dark:text-slate-300">
                         Загрузка карточки команды...
@@ -664,6 +690,49 @@ const AdminEventsPageClient = ({
                       eventType !== TEAM_REGISTERED_TO_GAME_EVENT &&
                       eventType !== TEAM_UNREGISTERED_FROM_GAME_EVENT
                     ) {
+                      // Для событий создания и удаления команды показывать пользователя
+                      if (
+                        eventType === TEAM_CREATED_EVENT ||
+                        eventType === TEAM_DELETED_EVENT
+                      ) {
+                        const actorUserId = String(
+                          event.actorUserId || '',
+                        ).trim()
+                        const actor = actorUserId
+                          ? userDetailsById[actorUserId]
+                          : null
+                        const isActorResolved = actorUserId
+                          ? hasOwn(userDetailsById, actorUserId)
+                          : false
+                        const actorCard = !isActorResolved ? (
+                          <p className="text-xs text-slate-500 dark:text-slate-300">
+                            Загрузка карточки пользователя...
+                          </p>
+                        ) : actor ? (
+                          <TeamMemberCard
+                            member={{
+                              id: actor.id || actorUserId,
+                              name: actor.name || 'Без имени',
+                              username: actor.username || '',
+                              userRole: actor.role || 'client',
+                              hasLinkedUser: true,
+                              phone: actor.phone || '',
+                              isCaptain: false,
+                            }}
+                            onOpen={handleOpenUserCard}
+                          />
+                        ) : (
+                          <p className="text-xs text-slate-500 dark:text-slate-300">
+                            Карточка пользователя недоступна.
+                          </p>
+                        )
+                        return (
+                          <>
+                            {actorCard}
+                            {teamCard}
+                          </>
+                        )
+                      }
                       return teamCard
                     }
 
@@ -731,19 +800,25 @@ const AdminEventsPageClient = ({
               </div>
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
-                  <p className="text-xs text-slate-500 dark:text-slate-300">Роль</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Роль
+                  </p>
                   <p className="mt-1 text-sm text-slate-900 dark:text-slate-100">
                     {selectedUserForModal.role || 'client'}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
-                  <p className="text-xs text-slate-500 dark:text-slate-300">Команд</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Команд
+                  </p>
                   <p className="mt-1 text-sm text-slate-900 dark:text-slate-100">
                     {Number(selectedUserForModal.teamsCount || 0)}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
-                  <p className="text-xs text-slate-500 dark:text-slate-300">Игр</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Игр
+                  </p>
                   <p className="mt-1 text-sm text-slate-900 dark:text-slate-100">
                     {Number(selectedUserForModal.gamesCount || 0)}
                   </p>

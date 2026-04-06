@@ -65,7 +65,9 @@ const getStdDev = (values = [], average = null) => {
 
 const buildRatingMetrics = ({ places = [], missedGames = 0 }) => {
   const normalizedPlaces = Array.isArray(places)
-    ? places.map((value) => Number(value)).filter((value) => Number.isFinite(value))
+    ? places
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value))
     : []
 
   const playedGames = normalizedPlaces.length
@@ -78,13 +80,14 @@ const buildRatingMetrics = ({ places = [], missedGames = 0 }) => {
       ? getStdDev(normalizedPlaces, averagePlace)
       : 0
   const attendanceDenominator = playedGames + normalizedMissedGames
-  const attendance = attendanceDenominator > 0 ? playedGames / attendanceDenominator : 1
-  const baseScore =
-    Number.isFinite(averagePlace)
-      ? averagePlace + RATING_STABILITY_WEIGHT * stdDevPlace
-      : null
-  const missPenalty =
-    Number.isFinite(baseScore) ? (1 - attendance) * RATING_MISS_PENALTY_WEIGHT : null
+  const attendance =
+    attendanceDenominator > 0 ? playedGames / attendanceDenominator : 1
+  const baseScore = Number.isFinite(averagePlace)
+    ? averagePlace + RATING_STABILITY_WEIGHT * stdDevPlace
+    : null
+  const missPenalty = Number.isFinite(baseScore)
+    ? (1 - attendance) * RATING_MISS_PENALTY_WEIGHT
+    : null
   const finalScore = Number.isFinite(baseScore) ? baseScore + missPenalty : null
 
   return {
@@ -97,19 +100,23 @@ const buildRatingMetrics = ({ places = [], missedGames = 0 }) => {
     baseScore,
     missPenalty,
     finalScore,
-    isEligible: playedGames >= RATING_MIN_PLAYED_GAMES && Number.isFinite(finalScore),
+    isEligible:
+      playedGames >= RATING_MIN_PLAYED_GAMES && Number.isFinite(finalScore),
   }
 }
 
 const buildTimeline = (games) =>
   games
     .map((game) => {
-      const result = game?.result && typeof game.result === 'object' ? game.result : {}
+      const result =
+        game?.result && typeof game.result === 'object' ? game.result : {}
       const teamsPlacesRaw =
         result?.teamsPlaces && typeof result.teamsPlaces === 'object'
           ? result.teamsPlaces
           : {}
-      const teamsUsers = Array.isArray(result?.teamsUsers) ? result.teamsUsers : []
+      const teamsUsers = Array.isArray(result?.teamsUsers)
+        ? result.teamsUsers
+        : []
 
       const teamsPlaces = new Map()
       Object.entries(teamsPlacesRaw).forEach(([teamId, place]) => {
@@ -149,13 +156,17 @@ const buildTimeline = (games) =>
         return null
       }
 
-      const startedAt = game?.dateStart ? new Date(game.dateStart).getTime() : Number.NaN
+      const startedAt = game?.dateStart
+        ? new Date(game.dateStart).getTime()
+        : Number.NaN
 
       const seasonId = toStringId(game?.seasonId)
 
       return {
         id: toStringId(game?._id) || '',
-        startedAt: Number.isFinite(startedAt) ? startedAt : Number.POSITIVE_INFINITY,
+        startedAt: Number.isFinite(startedAt)
+          ? startedAt
+          : Number.POSITIVE_INFINITY,
         seasonId: seasonId || null,
         teamsPlaces,
         playersPlaces,
@@ -199,7 +210,7 @@ const collectMetrics = (timeline, mapSelector) => {
       if (seasonId) {
         row.playedBySeason.set(
           seasonId,
-          (row.playedBySeason.get(seasonId) ?? 0) + 1
+          (row.playedBySeason.get(seasonId) ?? 0) + 1,
         )
       }
     })
@@ -290,7 +301,12 @@ const buildRanks = (metricsByKey) => {
   return metricsByKeyResolved
 }
 
-const buildRatingSnapshot = ({ rating, location, sourceGameId, entityType }) => {
+const buildRatingSnapshot = ({
+  rating,
+  location,
+  sourceGameId,
+  entityType,
+}) => {
   const nowIso = new Date().toISOString()
   return {
     version: 1,
@@ -300,20 +316,36 @@ const buildRatingSnapshot = ({ rating, location, sourceGameId, entityType }) => 
     updatedAt: nowIso,
     isEligible: Boolean(rating?.isEligible),
     rank: Number.isFinite(Number(rating?.rank)) ? Number(rating.rank) : null,
-    totalRanked: Number.isFinite(Number(rating?.totalRanked)) ? Number(rating.totalRanked) : 0,
+    totalRanked: Number.isFinite(Number(rating?.totalRanked))
+      ? Number(rating.totalRanked)
+      : 0,
     playersAbove: Number.isFinite(Number(rating?.playersAbove))
       ? Number(rating.playersAbove)
       : null,
-    finalScore: Number.isFinite(Number(rating?.finalScore)) ? Number(rating.finalScore) : null,
-    baseScore: Number.isFinite(Number(rating?.baseScore)) ? Number(rating.baseScore) : null,
-    missPenalty: Number.isFinite(Number(rating?.missPenalty)) ? Number(rating.missPenalty) : null,
+    finalScore: Number.isFinite(Number(rating?.finalScore))
+      ? Number(rating.finalScore)
+      : null,
+    baseScore: Number.isFinite(Number(rating?.baseScore))
+      ? Number(rating.baseScore)
+      : null,
+    missPenalty: Number.isFinite(Number(rating?.missPenalty))
+      ? Number(rating.missPenalty)
+      : null,
     averagePlace: Number.isFinite(Number(rating?.averagePlace))
       ? Number(rating.averagePlace)
       : null,
-    stdDevPlace: Number.isFinite(Number(rating?.stdDevPlace)) ? Number(rating.stdDevPlace) : null,
-    attendance: Number.isFinite(Number(rating?.attendance)) ? Number(rating.attendance) : null,
-    playedGames: Number.isFinite(Number(rating?.playedGames)) ? Number(rating.playedGames) : 0,
-    missedGames: Number.isFinite(Number(rating?.missedGames)) ? Number(rating.missedGames) : 0,
+    stdDevPlace: Number.isFinite(Number(rating?.stdDevPlace))
+      ? Number(rating.stdDevPlace)
+      : null,
+    attendance: Number.isFinite(Number(rating?.attendance))
+      ? Number(rating.attendance)
+      : null,
+    playedGames: Number.isFinite(Number(rating?.playedGames))
+      ? Number(rating.playedGames)
+      : 0,
+    missedGames: Number.isFinite(Number(rating?.missedGames))
+      ? Number(rating.missedGames)
+      : 0,
   }
 }
 
@@ -323,10 +355,13 @@ const updateParticipantsRatings = async ({ db, game }) => {
   }
 
   const gameId = toStringId(game?._id)
-  const result = game?.result && typeof game.result === 'object' ? game.result : {}
+  const result =
+    game?.result && typeof game.result === 'object' ? game.result : {}
   const teamsUsers = Array.isArray(result?.teamsUsers) ? result.teamsUsers : []
   const teamsPlacesRaw =
-    result?.teamsPlaces && typeof result.teamsPlaces === 'object' ? result.teamsPlaces : {}
+    result?.teamsPlaces && typeof result.teamsPlaces === 'object'
+      ? result.teamsPlaces
+      : {}
 
   const currentUserRefs = new Map()
   teamsUsers.forEach((membership) => {

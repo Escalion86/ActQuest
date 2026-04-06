@@ -141,14 +141,28 @@ const ManageUsersPage = ({
 
   useEffect(() => {
     // Если есть активный фильтр (поиск, ролль, город или сортировка), не перезаписывать список
-    const hasActiveFilter = searchQuery || roleFilter !== 'all' || locationFilter !== 'all' || sortBy !== 'registration_desc'
-    
+    const hasActiveFilter =
+      searchQuery ||
+      roleFilter !== 'all' ||
+      locationFilter !== 'all' ||
+      sortBy !== 'registration_desc'
+
     if (hasActiveFilter) {
-      console.log('[AdminUsers] Active filter detected, not overwriting list with initial data: searchQuery:', searchQuery, 'filters:', {roleFilter, locationFilter, sortBy})
+      console.log(
+        '[AdminUsers] Active filter detected, not overwriting list with initial data: searchQuery:',
+        searchQuery,
+        'filters:',
+        { roleFilter, locationFilter, sortBy },
+      )
       return
     }
 
-    console.log('[AdminUsers] Initial effect triggered - safeInitialUsers.length:', safeInitialUsers.length, 'initialHasMore:', initialHasMore)
+    console.log(
+      '[AdminUsers] Initial effect triggered - safeInitialUsers.length:',
+      safeInitialUsers.length,
+      'initialHasMore:',
+      initialHasMore,
+    )
     setUsers(safeInitialUsers)
     setPersistedUsers(safeInitialUsers)
     setHasMoreUsers(Boolean(initialHasMore))
@@ -159,11 +173,21 @@ const ManageUsersPage = ({
 
       return safeInitialUsers[0]?.id ?? null
     })
-  }, [initialHasMore, safeInitialUsers, searchQuery, roleFilter, locationFilter, sortBy])
+  }, [
+    initialHasMore,
+    safeInitialUsers,
+    searchQuery,
+    roleFilter,
+    locationFilter,
+    sortBy,
+  ])
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      console.log('[AdminUsers] Setting searchQuery from searchInput:', searchInput)
+      console.log(
+        '[AdminUsers] Setting searchQuery from searchInput:',
+        searchInput,
+      )
       setSearchQuery(searchInput.trim())
     }, 450)
 
@@ -174,14 +198,19 @@ const ManageUsersPage = ({
 
   const setUserIdQuery = useCallback(
     (nextUserId) => {
-      console.log('[AdminUsers] setUserIdQuery called with:', nextUserId, 'current searchParams:', searchParams?.toString())
-      
+      console.log(
+        '[AdminUsers] setUserIdQuery called with:',
+        nextUserId,
+        'current searchParams:',
+        searchParams?.toString(),
+      )
+
       // Если удаляем userId, отметить что это намеренное закрытие модалки
       // Флаг НЕ сбрасывать - пусть остаётся пока эффект не обработает новый searchParams
       if (!nextUserId) {
         isIntentionallyCLosingModalRef.current = true
       }
-      
+
       const nextQuery = new URLSearchParams(searchParams?.toString() || '')
       if (nextUserId) {
         nextQuery.set('userId', nextUserId)
@@ -200,7 +229,12 @@ const ManageUsersPage = ({
 
   const updateSearchQueryInUrl = useCallback(
     (nextSearchQuery) => {
-      console.log('[AdminUsers] updateSearchQueryInUrl called with:', nextSearchQuery, 'current searchParams:', searchParams?.toString())
+      console.log(
+        '[AdminUsers] updateSearchQueryInUrl called with:',
+        nextSearchQuery,
+        'current searchParams:',
+        searchParams?.toString(),
+      )
       const nextQuery = new URLSearchParams(searchParams?.toString() || '')
       if (nextSearchQuery && nextSearchQuery.trim()) {
         nextQuery.set('q', nextSearchQuery.trim())
@@ -221,29 +255,39 @@ const ManageUsersPage = ({
     setIsUserEditModalOpen(false)
   }, [])
 
-  const onUserUpdated = useCallback(() => {
-    // Закрыть модалку редактирования после успешного обновления
-    setIsUserEditModalOpen(false)
-  }, [])
-
   const closeUserTeamModal = useCallback(() => {
     setIsUserTeamModalOpen(false)
     setSelectedUserTeam(null)
   }, [])
 
   const closeUserViewModal = useCallback(() => {
-    console.log('[AdminUsers] Closing view modal, current searchInput:', searchInput, 'searchQuery:', searchQuery)
+    console.log(
+      '[AdminUsers] Closing view modal, current searchInput:',
+      searchInput,
+      'searchQuery:',
+      searchQuery,
+    )
     setIsUserViewModalOpen(false)
     closeUserTeamModal()
     setUserIdQuery(null)
   }, [closeUserTeamModal, setUserIdQuery, searchInput, searchQuery])
 
   useEffect(() => {
-    console.log('[AdminUsers] searchQuery changed:', searchQuery, 'current URL q param:', searchParams?.get('q'))
+    console.log(
+      '[AdminUsers] searchQuery changed:',
+      searchQuery,
+      'current URL q param:',
+      searchParams?.get('q'),
+    )
     // Синхронизируем searchQuery с URL параметром q
     const urlQParam = searchParams?.get('q') ?? ''
     if (searchQuery !== urlQParam) {
-      console.log('[AdminUsers] searchQuery differs from URL, updating - old:', urlQParam, 'new:', searchQuery)
+      console.log(
+        '[AdminUsers] searchQuery differs from URL, updating - old:',
+        urlQParam,
+        'new:',
+        searchQuery,
+      )
       updateSearchQueryInUrl(searchQuery)
     }
   }, [searchQuery, searchParams, updateSearchQueryInUrl])
@@ -294,10 +338,15 @@ const ManageUsersPage = ({
 
   // Эффект для закрытия модалей только если список пользователей пустой
   useEffect(() => {
-    console.log('[AdminUsers] Effect: checking if users list is empty - users.length:', users.length)
-    
+    console.log(
+      '[AdminUsers] Effect: checking if users list is empty - users.length:',
+      users.length,
+    )
+
     if (users.length === 0) {
-      console.log('[AdminUsers] No users (length=0), clearing selectedUserId and closing modals')
+      console.log(
+        '[AdminUsers] No users (length=0), clearing selectedUserId and closing modals',
+      )
       setSelectedUserId(null)
       setIsUserViewModalOpen(false)
       setIsUserEditModalOpen(false)
@@ -306,8 +355,13 @@ const ManageUsersPage = ({
 
   // Эффект для выбора пользователя из списка (если нет открытой модали)
   useEffect(() => {
-    console.log('[AdminUsers] Effect: users or selectedUserId changed - users.length:', users.length, 'selectedUserId:', selectedUserId)
-    
+    console.log(
+      '[AdminUsers] Effect: users or selectedUserId changed - users.length:',
+      users.length,
+      'selectedUserId:',
+      selectedUserId,
+    )
+
     if (users.length === 0) {
       console.log('[AdminUsers] Empty users list, skipping selection')
       return
@@ -321,7 +375,10 @@ const ManageUsersPage = ({
 
     // Если пользователь уже выбран и он есть в списке, то ничего не меняем
     if (selectedUserId && users.some((user) => user.id === selectedUserId)) {
-      console.log('[AdminUsers] Selected user still in list, keeping selection:', selectedUserId)
+      console.log(
+        '[AdminUsers] Selected user still in list, keeping selection:',
+        selectedUserId,
+      )
       return
     }
 
@@ -398,19 +455,27 @@ const ManageUsersPage = ({
       return undefined
     }
 
-    console.log('[AdminUsers] Effect on loadUsersByFilters triggered - checking dependencies:', {
-      isAdmin,
-      locationFilter,
-      roleFilter,
-      searchQuery,
-      sortBy,
-      'safeInitialUsers.length': safeInitialUsers.length,
-    })
+    console.log(
+      '[AdminUsers] Effect on loadUsersByFilters triggered - checking dependencies:',
+      {
+        isAdmin,
+        locationFilter,
+        roleFilter,
+        searchQuery,
+        sortBy,
+        'safeInitialUsers.length': safeInitialUsers.length,
+      },
+    )
 
     let cancelled = false
 
     const loadUsersByFilters = async () => {
-      console.log('[AdminUsers] Loading users with filters:', { searchQuery, roleFilter, locationFilter, sortBy })
+      console.log('[AdminUsers] Loading users with filters:', {
+        searchQuery,
+        roleFilter,
+        locationFilter,
+        sortBy,
+      })
       setIsLoadingMoreUsers(true)
       setFeedback(null)
 
@@ -442,7 +507,14 @@ const ManageUsersPage = ({
 
         const nextUsers = Array.isArray(json?.data) ? json.data : []
         const nextHasMore = Boolean(json?.meta?.hasMore)
-        console.log('[AdminUsers] Loaded users:', nextUsers.length, 'hasMore:', nextHasMore, 'current selectedUserId:', selectedUserId)
+        console.log(
+          '[AdminUsers] Loaded users:',
+          nextUsers.length,
+          'hasMore:',
+          nextHasMore,
+          'current selectedUserId:',
+          selectedUserId,
+        )
         setUsers(nextUsers)
         setPersistedUsers(nextUsers)
         setHasMoreUsers(nextHasMore)
@@ -488,11 +560,25 @@ const ManageUsersPage = ({
   const isUsersListLoading = isLoadingMoreUsers && users.length === 0
 
   useEffect(() => {
-    console.log('[AdminUsers] Modal state changed - View:', isUserViewModalOpen, 'Edit:', isUserEditModalOpen, 'selectedUserId:', selectedUserId)
+    console.log(
+      '[AdminUsers] Modal state changed - View:',
+      isUserViewModalOpen,
+      'Edit:',
+      isUserEditModalOpen,
+      'selectedUserId:',
+      selectedUserId,
+    )
   }, [isUserViewModalOpen, isUserEditModalOpen])
 
   useEffect(() => {
-    console.log('[AdminUsers] selectedUserId changed:', selectedUserId, 'isUserViewModalOpen:', isUserViewModalOpen, 'isUserEditModalOpen:', isUserEditModalOpen)
+    console.log(
+      '[AdminUsers] selectedUserId changed:',
+      selectedUserId,
+      'isUserViewModalOpen:',
+      isUserViewModalOpen,
+      'isUserEditModalOpen:',
+      isUserEditModalOpen,
+    )
   }, [selectedUserId, isUserViewModalOpen, isUserEditModalOpen])
 
   useEffect(() => {
@@ -505,7 +591,11 @@ const ManageUsersPage = ({
         return
       }
 
-      console.log('[AdminUsers] Opening view modal for user:', user.id, user.name)
+      console.log(
+        '[AdminUsers] Opening view modal for user:',
+        user.id,
+        user.name,
+      )
       // Отметить что мы намеренно открываем модалку (флаг не сбрасывать до обновления URL)
       isIntentionallyOpeningModalRef.current = true
       setSelectedUserId(user.id)
@@ -775,8 +865,19 @@ const ManageUsersPage = ({
   )
 
   useEffect(() => {
-    console.log('[AdminUsers] useEffect on searchParams - URL userId:', searchParams?.get('userId'), 'modal open:', isUserViewModalOpen, 'selectedUserId:', selectedUserId, 'intentionalClose flag:', isIntentionallyCLosingModalRef.current, 'intentionalOpen flag:', isIntentionallyOpeningModalRef.current)
-    
+    console.log(
+      '[AdminUsers] useEffect on searchParams - URL userId:',
+      searchParams?.get('userId'),
+      'modal open:',
+      isUserViewModalOpen,
+      'selectedUserId:',
+      selectedUserId,
+      'intentionalClose flag:',
+      isIntentionallyCLosingModalRef.current,
+      'intentionalOpen flag:',
+      isIntentionallyOpeningModalRef.current,
+    )
+
     // Если в процессе намеренного закрытия, просто закрыть модалку и не открывать её заново
     if (isIntentionallyCLosingModalRef.current) {
       console.log('[AdminUsers] In intentional close mode, closing modal')
@@ -784,12 +885,14 @@ const ManageUsersPage = ({
       const userIdFromQuery = searchParams?.get('userId')
       // Сбросить флаг когда userId будет удален из URL
       if (!userIdFromQuery) {
-        console.log('[AdminUsers] userId removed from URL, resetting intentional close flag')
+        console.log(
+          '[AdminUsers] userId removed from URL, resetting intentional close flag',
+        )
         isIntentionallyCLosingModalRef.current = false
       }
       return
     }
-    
+
     const userIdFromQuery = searchParams?.get('userId')
     const wasUserIdInUrl = prevUserIdFromUrlRef.current !== null
     const isUserIdRemovedFromUrl = wasUserIdInUrl && !userIdFromQuery
@@ -801,10 +904,12 @@ const ManageUsersPage = ({
       // Если в процессе намеренного открытия, НЕ закрывать модалку даже если userId нету в URL
       // (URL скоро обновится с новым userId)
       if (isIntentionallyOpeningModalRef.current) {
-        console.log('[AdminUsers] In intentional open mode, keeping modal open despite missing userId in URL')
+        console.log(
+          '[AdminUsers] In intentional open mode, keeping modal open despite missing userId in URL',
+        )
         return
       }
-      
+
       console.log('[AdminUsers] No userId in URL, closing modal')
       setIsUserViewModalOpen(false)
       return
@@ -812,13 +917,17 @@ const ManageUsersPage = ({
 
     // Если userId появился в URL и мы были в режиме "намеренного открытия", сбросить флаг
     if (isIntentionallyOpeningModalRef.current) {
-      console.log('[AdminUsers] userId appeared in URL, resetting intentional open flag')
+      console.log(
+        '[AdminUsers] userId appeared in URL, resetting intentional open flag',
+      )
       isIntentionallyOpeningModalRef.current = false
     }
 
     // Если модаль уже открыта с этим пользователем, ничего не меняем
     if (isUserViewModalOpen && selectedUserId === userIdFromQuery) {
-      console.log('[AdminUsers] Modal already open with correct user, keeping it open')
+      console.log(
+        '[AdminUsers] Modal already open with correct user, keeping it open',
+      )
       return
     }
 
@@ -830,7 +939,10 @@ const ManageUsersPage = ({
     }
 
     // Иначе обновляем выбор и открываем модаль
-    console.log('[AdminUsers] Setting new user and opening modal:', userIdFromQuery)
+    console.log(
+      '[AdminUsers] Setting new user and opening modal:',
+      userIdFromQuery,
+    )
     setSelectedUserId(userIdFromQuery)
     setIsUserEditModalOpen(false)
     setIsUserViewModalOpen(true)
@@ -1333,15 +1445,12 @@ const ManageUsersPage = ({
           isOpen={isUserViewModalOpen}
           onClose={closeUserViewModal}
           onOpenTeam={handleOpenUserTeamModal}
-          user={selectedUser}
         />
 
         <UserEditModal
           userId={selectedUserId}
           isOpen={isUserEditModalOpen}
           onClose={closeUserEditModal}
-          onUserUpdated={onUserUpdated}
-          user={selectedUser}
         />
 
         <Modal

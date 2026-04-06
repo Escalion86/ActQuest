@@ -76,6 +76,7 @@ const GameModals = ({
   handleAddTeamToGame,
   isAddingTeam,
   handleRemoveTeamFromGame,
+  isTeamsModalReadOnly,
   isRegisterModalOpen,
   handleCloseRegisterModal,
   isRegisterSubmitting,
@@ -91,6 +92,7 @@ const GameModals = ({
   isRegisterTeamsLoading,
   registerTeams,
   currentUserId,
+  currentUserRole,
   isCreateGameModalOpen,
   handleCloseCreateGameModal,
   isCreatingGame,
@@ -164,259 +166,261 @@ const GameModals = ({
 
   return (
     <>
-    {gameForEdit ? (
-      <GameEditModal
-        selectedGame={gameForEdit}
-      isEditModalOpen={isEditModalOpen}
-      handleCloseEditModal={handleCloseEditModal}
-      canEditSelectedGame={canEditSelectedGame}
-      isSaving={isSaving}
-      location={location}
-      isDirty={isDirty}
-      handleModalPrimaryAction={handleModalPrimaryAction}
-      handleResetChanges={handleResetChanges}
-      updateSelectedGame={updateSelectedGame}
-      GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
-      CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
-      toMinutes={toMinutes}
-      toSeconds={toSeconds}
-      handleAddTask={handleAddTask}
-      handleRemoveTask={handleRemoveTask}
-      handleTaskFieldChange={handleTaskFieldChange}
-      handleTaskNumberChange={handleTaskNumberChange}
-      handleTaskOptionalNumberChange={handleTaskOptionalNumberChange}
-      handleTaskCheckboxChange={handleTaskCheckboxChange}
-      handleTaskCoordinateChange={handleTaskCoordinateChange}
-      handleAddTaskCode={handleAddTaskCode}
-      handleTaskCodeChange={handleTaskCodeChange}
-      handleRemoveTaskCode={handleRemoveTaskCode}
-      handleAddTaskImage={handleAddTaskImage}
-      handleTaskImageChange={handleTaskImageChange}
-      handleRemoveTaskImage={handleRemoveTaskImage}
-      handleAddClue={handleAddClue}
-      handleTaskClueChange={handleTaskClueChange}
-      handleRemoveClue={handleRemoveClue}
-      handleAddSubTask={handleAddSubTask}
-      handleSubTaskChange={handleSubTaskChange}
-      handleRemoveSubTask={handleRemoveSubTask}
-      handleAddPenaltyCode={handleAddPenaltyCode}
-      handlePenaltyCodeChange={handlePenaltyCodeChange}
-      handleRemovePenaltyCode={handleRemovePenaltyCode}
-      handleAddBonusCode={handleAddBonusCode}
-      handleBonusCodeChange={handleBonusCodeChange}
-      handleRemoveBonusCode={handleRemoveBonusCode}
-      handleAddPrice={handleAddPrice}
-      handlePriceChange={handlePriceChange}
-      handleRemovePrice={handleRemovePrice}
-      handleAddFinance={handleAddFinance}
-      handleFinanceChange={handleFinanceChange}
-      handleRemoveFinance={handleRemoveFinance}
-      canGenerateResults={canGenerateResults}
-      isGeneratingResults={isGeneratingResults}
-      handleGenerateResults={handleGenerateResults}
-      currencyFormatter={currencyFormatter}
-      financesSummary={financesSummary}
-      balanceClass={balanceClass}
-      expandedTaskIds={expandedTaskIds}
-      toggleTaskExpansion={toggleTaskExpansion}
-      selectedGameModerators={selectedGameModerators}
-      availableModeratorsForSelect={availableModeratorsForSelect}
-      availableModeratorsMap={availableModeratorsMap}
-      availableOrganizersForSelect={availableOrganizersForSelect}
-      selectedModeratorToAdd={selectedModeratorToAdd}
-      setSelectedModeratorToAdd={setSelectedModeratorToAdd}
-      handleAddModerator={handleAddModerator}
-      handleRemoveModerator={handleRemoveModerator}
-      editGameLocationOptions={editGameLocationOptions}
-      editGameSeasons={editGameSeasons}
-      isEditGameSeasonsLoading={isEditGameSeasonsLoading}
-      isEditGameSeasonCreating={isEditGameSeasonCreating}
-      handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+      {gameForEdit ? (
+        <GameEditModal
+          selectedGame={gameForEdit}
+          isEditModalOpen={isEditModalOpen}
+          handleCloseEditModal={handleCloseEditModal}
+          canEditSelectedGame={canEditSelectedGame}
+          isSaving={isSaving}
+          location={location}
+          isDirty={isDirty}
+          handleModalPrimaryAction={handleModalPrimaryAction}
+          handleResetChanges={handleResetChanges}
+          updateSelectedGame={updateSelectedGame}
+          GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
+          CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
+          toMinutes={toMinutes}
+          toSeconds={toSeconds}
+          handleAddTask={handleAddTask}
+          handleRemoveTask={handleRemoveTask}
+          handleTaskFieldChange={handleTaskFieldChange}
+          handleTaskNumberChange={handleTaskNumberChange}
+          handleTaskOptionalNumberChange={handleTaskOptionalNumberChange}
+          handleTaskCheckboxChange={handleTaskCheckboxChange}
+          handleTaskCoordinateChange={handleTaskCoordinateChange}
+          handleAddTaskCode={handleAddTaskCode}
+          handleTaskCodeChange={handleTaskCodeChange}
+          handleRemoveTaskCode={handleRemoveTaskCode}
+          handleAddTaskImage={handleAddTaskImage}
+          handleTaskImageChange={handleTaskImageChange}
+          handleRemoveTaskImage={handleRemoveTaskImage}
+          handleAddClue={handleAddClue}
+          handleTaskClueChange={handleTaskClueChange}
+          handleRemoveClue={handleRemoveClue}
+          handleAddSubTask={handleAddSubTask}
+          handleSubTaskChange={handleSubTaskChange}
+          handleRemoveSubTask={handleRemoveSubTask}
+          handleAddPenaltyCode={handleAddPenaltyCode}
+          handlePenaltyCodeChange={handlePenaltyCodeChange}
+          handleRemovePenaltyCode={handleRemovePenaltyCode}
+          handleAddBonusCode={handleAddBonusCode}
+          handleBonusCodeChange={handleBonusCodeChange}
+          handleRemoveBonusCode={handleRemoveBonusCode}
+          handleAddPrice={handleAddPrice}
+          handlePriceChange={handlePriceChange}
+          handleRemovePrice={handleRemovePrice}
+          handleAddFinance={handleAddFinance}
+          handleFinanceChange={handleFinanceChange}
+          handleRemoveFinance={handleRemoveFinance}
+          canGenerateResults={canGenerateResults}
+          isGeneratingResults={isGeneratingResults}
+          handleGenerateResults={handleGenerateResults}
+          currencyFormatter={currencyFormatter}
+          financesSummary={financesSummary}
+          balanceClass={balanceClass}
+          expandedTaskIds={expandedTaskIds}
+          toggleTaskExpansion={toggleTaskExpansion}
+          selectedGameModerators={selectedGameModerators}
+          availableModeratorsForSelect={availableModeratorsForSelect}
+          availableModeratorsMap={availableModeratorsMap}
+          availableOrganizersForSelect={availableOrganizersForSelect}
+          selectedModeratorToAdd={selectedModeratorToAdd}
+          setSelectedModeratorToAdd={setSelectedModeratorToAdd}
+          handleAddModerator={handleAddModerator}
+          handleRemoveModerator={handleRemoveModerator}
+          editGameLocationOptions={editGameLocationOptions}
+          editGameSeasons={editGameSeasons}
+          isEditGameSeasonsLoading={isEditGameSeasonsLoading}
+          isEditGameSeasonCreating={isEditGameSeasonCreating}
+          handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+        />
+      ) : null}
+
+      {gameForEdit ? (
+        <GameEditModal
+          selectedGame={gameForEdit}
+          isEditModalOpen={isTasksModalOpen}
+          handleCloseEditModal={handleCloseTasksModal}
+          canEditSelectedGame={canEditSelectedGame}
+          isSaving={isSaving}
+          location={location}
+          isDirty={isDirty}
+          handleModalPrimaryAction={handleTasksModalPrimaryAction}
+          handleResetChanges={handleResetChanges}
+          updateSelectedGame={updateSelectedGame}
+          GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
+          CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
+          toMinutes={toMinutes}
+          toSeconds={toSeconds}
+          handleAddTask={handleAddTask}
+          handleRemoveTask={handleRemoveTask}
+          handleTaskFieldChange={handleTaskFieldChange}
+          handleTaskNumberChange={handleTaskNumberChange}
+          handleTaskOptionalNumberChange={handleTaskOptionalNumberChange}
+          handleTaskCheckboxChange={handleTaskCheckboxChange}
+          handleTaskCoordinateChange={handleTaskCoordinateChange}
+          handleAddTaskCode={handleAddTaskCode}
+          handleTaskCodeChange={handleTaskCodeChange}
+          handleRemoveTaskCode={handleRemoveTaskCode}
+          handleAddTaskImage={handleAddTaskImage}
+          handleTaskImageChange={handleTaskImageChange}
+          handleRemoveTaskImage={handleRemoveTaskImage}
+          handleAddClue={handleAddClue}
+          handleTaskClueChange={handleTaskClueChange}
+          handleRemoveClue={handleRemoveClue}
+          handleAddSubTask={handleAddSubTask}
+          handleSubTaskChange={handleSubTaskChange}
+          handleRemoveSubTask={handleRemoveSubTask}
+          handleAddPenaltyCode={handleAddPenaltyCode}
+          handlePenaltyCodeChange={handlePenaltyCodeChange}
+          handleRemovePenaltyCode={handleRemovePenaltyCode}
+          handleAddBonusCode={handleAddBonusCode}
+          handleBonusCodeChange={handleBonusCodeChange}
+          handleRemoveBonusCode={handleRemoveBonusCode}
+          handleAddPrice={handleAddPrice}
+          handlePriceChange={handlePriceChange}
+          handleRemovePrice={handleRemovePrice}
+          handleAddFinance={handleAddFinance}
+          handleFinanceChange={handleFinanceChange}
+          handleRemoveFinance={handleRemoveFinance}
+          canGenerateResults={canGenerateResults}
+          isGeneratingResults={isGeneratingResults}
+          handleGenerateResults={handleGenerateResults}
+          currencyFormatter={currencyFormatter}
+          financesSummary={financesSummary}
+          balanceClass={balanceClass}
+          expandedTaskIds={expandedTaskIds}
+          toggleTaskExpansion={toggleTaskExpansion}
+          selectedGameModerators={selectedGameModerators}
+          availableModeratorsForSelect={availableModeratorsForSelect}
+          availableModeratorsMap={availableModeratorsMap}
+          availableOrganizersForSelect={availableOrganizersForSelect}
+          selectedModeratorToAdd={selectedModeratorToAdd}
+          setSelectedModeratorToAdd={setSelectedModeratorToAdd}
+          handleAddModerator={handleAddModerator}
+          handleRemoveModerator={handleRemoveModerator}
+          editGameLocationOptions={editGameLocationOptions}
+          editGameSeasons={editGameSeasons}
+          isEditGameSeasonsLoading={isEditGameSeasonsLoading}
+          isEditGameSeasonCreating={isEditGameSeasonCreating}
+          handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+          sectionMode="tasks"
+          modalTitleOverride={`Редактор заданий «${gameForEdit?.name || 'Без названия'}»`}
+        />
+      ) : null}
+
+      {hasSelectedGame ? (
+        <GameTeamsModal
+          selectedGame={selectedGame}
+          isTeamsModalOpen={isTeamsModalOpen}
+          handleCloseTeamsModal={handleCloseTeamsModal}
+          teamsModalState={teamsModalState}
+          removingTeamIds={removingTeamIds}
+          selectedTeamToAdd={selectedTeamToAdd}
+          setSelectedTeamToAdd={setSelectedTeamToAdd}
+          handleAddTeamToGame={handleAddTeamToGame}
+          isAddingTeam={isAddingTeam}
+          handleRemoveTeamFromGame={handleRemoveTeamFromGame}
+          currentUserRole={currentUserRole}
+          isReadOnly={isTeamsModalReadOnly}
+        />
+      ) : null}
+
+      <GameRegisterModal
+        isRegisterModalOpen={isRegisterModalOpen}
+        handleCloseRegisterModal={handleCloseRegisterModal}
+        isRegisterSubmitting={isRegisterSubmitting}
+        handleSubmitRegister={handleSubmitRegister}
+        registerTeamId={registerTeamId}
+        registerGameId={registerGameId}
+        setRegisterTeamId={setRegisterTeamId}
+        setRegisterGameId={setRegisterGameId}
+        isRegisterModalFromCard={isRegisterModalFromCard}
+        registerModalGameName={registerModalGameName}
+        shouldHideRegisterGameIdField={shouldHideRegisterGameIdField}
+        registerFeedback={registerFeedback}
+        isRegisterTeamsLoading={isRegisterTeamsLoading}
+        registerTeams={registerTeams}
+        location={location}
+        currentUserId={currentUserId}
       />
-    ) : null}
 
-    {gameForEdit ? (
-      <GameEditModal
-        selectedGame={gameForEdit}
-      isEditModalOpen={isTasksModalOpen}
-      handleCloseEditModal={handleCloseTasksModal}
-      canEditSelectedGame={canEditSelectedGame}
-      isSaving={isSaving}
-      location={location}
-      isDirty={isDirty}
-      handleModalPrimaryAction={handleTasksModalPrimaryAction}
-      handleResetChanges={handleResetChanges}
-      updateSelectedGame={updateSelectedGame}
-      GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
-      CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
-      toMinutes={toMinutes}
-      toSeconds={toSeconds}
-      handleAddTask={handleAddTask}
-      handleRemoveTask={handleRemoveTask}
-      handleTaskFieldChange={handleTaskFieldChange}
-      handleTaskNumberChange={handleTaskNumberChange}
-      handleTaskOptionalNumberChange={handleTaskOptionalNumberChange}
-      handleTaskCheckboxChange={handleTaskCheckboxChange}
-      handleTaskCoordinateChange={handleTaskCoordinateChange}
-      handleAddTaskCode={handleAddTaskCode}
-      handleTaskCodeChange={handleTaskCodeChange}
-      handleRemoveTaskCode={handleRemoveTaskCode}
-      handleAddTaskImage={handleAddTaskImage}
-      handleTaskImageChange={handleTaskImageChange}
-      handleRemoveTaskImage={handleRemoveTaskImage}
-      handleAddClue={handleAddClue}
-      handleTaskClueChange={handleTaskClueChange}
-      handleRemoveClue={handleRemoveClue}
-      handleAddSubTask={handleAddSubTask}
-      handleSubTaskChange={handleSubTaskChange}
-      handleRemoveSubTask={handleRemoveSubTask}
-      handleAddPenaltyCode={handleAddPenaltyCode}
-      handlePenaltyCodeChange={handlePenaltyCodeChange}
-      handleRemovePenaltyCode={handleRemovePenaltyCode}
-      handleAddBonusCode={handleAddBonusCode}
-      handleBonusCodeChange={handleBonusCodeChange}
-      handleRemoveBonusCode={handleRemoveBonusCode}
-      handleAddPrice={handleAddPrice}
-      handlePriceChange={handlePriceChange}
-      handleRemovePrice={handleRemovePrice}
-      handleAddFinance={handleAddFinance}
-      handleFinanceChange={handleFinanceChange}
-      handleRemoveFinance={handleRemoveFinance}
-      canGenerateResults={canGenerateResults}
-      isGeneratingResults={isGeneratingResults}
-      handleGenerateResults={handleGenerateResults}
-      currencyFormatter={currencyFormatter}
-      financesSummary={financesSummary}
-      balanceClass={balanceClass}
-      expandedTaskIds={expandedTaskIds}
-      toggleTaskExpansion={toggleTaskExpansion}
-      selectedGameModerators={selectedGameModerators}
-      availableModeratorsForSelect={availableModeratorsForSelect}
-      availableModeratorsMap={availableModeratorsMap}
-      availableOrganizersForSelect={availableOrganizersForSelect}
-      selectedModeratorToAdd={selectedModeratorToAdd}
-      setSelectedModeratorToAdd={setSelectedModeratorToAdd}
-      handleAddModerator={handleAddModerator}
-      handleRemoveModerator={handleRemoveModerator}
-      editGameLocationOptions={editGameLocationOptions}
-      editGameSeasons={editGameSeasons}
-      isEditGameSeasonsLoading={isEditGameSeasonsLoading}
-      isEditGameSeasonCreating={isEditGameSeasonCreating}
-      handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
-      sectionMode="tasks"
-        modalTitleOverride={`Редактор заданий «${gameForEdit?.name || 'Без названия'}»`}
+      <GameCreateModal
+        isCreateGameModalOpen={isCreateGameModalOpen}
+        handleCloseCreateGameModal={handleCloseCreateGameModal}
+        isCreatingGame={isCreatingGame}
+        handleCreateGame={handleCreateGame}
+        newGameName={newGameName}
+        setNewGameName={setNewGameName}
+        newGameIsRated={newGameIsRated}
+        setNewGameIsRated={setNewGameIsRated}
+        createGameMode={createGameMode}
+        setCreateGameMode={setCreateGameMode}
+        cloneSourceGameId={cloneSourceGameId}
+        setCloneSourceGameId={setCloneSourceGameId}
+        cloneSourceGames={createGameCloneSourceOptions}
+        isCloneSourceGamesLoading={isCloneSourceGamesLoading}
+        createGameLocation={createGameLocation}
+        setCreateGameLocation={setCreateGameLocation}
+        createGameSeasonId={createGameSeasonId}
+        setCreateGameSeasonId={setCreateGameSeasonId}
+        createGameSeasons={createGameSeasons}
+        isCreateGameSeasonsLoading={isCreateGameSeasonsLoading}
+        isCreateGameSeasonCreating={isCreateGameSeasonCreating}
+        handleCreateSeasonForCreateGame={handleCreateSeasonForCreateGame}
+        createGameLocationOptions={createGameLocationOptions}
+        cloneOptions={createGameCloneOptions}
+        onCloneOptionChange={handleChangeCreateGameCloneOption}
+        isCreateGameActionDisabled={isCreateGameActionDisabled}
+        createGameFeedback={createGameFeedback}
       />
-    ) : null}
 
-    {hasSelectedGame ? (
-      <GameTeamsModal
-        selectedGame={selectedGame}
-      isTeamsModalOpen={isTeamsModalOpen}
-      handleCloseTeamsModal={handleCloseTeamsModal}
-      teamsModalState={teamsModalState}
-      removingTeamIds={removingTeamIds}
-      selectedTeamToAdd={selectedTeamToAdd}
-      setSelectedTeamToAdd={setSelectedTeamToAdd}
-      handleAddTeamToGame={handleAddTeamToGame}
-      isAddingTeam={isAddingTeam}
-        handleRemoveTeamFromGame={handleRemoveTeamFromGame}
+      {hasSelectedGame ? (
+        <GameDescriptionModal
+          selectedGame={selectedGame}
+          isDescriptionModalOpen={isDescriptionModalOpen}
+          handleCloseDescriptionModal={handleCloseDescriptionModal}
+          gameTypeLabel={gameTypeLabel}
+          plannedStartLabel={plannedStartLabel}
+          canViewRestrictedGameInfo={canViewRestrictedGameInfo}
+          canViewGameResults={canViewGameResults}
+          handleOpenResultsModal={handleOpenResultsModal}
+          participationSummaryLabel={participationSummaryLabel}
+          canJoinGame={canJoinGameFromDescription}
+          canEnterGame={canEnterGameFromDescription}
+          canCancelRegistration={canCancelGameRegistrationFromDescription}
+          onJoinGame={handleJoinGameFromDescription}
+          onEnterGame={handleEnterGameFromDescription}
+          onCancelRegistration={handleCancelGameRegistrationFromDescription}
+          isRegistrationSubmitting={isGameRegistrationSubmittingFromDescription}
+          taskDurationLabel={taskDurationLabel}
+          cluesDurationLabel={cluesDurationLabel}
+          clueModeDetails={clueModeDetails}
+          breakDurationLabel={breakDurationLabel}
+          taskFailurePenaltyLabel={taskFailurePenaltyLabel}
+          manyCodesLimitLabel={manyCodesLimitLabel}
+          manyCodesPenaltyLabel={manyCodesPenaltyLabel}
+          currencyFormatter={currencyFormatter}
+          financesSummary={financesSummary}
+          balanceClass={balanceClass}
+        />
+      ) : null}
+
+      <GameResultsModal
+        isResultsModalOpen={isResultsModalOpen}
+        handleCloseResultsModal={handleCloseResultsModal}
+        resultsModalState={resultsModalState}
       />
-    ) : null}
 
-    <GameRegisterModal
-      isRegisterModalOpen={isRegisterModalOpen}
-      handleCloseRegisterModal={handleCloseRegisterModal}
-      isRegisterSubmitting={isRegisterSubmitting}
-      handleSubmitRegister={handleSubmitRegister}
-      registerTeamId={registerTeamId}
-      registerGameId={registerGameId}
-      setRegisterTeamId={setRegisterTeamId}
-      setRegisterGameId={setRegisterGameId}
-      isRegisterModalFromCard={isRegisterModalFromCard}
-      registerModalGameName={registerModalGameName}
-      shouldHideRegisterGameIdField={shouldHideRegisterGameIdField}
-      registerFeedback={registerFeedback}
-      isRegisterTeamsLoading={isRegisterTeamsLoading}
-      registerTeams={registerTeams}
-      location={location}
-      currentUserId={currentUserId}
-    />
-
-    <GameCreateModal
-      isCreateGameModalOpen={isCreateGameModalOpen}
-      handleCloseCreateGameModal={handleCloseCreateGameModal}
-      isCreatingGame={isCreatingGame}
-      handleCreateGame={handleCreateGame}
-      newGameName={newGameName}
-      setNewGameName={setNewGameName}
-      newGameIsRated={newGameIsRated}
-      setNewGameIsRated={setNewGameIsRated}
-      createGameMode={createGameMode}
-      setCreateGameMode={setCreateGameMode}
-      cloneSourceGameId={cloneSourceGameId}
-      setCloneSourceGameId={setCloneSourceGameId}
-      cloneSourceGames={createGameCloneSourceOptions}
-      isCloneSourceGamesLoading={isCloneSourceGamesLoading}
-      createGameLocation={createGameLocation}
-      setCreateGameLocation={setCreateGameLocation}
-      createGameSeasonId={createGameSeasonId}
-      setCreateGameSeasonId={setCreateGameSeasonId}
-      createGameSeasons={createGameSeasons}
-      isCreateGameSeasonsLoading={isCreateGameSeasonsLoading}
-      isCreateGameSeasonCreating={isCreateGameSeasonCreating}
-      handleCreateSeasonForCreateGame={handleCreateSeasonForCreateGame}
-      createGameLocationOptions={createGameLocationOptions}
-      cloneOptions={createGameCloneOptions}
-      onCloneOptionChange={handleChangeCreateGameCloneOption}
-      isCreateGameActionDisabled={isCreateGameActionDisabled}
-      createGameFeedback={createGameFeedback}
-    />
-
-    {hasSelectedGame ? (
-      <GameDescriptionModal
-        selectedGame={selectedGame}
-      isDescriptionModalOpen={isDescriptionModalOpen}
-      handleCloseDescriptionModal={handleCloseDescriptionModal}
-      gameTypeLabel={gameTypeLabel}
-      plannedStartLabel={plannedStartLabel}
-      canViewRestrictedGameInfo={canViewRestrictedGameInfo}
-      canViewGameResults={canViewGameResults}
-      handleOpenResultsModal={handleOpenResultsModal}
-      participationSummaryLabel={participationSummaryLabel}
-      canJoinGame={canJoinGameFromDescription}
-      canEnterGame={canEnterGameFromDescription}
-      canCancelRegistration={canCancelGameRegistrationFromDescription}
-      onJoinGame={handleJoinGameFromDescription}
-      onEnterGame={handleEnterGameFromDescription}
-      onCancelRegistration={handleCancelGameRegistrationFromDescription}
-      isRegistrationSubmitting={isGameRegistrationSubmittingFromDescription}
-      taskDurationLabel={taskDurationLabel}
-      cluesDurationLabel={cluesDurationLabel}
-      clueModeDetails={clueModeDetails}
-      breakDurationLabel={breakDurationLabel}
-      taskFailurePenaltyLabel={taskFailurePenaltyLabel}
-      manyCodesLimitLabel={manyCodesLimitLabel}
-      manyCodesPenaltyLabel={manyCodesPenaltyLabel}
-      currencyFormatter={currencyFormatter}
-      financesSummary={financesSummary}
-        balanceClass={balanceClass}
-      />
-    ) : null}
-
-    <GameResultsModal
-      isResultsModalOpen={isResultsModalOpen}
-      handleCloseResultsModal={handleCloseResultsModal}
-      resultsModalState={resultsModalState}
-    />
-
-    {hasSelectedGame ? (
-      <GameTasksViewModal
-        isTasksViewModalOpen={isTasksViewModalOpen}
-        handleCloseTasksViewModal={handleCloseTasksViewModal}
-        selectedGame={selectedGame}
-      />
-    ) : null}
-  </>
+      {hasSelectedGame ? (
+        <GameTasksViewModal
+          isTasksViewModalOpen={isTasksViewModalOpen}
+          handleCloseTasksViewModal={handleCloseTasksViewModal}
+          selectedGame={selectedGame}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -535,6 +539,7 @@ GameModals.propTypes = {
   handleAddTeamToGame: PropTypes.func.isRequired,
   isAddingTeam: PropTypes.bool.isRequired,
   handleRemoveTeamFromGame: PropTypes.func.isRequired,
+  isTeamsModalReadOnly: PropTypes.bool,
   isRegisterModalOpen: PropTypes.bool.isRequired,
   handleCloseRegisterModal: PropTypes.func.isRequired,
   isRegisterSubmitting: PropTypes.bool.isRequired,
@@ -549,9 +554,10 @@ GameModals.propTypes = {
   registerFeedback: registerFeedbackShape,
   isRegisterTeamsLoading: PropTypes.bool.isRequired,
   registerTeams: PropTypes.arrayOf(
-    PropTypes.shape({ id: PropTypes.string.isRequired })
+    PropTypes.shape({ id: PropTypes.string.isRequired }),
   ).isRequired,
   currentUserId: PropTypes.string,
+  currentUserRole: PropTypes.string,
   isCreateGameModalOpen: PropTypes.bool.isRequired,
   handleCloseCreateGameModal: PropTypes.func.isRequired,
   isCreatingGame: PropTypes.bool.isRequired,
@@ -569,7 +575,7 @@ GameModals.propTypes = {
       id: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
       location: PropTypes.string,
-    })
+    }),
   ).isRequired,
   isCloneSourceGamesLoading: PropTypes.bool,
   createGameLocation: PropTypes.string.isRequired,
@@ -581,7 +587,7 @@ GameModals.propTypes = {
       id: PropTypes.string.isRequired,
       name: PropTypes.string.isRequired,
       location: PropTypes.string,
-    })
+    }),
   ),
   isCreateGameSeasonsLoading: PropTypes.bool,
   isCreateGameSeasonCreating: PropTypes.bool,
@@ -590,7 +596,7 @@ GameModals.propTypes = {
     PropTypes.shape({
       key: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
-    })
+    }),
   ).isRequired,
   createGameCloneOptions: PropTypes.shape({
     basic: PropTypes.bool,
@@ -623,7 +629,8 @@ GameModals.propTypes = {
   handleCancelGameRegistrationFromDescription: PropTypes.func,
   isGameRegistrationSubmittingFromDescription: PropTypes.bool,
   selectedGameModerators: PropTypes.arrayOf(moderatorShape).isRequired,
-  availableModeratorsForSelect: PropTypes.arrayOf(moderatorOptionShape).isRequired,
+  availableModeratorsForSelect:
+    PropTypes.arrayOf(moderatorOptionShape).isRequired,
   availableModeratorsMap: PropTypes.instanceOf(Map).isRequired,
   availableOrganizersForSelect: PropTypes.arrayOf(
     PropTypes.shape({
@@ -640,14 +647,14 @@ GameModals.propTypes = {
     PropTypes.shape({
       key: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
-    })
+    }),
   ),
   editGameSeasons: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
       name: PropTypes.string.isRequired,
       location: PropTypes.string,
-    })
+    }),
   ),
   isEditGameSeasonsLoading: PropTypes.bool,
   isEditGameSeasonCreating: PropTypes.bool,
@@ -687,6 +694,7 @@ GameModals.defaultProps = {
   shouldHideRegisterGameIdField: false,
   registerFeedback: null,
   currentUserId: null,
+  currentUserRole: null,
   isCloneSourceGamesLoading: false,
   selectedTeamToAdd: '',
   createGameSeasons: [],
