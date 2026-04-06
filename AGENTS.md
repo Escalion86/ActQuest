@@ -3,6 +3,7 @@
 ## Что это за проект
 
 ActQuest — это единый репозиторий с:
+
 - Next.js сайтом (кабинет, админка, страницы игр),
 - API-слоем (`/app/api`),
 - серверной бизнес-логикой (`/server`),
@@ -48,6 +49,93 @@ ActQuest — это единый репозиторий с:
 ### Когда формировать snapshots
 
 - Snapshot результата нужно фиксировать на `СТОП ИГРА` (`finished`), чтобы сохранить исторический состав команд/участников.
+
+## Структура `result` в Documents Games (БД)
+
+### Что такое `result`
+
+`result` — это объект в документе Game, который хранит:
+
+- **Снимки состояния** (snapshots): команды, участники, результаты на момент `СТОП ИГРА`
+- **Вычисленные метрики**: места команд, итоговые баллы, тайм-коды
+
+### Состав `result` объекта
+
+```javascript
+result: {
+  // === SNAPSHOTS (сохраняются при СТОП ИГРА) ===
+  teams: [
+    // Массив команд, участвовавших в игре (на момент завершения)
+    { id, name, captainId, price, ... }
+  ],
+  gameTeams: [
+    // Связь game->teams, фиксирует состояние регистрации команд
+    { gameId, teamId, status, joinedAt, ... }
+  ],
+  teamsUsers: [
+    // Участники в командах (на момент завершения игры)
+    // КРИТИЧНО: эти данные остаются даже если пользователь позже вышел из команды
+    { userId, userTelegramId, teamId, role, ... }
+  ],
+
+  // === COMPUTED (строятся из snapshots) ===
+  teamsPlaces: {
+    // Map/Object: teamId -> место в таблице (1, 2, 3, ...)
+    "team_id_1": 1,
+    "team_id_2": 2,
+  },
+  computed: {
+    // Полный результат с вычислениями:
+    // - для classic: места по времени прохождения
+    // - для photo: места по сумме баллов
+    // Структура:
+    {
+      teamsStats: [
+        {
+          teamId,
+          place,
+          time, // для classic
+          score, // для photo
+          penalties,
+          ...
+        }
+      ],
+      // ... другие вычисленные метрики
+    }
+  }
+}
+```
+
+### Ключевые нюансы работы с `result`
+
+1. **Snapshots — источник правды:**
+   - `result.teamsUsers` сохраняет ВСЕ участников на момент завершения
+   - Даже если пользователь позже вышел из команды, он остается в snapshot'е
+   - Это позволяет корректно отображать игры в кабинете пользователя, даже если он уже не в команде
+
+2. **Получение мест пользователя:**
+   - При загрузке игр в `fetchGamesForCabinet.js`:
+     - Сначала ищем места через текущее членство пользователя (GamesTeams + TeamsUsers)
+     - Если места нет (пользователь вышел из команды), ищем в `result.teamsUsers`
+     - Место берется из `result.teamsPlaces` по ID команды
+     - **Fallback**: если `result.teamsPlaces` пусто для старых игр, используем кол-во команд в `result.teams` или 1
+
+3. **Отображение в Обзоре (Overview):**
+   - На странице `/cabinet` показываются сыгранные игры из `pastGames`
+   - Фильтруются по `userTeamPlace > 0`
+   - **ВАЖНО**: Если `userTeamPlace` не заполнен (null), игра не отобразится!
+   - Решение: гарантировать, что `userTeamPlace` ВСЕГДА имеет значение, даже если snapshot'ы неполные
+
+4. **Когда формируются snapshots:**
+   - На `СТОП ИГРА` (`finished` status) через `buildGameResultComputed.js`
+   - Включает: teams, gameTeams, teamsUsers, teamsPlaces
+   - `computed` строится из этих snapshot'ов
+   - Если snapshot'ов нет → результат не сформирован → нельзя пересчитывать
+
+5. **Для `photo` игр:**
+   - `result.computed` содержит `photos` массив с проверками и баллами
+   - Места считаются по `score`, а не по времени
+   - `timeAddings` — корректировки очков, не время прохождения
 
 ## Рейтинг и статистика
 
@@ -99,11 +187,24 @@ ActQuest — это единый репозиторий с:
 
 ## Что смотреть в первую очередь при новой задаче
 
-1. `components/cabinet/app-router/GamesPageClient.js` — основной сценарий управления играми в кабинете.
-2. `app/api/[location]/games/[id]/route.js` — изменение игры и статусные переходы.
-3. `server/buildGameResultComputed.js` — расчет `teamsPlaces` + `computed`.
-4. `server/updateParticipantsRatings.js` и `server/updateParticipantsClosedStats.js` — рейтинг и gameStats.
-5. `app/api/cabinet/dev/*/route.js` — dev-операции пересчета/массового закрытия.
+1. `helpers/fetchGamesForCabinet.js` — **КРИТИЧНО** при работе с историей и snapshot'ами:
+   - Как заполняется `userTeamPlace` из текущих членств и snapshot'ов
+   - Как обрабатываются игры для пользователей, вышедших из команды
+   - Fallback логика при пустых `result.teamsPlaces`
+
+2. `components/cabinet/app-router/GamesPageClient.js` — основной сценарий управления играми в кабинете.
+
+3. `app/cabinet/_lib/overviewServerData.js` — загрузка и фильтрация игр для Обзора:
+   - Как вычисляется `personalProgressGames` (требует `userTeamPlace > 0`)
+   - Как считается средний рейтинг по месткам
+
+4. `app/api/[location]/games/[id]/route.js` — изменение игры и статусные переходы.
+
+5. `server/buildGameResultComputed.js` — расчет `teamsPlaces` + `computed` из snapshot'ов.
+
+6. `server/updateParticipantsRatings.js` и `server/updateParticipantsClosedStats.js` — рейтинг и gameStats.
+
+7. `app/api/cabinet/dev/*/route.js` — dev-операции пересчета/массового закрытия.
 
 ## Полезные команды
 
@@ -114,57 +215,218 @@ ActQuest — это единый репозиторий с:
 ## Troubleshooting (быстрая диагностика)
 
 1. Симптом: нельзя редактировать активную игру (поля не вводятся).
+
 - Проверить: `components/cabinet/app-router/GamesPageClient.js` -> `canEditSelectedGame`, роль пользователя, `editingGame`.
 - Проверить, что `editingGame` не сбрасывается эффектом на `selectedGameId` при открытой модалке.
 - Проверить role preview: `helpers/useCabinetRolePreview.js` (поддержка `client/moder/admin/dev`).
 
 2. Симптом: в прошедших играх “пусто”, но после refresh игры появляются/пропадают.
+
 - Проверить: гидрацию фильтра города в `components/cabinet/app-router/GamesPageClient.js` (`isGamesFilterLocationHydrated`).
 - Проверить API-фильтрацию: `app/api/cabinet/games-list/route.js`, `helpers/fetchGamesForCabinet.js`.
 - Проверить текущий `location` фильтр и роль (hidden-игры доступны не всем).
 
 3. Симптом: у игры нет кнопки “Результаты”.
+
 - Проверить: наличие `result.computed` (именно это признак сформированного результата в кабинете).
 - Проверить snapshots: `result.teams`, `result.gameTeams`, `result.teamsUsers`.
 - Пересобрать через `buildGameResultComputed`/dev-пересчет.
 
 4. Симптом: рейтинг пересчитан, но карточки/места выглядят неверно.
+
 - Проверить, что игра `closed` и `isRated !== false`.
 - Проверить, что `teamsPlaces` и `computed` были пересобраны из snapshots.
 - Проверить, что в расчет не попали игры без snapshots результата.
 
 5. Симптом: фотоквест имеет “странные” места/рейтинг.
+
 - Проверить ветку `photo` в `server/buildGameResultComputed.js`.
 - Убедиться, что расчет идет по баллам `photos[].checks`, а не по времени.
 - Проверить корректность `timeAddings` и штрафов/бонусов.
 
 6. Симптом: закрытие игры не обновляет `gameStats`/`rating`.
+
 - Проверить `app/api/[location]/games/[id]/route.js` (ветка перехода в `closed`).
 - Проверить вызовы `updateParticipantsClosedStats` и `updateParticipantsRatings`.
 - Проверить, что `teamsPlaces` присутствует после пересборки результата.
 
-## Pre-merge чеклист
+7. Симптом: на Обзоре пользователь видит только 1 сыгранную игру, хотя играл в мно́гих.
+
+- **ПРИЧИНА**: Пользователь вышел из команды, с которой играл в прошлых играх.
+- **РЕШЕНИЕ**: Проверить `result.teamsUsers` и `result.teamsPlaces` у этих игр.
+- Убедиться, что в `fetchGamesForCabinet.js` логика fill `userTeamPlace` из snapshot'ов работает:
+  - Она должна работать в обоих блоках: при текущем членстве и при поиске по snapshot'ам.
+- Проверить, что `userTeamPlace` НЕ `null` — если null, игра отфильтруется в Обзоре.
+- **Fallback**: при пустом `result.teamsPlaces` место должно быть = кол-во команд или 1.
+
+## Частые нюансы при работе с историческими snapshot'ами
+
+1. **Если `result.teamsUsers` пусто:**
+   - Это старая игра без сохраненного snapshot'а, результат неполный
+   - Игра может не отобразиться в истории пользователя
+   - Нужно пересобрать результат через dev-операцию или перепроверить логику сохранения
+
+2. **Если `result.teamsPlaces` пусто, но `result.teams` есть:**
+   - Места не были вычисленены (может быть ошибка в `buildGameResultComputed`)
+   - Fallback: использовать кол-во команд как последнее место или 1
+   - **Не игнорировать игру** — пользователь все равно участвовал
+
+3. **При вышедшем из команды пользователе:**
+   - GamesTeams не содержит текущую связь (user -> game)
+   - TeamsUsers (текущие) не содержит пользователя
+   - **ЧТО СПАСАЕТ**: `result.teamsUsers` в snapshot'е остается
+   - Логика поиска идет: текущее членство → backup'ы → snapshot'ы
+
+4. **Получение places для несколько команд:**
+   - Если пользователь участвовал в нескольких команде в одной игре (редко):
+   - Используем минимальное место (`Math.min(...places`)
+   - Это правильно, так как рейтинг должен быть лучший из возможных
+
+5. **Формирование `userParticipationTeams`:**
+   - Должен содержать массив всех команд пользователя в этой игре
+   - Используется для отображения: "Вы участвовали: Команда 1, Команда 2"
+   - Заполняется из текущего членства ИЛИ из snapshot'ов, если вышел
+
+## Архитектура Games/Teams/Users
+
+### Связи в БД
+
+```
+Games
+  ├── result.teams[] — snapshot команд (при СТОП ИГРА)
+  ├── result.gameTeams[] — связь игры с командами (snapshot)
+  └── result.teamsUsers[] — участники команд (snapshot, важно!)
+
+GamesTeams (текущие регистрации)
+  └── gameId -> teamId (активные связи)
+
+Teams
+  ├── id
+  ├── name
+  └── members (через TeamsUsers)
+
+TeamsUsers (члены команды - текущие)
+  └── userId/userTelegramId -> teamId -> role
+```
+
+### Ключевые различия: Текущее vs Историческое
+
+| Что                      | Источник                        | Когда использовать                           |
+| ------------------------ | ------------------------------- | -------------------------------------------- |
+| **Текущая команда**      | `TeamsUsers` (BD)               | Проверка текущего членства, редактирование   |
+| **Историческая команда** | `result.teamsUsers` (snapshot)  | Отображение игры, если user вышел (fallback) |
+| **Места команд**         | `result.teamsPlaces` (snapshot) | Всегда из result (источник истины)           |
+
+### Когда ищем команды пользователя в игре
+
+1. **Если есть текущее членство** → берём из `GamesTeams` + `TeamsUsers`
+2. **Если нет текущего членства** → ищем в `result.teamsUsers` (fallback для вышедших)
+3. **Если нет ничего** → игра не показывается (лучше скрыть, чем показать с ошибкой)
+
+## Ключевые компоненты UI для работы с играми
+
+### GamesPageClient.js
+
+- Главный компонент управления играми в кабинете
+- Логика: `canViewGameTeams`, `canManageThisGame`, `isTeamsModalReadOnly`
+- Отображает окна в виде плиток (tile) или списка (list)
+- `handleManageTeamsFromList(game, isReadOnly)` — открывает модаль командам
+
+### GameTeamsModal.js
+
+- Модаль просмотра/управления командами игры
+- Параметр `isReadOnly=true` — режим просмотра для обычных пользователей
+- При readonly скрывает кнопки удаления и "Добавить команду"
+
+### UserViewModal.js & TeamMemberCard.js
+
+- Отображают информацию о пользователе/члене команды
+- **ВМЕСТО КОНТАКТОВ**: показывают `gamesCount` и `rating?.rank`
+- Приватные данные скрывают
+
+### overviewServerData.js
+
+- Загружает данные для страницы `/cabinet` (Обзор)
+- Вычисляет `personalProgressGames` — отфильтрованные сыгранные игры
+- Требует `userTeamPlace > 0` для каждой игры (иначе отфильтруется)
+
+## Pre-merge чеклист (при изменении логики games/teams/users)
 
 1. Статусы и переходы
+
 - Проверены сценарии `active -> started -> finished -> closed`, `canceled -> active`, `closed -> reopen`.
 - Убедиться, что `started` нельзя выставить вручную в редакторе.
 
 2. Редактирование игры
+
 - Сценарий “карточка -> редактировать -> ввод в поле -> сохранить” работает.
 - При открытой модалке редактирования не происходит сброса `editingGame`.
 
 3. Результаты игры
+
 - Для завершенной/закрытой игры при наличии snapshot формируются `result.teamsPlaces` и `result.computed`.
 - Кнопка “Результаты” отображается корректно (если `computed` есть и `hideResult=false`).
 
 4. Рейтинг и статистика
+
 - При закрытии игры обновляются `gameStats` и `rating` участников/команд.
 - Для `photo` проверен расчет мест по баллам, для `classic` — по времени.
 
 5. Фильтры и списки
+
 - Проверены `upcoming/past` с фильтром города и сезонным фильтром.
 - В `past` корректно попадают завершенные/закрытые и просроченные активные/запущенные игры.
 
 6. Техпроверки
+
 - `npm run lint` без ошибок по измененным файлам.
 - Нет временных `console.log`/debug-кода в финальном diff.
+
+## Практические задачи и решения
+
+### Задача: Показать кнопку просмотра команд обычным пользователям
+
+**Решение:**
+
+- Условие: `canViewGameTeams && !canManageThisGame` (в отдельном блоке, не в admin-only)
+- Открыть с `isTeamsModalReadOnly=true` в `GameTeamsModal`
+- Скрыть delete-кнопки и "Добавить команду" при readonly
+
+**Файлы:** `GamesPageClient.js`, `GameTeamsModal.js`, `GameModals.js`
+
+### Задача: Пользователь вышел из команды, но игра не показывается
+
+**Диагностика:**
+
+1. Проверить `result.teamsUsers` — есть ли пользователь там?
+2. Проверить `result.teamsPlaces` — есть ли места команд?
+3. Проверить `fetchGamesForCabinet.js` — заполняется ли `userTeamPlace` из snapshot'ов?
+
+**Решение:**
+
+- Гарантировать fallback в `fetchGamesForCabinet.js`:
+  - Если мест нет → `userTeamPlace = resultTeamsCount || 1`
+  - Это КРИТИЧНО для visibility на Обзоре
+
+**Файлы:** `helpers/fetchGamesForCabinet.js`, `app/cabinet/_lib/overviewServerData.js`
+
+### Задача: Скрыть приватные данные (контакты пользователя)
+
+**Решение:**
+
+- Вместо `phone` показывать `gamesCount` и `rating?.rank`
+- Паттерн: проверить `user.gamesCount !== undefined` перед отображением
+- Для rating: только если `user.rating?.isEligible && Number.isFinite(user.rating?.rank)`
+
+**Файлы:** `UserViewModal.js`, `TeamMemberCard.js`
+
+### Задача: Разрешить просмотр команд на всех статусах игры
+
+**Решение:**
+
+```javascript
+const canViewGameTeams =
+  typeof game?.status === 'string' && game.status !== 'canceled'
+```
+
+**Файлы:** `components/cabinet/app-router/GamesPageClient.js` (обновить в обоих блоках: tile и list)

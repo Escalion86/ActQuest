@@ -127,7 +127,11 @@ const normalizeTaskMedia = (media = []) => {
     .map((item, index) => ({
       id: ensureString(item?.id, `task-media-${index}`),
       type:
-        item?.type === 'audio' ? 'audio' : item?.type === 'video' ? 'video' : 'image',
+        item?.type === 'audio'
+          ? 'audio'
+          : item?.type === 'video'
+            ? 'video'
+            : 'image',
       url: normalizeMediaUrl(item?.url),
       mime: ensureString(item?.mime, ''),
       size: ensureNumber(item?.size, 0),
@@ -321,7 +325,7 @@ const computeTasksStats = (tasks = []) => {
 
       return acc
     },
-    { total: 0, bonus: 0, canceled: 0 }
+    { total: 0, bonus: 0, canceled: 0 },
   )
 }
 
@@ -360,7 +364,8 @@ const normalizeGameForCabinet = (game) => {
     finishingPlace: ensureString(game.finishingPlace, ''),
     taskDuration: ensureNumber(game.taskDuration, 3600),
     cluesDuration: ensureNumber(game.cluesDuration, 1200),
-    clueEarlyAccessMode: game?.clueEarlyAccessMode === 'penalty' ? 'penalty' : 'time',
+    clueEarlyAccessMode:
+      game?.clueEarlyAccessMode === 'penalty' ? 'penalty' : 'time',
     clueEarlyPenalty: ensureNumber(game.clueEarlyPenalty, 0),
     allowCaptainForceClue: ensureBoolean(game.allowCaptainForceClue, true),
     allowCaptainFailTask: ensureBoolean(game.allowCaptainFailTask, true),
@@ -383,6 +388,9 @@ const normalizeGameForCabinet = (game) => {
     userTeamPlace: ensureNullableNumber(game.userTeamPlace),
     userParticipationTeams: normalizeUserParticipationTeams(
       game.userParticipationTeams,
+    ),
+    teams: normalizeUserParticipationTeams(game.userParticipationTeams).map(
+      (t) => t.teamName,
     ),
     tasksStats,
     isResultGenerated: isResultGenerated(game.result),
