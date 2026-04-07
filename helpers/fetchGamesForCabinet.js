@@ -130,6 +130,22 @@ const fetchGamesForCabinet = async ({
     query.hidden = { $ne: true }
   }
 
+  // Фильтр по view - добавляем в query для правильной пагинации
+  const now = new Date()
+  if (view === 'upcoming') {
+    // Игры: дата в будущем ИЛИ статус active/started
+    query.$or = [
+      { dateStart: { $gte: now } },
+      { status: { $in: ['active', 'started'] } },
+    ]
+  } else if (view === 'past') {
+    // Игры: дата в прошлом ИЛИ статус finished/closed/canceled
+    query.$or = [
+      { dateStart: { $lt: now } },
+      { status: { $in: ['finished', 'closed', 'canceled'] } },
+    ]
+  }
+
   const queryOffset = toPositiveInteger(offset, 0)
   const queryLimit = toPositiveInteger(limit, 10)
   const fetchLimit = queryLimit + 1
@@ -197,51 +213,10 @@ const fetchGamesForCabinet = async ({
     return { games: [], hasMore }
   }
 
-  // Фильтровать по view (past/upcoming)
-  const now = new Date()
-  const gamesFiltered = gamesDocs.filter((game) => {
-    if (view === 'all') {
-      return true
-    }
-
-    const startDate = toDate(game?.dateStart)
-    const gameStatus = String(game?.status).trim().toLowerCase()
-
-    if (view === 'upcoming') {
-      // Если есть дата и она в будущем -> предстоящая
-      if (startDate && startDate >= now) {
-        return true
-      }
-      // Если нет даты или дата в прошлом, но статус активный -> предстоящая
-      if (gameStatus === 'active' || gameStatus === 'started') {
-        return true
-      }
-      return false
-    }
-
-    if (view === 'past') {
-      // Если есть дата и она в прошлом -> прошедшая
-      if (startDate && startDate < now) {
-        return true
-      }
-      // Если нет даты или дата в будущем, но статус завершен -> прошедшая
-      if (
-        gameStatus === 'finished' ||
-        gameStatus === 'closed' ||
-        gameStatus === 'canceled'
-      ) {
-        return true
-      }
-      return false
-    }
-
-    return true
-  })
-
   // Загрузить создателей
   const creatorTelegramIds = Array.from(
     new Set(
-      gamesFiltered
+      gamesDocs
         .map((game) => Number(game?.creatorTelegramId))
         .filter((value) => Number.isFinite(value)),
     ),
@@ -276,7 +251,7 @@ const fetchGamesForCabinet = async ({
       : {}
 
   const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
-  const games = gamesFiltered.map((game) => {
+  const games = gamesDocs.map((game) => {
     const normalizedStatus =
       game?.status === 'closed' && !canSeeClosedStatus
         ? 'finished'
