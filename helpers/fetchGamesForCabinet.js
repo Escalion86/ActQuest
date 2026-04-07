@@ -125,84 +125,9 @@ const fetchGamesForCabinet = async ({
 
   // Фильтр по видимости:
   // - Админ/dev видят все игры
-  // - Обычные пользователи видят публичные игры +  скрытые игры в которых участвуют
+  // - Обычные пользователи видят только публичные (hidden !== true)
   if (!isElevatedRole) {
-    // Для обычных пользователей: найти скрытые игры где он участвует
-    let hiddenGameIdsForUser = []
-
-    if (hasUserId || hasTelegramId) {
-      const GamesTeamsModel = db.model('GamesTeams')
-      const TeamsUsersModel = db.model('TeamsUsers')
-
-      // Стратегия 1: Текущее участие (через TeamsUsers -> GamesTeams)
-      let currentGameIds = []
-      const teamsUserOrConditions = []
-      if (hasUserId) {
-        teamsUserOrConditions.push({ userId: currentUserIdString })
-      }
-      if (hasTelegramId) {
-        teamsUserOrConditions.push({
-          userTelegramId: currentUserTelegramIdNumber,
-        })
-      }
-
-      const userTeams = await TeamsUsersModel.find({
-        $or: teamsUserOrConditions,
-      })
-        .select({ teamId: 1 })
-        .lean()
-
-      const teamIds = userTeams
-        .map((t) => toStringId(t?.teamId))
-        .filter(Boolean)
-
-      if (teamIds.length > 0) {
-        const gameTeamsCurrentReg = await GamesTeamsModel.find({
-          teamId: { $in: teamIds },
-        })
-          .select({ gameId: 1 })
-          .lean()
-
-        currentGameIds = gameTeamsCurrentReg
-          .map((gt) => toStringId(gt?.gameId))
-          .filter(Boolean)
-      }
-
-      // Стратегия 2: Историческое участие (snapshots)
-      let snapshotGameIds = []
-      const snapshotOrConditions = []
-      if (hasUserId) {
-        snapshotOrConditions.push({
-          'result.teamsUsers.userId': currentUserIdString,
-        })
-      }
-      if (hasTelegramId) {
-        snapshotOrConditions.push({
-          'result.teamsUsers.userTelegramId': currentUserTelegramIdNumber,
-        })
-      }
-
-      const snapshotDocs = await GamesModel.find({
-        $or: snapshotOrConditions,
-      })
-        .select({ _id: 1 })
-        .lean()
-
-      snapshotGameIds = snapshotDocs
-        .map((g) => toStringId(g?._id))
-        .filter(Boolean)
-
-      // Комбинируем все game IDs где пользователь участвует
-      hiddenGameIdsForUser = Array.from(
-        new Set([...currentGameIds, ...snapshotGameIds]),
-      )
-    }
-
-    // Query: публичные игры ИЛИ скрытые игры где пользователь участвует
-    query.$or = [
-      { hidden: { $ne: true } },
-      { _id: { $in: hiddenGameIdsForUser } },
-    ]
+    query.hidden = { $ne: true }
   }
 
   const queryOffset = toPositiveInteger(offset, 0)
