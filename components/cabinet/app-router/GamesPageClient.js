@@ -1277,8 +1277,12 @@ const GamesPage = ({
         return []
       }
 
+      const validItems = items.filter(
+        (item) => item !== null && item !== undefined,
+      )
+
       if (gamesView === 'upcoming') {
-        return [...items].sort((first, second) => {
+        return [...validItems].sort((first, second) => {
           const firstTime = first?.dateStart
             ? new Date(first.dateStart).getTime()
             : Number.POSITIVE_INFINITY
@@ -1298,7 +1302,7 @@ const GamesPage = ({
       }
 
       if (gamesView === 'past') {
-        return [...items].sort((first, second) => {
+        return [...validItems].sort((first, second) => {
           const firstTime = first?.dateStart
             ? new Date(first.dateStart).getTime()
             : Number.NEGATIVE_INFINITY
@@ -1317,7 +1321,7 @@ const GamesPage = ({
         })
       }
 
-      return [...items].sort((first, second) => {
+      return [...validItems].sort((first, second) => {
         const firstTime = first?.updatedAt
           ? new Date(first.updatedAt).getTime()
           : 0
@@ -1544,7 +1548,9 @@ const GamesPage = ({
         },
       )
 
-      const nextGames = Array.isArray(json?.data) ? json.data : []
+      const nextGames = Array.isArray(json?.data)
+        ? json.data.filter((game) => game !== null && game !== undefined)
+        : []
       const nextHasMore = Boolean(json?.meta?.hasMore)
       const sorted = sortGamesForCurrentView(nextGames)
 

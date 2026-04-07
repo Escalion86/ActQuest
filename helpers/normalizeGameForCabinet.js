@@ -344,6 +344,9 @@ const normalizeGameForCabinet = (game) => {
 
   const id = ensureString(game._id ?? game.id)
   const tasksStats = computeTasksStats(game.tasks)
+  const normalizedUserParticipationTeams = normalizeUserParticipationTeams(
+    game.userParticipationTeams,
+  )
 
   return {
     id,
@@ -386,12 +389,8 @@ const normalizeGameForCabinet = (game) => {
     tasks: normalizeTasks(game.tasks),
     teamsCount: ensureNumber(game.teamsCount, 0),
     userTeamPlace: ensureNullableNumber(game.userTeamPlace),
-    userParticipationTeams: normalizeUserParticipationTeams(
-      game.userParticipationTeams,
-    ),
-    teams: normalizeUserParticipationTeams(game.userParticipationTeams).map(
-      (t) => t.teamName,
-    ),
+    userParticipationTeams: normalizedUserParticipationTeams,
+    teams: normalizedUserParticipationTeams.map((t) => t.teamName),
     tasksStats,
     isResultGenerated: isResultGenerated(game.result),
     updatedAt: ensureDateISOString(game.updatedAt),

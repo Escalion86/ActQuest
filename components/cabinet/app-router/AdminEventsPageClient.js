@@ -599,11 +599,16 @@ const AdminEventsPageClient = ({
                   {formatDateTime(event.createdAt)}
                 </div>
               </div>
-              <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
-                {event.message || 'Без описания'}
-              </p>
+              {String(event.type || '').toLowerCase() !==
+              USER_REGISTERED_EVENT ? (
+                <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+                  {event.message || 'Без описания'}
+                </p>
+              ) : null}
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-300">
-                <span>Город: {resolveLocationLabel(event.location)}</span>
+                {locationFilters.length !== 1 ? (
+                  <span>Город: {resolveLocationLabel(event.location)}</span>
+                ) : null}
                 {event.teamName ? <span>Команда: {event.teamName}</span> : null}
                 {event.gameName ? <span>Игра: {event.gameName}</span> : null}
               </div>

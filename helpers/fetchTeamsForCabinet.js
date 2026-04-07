@@ -30,8 +30,10 @@ const normalizeVisibilityFilter = (value) => {
 const compareByRating = (first, second) => {
   const firstRank = Number(first?.rating?.rank)
   const secondRank = Number(second?.rating?.rank)
-  const firstEligible = Boolean(first?.rating?.isEligible) && Number.isFinite(firstRank)
-  const secondEligible = Boolean(second?.rating?.isEligible) && Number.isFinite(secondRank)
+  const firstEligible =
+    Boolean(first?.rating?.isEligible) && Number.isFinite(firstRank)
+  const secondEligible =
+    Boolean(second?.rating?.isEligible) && Number.isFinite(secondRank)
 
   if (firstEligible && secondEligible) {
     if (firstRank !== secondRank) {
@@ -60,12 +62,16 @@ const sortTeams = (teams, sortBy) => {
   }
 
   if (resolvedSortBy === 'games_desc') {
-    return items.sort((first, second) => (second?.gamesCount ?? 0) - (first?.gamesCount ?? 0))
+    return items.sort(
+      (first, second) => (second?.gamesCount ?? 0) - (first?.gamesCount ?? 0),
+    )
   }
 
   return items.sort((first, second) => {
     const firstTime = first?.createdAt ? new Date(first.createdAt).getTime() : 0
-    const secondTime = second?.createdAt ? new Date(second.createdAt).getTime() : 0
+    const secondTime = second?.createdAt
+      ? new Date(second.createdAt).getTime()
+      : 0
     return secondTime - firstTime
   })
 }
@@ -107,8 +113,10 @@ const fetchTeamsForCabinet = async ({
         new Set(
           teamIds
             .map((teamId) => toStringId(teamId))
-            .filter((teamId) => typeof teamId === 'string' && teamId.length > 0)
-        )
+            .filter(
+              (teamId) => typeof teamId === 'string' && teamId.length > 0,
+            ),
+        ),
       )
     : null
 
@@ -117,18 +125,29 @@ const fetchTeamsForCabinet = async ({
   }
 
   const normalizedSearchQuery =
-    typeof searchQuery === 'string' ? searchQuery.trim().toLowerCase().slice(0, 100) : ''
+    typeof searchQuery === 'string'
+      ? searchQuery.trim().toLowerCase().slice(0, 100)
+      : ''
   const normalizedTeamLocation =
     typeof (teamLocationFilter ?? location) === 'string'
-      ? String(teamLocationFilter ?? location).trim().toLowerCase()
+      ? String(teamLocationFilter ?? location)
+          .trim()
+          .toLowerCase()
       : ''
   const normalizedVisibilityFilter = normalizeVisibilityFilter(visibilityFilter)
-  const baseFilter = Array.isArray(uniqueTeamIds) ? { _id: { $in: uniqueTeamIds } } : null
+  const baseFilter = Array.isArray(uniqueTeamIds)
+    ? { _id: { $in: uniqueTeamIds } }
+    : null
   const searchFilter = normalizedSearchQuery
     ? {
         $or: [
           { name_lowered: { $regex: escapeRegExp(normalizedSearchQuery) } },
-          { name: { $regex: escapeRegExp(normalizedSearchQuery), $options: 'i' } },
+          {
+            name: {
+              $regex: escapeRegExp(normalizedSearchQuery),
+              $options: 'i',
+            },
+          },
         ],
       }
     : null
@@ -138,14 +157,18 @@ const fetchTeamsForCabinet = async ({
       : normalizedVisibilityFilter === 'closed'
         ? { open: false }
         : null
-  const locationDbFilter = normalizedTeamLocation
-    ? { location: normalizedTeamLocation }
-    : null
-  const filterParts = [baseFilter, searchFilter, visibilityDbFilter, locationDbFilter].filter(Boolean)
+  const locationDbFilter =
+    normalizedTeamLocation && normalizedTeamLocation !== 'all'
+      ? { location: normalizedTeamLocation }
+      : null
+  const filterParts = [
+    baseFilter,
+    searchFilter,
+    visibilityDbFilter,
+    locationDbFilter,
+  ].filter(Boolean)
   const teamFilter =
-    filterParts.length > 1
-      ? { $and: filterParts }
-      : filterParts[0] || {}
+    filterParts.length > 1 ? { $and: filterParts } : filterParts[0] || {}
   const queryOffset = toPositiveInteger(offset, 0)
   const queryLimit = limit === null ? null : toPositiveInteger(limit, 0)
   const shouldPaginate = Number.isFinite(queryLimit) && queryLimit > 0
@@ -166,31 +189,47 @@ const fetchTeamsForCabinet = async ({
     return returnMeta ? { teams: [], hasMore: false } : []
   }
 
-  const teamMembersDocs = await TeamsUsersModel.find({ teamId: { $in: normalizedTeamIds } }).lean()
+  const teamMembersDocs = await TeamsUsersModel.find({
+    teamId: { $in: normalizedTeamIds },
+  }).lean()
   const memberUserIds = Array.from(
     new Set(
       ensureArray(teamMembersDocs)
         .map((doc) => toStringId(doc?.userId))
-        .filter((userId) => typeof userId === 'string' && userId.length > 0)
-    )
+        .filter((userId) => typeof userId === 'string' && userId.length > 0),
+    ),
   )
   const memberTelegramIds = Array.from(
     new Set(
       ensureArray(teamMembersDocs)
         .map((doc) => doc?.userTelegramId)
-        .filter((telegramId) => Number.isFinite(telegramId))
-    )
+        .filter((telegramId) => Number.isFinite(telegramId)),
+    ),
   )
 
   const usersByIdDocs = memberUserIds.length
     ? await UsersModel.find({ _id: { $in: memberUserIds } })
-        .select({ _id: 1, telegramId: 1, name: 1, username: 1, phone: 1, role: 1 })
+        .select({
+          _id: 1,
+          telegramId: 1,
+          name: 1,
+          username: 1,
+          phone: 1,
+          role: 1,
+        })
         .lean()
     : []
 
   const usersByTelegramDocs = memberTelegramIds.length
     ? await UsersModel.find({ telegramId: { $in: memberTelegramIds } })
-        .select({ _id: 1, telegramId: 1, name: 1, username: 1, phone: 1, role: 1 })
+        .select({
+          _id: 1,
+          telegramId: 1,
+          name: 1,
+          username: 1,
+          phone: 1,
+          role: 1,
+        })
         .lean()
     : []
 
@@ -204,45 +243,55 @@ const fetchTeamsForCabinet = async ({
     return acc
   }, {})
 
-  const usersByTelegramMap = ensureArray(usersByTelegramDocs).reduce((acc, user) => {
-    const telegramId = Number.isFinite(user?.telegramId) ? user.telegramId : null
+  const usersByTelegramMap = ensureArray(usersByTelegramDocs).reduce(
+    (acc, user) => {
+      const telegramId = Number.isFinite(user?.telegramId)
+        ? user.telegramId
+        : null
 
-    if (telegramId !== null) {
-      acc[telegramId] = user
-    }
+      if (telegramId !== null) {
+        acc[telegramId] = user
+      }
 
-    return acc
-  }, {})
-
-  const membersByTeam = ensureArray(teamMembersDocs).reduce((acc, membership) => {
-    const teamId = toStringId(membership?.teamId)
-    const userId = toStringId(membership?.userId)
-
-    if (!teamId) {
       return acc
-    }
+    },
+    {},
+  )
 
-    if (!acc[teamId]) {
-      acc[teamId] = []
-    }
+  const membersByTeam = ensureArray(teamMembersDocs).reduce(
+    (acc, membership) => {
+      const teamId = toStringId(membership?.teamId)
+      const userId = toStringId(membership?.userId)
 
-    const linkedUser =
-      (userId ? usersByIdMap[userId] ?? null : null) ??
-      usersByTelegramMap[membership?.userTelegramId] ??
-      null
+      if (!teamId) {
+        return acc
+      }
 
-    acc[teamId].push({
-      membershipId: membership?._id,
-      userId: userId ?? null,
-      userTelegramId: membership?.userTelegramId ?? null,
-      role: membership?.role,
-      user: linkedUser,
-    })
+      if (!acc[teamId]) {
+        acc[teamId] = []
+      }
 
-    return acc
-  }, {})
+      const linkedUser =
+        (userId ? (usersByIdMap[userId] ?? null) : null) ??
+        usersByTelegramMap[membership?.userTelegramId] ??
+        null
 
-  const gamesTeamsDocs = await GamesTeamsModel.find({ teamId: { $in: normalizedTeamIds } })
+      acc[teamId].push({
+        membershipId: membership?._id,
+        userId: userId ?? null,
+        userTelegramId: membership?.userTelegramId ?? null,
+        role: membership?.role,
+        user: linkedUser,
+      })
+
+      return acc
+    },
+    {},
+  )
+
+  const gamesTeamsDocs = await GamesTeamsModel.find({
+    teamId: { $in: normalizedTeamIds },
+  })
     .select({ teamId: 1, gameId: 1 })
     .lean()
 
@@ -250,13 +299,20 @@ const fetchTeamsForCabinet = async ({
     new Set(
       ensureArray(gamesTeamsDocs)
         .map((doc) => toStringId(doc?.gameId))
-        .filter((gameId) => typeof gameId === 'string' && gameId.length > 0)
-    )
+        .filter((gameId) => typeof gameId === 'string' && gameId.length > 0),
+    ),
   )
 
   const gamesDocs = gameIds.length
     ? await GamesModel.find({ _id: { $in: gameIds } })
-        .select({ _id: 1, name: 1, status: 1, location: 1, dateStart: 1, hidden: 1 })
+        .select({
+          _id: 1,
+          name: 1,
+          status: 1,
+          location: 1,
+          dateStart: 1,
+          hidden: 1,
+        })
         .lean()
     : []
 
@@ -273,7 +329,7 @@ const fetchTeamsForCabinet = async ({
   const gamesByTeam = ensureArray(gamesTeamsDocs).reduce((acc, doc) => {
     const teamId = toStringId(doc?.teamId)
     const gameId = toStringId(doc?.gameId)
-    const game = gameId ? gamesMap[gameId] ?? null : null
+    const game = gameId ? (gamesMap[gameId] ?? null) : null
 
     if (!teamId || !game) {
       return acc
@@ -295,7 +351,7 @@ const fetchTeamsForCabinet = async ({
         members: membersByTeam[toStringId(team?._id)] ?? [],
         games: gamesByTeam[toStringId(team?._id)] ?? [],
         location,
-      })
+      }),
     )
     .filter(Boolean)
   const sortedTeams = sortTeams(teams, sortBy)
