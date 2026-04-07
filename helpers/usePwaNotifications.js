@@ -7,9 +7,10 @@ const DEBUG_NAMESPACE = '[push-debug]'
 
 const INITIAL_STATE = {
   isSupported: false,
-  permission: typeof window !== 'undefined' && window.Notification
-    ? window.Notification.permission
-    : 'default',
+  permission:
+    typeof window !== 'undefined' && window.Notification
+      ? window.Notification.permission
+      : 'default',
   isSubscribed: false,
   isProcessing: false,
   error: null,
@@ -50,7 +51,10 @@ const resolveDebugPreference = () => {
     }
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.warn(`${DEBUG_NAMESPACE} Не удалось прочитать настройку из localStorage`, error)
+    console.warn(
+      `${DEBUG_NAMESPACE} Не удалось прочитать настройку из localStorage`,
+      error,
+    )
   }
 
   return false
@@ -163,12 +167,12 @@ const waitForServiceWorkerRegistration = async () => {
 
     if (mode !== 'production') {
       throw new Error(
-        'Сервис-воркер не запущен. Соберите приложение (npm run build && npm run start), чтобы протестировать push-уведомления.'
+        'Сервис-воркер не запущен. Соберите приложение (npm run build && npm run start), чтобы протестировать push-уведомления.',
       )
     }
 
     throw new Error(
-      'Сервис-воркер ещё не активировался. Обновите страницу и дождитесь полной загрузки перед включением уведомлений.'
+      'Сервис-воркер ещё не активировался. Обновите страницу и дождитесь полной загрузки перед включением уведомлений.',
     )
   } finally {
     if (timeoutId) {
@@ -186,12 +190,12 @@ const waitForServiceWorkerRegistration = async () => {
 
   if (mode !== 'production') {
     throw new Error(
-      'Сервис-воркер не запущен. Соберите приложение (npm run build && npm run start), чтобы протестировать push-уведомления.'
+      'Сервис-воркер не запущен. Соберите приложение (npm run build && npm run start), чтобы протестировать push-уведомления.',
     )
   }
 
   throw new Error(
-    'Сервис-воркер ещё не активировался. Обновите страницу и дождитесь полной загрузки перед включением уведомлений.'
+    'Сервис-воркер ещё не активировался. Обновите страницу и дождитесь полной загрузки перед включением уведомлений.',
   )
 }
 
@@ -200,17 +204,23 @@ const usePwaNotifications = ({ location, session }) => {
 
   const [state, setState] = useState(() => ({ ...INITIAL_STATE }))
   const [applicationServerKey, setApplicationServerKey] = useState(
-    initialApplicationServerKey
+    initialApplicationServerKey,
   )
   const [configStatus, setConfigStatus] = useState('loading')
   const [configError, setConfigError] = useState(null)
   const [isServerConfigured, setIsServerConfigured] = useState(
-    Boolean(initialApplicationServerKey)
+    Boolean(initialApplicationServerKey),
   )
   const abortControllerRef = useRef(null)
   const debugNoticeShownRef = useRef(false)
 
   const isClient = typeof window !== 'undefined'
+  const isIOSDevice =
+    isClient && /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+  const isStandalone =
+    isClient &&
+    (window.navigator.standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches)
   const isSupported =
     isClient &&
     'serviceWorker' in navigator &&
@@ -228,7 +238,10 @@ const usePwaNotifications = ({ location, session }) => {
       updateState({
         isSupported,
         isSubscribed: false,
-        permission: isClient && window.Notification ? window.Notification.permission : 'default',
+        permission:
+          isClient && window.Notification
+            ? window.Notification.permission
+            : 'default',
         isProcessing: false,
       })
       return
@@ -269,7 +282,9 @@ const usePwaNotifications = ({ location, session }) => {
   useEffect(() => {
     if (typeof window !== 'undefined' && !debugNoticeShownRef.current) {
       debugNoticeShownRef.current = true
-      debugLogRef.current('init', { mode: process.env.MODE ?? process.env.NODE_ENV })
+      debugLogRef.current('init', {
+        mode: process.env.MODE ?? process.env.NODE_ENV,
+      })
 
       if (!window.__aqPushDebug?.suppressIntro) {
         const introMessage =
@@ -301,7 +316,9 @@ const usePwaNotifications = ({ location, session }) => {
 
         if (!response.ok) {
           const data = await response.json().catch(() => null)
-          throw new Error(data?.error || 'Не удалось загрузить настройки уведомлений')
+          throw new Error(
+            data?.error || 'Не удалось загрузить настройки уведомлений',
+          )
         }
 
         const data = await response.json()
@@ -330,7 +347,9 @@ const usePwaNotifications = ({ location, session }) => {
 
         console.error('Push config load error', error)
         setConfigStatus('error')
-        setConfigError(error?.message || 'Не удалось проверить настройки уведомлений')
+        setConfigError(
+          error?.message || 'Не удалось проверить настройки уведомлений',
+        )
         debugLogRef.current('config:error', {
           message: error?.message,
         })
@@ -373,148 +392,155 @@ const usePwaNotifications = ({ location, session }) => {
     }
   }, [location, session, syncSubscriptionState])
 
-  const subscribe = useCallback(async (options = {}) => {
-    const skipPermissionRequest = Boolean(options?.skipPermissionRequest)
-    const forcedPermission =
-      typeof options?.permission === 'string' ? options.permission : null
+  const subscribe = useCallback(
+    async (options = {}) => {
+      const skipPermissionRequest = Boolean(options?.skipPermissionRequest)
+      const forcedPermission =
+        typeof options?.permission === 'string' ? options.permission : null
 
-    if (!isSupported) {
-      updateState({ error: 'Ваш браузер не поддерживает push-уведомления.' })
-      return { success: false }
-    }
-
-    if (!session) {
-      updateState({ error: 'Авторизуйтесь через Telegram, чтобы включить уведомления.' })
-      return { success: false }
-    }
-
-    if (configStatus === 'loading' && !applicationServerKey) {
-      return {
-        success: false,
-        message: CONFIG_LOADING_TRANSIENT_MESSAGE,
-        transient: true,
-      }
-    }
-
-    if (!applicationServerKey) {
-      updateState({ error: 'Публичный ключ для уведомлений не настроен.' })
-      return { success: false }
-    }
-
-    debugLogRef.current('subscribe:start', {
-      location,
-      permission: Notification.permission,
-    })
-
-    updateState({ isProcessing: true, error: null })
-
-    try {
-      let permission = forcedPermission
-
-      if (!permission) {
-        permission = skipPermissionRequest
-          ? Notification.permission
-          : await Notification.requestPermission()
+      if (!isSupported) {
+        updateState({ error: 'Ваш браузер не поддерживает push-уведомления.' })
+        return { success: false }
       }
 
-      if (permission !== 'granted') {
-        debugLogRef.current('subscribe:permission-denied', {
-          permission,
-        })
+      if (!session) {
         updateState({
-          isProcessing: false,
-          permission,
-          isSubscribed: false,
-          error:
-            permission === 'denied'
-              ? 'Уведомления запрещены в настройках браузера.'
-              : 'Браузер не дал разрешение на уведомления.',
+          error: 'Авторизуйтесь через Telegram, чтобы включить уведомления.',
         })
         return { success: false }
       }
 
-      const registration = await waitForServiceWorkerRegistration()
-      let subscription = await registration.pushManager.getSubscription()
-
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(applicationServerKey),
-        })
+      if (configStatus === 'loading' && !applicationServerKey) {
+        return {
+          success: false,
+          message: CONFIG_LOADING_TRANSIENT_MESSAGE,
+          transient: true,
+        }
       }
 
-      const payload = {
+      if (!applicationServerKey) {
+        updateState({ error: 'Публичный ключ для уведомлений не настроен.' })
+        return { success: false }
+      }
+
+      debugLogRef.current('subscribe:start', {
         location,
-        subscription: subscription.toJSON(),
-        userAgent: navigator.userAgent,
-      }
-
-      abortControllerRef.current = new AbortController()
-
-      const response = await fetch('/api/webapp/push/subscribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-        signal: abortControllerRef.current.signal,
-      })
-
-      const data = await response.json().catch(() => null)
-
-      if (!response.ok || data?.success === false) {
-        await subscription.unsubscribe().catch(() => null)
-        throw new Error(data?.error || 'Не удалось сохранить подписку на уведомления')
-      }
-
-      updateState({
-        isSubscribed: true,
         permission: Notification.permission,
-        error: null,
       })
 
-      debugLogRef.current('subscribe:success', {
-        endpoint: subscription.endpoint,
-        permission: Notification.permission,
-        serverResponse: data,
-      })
+      updateState({ isProcessing: true, error: null })
 
-      return { success: true }
-    } catch (error) {
-      console.error('Subscribe push error', error)
-      updateState({
-        isSubscribed: false,
-        permission: Notification.permission,
-        isProcessing: false,
-        error: error?.message || 'Не удалось включить push-уведомления',
-      })
-      debugLogRef.current('subscribe:error', {
-        message: error?.message,
-      })
-      return { success: false, error }
-    } finally {
-      abortControllerRef.current = null
-      updateState({ isProcessing: false })
+      try {
+        let permission = forcedPermission
 
-      syncSubscriptionState().catch((syncError) => {
-        console.error('Sync after subscribe failed', syncError)
-        debugLogRef.current('subscribe:sync-error', {
-          message: syncError?.message,
+        if (!permission) {
+          permission = skipPermissionRequest
+            ? Notification.permission
+            : await Notification.requestPermission()
+        }
+
+        if (permission !== 'granted') {
+          debugLogRef.current('subscribe:permission-denied', {
+            permission,
+          })
+          updateState({
+            isProcessing: false,
+            permission,
+            isSubscribed: false,
+            error:
+              permission === 'denied'
+                ? 'Уведомления запрещены в настройках браузера.'
+                : 'Браузер не дал разрешение на уведомления.',
+          })
+          return { success: false }
+        }
+
+        const registration = await waitForServiceWorkerRegistration()
+        let subscription = await registration.pushManager.getSubscription()
+
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(applicationServerKey),
+          })
+        }
+
+        const payload = {
+          location,
+          subscription: subscription.toJSON(),
+          userAgent: navigator.userAgent,
+        }
+
+        abortControllerRef.current = new AbortController()
+
+        const response = await fetch('/api/webapp/push/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: abortControllerRef.current.signal,
         })
-      })
 
-      debugLogRef.current('subscribe:finished', {
-        permission: Notification.permission,
-      })
-    }
-  }, [
-    applicationServerKey,
-    isSupported,
-    location,
-    session,
-    syncSubscriptionState,
-    updateState,
-  ])
+        const data = await response.json().catch(() => null)
+
+        if (!response.ok || data?.success === false) {
+          await subscription.unsubscribe().catch(() => null)
+          throw new Error(
+            data?.error || 'Не удалось сохранить подписку на уведомления',
+          )
+        }
+
+        updateState({
+          isSubscribed: true,
+          permission: Notification.permission,
+          error: null,
+        })
+
+        debugLogRef.current('subscribe:success', {
+          endpoint: subscription.endpoint,
+          permission: Notification.permission,
+          serverResponse: data,
+        })
+
+        return { success: true }
+      } catch (error) {
+        console.error('Subscribe push error', error)
+        updateState({
+          isSubscribed: false,
+          permission: Notification.permission,
+          isProcessing: false,
+          error: error?.message || 'Не удалось включить push-уведомления',
+        })
+        debugLogRef.current('subscribe:error', {
+          message: error?.message,
+        })
+        return { success: false, error }
+      } finally {
+        abortControllerRef.current = null
+        updateState({ isProcessing: false })
+
+        syncSubscriptionState().catch((syncError) => {
+          console.error('Sync after subscribe failed', syncError)
+          debugLogRef.current('subscribe:sync-error', {
+            message: syncError?.message,
+          })
+        })
+
+        debugLogRef.current('subscribe:finished', {
+          permission: Notification.permission,
+        })
+      }
+    },
+    [
+      applicationServerKey,
+      isSupported,
+      location,
+      session,
+      syncSubscriptionState,
+      updateState,
+    ],
+  )
 
   const unsubscribe = useCallback(async () => {
     if (!isSupported) {
@@ -553,7 +579,9 @@ const usePwaNotifications = ({ location, session }) => {
       const data = await response.json().catch(() => null)
 
       if (!response.ok || data?.success === false) {
-        throw new Error(data?.error || 'Не удалось удалить подписку на уведомления')
+        throw new Error(
+          data?.error || 'Не удалось удалить подписку на уведомления',
+        )
       }
 
       await subscription.unsubscribe().catch(() => null)
@@ -628,7 +656,10 @@ const usePwaNotifications = ({ location, session }) => {
             window.localStorage?.setItem(DEBUG_STORAGE_KEY, '0')
           }
         } catch (error) {
-          console.warn(`${DEBUG_NAMESPACE} Не удалось сохранить настройку`, error)
+          console.warn(
+            `${DEBUG_NAMESPACE} Не удалось сохранить настройку`,
+            error,
+          )
         }
         const status = this.enabled ? 'включены' : 'отключены'
         console.info(`${DEBUG_NAMESPACE} Подробные логи ${status}`)
@@ -648,7 +679,10 @@ const usePwaNotifications = ({ location, session }) => {
       },
       logSnapshot() {
         const nextSnapshot = this.getSnapshot()
-        console.groupCollapsed(`${DEBUG_NAMESPACE} snapshot`, new Date().toISOString())
+        console.groupCollapsed(
+          `${DEBUG_NAMESPACE} snapshot`,
+          new Date().toISOString(),
+        )
         console.table(nextSnapshot.state)
         console.log({
           configStatus: nextSnapshot.configStatus,
@@ -685,6 +719,8 @@ const usePwaNotifications = ({ location, session }) => {
 
   return {
     ...state,
+    isIOSDevice,
+    isStandalone,
     isConfigured:
       configStatus === 'success'
         ? Boolean(isServerConfigured)

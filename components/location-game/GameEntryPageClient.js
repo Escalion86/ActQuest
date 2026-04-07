@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -90,7 +90,7 @@ function GameEntryPage({
     }
 
     const prefersDark = window.matchMedia?.(
-      '(prefers-color-scheme: dark)'
+      '(prefers-color-scheme: dark)',
     ).matches
     setTheme(prefersDark ? 'dark' : 'light')
   }, [isClient])
@@ -114,40 +114,80 @@ function GameEntryPage({
 
   const plannedStart = useMemo(
     () => formatDateTime(game?.dateStart),
-    [game?.dateStart]
+    [game?.dateStart],
   )
   const actualStart = useMemo(
     () => formatDateTime(game?.dateStartFact),
-    [game?.dateStartFact]
+    [game?.dateStartFact],
   )
   const actualFinish = useMemo(
     () => formatDateTime(game?.dateEndFact),
-    [game?.dateEndFact]
+    [game?.dateEndFact],
   )
 
   const descriptionParts = useMemo(
     () => splitDescription(game?.description ?? ''),
-    [game?.description]
+    [game?.description],
   )
   const descriptionRich = useMemo(
     () =>
       typeof game?.descriptionRich === 'string'
         ? game.descriptionRich.trim()
         : '',
-    [game?.descriptionRich]
+    [game?.descriptionRich],
   )
 
   const statusLabel = statusLabels[status] ?? 'Статус неизвестен'
   const cityName = useMemo(() => formatCityName(location), [location])
   const participantTeam = useMemo(
     () => (participantTeams.length > 0 ? participantTeams[0] : null),
-    [participantTeams]
+    [participantTeams],
   )
   const participantTeamId = participantTeam?.id
     ? String(participantTeam.id)
     : null
   const canEnterGame = isGameStarted && !isGameFinished
   const showParticipantInfo = Boolean(participantTeamId && isParticipant)
+
+  const [isGameIdCopied, setIsGameIdCopied] = useState(false)
+  const gameIdCopyTimeoutRef = useRef(null)
+
+  useEffect(
+    () => () => {
+      if (gameIdCopyTimeoutRef.current) {
+        clearTimeout(gameIdCopyTimeoutRef.current)
+      }
+    },
+    [],
+  )
+
+  const gameIdString = game?._id ? String(game._id) : ''
+  const isHiddenGame = Boolean(game?.hidden)
+
+  const handleCopyGameId = useCallback(() => {
+    if (!gameIdString || typeof window === 'undefined') {
+      return
+    }
+
+    const copyPromise = navigator?.clipboard?.writeText
+      ? navigator.clipboard.writeText(gameIdString)
+      : Promise.reject(new Error('Clipboard API unavailable'))
+
+    copyPromise
+      .then(() => {
+        setIsGameIdCopied(true)
+        if (gameIdCopyTimeoutRef.current) {
+          clearTimeout(gameIdCopyTimeoutRef.current)
+        }
+        gameIdCopyTimeoutRef.current = setTimeout(() => {
+          setIsGameIdCopied(false)
+          gameIdCopyTimeoutRef.current = null
+        }, 2000)
+      })
+      .catch(() => {
+        setIsGameIdCopied(false)
+      })
+  }, [gameIdString])
 
   return (
     <>
@@ -273,6 +313,30 @@ function GameEntryPage({
                   ) : null} */}
                 </div>
               </div>
+
+              {isHiddenGame && gameIdString ? (
+                <div className="flex flex-col gap-2 px-4 py-3 border border-dashed rounded-2xl border-primary/40 bg-blue-50/70 dark:bg-blue-500/10 dark:border-blue-400/30">
+                  <div className="text-xs font-semibold text-gray-500 uppercase dark:text-slate-400">
+                    ID игры для присоединения
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyGameId}
+                    className="inline-flex items-center justify-between w-full px-3 py-2 text-sm font-medium transition border border-dashed rounded-lg border-primary/40 bg-white/80 text-primary hover:bg-blue-100 dark:bg-slate-800/60 dark:text-blue-300 dark:hover:bg-slate-700/60 dark:border-blue-400/30"
+                  >
+                    <span className="font-mono">{gameIdString}</span>
+                    <span className="text-[11px] font-normal uppercase tracking-wide">
+                      {isGameIdCopied
+                        ? 'Скопировано ✓'
+                        : 'Нажмите, чтобы скопировать'}
+                    </span>
+                  </button>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
+                    Эта игра скрыта. Отправьте этот ID другим игрокам, чтобы они
+                    могли найти и присоединиться к игре.
+                  </p>
+                </div>
+              ) : null}
 
               {error ? (
                 <div className="px-4 py-3 text-sm text-red-600 border border-red-200 rounded-2xl bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">

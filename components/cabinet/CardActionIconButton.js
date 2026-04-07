@@ -74,7 +74,13 @@ export const StatusCardIcon = ({ status }) => {
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <circle cx="10" cy="10" r="6.75" stroke="currentColor" strokeWidth="1.5" />
+        <circle
+          cx="10"
+          cy="10"
+          r="6.75"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
         <path
           d="M10 6.5V10.2L12.7 11.8"
           stroke="currentColor"
@@ -176,26 +182,37 @@ export const TargetCardIcon = () => (
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <circle
-      cx="10"
-      cy="10"
-      r="6.5"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    />
-    <circle
-      cx="10"
-      cy="10"
-      r="3.2"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    />
+    <circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="10" cy="10" r="3.2" stroke="currentColor" strokeWidth="1.5" />
     <path
       d="M10 1.75V4.25M10 15.75V18.25M1.75 10H4.25M15.75 10H18.25"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
     />
+  </svg>
+)
+
+export const GameControlCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <rect
+      x="3"
+      y="4"
+      width="14"
+      height="12"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <path d="M3 8h14" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M7 8v8M11 8v8" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="7" cy="11" r="0.8" fill="currentColor" />
+    <circle cx="11" cy="11" r="0.8" fill="currentColor" />
   </svg>
 )
 

@@ -125,25 +125,84 @@ const fetchGamesForCabinet = async ({
 
   // Фильтр по видимости:
   // - Админ/dev видят все игры
-  // - Обычные пользователи видят только публичные (hidden !== true)
+  // - Обычные пользователи видят публичные + скрытые, на которые записана их команда
   if (!isElevatedRole) {
-    query.hidden = { $ne: true }
+    let hiddenGameIds = []
+
+    if (hasUserId || hasTelegramId) {
+      const TeamsUsersModel = db.model('TeamsUsers')
+      const GamesTeamsModelVis = db.model('GamesTeams')
+
+      const tuOrConditions = []
+      if (hasUserId) {
+        tuOrConditions.push({ userId: currentUserIdString })
+      }
+      if (hasTelegramId) {
+        tuOrConditions.push({ userTelegramId: currentUserTelegramIdNumber })
+      }
+
+      const userTeamsDocs = await TeamsUsersModel.find({ $or: tuOrConditions })
+        .select({ teamId: 1 })
+        .lean()
+
+      const userTeamIds = userTeamsDocs
+        .map((t) => toStringId(t?.teamId))
+        .filter(Boolean)
+
+      if (userTeamIds.length > 0) {
+        const userGamesTeamsDocs = await GamesTeamsModelVis.find({
+          teamId: { $in: userTeamIds },
+        })
+          .select({ gameId: 1 })
+          .lean()
+
+        hiddenGameIds = Array.from(
+          new Set(
+            userGamesTeamsDocs
+              .map((gt) => toStringId(gt?.gameId))
+              .filter(Boolean),
+          ),
+        )
+      }
+    }
+
+    if (hiddenGameIds.length > 0) {
+      query.$and = [
+        {
+          $or: [{ hidden: { $ne: true } }, { _id: { $in: hiddenGameIds } }],
+        },
+      ]
+    } else {
+      query.hidden = { $ne: true }
+    }
   }
 
   // Фильтр по view - добавляем в query для правильной пагинации
   const now = new Date()
   if (view === 'upcoming') {
-    // Игры: дата в будущем ИЛИ статус active/started
-    query.$or = [
-      { dateStart: { $gte: now } },
-      { status: { $in: ['active', 'started'] } },
-    ]
+    const viewFilter = {
+      $or: [
+        { dateStart: { $gte: now } },
+        { status: { $in: ['active', 'started'] } },
+      ],
+    }
+    if (query.$and) {
+      query.$and.push(viewFilter)
+    } else {
+      query.$or = viewFilter.$or
+    }
   } else if (view === 'past') {
-    // Игры: дата в прошлом ИЛИ статус finished/closed/canceled
-    query.$or = [
-      { dateStart: { $lt: now } },
-      { status: { $in: ['finished', 'closed', 'canceled'] } },
-    ]
+    const viewFilter = {
+      $or: [
+        { dateStart: { $lt: now } },
+        { status: { $in: ['finished', 'closed', 'canceled'] } },
+      ],
+    }
+    if (query.$and) {
+      query.$and.push(viewFilter)
+    } else {
+      query.$or = viewFilter.$or
+    }
   }
 
   const queryOffset = toPositiveInteger(offset, 0)
@@ -213,6 +272,33 @@ const fetchGamesForCabinet = async ({
     return { games: [], hasMore }
   }
 
+  // Загрузить количество команд для предстоящих игр из GamesTeams
+  const GamesTeamsModel = db.model('GamesTeams')
+  const upcomingGameIds = gamesDocs
+    .filter((g) => {
+      const s = String(g?.status).toLowerCase()
+      return s === 'active' || s === 'started' || s === 'canceled'
+    })
+    .map((g) => toStringId(g?._id))
+    .filter(Boolean)
+
+  const teamsCountByGameId = {}
+
+  if (upcomingGameIds.length > 0) {
+    const gamesTeamsDocs = await GamesTeamsModel.find({
+      gameId: { $in: upcomingGameIds },
+    })
+      .select({ gameId: 1 })
+      .lean()
+
+    for (const gt of gamesTeamsDocs) {
+      const gId = toStringId(gt?.gameId)
+      if (gId) {
+        teamsCountByGameId[gId] = (teamsCountByGameId[gId] || 0) + 1
+      }
+    }
+  }
+
   // Загрузить создателей
   const creatorTelegramIds = Array.from(
     new Set(
@@ -258,15 +344,26 @@ const fetchGamesForCabinet = async ({
         : game?.status
 
     const gameId = game?._id ? game._id.toString() : null
+    const gameStatus = String(game?.status).toLowerCase()
     const creatorTelegramIdNumber = Number(game?.creatorTelegramId)
     const creatorKey = Number.isFinite(creatorTelegramIdNumber)
       ? String(creatorTelegramIdNumber)
       : null
 
+    // Для finished/closed — из result.teams, для остальных — из GamesTeams
+    let teamsCount = 0
+    if (gameStatus === 'finished' || gameStatus === 'closed') {
+      teamsCount = Array.isArray(game?.result?.teams)
+        ? game.result.teams.length
+        : 0
+    } else {
+      teamsCount = gameId ? teamsCountByGameId[gameId] || 0 : 0
+    }
+
     return normalizeGameForCabinet({
       ...game,
       status: normalizedStatus,
-      teamsCount: 0,
+      teamsCount,
       userTeamPlace: null,
       userParticipationTeams: [],
       creator: creatorKey ? (creatorsByTelegramId[creatorKey] ?? null) : null,

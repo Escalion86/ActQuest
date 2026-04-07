@@ -8,6 +8,7 @@ import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import CardActionIconButton, {
   EditCardIcon,
+  GameControlCardIcon,
   MegaphoneCardIcon,
   StatusCardIcon,
   TargetCardIcon,
@@ -2585,7 +2586,7 @@ const GamesPage = ({
         taskFailurePenalty: 0,
         manyCodesPenalty: [0, 0],
         individualStart: false,
-        isRated: Boolean(newGameIsRated),
+        isRated: false,
         seasonId: '',
         seasonName: '',
         hidden: true,
@@ -4923,6 +4924,21 @@ const GamesPage = ({
                             <MegaphoneCardIcon />
                           </CardActionIconButton>
                         )}
+                        {isGameInProgressStatus(game.status) &&
+                          canManageThisGame && (
+                            <CardActionIconButton
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                router.push(
+                                  `/cabinet/admin/game-control?gameId=${game._id}`,
+                                )
+                              }}
+                              label="Контроль игры"
+                              title="Мониторинг хода игры"
+                            >
+                              <GameControlCardIcon />
+                            </CardActionIconButton>
+                          )}
                       </div>
                     )}
                     {canViewGameTeams && !canManageThisGame && (
@@ -5248,6 +5264,22 @@ const GamesPage = ({
                           <MegaphoneCardIcon />
                         </CardActionIconButton>
                       )}
+                      {isGameInProgressStatus(game.status) &&
+                        canManageThisGame && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              router.push(
+                                `/cabinet/admin/game-control?gameId=${game._id}`,
+                              )
+                            }}
+                            label="Контроль игры"
+                            title="Мониторинг хода игры"
+                            className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                          >
+                            <GameControlCardIcon />
+                          </CardActionIconButton>
+                        )}
                     </div>
                   )}
                   {canViewGameTeams && !canManageThisGame && (

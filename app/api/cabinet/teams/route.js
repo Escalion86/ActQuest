@@ -109,7 +109,10 @@ export async function GET(request) {
       { status: 200 },
     )
   } catch (error) {
-    console.error('Failed to load cabinet teams via app router API pilot', error)
+    console.error(
+      'Failed to load cabinet teams via app router API pilot',
+      error,
+    )
     return NextResponse.json(
       { success: false, error: 'Не удалось загрузить команды' },
       { status: 500 },
@@ -181,7 +184,8 @@ export async function POST(request) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Чтобы создавать команды, требуется авторизованный пользователь',
+          error:
+            'Чтобы создавать команды, требуется авторизованный пользователь',
         },
         { status: 403 },
       )
@@ -196,14 +200,13 @@ export async function POST(request) {
       location,
     })
 
-    if (!isElevatedRole(actorRole)) {
-      await TeamsUsersModel.create({
-        teamId: toStringId(createdTeam?._id),
-        userId: actorUserId,
-        userTelegramId: actorTelegramId,
-        role: 'capitan',
-      })
-    }
+    // Создатель всегда становится капитаном команды
+    await TeamsUsersModel.create({
+      teamId: toStringId(createdTeam?._id),
+      userId: actorUserId,
+      userTelegramId: actorTelegramId,
+      role: 'capitan',
+    })
 
     const createdTeamId = toStringId(createdTeam?._id)
     const createdTeamName =
@@ -253,4 +256,3 @@ export async function POST(request) {
     )
   }
 }
-

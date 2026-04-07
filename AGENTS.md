@@ -430,3 +430,125 @@ const canViewGameTeams =
 ```
 
 **Файлы:** `components/cabinet/app-router/GamesPageClient.js` (обновить в обоих блоках: tile и list)
+
+## Контроль хода игры (Game Control)
+
+### Общее описание
+
+Страница мониторинга запущенной (`started`) игры в реальном времени, аналог команды `/gamestatus` из Telegram-бота.
+
+### Архитектура
+
+```
+app/cabinet/admin/game-control/page.js          — серверная страница (auth + admin check)
+components/cabinet/app-router/GameControlPageClient.js — клиентский компонент
+app/api/cabinet/admin/game-status/route.js       — API-эндпоинт (GET, query: gameId)
+components/cabinet/CardActionIconButton.js       — содержит GameControlCardIcon
+```
+
+### API-эндпоинт `game-status`
+
+- **Метод:** GET, параметр `?gameId=...`
+- **Доступ:** admin/dev или модератор, включённый в `game.moderators`
+- **Ограничение:** только для игр в статусе `started`
+- **Данные ответа:** `data.teams[]` — массив команд с полями:
+  - `teamId`, `teamName`, `activeTaskIndex`, `startedTasks`
+  - `findedCodesCount`, `wrongCodesCount`, `bonusCodesCount`, `penaltyCodesCount`
+  - `isTeamFinished`, `isTeamOnBreak`, `isActiveTaskFinished`, `isActiveTaskFailed`
+  - `sumTimeSeconds`, `currentTaskSeconds`, `breakTimeLeftSeconds`
+  - `cluesReceived`, `currentPhotosCount` (для photo-квестов)
+- **Сортировка:** по `activeTaskIndex` DESC → финишировавшие первыми → на перерыве → по кодам DESC
+- **Источник данных:** коллекции `Games`, `GamesTeams`, `Teams`
+
+### Клиентский компонент `GameControlPageClient`
+
+- Авто-обновление каждые 15 сек (переключаемый чекбокс «Авто»)
+- Сводка: всего команд, финишировали, в игре, на перерыве
+- Карточки команд с цветовой индикацией статуса:
+  - Зелёный — финиш, Жёлтый — перерыв, Красный — время вышло, Голубой — в игре
+- Отображает: задание, коды, общее время, время на задании, бонусы/штрафы, подсказки
+
+### Кнопка на карточках игр
+
+- Добавлена в оба вида (list + tile) в `GamesPageClient.js`
+- **Условие показа:** `isGameInProgressStatus(game.status) && canManageThisGame`
+  - `canManageThisGame` = `canManageGameStatus(game)` проверяет: admin/dev ИЛИ создатель ИЛИ модератор игры
+  - `isGameInProgressStatus` = `status === 'started'`
+- **Иконка:** `GameControlCardIcon` (таблица/дашборд) из `CardActionIconButton.js`
+- **Навигация:** `router.push('/cabinet/admin/game-control?gameId=${game._id}')`
+
+### Поля GamesTeams, используемые для расчёта статуса
+
+```javascript
+{
+  activeNum,       // индекс текущего задания (0-based)
+  startTime[],     // массив дат старта каждого задания
+  endTime[],       // массив дат завершения каждого задания
+  findedCodes[],   // массив найденных кодов по заданиям
+  wrongCodes[],    // массив неверных кодов по заданиям
+  findedBonusCodes[],    // бонусные коды
+  findedPenaltyCodes[],  // штрафные коды
+  photos[],        // для photo-квестов
+}
+```
+
+### Конфигурация игры (из Games)
+
+- `taskDuration` (по умолчанию 3600) — время на задание в секундах
+- `cluesDuration` (по умолчанию 1200) — интервал выдачи подсказок
+- `breakDuration` (по умолчанию 0) — перерыв между заданиями
+
+## Создание игры
+
+### Поведение по умолчанию
+
+- Новая игра **всегда скрыта** (`hidden: true`) — видна только в админке и зарегистрированным участникам
+- Новая игра **не рейтинговая** (`isRated: false`) — рейтинговость настраивается в редакторе игры после создания
+- Чекбокс «Рейтинговая игра» и выбор сезона **убраны** из модалки создания (`GameCreateModal.js`)
+- Вместо них показывается информационный баннер: «Рейтинговость и сезон можно настроить после создания в редакторе игры»
+
+### Файлы
+
+- `components/modals/GameCreateModal.js` — модалка создания игры
+- `components/cabinet/app-router/GamesPageClient.js` — payload создания (`isRated: false`, `hidden: true`)
+- `app/api/cabinet/games/route.js` — API создания игры (POST)
+
+## Скрытые игры и видимость
+
+### Логика видимости скрытых игр для обычных участников
+
+- По умолчанию скрытые игры (`hidden: true`) не видны обычным пользователям
+- **Исключение:** если пользователь зарегистрирован на скрытую игру (через GamesTeams), она отображается
+- Реализация в `fetchGamesForCabinet.js`: через `$and`/`$or` в MongoDB-запросе
+- Admin/dev видят все игры включая скрытые
+
+### ID-панель для скрытых игр
+
+- На странице входа в игру (`GameEntryPageClient.js`) показывается панель с ID игры, если `game.hidden === true`
+- Позволяет скопировать ID для передачи другим участникам
+
+## Количество команд на карточках игр (teamsCount)
+
+- Для `active`/`started`/`canceled` — подсчёт из коллекции `GamesTeams` (текущие регистрации)
+- Для `finished`/`closed` — из `result.teams.length` (snapshot)
+- Реализация в `fetchGamesForCabinet.js`
+
+## Фильтрация upcoming/past игр
+
+- Фильтр работает на уровне MongoDB-запроса (НЕ в памяти после пагинации!)
+- `upcoming`: `{ $or: [{ dateStart: { $gte: now } }, { status: { $in: ['active', 'started'] } }] }`
+- `past`: `{ $or: [{ dateStart: { $lt: now } }, { status: { $in: ['finished', 'closed', 'canceled'] } }] }`
+- Это гарантирует, что игры без даты, но с активным статусом, попадают в upcoming
+
+## Удаление команды
+
+- API: DELETE `/api/cabinet/teams/[id]` — проверяет права, запрещает удаление при наличии upcoming-регистраций
+- Удаляет: Teams, TeamsUsers, GamesTeams
+- UI: кнопка в `TeamEditModal`, доступна только admin
+- Подтверждение через `window.confirm()`
+
+## iPhone Push-уведомления
+
+- Safari на iOS не поддерживает Web Push без PWA (Home Screen)
+- `usePwaNotifications.js` возвращает `isIOSDevice` и `isStandalone`
+- `ProfilePageClient.js` показывает пошаговую инструкцию установки PWA для iOS

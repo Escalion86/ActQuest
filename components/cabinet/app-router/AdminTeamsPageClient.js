@@ -7,7 +7,9 @@ import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
-import CardActionIconButton, { EditCardIcon } from '@components/cabinet/CardActionIconButton'
+import CardActionIconButton, {
+  EditCardIcon,
+} from '@components/cabinet/CardActionIconButton'
 import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import NoticeBanner from '@components/NoticeBanner'
@@ -25,10 +27,7 @@ const TEAMS_PAGE_SIZE = 10
 const CABINET_ADMIN_API_BASE = '/api/cabinet/admin'
 
 const resolveRatingBadge = (rating) =>
-  rating?.isEligible && Number.isFinite(rating?.rank)
-    ? `#${rating.rank}`
-    : null
-
+  rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
 
 const serializeTeamForComparison = (team) => {
   if (!team) {
@@ -73,7 +72,9 @@ const AdminTeamsPage = ({
 
   const [teams, setTeams] = useState(safeInitialTeams)
   const [persistedTeams, setPersistedTeams] = useState(safeInitialTeams)
-  const [selectedTeamId, setSelectedTeamId] = useState(safeInitialTeams[0]?.id ?? null)
+  const [selectedTeamId, setSelectedTeamId] = useState(
+    safeInitialTeams[0]?.id ?? null,
+  )
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [visibilityFilter, setVisibilityFilter] = useState('all')
@@ -87,7 +88,9 @@ const AdminTeamsPage = ({
   const [isSearchingTeams, setIsSearchingTeams] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
-  const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] = useState(false)
+  const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] =
+    useState(false)
+  const [isDeletingTeam, setIsDeletingTeam] = useState(false)
   const copyTimeoutRef = useRef(null)
   const locationOptions = useMemo(
     () =>
@@ -145,26 +148,23 @@ const AdminTeamsPage = ({
     })
   }, [teams])
 
-  const handleTeamCardClick = useCallback(
-    (team) => {
-      if (!team) {
-        return
-      }
+  const handleTeamCardClick = useCallback((team) => {
+    if (!team) {
+      return
+    }
 
-      setSelectedTeamId(team.id)
-      setIsTeamDescriptionModalOpen(true)
-    },
-    []
-  )
+    setSelectedTeamId(team.id)
+    setIsTeamDescriptionModalOpen(true)
+  }, [])
 
   const selectedTeam = useMemo(
     () => teams.find((team) => team.id === selectedTeamId) ?? null,
-    [selectedTeamId, teams]
+    [selectedTeamId, teams],
   )
 
   const persistedSelectedTeam = useMemo(
     () => persistedTeams.find((team) => team.id === selectedTeamId) ?? null,
-    [persistedTeams, selectedTeamId]
+    [persistedTeams, selectedTeamId],
   )
 
   useEffect(() => {
@@ -182,12 +182,15 @@ const AdminTeamsPage = ({
     }
   }, [isEditModalOpen])
 
-  useEffect(() => () => {
-    if (copyTimeoutRef.current) {
-      clearTimeout(copyTimeoutRef.current)
-      copyTimeoutRef.current = null
-    }
-  }, [])
+  useEffect(
+    () => () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+        copyTimeoutRef.current = null
+      }
+    },
+    [],
+  )
 
   const closeTeamDescriptionModal = useCallback(() => {
     setIsTeamDescriptionModalOpen(false)
@@ -236,10 +239,10 @@ const AdminTeamsPage = ({
 
           const patch = typeof updater === 'function' ? updater(team) : updater
           return { ...team, ...patch }
-        })
+        }),
       )
     },
-    [canManageSelectedTeam, selectedTeamId]
+    [canManageSelectedTeam, selectedTeamId],
   )
 
   const handleTeamFieldChange = useCallback(
@@ -251,7 +254,7 @@ const AdminTeamsPage = ({
       setFeedback(null)
       updateSelectedTeam({ [field]: value })
     },
-    [canManageSelectedTeam, updateSelectedTeam]
+    [canManageSelectedTeam, updateSelectedTeam],
   )
 
   const handleResetTeam = useCallback(() => {
@@ -265,9 +268,11 @@ const AdminTeamsPage = ({
           return team
         }
 
-        const original = persistedTeams.find((item) => item.id === selectedTeamId)
+        const original = persistedTeams.find(
+          (item) => item.id === selectedTeamId,
+        )
         return original ? { ...original } : team
-      })
+      }),
     )
     setFeedback(null)
   }, [canManageSelectedTeam, persistedTeams, selectedTeamId])
@@ -281,12 +286,15 @@ const AdminTeamsPage = ({
     setFeedback(null)
 
     try {
-      const { json } = await requestApiJson(`/api/cabinet/teams/${selectedTeam.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: buildTeamUpdatePayload(selectedTeam) }),
-        fallbackMessage: 'Не удалось сохранить команду',
-      })
+      const { json } = await requestApiJson(
+        `/api/cabinet/teams/${selectedTeam.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: buildTeamUpdatePayload(selectedTeam) }),
+          fallbackMessage: 'Не удалось сохранить команду',
+        },
+      )
 
       const updatedTeam = {
         ...selectedTeam,
@@ -299,10 +307,14 @@ const AdminTeamsPage = ({
       }
 
       setTeams((prevTeams) =>
-        prevTeams.map((team) => (team.id === selectedTeamId ? updatedTeam : team))
+        prevTeams.map((team) =>
+          team.id === selectedTeamId ? updatedTeam : team,
+        ),
       )
       setPersistedTeams((prevTeams) =>
-        prevTeams.map((team) => (team.id === selectedTeamId ? updatedTeam : team))
+        prevTeams.map((team) =>
+          team.id === selectedTeamId ? updatedTeam : team,
+        ),
       )
 
       setFeedback({ type: 'success', message: 'Изменения сохранены' })
@@ -353,6 +365,46 @@ const AdminTeamsPage = ({
       })
   }, [selectedTeam?.id])
 
+  const handleDeleteTeam = useCallback(async () => {
+    if (!selectedTeam || !isAdmin) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Вы уверены, что хотите удалить команду «${selectedTeam.name || 'Без названия'}»?\n\nЭто действие необратимо. Все участники будут удалены из команды.`,
+    )
+    if (!confirmed) {
+      return
+    }
+
+    setIsDeletingTeam(true)
+    setFeedback(null)
+
+    try {
+      await requestApiJson(`/api/cabinet/teams/${selectedTeam.id}`, {
+        method: 'DELETE',
+        fallbackMessage: 'Не удалось удалить команду',
+      })
+
+      const deletedTeamName = selectedTeam.name || 'Без названия'
+      setTeams((prev) => prev.filter((t) => t.id !== selectedTeam.id))
+      setPersistedTeams((prev) => prev.filter((t) => t.id !== selectedTeam.id))
+      setIsEditModalOpen(false)
+      setFeedback({
+        type: 'success',
+        message: `Команда «${deletedTeamName}» удалена`,
+      })
+    } catch (error) {
+      console.error('Failed to delete team', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось удалить команду',
+      })
+    } finally {
+      setIsDeletingTeam(false)
+    }
+  }, [isAdmin, selectedTeam])
+
   const handleRemoveMember = useCallback(
     async (memberId) => {
       if (!selectedTeam || !canManageSelectedTeam) {
@@ -367,7 +419,8 @@ const AdminTeamsPage = ({
       if (member.isCaptain) {
         setFeedback({
           type: 'error',
-          message: 'Нельзя удалить капитана команды. Назначьте нового капитана и повторите действие.',
+          message:
+            'Нельзя удалить капитана команды. Назначьте нового капитана и повторите действие.',
         })
         return
       }
@@ -382,7 +435,7 @@ const AdminTeamsPage = ({
         })
 
         const updatedMembers = (selectedTeam.members ?? []).filter(
-          (item) => item.id !== memberId
+          (item) => item.id !== memberId,
         )
         const updatedTeam = {
           ...selectedTeam,
@@ -392,10 +445,14 @@ const AdminTeamsPage = ({
         }
 
         setTeams((prevTeams) =>
-          prevTeams.map((team) => (team.id === selectedTeamId ? updatedTeam : team))
+          prevTeams.map((team) =>
+            team.id === selectedTeamId ? updatedTeam : team,
+          ),
         )
         setPersistedTeams((prevTeams) =>
-          prevTeams.map((team) => (team.id === selectedTeamId ? updatedTeam : team))
+          prevTeams.map((team) =>
+            team.id === selectedTeamId ? updatedTeam : team,
+          ),
         )
 
         setFeedback({
@@ -412,7 +469,7 @@ const AdminTeamsPage = ({
         setMemberActionId(null)
       }
     },
-    [canManageSelectedTeam, selectedTeam, selectedTeamId]
+    [canManageSelectedTeam, selectedTeam, selectedTeamId],
   )
 
   const handleSetCaptain = useCallback(
@@ -446,7 +503,7 @@ const AdminTeamsPage = ({
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ data: { role: 'participant' } }),
-            })
+            }),
           )
         }
 
@@ -455,7 +512,9 @@ const AdminTeamsPage = ({
 
         responses.forEach((res, index) => {
           if (!res.ok || payloads[index]?.success === false) {
-            throw new Error(payloads[index]?.error || 'Не удалось обновить роль участника')
+            throw new Error(
+              payloads[index]?.error || 'Не удалось обновить роль участника',
+            )
           }
         })
 
@@ -478,10 +537,14 @@ const AdminTeamsPage = ({
         }
 
         setTeams((prevTeams) =>
-          prevTeams.map((team) => (team.id === selectedTeamId ? updatedTeam : team))
+          prevTeams.map((team) =>
+            team.id === selectedTeamId ? updatedTeam : team,
+          ),
         )
         setPersistedTeams((prevTeams) =>
-          prevTeams.map((team) => (team.id === selectedTeamId ? updatedTeam : team))
+          prevTeams.map((team) =>
+            team.id === selectedTeamId ? updatedTeam : team,
+          ),
         )
 
         setFeedback({
@@ -498,7 +561,7 @@ const AdminTeamsPage = ({
         setMemberActionId(null)
       }
     },
-    [canManageSelectedTeam, selectedTeam, selectedTeamId]
+    [canManageSelectedTeam, selectedTeam, selectedTeamId],
   )
 
   const teamsForList = useMemo(() => {
@@ -540,9 +603,12 @@ const AdminTeamsPage = ({
         params.set('location', locationFilter)
       }
 
-      const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/teams-list?${params.toString()}`, {
-        fallbackMessage: 'Не удалось загрузить команды',
-      })
+      const { json } = await requestApiJson(
+        `${CABINET_ADMIN_API_BASE}/teams-list?${params.toString()}`,
+        {
+          fallbackMessage: 'Не удалось загрузить команды',
+        },
+      )
 
       const nextTeams = Array.isArray(json?.data) ? json.data : []
       const nextHasMore = Boolean(json?.meta?.hasMore)
@@ -557,12 +623,21 @@ const AdminTeamsPage = ({
       console.error('Failed to load more teams', error)
       setFeedback({
         type: 'error',
-        message: error?.message || 'Не удалось загрузить дополнительные команды',
+        message:
+          error?.message || 'Не удалось загрузить дополнительные команды',
       })
     } finally {
       setIsLoadingMoreTeams(false)
     }
-  }, [hasMoreTeams, isLoadingMoreTeams, locationFilter, searchQuery, sortBy, teams.length, visibilityFilter])
+  }, [
+    hasMoreTeams,
+    isLoadingMoreTeams,
+    locationFilter,
+    searchQuery,
+    sortBy,
+    teams.length,
+    visibilityFilter,
+  ])
 
   useEffect(() => {
     if (!isAdmin) {
@@ -591,9 +666,12 @@ const AdminTeamsPage = ({
           params.set('location', locationFilter)
         }
 
-        const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/teams-list?${params.toString()}`, {
-          fallbackMessage: 'Не удалось загрузить команды',
-        })
+        const { json } = await requestApiJson(
+          `${CABINET_ADMIN_API_BASE}/teams-list?${params.toString()}`,
+          {
+            fallbackMessage: 'Не удалось загрузить команды',
+          },
+        )
 
         if (isCancelled) {
           return
@@ -631,15 +709,15 @@ const AdminTeamsPage = ({
   if (!isAdmin) {
     return (
       <>
-<CabinetLayout
+        <CabinetLayout
           title="Управление командами"
           description="Доступ ограничен: административные права отсутствуют."
           activePage="admin"
         >
           <FormSectionCard>
             <p className="text-sm text-slate-600 dark:text-slate-200">
-              У вас нет доступа к управлению командами. Если вы считаете, что это ошибка, обратитесь к главному
-              организатору.
+              У вас нет доступа к управлению командами. Если вы считаете, что
+              это ошибка, обратитесь к главному организатору.
             </p>
           </FormSectionCard>
         </CabinetLayout>
@@ -649,7 +727,7 @@ const AdminTeamsPage = ({
 
   return (
     <>
-<CabinetLayout
+      <CabinetLayout
         title="Управление командами"
         description="Редактируйте составы, управляйте капитанами и следите за активностью команд."
         activePage="admin"
@@ -669,47 +747,47 @@ const AdminTeamsPage = ({
             />
 
             <CabinetSelectField
-                id="team-visibility-filter"
-                label="Доступность"
-                value={visibilityFilter}
-                onChange={(event) => setVisibilityFilter(event.target.value)}
-                containerClassName="space-y-1"
-                labelClassName="text-xs font-semibold text-slate-500"
-                selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <option value="all">Все команды</option>
-                <option value="open">Открытые</option>
-                <option value="closed">Закрытые</option>
+              id="team-visibility-filter"
+              label="Доступность"
+              value={visibilityFilter}
+              onChange={(event) => setVisibilityFilter(event.target.value)}
+              containerClassName="space-y-1"
+              labelClassName="text-xs font-semibold text-slate-500"
+              selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+            >
+              <option value="all">Все команды</option>
+              <option value="open">Открытые</option>
+              <option value="closed">Закрытые</option>
             </CabinetSelectField>
 
             <CabinetSelectField
-                id="team-location-filter"
-                label="Город"
-                value={locationFilter}
-                onChange={(event) => setLocationFilter(event.target.value)}
-                containerClassName="space-y-1"
-                labelClassName="text-xs font-semibold text-slate-500"
-                selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                {locationFilterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+              id="team-location-filter"
+              label="Город"
+              value={locationFilter}
+              onChange={(event) => setLocationFilter(event.target.value)}
+              containerClassName="space-y-1"
+              labelClassName="text-xs font-semibold text-slate-500"
+              selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+            >
+              {locationFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </CabinetSelectField>
 
             <CabinetSelectField
-                id="team-sort"
-                label="Сортировка"
-                value={sortBy}
-                onChange={(event) => setSortBy(event.target.value)}
-                containerClassName="space-y-1"
-                labelClassName="text-xs font-semibold text-slate-500"
-                selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <option value="rating">По рейтингу</option>
-                <option value="games_desc">По количеству игр</option>
-                <option value="registration_desc">По дате регистрации</option>
+              id="team-sort"
+              label="Сортировка"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+              containerClassName="space-y-1"
+              labelClassName="text-xs font-semibold text-slate-500"
+              selectClassName="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+            >
+              <option value="rating">По рейтингу</option>
+              <option value="games_desc">По количеству игр</option>
+              <option value="registration_desc">По дате регистрации</option>
             </CabinetSelectField>
           </FormSectionCard>
 
@@ -771,7 +849,9 @@ const AdminTeamsPage = ({
                   onClick={handleLoadMoreTeams}
                   disabled={isLoadingMoreTeams || isSearchingTeams}
                   variant="secondary"
-                  tone={isLoadingMoreTeams || isSearchingTeams ? 'neutral' : 'cyan'}
+                  tone={
+                    isLoadingMoreTeams || isSearchingTeams ? 'neutral' : 'cyan'
+                  }
                   size="md"
                   className={`w-full ${
                     isLoadingMoreTeams || isSearchingTeams
@@ -779,7 +859,9 @@ const AdminTeamsPage = ({
                       : 'cursor-pointer'
                   }`}
                 >
-                  {isLoadingMoreTeams || isSearchingTeams ? 'Загружаем…' : 'Загрузить ещё'}
+                  {isLoadingMoreTeams || isSearchingTeams
+                    ? 'Загружаем…'
+                    : 'Загрузить ещё'}
                 </CabinetButton>
               )}
             </div>
@@ -809,6 +891,9 @@ const AdminTeamsPage = ({
           onSetCaptain={handleSetCaptain}
           onRemoveMember={handleRemoveMember}
           canEditCarSkin={isAdmin}
+          canDeleteTeam={isAdmin}
+          isDeletingTeam={isDeletingTeam}
+          onDeleteTeam={handleDeleteTeam}
           locationOptions={locationOptions}
         />
         <TeamDescriptionModal
@@ -868,7 +953,7 @@ AdminTeamsPage.propTypes = {
       }),
       createdAt: PropTypes.string,
       updatedAt: PropTypes.string,
-    })
+    }),
   ),
   initialHasMore: PropTypes.bool,
   session: PropTypes.object,

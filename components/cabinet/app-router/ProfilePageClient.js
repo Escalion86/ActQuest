@@ -72,6 +72,8 @@ const ProfilePage = ({ initialProfile }) => {
     typeof session?.user?.location === 'string' ? session.user.location : null
   const {
     isSupported: isPushSupported,
+    isIOSDevice: isPushIOSDevice,
+    isStandalone: isPushStandalone,
     isConfigured: isPushConfigured,
     isSubscribed: isPushSubscribed,
     isProcessing: isPushProcessing,
@@ -125,7 +127,9 @@ const ProfilePage = ({ initialProfile }) => {
     ''
   const isAdminOrDeveloper = useMemo(() => {
     const role =
-      typeof effectiveRole === 'string' ? effectiveRole.trim().toLowerCase() : ''
+      typeof effectiveRole === 'string'
+        ? effectiveRole.trim().toLowerCase()
+        : ''
     return role === 'admin' || role === 'dev'
   }, [effectiveRole])
   const resolvedProfileId = useMemo(() => {
@@ -147,8 +151,14 @@ const ProfilePage = ({ initialProfile }) => {
   const handleLocationChange = useCallback(
     async (event) => {
       const nextLocation =
-        typeof event?.target?.value === 'string' ? event.target.value.trim() : ''
-      if (!nextLocation || nextLocation === selectedLocation || isLocationSaving) {
+        typeof event?.target?.value === 'string'
+          ? event.target.value.trim()
+          : ''
+      if (
+        !nextLocation ||
+        nextLocation === selectedLocation ||
+        isLocationSaving
+      ) {
         return
       }
 
@@ -235,18 +245,21 @@ const ProfilePage = ({ initialProfile }) => {
   }, [])
 
   const startPhoneVerification = useCallback(async (digitsOnly) => {
-    const { response, json } = await requestApiJson(`${PHONE_VERIFY_API_BASE}/start`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
+    const { response, json } = await requestApiJson(
+      `${PHONE_VERIFY_API_BASE}/start`,
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: digitsOnly,
+          flow: 'change_phone',
+        }),
+        fallbackMessage: 'Не удалось запустить подтверждение номера',
       },
-      body: JSON.stringify({
-        phone: digitsOnly,
-        flow: 'change_phone',
-      }),
-      fallbackMessage: 'Не удалось запустить подтверждение номера',
-    })
+    )
 
     if (!response.ok || json?.success === false) {
       throw new Error(
@@ -507,15 +520,18 @@ const ProfilePage = ({ initialProfile }) => {
       }
 
       try {
-        const { json } = await requestApiJson(`${CABINET_USERS_API_BASE}/profile`, {
-          method: 'PUT',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
+        const { json } = await requestApiJson(
+          `${CABINET_USERS_API_BASE}/profile`,
+          {
+            method: 'PUT',
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+            fallbackMessage: 'Не удалось сохранить изменения',
           },
-          body: JSON.stringify(payload),
-          fallbackMessage: 'Не удалось сохранить изменения',
-        })
+        )
 
         const normalized = normalizeUserProfile(json.data)
 
@@ -615,7 +631,7 @@ const ProfilePage = ({ initialProfile }) => {
 
   return (
     <>
-<CabinetLayout
+      <CabinetLayout
         title="Мой профиль"
         description="Обновите контакты, чтобы участники и коллеги могли быстро связаться с вами."
         activePage="profile"
@@ -724,7 +740,24 @@ const ProfilePage = ({ initialProfile }) => {
               />
               {!isPushSupported ? (
                 <NoticeBanner tone="warning" variant="neon">
-                  Ваш браузер не поддерживает push-уведомления.
+                  {isPushIOSDevice && !isPushStandalone ? (
+                    <>
+                      <span className="font-semibold">
+                        Для получения push-уведомлений на iPhone:
+                      </span>
+                      <ol className="mt-1 ml-4 list-decimal text-xs space-y-0.5">
+                        <li>
+                          Нажмите кнопку «Поделиться» (квадрат со стрелкой)
+                          внизу Safari
+                        </li>
+                        <li>Выберите «На экран Домой»</li>
+                        <li>Откройте приложение с домашнего экрана</li>
+                        <li>Включите уведомления в профиле</li>
+                      </ol>
+                    </>
+                  ) : (
+                    'Ваш браузер не поддерживает push-уведомления.'
+                  )}
                 </NoticeBanner>
               ) : null}
               {isPushSupported &&
