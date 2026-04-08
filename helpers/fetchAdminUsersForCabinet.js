@@ -135,6 +135,17 @@ const toPositiveInteger = (value, fallback) => {
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+// Извлекает только цифры из строки (убирает +, пробелы, скобки, дефисы и т.д.)
+const extractDigits = (value) => value.replace(/\D/g, '')
+
+// Нормализует российский номер: ведущую "8" заменяет на "7"
+const normalizeRuPhone = (digits) => {
+  if (digits.length >= 10 && digits.startsWith('8')) {
+    return '7' + digits.slice(1)
+  }
+  return digits
+}
+
 const buildUsersQuery = (search) => {
   const normalizedSearch =
     typeof search === 'string' ? search.trim() : ''
@@ -155,7 +166,23 @@ const buildUsersQuery = (search) => {
   const numericSearch = Number(normalizedSearch)
   if (Number.isFinite(numericSearch)) {
     query.$or.push({ telegramId: numericSearch })
-    query.$or.push({ phone: numericSearch })
+  }
+
+  // Гибкий поиск по телефону: очищаем от нецифровых символов и ищем как подстроку
+  const digitsOnly = extractDigits(normalizedSearch)
+  if (digitsOnly.length >= 4) {
+    const phoneCandidates = new Set([digitsOnly, normalizeRuPhone(digitsOnly)])
+    phoneCandidates.forEach((candidate) => {
+      // Поиск через $expr + $toString, чтобы сравнивать числовое поле как строку
+      query.$or.push({
+        $expr: {
+          $regexMatch: {
+            input: { $toString: '$phone' },
+            regex: candidate,
+          },
+        },
+      })
+    })
   }
 
   return query

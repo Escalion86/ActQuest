@@ -204,7 +204,8 @@ const GameTeamsModal = ({
                                 {team.open ? 'Открыта' : 'Закрыта'}
                               </span>
                               {!isReadOnly && (
-                                <CabinetButton
+                                <button
+                                  type="button"
                                   onClick={(event) => {
                                     event.stopPropagation()
                                     // Временное ограничение: обычные пользователи не могут удалять команды
@@ -228,17 +229,27 @@ const GameTeamsModal = ({
                                   disabled={
                                     isRemoving || teamsModalState.isLoading
                                   }
-                                  variant="secondary"
-                                  tone={
-                                    isRemoving || teamsModalState.isLoading
-                                      ? 'neutral'
-                                      : 'danger'
-                                  }
-                                  size="sm"
-                                  className="inline-flex justify-center"
+                                  aria-label={`Удалить команду ${team.teamName || ''} из игры`}
+                                  className={`flex h-8 w-8 items-center justify-center rounded-lg border transition
+                                    ${isRemoving || teamsModalState.isLoading
+                                      ? 'cursor-wait border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-600'
+                                      : 'border-red-200 bg-red-50 text-red-500 hover:border-red-400 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400 dark:hover:border-red-400/60 dark:hover:bg-red-500/20'
+                                    }`}
                                 >
-                                  {isRemoving ? 'Удаление…' : 'Удалить'}
-                                </CabinetButton>
+                                  {isRemoving ? (
+                                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                                    </svg>
+                                  ) : (
+                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="3 6 5 6 21 6" />
+                                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                                      <path d="M10 11v6M14 11v6" />
+                                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                                    </svg>
+                                  )}
+                                </button>
                               )}
                             </div>
                           </div>

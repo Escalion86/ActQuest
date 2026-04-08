@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
@@ -9,6 +9,7 @@ import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import ModalSection from '@components/modals/ModalSection'
 import ModalSectionTitle from '@components/modals/ModalSectionTitle'
 import ImagesInput from '@components/cabinet/ImagesInput'
+import UserSelectField from '@components/cabinet/UserSelectField'
 import NeonCheckbox from '@components/NeonCheckbox'
 import ClassicCar from '@components/cars/ClassicCar'
 import SportCar from '@components/cars/SportCar'
@@ -104,7 +105,23 @@ const TeamEditModal = ({
   isDeletingTeam,
   onDeleteTeam,
   locationOptions,
+  onAddMember,
+  isAddingMember,
 }) => {
+  const [addMemberUser, setAddMemberUser] = useState(null)
+
+  useEffect(() => {
+    setAddMemberUser(null)
+  }, [selectedTeam?.id, isOpen])
+
+  const handleAddMemberClick = () => {
+    if (!addMemberUser || !onAddMember) {
+      return
+    }
+    onAddMember(addMemberUser.id, addMemberUser)
+    setAddMemberUser(null)
+  }
+
   if (!selectedTeam) {
     return null
   }
@@ -289,6 +306,30 @@ const TeamEditModal = ({
             )}
           </div>
 
+          {canManageSelectedTeam && (
+            <div className="flex flex-col gap-2 mt-3 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <UserSelectField
+                  label="Добавить игрока"
+                  selectedOption={addMemberUser}
+                  onSelect={setAddMemberUser}
+                  onClear={() => setAddMemberUser(null)}
+                  disabled={isAddingMember || isSaving}
+                />
+              </div>
+              <CabinetButton
+                onClick={handleAddMemberClick}
+                disabled={!addMemberUser || isAddingMember || isSaving}
+                variant="secondary"
+                tone="brand"
+                size="sm"
+                className="shrink-0 sm:mb-0"
+              >
+                {isAddingMember ? 'Добавление…' : 'Добавить'}
+              </CabinetButton>
+            </div>
+          )}
+
           {selectedTeam.members?.length > 0 ? (
             <div className="space-y-3">
               {selectedTeam.members.map((member) => {
@@ -379,6 +420,8 @@ const TeamEditModal = ({
 }
 
 TeamEditModal.propTypes = {
+  onAddMember: PropTypes.func,
+  isAddingMember: PropTypes.bool,
   selectedTeam: PropTypes.shape({
     id: PropTypes.string,
     name: PropTypes.string,
@@ -435,6 +478,8 @@ TeamEditModal.defaultProps = {
   isDeletingTeam: false,
   onDeleteTeam: undefined,
   locationOptions: [],
+  onAddMember: undefined,
+  isAddingMember: false,
 }
 
 TeamCarSkinPreview.propTypes = {

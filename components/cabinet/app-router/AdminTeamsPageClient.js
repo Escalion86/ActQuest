@@ -87,6 +87,7 @@ const AdminTeamsPage = ({
   const [isLoadingMoreTeams, setIsLoadingMoreTeams] = useState(false)
   const [isSearchingTeams, setIsSearchingTeams] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
+  const [isAddingMember, setIsAddingMember] = useState(false)
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] =
     useState(false)
@@ -564,6 +565,72 @@ const AdminTeamsPage = ({
     [canManageSelectedTeam, selectedTeam, selectedTeamId],
   )
 
+  const handleAddMember = useCallback(
+    async (userId, userOption) => {
+      if (!selectedTeam || !canManageSelectedTeam || !userId) {
+        return
+      }
+
+      setIsAddingMember(true)
+      setFeedback(null)
+
+      try {
+        const { json } = await requestApiJson('/api/cabinet/teams/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: { teamId: selectedTeam.id, targetUserId: userId, role: 'participant' },
+          }),
+          fallbackMessage: 'Не удалось добавить участника',
+        })
+
+        const newMember = json?.data?.member
+          ? {
+              id: String(json.data.member.id),
+              name: json.data.member.name || userOption?.title || 'Без имени',
+              username: json.data.member.username || null,
+              phone: null,
+              userRole: null,
+              hasLinkedUser: true,
+              isCaptain: false,
+            }
+          : null
+
+        const patchTeam = (t) => {
+          const updatedMembers = newMember
+            ? [...(t.members ?? []), newMember]
+            : t.members
+          return {
+            ...t,
+            members: updatedMembers,
+            membersCount: (updatedMembers ?? t.members ?? []).length,
+          }
+        }
+
+        setTeams((prev) =>
+          prev.map((t) => (t.id === selectedTeamId ? patchTeam(t) : t)),
+        )
+        setPersistedTeams((prev) =>
+          prev.map((t) => (t.id === selectedTeamId ? patchTeam(t) : t)),
+        )
+
+        setFeedback({
+          type: 'success',
+          message: `«${userOption?.title || 'Участник'}» добавлен в команду`,
+        })
+      } catch (error) {
+        console.error('Failed to add team member', error)
+        setFeedback({
+          type: 'error',
+          message: error?.message || 'Не удалось добавить участника',
+        })
+      } finally {
+        setIsAddingMember(false)
+      }
+    },
+    [canManageSelectedTeam, selectedTeam, selectedTeamId],
+  )
+
   const teamsForList = useMemo(() => {
     return teams.map((team) => {
       return {
@@ -895,6 +962,8 @@ const AdminTeamsPage = ({
           isDeletingTeam={isDeletingTeam}
           onDeleteTeam={handleDeleteTeam}
           locationOptions={locationOptions}
+          onAddMember={handleAddMember}
+          isAddingMember={isAddingMember}
         />
         <TeamDescriptionModal
           isOpen={isTeamDescriptionModalOpen}

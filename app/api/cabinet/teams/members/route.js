@@ -68,6 +68,7 @@ export async function POST(request) {
 
     const TeamsModel = db.model('Teams')
     const TeamsUsersModel = db.model('TeamsUsers')
+    const UsersModel = db.model('Users')
 
     const team = await TeamsModel.findById(teamId).select({ _id: 1, open: 1 }).lean()
     if (!team?._id) {
@@ -90,6 +91,83 @@ export async function POST(request) {
       return NextResponse.json(
         { success: false, error: 'Не удалось определить пользователя' },
         { status: 403 },
+      )
+    }
+
+    // Режим добавления произвольного пользователя (только admin/dev)
+    const targetUserIdRaw = toStringId(payload?.targetUserId)
+    if (targetUserIdRaw) {
+      if (!isElevatedRole(actorRole)) {
+        return NextResponse.json(
+          { success: false, error: 'Добавлять других пользователей могут только администраторы' },
+          { status: 403 },
+        )
+      }
+
+      const targetUserDoc = await UsersModel.findOne({ globalUserId: targetUserIdRaw })
+        .select({ globalUserId: 1, telegramId: 1, name: 1, username: 1 })
+        .lean()
+
+      if (!targetUserDoc) {
+        return NextResponse.json(
+          { success: false, error: 'Пользователь не найден' },
+          { status: 404 },
+        )
+      }
+
+      const targetGlobalUserId = toStringId(targetUserDoc.globalUserId)
+      const targetTelegramIdRaw = Number(targetUserDoc.telegramId)
+      const targetTelegramId = Number.isFinite(targetTelegramIdRaw) ? targetTelegramIdRaw : null
+
+      const existingFilter = {
+        teamId,
+        $or: [
+          ...(targetGlobalUserId ? [{ userId: targetGlobalUserId }] : []),
+          ...(targetTelegramId !== null ? [{ userTelegramId: targetTelegramId }] : []),
+        ],
+      }
+
+      if (existingFilter.$or.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Не удалось идентифицировать пользователя' },
+          { status: 400 },
+        )
+      }
+
+      const existingMembership = await TeamsUsersModel.findOne(existingFilter)
+        .select({ _id: 1 })
+        .lean()
+      if (existingMembership?._id) {
+        return NextResponse.json(
+          { success: false, error: 'Пользователь уже состоит в этой команде' },
+          { status: 409 },
+        )
+      }
+
+      const createdMembership = await TeamsUsersModel.create({
+        teamId,
+        userId: targetGlobalUserId,
+        userTelegramId: targetTelegramId,
+        role,
+      })
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            id: toStringId(createdMembership?._id),
+            teamId,
+            role,
+            member: {
+              id: toStringId(createdMembership?._id),
+              name: targetUserDoc.name || null,
+              username: targetUserDoc.username || null,
+              isCaptain: false,
+              hasLinkedUser: true,
+            },
+          },
+        },
+        { status: 201 },
       )
     }
 

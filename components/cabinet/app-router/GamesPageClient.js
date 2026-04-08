@@ -4877,7 +4877,8 @@ const GamesPage = ({
                     {(canEditThisGame ||
                       canManageThisGame ||
                       canManageStatusThisGame ||
-                      canBroadcastThisGame) && (
+                      canBroadcastThisGame ||
+                      canViewGameTeams) && (
                       <div className="order-3 flex items-center gap-2 self-start phoneH:order-1 phoneH:self-auto">
                         {canEditThisGame && (
                           <CardActionIconButton
@@ -4941,32 +4942,18 @@ const GamesPage = ({
                               <GameControlCardIcon />
                             </CardActionIconButton>
                           )}
-                      </div>
-                    )}
-                    {canViewGameTeams && !canManageThisGame && (
-                      <div className="flex items-center gap-2">
-                        <CardActionIconButton
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleManageTeamsFromList(game, true)
-                          }}
-                          label="Просмотр команд"
-                        >
-                          <TeamCardIcon />
-                        </CardActionIconButton>
-                      </div>
-                    )}
-                    {canManageThisGame && canViewGameTeams && (
-                      <div className="flex items-center gap-2">
-                        <CardActionIconButton
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            handleManageTeamsFromList(game, false)
-                          }}
-                          label="Управление командами"
-                        >
-                          <TeamCardIcon />
-                        </CardActionIconButton>
+                        {canViewGameTeams && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleManageTeamsFromList(game, !canManageThisGame)
+                            }}
+                            label={canManageThisGame ? 'Управление командами' : 'Просмотр команд'}
+                            title={canManageThisGame ? 'Управление командами' : 'Просмотр команд'}
+                          >
+                            <TeamCardIcon />
+                          </CardActionIconButton>
+                        )}
                       </div>
                     )}
                   </div>
@@ -5133,7 +5120,8 @@ const GamesPage = ({
                 canBroadcastThisGame ||
                 canEditThisGame ||
                 canManageThisGame ||
-                canManageStatusThisGame) && (
+                canManageStatusThisGame ||
+                canViewGameTeams) && (
                 <div className="mt-3 flex flex-col gap-2">
                   {(canJoinGame ||
                     canEnterGame ||
@@ -5214,7 +5202,9 @@ const GamesPage = ({
                   )}
                   {(canEditThisGame ||
                     canManageThisGame ||
-                    canManageStatusThisGame) && (
+                    canManageStatusThisGame ||
+                    canBroadcastThisGame ||
+                    canViewGameTeams) && (
                     <div className="flex items-center gap-2 self-start pointer-events-auto">
                       {canEditThisGame && (
                         <CardActionIconButton
@@ -5283,34 +5273,19 @@ const GamesPage = ({
                             <GameControlCardIcon />
                           </CardActionIconButton>
                         )}
-                    </div>
-                  )}
-                  {canViewGameTeams && !canManageThisGame && (
-                    <div className="flex items-center gap-2">
-                      <CardActionIconButton
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleManageTeamsFromList(game, true)
-                        }}
-                        label="Просмотр команд"
-                        className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                      >
-                        <TeamCardIcon />
-                      </CardActionIconButton>
-                    </div>
-                  )}
-                  {canManageThisGame && canViewGameTeams && (
-                    <div className="flex items-center gap-2">
-                      <CardActionIconButton
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleManageTeamsFromList(game, false)
-                        }}
-                        label="Управление командами"
-                        className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
-                      >
-                        <TeamCardIcon />
-                      </CardActionIconButton>
+                      {canViewGameTeams && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleManageTeamsFromList(game, !canManageThisGame)
+                          }}
+                          label={canManageThisGame ? 'Управление командами' : 'Просмотр команд'}
+                          title={canManageThisGame ? 'Управление командами' : 'Просмотр команд'}
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <TeamCardIcon />
+                        </CardActionIconButton>
+                      )}
                     </div>
                   )}
                 </div>
