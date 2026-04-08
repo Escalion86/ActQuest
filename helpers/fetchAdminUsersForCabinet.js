@@ -18,8 +18,10 @@ const normalizeSortBy = (value) => {
 const compareByRating = (first, second) => {
   const firstRank = Number(first?.rating?.rank)
   const secondRank = Number(second?.rating?.rank)
-  const firstEligible = Boolean(first?.rating?.isEligible) && Number.isFinite(firstRank)
-  const secondEligible = Boolean(second?.rating?.isEligible) && Number.isFinite(secondRank)
+  const firstEligible =
+    Boolean(first?.rating?.isEligible) && Number.isFinite(firstRank)
+  const secondEligible =
+    Boolean(second?.rating?.isEligible) && Number.isFinite(secondRank)
 
   if (firstEligible && secondEligible) {
     if (firstRank !== secondRank) {
@@ -48,12 +50,16 @@ const sortUsers = (users, sortBy) => {
   }
 
   if (resolvedSortBy === 'games_desc') {
-    return items.sort((first, second) => (second?.gamesCount ?? 0) - (first?.gamesCount ?? 0))
+    return items.sort(
+      (first, second) => (second?.gamesCount ?? 0) - (first?.gamesCount ?? 0),
+    )
   }
 
   return items.sort((first, second) => {
     const firstTime = first?.createdAt ? new Date(first.createdAt).getTime() : 0
-    const secondTime = second?.createdAt ? new Date(second.createdAt).getTime() : 0
+    const secondTime = second?.createdAt
+      ? new Date(second.createdAt).getTime()
+      : 0
     return secondTime - firstTime
   })
 }
@@ -103,7 +109,9 @@ const normalizeUserForAdmin = ({
       return a.isCaptain ? -1 : 1
     })
 
-  const playedGamesCount = Number.isFinite(Number(userDoc?.gameStats?.playedGamesCount))
+  const playedGamesCount = Number.isFinite(
+    Number(userDoc?.gameStats?.playedGamesCount),
+  )
     ? Number(userDoc.gameStats.playedGamesCount)
     : 0
 
@@ -147,8 +155,7 @@ const normalizeRuPhone = (digits) => {
 }
 
 const buildUsersQuery = (search) => {
-  const normalizedSearch =
-    typeof search === 'string' ? search.trim() : ''
+  const normalizedSearch = typeof search === 'string' ? search.trim() : ''
 
   if (!normalizedSearch) {
     return {}
@@ -156,11 +163,7 @@ const buildUsersQuery = (search) => {
 
   const regex = new RegExp(escapeRegExp(normalizedSearch), 'i')
   const query = {
-    $or: [
-      { name: regex },
-      { username: regex },
-      { globalUserId: regex },
-    ],
+    $or: [{ name: regex }, { username: regex }, { globalUserId: regex }],
   }
 
   const numericSearch = Number(normalizedSearch)
@@ -294,14 +297,18 @@ const fetchAdminUsersForCabinet = async ({
       new Set(
         usersDocs
           .map((userDoc) =>
-            Number.isFinite(userDoc?.telegramId) ? Number(userDoc.telegramId) : null
+            Number.isFinite(userDoc?.telegramId)
+              ? Number(userDoc.telegramId)
+              : null,
           )
-          .filter((id) => id !== null)
-      )
+          .filter((id) => id !== null),
+      ),
     )
 
     const membershipsDocsForAll = membershipTelegramIdsForAll.length
-      ? await TeamsUsersModel.find({ userTelegramId: { $in: membershipTelegramIdsForAll } })
+      ? await TeamsUsersModel.find({
+          userTelegramId: { $in: membershipTelegramIdsForAll },
+        })
           .select({ teamId: 1, userTelegramId: 1, role: 1 })
           .lean()
       : []
@@ -310,8 +317,8 @@ const fetchAdminUsersForCabinet = async ({
       new Set(
         membershipsDocsForAll
           .map((doc) => toStringId(doc?.teamId))
-          .filter((teamId) => typeof teamId === 'string' && teamId.length > 0)
-      )
+          .filter((teamId) => typeof teamId === 'string' && teamId.length > 0),
+      ),
     )
 
     const teamsDocsForAll = teamIdsForAll.length
@@ -363,7 +370,7 @@ const fetchAdminUsersForCabinet = async ({
         membershipsByUser: membershipsByUserForAll,
         teamsMap: teamsMapForAll,
         location,
-      })
+      }),
     )
 
     const sortedUsers = sortUsers(allUsers, resolvedSortBy)
@@ -377,14 +384,18 @@ const fetchAdminUsersForCabinet = async ({
     new Set(
       usersSlice
         .map((userDoc) =>
-          Number.isFinite(userDoc?.telegramId) ? Number(userDoc.telegramId) : null
+          Number.isFinite(userDoc?.telegramId)
+            ? Number(userDoc.telegramId)
+            : null,
         )
-        .filter((id) => id !== null)
-    )
+        .filter((id) => id !== null),
+    ),
   )
 
   const membershipsDocs = membershipTelegramIds.length
-    ? await TeamsUsersModel.find({ userTelegramId: { $in: membershipTelegramIds } })
+    ? await TeamsUsersModel.find({
+        userTelegramId: { $in: membershipTelegramIds },
+      })
         .select({ teamId: 1, userTelegramId: 1, role: 1 })
         .lean()
     : []
@@ -393,8 +404,8 @@ const fetchAdminUsersForCabinet = async ({
     new Set(
       membershipsDocs
         .map((doc) => toStringId(doc?.teamId))
-        .filter((teamId) => typeof teamId === 'string' && teamId.length > 0)
-    )
+        .filter((teamId) => typeof teamId === 'string' && teamId.length > 0),
+    ),
   )
 
   const teamsDocs = teamIds.length
@@ -440,15 +451,14 @@ const fetchAdminUsersForCabinet = async ({
     return acc
   }, {})
 
-  const users = usersSlice
-    .map((userDoc) =>
-      normalizeUserForAdmin({
-        userDoc,
-        membershipsByUser,
-        teamsMap,
-        location,
-      })
-    )
+  const users = usersSlice.map((userDoc) =>
+    normalizeUserForAdmin({
+      userDoc,
+      membershipsByUser,
+      teamsMap,
+      location,
+    }),
+  )
   return { users, hasMore }
 }
 

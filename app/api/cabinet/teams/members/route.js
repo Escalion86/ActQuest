@@ -70,7 +70,9 @@ export async function POST(request) {
     const TeamsUsersModel = db.model('TeamsUsers')
     const UsersModel = db.model('Users')
 
-    const team = await TeamsModel.findById(teamId).select({ _id: 1, open: 1 }).lean()
+    const team = await TeamsModel.findById(teamId)
+      .select({ _id: 1, open: 1 })
+      .lean()
     if (!team?._id) {
       return NextResponse.json(
         { success: false, error: 'Команда не найдена' },
@@ -99,12 +101,17 @@ export async function POST(request) {
     if (targetUserIdRaw) {
       if (!isElevatedRole(actorRole)) {
         return NextResponse.json(
-          { success: false, error: 'Добавлять других пользователей могут только администраторы' },
+          {
+            success: false,
+            error: 'Добавлять других пользователей могут только администраторы',
+          },
           { status: 403 },
         )
       }
 
-      const targetUserDoc = await UsersModel.findOne({ globalUserId: targetUserIdRaw })
+      const targetUserDoc = await UsersModel.findOne({
+        globalUserId: targetUserIdRaw,
+      })
         .select({ globalUserId: 1, telegramId: 1, name: 1, username: 1 })
         .lean()
 
@@ -117,13 +124,17 @@ export async function POST(request) {
 
       const targetGlobalUserId = toStringId(targetUserDoc.globalUserId)
       const targetTelegramIdRaw = Number(targetUserDoc.telegramId)
-      const targetTelegramId = Number.isFinite(targetTelegramIdRaw) ? targetTelegramIdRaw : null
+      const targetTelegramId = Number.isFinite(targetTelegramIdRaw)
+        ? targetTelegramIdRaw
+        : null
 
       const existingFilter = {
         teamId,
         $or: [
           ...(targetGlobalUserId ? [{ userId: targetGlobalUserId }] : []),
-          ...(targetTelegramId !== null ? [{ userTelegramId: targetTelegramId }] : []),
+          ...(targetTelegramId !== null
+            ? [{ userTelegramId: targetTelegramId }]
+            : []),
         ],
       }
 
@@ -173,7 +184,10 @@ export async function POST(request) {
 
     if (!isElevatedRole(actorRole) && role === 'capitan') {
       return NextResponse.json(
-        { success: false, error: 'Назначать капитана может только капитан команды' },
+        {
+          success: false,
+          error: 'Назначать капитана может только капитан команды',
+        },
         { status: 403 },
       )
     }
@@ -182,7 +196,8 @@ export async function POST(request) {
       return NextResponse.json(
         {
           success: false,
-          error: 'В этой команде закрыт набор. Попросите капитана добавить вас вручную.',
+          error:
+            'В этой команде закрыт набор. Попросите капитана добавить вас вручную.',
         },
         { status: 403 },
       )

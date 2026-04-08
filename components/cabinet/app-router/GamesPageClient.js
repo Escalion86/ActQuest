@@ -4698,7 +4698,8 @@ const GamesPage = ({
       const canEnterGame =
         hasParticipation &&
         (isGameInProgressStatus(visibleStatus) ||
-          (Boolean(game?.showEnterButton) && isActiveGameStatus(visibleStatus))) &&
+          (Boolean(game?.showEnterButton) &&
+            isActiveGameStatus(visibleStatus))) &&
         Boolean(gameEnterHref)
       const participationSummary = hasParticipation
         ? `Вы участвуете: ${participationTeams
@@ -4946,10 +4947,21 @@ const GamesPage = ({
                           <CardActionIconButton
                             onClick={(event) => {
                               event.stopPropagation()
-                              handleManageTeamsFromList(game, !canManageThisGame)
+                              handleManageTeamsFromList(
+                                game,
+                                !canManageThisGame,
+                              )
                             }}
-                            label={canManageThisGame ? 'Управление командами' : 'Просмотр команд'}
-                            title={canManageThisGame ? 'Управление командами' : 'Просмотр команд'}
+                            label={
+                              canManageThisGame
+                                ? 'Управление командами'
+                                : 'Просмотр команд'
+                            }
+                            title={
+                              canManageThisGame
+                                ? 'Управление командами'
+                                : 'Просмотр команд'
+                            }
                           >
                             <TeamCardIcon />
                           </CardActionIconButton>
@@ -5036,7 +5048,8 @@ const GamesPage = ({
       const canEnterGame =
         hasParticipation &&
         (isGameInProgressStatus(visibleStatus) ||
-          (Boolean(game?.showEnterButton) && isActiveGameStatus(visibleStatus))) &&
+          (Boolean(game?.showEnterButton) &&
+            isActiveGameStatus(visibleStatus))) &&
         Boolean(gameEnterHref)
       const participationSummary = hasParticipation
         ? `Вы участвуете: ${participationTeams
@@ -5279,8 +5292,16 @@ const GamesPage = ({
                             event.stopPropagation()
                             handleManageTeamsFromList(game, !canManageThisGame)
                           }}
-                          label={canManageThisGame ? 'Управление командами' : 'Просмотр команд'}
-                          title={canManageThisGame ? 'Управление командами' : 'Просмотр команд'}
+                          label={
+                            canManageThisGame
+                              ? 'Управление командами'
+                              : 'Просмотр команд'
+                          }
+                          title={
+                            canManageThisGame
+                              ? 'Управление командами'
+                              : 'Просмотр команд'
+                          }
                           className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <TeamCardIcon />
@@ -5540,7 +5561,8 @@ const GamesPage = ({
       Boolean(selectedGame?.id) &&
       selectedGameParticipationTeams.length > 0 &&
       (isGameInProgressStatus(selectedGame?.status) ||
-        (Boolean(selectedGame?.showEnterButton) && isActiveGameStatus(selectedGame?.status))) &&
+        (Boolean(selectedGame?.showEnterButton) &&
+          isActiveGameStatus(selectedGame?.status))) &&
       Boolean(selectedGameEnterHref),
     [
       selectedGame,

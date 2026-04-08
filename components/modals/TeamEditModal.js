@@ -126,7 +126,8 @@ const TeamEditModal = ({
     return null
   }
 
-  const fieldLabelClassName = 'text-sm font-semibold text-slate-700 dark:text-white'
+  const fieldLabelClassName =
+    'text-sm font-semibold text-slate-700 dark:text-white'
   const fieldInputClassName =
     'w-full px-4 py-3 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none'
   const sectionTitleClassName = 'text-lg text-slate-800 dark:text-white'
@@ -135,9 +136,7 @@ const TeamEditModal = ({
     <>
       <CabinetButton
         onClick={onModalPrimaryAction}
-        disabled={
-          isSaving || (isDirty && !canManageSelectedTeam)
-        }
+        disabled={isSaving || (isDirty && !canManageSelectedTeam)}
         variant="primary"
       >
         {isDirty
@@ -192,10 +191,7 @@ const TeamEditModal = ({
             />
             {canEditCarSkin && (
               <div>
-                <label
-                  htmlFor="team-car-skin"
-                  className={fieldLabelClassName}
-                >
+                <label htmlFor="team-car-skin" className={fieldLabelClassName}>
                   Вид машинки в интерактивной таблице
                 </label>
                 <div className="flex flex-col gap-3 mt-2 sm:flex-row sm:items-end">
@@ -222,7 +218,9 @@ const TeamEditModal = ({
             id="team-location"
             label="Город команды"
             value={selectedTeam.location || ''}
-            onChange={(event) => onTeamFieldChange('location', event.target.value)}
+            onChange={(event) =>
+              onTeamFieldChange('location', event.target.value)
+            }
             labelClassName={fieldLabelClassName}
             selectClassName={fieldInputClassName}
           >
@@ -286,9 +284,7 @@ const TeamEditModal = ({
             >
               <span>ID команды: {selectedTeam.id}</span>
               <span className="text-[11px] font-normal uppercase tracking-wide">
-                {isTeamIdCopied
-                  ? 'Скопировано'
-                  : 'Нажмите, чтобы скопировать'}
+                {isTeamIdCopied ? 'Скопировано' : 'Нажмите, чтобы скопировать'}
               </span>
             </button>
           ) : null}

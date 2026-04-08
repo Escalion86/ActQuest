@@ -579,7 +579,11 @@ const AdminTeamsPage = ({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            data: { teamId: selectedTeam.id, targetUserId: userId, role: 'participant' },
+            data: {
+              teamId: selectedTeam.id,
+              targetUserId: userId,
+              role: 'participant',
+            },
           }),
           fallbackMessage: 'Не удалось добавить участника',
         })
