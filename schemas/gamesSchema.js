@@ -27,7 +27,11 @@ const gamesSchema = {
     type: [
       {
         id: { type: String, trim: true },
-        type: { type: String, enum: ['image', 'audio', 'video'], default: 'image' },
+        type: {
+          type: String,
+          enum: ['image', 'audio', 'video'],
+          default: 'image',
+        },
         url: { type: String, trim: true, default: '' },
         mime: { type: String, trim: true, default: '' },
         size: { type: Number, default: 0 },
@@ -91,7 +95,11 @@ const gamesSchema = {
           type: [
             {
               id: { type: String, trim: true },
-              type: { type: String, enum: ['image', 'audio', 'video'], default: 'image' },
+              type: {
+                type: String,
+                enum: ['image', 'audio', 'video'],
+                default: 'image',
+              },
               url: { type: String, trim: true, default: '' },
               mime: { type: String, trim: true, default: '' },
               size: { type: Number, default: 0 },
@@ -303,6 +311,10 @@ const gamesSchema = {
       },
     ],
     default: [],
+  },
+  showEnterButton: {
+    type: Boolean,
+    default: false,
   },
   showTasks: {
     type: Boolean,

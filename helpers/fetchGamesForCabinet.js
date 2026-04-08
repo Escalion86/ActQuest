@@ -123,47 +123,60 @@ const fetchGamesForCabinet = async ({
     query.location = normalizedLocation
   }
 
+  // Загрузить команды текущего пользователя (для participation и видимости скрытых игр)
+  let userTeamIds = []
+  let userTeamRoles = {} // teamId -> role
+
+  if (hasUserId || hasTelegramId) {
+    const TeamsUsersModel = db.model('TeamsUsers')
+
+    const tuOrConditions = []
+    if (hasUserId) {
+      tuOrConditions.push({ userId: currentUserIdString })
+    }
+    if (hasTelegramId) {
+      tuOrConditions.push({ userTelegramId: currentUserTelegramIdNumber })
+    }
+
+    const userTeamsDocs = await TeamsUsersModel.find({ $or: tuOrConditions })
+      .select({ teamId: 1, role: 1 })
+      .lean()
+
+    userTeamIds = userTeamsDocs
+      .map((t) => toStringId(t?.teamId))
+      .filter(Boolean)
+
+    for (const tu of userTeamsDocs) {
+      const tId = toStringId(tu?.teamId)
+      if (tId) {
+        userTeamRoles[tId] =
+          typeof tu?.role === 'string' ? tu.role : 'participant'
+      }
+    }
+  }
+
   // Фильтр по видимости:
   // - Админ/dev видят все игры
   // - Обычные пользователи видят публичные + скрытые, на которые записана их команда
   if (!isElevatedRole) {
     let hiddenGameIds = []
 
-    if (hasUserId || hasTelegramId) {
-      const TeamsUsersModel = db.model('TeamsUsers')
+    if (userTeamIds.length > 0) {
       const GamesTeamsModelVis = db.model('GamesTeams')
 
-      const tuOrConditions = []
-      if (hasUserId) {
-        tuOrConditions.push({ userId: currentUserIdString })
-      }
-      if (hasTelegramId) {
-        tuOrConditions.push({ userTelegramId: currentUserTelegramIdNumber })
-      }
-
-      const userTeamsDocs = await TeamsUsersModel.find({ $or: tuOrConditions })
-        .select({ teamId: 1 })
+      const userGamesTeamsDocs = await GamesTeamsModelVis.find({
+        teamId: { $in: userTeamIds },
+      })
+        .select({ gameId: 1 })
         .lean()
 
-      const userTeamIds = userTeamsDocs
-        .map((t) => toStringId(t?.teamId))
-        .filter(Boolean)
-
-      if (userTeamIds.length > 0) {
-        const userGamesTeamsDocs = await GamesTeamsModelVis.find({
-          teamId: { $in: userTeamIds },
-        })
-          .select({ gameId: 1 })
-          .lean()
-
-        hiddenGameIds = Array.from(
-          new Set(
-            userGamesTeamsDocs
-              .map((gt) => toStringId(gt?.gameId))
-              .filter(Boolean),
-          ),
-        )
-      }
+      hiddenGameIds = Array.from(
+        new Set(
+          userGamesTeamsDocs
+            .map((gt) => toStringId(gt?.gameId))
+            .filter(Boolean),
+        ),
+      )
     }
 
     if (hiddenGameIds.length > 0) {
@@ -241,6 +254,7 @@ const fetchGamesForCabinet = async ({
       isRated: 1,
       hidden: 1,
       showCreator: 1,
+      showEnterButton: 1,
       showTasks: 1,
       hideResult: 1,
       registrationOpen: 1,
@@ -337,6 +351,64 @@ const fetchGamesForCabinet = async ({
       : {}
 
   const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
+
+  // Загрузить participation пользователя для каждой загруженной игры
+  const participationByGameId = {} // gameId -> [{ teamId, teamName, isCaptain }]
+
+  if (userTeamIds.length > 0) {
+    const allGameIds = gamesDocs.map((g) => toStringId(g?._id)).filter(Boolean)
+
+    if (allGameIds.length > 0) {
+      const userGamesTeamsDocs = await GamesTeamsModel.find({
+        gameId: { $in: allGameIds },
+        teamId: { $in: userTeamIds },
+      })
+        .select({ gameId: 1, teamId: 1 })
+        .lean()
+
+      // Собрать уникальные teamId для загрузки имён
+      const participatingTeamIds = Array.from(
+        new Set(
+          userGamesTeamsDocs
+            .map((gt) => toStringId(gt?.teamId))
+            .filter(Boolean),
+        ),
+      )
+
+      const teamsNamesById = {}
+      if (participatingTeamIds.length > 0) {
+        const TeamsModel = db.model('Teams')
+        const teamsDocs = await TeamsModel.find({
+          _id: { $in: participatingTeamIds },
+        })
+          .select({ _id: 1, name: 1 })
+          .lean()
+
+        for (const t of teamsDocs) {
+          teamsNamesById[toStringId(t._id)] =
+            typeof t?.name === 'string' ? t.name : ''
+        }
+      }
+
+      for (const gt of userGamesTeamsDocs) {
+        const gId = toStringId(gt?.gameId)
+        const tId = toStringId(gt?.teamId)
+        if (!gId || !tId) {
+          continue
+        }
+        if (!participationByGameId[gId]) {
+          participationByGameId[gId] = []
+        }
+        const role = userTeamRoles[tId] || 'participant'
+        participationByGameId[gId].push({
+          teamId: tId,
+          teamName: teamsNamesById[tId] || '',
+          isCaptain: role === 'captain',
+        })
+      }
+    }
+  }
+
   const games = gamesDocs.map((game) => {
     const normalizedStatus =
       game?.status === 'closed' && !canSeeClosedStatus
@@ -365,7 +437,7 @@ const fetchGamesForCabinet = async ({
       status: normalizedStatus,
       teamsCount,
       userTeamPlace: null,
-      userParticipationTeams: [],
+      userParticipationTeams: gameId ? participationByGameId[gameId] || [] : [],
       creator: creatorKey ? (creatorsByTelegramId[creatorKey] ?? null) : null,
     })
   })

@@ -380,6 +380,7 @@ const normalizeGameForCabinet = (game) => {
     isRated: ensureBoolean(game.isRated, true),
     hidden: ensureBoolean(game.hidden, true),
     showCreator: ensureBoolean(game.showCreator, true),
+    showEnterButton: ensureBoolean(game.showEnterButton, false),
     showTasks: ensureBoolean(game.showTasks, false),
     hideResult: ensureBoolean(game.hideResult, false),
     registrationOpen: ensureBoolean(game.registrationOpen, true),

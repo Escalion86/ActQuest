@@ -701,6 +701,7 @@ const buildUpdatePayload = (game) => {
         : null,
     hidden: normalizedIsRated ? false : Boolean(game.hidden),
     showCreator: Boolean(game.showCreator),
+    showEnterButton: Boolean(game.showEnterButton),
     showTasks: Boolean(game.showTasks),
     hideResult: Boolean(game.hideResult),
     registrationOpen: Boolean(game.registrationOpen ?? true),
@@ -4696,7 +4697,8 @@ const GamesPage = ({
       })
       const canEnterGame =
         hasParticipation &&
-        isGameInProgressStatus(visibleStatus) &&
+        (isGameInProgressStatus(visibleStatus) ||
+          (Boolean(game?.showEnterButton) && isActiveGameStatus(visibleStatus))) &&
         Boolean(gameEnterHref)
       const participationSummary = hasParticipation
         ? `Вы участвуете: ${participationTeams
@@ -5046,7 +5048,8 @@ const GamesPage = ({
       })
       const canEnterGame =
         hasParticipation &&
-        isGameInProgressStatus(visibleStatus) &&
+        (isGameInProgressStatus(visibleStatus) ||
+          (Boolean(game?.showEnterButton) && isActiveGameStatus(visibleStatus))) &&
         Boolean(gameEnterHref)
       const participationSummary = hasParticipation
         ? `Вы участвуете: ${participationTeams
@@ -5561,7 +5564,8 @@ const GamesPage = ({
     () =>
       Boolean(selectedGame?.id) &&
       selectedGameParticipationTeams.length > 0 &&
-      isGameInProgressStatus(selectedGame?.status) &&
+      (isGameInProgressStatus(selectedGame?.status) ||
+        (Boolean(selectedGame?.showEnterButton) && isActiveGameStatus(selectedGame?.status))) &&
       Boolean(selectedGameEnterHref),
     [
       selectedGame,
