@@ -110,6 +110,7 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
     await syncLegacyUserByLocation({
       location: effectiveLocation,
       findQuery: { phone },
+      globalUserId: user._id,
       updates: {
         ...updates,
         globalUserId: user._id.toString(),

@@ -27,9 +27,7 @@ const CABINET_TEAMS_ENTITY_API_BASE = '/api/cabinet/teams'
 const CABINET_TEAM_MEMBERS_API_BASE = '/api/cabinet/teams/members'
 
 const resolveRatingBadge = (rating) =>
-  rating?.isEligible && Number.isFinite(rating?.rank)
-    ? `#${rating.rank}`
-    : null
+  rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
 
 const serializeTeamForComparison = (team) => {
   if (!team) {
@@ -105,7 +103,7 @@ const TeamsPage = ({
   const [teams, setTeams] = useState(safeInitialTeams)
   const [persistedTeams, setPersistedTeams] = useState(safeInitialTeams)
   const [selectedTeamId, setSelectedTeamId] = useState(
-    safeInitialTeams[0]?.id ?? null
+    safeInitialTeams[0]?.id ?? null,
   )
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -121,7 +119,8 @@ const TeamsPage = ({
   const [isJoiningTeam, setIsJoiningTeam] = useState(false)
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const copyTimeoutRef = useRef(null)
-  const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] = useState(false)
+  const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] =
+    useState(false)
   const [isLeavingTeam, setIsLeavingTeam] = useState(false)
   const [isDeletingTeam, setIsDeletingTeam] = useState(false)
   const snackbar = useSnackbar()
@@ -164,10 +163,10 @@ const TeamsPage = ({
           }
 
           return false
-        })
+        }),
       )
     },
-    [currentTelegramId, currentUserId]
+    [currentTelegramId, currentUserId],
   )
 
   useEffect(() => {
@@ -186,11 +185,11 @@ const TeamsPage = ({
 
   const visibleTeams = useMemo(
     () => filterTeamsByCurrentUser(teams),
-    [filterTeamsByCurrentUser, teams]
+    [filterTeamsByCurrentUser, teams],
   )
   const visiblePersistedTeams = useMemo(
     () => filterTeamsByCurrentUser(persistedTeams),
-    [filterTeamsByCurrentUser, persistedTeams]
+    [filterTeamsByCurrentUser, persistedTeams],
   )
 
   useEffect(() => {
@@ -211,16 +210,19 @@ const TeamsPage = ({
     setIsTeamDescriptionModalOpen(false)
   }, [])
 
-  useEffect(() => () => {
-    if (copyTimeoutRef.current) {
-      clearTimeout(copyTimeoutRef.current)
-      copyTimeoutRef.current = null
-    }
-  }, [])
+  useEffect(
+    () => () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+        copyTimeoutRef.current = null
+      }
+    },
+    [],
+  )
 
   const selectedTeam = useMemo(
     () => visibleTeams.find((team) => team.id === selectedTeamId) ?? null,
-    [selectedTeamId, visibleTeams]
+    [selectedTeamId, visibleTeams],
   )
 
   useEffect(() => {
@@ -230,8 +232,9 @@ const TeamsPage = ({
   }, [selectedTeam])
 
   const persistedSelectedTeam = useMemo(
-    () => visiblePersistedTeams.find((team) => team.id === selectedTeamId) ?? null,
-    [selectedTeamId, visiblePersistedTeams]
+    () =>
+      visiblePersistedTeams.find((team) => team.id === selectedTeamId) ?? null,
+    [selectedTeamId, visiblePersistedTeams],
   )
 
   const isDirty = useMemo(() => {
@@ -255,7 +258,7 @@ const TeamsPage = ({
       (member) =>
         member.isCaptain &&
         ((currentUserId && member.userId === currentUserId) ||
-          (currentTelegramId && member.telegramId === currentTelegramId))
+          (currentTelegramId && member.telegramId === currentTelegramId)),
     )
   }, [currentTelegramId, currentUserId, selectedTeam])
 
@@ -284,7 +287,7 @@ const TeamsPage = ({
     Boolean(selectedTeamCurrentMember) && !selectedTeamCurrentMember.isCaptain
   const canDeleteSelectedTeam = Boolean(selectedTeam && isTeamCaptain)
   const canUseSelfServiceTeams = Boolean(
-    currentUserId || currentTelegramIdNumber !== null
+    currentUserId || currentTelegramIdNumber !== null,
   )
   const isTeamsLimitReached = visibleTeams.length >= MAX_TEAMS_PER_USER
   const canUseSelfServiceTeamsActions =
@@ -296,7 +299,9 @@ const TeamsPage = ({
     }
 
     return [...items].sort((first, second) => {
-      const firstTime = first?.updatedAt ? new Date(first.updatedAt).getTime() : 0
+      const firstTime = first?.updatedAt
+        ? new Date(first.updatedAt).getTime()
+        : 0
       const secondTime = second?.updatedAt
         ? new Date(second.updatedAt).getTime()
         : 0
@@ -317,30 +322,30 @@ const TeamsPage = ({
     })
   }, [])
 
-  const fetchTeamsSnapshot = useCallback(
-    async (teamIds) => {
-      if (!Array.isArray(teamIds) || teamIds.length === 0) {
-        return []
-      }
+  const fetchTeamsSnapshot = useCallback(async (teamIds) => {
+    if (!Array.isArray(teamIds) || teamIds.length === 0) {
+      return []
+    }
 
-      const params = new URLSearchParams()
-      teamIds
-        .map((id) => (typeof id === 'string' ? id : id?.toString?.() ?? ''))
-        .filter((id) => id.length > 0)
-        .forEach((id) => params.append('teamIds', id))
+    const params = new URLSearchParams()
+    teamIds
+      .map((id) => (typeof id === 'string' ? id : (id?.toString?.() ?? '')))
+      .filter((id) => id.length > 0)
+      .forEach((id) => params.append('teamIds', id))
 
-      if ([...params.keys()].filter((key) => key === 'teamIds').length === 0) {
-        return []
-      }
+    if ([...params.keys()].filter((key) => key === 'teamIds').length === 0) {
+      return []
+    }
 
-      const { json } = await requestApiJson(`${CABINET_TEAMS_API_BASE}?${params.toString()}`, {
+    const { json } = await requestApiJson(
+      `${CABINET_TEAMS_API_BASE}?${params.toString()}`,
+      {
         fallbackMessage: 'Не удалось загрузить данные команды',
-      })
+      },
+    )
 
-      return Array.isArray(json?.data) ? json.data : []
-    },
-    []
-  )
+    return Array.isArray(json?.data) ? json.data : []
+  }, [])
 
   const updateSelectedTeam = useCallback(
     (updater) => {
@@ -356,10 +361,10 @@ const TeamsPage = ({
 
           const patch = typeof updater === 'function' ? updater(team) : updater
           return { ...team, ...patch }
-        })
+        }),
       )
     },
-    [canManageSelectedTeam, selectedTeamId]
+    [canManageSelectedTeam, selectedTeamId],
   )
 
   const handleTeamFieldChange = useCallback(
@@ -370,7 +375,7 @@ const TeamsPage = ({
 
       updateSelectedTeam({ [field]: value })
     },
-    [canManageSelectedTeam, updateSelectedTeam]
+    [canManageSelectedTeam, updateSelectedTeam],
   )
 
   const handleResetTeam = useCallback(() => {
@@ -385,10 +390,10 @@ const TeamsPage = ({
         }
 
         const original = persistedTeams.find(
-          (item) => item.id === selectedTeamId
+          (item) => item.id === selectedTeamId,
         )
         return original ? { ...original } : team
-      })
+      }),
     )
   }, [canManageSelectedTeam, persistedTeams, selectedTeamId])
 
@@ -436,7 +441,6 @@ const TeamsPage = ({
 
     setIsEditModalOpen(false)
   }, [isSaving])
-
 
   const handleCopyTeamId = useCallback(() => {
     const value = selectedTeam?.id
@@ -491,7 +495,7 @@ const TeamsPage = ({
       snackbar.error(
         isTeamsLimitReached
           ? `Достигнут лимит: не более ${MAX_TEAMS_PER_USER} команд`
-          : 'Создание команды сейчас недоступно'
+          : 'Создание команды сейчас недоступно',
       )
       return
     }
@@ -506,7 +510,7 @@ const TeamsPage = ({
 
     if (!currentUserId && currentTelegramIdNumber === null) {
       snackbar.error(
-        'Чтобы управлять командами, требуется авторизованный пользователь.'
+        'Чтобы управлять командами, требуется авторизованный пользователь.',
       )
       return
     }
@@ -521,21 +525,18 @@ const TeamsPage = ({
         open: Boolean(newTeamOpen),
       })
 
-      const { json } = await requestApiJson(
-        CABINET_TEAMS_API_BASE,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(createPayload),
-          fallbackMessage: 'Не удалось создать команду',
-        }
-      )
+      const { json } = await requestApiJson(CABINET_TEAMS_API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createPayload),
+        fallbackMessage: 'Не удалось создать команду',
+      })
 
       const createdTeamIdRaw = json?.data?._id ?? json?.data?.id
       const createdTeamId =
         typeof createdTeamIdRaw === 'string'
           ? createdTeamIdRaw
-          : createdTeamIdRaw?.toString?.() ?? null
+          : (createdTeamIdRaw?.toString?.() ?? null)
 
       if (!createdTeamId) {
         throw new Error('Не удалось получить идентификатор новой команды')
@@ -545,7 +546,7 @@ const TeamsPage = ({
 
       if (!freshTeam) {
         throw new Error(
-          'Команда создана, но не удалось обновить список. Обновите страницу.'
+          'Команда создана, но не удалось обновить список. Обновите страницу.',
         )
       }
 
@@ -553,13 +554,13 @@ const TeamsPage = ({
         sortTeamsByUpdatedAt([
           ...prev.filter((item) => item.id !== freshTeam.id),
           freshTeam,
-        ])
+        ]),
       )
       setPersistedTeams((prev) =>
         sortTeamsByUpdatedAt([
           ...prev.filter((item) => item.id !== freshTeam.id),
           freshTeam,
-        ])
+        ]),
       )
       setSelectedTeamId(freshTeam.id)
 
@@ -569,7 +570,7 @@ const TeamsPage = ({
       setNewTeamImage('')
       setNewTeamOpen(true)
       snackbar.success(
-        `Команда «${freshTeam.name || trimmedName}» создана. Вы назначены капитаном.`
+        `Команда «${freshTeam.name || trimmedName}» создана. Вы назначены капитаном.`,
       )
     } catch (error) {
       console.error('Failed to create team', error)
@@ -596,7 +597,7 @@ const TeamsPage = ({
       snackbar.error(
         isTeamsLimitReached
           ? `Достигнут лимит: не более ${MAX_TEAMS_PER_USER} команд`
-          : 'Вступление в команду сейчас недоступно'
+          : 'Вступление в команду сейчас недоступно',
       )
       return
     }
@@ -610,7 +611,7 @@ const TeamsPage = ({
 
     if (!currentUserId && currentTelegramIdNumber === null) {
       snackbar.error(
-        'Чтобы присоединяться к командам, требуется авторизованный пользователь.'
+        'Чтобы присоединяться к командам, требуется авторизованный пользователь.',
       )
       return
     }
@@ -623,35 +624,38 @@ const TeamsPage = ({
     setIsJoiningTeam(true)
 
     try {
-      const { json: teamJson } = await requestApiJson(`${CABINET_TEAMS_ENTITY_API_BASE}/${trimmedTeamId}`, {
-        fallbackMessage: 'Команда не найдена',
-      })
+      const { json: teamJson } = await requestApiJson(
+        `${CABINET_TEAMS_ENTITY_API_BASE}/${trimmedTeamId}`,
+        {
+          fallbackMessage: 'Команда не найдена',
+        },
+      )
 
       const rawOpen = teamJson?.data?.open
       const isTeamOpen =
-        rawOpen === true || rawOpen === 'true' || rawOpen === 1 || rawOpen === '1'
+        rawOpen === true ||
+        rawOpen === 'true' ||
+        rawOpen === 1 ||
+        rawOpen === '1'
 
       if (!isTeamOpen) {
         throw new Error(
-          'В этой команде закрыт набор. Попросите капитана добавить вас вручную.'
+          'В этой команде закрыт набор. Попросите капитана добавить вас вручную.',
         )
       }
 
-      await requestApiJson(
-        CABINET_TEAM_MEMBERS_API_BASE,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ teamId: trimmedTeamId, role: 'participant' }),
-          fallbackMessage: 'Не удалось присоединиться к команде',
-        }
-      )
+      await requestApiJson(CABINET_TEAM_MEMBERS_API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: trimmedTeamId, role: 'participant' }),
+        fallbackMessage: 'Не удалось присоединиться к команде',
+      })
 
       const [freshTeam] = await fetchTeamsSnapshot([trimmedTeamId])
 
       if (!freshTeam) {
         throw new Error(
-          'Вы вступили в команду, но не удалось обновить список. Обновите страницу.'
+          'Вы вступили в команду, но не удалось обновить список. Обновите страницу.',
         )
       }
 
@@ -659,20 +663,20 @@ const TeamsPage = ({
         sortTeamsByUpdatedAt([
           ...prev.filter((item) => item.id !== freshTeam.id),
           freshTeam,
-        ])
+        ]),
       )
       setPersistedTeams((prev) =>
         sortTeamsByUpdatedAt([
           ...prev.filter((item) => item.id !== freshTeam.id),
           freshTeam,
-        ])
+        ]),
       )
       setSelectedTeamId(freshTeam.id)
 
       setIsJoinModalOpen(false)
       setJoinTeamId('')
       snackbar.success(
-        `Вы присоединились к команде «${freshTeam.name || 'без названия'}».`
+        `Вы присоединились к команде «${freshTeam.name || 'без названия'}».`,
       )
     } catch (error) {
       console.error('Failed to join team', error)
@@ -707,7 +711,7 @@ const TeamsPage = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: buildTeamUpdatePayload(selectedTeam) }),
           fallbackMessage: 'Не удалось сохранить команду',
-        }
+        },
       )
 
       const updatedTeam = {
@@ -722,13 +726,13 @@ const TeamsPage = ({
 
       setTeams((prevTeams) =>
         prevTeams.map((team) =>
-          team.id === selectedTeamId ? updatedTeam : team
-        )
+          team.id === selectedTeamId ? updatedTeam : team,
+        ),
       )
       setPersistedTeams((prevTeams) =>
         prevTeams.map((team) =>
-          team.id === selectedTeamId ? updatedTeam : team
-        )
+          team.id === selectedTeamId ? updatedTeam : team,
+        ),
       )
       snackbar.success('Изменения сохранены')
       setIsEditModalOpen(false)
@@ -738,12 +742,7 @@ const TeamsPage = ({
     } finally {
       setIsSaving(false)
     }
-  }, [
-    canManageSelectedTeam,
-    selectedTeam,
-    selectedTeamId,
-    snackbar,
-  ])
+  }, [canManageSelectedTeam, selectedTeam, selectedTeamId, snackbar])
 
   const handleModalPrimaryAction = useCallback(() => {
     if (isSaving) {
@@ -755,7 +754,13 @@ const TeamsPage = ({
     } else {
       handleCloseEditModal()
     }
-  }, [canManageSelectedTeam, handleCloseEditModal, handleSaveTeam, isDirty, isSaving])
+  }, [
+    canManageSelectedTeam,
+    handleCloseEditModal,
+    handleSaveTeam,
+    isDirty,
+    isSaving,
+  ])
 
   const handleRemoveMember = useCallback(
     async (memberId) => {
@@ -770,7 +775,7 @@ const TeamsPage = ({
 
       if (member.isCaptain) {
         snackbar.error(
-          'Нельзя удалить капитана команды. Назначьте нового капитана и повторите действие.'
+          'Нельзя удалить капитана команды. Назначьте нового капитана и повторите действие.',
         )
         return
       }
@@ -778,16 +783,13 @@ const TeamsPage = ({
       setMemberActionId(memberId)
 
       try {
-        await requestApiJson(
-          `${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`,
-          {
-            method: 'DELETE',
-            fallbackMessage: 'Не удалось удалить участника',
-          }
-        )
+        await requestApiJson(`${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`, {
+          method: 'DELETE',
+          fallbackMessage: 'Не удалось удалить участника',
+        })
 
         const updatedMembers = (selectedTeam.members ?? []).filter(
-          (item) => item.id !== memberId
+          (item) => item.id !== memberId,
         )
         const updatedTeam = {
           ...selectedTeam,
@@ -798,17 +800,17 @@ const TeamsPage = ({
 
         setTeams((prevTeams) =>
           prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team
-          )
+            team.id === selectedTeamId ? updatedTeam : team,
+          ),
         )
         setPersistedTeams((prevTeams) =>
           prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team
-          )
+            team.id === selectedTeamId ? updatedTeam : team,
+          ),
         )
 
         snackbar.success(
-          `Участник «${member.name || 'Без имени'}» удалён из команды`
+          `Участник «${member.name || 'Без имени'}» удалён из команды`,
         )
       } catch (error) {
         console.error('Failed to remove team member', error)
@@ -817,12 +819,7 @@ const TeamsPage = ({
         setMemberActionId(null)
       }
     },
-    [
-      canManageSelectedTeam,
-      selectedTeam,
-      selectedTeamId,
-      snackbar,
-    ]
+    [canManageSelectedTeam, selectedTeam, selectedTeamId, snackbar],
   )
 
   const handleSetCaptain = useCallback(
@@ -855,7 +852,7 @@ const TeamsPage = ({
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ data: { role: 'participant' } }),
-            })
+            }),
           )
         }
 
@@ -865,7 +862,7 @@ const TeamsPage = ({
         responses.forEach((res, index) => {
           if (!res.ok || payloads[index]?.success === false) {
             throw new Error(
-              payloads[index]?.error || 'Не удалось обновить роль участника'
+              payloads[index]?.error || 'Не удалось обновить роль участника',
             )
           }
         })
@@ -890,17 +887,17 @@ const TeamsPage = ({
 
         setTeams((prevTeams) =>
           prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team
-          )
+            team.id === selectedTeamId ? updatedTeam : team,
+          ),
         )
         setPersistedTeams((prevTeams) =>
           prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team
-          )
+            team.id === selectedTeamId ? updatedTeam : team,
+          ),
         )
 
         snackbar.success(
-          `«${member.name || 'Участник'}» назначен капитаном команды`
+          `«${member.name || 'Участник'}» назначен капитаном команды`,
         )
       } catch (error) {
         console.error('Failed to promote team member', error)
@@ -909,12 +906,7 @@ const TeamsPage = ({
         setMemberActionId(null)
       }
     },
-    [
-      canManageSelectedTeam,
-      selectedTeam,
-      selectedTeamId,
-      snackbar,
-    ]
+    [canManageSelectedTeam, selectedTeam, selectedTeamId, snackbar],
   )
 
   const teamRestrictionMessage = useMemo(() => {
@@ -922,10 +914,7 @@ const TeamsPage = ({
       return null
     }
 
-    if (
-      selectedTeam.captain &&
-      selectedTeam.captain.userId === currentUserId
-    ) {
+    if (selectedTeam.captain && selectedTeam.captain.userId === currentUserId) {
       return null
     }
 
@@ -933,10 +922,14 @@ const TeamsPage = ({
   }, [canManageSelectedTeam, currentUserId, selectedTeam])
 
   const isCreateActionDisabled =
-    isCreatingTeam || !canUseSelfServiceTeamsActions || newTeamName.trim().length === 0
+    isCreatingTeam ||
+    !canUseSelfServiceTeamsActions ||
+    newTeamName.trim().length === 0
 
   const isJoinActionDisabled =
-    isJoiningTeam || !canUseSelfServiceTeamsActions || joinTeamId.trim().length === 0
+    isJoiningTeam ||
+    !canUseSelfServiceTeamsActions ||
+    joinTeamId.trim().length === 0
 
   const teamsForList = useMemo(() => {
     if (!Array.isArray(visibleTeams)) {
@@ -948,12 +941,10 @@ const TeamsPage = ({
         (member) =>
           member.isCaptain &&
           ((currentUserId && member.userId === currentUserId) ||
-            (currentTelegramId && member.telegramId === currentTelegramId))
+            (currentTelegramId && member.telegramId === currentTelegramId)),
       )
 
-      const canManageTeam =
-        isAdmin ||
-        isCaptainForCurrentUser
+      const canManageTeam = isAdmin || isCaptainForCurrentUser
 
       return {
         id: team.id,
@@ -991,8 +982,7 @@ const TeamsPage = ({
         isAdmin ||
         (team.members ?? []).some(
           (member) =>
-            member.isCaptain &&
-            member.userId === (currentUserId ?? '')
+            member.isCaptain && member.userId === (currentUserId ?? ''),
         )
 
       if (!canManageTeam) {
@@ -1003,12 +993,7 @@ const TeamsPage = ({
       closeTeamDescriptionModal()
       setIsEditModalOpen(true)
     },
-    [
-      closeTeamDescriptionModal,
-      currentUserId,
-      isAdmin,
-      visibleTeams,
-    ]
+    [closeTeamDescriptionModal, currentUserId, isAdmin, visibleTeams],
   )
 
   useEffect(() => {
@@ -1031,8 +1016,7 @@ const TeamsPage = ({
         isAdmin ||
         (team.members ?? []).some(
           (member) =>
-            member.isCaptain &&
-            member.userId === (currentUserId ?? '')
+            member.isCaptain && member.userId === (currentUserId ?? ''),
         )
 
       if (canManageTeam) {
@@ -1054,17 +1038,14 @@ const TeamsPage = ({
       ? `${pathname}?${nextParams.toString()}`
       : pathname
     router.replace(nextUrl, { scroll: false })
-  }, [
-    currentUserId,
-    isAdmin,
-    pathname,
-    router,
-    searchParams,
-    visibleTeams,
-  ])
+  }, [currentUserId, isAdmin, pathname, router, searchParams, visibleTeams])
 
   const handleLeaveSelectedTeam = useCallback(async () => {
-    if (!selectedTeam || !selectedTeamCurrentMember || selectedTeamCurrentMember.isCaptain) {
+    if (
+      !selectedTeam ||
+      !selectedTeamCurrentMember ||
+      selectedTeamCurrentMember.isCaptain
+    ) {
       return
     }
 
@@ -1081,11 +1062,15 @@ const TeamsPage = ({
         {
           method: 'DELETE',
           fallbackMessage: 'Не удалось выйти из команды',
-        }
+        },
       )
 
-      setTeams((prevTeams) => prevTeams.filter((team) => team.id !== selectedTeam.id))
-      setPersistedTeams((prevTeams) => prevTeams.filter((team) => team.id !== selectedTeam.id))
+      setTeams((prevTeams) =>
+        prevTeams.filter((team) => team.id !== selectedTeam.id),
+      )
+      setPersistedTeams((prevTeams) =>
+        prevTeams.filter((team) => team.id !== selectedTeam.id),
+      )
       closeTeamDescriptionModal()
 
       snackbar.success('Вы вышли из команды')
@@ -1123,13 +1108,18 @@ const TeamsPage = ({
     setIsDeletingTeam(true)
 
     try {
-      await requestApiJson(`${CABINET_TEAMS_ENTITY_API_BASE}/${selectedTeam.id}`, {
-        method: 'DELETE',
-        fallbackMessage: 'Не удалось удалить команду',
-      })
+      await requestApiJson(
+        `${CABINET_TEAMS_ENTITY_API_BASE}/${selectedTeam.id}`,
+        {
+          method: 'DELETE',
+          fallbackMessage: 'Не удалось удалить команду',
+        },
+      )
 
       const deletedTeamId = selectedTeam.id
-      setTeams((prevTeams) => prevTeams.filter((team) => team.id !== deletedTeamId))
+      setTeams((prevTeams) =>
+        prevTeams.filter((team) => team.id !== deletedTeamId),
+      )
       setPersistedTeams((prevTeams) =>
         prevTeams.filter((team) => team.id !== deletedTeamId),
       )
@@ -1150,7 +1140,7 @@ const TeamsPage = ({
 
   return (
     <>
-<CabinetLayout
+      <CabinetLayout
         title="Мои команды"
         description="Следите за составом, назначайте капитанов и контролируйте участие в играх."
         activePage="teams"
@@ -1209,7 +1199,8 @@ const TeamsPage = ({
             </div>
             {isTeamsLimitReached && (
               <NoticeBanner tone="warning" variant="neon">
-                Достигнут лимит команд: один игрок может состоять максимум в {MAX_TEAMS_PER_USER} командах.
+                Достигнут лимит команд: один игрок может состоять максимум в{' '}
+                {MAX_TEAMS_PER_USER} командах.
               </NoticeBanner>
             )}
 
@@ -1313,7 +1304,9 @@ const TeamsPage = ({
               </ul>
             ) : (
               <div className="p-6 text-sm text-center bg-white dark:bg-slate-900/80 border shadow-sm text-slate-500 dark:text-slate-300 border-slate-200 dark:border-slate-700 rounded-2xl">
-                У вас пока нет команд. Нажмите «Создать команду», чтобы сформировать новую, или используйте кнопку вступления, если знаете id команды.
+                У вас пока нет команд. Нажмите «Создать команду», чтобы
+                сформировать новую, или используйте кнопку вступления, если
+                знаете id команды.
               </div>
             )}
           </div>
@@ -1370,6 +1363,7 @@ const TeamsPage = ({
           canLeaveTeam={canLeaveSelectedTeam}
           isLeavingTeam={isLeavingTeam}
           onLeaveTeam={handleLeaveSelectedTeam}
+          isDeveloper={userRole === 'dev'}
         />
       </CabinetLayout>
     </>
@@ -1423,7 +1417,7 @@ TeamsPage.propTypes = {
       }),
       createdAt: PropTypes.string,
       updatedAt: PropTypes.string,
-    })
+    }),
   ),
   initialLocation: PropTypes.string,
   session: PropTypes.object,
@@ -1436,4 +1430,3 @@ TeamsPage.defaultProps = {
 }
 
 export default TeamsPage
-

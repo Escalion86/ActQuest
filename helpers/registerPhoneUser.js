@@ -107,6 +107,7 @@ const registerPhoneUser = async ({ location, rawData }) => {
     await syncLegacyUserByLocation({
       location: resolvedLocation,
       findQuery: { phone },
+      globalUserId: user._id,
       updates: {
         ...updates,
         globalUserId: user._id.toString(),

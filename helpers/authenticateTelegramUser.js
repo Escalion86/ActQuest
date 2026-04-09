@@ -184,6 +184,7 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
     await syncLegacyUserByLocation({
       location: resolvedLocation,
       findQuery: { telegramId: payload.id },
+      globalUserId: user._id,
       updates: {
         ...updates,
         authMethod: 'telegram',

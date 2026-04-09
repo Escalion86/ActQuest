@@ -66,7 +66,7 @@ const sortUsers = (users, sortBy) => {
 
 const normalizeUserForAdmin = ({
   userDoc,
-  membershipsByUser,
+  userMemberships,
   teamsMap,
   location,
 }) => {
@@ -75,9 +75,8 @@ const normalizeUserForAdmin = ({
     ? Number(userDoc.telegramId)
     : null
   const telegramId = numericTelegramId !== null ? String(numericTelegramId) : ''
-  const memberships = membershipsByUser[telegramId] ?? []
 
-  const teams = memberships
+  const teams = userMemberships
     .map((membership) => {
       const teamId = membership.teamId
       const team = teamsMap[teamId] ?? null
@@ -139,6 +138,45 @@ const toPositiveInteger = (value, fallback) => {
     return fallback
   }
   return Math.floor(numeric)
+}
+
+/**
+ * Определяет, принадлежит ли membership-запись данному пользователю.
+ * Совпадение по userId (TeamsUsers.userId == Users._id) ИЛИ по userTelegramId.
+ * Для записей с userTelegramId === 0 (legacy, Number(null)) — матч только по userId.
+ */
+const resolveMembershipsForUser = (userDoc, membershipsDocs) => {
+  const userId = userDoc?._id ? String(userDoc._id) : null
+  const numericTelegramId =
+    Number.isFinite(userDoc?.telegramId) && userDoc.telegramId !== 0
+      ? Number(userDoc.telegramId)
+      : null
+
+  const seenTeamIds = new Set()
+  return membershipsDocs
+    .filter((doc) => {
+      const docUserId = doc?.userId ? String(doc.userId) : null
+      const docTelegramId = doc?.userTelegramId
+
+      const matchByUserId = userId && docUserId && docUserId === userId
+      const matchByTelegramId =
+        numericTelegramId !== null &&
+        Number.isFinite(docTelegramId) &&
+        docTelegramId !== 0 &&
+        docTelegramId === numericTelegramId
+
+      return matchByUserId || matchByTelegramId
+    })
+    .map((doc) => {
+      const teamId = toStringId(doc?.teamId)
+      if (!teamId || seenTeamIds.has(teamId)) return null
+      seenTeamIds.add(teamId)
+      return {
+        teamId,
+        role: doc?.role === 'capitan' ? 'capitan' : 'participant',
+      }
+    })
+    .filter(Boolean)
 }
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -304,12 +342,30 @@ const fetchAdminUsersForCabinet = async ({
           .filter((id) => id !== null),
       ),
     )
+    const membershipUserIdsForAll = Array.from(
+      new Set(
+        usersDocs
+          .map((userDoc) => (userDoc?._id ? String(userDoc._id) : null))
+          .filter((id) => id !== null),
+      ),
+    )
 
-    const membershipsDocsForAll = membershipTelegramIdsForAll.length
-      ? await TeamsUsersModel.find({
-          userTelegramId: { $in: membershipTelegramIdsForAll },
-        })
-          .select({ teamId: 1, userTelegramId: 1, role: 1 })
+    const membershipQueryForAll = []
+    if (membershipTelegramIdsForAll.length) {
+      membershipQueryForAll.push({
+        userTelegramId: { $in: membershipTelegramIdsForAll },
+      })
+    }
+    if (membershipUserIdsForAll.length) {
+      membershipQueryForAll.push({ userId: { $in: membershipUserIdsForAll } })
+    }
+    const membershipsDocsForAll = membershipQueryForAll.length
+      ? await TeamsUsersModel.find(
+          membershipQueryForAll.length === 1
+            ? membershipQueryForAll[0]
+            : { $or: membershipQueryForAll },
+        )
+          .select({ teamId: 1, userTelegramId: 1, userId: 1, role: 1 })
           .lean()
       : []
 
@@ -342,32 +398,15 @@ const fetchAdminUsersForCabinet = async ({
       return acc
     }, {})
 
-    const membershipsByUserForAll = membershipsDocsForAll.reduce((acc, doc) => {
-      const telegramId = Number.isFinite(doc?.userTelegramId)
-        ? String(doc.userTelegramId)
-        : null
-      const teamId = toStringId(doc?.teamId)
-
-      if (!telegramId || !teamId) {
-        return acc
-      }
-
-      if (!acc[telegramId]) {
-        acc[telegramId] = []
-      }
-
-      acc[telegramId].push({
-        teamId,
-        role: doc?.role === 'capitan' ? 'capitan' : 'participant',
-      })
-
-      return acc
-    }, {})
+    const membershipsByUserForAll = membershipsDocsForAll
 
     const allUsers = usersDocs.map((userDoc) =>
       normalizeUserForAdmin({
         userDoc,
-        membershipsByUser: membershipsByUserForAll,
+        userMemberships: resolveMembershipsForUser(
+          userDoc,
+          membershipsByUserForAll,
+        ),
         teamsMap: teamsMapForAll,
         location,
       }),
@@ -391,12 +430,28 @@ const fetchAdminUsersForCabinet = async ({
         .filter((id) => id !== null),
     ),
   )
+  const membershipUserIds = Array.from(
+    new Set(
+      usersSlice
+        .map((userDoc) => (userDoc?._id ? String(userDoc._id) : null))
+        .filter((id) => id !== null),
+    ),
+  )
 
-  const membershipsDocs = membershipTelegramIds.length
-    ? await TeamsUsersModel.find({
-        userTelegramId: { $in: membershipTelegramIds },
-      })
-        .select({ teamId: 1, userTelegramId: 1, role: 1 })
+  const membershipQuery = []
+  if (membershipTelegramIds.length) {
+    membershipQuery.push({ userTelegramId: { $in: membershipTelegramIds } })
+  }
+  if (membershipUserIds.length) {
+    membershipQuery.push({ userId: { $in: membershipUserIds } })
+  }
+  const membershipsDocs = membershipQuery.length
+    ? await TeamsUsersModel.find(
+        membershipQuery.length === 1
+          ? membershipQuery[0]
+          : { $or: membershipQuery },
+      )
+        .select({ teamId: 1, userTelegramId: 1, userId: 1, role: 1 })
         .lean()
     : []
 
@@ -429,32 +484,10 @@ const fetchAdminUsersForCabinet = async ({
     return acc
   }, {})
 
-  const membershipsByUser = membershipsDocs.reduce((acc, doc) => {
-    const telegramId = Number.isFinite(doc?.userTelegramId)
-      ? String(doc.userTelegramId)
-      : null
-    const teamId = toStringId(doc?.teamId)
-
-    if (!telegramId || !teamId) {
-      return acc
-    }
-
-    if (!acc[telegramId]) {
-      acc[telegramId] = []
-    }
-
-    acc[telegramId].push({
-      teamId,
-      role: doc?.role === 'capitan' ? 'capitan' : 'participant',
-    })
-
-    return acc
-  }, {})
-
   const users = usersSlice.map((userDoc) =>
     normalizeUserForAdmin({
       userDoc,
-      membershipsByUser,
+      userMemberships: resolveMembershipsForUser(userDoc, membershipsDocs),
       teamsMap,
       location,
     }),

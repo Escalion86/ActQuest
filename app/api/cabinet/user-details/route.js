@@ -10,7 +10,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const normalizeTelegramId = (value) => {
   const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric : null
+  return Number.isFinite(numeric) && numeric !== 0 ? numeric : null
 }
 
 const normalizeMembershipRole = (value) =>
@@ -31,7 +31,9 @@ export async function GET(request) {
       typeof requestUrl.searchParams.get('userId') === 'string'
         ? requestUrl.searchParams.get('userId').trim()
         : ''
-    const telegramId = normalizeTelegramId(requestUrl.searchParams.get('telegramId'))
+    const telegramId = normalizeTelegramId(
+      requestUrl.searchParams.get('telegramId'),
+    )
 
     if (!userId && telegramId === null) {
       return NextResponse.json(
@@ -60,15 +62,28 @@ export async function GET(request) {
     }
 
     const userTelegramId = normalizeTelegramId(userDoc?.telegramId)
-    const memberships =
-      userTelegramId !== null
-        ? await TeamsUsersModel.find({ userTelegramId })
-            .select({ teamId: 1, role: 1 })
-            .lean()
-        : []
+    const userOdId = toStringId(userDoc?._id)
+    const membershipQuery = []
+    if (userTelegramId !== null) {
+      membershipQuery.push({ userTelegramId })
+    }
+    if (userOdId) {
+      membershipQuery.push({ userId: userOdId })
+    }
+    const memberships = membershipQuery.length
+      ? await TeamsUsersModel.find(
+          membershipQuery.length === 1
+            ? membershipQuery[0]
+            : { $or: membershipQuery },
+        )
+          .select({ teamId: 1, role: 1 })
+          .lean()
+      : []
 
     const teamIds = Array.from(
-      new Set(memberships.map((doc) => toStringId(doc?.teamId)).filter(Boolean)),
+      new Set(
+        memberships.map((doc) => toStringId(doc?.teamId)).filter(Boolean),
+      ),
     )
 
     const teamsDocs = teamIds.length

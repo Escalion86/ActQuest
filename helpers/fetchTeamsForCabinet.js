@@ -216,6 +216,8 @@ const fetchTeamsForCabinet = async ({
           username: 1,
           phone: 1,
           role: 1,
+          photoUrl: 1,
+          images: 1,
         })
         .lean()
     : []
@@ -229,6 +231,8 @@ const fetchTeamsForCabinet = async ({
           username: 1,
           phone: 1,
           role: 1,
+          photoUrl: 1,
+          images: 1,
         })
         .lean()
     : []

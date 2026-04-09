@@ -58,22 +58,23 @@ const normalizeMembers = (members = []) => {
     const user = member?.user ?? {}
 
     const rawTelegramId =
-      member?.userTelegramId ??
-      member?.telegramId ??
-      user?.telegramId ??
-      null
-    const rawUserId =
-      member?.userId ??
-      user?._id ??
-      null
+      member?.userTelegramId ?? member?.telegramId ?? user?.telegramId ?? null
+    const rawUserId = member?.userId ?? user?._id ?? null
     const hasLinkedUser = Boolean(user && Object.keys(user).length > 0)
     const fallbackName = ensureString(
-      user?.username ? `@${user.username}` : rawTelegramId ? `Участник ${rawTelegramId}` : '',
-      'Участник без профиля'
+      user?.username
+        ? `@${user.username}`
+        : rawTelegramId
+          ? `Участник ${rawTelegramId}`
+          : '',
+      'Участник без профиля',
     )
 
     return {
-      id: ensureString(member?.membershipId ?? member?._id ?? member?.id, `member-${index}`),
+      id: ensureString(
+        member?.membershipId ?? member?._id ?? member?.id,
+        `member-${index}`,
+      ),
       userId: ensureString(rawUserId, ''),
       telegramId: ensureString(rawTelegramId, ''),
       role,
@@ -83,6 +84,8 @@ const normalizeMembers = (members = []) => {
       phone: ensurePhone(user?.phone),
       userRole: ensureString(user?.role, ''),
       hasLinkedUser,
+      photoUrl: ensureString(user?.photoUrl, ''),
+      images: Array.isArray(user?.images) ? user.images : [],
     }
   })
 
@@ -123,7 +126,8 @@ const resolvePlayedGamesCount = ({ team, normalizedGames }) => {
   }
 
   return normalizedGames.reduce((acc, game) => {
-    const status = typeof game?.status === 'string' ? game.status.trim().toLowerCase() : ''
+    const status =
+      typeof game?.status === 'string' ? game.status.trim().toLowerCase() : ''
     return status === 'closed' ? acc + 1 : acc
   }, 0)
 }

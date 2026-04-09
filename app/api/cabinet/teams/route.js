@@ -176,9 +176,10 @@ export async function POST(request) {
       session.user.globalUserId ?? session.user.userId ?? session.user._id,
     )
     const actorTelegramIdRaw = Number(session.user.telegramId)
-    const actorTelegramId = Number.isFinite(actorTelegramIdRaw)
-      ? actorTelegramIdRaw
-      : null
+    const actorTelegramId =
+      Number.isFinite(actorTelegramIdRaw) && actorTelegramIdRaw !== 0
+        ? actorTelegramIdRaw
+        : null
 
     if (!actorUserId && actorTelegramId === null) {
       return NextResponse.json(

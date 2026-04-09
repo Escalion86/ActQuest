@@ -85,9 +85,10 @@ export async function POST(request) {
       session.user.globalUserId ?? session.user.userId ?? session.user._id,
     )
     const actorTelegramIdRaw = Number(session.user.telegramId)
-    const actorTelegramId = Number.isFinite(actorTelegramIdRaw)
-      ? actorTelegramIdRaw
-      : null
+    const actorTelegramId =
+      Number.isFinite(actorTelegramIdRaw) && actorTelegramIdRaw !== 0
+        ? actorTelegramIdRaw
+        : null
 
     if (!actorUserId && actorTelegramId === null) {
       return NextResponse.json(
@@ -124,9 +125,10 @@ export async function POST(request) {
 
       const targetGlobalUserId = toStringId(targetUserDoc.globalUserId)
       const targetTelegramIdRaw = Number(targetUserDoc.telegramId)
-      const targetTelegramId = Number.isFinite(targetTelegramIdRaw)
-        ? targetTelegramIdRaw
-        : null
+      const targetTelegramId =
+        Number.isFinite(targetTelegramIdRaw) && targetTelegramIdRaw !== 0
+          ? targetTelegramIdRaw
+          : null
 
       const existingFilter = {
         teamId,

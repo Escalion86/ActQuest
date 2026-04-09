@@ -93,6 +93,7 @@ const authenticatePhoneUser = async ({ location, rawData }) => {
     await syncLegacyUserByLocation({
       location: resolvedLocation,
       findQuery: { phone },
+      globalUserId: user._id,
       updates: {
         ...updates,
         authMethod: 'phone',

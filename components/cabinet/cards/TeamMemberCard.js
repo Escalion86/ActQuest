@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types'
 
 import SelectableCard from '@components/cabinet/SelectableCard'
+import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 
 const systemRoleLabels = {
   client: 'Участник',
@@ -27,7 +28,7 @@ const TeamMemberCard = ({ member, onOpen }) => (
       <div className="min-w-0 flex items-start gap-3">
         <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
           <img
-            src="/img/avatars/user.png"
+            src={getUserAvatarSrc(member)}
             alt={member.name || 'Участник'}
             className="h-full w-full object-cover"
             loading="lazy"

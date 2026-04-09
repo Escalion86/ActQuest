@@ -40,9 +40,10 @@ const resolveActorIdentity = (session) => {
     session?.user?.globalUserId ?? session?.user?.userId ?? session?.user?._id,
   )
   const actorTelegramIdRaw = Number(session?.user?.telegramId)
-  const actorTelegramId = Number.isFinite(actorTelegramIdRaw)
-    ? actorTelegramIdRaw
-    : null
+  const actorTelegramId =
+    Number.isFinite(actorTelegramIdRaw) && actorTelegramIdRaw !== 0
+      ? actorTelegramIdRaw
+      : null
 
   return { actorUserId, actorTelegramId }
 }
@@ -142,7 +143,9 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    const role = String(membership.role ?? '').trim().toLowerCase()
+    const role = String(membership.role ?? '')
+      .trim()
+      .toLowerCase()
     const isCaptain = role === 'capitan'
     if (isCaptain && !isElevatedRole(actorRole)) {
       return NextResponse.json(
@@ -161,7 +164,10 @@ export async function DELETE(request, { params }) {
       { status: 200 },
     )
   } catch (error) {
-    console.error('Failed to remove team membership via cabinet API (app)', error)
+    console.error(
+      'Failed to remove team membership via cabinet API (app)',
+      error,
+    )
     return NextResponse.json(
       { success: false, error: 'Не удалось удалить участника из команды' },
       { status: 500 },
@@ -228,7 +234,10 @@ export async function PUT(request, { params }) {
 
     if (!allowed) {
       return NextResponse.json(
-        { success: false, error: 'Недостаточно прав для изменения роли участника' },
+        {
+          success: false,
+          error: 'Недостаточно прав для изменения роли участника',
+        },
         { status: 403 },
       )
     }
@@ -243,11 +252,13 @@ export async function PUT(request, { params }) {
 
     return NextResponse.json({ success: true, data: updated }, { status: 200 })
   } catch (error) {
-    console.error('Failed to update team membership via cabinet API (app)', error)
+    console.error(
+      'Failed to update team membership via cabinet API (app)',
+      error,
+    )
     return NextResponse.json(
       { success: false, error: 'Не удалось обновить роль участника' },
       { status: 500 },
     )
   }
 }
-

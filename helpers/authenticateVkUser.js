@@ -4,8 +4,7 @@ import syncLegacyUserByLocation from '@helpers/syncLegacyUserByLocation'
 import normalizeAuthPhone from '@helpers/normalizeAuthPhone'
 
 const isVkDebugEnabled =
-  process.env.VK_AUTH_DEBUG === 'true' ||
-  process.env.VK_DEBUG_LOGS === 'true'
+  process.env.VK_AUTH_DEBUG === 'true' || process.env.VK_DEBUG_LOGS === 'true'
 
 const maskToken = (token) => {
   if (!token || typeof token !== 'string') return null
@@ -165,7 +164,9 @@ const authenticateVkUser = async ({ location, rawData }) => {
         httpStatus: vkResponse.status,
         vkErrorCode: vkJson?.error?.error_code ?? null,
         hasResponseArray: Array.isArray(vkJson?.response),
-        responseLength: Array.isArray(vkJson?.response) ? vkJson.response.length : null,
+        responseLength: Array.isArray(vkJson?.response)
+          ? vkJson.response.length
+          : null,
       })
     }
 
@@ -173,10 +174,13 @@ const authenticateVkUser = async ({ location, rawData }) => {
       // Для токенов VK ID метод api.vk.com/users.get может вернуть auth-ошибку.
       // В таком случае используем данные из One Tap payload и не блокируем вход.
       if (isVkDebugEnabled) {
-        console.info('[VK_DEBUG] authenticateVkUser:vk_api_error_fallback_to_payload', {
-          vkError: vkJson.error,
-          vkUserId,
-        })
+        console.info(
+          '[VK_DEBUG] authenticateVkUser:vk_api_error_fallback_to_payload',
+          {
+            vkError: vkJson.error,
+            vkUserId,
+          },
+        )
       }
 
       verifiedUser = {
@@ -191,9 +195,12 @@ const authenticateVkUser = async ({ location, rawData }) => {
       vkJson.response.length === 0
     ) {
       if (isVkDebugEnabled) {
-        console.info('[VK_DEBUG] authenticateVkUser:vk_user_not_found_fallback_to_payload', {
-          vkUserId,
-        })
+        console.info(
+          '[VK_DEBUG] authenticateVkUser:vk_user_not_found_fallback_to_payload',
+          {
+            vkUserId,
+          },
+        )
       }
 
       verifiedUser = {
@@ -207,10 +214,13 @@ const authenticateVkUser = async ({ location, rawData }) => {
     }
   } catch (error) {
     if (isVkDebugEnabled) {
-      console.info('[VK_DEBUG] authenticateVkUser:vk_api_request_failed_fallback_to_payload', {
-        message: error.message,
-        vkUserId,
-      })
+      console.info(
+        '[VK_DEBUG] authenticateVkUser:vk_api_request_failed_fallback_to_payload',
+        {
+          message: error.message,
+          vkUserId,
+        },
+      )
     }
 
     verifiedUser = {
@@ -281,6 +291,7 @@ const authenticateVkUser = async ({ location, rawData }) => {
     await syncLegacyUserByLocation({
       location: persistedLocation || resolvedLocation,
       findQuery: { phone },
+      globalUserId: user._id,
       updates: {
         ...updates,
         authMethod: 'vk',

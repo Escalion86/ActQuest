@@ -5,17 +5,22 @@ const syncLegacyUserByLocation = async ({
   findQuery,
   updates,
   setOnInsert = {},
+  globalUserId = null,
 }) => {
-  if (!location || !findQuery || !updates) return null
+  if (!location || !updates) return null
+  if (!globalUserId && !findQuery) return null
 
   try {
     const db = await dbConnectGlobal()
     if (!db) return null
 
+    // Если известен globalUserId — ищем строго по _id (без риска дубликатов)
+    const query = globalUserId ? { _id: globalUserId } : findQuery
+
     const user = await db
       .model('Users')
       .findOneAndUpdate(
-        findQuery,
+        query,
         {
           $set: updates,
           $setOnInsert: {
@@ -33,10 +38,12 @@ const syncLegacyUserByLocation = async ({
 
     return user
   } catch (error) {
-    console.error('Legacy user sync failed', { location, error: error?.message })
+    console.error('Legacy user sync failed', {
+      location,
+      error: error?.message,
+    })
     return null
   }
 }
 
 export default syncLegacyUserByLocation
-

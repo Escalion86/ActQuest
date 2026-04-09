@@ -13,6 +13,7 @@ import fetchCabinetUserDetails from '@helpers/fetchCabinetUserDetails'
 import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
 import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 import requestApiJson from '@helpers/requestApiJson'
+import CopyableId from '@components/cabinet/CopyableId'
 import UnifiedGameDescriptionModal from '@components/modals/UnifiedGameDescriptionModal'
 import { LOCATIONS } from '@server/serverConstants'
 
@@ -34,7 +35,13 @@ const resolveLocationLabel = (locationKey) => {
   return rawName.charAt(0).toUpperCase() + rawName.slice(1)
 }
 
-const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam }) => {
+const UserViewModal = ({
+  userId,
+  isOpen,
+  onClose,
+  onOpenTeam,
+  isDeveloper,
+}) => {
   const {
     data: user,
     isLoading,
@@ -356,6 +363,14 @@ const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam }) => {
                       : 'Неизвестно'}
                   </p>
                 </div>
+                {isDeveloper && user.id ? (
+                  <div>
+                    <p className="text-xs text-slate-500">ID</p>
+                    <div className="mt-1">
+                      <CopyableId id={user.id} label="User ID" />
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               {Array.isArray(user.preferences) &&
@@ -415,11 +430,13 @@ UserViewModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onOpenTeam: PropTypes.func,
+  isDeveloper: PropTypes.bool,
 }
 
 UserViewModal.defaultProps = {
   userId: null,
   onOpenTeam: null,
+  isDeveloper: false,
 }
 
 export default UserViewModal

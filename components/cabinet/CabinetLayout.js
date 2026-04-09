@@ -382,13 +382,8 @@ const CabinetLayout = ({
     if (!shouldForceLocationSelection) {
       setLocationPromptValue('')
       setLocationPromptError('')
-      return
     }
-
-    if (locationPromptValue) return
-    const fallbackLocation = availableLocations[0]?.key ?? ''
-    setLocationPromptValue(fallbackLocation)
-  }, [availableLocations, locationPromptValue, shouldForceLocationSelection])
+  }, [shouldForceLocationSelection])
 
   const applyTheme = useCallback((nextTheme) => {
     const isDark = nextTheme === 'dark'
@@ -1049,6 +1044,9 @@ const CabinetLayout = ({
                 disabled={isLocationSaving}
                 className={`w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 ${forceLocationSelectClass}`}
               >
+                <option value="" disabled>
+                  Выберите город...
+                </option>
                 {availableLocations.map((item) => (
                   <option key={item.key} value={item.key}>
                     {item.label}
