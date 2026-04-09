@@ -37,12 +37,7 @@ const resolveLocationLabel = (locationKey) => {
   return rawName.charAt(0).toUpperCase() + rawName.slice(1)
 }
 
-const UserViewModal = ({
-  userId,
-  isOpen,
-  onClose,
-  onOpenTeam,
-}) => {
+const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam }) => {
   const isDeveloper = useAtomValue(isDeveloperAtom)
   const {
     data: user,
