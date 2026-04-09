@@ -13,29 +13,32 @@ const GameStatusModal = ({
   onAction,
   validationResult,
   isSaving,
+  progressMessage,
 }) => (
   <Modal
     isOpen={isOpen}
     title={`Смена статуса — ${gameName || 'Без названия'}`}
     onClose={onClose}
-    footer={(
-      <CabinetButton
-        onClick={onClose}
-        variant="secondary"
-        disabled={isSaving}
-      >
+    footer={
+      <CabinetButton onClick={onClose} variant="secondary" disabled={isSaving}>
         Закрыть
       </CabinetButton>
-    )}
+    }
   >
     <div className="space-y-4">
       <p className="text-sm text-slate-600 dark:text-slate-300">
-        Текущий статус: <span className="font-semibold text-slate-800 dark:text-slate-100">{currentStatusLabel}</span>
+        Текущий статус:{' '}
+        <span className="font-semibold text-slate-800 dark:text-slate-100">
+          {currentStatusLabel}
+        </span>
       </p>
       {actions.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {actions.map((action) => (
-            <div key={action.id} className="rounded-xl border border-slate-200/80 p-3 dark:border-slate-700/80">
+            <div
+              key={action.id}
+              className="rounded-xl border border-slate-200/80 p-3 dark:border-slate-700/80"
+            >
               <CabinetButton
                 onClick={() => onAction(action.id)}
                 variant={action.variant}
@@ -60,8 +63,36 @@ const GameStatusModal = ({
         </p>
       )}
       <p className="text-xs text-slate-500 dark:text-slate-300">
-        «СТАРТ ИГРЫ» и «СТОП ИГРЫ» запускают серверные сценарии с оповещением игроков.
+        «СТАРТ ИГРЫ» и «СТОП ИГРЫ» запускают серверные сценарии с оповещением
+        игроков.
       </p>
+      {isSaving && progressMessage ? (
+        <div className="flex items-center gap-3 rounded-xl border border-sky-300/70 bg-sky-50/80 px-4 py-3 dark:border-sky-500/50 dark:bg-sky-500/10">
+          <svg
+            className="h-5 w-5 shrink-0 animate-spin text-sky-600 dark:text-sky-300"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          <p className="text-sm font-medium text-sky-700 dark:text-sky-200">
+            {progressMessage}
+          </p>
+        </div>
+      ) : null}
       {validationResult ? (
         <div
           className={`rounded-xl border px-4 py-3 ${
@@ -84,7 +115,10 @@ const GameStatusModal = ({
           {validationResult.hasErrors ? (
             <ul className="mt-2 space-y-1">
               {validationResult.errors.map((error) => (
-                <li key={error} className="text-xs text-rose-700 dark:text-rose-200">
+                <li
+                  key={error}
+                  className="text-xs text-rose-700 dark:text-rose-200"
+                >
                   • {error}
                 </li>
               ))}
@@ -106,10 +140,11 @@ GameStatusModal.propTypes = {
       label: PropTypes.string.isRequired,
       id: PropTypes.string.isRequired,
       variant: PropTypes.oneOf(['primary', 'secondary', 'soft']).isRequired,
-      tone: PropTypes.oneOf(['neutral', 'brand', 'cyan', 'success', 'danger']).isRequired,
+      tone: PropTypes.oneOf(['neutral', 'brand', 'cyan', 'success', 'danger'])
+        .isRequired,
       description: PropTypes.string,
       disabled: PropTypes.bool,
-    })
+    }),
   ).isRequired,
   onAction: PropTypes.func.isRequired,
   validationResult: PropTypes.shape({
@@ -117,11 +152,13 @@ GameStatusModal.propTypes = {
     errors: PropTypes.arrayOf(PropTypes.string).isRequired,
   }),
   isSaving: PropTypes.bool.isRequired,
+  progressMessage: PropTypes.string,
 }
 
 GameStatusModal.defaultProps = {
   gameName: '',
   validationResult: null,
+  progressMessage: '',
 }
 
 export default memo(GameStatusModal)

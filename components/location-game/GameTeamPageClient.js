@@ -173,14 +173,18 @@ const stripPhotoOnlySectionsForClassic = (html, gameType) => {
     return ''
   }
 
-  if (String(gameType || '').trim().toLowerCase() === 'photo') {
+  if (
+    String(gameType || '')
+      .trim()
+      .toLowerCase() === 'photo'
+  ) {
     return html
   }
 
   return html
     .replace(
       /\n*<b>За выполнение основного задания<\/b>:[\s\S]*?(?=\n\n<b>|$)/gi,
-      ''
+      '',
     )
     .replace(/\n*<b>Доп\. задания<\/b>:[\s\S]*?(?=\n\n<b>|$)/gi, '')
 }
@@ -202,7 +206,7 @@ const resolveThemePreference = () => {
   }
 
   const prefersDark = window.matchMedia?.(
-    '(prefers-color-scheme: dark)'
+    '(prefers-color-scheme: dark)',
   ).matches
   return prefersDark ? 'dark' : 'light'
 }
@@ -240,6 +244,7 @@ function GameTeamPage({
   const taskContentRef = useRef(null)
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
+  const [stickyMessages, setStickyMessages] = useState([])
   const previousTaskStateRef = useRef(taskState || 'idle')
   const previousPostCompletionMessageRef = useRef('')
   const initialShouldClearMessages = Boolean(result?.shouldResetMessages)
@@ -250,11 +255,13 @@ function GameTeamPage({
       taskState,
       result,
       postCompletionMessage,
-    })
+    }),
   )
   const [isTaskRefreshing, setIsTaskRefreshing] = useState(false)
   const [taskRefreshError, setTaskRefreshError] = useState(null)
-  const [countdownPanel, setCountdownPanel] = useState(null)
+  const countdownPanelRef = useRef(null)
+  const countdownPanelLabelRef = useRef(null)
+  const countdownPanelValueRef = useRef(null)
   const [
     shouldClearMessagesForActiveTask,
     setShouldClearMessagesForActiveTask,
@@ -278,7 +285,7 @@ function GameTeamPage({
 
   const collapseStorageKey = useMemo(
     () => `aq-game-info-collapsed-${gameId}-${teamId}`,
-    [gameId, teamId]
+    [gameId, teamId],
   )
 
   const effectiveTheme = theme ?? 'light'
@@ -335,6 +342,21 @@ function GameTeamPage({
     refreshRequestedRef.current = 0
   }, [taskData.html])
 
+  // При получении result с сообщениями (ответ на ввод кода) — сохраняем в stickyMessages
+  useEffect(() => {
+    if (shouldClearMessageParam && result) {
+      const msgs = collectResultMessages({
+        result,
+        normalizedTaskMessage: normalizeForComparison(taskHtml),
+        isBreakState: taskState === 'break',
+        isGameCompletion: isGameFinished || taskState === 'completed',
+      })
+      if (msgs.length > 0) {
+        setStickyMessages(msgs)
+      }
+    }
+  }, [shouldClearMessageParam, result, taskHtml, taskState, isGameFinished])
+
   useEffect(() => {
     updateTaskData({
       taskHtml,
@@ -373,14 +395,7 @@ function GameTeamPage({
     const cleanPath = `/game/${gameId}/process/${teamId}`
     hasClearedMessageRef.current = true
     router.replace(cleanPath, { scroll: false })
-  }, [
-    gameId,
-    isClient,
-    location,
-    router,
-    shouldClearMessageParam,
-    teamId,
-  ])
+  }, [gameId, isClient, location, router, shouldClearMessageParam, teamId])
 
   useEffect(() => {
     if (!isClient) return
@@ -420,6 +435,7 @@ function GameTeamPage({
 
       if (recordTimestamp) {
         refreshRequestedRef.current = Date.now()
+        setStickyMessages([])
       }
 
       setTaskRefreshError(null)
@@ -454,7 +470,7 @@ function GameTeamPage({
         return true
       } catch (refreshError) {
         setTaskRefreshError(
-          refreshError?.message || 'Не удалось обновить задание'
+          refreshError?.message || 'Не удалось обновить задание',
         )
         if (recordTimestamp) {
           refreshRequestedRef.current = 0
@@ -464,7 +480,7 @@ function GameTeamPage({
         setIsTaskRefreshing(false)
       }
     },
-    [gameId, isTaskRefreshing, location, teamId, updateTaskData]
+    [gameId, isTaskRefreshing, location, teamId, updateTaskData],
   )
 
   const handleLeaveGame = useCallback(() => {
@@ -477,6 +493,7 @@ function GameTeamPage({
     if (!trimmedAnswer) return
 
     setIsSubmitting(true)
+    setStickyMessages([])
     try {
       hasClearedMessageRef.current = false
       await router.push(
@@ -496,22 +513,22 @@ function GameTeamPage({
   } = taskData
   const locationTimeZone = useMemo(
     () => LOCATIONS?.[location]?.timeZone || null,
-    [location]
+    [location],
   )
   const plannedStart = useMemo(
     () => formatDateTime(game?.dateStart, locationTimeZone),
-    [game?.dateStart, locationTimeZone]
+    [game?.dateStart, locationTimeZone],
   )
   const actualStart = useMemo(
     () => formatDateTime(game?.dateStartFact, locationTimeZone),
-    [game?.dateStartFact, locationTimeZone]
+    [game?.dateStartFact, locationTimeZone],
   )
   const actualFinish = useMemo(
     () =>
       isGameFinished
         ? formatDateTime(game?.dateEndFact, locationTimeZone)
         : null,
-    [game?.dateEndFact, isGameFinished, locationTimeZone]
+    [game?.dateEndFact, isGameFinished, locationTimeZone],
   )
   const cityName = useMemo(() => formatCityName(location), [location])
   const gameTypeLabel = useMemo(() => {
@@ -526,11 +543,11 @@ function GameTeamPage({
       transformHtml(
         stripPhotoOnlySectionsForClassic(currentTaskHtml ?? '', game?.type),
       ),
-    [currentTaskHtml, game?.type]
+    [currentTaskHtml, game?.type],
   )
   const normalizedTaskMessage = useMemo(
     () => normalizeForComparison(currentTaskHtml),
-    [currentTaskHtml]
+    [currentTaskHtml],
   )
 
   const isBreakState = currentTaskState === 'break'
@@ -545,12 +562,12 @@ function GameTeamPage({
         isBreakState,
         isGameCompletion,
       }),
-    [currentResult, normalizedTaskMessage, isBreakState, isGameCompletion]
+    [currentResult, normalizedTaskMessage, isBreakState, isGameCompletion],
   )
 
   const visibleActiveTaskMessages = useMemo(
     () => (shouldClearMessagesForActiveTask ? [] : activeTaskResultMessages),
-    [shouldClearMessagesForActiveTask, activeTaskResultMessages]
+    [shouldClearMessagesForActiveTask, activeTaskResultMessages],
   )
 
   useEffect(() => {
@@ -606,6 +623,9 @@ function GameTeamPage({
         setShouldClearMessagesForActiveTask(true)
         setLastResultSnapshot(null)
       }
+      if (currentTaskState === 'completed' || currentTaskState === 'break') {
+        setStickyMessages([])
+      }
       previousTaskStateRef.current = currentTaskState
     }
   }, [currentTaskState])
@@ -633,7 +653,9 @@ function GameTeamPage({
   const resultMessages =
     visibleActiveTaskMessages.length > 0
       ? visibleActiveTaskMessages
-      : fallbackResultMessages
+      : stickyMessages.length > 0
+        ? stickyMessages
+        : fallbackResultMessages
 
   const postCompletionMessageHtml = useMemo(() => {
     if (!currentPostCompletionMessage) return ''
@@ -699,11 +721,13 @@ function GameTeamPage({
     if (!container) return
 
     const nodes = Array.from(
-      container.querySelectorAll('[data-task-countdown]')
+      container.querySelectorAll('[data-task-countdown]'),
     )
 
     if (nodes.length === 0) {
-      setCountdownPanel(null)
+      if (countdownPanelRef.current) {
+        countdownPanelRef.current.style.display = 'none'
+      }
       return
     }
 
@@ -740,14 +764,14 @@ function GameTeamPage({
 
         const remainingSeconds = Math.max(
           Math.ceil((remainingMs ?? 0) / 1000),
-          0
+          0,
         )
 
         element.textContent = formatCountdownSeconds(remainingSeconds)
 
         if (!panelState) {
           const countdownType = String(
-            element.getAttribute('data-task-countdown') || ''
+            element.getAttribute('data-task-countdown') || '',
           )
             .trim()
             .toLowerCase()
@@ -796,17 +820,19 @@ function GameTeamPage({
         }
       })
 
-      setCountdownPanel((prev) => {
-        if (!panelState) return null
-        if (
-          prev &&
-          prev.label === panelState.label &&
-          prev.value === panelState.value
-        ) {
-          return prev
+      if (countdownPanelRef.current) {
+        if (panelState) {
+          countdownPanelRef.current.style.display = ''
+          if (countdownPanelLabelRef.current) {
+            countdownPanelLabelRef.current.textContent = panelState.label + ':'
+          }
+          if (countdownPanelValueRef.current) {
+            countdownPanelValueRef.current.textContent = panelState.value
+          }
+        } else {
+          countdownPanelRef.current.style.display = 'none'
         }
-        return panelState
-      })
+      }
     }
 
     updateCountdowns()
@@ -1078,14 +1104,17 @@ function GameTeamPage({
                     />
                   </button>
                 </div>
-                {countdownPanel ? (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-3 py-1.5 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-100">
-                    <span>{countdownPanel.label}:</span>
-                    <span className="font-mono tracking-wide">
-                      {countdownPanel.value}
-                    </span>
-                  </div>
-                ) : null}
+                <div
+                  ref={countdownPanelRef}
+                  className="mt-3 inline-flex items-center gap-2 rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-3 py-1.5 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-100"
+                  style={{ display: 'none' }}
+                >
+                  <span ref={countdownPanelLabelRef} />
+                  <span
+                    ref={countdownPanelValueRef}
+                    className="font-mono tracking-wide"
+                  />
+                </div>
                 {taskRefreshError ? (
                   <p className="mt-3 text-sm text-red-600 dark:text-red-300">
                     {taskRefreshError}

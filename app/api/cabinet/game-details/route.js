@@ -52,7 +52,9 @@ export async function GET(request) {
     }
 
     const sessionRole = normalizeRole(session?.user?.role) ?? 'client'
-    const previewRole = normalizeRole(requestUrl.searchParams.get('rolePreview'))
+    const previewRole = normalizeRole(
+      requestUrl.searchParams.get('rolePreview'),
+    )
     const userRole =
       sessionRole === 'dev' && previewRole && previewRole !== 'dev'
         ? previewRole
@@ -182,7 +184,9 @@ export async function GET(request) {
 
       if (hasUserId || hasTelegramId) {
         const teamIds = Array.from(
-          new Set(gameTeams.map((doc) => toStringId(doc?.teamId)).filter(Boolean)),
+          new Set(
+            gameTeams.map((doc) => toStringId(doc?.teamId)).filter(Boolean),
+          ),
         )
 
         const membershipOr = []
@@ -248,7 +252,10 @@ export async function GET(request) {
       creator: creatorDoc,
     })
 
-    return NextResponse.json({ success: true, data: normalizedGame }, { status: 200 })
+    return NextResponse.json(
+      { success: true, data: normalizedGame },
+      { status: 200 },
+    )
   } catch (error) {
     console.error('Failed to load cabinet game details (app)', error)
     return NextResponse.json(
@@ -257,4 +264,3 @@ export async function GET(request) {
     )
   }
 }
-

@@ -815,6 +815,7 @@ const GamesPage = ({
   const [statusModalGameId, setStatusModalGameId] = useState('')
   const [statusValidationResult, setStatusValidationResult] = useState(null)
   const [isStatusChanging, setIsStatusChanging] = useState(false)
+  const [statusProgressMessage, setStatusProgressMessage] = useState('')
   const [editingGame, setEditingGame] = useState(null)
   const [editingBaselineGame, setEditingBaselineGame] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -2605,6 +2606,7 @@ const GamesPage = ({
       if (isCloneMode) {
         const gameDetailsParams = new URLSearchParams({
           gameId: cloneSourceGameId,
+          location: 'all',
         })
 
         const { json: sourceJson } = await requestApiJson(
@@ -4045,6 +4047,7 @@ const GamesPage = ({
 
       setIsStatusChanging(true)
       setFeedback(null)
+      setStatusProgressMessage('')
 
       try {
         const runGameValidation = async () => {
@@ -4066,6 +4069,7 @@ const GamesPage = ({
         }
 
         if (actionId === 'check_game') {
+          setStatusProgressMessage('Проверяем игру…')
           const validation = await runGameValidation()
           setStatusValidationResult({
             hasErrors: validation.hasErrors,
@@ -4085,6 +4089,7 @@ const GamesPage = ({
         let successMessage = 'Статус игры обновлён'
 
         if (actionId === 'start_game') {
+          setStatusProgressMessage('Проверяем игру перед запуском…')
           const validation = await runGameValidation()
           setStatusValidationResult({
             hasErrors: validation.hasErrors,
@@ -4105,6 +4110,9 @@ const GamesPage = ({
             return
           }
 
+          setStatusProgressMessage(
+            'Запускаем игру, рассылаем уведомления игрокам…',
+          )
           await requestApiJson(
             `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
               statusModalGame.id,
@@ -4115,6 +4123,7 @@ const GamesPage = ({
           )
           successMessage = 'Игра запущена'
         } else if (actionId === 'stop_game') {
+          setStatusProgressMessage('Останавливаем игру, формируем результаты…')
           await requestApiJson(
             `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
               statusModalGame.id,
@@ -4167,6 +4176,7 @@ const GamesPage = ({
           )
         }
 
+        setStatusProgressMessage('Обновляем список игр…')
         await fetchGamesPage({
           offset: 0,
           replace: true,
@@ -4175,6 +4185,7 @@ const GamesPage = ({
             : location,
         })
 
+        setStatusProgressMessage('')
         setIsStatusModalOpen(false)
         setFeedback({ type: 'success', message: successMessage })
         setToastEvent({
@@ -4192,6 +4203,7 @@ const GamesPage = ({
         })
       } finally {
         setIsStatusChanging(false)
+        setStatusProgressMessage('')
       }
     },
     [
@@ -4799,8 +4811,8 @@ const GamesPage = ({
                   canManageStatusThisGame ||
                   canViewThisGameResults ||
                   canViewThisGameTasks) && (
-                  <div className="mt-3 flex flex-col gap-2 phoneH:flex-row phoneH:items-center phoneH:justify-between">
-                    <div className="order-1 flex items-center gap-2 phoneH:order-2">
+                  <div className="flex flex-col gap-2 mt-3 phoneH:flex-row phoneH:items-center phoneH:justify-between">
+                    <div className="flex items-center order-1 gap-2 phoneH:order-2">
                       {hasUserTeamPlace && (
                         <span className="pointer-events-none inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200">
                           Место: {userTeamPlace}
@@ -4824,7 +4836,7 @@ const GamesPage = ({
                       canEnterGame ||
                       canViewThisGameTasks ||
                       canViewThisGameResults) && (
-                      <div className="order-2 flex items-center gap-2 phoneH:order-3 phoneH:ml-auto">
+                      <div className="flex items-center order-2 gap-2 phoneH:order-3 phoneH:ml-auto">
                         {canEnterGame && (
                           <button
                             type="button"
@@ -4880,7 +4892,7 @@ const GamesPage = ({
                       canManageStatusThisGame ||
                       canBroadcastThisGame ||
                       canViewGameTeams) && (
-                      <div className="order-3 flex items-center gap-2 self-start phoneH:order-1 phoneH:self-auto">
+                      <div className="flex items-center self-start order-3 gap-2 phoneH:order-1 phoneH:self-auto">
                         {canEditThisGame && (
                           <CardActionIconButton
                             onClick={(event) => {
@@ -4934,7 +4946,7 @@ const GamesPage = ({
                               onClick={(event) => {
                                 event.stopPropagation()
                                 router.push(
-                                  `/cabinet/admin/game-control?gameId=${game._id}`,
+                                  `/cabinet/admin/game-control?gameId=${game.id}`,
                                 )
                               }}
                               label="Контроль игры"
@@ -5135,12 +5147,12 @@ const GamesPage = ({
                 canManageThisGame ||
                 canManageStatusThisGame ||
                 canViewGameTeams) && (
-                <div className="mt-3 flex flex-col gap-2">
+                <div className="flex flex-col gap-2 mt-3">
                   {(canJoinGame ||
                     canEnterGame ||
                     canViewThisGameTasks ||
                     canViewThisGameResults) && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    <div className="flex items-center gap-2 pb-1 overflow-x-auto">
                       {canEnterGame && (
                         <button
                           type="button"
@@ -5218,7 +5230,7 @@ const GamesPage = ({
                     canManageStatusThisGame ||
                     canBroadcastThisGame ||
                     canViewGameTeams) && (
-                    <div className="flex items-center gap-2 self-start pointer-events-auto">
+                    <div className="flex items-center self-start gap-2 pointer-events-auto">
                       {canEditThisGame && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -5276,7 +5288,7 @@ const GamesPage = ({
                             onClick={(event) => {
                               event.stopPropagation()
                               router.push(
-                                `/cabinet/admin/game-control?gameId=${game._id}`,
+                                `/cabinet/admin/game-control?gameId=${game.id}`,
                               )
                             }}
                             label="Контроль игры"
@@ -5793,12 +5805,12 @@ const GamesPage = ({
                       <button
                         type="button"
                         onClick={() => setOpenedGamesFilterPanel(null)}
-                        className="text-sm font-semibold text-rose-500 transition hover:text-rose-400"
+                        className="text-sm font-semibold transition text-rose-500 hover:text-rose-400"
                       >
                         Скрыть
                       </button>
                     </div>
-                    <div className="mt-3 max-h-64 space-y-1 overflow-y-auto pr-1">
+                    <div className="pr-1 mt-3 space-y-1 overflow-y-auto max-h-64">
                       {gameLocationOptions.map((item) => {
                         const isSelected = gamesFilterLocation === item.key
                         return (
@@ -5809,7 +5821,7 @@ const GamesPage = ({
                               setGamesFilterLocation(item.key)
                               setOpenedGamesFilterPanel(null)
                             }}
-                            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
+                            className="flex items-center w-full gap-3 px-2 py-2 text-sm text-left transition rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
                           >
                             <span
                               className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border text-xs font-bold ${
@@ -5844,12 +5856,12 @@ const GamesPage = ({
                           setPastGamesSeasonFilter(PAST_GAMES_SEASON_FILTER_ALL)
                           setOpenedGamesFilterPanel(null)
                         }}
-                        className="text-sm font-semibold text-rose-500 transition hover:text-rose-400"
+                        className="text-sm font-semibold transition text-rose-500 hover:text-rose-400"
                       >
                         Сбросить
                       </button>
                     </div>
-                    <div className="mt-3 max-h-64 space-y-1 overflow-y-auto pr-1">
+                    <div className="pr-1 mt-3 space-y-1 overflow-y-auto max-h-64">
                       {pastGamesSeasonOptions.map((option) => {
                         const isSelected =
                           pastGamesSeasonFilter === option.value
@@ -5861,7 +5873,7 @@ const GamesPage = ({
                               setPastGamesSeasonFilter(option.value)
                               setOpenedGamesFilterPanel(null)
                             }}
-                            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
+                            className="flex items-center w-full gap-3 px-2 py-2 text-sm text-left transition rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
                           >
                             <span
                               className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border text-xs font-bold ${
@@ -6169,6 +6181,7 @@ const GamesPage = ({
                 onAction={handleStatusAction}
                 validationResult={statusValidationResult}
                 isSaving={isStatusChanging}
+                progressMessage={statusProgressMessage}
               />
               <GamePushBroadcastModal
                 isOpen={isPushBroadcastModalOpen}
