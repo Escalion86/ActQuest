@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useAtomValue } from 'jotai'
 
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
@@ -19,6 +20,7 @@ import {
   TEAM_CAR_SKIN_OPTIONS,
   normalizeTeamCarSkin,
 } from '@helpers/teamCarSkins'
+import { isAdminAtom } from '@state/atoms/cabinetSessionAtom'
 
 const normalizePhoneLink = (phone) => {
   if (!phone) {
@@ -109,6 +111,7 @@ const TeamEditModal = ({
   isAddingMember,
 }) => {
   const [addMemberUser, setAddMemberUser] = useState(null)
+  const isAdmin = useAtomValue(isAdminAtom)
 
   useEffect(() => {
     setAddMemberUser(null)
@@ -302,7 +305,7 @@ const TeamEditModal = ({
             )}
           </div>
 
-          {canManageSelectedTeam && (
+          {canManageSelectedTeam && isAdmin && (
             <div className="flex flex-col gap-2 mt-3 sm:flex-row sm:items-end">
               <div className="flex-1">
                 <UserSelectField
