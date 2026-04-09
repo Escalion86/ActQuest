@@ -1445,7 +1445,6 @@ const ManageUsersPage = ({
           isOpen={isUserViewModalOpen}
           onClose={closeUserViewModal}
           onOpenTeam={handleOpenUserTeamModal}
-          isDeveloper={isDeveloper}
         />
 
         <UserEditModal

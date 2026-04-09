@@ -31,6 +31,8 @@ import isUserAdmin from '@helpers/isUserAdmin'
 import canManageTransactions from '@helpers/canManageTransactions'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
+import { useSetAtom } from 'jotai'
+import { isDeveloperAtom } from '@state/atoms/cabinetSessionAtom'
 
 const normalizeLocationName = (locationKey) => {
   const location = locationKey ? LOCATIONS[locationKey] : null
@@ -248,6 +250,12 @@ const CabinetLayout = ({
   const sessionRole = session?.user?.role ?? 'client'
   const { isDeveloper, effectiveRole, setRolePreview } =
     useCabinetRolePreview(sessionRole)
+
+  const setIsDeveloperAtom = useSetAtom(isDeveloperAtom)
+  useEffect(() => {
+    setIsDeveloperAtom(effectiveRole === 'dev')
+  }, [effectiveRole, setIsDeveloperAtom])
+
   const role = effectiveRole
   const userName =
     session?.user?.name || session?.user?.username || 'Пользователь'

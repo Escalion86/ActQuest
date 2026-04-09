@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useAtomValue } from 'jotai'
 
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CopyableId from '@components/cabinet/CopyableId'
@@ -13,6 +14,7 @@ import { LOCATIONS } from '@server/serverConstants'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
 import UnifiedGameDescriptionModal from './UnifiedGameDescriptionModal'
+import { isDeveloperAtom } from '@state/atoms/cabinetSessionAtom'
 
 const resolveLocationLabel = (locationKey) => {
   const key =
@@ -36,8 +38,8 @@ const TeamDescriptionModal = ({
   onLeaveTeam,
   onOpenMember,
   onOpenGame,
-  isDeveloper,
 }) => {
+  const isDeveloper = useAtomValue(isDeveloperAtom)
   const [isGamePreviewModalOpen, setIsGamePreviewModalOpen] = useState(false)
   const [selectedGamePreview, setSelectedGamePreview] = useState(null)
   const [isGamePreviewLoading, setIsGamePreviewLoading] = useState(false)
@@ -426,7 +428,6 @@ TeamDescriptionModal.propTypes = {
   onLeaveTeam: PropTypes.func,
   onOpenMember: PropTypes.func,
   onOpenGame: PropTypes.func,
-  isDeveloper: PropTypes.bool,
   selectedTeam: PropTypes.shape({
     id: PropTypes.string,
     name: PropTypes.string,

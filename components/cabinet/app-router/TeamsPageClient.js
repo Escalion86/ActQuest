@@ -1363,7 +1363,6 @@ const TeamsPage = ({
           canLeaveTeam={canLeaveSelectedTeam}
           isLeavingTeam={isLeavingTeam}
           onLeaveTeam={handleLeaveSelectedTeam}
-          isDeveloper={userRole === 'dev'}
         />
       </CabinetLayout>
     </>

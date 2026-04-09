@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import PropTypes from 'prop-types'
+import { useAtomValue } from 'jotai'
 import Modal from '@components/Modal'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
@@ -16,6 +17,7 @@ import requestApiJson from '@helpers/requestApiJson'
 import CopyableId from '@components/cabinet/CopyableId'
 import UnifiedGameDescriptionModal from '@components/modals/UnifiedGameDescriptionModal'
 import { LOCATIONS } from '@server/serverConstants'
+import { isDeveloperAtom } from '@state/atoms/cabinetSessionAtom'
 
 const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
 const modalItemTitleClass = 'aq-modal-item-title text-lg font-semibold'
@@ -40,8 +42,8 @@ const UserViewModal = ({
   isOpen,
   onClose,
   onOpenTeam,
-  isDeveloper,
 }) => {
+  const isDeveloper = useAtomValue(isDeveloperAtom)
   const {
     data: user,
     isLoading,
@@ -430,13 +432,11 @@ UserViewModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onOpenTeam: PropTypes.func,
-  isDeveloper: PropTypes.bool,
 }
 
 UserViewModal.defaultProps = {
   userId: null,
   onOpenTeam: null,
-  isDeveloper: false,
 }
 
 export default UserViewModal

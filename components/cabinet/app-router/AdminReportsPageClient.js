@@ -34,7 +34,11 @@ const createEmptyReports = () => ({
   recentActivity: [],
 })
 
-const ReportsPage = ({ initialReports, initialLocation, session: initialSession }) => {
+const ReportsPage = ({
+  initialReports,
+  initialLocation,
+  session: initialSession,
+}) => {
   const safeInitialReports =
     initialReports &&
     typeof initialReports === 'object' &&
@@ -123,15 +127,15 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
   if (!isAdmin) {
     return (
       <>
-<CabinetLayout
+        <CabinetLayout
           title="Статистика и отчёты"
           description="Доступ ограничен: административные права отсутствуют."
           activePage="admin"
         >
           <section className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
             <p className="text-sm text-slate-600">
-              У вас нет доступа к статистике проекта. Если вы считаете, что это ошибка, обратитесь к главному
-              организатору.
+              У вас нет доступа к статистике проекта. Если вы считаете, что это
+              ошибка, обратитесь к главному организатору.
             </p>
           </section>
         </CabinetLayout>
@@ -141,7 +145,7 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
 
   return (
     <>
-<CabinetLayout
+      <CabinetLayout
         title="Статистика и отчёты"
         description="Анализируйте ключевые показатели проекта, следите за динамикой роста и активностью команд."
         activePage="admin"
@@ -152,11 +156,18 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
               key={section.id}
               className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4"
             >
-              <h2 className="text-lg font-semibold text-primary dark:text-slate-100">{section.title}</h2>
+              <h2 className="text-lg font-semibold text-primary dark:text-slate-100">
+                {section.title}
+              </h2>
               <ul className="space-y-2">
                 {section.items.map((item) => (
-                  <li key={item.label} className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm text-slate-500 dark:text-slate-300">{item.label}</span>
+                  <li
+                    key={item.label}
+                    className="flex items-baseline justify-between gap-3"
+                  >
+                    <span className="text-sm text-slate-500 dark:text-slate-300">
+                      {item.label}
+                    </span>
                     <span className="text-base font-semibold text-primary dark:text-slate-100">
                       {numberFormatter.format(item.value)}
                     </span>
@@ -169,7 +180,9 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
 
         <section className="grid gap-6 mt-6 md:grid-cols-1">
           <article className="p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-              <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Топ команд по активности</h2>
+            <h2 className="text-lg font-semibold text-primary dark:text-slate-100">
+              Топ команд по активности
+            </h2>
             {safeInitialReports.topTeams.length > 0 ? (
               <ul className="space-y-3">
                 {safeInitialReports.topTeams.map((team) => (
@@ -183,13 +196,17 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-slate-500">Пока нет активных команд с участниками.</p>
+              <p className="text-sm text-slate-500">
+                Пока нет активных команд с участниками.
+              </p>
             )}
           </article>
         </section>
 
         <section className="mt-6 p-6 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold text-primary dark:text-slate-100">Недавняя активность</h2>
+          <h2 className="text-lg font-semibold text-primary dark:text-slate-100">
+            Недавняя активность
+          </h2>
           {safeInitialReports.recentActivity.length > 0 ? (
             <ul className="space-y-3">
               {safeInitialReports.recentActivity.map((activity) => (
@@ -198,8 +215,12 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
                   className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-primary dark:text-slate-100">{activity.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-300">{activity.description}</p>
+                    <p className="text-sm font-semibold text-primary dark:text-slate-100">
+                      {activity.name}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-300">
+                      {activity.description}
+                    </p>
                   </div>
                   <p className="text-xs text-slate-400">
                     {activity.updatedAt
@@ -210,7 +231,9 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-slate-500">Недавних изменений не обнаружено.</p>
+            <p className="text-sm text-slate-500">
+              Недавних изменений не обнаружено.
+            </p>
           )}
         </section>
         <TeamDescriptionModal
@@ -231,7 +254,9 @@ const ReportsPage = ({ initialReports, initialLocation, session: initialSession 
       {isTeamModalOpen && !isTeamLoading && teamLoadError ? (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 px-4">
           <div className="w-full max-w-md rounded-2xl border border-rose-300 bg-white p-6 shadow-xl dark:border-rose-500/50 dark:bg-slate-900/95">
-            <p className="text-sm text-rose-600 dark:text-rose-300">{teamLoadError}</p>
+            <p className="text-sm text-rose-600 dark:text-rose-300">
+              {teamLoadError}
+            </p>
             <button
               type="button"
               onClick={handleCloseTeamModal}
@@ -268,7 +293,7 @@ ReportsPage.propTypes = {
         role: PropTypes.string,
         label: PropTypes.string,
         count: PropTypes.number,
-      })
+      }),
     ),
     topTeams: PropTypes.arrayOf(
       PropTypes.shape({
@@ -277,7 +302,7 @@ ReportsPage.propTypes = {
         membersCount: PropTypes.number,
         gamesCount: PropTypes.number,
         updatedAt: PropTypes.string,
-      })
+      }),
     ),
     recentActivity: PropTypes.arrayOf(
       PropTypes.shape({
@@ -286,7 +311,7 @@ ReportsPage.propTypes = {
         name: PropTypes.string,
         description: PropTypes.string,
         updatedAt: PropTypes.string,
-      })
+      }),
     ),
   }),
   initialLocation: PropTypes.string,
