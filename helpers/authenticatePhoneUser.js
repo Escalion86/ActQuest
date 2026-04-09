@@ -22,7 +22,10 @@ const normalizeName = (value) => {
 
 const authenticatePhoneUser = async ({ location, rawData }) => {
   if (!rawData) {
-    return errorResponse('MISSING_PAYLOAD', 'Не получены данные авторизации по номеру телефона.')
+    return errorResponse(
+      'MISSING_PAYLOAD',
+      'Не получены данные авторизации по номеру телефона.',
+    )
   }
 
   let payload = rawData
@@ -47,7 +50,10 @@ const authenticatePhoneUser = async ({ location, rawData }) => {
 
   const resolvedLocation = normalizeLocation(location)
   if (!resolvedLocation) {
-    return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации.')
+    return errorResponse(
+      'MISSING_LOCATION',
+      'Не указан игровой регион для авторизации.',
+    )
   }
 
   const phone = normalizeAuthPhone(payload.phone)

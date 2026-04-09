@@ -40,12 +40,18 @@ const registerPhoneUser = async ({ location, rawData }) => {
   }
 
   if (!payload || typeof payload !== 'object') {
-    return errorResponse('INVALID_PAYLOAD_TYPE', 'Некорректный формат данных регистрации.')
+    return errorResponse(
+      'INVALID_PAYLOAD_TYPE',
+      'Некорректный формат данных регистрации.',
+    )
   }
 
   const resolvedLocation = normalizeLocation(location)
   if (!resolvedLocation) {
-    return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для регистрации.')
+    return errorResponse(
+      'MISSING_LOCATION',
+      'Не указан игровой регион для регистрации.',
+    )
   }
 
   const phone = normalizeAuthPhone(payload.phone)
@@ -81,9 +87,7 @@ const registerPhoneUser = async ({ location, rawData }) => {
 
     const passwordHash = createPasswordHash(password)
     const fallbackName =
-      providedName ||
-      existingUser?.name ||
-      `Пользователь ${String(phone)}`
+      providedName || existingUser?.name || `Пользователь ${String(phone)}`
 
     const updates = {
       phone,
@@ -101,7 +105,10 @@ const registerPhoneUser = async ({ location, rawData }) => {
     })
 
     if (!user) {
-      return errorResponse('USER_NOT_CREATED', 'Не удалось завершить регистрацию пользователя.')
+      return errorResponse(
+        'USER_NOT_CREATED',
+        'Не удалось завершить регистрацию пользователя.',
+      )
     }
 
     await syncLegacyUserByLocation({
@@ -133,9 +140,13 @@ const registerPhoneUser = async ({ location, rawData }) => {
       },
     }
   } catch (error) {
-    return errorResponse('USER_UPDATE_FAILED', 'Ошибка при регистрации пользователя.', {
-      message: error.message,
-    })
+    return errorResponse(
+      'USER_UPDATE_FAILED',
+      'Ошибка при регистрации пользователя.',
+      {
+        message: error.message,
+      },
+    )
   }
 }
 

@@ -40,7 +40,10 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
   }
 
   if (!payload || typeof payload !== 'object') {
-    return errorResponse('INVALID_PAYLOAD_TYPE', 'Некорректный формат данных авторизации.')
+    return errorResponse(
+      'INVALID_PAYLOAD_TYPE',
+      'Некорректный формат данных авторизации.',
+    )
   }
 
   const resolvedLocation = normalizeLocation(location)
@@ -88,7 +91,10 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
 
     const isPasswordValid = verifyPasswordHash(password, user.passwordHash)
     if (!isPasswordValid) {
-      return errorResponse('WRONG_PASSWORD', 'Неверный пароль. Попробуйте снова.')
+      return errorResponse(
+        'WRONG_PASSWORD',
+        'Неверный пароль. Попробуйте снова.',
+      )
     }
 
     const persistedLocation =
@@ -104,7 +110,11 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
 
     const refreshedUser = await globalDb
       .model('Users')
-      .findByIdAndUpdate(user._id, { $set: updates }, { returnDocument: 'after' })
+      .findByIdAndUpdate(
+        user._id,
+        { $set: updates },
+        { returnDocument: 'after' },
+      )
       .lean()
 
     await syncLegacyUserByLocation({
@@ -139,11 +149,14 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
       payload,
     }
   } catch (error) {
-    return errorResponse('USER_UPDATE_FAILED', 'Ошибка при авторизации пользователя.', {
-      message: error.message,
-    })
+    return errorResponse(
+      'USER_UPDATE_FAILED',
+      'Ошибка при авторизации пользователя.',
+      {
+        message: error.message,
+      },
+    )
   }
 }
 
 export default authenticatePasswordUser
-

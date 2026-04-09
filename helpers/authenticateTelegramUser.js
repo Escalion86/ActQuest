@@ -45,24 +45,35 @@ const errorResponse = (code, message, details = null) => ({
 
 const authenticateTelegramUser = async ({ location, rawData }) => {
   if (!rawData) {
-    return errorResponse('MISSING_PAYLOAD', 'Не получены данные авторизации Telegram.')
+    return errorResponse(
+      'MISSING_PAYLOAD',
+      'Не получены данные авторизации Telegram.',
+    )
   }
 
   let payload = rawData
   try {
     if (typeof rawData === 'string') payload = JSON.parse(rawData)
   } catch (error) {
-    return errorResponse('INVALID_PAYLOAD', 'Не удалось разобрать данные авторизации Telegram.', {
-      message: error.message,
-    })
+    return errorResponse(
+      'INVALID_PAYLOAD',
+      'Не удалось разобрать данные авторизации Telegram.',
+      {
+        message: error.message,
+      },
+    )
   }
 
   if (!payload || typeof payload !== 'object') {
-    return errorResponse('INVALID_PAYLOAD_TYPE', 'Некорректный формат данных авторизации Telegram.')
+    return errorResponse(
+      'INVALID_PAYLOAD_TYPE',
+      'Некорректный формат данных авторизации Telegram.',
+    )
   }
 
   const currentMode = process.env.MODE ?? process.env.NODE_ENV ?? 'production'
-  const isTestAuthAllowed = currentMode !== 'production' || isExplicitTestAuthEnabled
+  const isTestAuthAllowed =
+    currentMode !== 'production' || isExplicitTestAuthEnabled
   const isTestAuth = Boolean(payload?.__isTestAuth) && isTestAuthAllowed
 
   const resolveLocation = () => {
@@ -73,7 +84,10 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
 
   const resolvedLocation = resolveLocation()
   if (!resolvedLocation && !isTestAuth) {
-    return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации Telegram.')
+    return errorResponse(
+      'MISSING_LOCATION',
+      'Не указан игровой регион для авторизации Telegram.',
+    )
   }
 
   if (isTestAuth) {
@@ -82,7 +96,8 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
     delete sanitizedPayload.__testLocation
 
     const userLocation = resolvedLocation || 'test'
-    const rawPayloadTelegramId = sanitizedPayload?.id ?? sanitizedPayload?.telegramId ?? null
+    const rawPayloadTelegramId =
+      sanitizedPayload?.id ?? sanitizedPayload?.telegramId ?? null
     const normalizedTelegramId = normalizeTelegramId(rawPayloadTelegramId)
 
     let dbUser = null
@@ -91,14 +106,18 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
       try {
         const globalDb = await dbConnectGlobal()
         if (globalDb) {
-          dbUser = await globalDb.model('Users').findOne({ telegramId: normalizedTelegramId }).lean()
+          dbUser = await globalDb
+            .model('Users')
+            .findOne({ telegramId: normalizedTelegramId })
+            .lean()
         }
       } catch (lookupError) {
         console.error('Test auth global user lookup error', lookupError)
       }
     }
 
-    const fallbackTelegramId = dbUser?.telegramId ?? normalizedTelegramId ?? null
+    const fallbackTelegramId =
+      dbUser?.telegramId ?? normalizedTelegramId ?? null
     const fallbackUserId = dbUser?._id
       ? dbUser._id.toString()
       : `test-${String(rawPayloadTelegramId ?? fallbackTelegramId ?? 'user')}`
@@ -116,7 +135,8 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
       name: dbUser?.name ?? buildUserName(sanitizedPayload),
       username: dbUser?.username ?? sanitizedPayload?.username ?? null,
       photoUrl: dbUser?.photoUrl ?? sanitizedPayload?.photo_url ?? null,
-      languageCode: dbUser?.languageCode ?? sanitizedPayload?.language_code ?? null,
+      languageCode:
+        dbUser?.languageCode ?? sanitizedPayload?.language_code ?? null,
       isPremium:
         typeof dbUser?.isPremium === 'boolean'
           ? dbUser.isPremium
@@ -135,12 +155,18 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
   }
 
   if (!resolvedLocation) {
-    return errorResponse('MISSING_LOCATION', 'Не указан игровой регион для авторизации Telegram.')
+    return errorResponse(
+      'MISSING_LOCATION',
+      'Не указан игровой регион для авторизации Telegram.',
+    )
   }
 
   const token = getTelegramTokenByLocation(resolvedLocation)
   if (!token) {
-    return errorResponse('MISSING_TELEGRAM_TOKEN', 'Для выбранного региона не настроен бот Telegram.')
+    return errorResponse(
+      'MISSING_TELEGRAM_TOKEN',
+      'Для выбранного региона не настроен бот Telegram.',
+    )
   }
 
   const isPayloadValid = verifyTelegramAuthPayload(payload, token)
@@ -178,7 +204,10 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
     })
 
     if (!user) {
-      return errorResponse('USER_NOT_CREATED', 'Не удалось создать или обновить профиль пользователя Telegram.')
+      return errorResponse(
+        'USER_NOT_CREATED',
+        'Не удалось создать или обновить профиль пользователя Telegram.',
+      )
     }
 
     await syncLegacyUserByLocation({
@@ -211,9 +240,13 @@ const authenticateTelegramUser = async ({ location, rawData }) => {
       payload,
     }
   } catch (error) {
-    return errorResponse('USER_UPDATE_FAILED', 'Ошибка при сохранении профиля пользователя Telegram.', {
-      message: error.message,
-    })
+    return errorResponse(
+      'USER_UPDATE_FAILED',
+      'Ошибка при сохранении профиля пользователя Telegram.',
+      {
+        message: error.message,
+      },
+    )
   }
 }
 
