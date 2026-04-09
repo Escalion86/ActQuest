@@ -1,4 +1,5 @@
 import js from '@eslint/js'
+import globals from 'globals'
 
 export default [
   {
@@ -9,6 +10,11 @@ export default [
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        React: 'readonly',
+      },
       parserOptions: {
         ecmaFeatures: {
           jsx: true,
@@ -18,8 +24,11 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       'no-console': 'off',
-      'no-undef': 'off',
-      'no-unused-vars': 'off',
+      'no-undef': 'warn',
+      'no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       'no-extra-boolean-cast': 'off',
     },
   },

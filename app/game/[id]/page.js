@@ -9,6 +9,44 @@ import { resolveGameLocationById } from '@app/api/cabinet/_lib/resolveGameLocati
 
 export const dynamic = 'force-dynamic'
 
+export async function generateMetadata({ params }) {
+  const resolvedParams = await params
+  const gameIdParam = resolvedParams?.id
+  if (typeof gameIdParam !== 'string') return {}
+
+  try {
+    const { location } = await resolveGameLocationById(gameIdParam)
+    if (!location) return {}
+
+    const game = await fetchGame(location, gameIdParam)
+    if (!game?.name) return {}
+
+    const title = game.name
+    const description = game.description
+      ? game.description.replace(/<[^>]*>/g, '').slice(0, 200)
+      : 'Городской автоквест на платформе ActQuest'
+
+    const images = game.image ? [{ url: game.image, alt: title }] : []
+
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        ...(images.length > 0 && { images }),
+      },
+      twitter: {
+        title,
+        description,
+        ...(images.length > 0 && { images: [game.image] }),
+      },
+    }
+  } catch {
+    return {}
+  }
+}
+
 export default async function GameEntryPage({ params }) {
   const resolvedParams = await params
   const gameIdParam = resolvedParams?.id
@@ -24,7 +62,9 @@ export default async function GameEntryPage({ params }) {
 
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    redirect(`/cabinet/login?callbackUrl=${encodeURIComponent(`/game/${gameIdParam}`)}`)
+    redirect(
+      `/cabinet/login?callbackUrl=${encodeURIComponent(`/game/${gameIdParam}`)}`,
+    )
   }
 
   let payload
@@ -53,7 +93,10 @@ export default async function GameEntryPage({ params }) {
         error: 'DB_CONNECTION_FAILED',
       }
     } else {
-      const gamesTeams = await db.model('GamesTeams').find({ gameId: gameIdParam }).lean()
+      const gamesTeams = await db
+        .model('GamesTeams')
+        .find({ gameId: gameIdParam })
+        .lean()
       const teamIds = Array.isArray(gamesTeams)
         ? gamesTeams.map((gameTeam) => gameTeam?.teamId).filter(Boolean)
         : []
@@ -62,7 +105,10 @@ export default async function GameEntryPage({ params }) {
       let participantTeams = []
 
       if (teamIds.length > 0 && session?.user?.telegramId) {
-        const teamsUsers = await db.model('TeamsUsers').find({ teamId: { $in: teamIds } }).lean()
+        const teamsUsers = await db
+          .model('TeamsUsers')
+          .find({ teamId: { $in: teamIds } })
+          .lean()
         const telegramId = String(session.user.telegramId)
         const memberships = teamsUsers.filter(
           (item) => String(item.userTelegramId) === telegramId,
@@ -79,11 +125,16 @@ export default async function GameEntryPage({ params }) {
             ),
           ]
 
-          const teams = await db.model('Teams').find({ _id: { $in: membershipTeamIds } }).lean()
+          const teams = await db
+            .model('Teams')
+            .find({ _id: { $in: membershipTeamIds } })
+            .lean()
           participantTeams = teams
             .map((team) => {
               const id = String(team._id)
-              const mappedTeam = gamesTeams.find((gameTeam) => String(gameTeam.teamId) === id)
+              const mappedTeam = gamesTeams.find(
+                (gameTeam) => String(gameTeam.teamId) === id,
+              )
               if (!mappedTeam) return null
               return {
                 id,

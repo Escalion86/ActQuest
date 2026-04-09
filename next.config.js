@@ -6,11 +6,27 @@ module.exports = {
   //   return config
   // },
   experimental: {
-    largePageDataBytes: 512 * 100000,
+    largePageDataBytes: 5 * 1024 * 1024, // 5 MB
   },
   reactStrictMode: true,
   env: {
     MODE: process.env.MODE ?? process.env.NODE_ENV,
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(self)',
+          },
+        ],
+      },
+    ]
   },
   // images: {
   //   domains: ['uniplatform.ru, dev.uniplatform.ru, localhost'],

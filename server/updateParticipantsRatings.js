@@ -1,27 +1,8 @@
+import { toStringId } from '@helpers/idAndDate'
+
 const RATING_MIN_PLAYED_GAMES = 3
 const RATING_STABILITY_WEIGHT = 0.2
 const RATING_MISS_PENALTY_WEIGHT = 0.3
-
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value)
-  }
-
-  if (typeof value.toString === 'function') {
-    const stringValue = value.toString()
-    return stringValue && stringValue !== '[object Object]' ? stringValue : null
-  }
-
-  return null
-}
 
 const resolveParticipantRatingKey = (userId, telegramId) => {
   if (userId) {

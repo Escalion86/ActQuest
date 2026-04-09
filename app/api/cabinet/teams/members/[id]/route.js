@@ -3,24 +3,7 @@ import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
-
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    return trimmed.length > 0 ? trimmed : null
-  }
-  if (typeof value === 'number') {
-    return String(value)
-  }
-  if (typeof value?.toString === 'function') {
-    const parsed = value.toString()
-    return parsed === '[object Object]' ? null : parsed
-  }
-  return null
-}
+import { toStringId } from '@helpers/idAndDate'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {

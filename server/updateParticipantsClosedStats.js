@@ -1,23 +1,4 @@
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value)
-  }
-
-  if (typeof value.toString === 'function') {
-    const stringValue = value.toString()
-    return stringValue && stringValue !== '[object Object]' ? stringValue : null
-  }
-
-  return null
-}
+import { toStringId } from '@helpers/idAndDate'
 
 const resolveParticipantKey = ({ userId, telegramId }) => {
   if (userId) {
@@ -37,12 +18,15 @@ const resolveTeamKey = (teamId) => {
 const buildClosedTimeline = (games) =>
   games
     .map((game) => {
-      const result = game?.result && typeof game.result === 'object' ? game.result : {}
+      const result =
+        game?.result && typeof game.result === 'object' ? game.result : {}
       const teamsPlacesRaw =
         result?.teamsPlaces && typeof result.teamsPlaces === 'object'
           ? result.teamsPlaces
           : {}
-      const teamsUsers = Array.isArray(result?.teamsUsers) ? result.teamsUsers : []
+      const teamsUsers = Array.isArray(result?.teamsUsers)
+        ? result.teamsUsers
+        : []
 
       const teamsPlaces = new Map()
       Object.entries(teamsPlacesRaw).forEach(([teamId, place]) => {
@@ -80,17 +64,18 @@ const buildClosedTimeline = (games) =>
 
       const startedAt =
         game?.dateStart || game?.dateStartFact || game?.updatedAt || null
-      const startedAtTime = startedAt ? new Date(startedAt).getTime() : Number.NaN
+      const startedAtTime = startedAt
+        ? new Date(startedAt).getTime()
+        : Number.NaN
 
       return {
         id: toStringId(game?._id) || '',
         startedAtTime: Number.isFinite(startedAtTime)
           ? startedAtTime
           : Number.NEGATIVE_INFINITY,
-        startedAtIso:
-          Number.isFinite(startedAtTime)
-            ? new Date(startedAtTime).toISOString()
-            : null,
+        startedAtIso: Number.isFinite(startedAtTime)
+          ? new Date(startedAtTime).toISOString()
+          : null,
         teamsPlaces,
         playersPlaces,
       }
@@ -124,7 +109,10 @@ const buildParticipationSnapshot = ({ placeByGame, nowIso }) => {
     }
 
     if (typeof item?.startedAtIso === 'string') {
-      if (!lastPlayedAt || new Date(item.startedAtIso) > new Date(lastPlayedAt)) {
+      if (
+        !lastPlayedAt ||
+        new Date(item.startedAtIso) > new Date(lastPlayedAt)
+      ) {
         lastPlayedAt = item.startedAtIso
       }
     }
@@ -145,7 +133,8 @@ const updateParticipantsClosedStats = async ({ db, game }) => {
     return { usersUpdated: 0, teamsUpdated: 0 }
   }
 
-  const result = game?.result && typeof game.result === 'object' ? game.result : {}
+  const result =
+    game?.result && typeof game.result === 'object' ? game.result : {}
   const teamsUsers = Array.isArray(result?.teamsUsers) ? result.teamsUsers : []
   const teamsPlacesRaw =
     result?.teamsPlaces && typeof result?.teamsPlaces === 'object'

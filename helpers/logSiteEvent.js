@@ -1,24 +1,7 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
 import { broadcastNotificationToUsers } from '@server/pwaNotifications'
-
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    return trimmed.length > 0 ? trimmed : null
-  }
-  if (typeof value === 'number') {
-    return String(value)
-  }
-  if (typeof value?.toString === 'function') {
-    const parsed = value.toString()
-    return parsed === '[object Object]' ? null : parsed
-  }
-  return null
-}
+import { toStringId } from '@helpers/idAndDate'
 
 const normalizeLocation = (value) => {
   if (typeof value !== 'string') {
@@ -49,7 +32,8 @@ const EVENT_TYPE_LABELS = {
 }
 
 const isAdminRole = (role) =>
-  typeof role === 'string' && ['admin', 'dev'].includes(role.trim().toLowerCase())
+  typeof role === 'string' &&
+  ['admin', 'dev'].includes(role.trim().toLowerCase())
 
 const isLocationAllowed = (location) =>
   typeof location === 'string' &&
@@ -126,7 +110,8 @@ const logSiteEvent = async ({
             users: targetUsers,
             notification: {
               title: `Событие: ${EVENT_TYPE_LABELS[type] || type}`,
-              body: normalizeText(message) || 'На сайте произошло новое событие.',
+              body:
+                normalizeText(message) || 'На сайте произошло новое событие.',
               tag: `admin-site-event-${String(type).trim()}-${Date.now()}`,
               location: normalizedLocation,
               data: {

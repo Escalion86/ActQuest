@@ -3,27 +3,7 @@ import { NextResponse } from 'next/server'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import buildGameResultComputed from '@server/buildGameResultComputed'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
-
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value)
-  }
-
-  if (typeof value.toString === 'function') {
-    const stringValue = value.toString()
-    return stringValue && stringValue !== '[object Object]' ? stringValue : null
-  }
-
-  return null
-}
+import { toStringId } from '@helpers/idAndDate'
 
 const normalizeTeamsPlaces = (teamsPlaces) => {
   if (!teamsPlaces) {

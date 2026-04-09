@@ -918,7 +918,6 @@ const Index2Page = () => {
         const hasUpcomingByLocation = await Promise.all(
           scenarioLocations.map(async (locationItem) => {
             const params = new URLSearchParams({
-              collection: 'games',
               location: locationItem.key,
               sort: 'dateStart',
               limit: '120',
@@ -926,7 +925,7 @@ const Index2Page = () => {
             })
 
             const response = await fetch(
-              `/api/${locationItem.key}/custom?${params.toString()}`,
+              `/api/public/discovery?${params.toString()}`,
             )
             const json = await response.json()
             const list = Array.isArray(json?.data) ? json.data : []
@@ -999,7 +998,6 @@ const Index2Page = () => {
 
       try {
         const params = new URLSearchParams({
-          collection: 'games',
           location: selectedScenarioLocation,
           sort: 'dateStart',
           limit: '120',
@@ -1007,7 +1005,7 @@ const Index2Page = () => {
         })
 
         const response = await fetch(
-          `/api/${selectedScenarioLocation}/custom?${params.toString()}`,
+          `/api/public/discovery?${params.toString()}`,
         )
         const json = await response.json()
         const list = Array.isArray(json?.data) ? json.data : []
@@ -1094,12 +1092,12 @@ const Index2Page = () => {
     const fetchProjectChatUrl = async () => {
       try {
         const params = new URLSearchParams({
-          collection: 'sitesettings',
-          limit: '1',
+          type: 'settings',
+          location: selectedScenarioLocation,
           select: 'chatUrl',
         })
         const response = await fetch(
-          `/api/${selectedScenarioLocation}/custom?${params.toString()}`,
+          `/api/public/discovery?${params.toString()}`,
         )
         const json = await response.json()
 
@@ -1141,7 +1139,6 @@ const Index2Page = () => {
       try {
         const fetchGamesByLocation = async (locationKey) => {
           const params = new URLSearchParams({
-            collection: 'games',
             location: locationKey,
             sort: '-dateEndFact',
             limit: '120',
@@ -1149,7 +1146,7 @@ const Index2Page = () => {
               '_id,name,image,location,dateStart,dateEndFact,status,hidden',
           })
           const response = await fetch(
-            `/api/${locationKey}/custom?${params.toString()}`,
+            `/api/public/discovery?${params.toString()}`,
           )
           const json = await response.json()
           if (!response.ok) return []
@@ -2134,7 +2131,7 @@ const Index2Page = () => {
 
   return (
     <>
-      <div className="relative min-h-screen overflow-hidden bg-[#0B001A] text-slate-100">
+      <div className="relative min-h-dvh overflow-hidden bg-[#0B001A] text-slate-100">
         <div className="absolute inset-0 pointer-events-none">
           <div className="bg-orb bg-orb-1 absolute -left-16 top-8 h-64 w-64 rounded-full bg-[#7A00FF]/25 blur-3xl" />
           <div className="bg-orb bg-orb-2 absolute right-0 top-1/3 h-72 w-72 rounded-full bg-[#00D1FF]/15 blur-3xl" />
@@ -2142,7 +2139,7 @@ const Index2Page = () => {
         </div>
 
         {stage === 'prelude' && (
-          <section className="relative z-10 flex flex-col justify-center w-full max-w-5xl min-h-screen px-6 mx-auto">
+          <section className="relative z-10 flex flex-col justify-center w-full max-w-5xl min-h-dvh px-6 mx-auto">
             <div className="space-y-3 font-mono text-sm uppercase tracking-[0.16em] text-[#b9a8da] md:text-base">
               {preludeLines.slice(0, visiblePrelude).map((line) => (
                 <p key={line} className="animate-fade-in">
@@ -2155,7 +2152,7 @@ const Index2Page = () => {
 
         {stage === 'entry' && (
           <section
-            className={`relative z-10 flex min-h-screen items-center justify-center px-6 ${entryGlitch ? 'animate-glitch' : ''}`}
+            className={`relative z-10 flex min-h-dvh items-center justify-center px-6 ${entryGlitch ? 'animate-glitch' : ''}`}
           >
             <div className="w-full max-w-4xl text-center">
               <p className="text-sm uppercase tracking-[0.2em] text-[#00D1FF]">
@@ -2183,7 +2180,7 @@ const Index2Page = () => {
         )}
 
         {stage === 'riddle' && (
-          <section className="relative z-10 flex items-center w-full max-w-3xl min-h-screen px-6 mx-auto">
+          <section className="relative z-10 flex items-center w-full max-w-3xl min-h-dvh px-6 mx-auto">
             {riddlePhase === 'question' && (
               <div
                 className={`w-full rounded-3xl border border-white/15 bg-[#120726]/85 p-8 backdrop-blur-xl transition-all duration-300 ${
@@ -2259,7 +2256,6 @@ const Index2Page = () => {
                     />
                   </div>
                 )}
-
               </div>
             )}
 

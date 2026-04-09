@@ -6,27 +6,7 @@ import { authOptions } from '@server/auth/authOptions'
 import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import logSiteEvent from '@helpers/logSiteEvent'
-
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number') {
-    return value.toString()
-  }
-
-  if (typeof value.toString === 'function') {
-    const result = value.toString()
-    return result === '[object Object]' ? null : result
-  }
-
-  return null
-}
+import { toStringId } from '@helpers/idAndDate'
 
 const normalizeGameTeamEntry = (doc) => {
   const id = toStringId(doc?._id ?? doc?.id)

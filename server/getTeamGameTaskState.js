@@ -44,7 +44,10 @@ const formatSecondsForCountdown = (totalSeconds) => {
 }
 
 const createCountdownSpan = (secondsLeft, targetTimestamp) => {
-  const attributes = ['data-task-countdown="break"', 'data-refresh-on-complete="true"']
+  const attributes = [
+    'data-task-countdown="break"',
+    'data-refresh-on-complete="true"',
+  ]
   if (Number.isFinite(targetTimestamp)) {
     attributes.push(`data-target="${targetTimestamp}"`)
   }
@@ -64,10 +67,32 @@ export const GAME_TASK_ERRORS = {
   UNKNOWN_ERROR: 'UNKNOWN_ERROR',
 }
 
-const buildError = (code, extra = {}) => ({ success: false, errorCode: code, ...extra })
+const buildError = (code, extra = {}) => ({
+  success: false,
+  errorCode: code,
+  ...extra,
+})
 
 const safeSerialize = (value) => JSON.parse(JSON.stringify(value))
 const sanitizeFragment = (value) => sanitize(String(value || ''))
+
+// Безопасная проекция game для клиента — БЕЗ ответов/кодов/подсказок
+const safeSerializeGameForClient = (game) => {
+  if (!game) return null
+  return {
+    _id: game._id ? String(game._id) : undefined,
+    name: game.name || '',
+    type: game.type || 'classic',
+    location: game.location || '',
+    dateStart: game.dateStart || null,
+    dateStartFact: game.dateStartFact || null,
+    dateEndFact: game.dateEndFact || null,
+    status: game.status || 'active',
+    finishingPlace: game.finishingPlace || '',
+    image: game.image || null,
+    tasksCount: Array.isArray(game.tasks) ? game.tasks.length : 0,
+  }
+}
 
 const computeTaskHtml = async ({
   game,
@@ -101,7 +126,11 @@ const computeTaskHtml = async ({
     const nextIndex = clampedIndex + 1
     const hasNextTask = nextIndex < tasksCount
 
-    const startTimes = ensureArrayWithLength(teamState.startTime, tasksCount, null)
+    const startTimes = ensureArrayWithLength(
+      teamState.startTime,
+      tasksCount,
+      null,
+    )
     const endTimes = ensureArrayWithLength(teamState.endTime, tasksCount, null)
 
     const activeStart = ensureDateValue(startTimes[clampedIndex])
@@ -125,7 +154,7 @@ const computeTaskHtml = async ({
       if (activeStart && taskDurationSeconds > 0) {
         const elapsedSinceStart = Math.max(
           Math.floor((nowMs - activeStart.getTime()) / 1000),
-          0
+          0,
         )
 
         if (elapsedSinceStart >= taskDurationSeconds) {
@@ -140,14 +169,14 @@ const computeTaskHtml = async ({
       const startTimeUpdates = ensureArrayWithLength(
         teamState.startTime,
         tasksCount,
-        null
+        null,
       ).map(cloneDateValue)
       startTimeUpdates[nextIndex] = new Date()
 
       const forcedCluesUpdates = ensureArrayWithLength(
         teamState.forcedClues,
         tasksCount,
-        0
+        0,
       ).map((value) => (Number.isFinite(value) ? value : 0))
       forcedCluesUpdates[nextIndex] = 0
 
@@ -164,7 +193,7 @@ const computeTaskHtml = async ({
 
       const elapsedAfterEnd = Math.max(
         Math.floor((nowMs - activeEnd.getTime()) / 1000),
-        0
+        0,
       )
 
       if (elapsedAfterEnd >= breakDurationSeconds) {
@@ -177,7 +206,7 @@ const computeTaskHtml = async ({
     if (activeStart && taskDurationSeconds > 0) {
       const elapsedSinceStart = Math.max(
         Math.floor((nowMs - activeStart.getTime()) / 1000),
-        0
+        0,
       )
 
       if (elapsedSinceStart >= taskDurationSeconds) {
@@ -214,7 +243,7 @@ const computeTaskHtml = async ({
     }
 
     const combinedMessages = [...baseMessages, ...autoProgressMessages].filter(
-      Boolean
+      Boolean,
     )
 
     processResult = {
@@ -236,7 +265,9 @@ const computeTaskHtml = async ({
       const finishingPlace = game.finishingPlace
       const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
       if (finishingPlace) {
-        completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
+        completionParts.push(
+          `<br /><br /><b>Точка сбора:</b> ${finishingPlace}`,
+        )
       }
       if (lastTask?.postMessage) {
         postCompletionMessage = sanitizeFragment(lastTask.postMessage)
@@ -247,22 +278,22 @@ const computeTaskHtml = async ({
       const startTimes = ensureArrayWithLength(
         effectiveGameTeam.startTime,
         tasksCount,
-        null
+        null,
       )
       const forcedClues = ensureArrayWithLength(
         effectiveGameTeam.forcedClues,
         tasksCount,
-        0
+        0,
       )
       const endTimes = ensureArrayWithLength(
         effectiveGameTeam.endTime,
         tasksCount,
-        null
+        null,
       )
 
       const activeTaskIndex = Math.max(
         Math.min(activeNumRaw, tasksCount - 1),
-        0
+        0,
       )
       const activeTaskEndTime = ensureDateValue(endTimes[activeTaskIndex])
       const activeTaskStartTime = ensureDateValue(startTimes[activeTaskIndex])
@@ -277,7 +308,7 @@ const computeTaskHtml = async ({
         if (activeTaskEndTime) {
           const elapsed = Math.max(
             Math.floor((nowMs - activeTaskEndTime.getTime()) / 1000),
-            0
+            0,
           )
           if (elapsed < breakDurationSeconds) {
             breakSecondsLeft = breakDurationSeconds - elapsed
@@ -288,7 +319,7 @@ const computeTaskHtml = async ({
         } else if (activeTaskStartTime && taskDurationSeconds > 0) {
           const elapsedSinceStart = Math.max(
             Math.floor((nowMs - activeTaskStartTime.getTime()) / 1000),
-            0
+            0,
           )
           if (elapsedSinceStart >= taskDurationSeconds) {
             const overtime = elapsedSinceStart - taskDurationSeconds
@@ -314,12 +345,14 @@ const computeTaskHtml = async ({
             : '<b>Задание выполнено.</b>',
         ]
         breakParts.push('<br /><br /><b>Перерыв.</b>')
-        breakParts.push('<br /><br /><b>Ожидайте следующее задание после перерыва.</b>')
+        breakParts.push(
+          '<br /><br /><b>Ожидайте следующее задание после перерыва.</b>',
+        )
         breakParts.push(
           `<br /><br /><b>Время до окончания перерыва:</b> ${createCountdownSpan(
             breakSecondsLeft,
-            breakTargetTimestamp
-          )}`
+            breakTargetTimestamp,
+          )}`,
         )
         taskHtml = breakParts.join('')
         taskState = 'break'
@@ -328,14 +361,11 @@ const computeTaskHtml = async ({
         if (activeTaskStartTime) {
           elapsedSeconds = Math.max(
             Math.floor((Date.now() - activeTaskStartTime.getTime()) / 1000),
-            0
+            0,
           )
         }
 
-        const forcedCluesCount = Math.max(
-          forcedClues[activeTaskIndex] ?? 0,
-          0
-        )
+        const forcedCluesCount = Math.max(forcedClues[activeTaskIndex] ?? 0, 0)
         const timedCluesCount =
           cluesDurationSeconds > 0
             ? Math.max(Math.floor(elapsedSeconds / cluesDurationSeconds), 0)
@@ -398,6 +428,7 @@ const getTeamGameTaskState = async ({
   gameId,
   teamId,
   telegramId,
+  userId,
   message,
 }) => {
   if (!location || !gameId || !teamId) {
@@ -426,7 +457,7 @@ const getTeamGameTaskState = async ({
 
     if (!db) {
       return buildError(GAME_TASK_ERRORS.DB_CONNECTION_FAILED, {
-        game: safeSerialize(game),
+        game: safeSerializeGameForClient(game),
         team: safeSerialize(team),
         status,
         isGameStarted,
@@ -437,34 +468,41 @@ const getTeamGameTaskState = async ({
     const gamesTeamsModel = db.model('GamesTeams')
     const teamsUsersModel = db.model('TeamsUsers')
 
-    let gameTeam = await gamesTeamsModel
-      .findOne({ gameId, teamId })
-      .lean()
+    let gameTeam = await gamesTeamsModel.findOne({ gameId, teamId }).lean()
 
     if (!gameTeam) {
       return buildError(GAME_TASK_ERRORS.TEAM_NOT_FOUND, { statusCode: 404 })
     }
 
+    // Проверка принадлежности пользователя к команде
+    const teamUsers = await teamsUsersModel.find({ teamId }).lean()
+
+    let isTeamMember = false
+
     if (telegramId) {
       const telegramIdStr = String(telegramId)
-      const teamUsers = await teamsUsersModel
-        .find({ teamId })
-        .lean()
-      const currentTeamUser = teamUsers.find(
+      isTeamMember = teamUsers.some(
         (teamUser) =>
-          teamUser && String(teamUser.userTelegramId ?? '') === telegramIdStr
+          teamUser && String(teamUser.userTelegramId ?? '') === telegramIdStr,
       )
+    }
 
-      if (!currentTeamUser) {
-        return buildError(GAME_TASK_ERRORS.TEAM_ACCESS_DENIED, {
-          statusCode: 403,
-          game: safeSerialize(game),
-          team: safeSerialize(team),
-          status,
-          isGameStarted,
-          isGameFinished,
-        })
-      }
+    if (!isTeamMember && userId) {
+      const userIdStr = String(userId)
+      isTeamMember = teamUsers.some(
+        (teamUser) => teamUser && String(teamUser.userId ?? '') === userIdStr,
+      )
+    }
+
+    if (!isTeamMember) {
+      return buildError(GAME_TASK_ERRORS.TEAM_ACCESS_DENIED, {
+        statusCode: 403,
+        game: safeSerializeGameForClient(game),
+        team: safeSerialize(team),
+        status,
+        isGameStarted,
+        isGameFinished,
+      })
     }
 
     const actingTelegramId = telegramId
@@ -501,20 +539,19 @@ const getTeamGameTaskState = async ({
       taskState,
       processResult: finalResult,
       postCompletionMessage,
-    } =
-      await computeTaskHtml({
-        game,
-        gameTeam,
-        processResult,
-        isGameStarted,
-        isGameFinished,
-        gamesTeamsModel,
-      })
+    } = await computeTaskHtml({
+      game,
+      gameTeam,
+      processResult,
+      isGameStarted,
+      isGameFinished,
+      gamesTeamsModel,
+    })
 
     return {
       success: true,
       data: {
-        game: safeSerialize(game),
+        game: safeSerializeGameForClient(game),
         team: safeSerialize(team),
         status,
         isGameStarted,
@@ -536,4 +573,3 @@ const getTeamGameTaskState = async ({
 }
 
 export default getTeamGameTaskState
-

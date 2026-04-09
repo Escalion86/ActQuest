@@ -1,28 +1,7 @@
 import { broadcastNotificationToUsers } from '@server/pwaNotifications'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
-
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    return trimmed.length > 0 ? trimmed : null
-  }
-
-  if (typeof value === 'number') {
-    return String(value)
-  }
-
-  if (typeof value.toString === 'function') {
-    const parsed = value.toString()
-    return parsed === '[object Object]' ? null : parsed
-  }
-
-  return null
-}
+import { toStringId } from '@helpers/idAndDate'
 
 const getRegisteredUsersByGame = async ({ db, gameId }) => {
   const normalizedGameId = toStringId(gameId)

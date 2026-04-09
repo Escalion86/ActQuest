@@ -6,6 +6,7 @@ import { authOptions } from '@server/auth/authOptions'
 import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import logSiteEvent from '@helpers/logSiteEvent'
+import { toStringId } from '@helpers/idAndDate'
 
 const collectTeamIds = (searchParams) => {
   const rawIds = []
@@ -36,24 +37,6 @@ const collectTeamIds = (searchParams) => {
   appendValue(searchParams.get('teamId'))
 
   return Array.from(new Set(rawIds))
-}
-
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    return trimmed.length > 0 ? trimmed : null
-  }
-  if (typeof value === 'number') {
-    return String(value)
-  }
-  if (typeof value?.toString === 'function') {
-    const parsed = value.toString()
-    return parsed === '[object Object]' ? null : parsed
-  }
-  return null
 }
 
 const normalizeRole = (value) => {

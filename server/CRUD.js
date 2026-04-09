@@ -7,6 +7,45 @@ import isUserAdmin from '@helpers/isUserAdmin'
 // import Users from '@models/Users'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
+// Whitelist допустимых MongoDB-операторов для защиты от NoSQL-инъекций
+const ALLOWED_OPERATORS = new Set([
+  '$in',
+  '$nin',
+  '$gt',
+  '$gte',
+  '$lt',
+  '$lte',
+  '$ne',
+  '$eq',
+  '$exists',
+  '$or',
+  '$and',
+])
+
+// Запрещённые операторы, позволяющие выполнение произвольного кода или обход логики
+// $where, $expr, $function, $accumulator, $regex (без whitelist — можно ReDoS)
+function validateQueryKeys(obj) {
+  for (const key of Object.keys(obj)) {
+    if (key.startsWith('$') && !ALLOWED_OPERATORS.has(key)) {
+      throw new Error(`Запрещённый оператор в запросе: ${key}`)
+    }
+    if (
+      typeof obj[key] === 'object' &&
+      obj[key] !== null &&
+      !Array.isArray(obj[key])
+    ) {
+      validateQueryKeys(obj[key])
+    }
+    if (Array.isArray(obj[key])) {
+      for (const item of obj[key]) {
+        if (typeof item === 'object' && item !== null) {
+          validateQueryKeys(item)
+        }
+      }
+    }
+  }
+}
+
 function transformQuery(query) {
   const processSingleValue = (key, value) => {
     // Добавляем проверку на отсутствие ключа (на случай корневого уровня)
@@ -43,6 +82,11 @@ function transformQuery(query) {
 
   const buildNestedStructure = (keys, value, ctx) => {
     const [currentKey, ...restKeys] = keys
+
+    // Проверка оператора на whitelist при построении структуры
+    if (currentKey.startsWith('$') && !ALLOWED_OPERATORS.has(currentKey)) {
+      throw new Error(`Запрещённый оператор в запросе: ${currentKey}`)
+    }
 
     if (restKeys.length === 0) {
       // Изменения здесь: добавляем проверку на оператор $in
@@ -89,18 +133,26 @@ function transformQuery(query) {
 
   processInOperator(result, '')
 
+  // Финальная валидация результата
+  validateQueryKeys(result)
+
   return result
 }
 
 const isClosedGameStatus = (status) =>
-  (typeof status === 'string' ? status.toLowerCase() : String(status)) === 'closed'
+  (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
+  'closed'
 
 const isGameClosedById = async (db, gameId) => {
   if (!gameId) {
     return false
   }
 
-  const game = await db.model('Games').findById(gameId).select({ status: 1 }).lean()
+  const game = await db
+    .model('Games')
+    .findById(gameId)
+    .select({ status: 1 })
+    .lean()
   return isClosedGameStatus(game?.status)
 }
 
@@ -325,10 +377,20 @@ export default async function handler(Schema, req, res, params = null) {
           if (Schema === 'Games') {
             payload.location = location
 
-            const nextStatusRaw = typeof payload?.status === 'string' ? payload.status.toLowerCase() : null
-            const currentStatusRaw = typeof data?.status === 'string' ? data.status.toLowerCase() : null
+            const nextStatusRaw =
+              typeof payload?.status === 'string'
+                ? payload.status.toLowerCase()
+                : null
+            const currentStatusRaw =
+              typeof data?.status === 'string'
+                ? data.status.toLowerCase()
+                : null
 
-            if (nextStatusRaw === 'closed' && currentStatusRaw !== 'finished' && currentStatusRaw !== 'closed') {
+            if (
+              nextStatusRaw === 'closed' &&
+              currentStatusRaw !== 'finished' &&
+              currentStatusRaw !== 'closed'
+            ) {
               return res?.status(400).json({
                 success: false,
                 error:
@@ -360,7 +422,7 @@ export default async function handler(Schema, req, res, params = null) {
                 (user) =>
                   isUserAdmin(user) &&
                   user.notifications?.get('telegram').active &&
-                  user.notifications?.get('telegram')?.id
+                  user.notifications?.get('telegram')?.id,
               )
               .map((user) => user.notifications?.get('telegram')?.id)
             await Promise.all(
@@ -378,7 +440,7 @@ export default async function handler(Schema, req, res, params = null) {
                       data.birthday,
                       true,
                       true,
-                      true
+                      true,
                     )}`,
                     parse_mode: 'html',
                   },
@@ -386,7 +448,7 @@ export default async function handler(Schema, req, res, params = null) {
                   (data) => console.log('error', data),
                   true,
                   null,
-                  true
+                  true,
                 )
                 if (data.images && data.images[0]) {
                   await postData(
@@ -401,7 +463,7 @@ export default async function handler(Schema, req, res, params = null) {
                             // caption: 'Наденька',
                             // "parse_mode": "optional (you can delete this parameter) the parse mode of the caption"
                           }
-                        })
+                        }),
                       ),
                       // reply_markup:
                       //   req.headers.origin.substr(0, 5) === 'https'
@@ -421,7 +483,7 @@ export default async function handler(Schema, req, res, params = null) {
                     (data) => console.log('error', data),
                     true,
                     null,
-                    true
+                    true,
                   )
                   // await postData(
                   //   `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendPhoto`,
@@ -448,7 +510,7 @@ export default async function handler(Schema, req, res, params = null) {
                   //   true
                   // )
                 }
-              })
+              }),
             )
           }
 
@@ -465,9 +527,13 @@ export default async function handler(Schema, req, res, params = null) {
       try {
         if (params) {
           if (Schema === 'GamesTeams') {
-            const docsToDelete = await db.model(Schema).find(params).select({ gameId: 1 }).lean()
+            const docsToDelete = await db
+              .model(Schema)
+              .find(params)
+              .select({ gameId: 1 })
+              .lean()
             const hasClosedGame = await Promise.all(
-              docsToDelete.map((item) => isGameClosedById(db, item?.gameId))
+              docsToDelete.map((item) => isGameClosedById(db, item?.gameId)),
             )
             if (hasClosedGame.some(Boolean)) {
               return res?.status(400).json({
@@ -524,7 +590,7 @@ export default async function handler(Schema, req, res, params = null) {
               .select({ gameId: 1 })
               .lean()
             const hasClosedGame = await Promise.all(
-              docsToDelete.map((item) => isGameClosedById(db, item?.gameId))
+              docsToDelete.map((item) => isGameClosedById(db, item?.gameId)),
             )
             if (hasClosedGame.some(Boolean)) {
               return res?.status(400).json({
@@ -560,4 +626,3 @@ export default async function handler(Schema, req, res, params = null) {
       break
   }
 }
-

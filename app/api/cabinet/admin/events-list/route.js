@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import isUserAdmin from '@helpers/isUserAdmin'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { toStringId } from '@helpers/idAndDate'
 
 const parsePositiveInteger = (value, fallback) => {
   const numeric = Number(value)
@@ -35,20 +36,6 @@ const normalizeLocationFilters = (value) => {
   )
 }
 
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  if (typeof value?.toString === 'function') {
-    const parsed = value.toString()
-    return parsed === '[object Object]' ? null : parsed
-  }
-  return null
-}
-
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user || !isUserAdmin({ role: session.user.role })) {
@@ -65,7 +52,10 @@ export async function GET(request) {
     }
 
     const requestUrl = new URL(request.url)
-    const offset = parsePositiveInteger(requestUrl.searchParams.get('offset'), 0)
+    const offset = parsePositiveInteger(
+      requestUrl.searchParams.get('offset'),
+      0,
+    )
     const limit = parsePositiveInteger(requestUrl.searchParams.get('limit'), 20)
     const locationFilters = normalizeLocationFilters(
       requestUrl.searchParams.get('locations') ??
@@ -73,9 +63,7 @@ export async function GET(request) {
     )
 
     const query =
-      locationFilters.length > 0
-        ? { location: { $in: locationFilters } }
-        : {}
+      locationFilters.length > 0 ? { location: { $in: locationFilters } } : {}
     const SiteEvents = db.model('SiteEvents')
     const docs = await SiteEvents.find(query)
       .sort({ createdAt: -1, _id: -1 })
@@ -100,7 +88,8 @@ export async function GET(request) {
       teamName: typeof doc?.teamName === 'string' ? doc.teamName : '',
       gameId: typeof doc?.gameId === 'string' ? doc.gameId : null,
       gameName: typeof doc?.gameName === 'string' ? doc.gameName : '',
-      metadata: doc?.metadata && typeof doc.metadata === 'object' ? doc.metadata : {},
+      metadata:
+        doc?.metadata && typeof doc.metadata === 'object' ? doc.metadata : {},
       createdAt: doc?.createdAt ? new Date(doc.createdAt).toISOString() : null,
     }))
 

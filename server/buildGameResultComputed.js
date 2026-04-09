@@ -1,25 +1,5 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
-
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value)
-  }
-
-  if (typeof value.toString === 'function') {
-    const stringValue = value.toString()
-    return stringValue && stringValue !== '[object Object]' ? stringValue : null
-  }
-
-  return null
-}
+import { toStringId } from '@helpers/idAndDate'
 
 const secondsToTime = (sec) => {
   const numeric = Number(sec)
@@ -134,7 +114,9 @@ const getTaskPenaltyAndBonus = (task, gameTeam, taskIndex) => {
     ? findedBonusCodes[taskIndex]
     : []
 
-  const penaltyCodes = Array.isArray(task?.penaltyCodes) ? task.penaltyCodes : []
+  const penaltyCodes = Array.isArray(task?.penaltyCodes)
+    ? task.penaltyCodes
+    : []
   const bonusCodes = Array.isArray(task?.bonusCodes) ? task.bonusCodes : []
 
   const penaltyItems = penaltyCodes
@@ -142,7 +124,8 @@ const getTaskPenaltyAndBonus = (task, gameTeam, taskIndex) => {
     .map((item) => ({
       type: 'penalty',
       seconds: Number(item?.penalty) || 0,
-      description: typeof item?.description === 'string' ? item.description : '',
+      description:
+        typeof item?.description === 'string' ? item.description : '',
       code: item?.code || '',
     }))
     .filter((item) => item.seconds > 0)
@@ -152,12 +135,16 @@ const getTaskPenaltyAndBonus = (task, gameTeam, taskIndex) => {
     .map((item) => ({
       type: 'bonus',
       seconds: Number(item?.bonus) || 0,
-      description: typeof item?.description === 'string' ? item.description : '',
+      description:
+        typeof item?.description === 'string' ? item.description : '',
       code: item?.code || '',
     }))
     .filter((item) => item.seconds > 0)
 
-  const penaltySeconds = penaltyItems.reduce((acc, item) => acc + item.seconds, 0)
+  const penaltySeconds = penaltyItems.reduce(
+    (acc, item) => acc + item.seconds,
+    0,
+  )
   const bonusSeconds = bonusItems.reduce((acc, item) => acc + item.seconds, 0)
 
   return {
@@ -183,8 +170,12 @@ const getWrongCodePenalty = (game, gameTeam, taskIndex) => {
     return 0
   }
 
-  const wrongCodes = Array.isArray(gameTeam?.wrongCodes) ? gameTeam.wrongCodes : []
-  const wrongCodesOnTask = Array.isArray(wrongCodes[taskIndex]) ? wrongCodes[taskIndex] : []
+  const wrongCodes = Array.isArray(gameTeam?.wrongCodes)
+    ? gameTeam.wrongCodes
+    : []
+  const wrongCodesOnTask = Array.isArray(wrongCodes[taskIndex])
+    ? wrongCodes[taskIndex]
+    : []
 
   if (wrongCodesOnTask.length < maxCodes) {
     return 0
@@ -223,7 +214,10 @@ const buildEmptyTeamResult = (team, game) => {
 
   return {
     teamId,
-    teamName: typeof team?.name === 'string' && team.name.trim() ? team.name.trim() : 'Без названия',
+    teamName:
+      typeof team?.name === 'string' && team.name.trim()
+        ? team.name.trim()
+        : 'Без названия',
     baseSeconds,
     baseDisplay: '[стоп игра]',
     hasStopGame: true,
@@ -287,13 +281,20 @@ const buildTeamResult = (team, gameTeam, game) => {
     }
 
     let taskFailurePenaltySeconds = 0
-    if (shouldCountInTotals && (numericDuration === null || normalizedSeconds >= taskDuration)) {
+    if (
+      shouldCountInTotals &&
+      (numericDuration === null || normalizedSeconds >= taskDuration)
+    ) {
       taskFailurePenaltySeconds = taskFailurePenalty
       failurePenaltySeconds += taskFailurePenaltySeconds
     }
 
     const codeResult = getTaskPenaltyAndBonus(task, gameTeam, taskIndex)
-    const wrongCodePenaltySeconds = getWrongCodePenalty(game, gameTeam, taskIndex)
+    const wrongCodePenaltySeconds = getWrongCodePenalty(
+      game,
+      gameTeam,
+      taskIndex,
+    )
 
     codePenaltySeconds += codeResult.penaltySeconds
     codeBonusSeconds += codeResult.bonusSeconds
@@ -339,7 +340,10 @@ const buildTeamResult = (team, gameTeam, game) => {
       raw,
       seconds: numericDuration,
       normalizedSeconds,
-      penaltySeconds: taskFailurePenaltySeconds + codeResult.penaltySeconds + wrongCodePenaltySeconds,
+      penaltySeconds:
+        taskFailurePenaltySeconds +
+        codeResult.penaltySeconds +
+        wrongCodePenaltySeconds,
       bonusSeconds: codeResult.bonusSeconds,
       manyWrongCodePenaltySeconds: wrongCodePenaltySeconds,
       adjustments,
@@ -361,7 +365,9 @@ const buildTeamResult = (team, gameTeam, game) => {
             display: secondsToTime(Math.abs(seconds)),
             name: typeof item?.name === 'string' ? item.name : '',
             taskId: item?.taskId || null,
-            taskIndex: Number.isFinite(Number(item?.taskIndex)) ? Number(item.taskIndex) : null,
+            taskIndex: Number.isFinite(Number(item?.taskIndex))
+              ? Number(item.taskIndex)
+              : null,
           }
         })
         .filter(Boolean)
@@ -376,13 +382,19 @@ const buildTeamResult = (team, gameTeam, game) => {
     codeBonusSeconds +
     addingsSeconds
 
-  const teamId = toStringId(team?._id ?? team?.id) || toStringId(gameTeam?.teamId) || ''
+  const teamId =
+    toStringId(team?._id ?? team?.id) || toStringId(gameTeam?.teamId) || ''
 
   return {
     teamId,
-    teamName: typeof team?.name === 'string' && team.name.trim() ? team.name.trim() : 'Без названия',
+    teamName:
+      typeof team?.name === 'string' && team.name.trim()
+        ? team.name.trim()
+        : 'Без названия',
     baseSeconds,
-    baseDisplay: hasStopGame ? '[стоп игра]' : secondsToTime(baseSeconds) || '00:00:00',
+    baseDisplay: hasStopGame
+      ? '[стоп игра]'
+      : secondsToTime(baseSeconds) || '00:00:00',
     hasStopGame,
     failurePenaltySeconds,
     codePenaltySeconds,
@@ -416,7 +428,9 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
             absPoints: Math.abs(points),
             name: typeof item?.name === 'string' ? item.name : '',
             taskId: item?.taskId || null,
-            taskIndex: Number.isFinite(Number(item?.taskIndex)) ? Number(item.taskIndex) : null,
+            taskIndex: Number.isFinite(Number(item?.taskIndex))
+              ? Number(item.taskIndex)
+              : null,
           }
         })
         .filter(Boolean)
@@ -434,7 +448,9 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
     const checks = getPhotoTaskChecks(gameTeam, taskIndex)
     const accepted = Boolean(checks?.accepted)
 
-    const baseTaskPoints = accepted ? Number(task?.taskBonusForComplite) || 0 : 0
+    const baseTaskPoints = accepted
+      ? Number(task?.taskBonusForComplite) || 0
+      : 0
     const taskSubTasks = Array.isArray(task?.subTasks) ? task.subTasks : []
     const acceptedSubTaskPoints = accepted
       ? taskSubTasks.reduce((acc, subTask) => {
@@ -481,7 +497,10 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
     }
   })
 
-  const addingsPoints = addings.reduce((acc, item) => acc + (Number(item.points) || 0), 0)
+  const addingsPoints = addings.reduce(
+    (acc, item) => acc + (Number(item.points) || 0),
+    0,
+  )
   const finalPoints =
     taskPoints +
     subTaskPoints +
@@ -491,11 +510,15 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
     failurePenaltyPoints +
     addingsPoints
 
-  const teamId = toStringId(team?._id ?? team?.id) || toStringId(gameTeam?.teamId) || ''
+  const teamId =
+    toStringId(team?._id ?? team?.id) || toStringId(gameTeam?.teamId) || ''
 
   return {
     teamId,
-    teamName: typeof team?.name === 'string' && team.name.trim() ? team.name.trim() : 'Без названия',
+    teamName:
+      typeof team?.name === 'string' && team.name.trim()
+        ? team.name.trim()
+        : 'Без названия',
     scoringMode: 'points',
     taskPoints,
     subTaskPoints,
@@ -550,7 +573,10 @@ const buildTaskBoards = (teamsResults, game) => {
 
     const averageSeconds =
       numericSeconds.length > 0
-        ? Math.round(numericSeconds.reduce((acc, value) => acc + value, 0) / numericSeconds.length)
+        ? Math.round(
+            numericSeconds.reduce((acc, value) => acc + value, 0) /
+              numericSeconds.length,
+          )
         : null
 
     return {
@@ -559,14 +585,18 @@ const buildTaskBoards = (teamsResults, game) => {
       canceled: Boolean(task?.canceled),
       isBonusTask: Boolean(task?.isBonusTask),
       averageSeconds,
-      averageDisplay: isNumeric(averageSeconds) ? secondsToTime(averageSeconds) : null,
+      averageDisplay: isNumeric(averageSeconds)
+        ? secondsToTime(averageSeconds)
+        : null,
       entries,
     }
   })
 }
 
 const buildHighlights = (taskBoards) => {
-  const applicable = taskBoards.filter((board) => !board.canceled && !board.isBonusTask)
+  const applicable = taskBoards.filter(
+    (board) => !board.canceled && !board.isBonusTask,
+  )
 
   const easiestTask = [...applicable]
     .filter((board) => isNumeric(board.averageSeconds))
@@ -629,7 +659,9 @@ const resolveGameDuration = ({ game, gameTeams }) => {
     const allEnds = []
 
     gameTeams.forEach((gameTeam) => {
-      const starts = Array.isArray(gameTeam?.startTime) ? gameTeam.startTime : []
+      const starts = Array.isArray(gameTeam?.startTime)
+        ? gameTeam.startTime
+        : []
       const ends = Array.isArray(gameTeam?.endTime) ? gameTeam.endTime : []
 
       starts.forEach((value) => {
@@ -654,7 +686,9 @@ const resolveGameDuration = ({ game, gameTeams }) => {
     if (!endedAt) {
       const endCandidates = allEnds.length > 0 ? allEnds : allStarts
       if (endCandidates.length > 0) {
-        endedAt = new Date(Math.max(...endCandidates.map((item) => item.getTime())))
+        endedAt = new Date(
+          Math.max(...endCandidates.map((item) => item.getTime())),
+        )
       }
     }
   }
@@ -679,10 +713,16 @@ const resolveGameDuration = ({ game, gameTeams }) => {
 }
 
 const getResultSnapshots = (game) => {
-  const currentResult = game?.result && typeof game.result === 'object' ? game.result : {}
-  const hasTeams = Array.isArray(currentResult?.teams) && currentResult.teams.length > 0
-  const hasGameTeams = Array.isArray(currentResult?.gameTeams) && currentResult.gameTeams.length > 0
-  const hasTeamsUsers = Array.isArray(currentResult?.teamsUsers) && currentResult.teamsUsers.length > 0
+  const currentResult =
+    game?.result && typeof game.result === 'object' ? game.result : {}
+  const hasTeams =
+    Array.isArray(currentResult?.teams) && currentResult.teams.length > 0
+  const hasGameTeams =
+    Array.isArray(currentResult?.gameTeams) &&
+    currentResult.gameTeams.length > 0
+  const hasTeamsUsers =
+    Array.isArray(currentResult?.teamsUsers) &&
+    currentResult.teamsUsers.length > 0
 
   if (hasTeams && hasGameTeams && hasTeamsUsers) {
     return {
@@ -693,7 +733,7 @@ const getResultSnapshots = (game) => {
   }
 
   const error = new Error(
-    'Снапшоты результатов отсутствуют. Сначала сохраните result.teams/result.gameTeams/result.teamsUsers при остановке игры.'
+    'Снапшоты результатов отсутствуют. Сначала сохраните result.teams/result.gameTeams/result.teamsUsers при остановке игры.',
   )
   error.code = 'RESULT_SNAPSHOTS_MISSING'
   throw error
@@ -702,13 +742,19 @@ const getResultSnapshots = (game) => {
 const buildGameResultComputed = async ({ game }) => {
   const snapshots = getResultSnapshots(game)
   const teams = Array.isArray(snapshots.teams) ? snapshots.teams : []
-  const gameTeams = Array.isArray(snapshots.gameTeams) ? snapshots.gameTeams : []
-  const teamsUsers = Array.isArray(snapshots.teamsUsers) ? snapshots.teamsUsers : []
+  const gameTeams = Array.isArray(snapshots.gameTeams)
+    ? snapshots.gameTeams
+    : []
+  const teamsUsers = Array.isArray(snapshots.teamsUsers)
+    ? snapshots.teamsUsers
+    : []
 
   const isPhotoGame = game?.type === 'photo'
   const teamsResults = teams.map((team) => {
     const teamId = toStringId(team?._id ?? team?.id)
-    const gameTeam = gameTeams.find((item) => toStringId(item?.teamId) === teamId)
+    const gameTeam = gameTeams.find(
+      (item) => toStringId(item?.teamId) === teamId,
+    )
     return isPhotoGame
       ? buildPhotoTeamResult(team, gameTeam, game)
       : buildTeamResult(team, gameTeam, game)

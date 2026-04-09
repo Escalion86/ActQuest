@@ -552,3 +552,38 @@ components/cabinet/CardActionIconButton.js       — содержит GameContro
 - Safari на iOS не поддерживает Web Push без PWA (Home Screen)
 - `usePwaNotifications.js` возвращает `isIOSDevice` и `isStandalone`
 - `ProfilePageClient.js` показывает пошаговую инструкцию установки PWA для iOS
+
+## Стек технологий
+
+- **Next.js 16** (App Router, React 19), **Mongoose 9**, **MongoDB 7**
+- **State**: Jotai (custom реализация в `lib/jotai/`), React Query v5 (миграция в процессе)
+- **CSS**: Tailwind CSS v4, dark mode via `class`
+- **Auth**: NextAuth.js (Telegram, VK One Tap, телефон, пароль)
+- **Push**: `web-push` (PWA Service Worker)
+- **Файлы**: EscalionCloud (внешний сервис загрузки)
+- **HTML**: `sanitize-html` — XSS-защита rich-text контента
+- **Тесты**: отсутствуют (только smoke-скрипты в `scripts/`)
+
+## State Management — текущее состояние
+
+- **Jotai** v2.19 — state для UI (модалки, сессия, роли); atoms в `state/`
+- **React Query** — data fetching (Phase 1 завершена: admin модалки)
+
+## Техдолг и известные проблемы
+
+### Дублирование кода
+
+- `gameProcess.js` и `webGameProcess.js` — 80%+ дублированной логики (~800 строк каждый)
+- `GameControlPageClient.js` — существует в `components/cabinet/app-router/` (dashboard) и `components/location-game/` (legacy telegram control) — разные компоненты с одинаковым именем
+- `secondsToTime` — реализация в `buildGameResultComputed.js` и `telegram/func/secondsToTime.js`
+
+### Безопасность
+
+- Legacy маршруты `/api/[location]/*` защищены auth для записи (`runLocationLegacyHandler`, `requireAuth: 'write'`)
+- `transformQuery` в `server/CRUD.js` имеет whitelist допустимых MongoDB-операторов
+- Endpoint `/api/[location]/custom` удалён, заменён на `/api/public/discovery` с ограниченным доступом к данным
+
+### ESLint
+
+- Правила `no-undef` и `no-unused-vars` включены как **warn** (ранее были выключены)
+- Линтинг покрывает только `app/` и часть `components/cabinet/` (не server, helpers, telegram)

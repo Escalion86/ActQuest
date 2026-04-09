@@ -10,23 +10,35 @@ const siteUrl =
 export const metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'ActQuest',
-    template: '%s',
+    default: 'ActQuest — городские автоквесты',
+    template: '%s | ActQuest',
   },
-  description: 'ActQuest — платформа для городских автоквестов.',
+  description:
+    'Командные автоквесты по городу: разгадывайте загадки, ищите коды, соревнуйтесь с друзьями. Красноярск, Норильск, Екатеринбург.',
   applicationName: 'ActQuest',
   manifest: '/manifest.json',
   openGraph: {
     type: 'website',
     siteName: 'ActQuest',
-    title: 'ActQuest',
-    description: 'ActQuest — платформа для городских автоквестов.',
+    title: 'ActQuest — городские автоквесты',
+    description:
+      'Командные автоквесты по городу: разгадывайте загадки, ищите коды, соревнуйтесь с друзьями.',
     url: siteUrl,
+    images: [
+      {
+        url: '/logo_title.png',
+        width: 1024,
+        height: 1024,
+        alt: 'ActQuest',
+      },
+    ],
   },
   twitter: {
-    card: 'summary',
-    title: 'ActQuest',
-    description: 'ActQuest — платформа для городских автоквестов.',
+    card: 'summary_large_image',
+    title: 'ActQuest — городские автоквесты',
+    description:
+      'Командные автоквесты по городу: разгадывайте загадки, ищите коды, соревнуйтесь с друзьями.',
+    images: ['/logo_title.png'],
   },
   icons: {
     icon: '/favicon.ico',
@@ -35,6 +47,9 @@ export const metadata = {
 }
 
 export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
   themeColor: '#111827',
 }
 

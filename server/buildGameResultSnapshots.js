@@ -1,28 +1,11 @@
-const toStringId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value)
-  }
-
-  if (typeof value.toString === 'function') {
-    const stringValue = value.toString()
-    return stringValue && stringValue !== '[object Object]' ? stringValue : null
-  }
-
-  return null
-}
+import { toStringId } from '@helpers/idAndDate'
 
 const buildGameResultSnapshots = async ({ db, gameId }) => {
   const normalizedGameId = toStringId(gameId)
   if (!normalizedGameId) {
-    throw new Error('Не передан идентификатор игры для формирования снапшота результатов')
+    throw new Error(
+      'Не передан идентификатор игры для формирования снапшота результатов',
+    )
   }
 
   const GamesTeams = db.model('GamesTeams')
@@ -31,7 +14,7 @@ const buildGameResultSnapshots = async ({ db, gameId }) => {
 
   const gameTeams = await GamesTeams.find({ gameId: normalizedGameId }).lean()
   const teamIds = Array.from(
-    new Set(gameTeams.map((item) => toStringId(item?.teamId)).filter(Boolean))
+    new Set(gameTeams.map((item) => toStringId(item?.teamId)).filter(Boolean)),
   )
 
   const teams = teamIds.length

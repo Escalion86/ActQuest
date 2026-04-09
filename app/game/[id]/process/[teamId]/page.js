@@ -36,7 +36,9 @@ export default async function GameTeamPage({ params, searchParams }) {
       ? resolvedSearchParams.message
       : undefined
   const sanitizedMessage =
-    messageParam && messageParam !== 'undefined' ? messageParam.trim() : undefined
+    messageParam && messageParam !== 'undefined'
+      ? messageParam.trim()
+      : undefined
   const shouldClearMessageParam = Boolean(sanitizedMessage)
 
   let payload
@@ -46,6 +48,7 @@ export default async function GameTeamPage({ params, searchParams }) {
       gameId: gameIdParam,
       teamId: teamIdParam,
       telegramId: session?.user?.telegramId,
+      userId: session?.user?.id,
       message: sanitizedMessage,
     })
 
@@ -66,9 +69,12 @@ export default async function GameTeamPage({ params, searchParams }) {
       if (errorCode === GAME_TASK_ERRORS.DB_CONNECTION_FAILED) {
         const fallbackGame = stateResult.game || null
         const fallbackTeam = stateResult.team || null
-        const fallbackStatus = stateResult.status || fallbackGame?.status || 'active'
-        const isGameStarted = stateResult.isGameStarted ?? fallbackStatus === 'started'
-        const isGameFinished = stateResult.isGameFinished ?? fallbackStatus === 'finished'
+        const fallbackStatus =
+          stateResult.status || fallbackGame?.status || 'active'
+        const isGameStarted =
+          stateResult.isGameStarted ?? fallbackStatus === 'started'
+        const isGameFinished =
+          stateResult.isGameFinished ?? fallbackStatus === 'finished'
 
         payload = {
           session,
