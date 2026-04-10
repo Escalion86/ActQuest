@@ -100,19 +100,10 @@ const buildBaseData = (location) => ({
 export const loadCabinetAppOverview = async (session) => {
   const location = normalizeLocation(session?.user?.location)
   const role = normalizeRole(session?.user?.role)
-
-  const rawTelegramId = session?.user?.telegramId
-  const creatorTelegramId =
-    rawTelegramId === null || rawTelegramId === undefined
-      ? null
-      : Number(rawTelegramId)
   const currentUserId =
     session?.user?._id === null || session?.user?._id === undefined
       ? null
       : String(session.user._id)
-  const currentUserTelegramId = Number.isFinite(creatorTelegramId)
-    ? creatorTelegramId
-    : null
 
   const baseData = buildBaseData(location)
 
@@ -128,7 +119,6 @@ export const loadCabinetAppOverview = async (session) => {
         .findOne(userLookupFilter)
         .select({
           _id: 1,
-          telegramId: 1,
           name: 1,
           username: 1,
           rating: 1,
@@ -137,26 +127,13 @@ export const loadCabinetAppOverview = async (session) => {
     : null
 
   const normalizedUserId = userDoc?._id ? String(userDoc._id) : currentUserId
-  const normalizedTelegramId = Number.isFinite(Number(userDoc?.telegramId))
-    ? Number(userDoc.telegramId)
-    : currentUserTelegramId
 
   const TeamsUsersModel = db.model('TeamsUsers')
-  const membershipOr = []
-
-  if (normalizedUserId) {
-    membershipOr.push({ userId: normalizedUserId })
-  }
-  if (Number.isFinite(normalizedTelegramId)) {
-    membershipOr.push({ userTelegramId: normalizedTelegramId })
-  }
-
-  const memberships =
-    membershipOr.length > 0
-      ? await TeamsUsersModel.find({ $or: membershipOr })
-          .select({ _id: 1, teamId: 1, role: 1 })
-          .lean()
-      : []
+  const memberships = normalizedUserId
+    ? await TeamsUsersModel.find({ userId: normalizedUserId })
+        .select({ _id: 1, teamId: 1, role: 1 })
+        .lean()
+    : []
 
   const teamIds = Array.from(
     new Set(
@@ -222,11 +199,7 @@ export const loadCabinetAppOverview = async (session) => {
     db,
     location,
     userRole: role,
-    creatorTelegramId: Number.isFinite(creatorTelegramId)
-      ? creatorTelegramId
-      : null,
     currentUserId: normalizedUserId,
-    currentUserTelegramId: normalizedTelegramId,
     offset: 0,
     limit: 500,
     view: 'upcoming',
@@ -236,11 +209,7 @@ export const loadCabinetAppOverview = async (session) => {
     db,
     location,
     userRole: role,
-    creatorTelegramId: Number.isFinite(creatorTelegramId)
-      ? creatorTelegramId
-      : null,
     currentUserId: normalizedUserId,
-    currentUserTelegramId: normalizedTelegramId,
     offset: 0,
     limit: 500,
     view: 'past',

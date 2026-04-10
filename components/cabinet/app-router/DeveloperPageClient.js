@@ -50,6 +50,11 @@ const DeveloperPage = ({ session: initialSession }) => {
     useState(false)
   const [usersWithoutPhoneResult, setUsersWithoutPhoneResult] = useState(null)
   const [usersWithoutPhoneError, setUsersWithoutPhoneError] = useState('')
+  const [isCheckingTeamsUsersIntegrity, setIsCheckingTeamsUsersIntegrity] =
+    useState(false)
+  const [teamsUsersIntegrityResult, setTeamsUsersIntegrityResult] =
+    useState(null)
+  const [teamsUsersIntegrityError, setTeamsUsersIntegrityError] = useState('')
   const [requestingPhoneByUserId, setRequestingPhoneByUserId] = useState({})
   const [requestPhoneFeedbackByUserId, setRequestPhoneFeedbackByUserId] =
     useState({})
@@ -219,6 +224,45 @@ const DeveloperPage = ({ session: initialSession }) => {
       )
     } finally {
       setIsLoadingUsersWithoutPhone(false)
+    }
+  }
+
+  const handleCheckTeamsUsersIntegrity = async () => {
+    if (isCheckingTeamsUsersIntegrity) {
+      return
+    }
+
+    setIsCheckingTeamsUsersIntegrity(true)
+    setTeamsUsersIntegrityError('')
+    setTeamsUsersIntegrityResult(null)
+
+    try {
+      const response = await fetch(
+        `${CABINET_DEV_API_BASE}/teams-users-integrity`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+        },
+      )
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(
+          json?.error ||
+            'Не удалось проверить целостность записей участников команд',
+        )
+      }
+
+      setTeamsUsersIntegrityResult(json?.data ?? null)
+    } catch (requestError) {
+      setTeamsUsersIntegrityError(
+        requestError?.message ||
+          'Не удалось проверить целостность записей участников команд',
+      )
+    } finally {
+      setIsCheckingTeamsUsersIntegrity(false)
     }
   }
 
@@ -600,6 +644,104 @@ const DeveloperPage = ({ session: initialSession }) => {
               ) : (
                 <p className="mt-2 text-xs">
                   Все проверенные пользователи имеют телефон.
+                </p>
+              )}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Проверка целостности TeamsUsers
+          </h3>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Проверяет записи участий в командах, где отсутствует пользователь
+            или команда.
+          </p>
+          <div className="mt-4">
+            <CabinetButton
+              onClick={handleCheckTeamsUsersIntegrity}
+              variant="primary"
+              tone="brand"
+              disabled={isCheckingTeamsUsersIntegrity}
+            >
+              {isCheckingTeamsUsersIntegrity
+                ? 'Проверяем...'
+                : 'Проверить целостность TeamsUsers'}
+            </CabinetButton>
+          </div>
+
+          {teamsUsersIntegrityError ? (
+            <p className="mt-4 rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+              {teamsUsersIntegrityError}
+            </p>
+          ) : null}
+
+          {teamsUsersIntegrityResult ? (
+            <div className="mt-4 rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <p>
+                Проверено записей TeamsUsers:{' '}
+                {teamsUsersIntegrityResult.totalMembershipsCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Проблемных записей:{' '}
+                {teamsUsersIntegrityResult.brokenMembershipsCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Нет пользователя:{' '}
+                {teamsUsersIntegrityResult.missingUserCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Нет команды: {teamsUsersIntegrityResult.missingTeamCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Нет и пользователя, и команды:{' '}
+                {teamsUsersIntegrityResult.missingBothCount ?? 0}
+              </p>
+
+              {teamsUsersIntegrityResult.truncated ? (
+                <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  Показаны не все проблемные записи: выведено{' '}
+                  {teamsUsersIntegrityResult.brokenMembershipsReturned ?? 0} из{' '}
+                  {teamsUsersIntegrityResult.brokenMembershipsCount ?? 0}.
+                </p>
+              ) : null}
+
+              {Array.isArray(teamsUsersIntegrityResult.brokenMemberships) &&
+              teamsUsersIntegrityResult.brokenMemberships.length > 0 ? (
+                <div className="mt-3 max-h-80 space-y-2 overflow-y-auto pr-1">
+                  {teamsUsersIntegrityResult.brokenMemberships.map(
+                    (membership) => (
+                      <div
+                        key={membership.id}
+                        className="rounded-lg border border-emerald-300/70 bg-white/80 px-3 py-2 text-xs text-slate-700 dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-slate-200"
+                      >
+                        <p className="font-semibold">
+                          Membership ID: {membership.id}
+                        </p>
+                        <p className="mt-1">
+                          teamId: {membership.teamId || '—'} · userId:{' '}
+                          {membership.userId || '—'} · role:{' '}
+                          {membership.role || 'participant'}
+                        </p>
+                        <p className="mt-1">
+                          Проблемы:{' '}
+                          {Array.isArray(membership.issueCodes) &&
+                          membership.issueCodes.length > 0
+                            ? membership.issueCodes.join(', ')
+                            : '—'}
+                        </p>
+                        <p className="mt-1">
+                          userTelegramId: {membership.userTelegramId ?? '—'} ·
+                          createdAt: {membership.createdAt || '—'}
+                        </p>
+                      </div>
+                    ),
+                  )}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs">
+                  Битые связи в TeamsUsers не найдены.
                 </p>
               )}
             </div>

@@ -72,24 +72,12 @@ export async function GET(request) {
     const isAdmin = isUserAdmin({ role })
     const currentUserId =
       typeof session?.user?._id === 'string' ? session.user._id : null
-    const currentUserTelegramId = Number.isFinite(Number(session?.user?.telegramId))
-      ? String(Number(session.user.telegramId))
-      : null
 
     const isMember = Array.isArray(team.members)
       ? team.members.some((member) => {
           const memberUserId =
             typeof member?.userId === 'string' ? member.userId : null
-          const memberTelegramId =
-            typeof member?.telegramId === 'string' ? member.telegramId : null
-          return (
-            (currentUserId &&
-              memberUserId &&
-              memberUserId === currentUserId) ||
-            (currentUserTelegramId &&
-              memberTelegramId &&
-              memberTelegramId === currentUserTelegramId)
-          )
+          return currentUserId && memberUserId && memberUserId === currentUserId
         })
       : false
 

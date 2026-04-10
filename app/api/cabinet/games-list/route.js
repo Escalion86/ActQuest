@@ -77,18 +77,10 @@ export async function GET(request) {
       ? previewRole
       : sessionRole
 
-  const rawTelegramId = session?.user?.telegramId
-  const creatorTelegramId =
-    rawTelegramId === null || rawTelegramId === undefined
-      ? null
-      : Number(rawTelegramId)
   const currentUserId =
     session?.user?._id === null || session?.user?._id === undefined
       ? null
       : String(session.user._id)
-  const currentUserTelegramId = Number.isFinite(creatorTelegramId)
-    ? creatorTelegramId
-    : null
 
   const hasLocationQueryParam = query.has('location')
   const locationFromQuery = hasLocationQueryParam ? query.get('location') : null
@@ -116,11 +108,7 @@ export async function GET(request) {
       db,
       location: normalizedLocation,
       userRole,
-      creatorTelegramId: Number.isFinite(creatorTelegramId)
-        ? creatorTelegramId
-        : null,
       currentUserId,
-      currentUserTelegramId,
       offset,
       limit,
       view,

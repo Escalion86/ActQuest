@@ -27,6 +27,19 @@ const toObjectIdCompatible = (value) => {
   return trimmed.length > 0 ? trimmed : null
 }
 
+const normalizeTelegramId = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return null
+  }
+
+  return numeric
+}
+
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -61,18 +74,12 @@ export async function GET(request) {
         : sessionRole
 
     const rawTelegramId = session?.user?.telegramId
-    const creatorTelegramId =
-      rawTelegramId === null || rawTelegramId === undefined
-        ? null
-        : Number(rawTelegramId)
+    const creatorTelegramId = normalizeTelegramId(rawTelegramId)
 
     const currentUserId =
       session?.user?._id === null || session?.user?._id === undefined
         ? null
         : String(session.user._id)
-    const currentUserTelegramId = Number.isFinite(creatorTelegramId)
-      ? creatorTelegramId
-      : null
 
     const hasLocationQueryParam = requestUrl.searchParams.has('location')
     const locationFromQuery = hasLocationQueryParam
@@ -178,30 +185,20 @@ export async function GET(request) {
     let userTeamPlace = null
     if (gameDoc?.result?.teamsPlaces && gameTeams.length > 0) {
       const currentUserIdString = toStringId(currentUserId)
-      const currentUserTelegramIdNumber = Number(currentUserTelegramId)
       const hasUserId = Boolean(currentUserIdString)
-      const hasTelegramId = Number.isFinite(currentUserTelegramIdNumber)
 
-      if (hasUserId || hasTelegramId) {
+      if (hasUserId) {
         const teamIds = Array.from(
           new Set(
             gameTeams.map((doc) => toStringId(doc?.teamId)).filter(Boolean),
           ),
         )
 
-        const membershipOr = []
-        if (hasUserId) {
-          membershipOr.push({ userId: currentUserIdString })
-        }
-        if (hasTelegramId) {
-          membershipOr.push({ userTelegramId: currentUserTelegramIdNumber })
-        }
-
         const memberships =
-          teamIds.length && membershipOr.length
+          teamIds.length
             ? await TeamsUsersModel.find({
                 teamId: { $in: teamIds },
-                $or: membershipOr,
+                userId: currentUserIdString,
               })
                 .select({ teamId: 1 })
                 .lean()
@@ -237,8 +234,8 @@ export async function GET(request) {
         ? 'finished'
         : gameDoc?.status
 
-    const creatorTelegramIdRaw = Number(gameDoc?.creatorTelegramId)
-    const creatorDoc = Number.isFinite(creatorTelegramIdRaw)
+    const creatorTelegramIdRaw = normalizeTelegramId(gameDoc?.creatorTelegramId)
+    const creatorDoc = creatorTelegramIdRaw !== null
       ? await UsersModel.findOne({ telegramId: creatorTelegramIdRaw })
           .select({ _id: 1, name: 1, username: 1, phone: 1, telegramId: 1 })
           .lean()

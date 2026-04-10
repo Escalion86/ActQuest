@@ -6,11 +6,6 @@ import isUserAdmin from '@helpers/isUserAdmin'
 import { toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
-const normalizeTelegramId = (value) => {
-  const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric : null
-}
-
 const resolveTeamNameMap = (teams) => {
   const entries = Array.isArray(teams) ? teams : []
   return entries.reduce((acc, team) => {
@@ -41,13 +36,12 @@ export async function GET(request) {
     typeof requestUrl.searchParams.get('userId') === 'string'
       ? requestUrl.searchParams.get('userId').trim()
       : ''
-  const telegramId = normalizeTelegramId(requestUrl.searchParams.get('telegramId'))
 
-  if (!userId && telegramId === null) {
+  if (!userId) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Не переданы идентификаторы пользователя',
+        error: 'Не передан userId пользователя',
       },
       { status: 400 },
     )
@@ -59,19 +53,11 @@ export async function GET(request) {
       throw new Error('Не удалось подключиться к базе данных')
     }
 
-    const orConditions = []
-    if (userId) {
-      orConditions.push({ 'result.teamsUsers.userId': userId })
-    }
-    if (telegramId !== null) {
-      orConditions.push({ 'result.teamsUsers.userTelegramId': telegramId })
-    }
-
     const games = await db
       .model('Games')
       .find({
         status: 'closed',
-        $or: orConditions,
+        'result.teamsUsers.userId': userId,
       })
       .select({
         _id: 1,
@@ -93,11 +79,9 @@ export async function GET(request) {
 
       teamsUsers.forEach((membership) => {
         const membershipUserId = toStringId(membership?.userId)
-        const membershipTelegramId = normalizeTelegramId(membership?.userTelegramId)
 
         const byUserId = userId && membershipUserId === userId
-        const byTelegram = telegramId !== null && membershipTelegramId === telegramId
-        if (!byUserId && !byTelegram) {
+        if (!byUserId) {
           return
         }
 

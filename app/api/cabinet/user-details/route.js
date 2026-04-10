@@ -62,20 +62,9 @@ export async function GET(request) {
     }
 
     const userTelegramId = normalizeTelegramId(userDoc?.telegramId)
-    const userOdId = toStringId(userDoc?._id)
-    const membershipQuery = []
-    if (userTelegramId !== null) {
-      membershipQuery.push({ userTelegramId })
-    }
-    if (userOdId) {
-      membershipQuery.push({ userId: userOdId })
-    }
-    const memberships = membershipQuery.length
-      ? await TeamsUsersModel.find(
-          membershipQuery.length === 1
-            ? membershipQuery[0]
-            : { $or: membershipQuery },
-        )
+    const membershipUserId = toStringId(userDoc?._id)
+    const memberships = membershipUserId
+      ? await TeamsUsersModel.find({ userId: membershipUserId })
           .select({ teamId: 1, role: 1 })
           .lean()
       : []

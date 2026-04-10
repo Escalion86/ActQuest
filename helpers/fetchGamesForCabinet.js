@@ -14,6 +14,19 @@ const toDate = (value) => {
   return date && !Number.isNaN(date.getTime()) ? date : null
 }
 
+const normalizeTelegramId = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return null
+  }
+
+  return numeric
+}
+
 const resolveGamesSort = (view) => {
   if (view === 'upcoming') {
     return { dateStart: 1, _id: 1 }
@@ -94,9 +107,7 @@ const fetchGamesForCabinet = async ({
   db,
   location,
   userRole,
-  creatorTelegramId = null,
   currentUserId = null,
-  currentUserTelegramId = null,
   offset = 0,
   limit = 10,
   view = 'all',
@@ -108,9 +119,7 @@ const fetchGamesForCabinet = async ({
   const GamesModel = db.model('Games')
 
   const currentUserIdString = toStringId(currentUserId)
-  const currentUserTelegramIdNumber = Number(currentUserTelegramId)
   const hasUserId = Boolean(currentUserIdString)
-  const hasTelegramId = Number.isFinite(currentUserTelegramIdNumber)
   const isElevatedRole = userRole === 'admin' || userRole === 'dev'
 
   // Построить базовый query
@@ -127,18 +136,11 @@ const fetchGamesForCabinet = async ({
   let userTeamIds = []
   let userTeamRoles = {} // teamId -> role
 
-  if (hasUserId || hasTelegramId) {
+  if (hasUserId) {
     const TeamsUsersModel = db.model('TeamsUsers')
-
-    const tuOrConditions = []
-    if (hasUserId) {
-      tuOrConditions.push({ userId: currentUserIdString })
-    }
-    if (hasTelegramId) {
-      tuOrConditions.push({ userTelegramId: currentUserTelegramIdNumber })
-    }
-
-    const userTeamsDocs = await TeamsUsersModel.find({ $or: tuOrConditions })
+    const userTeamsDocs = await TeamsUsersModel.find({
+      userId: currentUserIdString,
+    })
       .select({ teamId: 1, role: 1 })
       .lean()
 
@@ -317,8 +319,8 @@ const fetchGamesForCabinet = async ({
   const creatorTelegramIds = Array.from(
     new Set(
       gamesDocs
-        .map((game) => Number(game?.creatorTelegramId))
-        .filter((value) => Number.isFinite(value)),
+        .map((game) => normalizeTelegramId(game?.creatorTelegramId))
+        .filter((value) => value !== null),
     ),
   )
 
@@ -331,8 +333,8 @@ const fetchGamesForCabinet = async ({
             .select({ _id: 1, name: 1, username: 1, phone: 1, telegramId: 1 })
             .lean()
         ).reduce((acc, userDoc) => {
-          const telegramId = Number(userDoc?.telegramId)
-          if (!Number.isFinite(telegramId)) {
+          const telegramId = normalizeTelegramId(userDoc?.telegramId)
+          if (telegramId === null) {
             return acc
           }
           acc[String(telegramId)] = {
@@ -417,8 +419,8 @@ const fetchGamesForCabinet = async ({
 
     const gameId = game?._id ? game._id.toString() : null
     const gameStatus = String(game?.status).toLowerCase()
-    const creatorTelegramIdNumber = Number(game?.creatorTelegramId)
-    const creatorKey = Number.isFinite(creatorTelegramIdNumber)
+    const creatorTelegramIdNumber = normalizeTelegramId(game?.creatorTelegramId)
+    const creatorKey = creatorTelegramIdNumber !== null
       ? String(creatorTelegramIdNumber)
       : null
 

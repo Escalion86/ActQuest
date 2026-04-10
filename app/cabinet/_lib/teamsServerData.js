@@ -14,11 +14,6 @@ const toStringOrNull = (value) => {
   return String(value)
 }
 
-const toFiniteNumberOrNull = (value) => {
-  const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric : null
-}
-
 export const loadCabinetAppTeams = async (session) => {
   const db = await dbConnectGlobal()
   if (!db) {
@@ -26,23 +21,12 @@ export const loadCabinetAppTeams = async (session) => {
   }
 
   const userId = toStringOrNull(session?.user?._id)
-  const telegramId = toFiniteNumberOrNull(session?.user?.telegramId)
-
-  if (!userId && telegramId === null) {
+  if (!userId) {
     return []
   }
 
   const TeamsUsersModel = db.model('TeamsUsers')
-
-  const membershipQuery = userId
-    ? telegramId !== null
-      ? {
-          $or: [{ userId }, { userTelegramId: telegramId }],
-        }
-      : { userId }
-    : { userTelegramId: telegramId }
-
-  const memberships = await TeamsUsersModel.find(membershipQuery)
+  const memberships = await TeamsUsersModel.find({ userId })
     .select({ teamId: 1 })
     .lean()
 

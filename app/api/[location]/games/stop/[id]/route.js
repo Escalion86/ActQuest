@@ -25,7 +25,7 @@ const getRegisteredUsersByGame = async ({ db, gameId }) => {
   }
 
   const memberships = await TeamsUsers.find({ teamId: { $in: teamIds } })
-    .select({ userId: 1, userTelegramId: 1 })
+    .select({ userId: 1 })
     .lean()
 
   const objectIdUserIds = Array.from(
@@ -35,23 +35,12 @@ const getRegisteredUsersByGame = async ({ db, gameId }) => {
         .filter((value) => typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value)),
     ),
   )
-  const telegramIds = Array.from(
-    new Set(
-      memberships
-        .map((item) => Number(item?.userTelegramId))
-        .filter((value) => Number.isFinite(value)),
-    ),
-  )
-
-  if (objectIdUserIds.length === 0 && telegramIds.length === 0) {
+  if (objectIdUserIds.length === 0) {
     return []
   }
 
   const users = await Users.find({
-    $or: [
-      ...(objectIdUserIds.length > 0 ? [{ _id: { $in: objectIdUserIds } }] : []),
-      ...(telegramIds.length > 0 ? [{ telegramId: { $in: telegramIds } }] : []),
-    ],
+    _id: { $in: objectIdUserIds },
   })
     .select({ _id: 1, telegramId: 1, pushSubscriptions: 1 })
     .lean()

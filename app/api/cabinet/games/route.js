@@ -28,6 +28,19 @@ const normalizeStringOrNull = (value) => {
   return trimmed.length > 0 ? trimmed : null
 }
 
+const normalizeTelegramId = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return null
+  }
+
+  return numeric
+}
+
 export async function POST(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -65,10 +78,7 @@ export async function POST(request) {
     )
   }
 
-  const creatorTelegramIdRaw = Number(session.user.telegramId)
-  const creatorTelegramId = Number.isFinite(creatorTelegramIdRaw)
-    ? creatorTelegramIdRaw
-    : null
+  const creatorTelegramId = normalizeTelegramId(session.user.telegramId)
 
   try {
     const db = await dbConnectGlobal()
@@ -82,8 +92,8 @@ export async function POST(request) {
       name,
       location: location.toLowerCase(),
       creatorTelegramId:
-        Number.isFinite(Number(payload?.creatorTelegramId))
-          ? Number(payload.creatorTelegramId)
+        normalizeTelegramId(payload?.creatorTelegramId) !== null
+          ? normalizeTelegramId(payload?.creatorTelegramId)
           : creatorTelegramId,
     }
 

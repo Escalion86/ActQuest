@@ -142,30 +142,19 @@ const toPositiveInteger = (value, fallback) => {
 
 /**
  * Определяет, принадлежит ли membership-запись данному пользователю.
- * Совпадение по userId (TeamsUsers.userId == Users._id) ИЛИ по userTelegramId.
- * Для записей с userTelegramId === 0 (legacy, Number(null)) — матч только по userId.
+ * Совпадение только по userId (TeamsUsers.userId == Users._id).
  */
 const resolveMembershipsForUser = (userDoc, membershipsDocs) => {
   const userId = userDoc?._id ? String(userDoc._id) : null
-  const numericTelegramId =
-    Number.isFinite(userDoc?.telegramId) && userDoc.telegramId !== 0
-      ? Number(userDoc.telegramId)
-      : null
 
   const seenTeamIds = new Set()
   return membershipsDocs
     .filter((doc) => {
       const docUserId = doc?.userId ? String(doc.userId) : null
-      const docTelegramId = doc?.userTelegramId
 
       const matchByUserId = userId && docUserId && docUserId === userId
-      const matchByTelegramId =
-        numericTelegramId !== null &&
-        Number.isFinite(docTelegramId) &&
-        docTelegramId !== 0 &&
-        docTelegramId === numericTelegramId
 
-      return matchByUserId || matchByTelegramId
+      return matchByUserId
     })
     .map((doc) => {
       const teamId = toStringId(doc?.teamId)
@@ -331,17 +320,6 @@ const fetchAdminUsersForCabinet = async ({
       return { users: [], hasMore: false }
     }
 
-    const membershipTelegramIdsForAll = Array.from(
-      new Set(
-        usersDocs
-          .map((userDoc) =>
-            Number.isFinite(userDoc?.telegramId)
-              ? Number(userDoc.telegramId)
-              : null,
-          )
-          .filter((id) => id !== null),
-      ),
-    )
     const membershipUserIdsForAll = Array.from(
       new Set(
         usersDocs
@@ -351,11 +329,6 @@ const fetchAdminUsersForCabinet = async ({
     )
 
     const membershipQueryForAll = []
-    if (membershipTelegramIdsForAll.length) {
-      membershipQueryForAll.push({
-        userTelegramId: { $in: membershipTelegramIdsForAll },
-      })
-    }
     if (membershipUserIdsForAll.length) {
       membershipQueryForAll.push({ userId: { $in: membershipUserIdsForAll } })
     }
@@ -365,7 +338,7 @@ const fetchAdminUsersForCabinet = async ({
             ? membershipQueryForAll[0]
             : { $or: membershipQueryForAll },
         )
-          .select({ teamId: 1, userTelegramId: 1, userId: 1, role: 1 })
+          .select({ teamId: 1, userId: 1, role: 1 })
           .lean()
       : []
 
@@ -419,17 +392,6 @@ const fetchAdminUsersForCabinet = async ({
     return { users: pagedUsers, hasMore: pagedHasMore }
   }
 
-  const membershipTelegramIds = Array.from(
-    new Set(
-      usersSlice
-        .map((userDoc) =>
-          Number.isFinite(userDoc?.telegramId)
-            ? Number(userDoc.telegramId)
-            : null,
-        )
-        .filter((id) => id !== null),
-    ),
-  )
   const membershipUserIds = Array.from(
     new Set(
       usersSlice
@@ -439,9 +401,6 @@ const fetchAdminUsersForCabinet = async ({
   )
 
   const membershipQuery = []
-  if (membershipTelegramIds.length) {
-    membershipQuery.push({ userTelegramId: { $in: membershipTelegramIds } })
-  }
   if (membershipUserIds.length) {
     membershipQuery.push({ userId: { $in: membershipUserIds } })
   }
@@ -451,7 +410,7 @@ const fetchAdminUsersForCabinet = async ({
           ? membershipQuery[0]
           : { $or: membershipQuery },
       )
-        .select({ teamId: 1, userTelegramId: 1, userId: 1, role: 1 })
+        .select({ teamId: 1, userId: 1, role: 1 })
         .lean()
     : []
 

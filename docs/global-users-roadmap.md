@@ -8,7 +8,7 @@
 
 ## Последняя проверка
 
-Дата: 2026-04-04
+Дата: 2026-04-10
 
 Ключевые файлы-источники статусов:
 - `utils/dbConnectGlobal.js`
@@ -22,8 +22,15 @@
 - `scripts/verifyGlobalMigration.js`
 - `schemas/usersSchema.js`
 - `helpers/fetchAdminUsersForCabinet.js`
+- `helpers/fetchGamesForCabinet.js`
+- `helpers/fetchTeamsForCabinet.js`
 - `app/api/cabinet/users/profile/route.js`
 - `app/api/cabinet/users/location/route.js`
+- `app/api/cabinet/teams/route.js`
+- `app/api/cabinet/teams/[id]/route.js`
+- `app/api/cabinet/teams/members/route.js`
+- `app/api/cabinet/teams/members/[id]/route.js`
+- `app/api/cabinet/games/[gameId]/teams/route.js`
 
 Шаблон обновления:
 - Обновить дату в этом блоке.
@@ -74,6 +81,7 @@
 5. Удаление legacy-зависимостей
 - [x] Убрать жёсткую привязку к `telegramId` как обязательному ключу.
 - [~] Убрать чтение/запись `Users` из городских БД там, где это уже не требуется.
+- [~] Связки `Users -> TeamsUsers -> Teams` в кабинетных API переведены на `userId` (`Users._id`); fallback по `userTelegramId` в связках отключён, legacy-ветки Telegram/WebApp ещё требуют точечного cleanup.
 
 ## Риски и контроль
 - Риск неправильного merge дублей.
@@ -86,7 +94,7 @@
 ## Критерии готовности (Definition of Done)
 - [x] Новый пользователь создаётся только в `actquest_global`.
 - [~] Существующий пользователь логинится любым методом и получает один `globalUserId`.
-- [~] Кабинет работает без обязательного `telegramId`.
+- [~] Кабинет работает без обязательного `telegramId`; membership-связки в кабинетных API идут по `userId`.
 - [x] Старые пользователи продолжают входить без ручного вмешательства.
 
 ## Приоритеты

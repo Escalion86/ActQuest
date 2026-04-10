@@ -30,11 +30,6 @@ export const loadCabinetAppGames = async ({ session, view }) => {
 
   const role = normalizeRole(session?.user?.role)
   const location = normalizeLocation(session?.user?.location)
-  const rawTelegramId = session?.user?.telegramId
-  const creatorTelegramId =
-    rawTelegramId === null || rawTelegramId === undefined
-      ? null
-      : Number(rawTelegramId)
   const currentUserId =
     session?.user?._id === null || session?.user?._id === undefined
       ? null
@@ -44,13 +39,7 @@ export const loadCabinetAppGames = async ({ session, view }) => {
     db,
     location,
     userRole: role,
-    creatorTelegramId: Number.isFinite(creatorTelegramId)
-      ? creatorTelegramId
-      : null,
     currentUserId,
-    currentUserTelegramId: Number.isFinite(creatorTelegramId)
-      ? creatorTelegramId
-      : null,
     offset: 0,
     limit: 10,
     view: view === 'past' ? 'past' : 'upcoming',
@@ -58,4 +47,3 @@ export const loadCabinetAppGames = async ({ session, view }) => {
 
   return Array.isArray(games) ? games : []
 }
-

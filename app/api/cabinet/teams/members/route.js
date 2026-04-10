@@ -67,13 +67,8 @@ export async function POST(request) {
     const actorUserId = toStringId(
       session.user.globalUserId ?? session.user.userId ?? session.user._id,
     )
-    const actorTelegramIdRaw = Number(session.user.telegramId)
-    const actorTelegramId =
-      Number.isFinite(actorTelegramIdRaw) && actorTelegramIdRaw !== 0
-        ? actorTelegramIdRaw
-        : null
 
-    if (!actorUserId && actorTelegramId === null) {
+    if (!actorUserId) {
       return NextResponse.json(
         { success: false, error: 'Не удалось определить пользователя' },
         { status: 403 },
@@ -107,30 +102,17 @@ export async function POST(request) {
       }
 
       const targetGlobalUserId = toStringId(targetUserDoc.globalUserId)
-      const targetTelegramIdRaw = Number(targetUserDoc.telegramId)
-      const targetTelegramId =
-        Number.isFinite(targetTelegramIdRaw) && targetTelegramIdRaw !== 0
-          ? targetTelegramIdRaw
-          : null
-
-      const existingFilter = {
-        teamId,
-        $or: [
-          ...(targetGlobalUserId ? [{ userId: targetGlobalUserId }] : []),
-          ...(targetTelegramId !== null
-            ? [{ userTelegramId: targetTelegramId }]
-            : []),
-        ],
-      }
-
-      if (existingFilter.$or.length === 0) {
+      if (!targetGlobalUserId) {
         return NextResponse.json(
           { success: false, error: 'Не удалось идентифицировать пользователя' },
           { status: 400 },
         )
       }
 
-      const existingMembership = await TeamsUsersModel.findOne(existingFilter)
+      const existingMembership = await TeamsUsersModel.findOne({
+        teamId,
+        userId: targetGlobalUserId,
+      })
         .select({ _id: 1 })
         .lean()
       if (existingMembership?._id) {
@@ -143,7 +125,6 @@ export async function POST(request) {
       const createdMembership = await TeamsUsersModel.create({
         teamId,
         userId: targetGlobalUserId,
-        userTelegramId: targetTelegramId,
         role,
       })
 
@@ -190,12 +171,7 @@ export async function POST(request) {
 
     const membershipFilter = {
       teamId,
-      $or: [
-        ...(actorUserId ? [{ userId: actorUserId }] : []),
-        ...(Number.isFinite(actorTelegramId)
-          ? [{ userTelegramId: actorTelegramId }]
-          : []),
-      ],
+      userId: actorUserId,
     }
 
     const existingMembership = await TeamsUsersModel.findOne(membershipFilter)
@@ -211,7 +187,6 @@ export async function POST(request) {
     const createdMembership = await TeamsUsersModel.create({
       teamId,
       userId: actorUserId,
-      userTelegramId: actorTelegramId,
       role,
     })
 

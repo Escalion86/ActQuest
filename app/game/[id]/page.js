@@ -103,15 +103,18 @@ export default async function GameEntryPage({ params }) {
 
       let isParticipant = false
       let participantTeams = []
+      const currentUserId =
+        session?.user?._id === null || session?.user?._id === undefined
+          ? null
+          : String(session.user._id)
 
-      if (teamIds.length > 0 && session?.user?.telegramId) {
+      if (teamIds.length > 0 && currentUserId) {
         const teamsUsers = await db
           .model('TeamsUsers')
           .find({ teamId: { $in: teamIds } })
           .lean()
-        const telegramId = String(session.user.telegramId)
         const memberships = teamsUsers.filter(
-          (item) => String(item.userTelegramId) === telegramId,
+          (item) => String(item.userId || '') === currentUserId,
         )
 
         if (memberships.length > 0) {

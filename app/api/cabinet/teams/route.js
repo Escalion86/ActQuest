@@ -39,18 +39,6 @@ const collectTeamIds = (searchParams) => {
   return Array.from(new Set(rawIds))
 }
 
-const normalizeRole = (value) => {
-  if (typeof value !== 'string') {
-    return 'client'
-  }
-  const normalizedRaw = value.trim().toLowerCase()
-  const normalized = normalizedRaw
-  return ['client', 'moder', 'admin', 'dev'].includes(normalized)
-    ? normalized
-    : 'client'
-}
-
-const isElevatedRole = (role) => role === 'admin' || role === 'dev'
 const resolveAllowedLocations = () =>
   Object.entries(LOCATIONS)
     .filter(([, value]) => !value?.hidden)
@@ -154,7 +142,6 @@ export async function POST(request) {
     const TeamsModel = db.model('Teams')
     const TeamsUsersModel = db.model('TeamsUsers')
 
-    const actorRole = normalizeRole(session.user.role)
     const actorUserId = toStringId(
       session.user.globalUserId ?? session.user.userId ?? session.user._id,
     )
@@ -164,7 +151,7 @@ export async function POST(request) {
         ? actorTelegramIdRaw
         : null
 
-    if (!actorUserId && actorTelegramId === null) {
+    if (!actorUserId) {
       return NextResponse.json(
         {
           success: false,
@@ -188,7 +175,6 @@ export async function POST(request) {
     await TeamsUsersModel.create({
       teamId: toStringId(createdTeam?._id),
       userId: actorUserId,
-      userTelegramId: actorTelegramId,
       role: 'capitan',
     })
 

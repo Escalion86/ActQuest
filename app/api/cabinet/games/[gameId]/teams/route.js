@@ -73,26 +73,14 @@ const resolveSessionIdentity = (session) => {
       sessionUser.id ??
       null,
   )
-  const telegramIdRaw = Number(sessionUser.telegramId)
-  const telegramId = Number.isFinite(telegramIdRaw) ? telegramIdRaw : null
 
   return {
     userId,
-    telegramId,
     role: normalizeRole(sessionUser.role),
   }
 }
 
-const resolveMembershipFilter = ({ userId, telegramId }) => {
-  const orFilter = []
-  if (userId) {
-    orFilter.push({ userId })
-  }
-  if (Number.isFinite(telegramId)) {
-    orFilter.push({ userTelegramId: telegramId })
-  }
-  return orFilter
-}
+const resolveMembershipFilter = ({ userId }) => (userId ? [{ userId }] : [])
 
 const ensureGameAllowsRegistration = (game) => {
   const status = String(game?.status ?? '')
@@ -361,7 +349,7 @@ export async function POST(request, { params }) {
       location: normalizeLocation(game?.location),
       message: `Команда «${typeof team?.name === 'string' ? team.name : ''}» зарегистрирована на игру «${typeof game?.name === 'string' ? game.name : ''}»`,
       actorUserId: identity.userId,
-      actorTelegramId: identity.telegramId,
+      actorTelegramId: null,
       teamId,
       teamName: typeof team?.name === 'string' ? team.name : '',
       gameId: normalizedResolvedGameId,
@@ -507,7 +495,7 @@ export async function DELETE(request, { params }) {
             location: normalizeLocation(game?.location),
             message: `Команда «${teamNameById[currentTeamId] || ''}» снята с регистрации на игру «${typeof game?.name === 'string' ? game.name : ''}»`,
             actorUserId: identity.userId,
-            actorTelegramId: identity.telegramId,
+            actorTelegramId: null,
             teamId: currentTeamId,
             teamName: teamNameById[currentTeamId] || '',
             gameId: normalizedResolvedGameId,

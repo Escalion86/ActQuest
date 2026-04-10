@@ -22,20 +22,14 @@ const resolveActorIdentity = (session) => {
   const actorUserId = toStringId(
     session?.user?.globalUserId ?? session?.user?.userId ?? session?.user?._id,
   )
-  const actorTelegramIdRaw = Number(session?.user?.telegramId)
-  const actorTelegramId =
-    Number.isFinite(actorTelegramIdRaw) && actorTelegramIdRaw !== 0
-      ? actorTelegramIdRaw
-      : null
 
-  return { actorUserId, actorTelegramId }
+  return { actorUserId }
 }
 
 const ensureCanManageMembership = async ({
   db,
   actorRole,
   actorUserId,
-  actorTelegramId,
   membership,
 }) => {
   if (isElevatedRole(actorRole)) {
@@ -43,16 +37,9 @@ const ensureCanManageMembership = async ({
   }
 
   const memberUserId = toStringId(membership?.userId)
-  const memberTelegramIdRaw = Number(membership?.userTelegramId)
-  const memberTelegramId = Number.isFinite(memberTelegramIdRaw)
-    ? memberTelegramIdRaw
-    : null
 
   const isSelfMembership =
-    (actorUserId && memberUserId && actorUserId === memberUserId) ||
-    (Number.isFinite(actorTelegramId) &&
-      Number.isFinite(memberTelegramId) &&
-      actorTelegramId === memberTelegramId)
+    actorUserId && memberUserId && actorUserId === memberUserId
   if (isSelfMembership) {
     return true
   }
@@ -61,12 +48,7 @@ const ensureCanManageMembership = async ({
   const captainMembership = await TeamsUsersModel.findOne({
     teamId: membership.teamId,
     role: 'capitan',
-    $or: [
-      ...(actorUserId ? [{ userId: actorUserId }] : []),
-      ...(Number.isFinite(actorTelegramId)
-        ? [{ userTelegramId: actorTelegramId }]
-        : []),
-    ],
+    userId: actorUserId,
   })
     .select({ _id: 1 })
     .lean()
@@ -110,12 +92,11 @@ export async function DELETE(request, { params }) {
     }
 
     const actorRole = normalizeRole(session.user.role)
-    const { actorUserId, actorTelegramId } = resolveActorIdentity(session)
+    const { actorUserId } = resolveActorIdentity(session)
     const allowed = await ensureCanManageMembership({
       db,
       actorRole,
       actorUserId,
-      actorTelegramId,
       membership,
     })
 
@@ -206,12 +187,11 @@ export async function PUT(request, { params }) {
     }
 
     const actorRole = normalizeRole(session.user.role)
-    const { actorUserId, actorTelegramId } = resolveActorIdentity(session)
+    const { actorUserId } = resolveActorIdentity(session)
     const allowed = await ensureCanManageMembership({
       db,
       actorRole,
       actorUserId,
-      actorTelegramId,
       membership,
     })
 

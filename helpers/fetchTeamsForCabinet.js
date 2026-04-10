@@ -199,31 +199,9 @@ const fetchTeamsForCabinet = async ({
         .filter((userId) => typeof userId === 'string' && userId.length > 0),
     ),
   )
-  const memberTelegramIds = Array.from(
-    new Set(
-      ensureArray(teamMembersDocs)
-        .map((doc) => doc?.userTelegramId)
-        .filter((telegramId) => Number.isFinite(telegramId)),
-    ),
-  )
 
   const usersByIdDocs = memberUserIds.length
     ? await UsersModel.find({ _id: { $in: memberUserIds } })
-        .select({
-          _id: 1,
-          telegramId: 1,
-          name: 1,
-          username: 1,
-          phone: 1,
-          role: 1,
-          photoUrl: 1,
-          images: 1,
-        })
-        .lean()
-    : []
-
-  const usersByTelegramDocs = memberTelegramIds.length
-    ? await UsersModel.find({ telegramId: { $in: memberTelegramIds } })
         .select({
           _id: 1,
           telegramId: 1,
@@ -247,21 +225,6 @@ const fetchTeamsForCabinet = async ({
     return acc
   }, {})
 
-  const usersByTelegramMap = ensureArray(usersByTelegramDocs).reduce(
-    (acc, user) => {
-      const telegramId = Number.isFinite(user?.telegramId)
-        ? user.telegramId
-        : null
-
-      if (telegramId !== null) {
-        acc[telegramId] = user
-      }
-
-      return acc
-    },
-    {},
-  )
-
   const membersByTeam = ensureArray(teamMembersDocs).reduce(
     (acc, membership) => {
       const teamId = toStringId(membership?.teamId)
@@ -275,10 +238,7 @@ const fetchTeamsForCabinet = async ({
         acc[teamId] = []
       }
 
-      const linkedUser =
-        (userId ? (usersByIdMap[userId] ?? null) : null) ??
-        usersByTelegramMap[membership?.userTelegramId] ??
-        null
+      const linkedUser = userId ? (usersByIdMap[userId] ?? null) : null
 
       acc[teamId].push({
         membershipId: membership?._id,

@@ -23,15 +23,6 @@ const normalizeStringId = (value) => {
   return ''
 }
 
-const normalizeTelegramId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  const asNumber = Number(value)
-  return Number.isFinite(asNumber) ? asNumber : null
-}
-
 const isElevatedRole = (role) => role === 'admin' || role === 'dev'
 const resolveAllowedLocations = () =>
   Object.entries(LOCATIONS)
@@ -112,7 +103,6 @@ export async function PUT(request, { params }) {
   const userId = normalizeStringId(
     session.user.globalUserId ?? session.user.userId ?? session.user._id,
   )
-  const userTelegramId = normalizeTelegramId(session.user.telegramId)
   const userRole =
     typeof session.user.role === 'string'
       ? session.user.role.trim().toLowerCase()
@@ -167,14 +157,7 @@ export async function PUT(request, { params }) {
     }
 
     if (!isElevatedRole(userRole)) {
-      const membershipOr = []
-      if (userId) {
-        membershipOr.push({ userId })
-      }
-      if (userTelegramId !== null) {
-        membershipOr.push({ userTelegramId })
-      }
-      if (membershipOr.length === 0) {
+      if (!userId) {
         return NextResponse.json(
           { success: false, error: 'Недостаточно прав для изменения команды' },
           { status: 403 },
@@ -184,7 +167,7 @@ export async function PUT(request, { params }) {
       const captainMembership = await TeamsUsersModel.findOne({
         teamId,
         role: 'capitan',
-        $or: membershipOr,
+        userId,
       })
         .select({ _id: 1 })
         .lean()
@@ -257,7 +240,10 @@ export async function DELETE(request, { params }) {
   const userId = normalizeStringId(
     session.user.globalUserId ?? session.user.userId ?? session.user._id,
   )
-  const userTelegramId = normalizeTelegramId(session.user.telegramId)
+  const actorTelegramIdRaw = Number(session.user.telegramId)
+  const actorTelegramId = Number.isFinite(actorTelegramIdRaw)
+    ? actorTelegramIdRaw
+    : null
   const userRole =
     typeof session.user.role === 'string'
       ? session.user.role.trim().toLowerCase()
@@ -288,15 +274,7 @@ export async function DELETE(request, { params }) {
     }
 
     if (!isElevatedRole(userRole)) {
-      const membershipOr = []
-      if (userId) {
-        membershipOr.push({ userId })
-      }
-      if (userTelegramId !== null) {
-        membershipOr.push({ userTelegramId })
-      }
-
-      if (membershipOr.length === 0) {
+      if (!userId) {
         return NextResponse.json(
           {
             success: false,
@@ -309,7 +287,7 @@ export async function DELETE(request, { params }) {
       const captainMembership = await TeamsUsersModel.findOne({
         teamId,
         role: 'capitan',
-        $or: membershipOr,
+        userId,
       })
         .select({ _id: 1 })
         .lean()
@@ -391,7 +369,7 @@ export async function DELETE(request, { params }) {
       location: normalizeLocation(team?.location),
       message: `Удалена команда «${typeof team?.name === 'string' ? team.name : ''}»`,
       actorUserId: userId || null,
-      actorTelegramId: userTelegramId,
+      actorTelegramId,
       teamId,
       teamName: typeof team?.name === 'string' ? team.name : '',
       metadata: {

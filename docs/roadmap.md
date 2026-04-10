@@ -6,11 +6,11 @@
 - [~] В процессе
 - [ ] Не начато
 
-Актуализация статусов по коду: 2026-04-04.
+Актуализация статусов по коду: 2026-04-10.
 
 ## Последняя проверка
 
-Дата: 2026-04-03
+Дата: 2026-04-10
 
 Ключевые файлы-источники статусов:
 - `app/api/auth/[...nextauth]/route.js`
@@ -28,6 +28,14 @@
 - `schemas/usersSchema.js`
 - `helpers/normalizeUserProfile.js`
 - `helpers/getUserAvatarSrc.js`
+- `helpers/fetchGamesForCabinet.js`
+- `helpers/fetchTeamsForCabinet.js`
+- `app/api/cabinet/teams/route.js`
+- `app/api/cabinet/teams/[id]/route.js`
+- `app/api/cabinet/teams/members/route.js`
+- `app/api/cabinet/teams/members/[id]/route.js`
+- `app/api/cabinet/games/[gameId]/teams/route.js`
+- `app/api/cabinet/games/[gameId]/push-broadcast/route.js`
 - `docs/app-router-migration-roadmap.md`
 - `app/layout.js`
 - `app/api/health/route.js`
