@@ -14,6 +14,8 @@ import FontFamily from '@tiptap/extension-font-family'
 import { Node, mergeAttributes } from '@tiptap/core'
 import { NodeSelection } from '@tiptap/pm/state'
 
+import Modal from '@components/Modal'
+import SystemPromptMdEditor from '@components/cabinet/SystemPromptMdEditor'
 import { sendImage } from '@helpers/cloudinary'
 
 const FONT_OPTIONS = [
@@ -57,6 +59,8 @@ const ESCALIONCLOUD_PUBLIC_ORIGIN =
 const MAX_VIDEO_SIZE_BYTES = 40 * 1024 * 1024
 const DEFAULT_PICKER_COLOR = '#111827'
 const NO_COLOR_TOKEN = '__no_color__'
+const AI_SYSTEM_PROMPTS_SECTION = 'task_rich_editor'
+const AI_UI_QUESTIONS_PREFIX = 'AQ_UI_QUESTIONS'
 
 const getEditorViewSafe = (editorInstance) => {
   if (!editorInstance) return null
@@ -73,6 +77,15 @@ const isEditorEmptySafe = (editorInstance) => {
     return Boolean(editorInstance.isEmpty)
   } catch {
     return false
+  }
+}
+
+const getEditorPlainTextSafe = (editorInstance) => {
+  if (!editorInstance) return ''
+  try {
+    return String(editorInstance.getText?.() || '')
+  } catch {
+    return ''
   }
 }
 
@@ -187,6 +200,261 @@ const normalizeEditorInputValue = (value) => {
   }
 
   return plainTextToEditorHtml(source)
+}
+
+const htmlToPlainText = (html) => {
+  const source = String(html || '')
+  if (!source.trim()) return ''
+
+  if (typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
+    return source.replace(/<[^>]*>/g, ' ')
+  }
+
+  try {
+    const parser = new window.DOMParser()
+    const doc = parser.parseFromString(source, 'text/html')
+    return (doc.body?.textContent || '').trim()
+  } catch {
+    return source.replace(/<[^>]*>/g, ' ').trim()
+  }
+}
+
+const normalizeTextWhitespace = (value) =>
+  String(value || '')
+    .replace(/\r\n?/g, '\n')
+    .replaceAll('\u00A0', ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+const buildCurrentTextForAiPrompt = (currentHtml) => {
+  const source = String(currentHtml || '')
+  if (!source.trim()) return ''
+
+  const prepared = source
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<li\b[^>]*>/gi, '\n• ')
+    .replace(/<\/li>/gi, '')
+
+  return normalizeTextWhitespace(htmlToPlainText(prepared))
+}
+
+const buildAiRequestContent = ({ currentHtml, includeCurrentText, prompt }) => {
+  const currentText = includeCurrentText
+    ? buildCurrentTextForAiPrompt(currentHtml)
+    : ''
+  const cleanPrompt = normalizeTextWhitespace(prompt)
+
+  return [currentText, cleanPrompt].filter(Boolean).join('\n\n')
+}
+
+const isSafeLinkHref = (value) => /^https?:\/\/\S+$/i.test(String(value || ''))
+
+const sanitizeAiHtmlPreview = (html) => {
+  const source = String(html || '')
+  if (!source.trim()) return ''
+
+  if (typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
+    return source.replace(/<[^>]*>/g, '')
+  }
+
+  try {
+    const parser = new window.DOMParser()
+    const doc = parser.parseFromString(source, 'text/html')
+    const allowedTags = new Set(['b', 'br', 'i', 'u', 'del', 'strong', 'em', 'a'])
+
+    const allElements = Array.from(doc.body.querySelectorAll('*'))
+    allElements.forEach((element) => {
+      const tagName = String(element.tagName || '').toLowerCase()
+      if (!allowedTags.has(tagName)) {
+        element.replaceWith(...Array.from(element.childNodes))
+        return
+      }
+
+      if (tagName !== 'a') {
+        Array.from(element.attributes).forEach((attribute) => {
+          element.removeAttribute(attribute.name)
+        })
+        return
+      }
+
+      const href = String(element.getAttribute('href') || '').trim()
+      if (!isSafeLinkHref(href)) {
+        element.removeAttribute('href')
+        element.removeAttribute('target')
+        element.removeAttribute('rel')
+        return
+      }
+
+      element.setAttribute('href', href)
+      element.setAttribute('target', '_blank')
+      element.setAttribute('rel', 'noopener noreferrer')
+
+      Array.from(element.attributes).forEach((attribute) => {
+        if (!['href', 'target', 'rel'].includes(attribute.name.toLowerCase())) {
+          element.removeAttribute(attribute.name)
+        }
+      })
+    })
+
+    return doc.body.innerHTML
+  } catch {
+    return source.replace(/<[^>]*>/g, '')
+  }
+}
+
+const formatAiTextToPreviewHtml = (value) => {
+  const raw = String(value || '')
+  if (!raw.trim()) return ''
+
+  const escaped = escapeHtmlText(raw).replace(/\r\n?/g, '\n')
+
+  const withFormatting = escaped
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/__(.+?)__/g, '<u>$1</u>')
+    .replace(/~~(.+?)~~/g, '<i>$1</i>')
+    .replace(/--(.+?)--/g, '<del>$1</del>')
+    .replace(/<<([^<>\s]+)>>/g, (match, url) => {
+      if (!isSafeLinkHref(url)) return match
+      const safeHref = escapeHtmlAttribute(url)
+      return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${safeHref}</a>`
+    })
+    .replace(/\n/g, '<br>')
+
+  return sanitizeAiHtmlPreview(withFormatting)
+}
+
+const requestJson = async (url, options = {}, fallbackErrorMessage) => {
+  const response = await fetch(url, options)
+  const json = await response.json().catch(() => ({}))
+  if (!response.ok || json?.success !== true) {
+    throw new Error(
+      (typeof json?.error === 'string' && json.error) ||
+        fallbackErrorMessage ||
+        'Запрос завершился с ошибкой',
+    )
+  }
+  return json
+}
+
+const AI_UI_QUESTIONS_INSTRUCTIONS = `
+Если тебе НЕ хватает данных, верни УТОЧНЯЮЩИЕ ВОПРОСЫ в строгом формате:
+${AI_UI_QUESTIONS_PREFIX}
+\`\`\`json
+{
+  "title": "Уточните параметры",
+  "questions": [
+    {
+      "id": "game_type",
+      "label": "Тип игры",
+      "type": "single_choice",
+      "control": "radio",
+      "required": true,
+      "options": [
+        { "value": "classic", "label": "Классика" },
+        { "value": "photo", "label": "Фотоквест" }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+Правила:
+- Если задаешь вопросы, не добавляй обычный текст вне этого формата.
+- "type" допустим: "single_choice" или "text".
+- Для "single_choice" всегда передавай options.
+- "control" для выбора: "radio" или "select".
+- После получения ответов верни финальный результат задания обычным текстом.
+`.trim()
+
+const extractAiQuestionsPayload = (responseText) => {
+  const source = String(responseText || '').trim()
+  if (!source || !source.includes(AI_UI_QUESTIONS_PREFIX)) {
+    return null
+  }
+
+  const fencedMatch = source.match(/```json\s*([\s\S]*?)```/i)
+  const rawJson = fencedMatch?.[1]
+    ? fencedMatch[1]
+    : source.replace(AI_UI_QUESTIONS_PREFIX, '').trim()
+
+  try {
+    return JSON.parse(rawJson)
+  } catch {
+    return null
+  }
+}
+
+const normalizeAiQuestions = (payload) => {
+  if (!payload || typeof payload !== 'object') return null
+  const rawQuestions = Array.isArray(payload.questions) ? payload.questions : []
+  const questions = rawQuestions
+    .map((question, index) => {
+      const id =
+        typeof question?.id === 'string' && question.id.trim()
+          ? question.id.trim()
+          : `question_${index + 1}`
+      const label =
+        typeof question?.label === 'string' && question.label.trim()
+          ? question.label.trim()
+          : `Вопрос ${index + 1}`
+      const type = question?.type === 'text' ? 'text' : 'single_choice'
+      const control =
+        question?.control === 'radio' || question?.control === 'select'
+          ? question.control
+          : 'select'
+      const options =
+        type === 'single_choice'
+          ? (Array.isArray(question?.options) ? question.options : [])
+              .map((option, optionIndex) => {
+                const value =
+                  typeof option?.value === 'string' && option.value.trim()
+                    ? option.value.trim()
+                    : `option_${optionIndex + 1}`
+                const optionLabel =
+                  typeof option?.label === 'string' && option.label.trim()
+                    ? option.label.trim()
+                    : value
+                return { value, label: optionLabel }
+              })
+              .filter((option) => Boolean(option.value))
+          : []
+
+      if (type === 'single_choice' && options.length === 0) {
+        return null
+      }
+
+      return {
+        id,
+        label,
+        type,
+        control,
+        required: question?.required !== false,
+        options,
+      }
+    })
+    .filter(Boolean)
+
+  if (questions.length === 0) return null
+  return {
+    title:
+      typeof payload?.title === 'string' && payload.title.trim()
+        ? payload.title.trim()
+        : 'Уточните параметры',
+    questions,
+  }
+}
+
+const buildAnswersMessage = (questionsPayload, answersMap = {}) => {
+  if (!questionsPayload?.questions?.length) return ''
+  const lines = questionsPayload.questions.map((question) => {
+    const rawAnswer =
+      typeof answersMap?.[question.id] === 'string' ? answersMap[question.id] : ''
+    const normalizedAnswer = rawAnswer.trim()
+    return `- ${question.label}: ${normalizedAnswer || 'Не указано'}`
+  })
+  return `Ответы на уточняющие вопросы:\n${lines.join('\n')}`
 }
 
 const toHexColor = (value) => {
@@ -884,6 +1152,27 @@ const TaskRichEditor = ({
     left: 0,
     selectedIndex: 0,
   })
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiIncludeCurrentText, setAiIncludeCurrentText] = useState(true)
+  const [aiUseDeepReasoning, setAiUseDeepReasoning] = useState(false)
+  const [isAiLoading, setIsAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const [aiPreviewHtml, setAiPreviewHtml] = useState('')
+  const [aiSystemPrompts, setAiSystemPrompts] = useState([])
+  const [selectedAiSystemPromptId, setSelectedAiSystemPromptId] = useState('')
+  const [isAiSystemPromptsLoading, setIsAiSystemPromptsLoading] = useState(false)
+  const [aiSystemPromptsError, setAiSystemPromptsError] = useState('')
+  const [isSystemPromptModalOpen, setIsSystemPromptModalOpen] = useState(false)
+  const [systemPromptModalMode, setSystemPromptModalMode] = useState('create')
+  const [systemPromptTitleDraft, setSystemPromptTitleDraft] = useState('')
+  const [systemPromptMdDraft, setSystemPromptMdDraft] = useState('')
+  const [systemPromptModalError, setSystemPromptModalError] = useState('')
+  const [isSystemPromptSaving, setIsSystemPromptSaving] = useState(false)
+  const [isSystemPromptDeleting, setIsSystemPromptDeleting] = useState(false)
+  const [aiConversationHistory, setAiConversationHistory] = useState([])
+  const [aiQuestionsPayload, setAiQuestionsPayload] = useState(null)
+  const [aiQuestionsAnswers, setAiQuestionsAnswers] = useState({})
 
   const normalizedValue = typeof value === 'string' ? value : ''
   const normalizedContentValue = useMemo(
@@ -938,6 +1227,47 @@ const TaskRichEditor = ({
     },
     [extensions, disabled],
   )
+  const hasCurrentEditorText = getEditorPlainTextSafe(editor).trim().length > 0
+  const selectedAiSystemPrompt = useMemo(
+    () =>
+      aiSystemPrompts.find(
+        (item) =>
+          String(item?.id || '').trim() ===
+          String(selectedAiSystemPromptId || '').trim(),
+      ) || null,
+    [aiSystemPrompts, selectedAiSystemPromptId],
+  )
+
+  const loadAiSystemPrompts = useCallback(async () => {
+    setIsAiSystemPromptsLoading(true)
+    setAiSystemPromptsError('')
+    try {
+      const json = await requestJson(
+        `/api/cabinet/ai-system-prompts?section=${encodeURIComponent(
+          AI_SYSTEM_PROMPTS_SECTION,
+        )}`,
+        { cache: 'no-store' },
+        'Не удалось загрузить системные промпты',
+      )
+
+      const items = Array.isArray(json?.data) ? json.data : []
+      setAiSystemPrompts(items)
+      setSelectedAiSystemPromptId((prev) => {
+        const prevId = String(prev || '').trim()
+        if (prevId && items.some((item) => String(item?.id || '') === prevId)) {
+          return prevId
+        }
+        return ''
+      })
+    } catch (error) {
+      setAiSystemPrompts([])
+      setAiSystemPromptsError(
+        error?.message || 'Не удалось загрузить системные промпты',
+      )
+    } finally {
+      setIsAiSystemPromptsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!editor) return
@@ -1162,7 +1492,7 @@ const TaskRichEditor = ({
       let coords
       try {
         coords = view.coordsAtPos(cursorPos)
-      } catch (error) {
+      } catch {
         closeSlashMenu()
         return
       }
@@ -1483,6 +1813,306 @@ const TaskRichEditor = ({
     editor.chain().focus().clearNodes().unsetAllMarks().run()
   }, [disabled, editor])
 
+  const openAiModal = useCallback(() => {
+    if (disabled) return
+    setAiIncludeCurrentText(hasCurrentEditorText)
+    setIsAiModalOpen(true)
+    setAiError('')
+    setAiPreviewHtml('')
+    void loadAiSystemPrompts()
+  }, [disabled, hasCurrentEditorText, loadAiSystemPrompts])
+
+  const closeAiModal = useCallback(() => {
+    if (isAiLoading) return
+    setIsAiModalOpen(false)
+    setAiError('')
+  }, [isAiLoading])
+
+  const requestAiRewrite = useCallback(
+    async ({ overrideUserContent = '' } = {}) => {
+      if (disabled || isAiLoading) return
+
+      const currentHtml = editor?.getHTML?.() || ''
+      const content =
+        typeof overrideUserContent === 'string' && overrideUserContent.trim()
+          ? overrideUserContent.trim()
+          : buildAiRequestContent({
+              currentHtml,
+              includeCurrentText: aiIncludeCurrentText,
+              prompt: aiPrompt,
+            })
+
+      if (!content) {
+        setAiError('Введите запрос или включите передачу текущего текста.')
+        setAiPreviewHtml('')
+        return
+      }
+
+      const systemPromptParts = []
+      const baseSystemPrompt =
+        typeof selectedAiSystemPrompt?.promptMd === 'string'
+          ? selectedAiSystemPrompt.promptMd.trim()
+          : ''
+      if (baseSystemPrompt) {
+        systemPromptParts.push(baseSystemPrompt)
+      }
+      systemPromptParts.push(AI_UI_QUESTIONS_INSTRUCTIONS)
+      const effectiveSystemPrompt = systemPromptParts.join('\n\n')
+
+      const messages = [
+        {
+          role: 'system',
+          content: effectiveSystemPrompt,
+        },
+        ...aiConversationHistory,
+        {
+          role: 'user',
+          content,
+        },
+      ]
+
+      setIsAiLoading(true)
+      setAiError('')
+
+      try {
+        const result = await requestJson(
+          '/api/deepseek',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages,
+              deep: aiUseDeepReasoning,
+            }),
+          },
+          'Не удалось получить ответ от ИИ',
+        )
+
+        const aiText =
+          typeof result?.data?.choices?.[0]?.message?.content === 'string'
+            ? result.data.choices[0].message.content.trim()
+            : ''
+
+        if (!aiText) {
+          throw new Error('Не удалось получить ответ от ИИ')
+        }
+
+        const parsedQuestions = normalizeAiQuestions(extractAiQuestionsPayload(aiText))
+        if (parsedQuestions) {
+          setAiQuestionsPayload(parsedQuestions)
+          setAiQuestionsAnswers((prev) => {
+            const nextAnswers = {}
+            parsedQuestions.questions.forEach((question) => {
+              const existing =
+                typeof prev?.[question.id] === 'string' ? prev[question.id] : ''
+              if (existing.trim()) {
+                nextAnswers[question.id] = existing
+                return
+              }
+              if (question.type === 'single_choice' && question.options.length > 0) {
+                nextAnswers[question.id] = question.options[0].value
+              } else {
+                nextAnswers[question.id] = ''
+              }
+            })
+            return nextAnswers
+          })
+          setAiPreviewHtml('')
+        } else {
+          const nextPreviewHtml = formatAiTextToPreviewHtml(aiText)
+          if (!nextPreviewHtml) {
+            throw new Error('Не удалось получить ответ от ИИ')
+          }
+          setAiQuestionsPayload(null)
+          setAiQuestionsAnswers({})
+          setAiPreviewHtml(nextPreviewHtml)
+        }
+
+        setAiConversationHistory((prev) => [
+          ...prev,
+          { role: 'user', content },
+          { role: 'assistant', content: aiText },
+        ])
+      } catch (error) {
+        setAiError(error?.message || 'Не удалось получить ответ от ИИ')
+        setAiPreviewHtml('')
+      } finally {
+        setIsAiLoading(false)
+      }
+    },
+    [
+      aiConversationHistory,
+      aiIncludeCurrentText,
+      aiPrompt,
+      aiUseDeepReasoning,
+      disabled,
+      editor,
+      isAiLoading,
+      selectedAiSystemPrompt?.promptMd,
+    ],
+  )
+
+  const applyAiPreviewToEditor = useCallback(() => {
+    if (!editor || disabled || !aiPreviewHtml) return
+    editor.commands.setContent(aiPreviewHtml, true)
+    propagateEditorState(editor)
+    setIsAiModalOpen(false)
+    setAiError('')
+  }, [aiPreviewHtml, disabled, editor, propagateEditorState])
+
+  const submitAiQuestionsAnswers = useCallback(async () => {
+    if (!aiQuestionsPayload?.questions?.length) return
+    const missingRequired = aiQuestionsPayload.questions.find((question) => {
+      if (!question.required) return false
+      const answer =
+        typeof aiQuestionsAnswers?.[question.id] === 'string'
+          ? aiQuestionsAnswers[question.id].trim()
+          : ''
+      return !answer
+    })
+
+    if (missingRequired) {
+      setAiError(`Заполните поле «${missingRequired.label}».`)
+      return
+    }
+
+    const answersMessage = buildAnswersMessage(aiQuestionsPayload, aiQuestionsAnswers)
+    if (!answersMessage) {
+      setAiError('Не удалось собрать уточнения для ИИ.')
+      return
+    }
+
+    setAiQuestionsPayload(null)
+    await requestAiRewrite({ overrideUserContent: answersMessage })
+  }, [aiQuestionsAnswers, aiQuestionsPayload, requestAiRewrite])
+
+  const resetAiConversationContext = useCallback(() => {
+    setAiConversationHistory([])
+    setAiQuestionsPayload(null)
+    setAiQuestionsAnswers({})
+    setAiPreviewHtml('')
+    setAiError('')
+  }, [])
+
+  const openCreateSystemPromptModal = useCallback(() => {
+    setSystemPromptModalMode('create')
+    setSystemPromptTitleDraft('')
+    setSystemPromptMdDraft('')
+    setSystemPromptModalError('')
+    setIsSystemPromptModalOpen(true)
+  }, [])
+
+  const openEditSystemPromptModal = useCallback(() => {
+    if (!selectedAiSystemPrompt) return
+    setSystemPromptModalMode('edit')
+    setSystemPromptTitleDraft(selectedAiSystemPrompt.title || '')
+    setSystemPromptMdDraft(selectedAiSystemPrompt.promptMd || '')
+    setSystemPromptModalError('')
+    setIsSystemPromptModalOpen(true)
+  }, [selectedAiSystemPrompt])
+
+  const closeSystemPromptModal = useCallback(() => {
+    if (isSystemPromptSaving || isSystemPromptDeleting) return
+    setIsSystemPromptModalOpen(false)
+    setSystemPromptModalError('')
+  }, [isSystemPromptDeleting, isSystemPromptSaving])
+
+  const saveSystemPrompt = useCallback(async () => {
+    if (isSystemPromptSaving || isSystemPromptDeleting) return
+    const normalizedTitle = String(systemPromptTitleDraft || '').trim()
+    const normalizedPromptMd = String(systemPromptMdDraft || '').trim()
+
+    if (!normalizedTitle) {
+      setSystemPromptModalError('Укажите заголовок системного промпта.')
+      return
+    }
+    if (!normalizedPromptMd) {
+      setSystemPromptModalError('Введите текст системного промпта.')
+      return
+    }
+
+    setIsSystemPromptSaving(true)
+    setSystemPromptModalError('')
+
+    try {
+      const endpoint =
+        systemPromptModalMode === 'edit' && selectedAiSystemPrompt?.id
+          ? `/api/cabinet/ai-system-prompts/${encodeURIComponent(
+              selectedAiSystemPrompt.id,
+            )}`
+          : '/api/cabinet/ai-system-prompts'
+      const method =
+        systemPromptModalMode === 'edit' && selectedAiSystemPrompt?.id
+          ? 'PUT'
+          : 'POST'
+
+      const json = await requestJson(
+        endpoint,
+        {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: normalizedTitle,
+            promptMd: normalizedPromptMd,
+            section: AI_SYSTEM_PROMPTS_SECTION,
+          }),
+        },
+        'Не удалось сохранить системный промпт',
+      )
+
+      const savedId = String(json?.data?.id || '').trim()
+      await loadAiSystemPrompts()
+      if (savedId) {
+        setSelectedAiSystemPromptId(savedId)
+      }
+      setIsSystemPromptModalOpen(false)
+    } catch (error) {
+      setSystemPromptModalError(
+        error?.message || 'Не удалось сохранить системный промпт',
+      )
+    } finally {
+      setIsSystemPromptSaving(false)
+    }
+  }, [
+    isSystemPromptDeleting,
+    isSystemPromptSaving,
+    loadAiSystemPrompts,
+    selectedAiSystemPrompt?.id,
+    systemPromptMdDraft,
+    systemPromptModalMode,
+    systemPromptTitleDraft,
+  ])
+
+  const deleteSelectedSystemPrompt = useCallback(async () => {
+    if (!selectedAiSystemPrompt?.id || isSystemPromptDeleting) return
+    if (typeof window !== 'undefined') {
+      const shouldDelete = window.confirm(
+        `Удалить системный промпт «${selectedAiSystemPrompt.title || 'Без названия'}»?`,
+      )
+      if (!shouldDelete) return
+    }
+
+    setIsSystemPromptDeleting(true)
+    setAiSystemPromptsError('')
+    try {
+      await requestJson(
+        `/api/cabinet/ai-system-prompts/${encodeURIComponent(
+          selectedAiSystemPrompt.id,
+        )}`,
+        { method: 'DELETE' },
+        'Не удалось удалить системный промпт',
+      )
+      await loadAiSystemPrompts()
+      setSelectedAiSystemPromptId('')
+    } catch (error) {
+      setAiSystemPromptsError(
+        error?.message || 'Не удалось удалить системный промпт',
+      )
+    } finally {
+      setIsSystemPromptDeleting(false)
+    }
+  }, [isSystemPromptDeleting, loadAiSystemPrompts, selectedAiSystemPrompt])
+
   if (!editor) {
     return (
       <div className="px-4 py-3 text-sm bg-white border rounded-xl border-slate-200 text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300">
@@ -1658,6 +2288,12 @@ const TaskRichEditor = ({
             onClick={clearFormatting}
             disabled={disabled}
           />
+          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+          <ToolbarButton
+            label="ИИ"
+            onClick={openAiModal}
+            disabled={disabled || isAiLoading}
+          />
         </div>
 
         <input
@@ -1737,6 +2373,354 @@ const TaskRichEditor = ({
           </p>
         ) : null}
       </div>
+
+      <Modal
+        isOpen={isAiModalOpen}
+        title="ИИ-редактирование текста"
+        onClose={closeAiModal}
+        compactMobile
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={requestAiRewrite}
+              disabled={isAiLoading}
+              className="aq-modal-btn aq-modal-btn-secondary"
+            >
+              {isAiLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#00D1FF]/35 border-t-[#7A00FF] shadow-[0_0_8px_rgba(0,209,255,0.35)]"
+                    aria-hidden="true"
+                  />
+                  Генерация...
+                </span>
+              ) : (
+                'Сгенерировать'
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={applyAiPreviewToEditor}
+              disabled={isAiLoading || !aiPreviewHtml}
+              className="aq-modal-btn aq-modal-btn-primary"
+            >
+              Подставить в текст
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label
+              htmlFor="aq-ai-system-prompt"
+              className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"
+            >
+              Системный промпт
+            </label>
+            <div className="flex items-center gap-2">
+              <select
+                id="aq-ai-system-prompt"
+                value={selectedAiSystemPromptId}
+                onChange={(event) => {
+                  const nextId = String(event.target.value || '')
+                  setSelectedAiSystemPromptId(nextId)
+                  resetAiConversationContext()
+                }}
+                disabled={isAiLoading || isAiSystemPromptsLoading}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              >
+                <option value="">Без системного промпта</option>
+                {aiSystemPrompts.map((promptItem) => (
+                  <option key={promptItem.id} value={promptItem.id}>
+                    {promptItem.title || 'Без названия'}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={openCreateSystemPromptModal}
+                disabled={isAiLoading || isAiSystemPromptsLoading}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-lg font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                title="Добавить системный промпт"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={openEditSystemPromptModal}
+                disabled={
+                  isAiLoading || isAiSystemPromptsLoading || !selectedAiSystemPrompt
+                }
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                title="Редактировать системный промпт"
+              >
+                Изм.
+              </button>
+              <button
+                type="button"
+                onClick={deleteSelectedSystemPrompt}
+                disabled={
+                  isAiLoading ||
+                  isAiSystemPromptsLoading ||
+                  isSystemPromptDeleting ||
+                  !selectedAiSystemPrompt
+                }
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/40 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                title="Удалить системный промпт"
+              >
+                Удалить
+              </button>
+            </div>
+            {isAiSystemPromptsLoading ? (
+              <p className="text-xs text-slate-500 dark:text-slate-300">
+                Загружаем системные промпты...
+              </p>
+            ) : null}
+            {aiSystemPromptsError ? (
+              <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                {aiSystemPromptsError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900/60">
+            <p className="text-xs text-slate-600 dark:text-slate-200">
+              Контекст диалога: {aiConversationHistory.length / 2 > 0
+                ? `${Math.floor(aiConversationHistory.length / 2)} сообщений`
+                : 'пустой'}
+            </p>
+            <button
+              type="button"
+              onClick={resetAiConversationContext}
+              disabled={isAiLoading || aiConversationHistory.length === 0}
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            >
+              Сбросить контекст
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="aq-ai-prompt"
+              className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"
+            >
+              Запрос к ИИ
+            </label>
+            <textarea
+              id="aq-ai-prompt"
+              value={aiPrompt}
+              onChange={(event) => setAiPrompt(event.target.value)}
+              disabled={isAiLoading}
+              placeholder="Например: сократи текст, упростить стиль, исправить ошибки."
+              rows={4}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
+              <input
+                type="checkbox"
+                checked={aiIncludeCurrentText}
+                onChange={(event) =>
+                  setAiIncludeCurrentText(Boolean(event.target.checked))
+                }
+                disabled={isAiLoading || !hasCurrentEditorText}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400 dark:border-slate-600"
+              />
+              Передать текущий текст редактора
+            </label>
+
+            <label className="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
+              <input
+                type="checkbox"
+                checked={aiUseDeepReasoning}
+                onChange={(event) =>
+                  setAiUseDeepReasoning(Boolean(event.target.checked))
+                }
+                disabled={isAiLoading}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400 dark:border-slate-600"
+              />
+              Deep-режим (reasoner)
+            </label>
+          </div>
+
+          {aiError ? (
+            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+              {aiError}
+            </p>
+          ) : null}
+
+          {aiQuestionsPayload ? (
+            <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-3 dark:border-amber-500/40 dark:bg-amber-500/10">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                {aiQuestionsPayload.title}
+              </p>
+              <div className="space-y-3">
+                {aiQuestionsPayload.questions.map((question) => (
+                  <div key={question.id} className="space-y-1.5">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-100">
+                      {question.label}
+                      {question.required ? (
+                        <span className="ml-1 text-rose-500" aria-hidden="true">
+                          *
+                        </span>
+                      ) : null}
+                    </p>
+                    {question.type === 'text' ? (
+                      <input
+                        type="text"
+                        value={aiQuestionsAnswers?.[question.id] || ''}
+                        onChange={(event) =>
+                          setAiQuestionsAnswers((prev) => ({
+                            ...prev,
+                            [question.id]: event.target.value,
+                          }))
+                        }
+                        disabled={isAiLoading}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      />
+                    ) : question.control === 'radio' ? (
+                      <div className="flex flex-wrap items-center gap-3">
+                        {question.options.map((option) => (
+                          <label
+                            key={`${question.id}-${option.value}`}
+                            className="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200"
+                          >
+                            <input
+                              type="radio"
+                              name={`ai-question-${question.id}`}
+                              value={option.value}
+                              checked={
+                                String(aiQuestionsAnswers?.[question.id] || '') ===
+                                String(option.value)
+                              }
+                              onChange={(event) =>
+                                setAiQuestionsAnswers((prev) => ({
+                                  ...prev,
+                                  [question.id]: event.target.value,
+                                }))
+                              }
+                              disabled={isAiLoading}
+                            />
+                            {option.label}
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <select
+                        value={aiQuestionsAnswers?.[question.id] || ''}
+                        onChange={(event) =>
+                          setAiQuestionsAnswers((prev) => ({
+                            ...prev,
+                            [question.id]: event.target.value,
+                          }))
+                        }
+                        disabled={isAiLoading}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      >
+                        {question.options.map((option) => (
+                          <option key={`${question.id}-${option.value}`} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={submitAiQuestionsAnswers}
+                  disabled={isAiLoading}
+                  className="aq-modal-btn aq-modal-btn-primary"
+                >
+                  Отправить уточнения
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {aiPreviewHtml ? (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+                Предпросмотр ответа
+              </p>
+              <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-100">
+                <div
+                  className="aq-rich-text-base break-words [&_*]:max-w-full [&_*]:break-words"
+                  dangerouslySetInnerHTML={{ __html: aiPreviewHtml }}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isSystemPromptModalOpen}
+        title={
+          systemPromptModalMode === 'edit'
+            ? 'Редактирование системного промпта'
+            : 'Новый системный промпт'
+        }
+        onClose={closeSystemPromptModal}
+        compactMobile
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={saveSystemPrompt}
+              disabled={isSystemPromptSaving || isSystemPromptDeleting}
+              className="aq-modal-btn aq-modal-btn-primary"
+            >
+              {isSystemPromptSaving ? 'Сохранение...' : 'Сохранить'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label
+              htmlFor="aq-system-prompt-title"
+              className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"
+            >
+              Заголовок
+            </label>
+            <input
+              id="aq-system-prompt-title"
+              type="text"
+              value={systemPromptTitleDraft}
+              onChange={(event) => setSystemPromptTitleDraft(event.target.value)}
+              disabled={isSystemPromptSaving || isSystemPromptDeleting}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              placeholder="Например: Редактор задач ActQuest"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+              Текст системного промпта (Markdown)
+            </p>
+            <SystemPromptMdEditor
+              valueMd={systemPromptMdDraft}
+              disabled={isSystemPromptSaving || isSystemPromptDeleting}
+              placeholder="Опишите инструкции для ИИ..."
+              onChange={({ markdown }) => {
+                setSystemPromptMdDraft(markdown || '')
+              }}
+            />
+          </div>
+
+          {systemPromptModalError ? (
+            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+              {systemPromptModalError}
+            </p>
+          ) : null}
+        </div>
+      </Modal>
 
       <style jsx global>{`
         .ProseMirror .aq-image-node {

@@ -720,6 +720,88 @@ const buildUpdatePayload = (game) => {
   }
 }
 
+const getTaskDescriptionText = (task) => {
+  const taskText = typeof task?.task === 'string' ? task.task.trim() : ''
+  if (taskText) {
+    return taskText
+  }
+  return stripHtmlToPlainText(task?.taskRich)
+}
+
+const getClueText = (clue) => {
+  const clueText = typeof clue?.clue === 'string' ? clue.clue.trim() : ''
+  if (clueText) {
+    return clueText
+  }
+  return stripHtmlToPlainText(clue?.clueRich)
+}
+
+const validateTaskEditorRequirements = (game) => {
+  const issues = []
+  const tasks = Array.isArray(game?.tasks) ? game.tasks : []
+  const isPhotoGame = String(game?.type || '').toLowerCase() === 'photo'
+
+  tasks.forEach((task, index) => {
+    const taskId = typeof task?.id === 'string' ? task.id : null
+    const taskLabel = `Задание ${index + 1}`
+    const title = typeof task?.title === 'string' ? task.title.trim() : ''
+    const description = getTaskDescriptionText(task)
+    const clues = Array.isArray(task?.clues) ? task.clues : []
+    const hasFilledClue = clues.some((clue) => getClueText(clue).trim() !== '')
+
+    if (!title) {
+      issues.push({
+        taskId,
+        message: `${taskLabel}: заполните обязательное поле «Название задания».`,
+      })
+    }
+
+    if (!description.trim()) {
+      issues.push({
+        taskId,
+        message: `${taskLabel}: заполните обязательное поле «Описание задания».`,
+      })
+    }
+
+    if (clues.length === 0) {
+      issues.push({
+        taskId,
+        message: `${taskLabel}: добавьте хотя бы одну подсказку.`,
+      })
+    } else if (!hasFilledClue) {
+      issues.push({
+        taskId,
+        message: `${taskLabel}: заполните текст хотя бы в одной подсказке.`,
+      })
+    }
+
+    if (isPhotoGame) {
+      return
+    }
+
+    const codes = sanitizeStringArray(task?.codes)
+    if (codes.length === 0) {
+      issues.push({
+        taskId,
+        message: `${taskLabel}: добавьте хотя бы один основной код.`,
+      })
+    }
+
+    const requiredCodesCount = toNullableNumber(task?.numCodesToCompliteTask)
+    if (
+      requiredCodesCount !== null &&
+      Number(requiredCodesCount) > Number(codes.length)
+    ) {
+      issues.push({
+        taskId,
+        message: `${taskLabel}: «Кодов для выполнения» (${requiredCodesCount}) не может быть больше количества основных кодов (${codes.length}).`,
+      })
+    }
+  })
+
+  return issues
+}
+
 const GameCardImage = ({ src, alt, className, placeholderClassName }) => {
   const [hasLoadError, setHasLoadError] = useState(false)
 
@@ -3228,6 +3310,28 @@ const GamesPage = ({
     const gameToSave = editingGame ?? selectedGame
     if (!gameToSave || !canEditSelectedGame) return
 
+    let validationWarningMessage = ''
+    const validationIssues = validateTaskEditorRequirements(gameToSave)
+    if (validationIssues.length > 0) {
+      const issueTaskIds = validationIssues
+        .map((issue) => issue.taskId)
+        .filter(Boolean)
+      if (issueTaskIds.length > 0) {
+        setExpandedTaskIds((prev) =>
+          Array.from(new Set([...(Array.isArray(prev) ? prev : []), ...issueTaskIds])),
+        )
+      }
+
+      const firstIssue = validationIssues[0]?.message || 'Проверьте задания.'
+      const totalIssues = validationIssues.length
+      const feedbackMessage =
+        totalIssues > 1
+          ? `${firstIssue} Дополнительно ошибок: ${totalIssues - 1}.`
+          : firstIssue
+
+      validationWarningMessage = feedbackMessage
+    }
+
     setIsSaving(true)
     setFeedback(null)
 
@@ -3257,7 +3361,15 @@ const GamesPage = ({
           game.id === normalizedGame.id ? normalizedGame : game,
         ),
       )
-      setFeedback({ type: 'success', message: 'Изменения сохранены' })
+      if (validationWarningMessage) {
+        setToastEvent({
+          id: `game-save-validation-warning-${Date.now()}`,
+          type: 'warning',
+          message: `Сохранено с предупреждением: ${validationWarningMessage}`,
+        })
+      } else {
+        setFeedback({ type: 'success', message: 'Изменения сохранены' })
+      }
       setEditingGame(null)
       setEditingBaselineGame(null)
       setIsEditModalOpen(false)

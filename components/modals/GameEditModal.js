@@ -70,6 +70,22 @@ const normalizeComparableRichText = (richValue, plainValue) => {
   return rich
 }
 
+const getTaskDescriptionText = (task) => {
+  const taskText = typeof task?.task === 'string' ? task.task.trim() : ''
+  if (taskText) {
+    return taskText
+  }
+  return stripHtmlToPlainText(task?.taskRich)
+}
+
+const getClueText = (clue) => {
+  const clueText = typeof clue?.clue === 'string' ? clue.clue.trim() : ''
+  if (clueText) {
+    return clueText
+  }
+  return stripHtmlToPlainText(clue?.clueRich)
+}
+
 const GameEditModal = ({
   selectedGame,
   isEditModalOpen,
@@ -155,6 +171,17 @@ const GameEditModal = ({
     'text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200'
   const compactInputClassName =
     'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
+  const requiredMark = (
+    <span className="ml-1 text-rose-500" aria-hidden="true">
+      *
+    </span>
+  )
+  const withRequiredMark = (label) => (
+    <>
+      {label}
+      {requiredMark}
+    </>
+  )
   const getCheckboxChecked = (valueOrEvent) =>
     typeof valueOrEvent === 'boolean'
       ? valueOrEvent
@@ -885,6 +912,36 @@ const GameEditModal = ({
               <div className="space-y-4">
                 {selectedGame.tasks.map((task, index) => {
                   const isExpanded = expandedTaskIds.includes(task.id)
+                  const taskTitle = typeof task?.title === 'string' ? task.title.trim() : ''
+                  const taskDescription = getTaskDescriptionText(task).trim()
+                  const taskClues = Array.isArray(task?.clues) ? task.clues : []
+                  const hasFilledClue = taskClues.some(
+                    (clue) => getClueText(clue).trim() !== '',
+                  )
+                  const normalizedCodes = (Array.isArray(task?.codes) ? task.codes : [])
+                    .map((codeValue) =>
+                      typeof codeValue === 'string' ? codeValue.trim() : '',
+                    )
+                    .filter(Boolean)
+                  const rawRequiredCodes = task?.numCodesToCompliteTask
+                  const requiredCodesCount =
+                    rawRequiredCodes === null ||
+                    rawRequiredCodes === undefined ||
+                    rawRequiredCodes === ''
+                      ? null
+                      : Number(rawRequiredCodes)
+                  const hasCodesOverflowError =
+                    !isPhotoGame &&
+                    requiredCodesCount !== null &&
+                    Number.isFinite(requiredCodesCount) &&
+                    requiredCodesCount > normalizedCodes.length
+                  const hasTaskValidationErrors =
+                    !taskTitle ||
+                    !taskDescription ||
+                    taskClues.length === 0 ||
+                    !hasFilledClue ||
+                    (!isPhotoGame && normalizedCodes.length === 0) ||
+                    hasCodesOverflowError
 
                   return (
                     <div
@@ -913,29 +970,56 @@ const GameEditModal = ({
                               : ''}
                           </p>
                         </div>
-                        <span className="text-xs font-semibold">
-                          {isExpanded ? 'Свернуть' : 'Развернуть'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {hasTaskValidationErrors ? (
+                            <span
+                              className="inline-flex h-5 w-5 items-center justify-center"
+                              title="В задании есть незаполненные обязательные поля"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  d="M12 3L2 21h20L12 3z"
+                                  fill="#ef4444"
+                                />
+                                <rect
+                                  x="11"
+                                  y="8"
+                                  width="2"
+                                  height="7"
+                                  rx="1"
+                                  fill="#ffffff"
+                                />
+                                <circle cx="12" cy="18" r="1.3" fill="#ffffff" />
+                              </svg>
+                            </span>
+                          ) : null}
+                          <span
+                            className={`inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition-transform duration-200 dark:border-slate-600 dark:bg-slate-900/80 dark:text-slate-200 ${
+                              isExpanded ? 'rotate-180' : 'rotate-0'
+                            }`}
+                            aria-hidden="true"
+                          >
+                            <svg viewBox="0 0 20 20" className="h-3.5 w-3.5">
+                              <path
+                                d="M4 7.5l6 6 6-6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.1"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </span>
+                        </div>
                       </button>
 
                       {isExpanded && (
                         <div className="space-y-5 px-4 py-5">
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <CabinetInputField
-                              id={`task-title-${task.id}`}
-                              label="Название задания"
-                              type="text"
-                              value={task.title}
-                              onChange={(event) =>
-                                handleTaskFieldChange(
-                                  task.id,
-                                  'title',
-                                  event.target.value,
-                                )
-                              }
-                              labelClassName={fieldLabelClassName}
-                              inputClassName={fieldInputClassName}
-                            />
+                          <div className="space-y-4">
                             <div className="flex flex-col gap-2 md:items-start">
                               <NeonCheckbox
                                 id={`task-is-bonus-${task.id}`}
@@ -998,11 +1082,26 @@ const GameEditModal = ({
                                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
                               />
                             </div>
+                            <CabinetInputField
+                              id={`task-title-${task.id}`}
+                              label={withRequiredMark('Название задания')}
+                              type="text"
+                              value={task.title}
+                              onChange={(event) =>
+                                handleTaskFieldChange(
+                                  task.id,
+                                  'title',
+                                  event.target.value,
+                                )
+                              }
+                              labelClassName={fieldLabelClassName}
+                              inputClassName={fieldInputClassName}
+                            />
                           </div>
 
                           <div className="space-y-2">
                             <p className={fieldLabelClassName}>
-                              Описание задания
+                              {withRequiredMark('Описание задания')}
                             </p>
                             <TaskRichEditor
                               value={task.taskRich || task.task || ''}
@@ -1067,6 +1166,115 @@ const GameEditModal = ({
                                 )
                               }}
                             />
+                          </div>
+
+                          <div>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
+                                {withRequiredMark('Подсказки')}
+                              </h4>
+                              <CabinetButton
+                                onClick={() => handleAddClue(task.id)}
+                                variant="secondary"
+                                tone="brand"
+                                size="sm"
+                                className="inline-flex justify-center"
+                              >
+                                Добавить подсказку
+                              </CabinetButton>
+                            </div>
+                            {task.clues?.length > 0 ? (
+                              <div className="mt-3 space-y-4">
+                                {task.clues.map((clue, clueIndex) => (
+                                  <div
+                                    key={clue.id}
+                                    className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                                  >
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                      <p className="text-sm font-semibold text-slate-700 dark:text-white">
+                                        Подсказка {clueIndex + 1}
+                                      </p>
+                                      <CabinetButton
+                                        onClick={() =>
+                                          handleRemoveClue(task.id, clue.id)
+                                        }
+                                        variant="secondary"
+                                        tone="danger"
+                                        size="sm"
+                                        className="inline-flex items-center justify-center"
+                                      >
+                                        Удалить подсказку
+                                      </CabinetButton>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <TaskRichEditor
+                                        value={clue.clueRich || clue.clue || ''}
+                                        directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}/editor`}
+                                        disabled={
+                                          !canEditSelectedGame || isSaving
+                                        }
+                                        placeholder="Введите текст подсказки. Можно использовать форматирование, картинки и аудио."
+                                        onChange={({ html, plainText }) => {
+                                          const nextClueText =
+                                            plainText ||
+                                            stripHtmlToPlainText(html || '')
+                                          const nextClueRich =
+                                            typeof html === 'string' ? html : ''
+                                          const currentClueText =
+                                            typeof clue.clue === 'string'
+                                              ? clue.clue
+                                              : ''
+                                          const currentClueRich =
+                                            typeof clue.clueRich === 'string'
+                                              ? clue.clueRich
+                                              : ''
+                                          const isSameClueText =
+                                            normalizeComparablePlainText(
+                                              nextClueText,
+                                            ) ===
+                                            normalizeComparablePlainText(
+                                              currentClueText,
+                                            )
+                                          const isSameClueRich =
+                                            normalizeComparableRichText(
+                                              nextClueRich,
+                                              nextClueText,
+                                            ) ===
+                                            normalizeComparableRichText(
+                                              currentClueRich,
+                                              currentClueText,
+                                            )
+
+                                          if (
+                                            isSameClueText &&
+                                            isSameClueRich
+                                          ) {
+                                            return
+                                          }
+
+                                          handleTaskClueChange(
+                                            task.id,
+                                            clue.id,
+                                            'clueRich',
+                                            nextClueRich,
+                                          )
+                                          handleTaskClueChange(
+                                            task.id,
+                                            clue.id,
+                                            'clue',
+                                            nextClueText,
+                                          )
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">
+                                Подсказок пока нет.
+                              </p>
+                            )}
                           </div>
 
                           <div className="grid gap-4">
@@ -1182,7 +1390,7 @@ const GameEditModal = ({
                             <div>
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
-                                  Коды задания
+                                  {withRequiredMark('Коды задания')}
                                 </h4>
                                 <CabinetButton
                                   onClick={() => handleAddTaskCode(task.id)}
@@ -1261,118 +1469,6 @@ const GameEditModal = ({
                               </div>
                             </div>
                           )}
-
-                          <div>
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                              <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
-                                Подсказки
-                              </h4>
-                              <CabinetButton
-                                onClick={() => handleAddClue(task.id)}
-                                variant="secondary"
-                                tone="brand"
-                                size="sm"
-                                className="inline-flex justify-center"
-                              >
-                                Добавить подсказку
-                              </CabinetButton>
-                            </div>
-                            {task.clues?.length > 0 ? (
-                              <div className="mt-3 space-y-4">
-                                {task.clues.map((clue, clueIndex) => (
-                                  <div
-                                    key={clue.id}
-                                    className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
-                                  >
-                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                      <p className="text-sm font-semibold text-slate-700 dark:text-white">
-                                        Подсказка {clueIndex + 1}
-                                      </p>
-                                      <CabinetButton
-                                        onClick={() =>
-                                          handleRemoveClue(task.id, clue.id)
-                                        }
-                                        variant="secondary"
-                                        tone="danger"
-                                        size="sm"
-                                        className="inline-flex items-center justify-center"
-                                      >
-                                        Удалить подсказку
-                                      </CabinetButton>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <p className={compactLabelClassName}>
-                                        Текст подсказки
-                                      </p>
-                                      <TaskRichEditor
-                                        value={clue.clueRich || clue.clue || ''}
-                                        directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}/editor`}
-                                        disabled={
-                                          !canEditSelectedGame || isSaving
-                                        }
-                                        placeholder="Введите текст подсказки. Можно использовать форматирование, картинки и аудио."
-                                        onChange={({ html, plainText }) => {
-                                          const nextClueText =
-                                            plainText ||
-                                            stripHtmlToPlainText(html || '')
-                                          const nextClueRich =
-                                            typeof html === 'string' ? html : ''
-                                          const currentClueText =
-                                            typeof clue.clue === 'string'
-                                              ? clue.clue
-                                              : ''
-                                          const currentClueRich =
-                                            typeof clue.clueRich === 'string'
-                                              ? clue.clueRich
-                                              : ''
-                                          const isSameClueText =
-                                            normalizeComparablePlainText(
-                                              nextClueText,
-                                            ) ===
-                                            normalizeComparablePlainText(
-                                              currentClueText,
-                                            )
-                                          const isSameClueRich =
-                                            normalizeComparableRichText(
-                                              nextClueRich,
-                                              nextClueText,
-                                            ) ===
-                                            normalizeComparableRichText(
-                                              currentClueRich,
-                                              currentClueText,
-                                            )
-
-                                          if (
-                                            isSameClueText &&
-                                            isSameClueRich
-                                          ) {
-                                            return
-                                          }
-
-                                          handleTaskClueChange(
-                                            task.id,
-                                            clue.id,
-                                            'clueRich',
-                                            nextClueRich,
-                                          )
-                                          handleTaskClueChange(
-                                            task.id,
-                                            clue.id,
-                                            'clue',
-                                            nextClueText,
-                                          )
-                                        }}
-                                      />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">
-                                Подсказок пока нет.
-                              </p>
-                            )}
-                          </div>
 
                           {isPhotoGame && (
                             <div>
