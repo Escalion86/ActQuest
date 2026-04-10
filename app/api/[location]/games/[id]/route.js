@@ -64,6 +64,8 @@ const stripHtmlToPlainText = (value) =>
 const sanitizeTasksRichContent = (tasks = []) =>
   (Array.isArray(tasks) ? tasks : []).map((task) => ({
     ...task,
+    howToSolve:
+      typeof task?.howToSolve === 'string' ? task.howToSolve.trim() : '',
     taskRich:
       typeof task?.taskRich === 'string' && task.taskRich.trim().length > 0
         ? sanitize(task.taskRich)

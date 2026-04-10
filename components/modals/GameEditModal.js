@@ -1090,6 +1090,23 @@ const GameEditModal = ({
                           </div>
 
                           <CabinetTextareaField
+                            id={`task-how-to-solve-${task.id}`}
+                            label="Как разгадать?"
+                            rows={4}
+                            value={task.howToSolve || ''}
+                            onChange={(event) =>
+                              handleTaskFieldChange(
+                                task.id,
+                                'howToSolve',
+                                event.target.value,
+                              )
+                            }
+                            labelClassName={fieldLabelClassName}
+                            textareaClassName={fieldInputClassName}
+                            placeholder="Кратко опишите логику разгадки для разбора после игры"
+                          />
+
+                          <CabinetTextareaField
                             id={`task-post-message-${task.id}`}
                             label="Сообщение после выполнения"
                             rows={3}

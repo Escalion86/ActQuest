@@ -299,6 +299,23 @@ const GameTasksViewModal = ({
                       <div className="px-3 py-3 space-y-2 border rounded-xl border-emerald-300/60 bg-emerald-50/70 dark:border-emerald-500/35 dark:bg-emerald-500/10">
                         <ModalSectionTitle>Ответ</ModalSectionTitle>
                         {renderAnswer(task)}
+                        {typeof task?.howToSolve === 'string' &&
+                          task.howToSolve.trim() && (
+                            <div className="pt-2 border-t border-emerald-300/50 dark:border-emerald-500/30">
+                              <ModalSectionTitle>
+                                Как разгадать?
+                              </ModalSectionTitle>
+                              <div className="mt-1">
+                                <TiptapContentView
+                                  text={task.howToSolve}
+                                  emptyText="Описание разгадки не задано."
+                                  className="text-sm leading-relaxed text-slate-700 dark:prose-invert dark:text-slate-200"
+                                  textClassName="text-sm leading-relaxed text-slate-700 dark:text-slate-200"
+                                  emptyClassName="text-sm text-slate-500 dark:text-slate-300"
+                                />
+                              </div>
+                            </div>
+                          )}
                       </div>
                     )}
 
@@ -338,6 +355,7 @@ GameTasksViewModal.propTypes = {
         id: PropTypes.string,
         title: PropTypes.string,
         task: PropTypes.string,
+        howToSolve: PropTypes.string,
         taskRich: PropTypes.string,
         coordinates: PropTypes.shape({
           latitude: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),

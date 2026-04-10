@@ -20,6 +20,28 @@ const isDeveloperRole = (role) => {
   return role.trim().toLowerCase() === 'dev'
 }
 
+const extractFilenameFromContentDisposition = (headerValue) => {
+  if (typeof headerValue !== 'string' || headerValue.trim() === '') {
+    return null
+  }
+
+  const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim())
+    } catch {
+      return utf8Match[1].trim()
+    }
+  }
+
+  const filenameMatch = headerValue.match(/filename="([^"]+)"/i)
+  if (filenameMatch?.[1]) {
+    return filenameMatch[1].trim()
+  }
+
+  return null
+}
+
 const broadcastLocationOptions = [
   { value: 'all', label: 'Во все города' },
   ...Object.entries(LOCATIONS)
@@ -37,8 +59,10 @@ const DeveloperPage = ({ session: initialSession }) => {
   const router = useRouter()
   const { activeSession } = useMergedSession(initialSession)
   const [isRecalculating, setIsRecalculating] = useState(false)
+  const [isExportingGameTasks, setIsExportingGameTasks] = useState(false)
   const [isClosingFinished, setIsClosingFinished] = useState(false)
   const [result, setResult] = useState(null)
+  const [exportGameTasksResult, setExportGameTasksResult] = useState(null)
   const [closeFinishedResult, setCloseFinishedResult] = useState(null)
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false)
   const [broadcastText, setBroadcastText] = useState('')
@@ -55,6 +79,7 @@ const DeveloperPage = ({ session: initialSession }) => {
   const [teamsUsersIntegrityResult, setTeamsUsersIntegrityResult] =
     useState(null)
   const [teamsUsersIntegrityError, setTeamsUsersIntegrityError] = useState('')
+  const [exportGameTasksError, setExportGameTasksError] = useState('')
   const [requestingPhoneByUserId, setRequestingPhoneByUserId] = useState({})
   const [requestPhoneFeedbackByUserId, setRequestPhoneFeedbackByUserId] =
     useState({})
@@ -128,6 +153,71 @@ const DeveloperPage = ({ session: initialSession }) => {
       setError(requestError?.message || 'Не удалось закрыть завершенные игры')
     } finally {
       setIsClosingFinished(false)
+    }
+  }
+
+  const handleExportGameTasks = async () => {
+    if (isExportingGameTasks) {
+      return
+    }
+
+    setIsExportingGameTasks(true)
+    setExportGameTasksError('')
+    setExportGameTasksResult(null)
+
+    try {
+      const response = await fetch(
+        `${CABINET_DEV_API_BASE}/recalculate-ratings?mode=export-game-tasks`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/vnd.ms-excel,application/json',
+          },
+        },
+      )
+
+      if (!response.ok) {
+        let errorMessage = 'Не удалось выгрузить задания в Excel'
+        try {
+          const json = await response.json()
+          if (json?.error) {
+            errorMessage = json.error
+          }
+        } catch {
+          // ignore json parse errors and keep fallback message
+        }
+        throw new Error(errorMessage)
+      }
+
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition')
+      const fileName =
+        extractFilenameFromContentDisposition(disposition) ||
+        `actquest-game-tasks-${new Date().toISOString().slice(0, 10)}.xls`
+      const exportedRows = Number(response.headers.get('x-exported-rows')) || 0
+      const exportedGames =
+        Number(response.headers.get('x-exported-games')) || 0
+
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+
+      setExportGameTasksResult({
+        fileName,
+        exportedRows,
+        exportedGames,
+      })
+    } catch (requestError) {
+      setExportGameTasksError(
+        requestError?.message || 'Не удалось выгрузить задания в Excel',
+      )
+    } finally {
+      setIsExportingGameTasks(false)
     }
   }
 
@@ -561,6 +651,48 @@ const DeveloperPage = ({ session: initialSession }) => {
               </p>
               <p className="mt-1">
                 Операций обновления команд: {result.teamsUpdatedOperations ?? 0}
+              </p>
+            </div>
+          ) : null}
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Выгрузка заданий игр в Excel
+          </h3>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Экспортирует все задания из всех игр в Excel-файл.
+            В выгрузке: название игры, дата, тип игры, задание, подсказки,
+            ответ и поле «Как разгадать?».
+          </p>
+          <div className="mt-4">
+            <CabinetButton
+              onClick={handleExportGameTasks}
+              variant="primary"
+              tone="cyan"
+              disabled={isExportingGameTasks}
+            >
+              {isExportingGameTasks
+                ? 'Готовим файл...'
+                : 'Выгрузить задания в Excel'}
+            </CabinetButton>
+          </div>
+
+          {exportGameTasksError ? (
+            <p className="mt-4 rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+              {exportGameTasksError}
+            </p>
+          ) : null}
+
+          {exportGameTasksResult ? (
+            <div className="mt-4 rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <p>Файл сформирован и скачан.</p>
+              <p className="mt-1">Имя файла: {exportGameTasksResult.fileName}</p>
+              <p className="mt-1">
+                Игр обработано: {exportGameTasksResult.exportedGames ?? 0}
+              </p>
+              <p className="mt-1">
+                Строк с заданиями: {exportGameTasksResult.exportedRows ?? 0}
               </p>
             </div>
           ) : null}

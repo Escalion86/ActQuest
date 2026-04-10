@@ -87,6 +87,11 @@ const gamesSchema = {
           default: '',
           trim: true,
         },
+        howToSolve: {
+          type: String,
+          default: '',
+          trim: true,
+        },
         taskRich: {
           type: String,
           default: '',

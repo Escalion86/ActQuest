@@ -288,6 +288,7 @@ const normalizeTasks = (tasks = []) => {
     mongoId: task?._id ? ensureString(task._id) : null,
     title: ensureString(task?.title, ''),
     task: ensureString(task?.task, ''),
+    howToSolve: ensureString(task?.howToSolve, ''),
     taskRich: ensureString(task?.taskRich, ''),
     taskMedia: normalizeTaskMedia(task?.taskMedia),
     taskBonusForComplite: ensureNumber(task?.taskBonusForComplite, 0),

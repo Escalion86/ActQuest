@@ -239,6 +239,7 @@ const createTask = () => ({
   mongoId: null,
   title: '',
   task: '',
+  howToSolve: '',
   taskRich: '',
   taskMedia: [],
   taskBonusForComplite: 0,
@@ -393,6 +394,7 @@ const normalizePayloadForComparison = (payload) => {
   ).map((task) => ({
     ...task,
     task: normalizePlainTextForComparison(task?.task || ''),
+    howToSolve: normalizePlainTextForComparison(task?.howToSolve || ''),
     taskRich: normalizeRichTextForComparison(task?.taskRich, task?.task),
     clues: (Array.isArray(task?.clues) ? task.clues : []).map((clue) => ({
       ...clue,
@@ -505,6 +507,8 @@ const buildUpdatePayload = (game) => {
         typeof task.task === 'string' && task.task.trim() !== ''
           ? task.task
           : stripHtmlToPlainText(task.taskRich),
+      howToSolve:
+        typeof task.howToSolve === 'string' ? task.howToSolve : '',
       taskRich: typeof task.taskRich === 'string' ? task.taskRich : '',
       taskMedia: (Array.isArray(task.taskMedia) ? task.taskMedia : [])
         .map((media, index) => ({
@@ -6322,6 +6326,7 @@ GamesPage.propTypes = {
           mongoId: PropTypes.string,
           title: PropTypes.string,
           task: PropTypes.string,
+          howToSolve: PropTypes.string,
           taskRich: PropTypes.string,
           taskMedia: PropTypes.arrayOf(taskMediaShape),
           taskBonusForComplite: PropTypes.number,
