@@ -91,6 +91,8 @@ export async function POST(request) {
       ...payload,
       name,
       location: location.toLowerCase(),
+      // При создании игра всегда скрыта.
+      hidden: true,
       creatorTelegramId:
         normalizeTelegramId(payload?.creatorTelegramId) !== null
           ? normalizeTelegramId(payload?.creatorTelegramId)

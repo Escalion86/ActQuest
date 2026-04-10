@@ -2797,6 +2797,8 @@ const GamesPage = ({
       const selectedSeason =
         createGameSeasons.find((season) => season.id === createGameSeasonId) ||
         null
+      // Новая игра всегда создается скрытой, даже при клонировании.
+      baseDraft.hidden = true
       baseDraft.seasonId = Boolean(baseDraft.isRated)
         ? selectedSeason?.id || ''
         : ''
