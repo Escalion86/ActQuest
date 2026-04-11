@@ -704,6 +704,9 @@ function GameTeamPage({
 
   const shouldShowLastMessage = displayedResultMessages.length > 0
   const shouldShowAnswerForm = !isGameCompletion && !isBreakState
+  const shouldShowGameCompletedBlock = isGameCompletion
+  const shouldShowCurrentTaskBlock =
+    Boolean(formattedTaskMessage) && !shouldShowGameCompletedBlock
   const statusNotice = useMemo(() => {
     if (error) return null
     if (!isGameStarted && status === 'active') {
@@ -1080,7 +1083,23 @@ function GameTeamPage({
               </section>
             ) : null}
 
-            {formattedTaskMessage ? (
+            {shouldShowGameCompletedBlock ? (
+              <section className="p-6 border border-emerald-200 shadow-lg bg-emerald-50 rounded-3xl dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:shadow-slate-950/40">
+                <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-100">
+                  Игра окончена
+                </h2>
+                <p className="mt-4 text-base leading-relaxed text-emerald-900 dark:text-emerald-100">
+                  Поздравляем! Вы завершили игру.
+                </p>
+                {game?.finishingPlace ? (
+                  <p className="mt-3 text-base leading-relaxed text-emerald-900 dark:text-emerald-100">
+                    Точка сбора после игры: {game.finishingPlace}
+                  </p>
+                ) : null}
+              </section>
+            ) : null}
+
+            {shouldShowCurrentTaskBlock ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-primary dark:text-white">
