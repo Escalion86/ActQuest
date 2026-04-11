@@ -74,6 +74,20 @@ const DeveloperPage = ({ session: initialSession }) => {
     useState(false)
   const [usersWithoutPhoneResult, setUsersWithoutPhoneResult] = useState(null)
   const [usersWithoutPhoneError, setUsersWithoutPhoneError] = useState('')
+  const [isLoadingUsersWithDuplicatePhones, setIsLoadingUsersWithDuplicatePhones] =
+    useState(false)
+  const [usersWithDuplicatePhonesResult, setUsersWithDuplicatePhonesResult] =
+    useState(null)
+  const [usersWithDuplicatePhonesError, setUsersWithDuplicatePhonesError] =
+    useState('')
+  const [isPreviewingDuplicatePhoneByValue, setIsPreviewingDuplicatePhoneByValue] =
+    useState({})
+  const [duplicatePhonePreviewByValue, setDuplicatePhonePreviewByValue] =
+    useState({})
+  const [isApplyingDuplicatePhoneMergeByValue, setIsApplyingDuplicatePhoneMergeByValue] =
+    useState({})
+  const [mergeDuplicatePhoneFeedbackByValue, setMergeDuplicatePhoneFeedbackByValue] =
+    useState({})
   const [isCheckingTeamsUsersIntegrity, setIsCheckingTeamsUsersIntegrity] =
     useState(false)
   const [teamsUsersIntegrityResult, setTeamsUsersIntegrityResult] =
@@ -314,6 +328,221 @@ const DeveloperPage = ({ session: initialSession }) => {
       )
     } finally {
       setIsLoadingUsersWithoutPhone(false)
+    }
+  }
+
+  const handleLoadUsersWithDuplicatePhones = async () => {
+    if (isLoadingUsersWithDuplicatePhones) {
+      return
+    }
+
+    setIsLoadingUsersWithDuplicatePhones(true)
+    setUsersWithDuplicatePhonesError('')
+    setUsersWithDuplicatePhonesResult(null)
+
+    try {
+      const response = await fetch(
+        `${CABINET_DEV_API_BASE}/users-duplicate-phones`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+        },
+      )
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(
+          json?.error ||
+            'Не удалось проверить пользователей с дублирующимися телефонами',
+        )
+      }
+
+      setUsersWithDuplicatePhonesResult(json?.data ?? null)
+    } catch (requestError) {
+      setUsersWithDuplicatePhonesError(
+        requestError?.message ||
+          'Не удалось проверить пользователей с дублирующимися телефонами',
+      )
+    } finally {
+      setIsLoadingUsersWithDuplicatePhones(false)
+    }
+  }
+
+  const handleExportDuplicatePhonesJson = () => {
+    if (!usersWithDuplicatePhonesResult) {
+      return
+    }
+
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      ...usersWithDuplicatePhonesResult,
+    }
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `actquest-duplicate-phones-${new Date()
+      .toISOString()
+      .slice(0, 19)
+      .replace(/[:T]/g, '-')}.json`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handlePreviewDuplicatePhoneGroup = async (phone) => {
+    const normalizedPhone = Number(phone)
+    if (!Number.isFinite(normalizedPhone) || normalizedPhone <= 0) {
+      return
+    }
+
+    if (isPreviewingDuplicatePhoneByValue[normalizedPhone]) {
+      return
+    }
+
+    setIsPreviewingDuplicatePhoneByValue((prev) => ({
+      ...prev,
+      [normalizedPhone]: true,
+    }))
+    setMergeDuplicatePhoneFeedbackByValue((prev) => ({
+      ...prev,
+      [normalizedPhone]: '',
+    }))
+
+    try {
+      const response = await fetch(
+        `${CABINET_DEV_API_BASE}/users-duplicate-phones`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            phone: normalizedPhone,
+            dryRun: true,
+          }),
+        },
+      )
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(json?.error || 'Не удалось объединить дубликаты')
+      }
+
+      setDuplicatePhonePreviewByValue((prev) => ({
+        ...prev,
+        [normalizedPhone]: json?.data ?? null,
+      }))
+      setMergeDuplicatePhoneFeedbackByValue((prev) => ({
+        ...prev,
+        [normalizedPhone]: 'Проверка завершена. Можно применять объединение.',
+      }))
+    } catch (requestError) {
+      setMergeDuplicatePhoneFeedbackByValue((prev) => ({
+        ...prev,
+        [normalizedPhone]:
+          requestError?.message || 'Ошибка объединения дублирующихся аккаунтов',
+      }))
+    } finally {
+      setIsPreviewingDuplicatePhoneByValue((prev) => ({
+        ...prev,
+        [normalizedPhone]: false,
+      }))
+    }
+  }
+
+  const handleMergeDuplicatePhoneGroup = async (phone) => {
+    const normalizedPhone = Number(phone)
+    if (!Number.isFinite(normalizedPhone) || normalizedPhone <= 0) {
+      return
+    }
+
+    if (isApplyingDuplicatePhoneMergeByValue[normalizedPhone]) {
+      return
+    }
+
+    if (!duplicatePhonePreviewByValue[normalizedPhone]) {
+      setMergeDuplicatePhoneFeedbackByValue((prev) => ({
+        ...prev,
+        [normalizedPhone]:
+          'Сначала нажмите "Проверить изменения", затем применяйте объединение.',
+      }))
+      return
+    }
+
+    const isConfirmed = window.confirm(
+      `Применить объединение аккаунтов с номером +${normalizedPhone}? Будет оставлен самый новый профиль, старые удалятся.`,
+    )
+    if (!isConfirmed) {
+      return
+    }
+
+    setIsApplyingDuplicatePhoneMergeByValue((prev) => ({
+      ...prev,
+      [normalizedPhone]: true,
+    }))
+    setMergeDuplicatePhoneFeedbackByValue((prev) => ({
+      ...prev,
+      [normalizedPhone]: '',
+    }))
+
+    try {
+      const response = await fetch(
+        `${CABINET_DEV_API_BASE}/users-duplicate-phones`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            phone: normalizedPhone,
+            dryRun: false,
+            confirmApply: true,
+          }),
+        },
+      )
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(json?.error || 'Не удалось объединить дубликаты')
+      }
+
+      const deletedUsersCount = Number(json?.data?.deletedUsersCount) || 0
+      const movedMembershipsCount = Number(json?.data?.movedMembershipsCount) || 0
+      const removedDuplicateMembershipsCount =
+        Number(json?.data?.removedDuplicateMembershipsCount) || 0
+      const updatedGamesCount = Number(json?.data?.updatedGamesCount) || 0
+
+      setMergeDuplicatePhoneFeedbackByValue((prev) => ({
+        ...prev,
+        [normalizedPhone]: `Готово: удалено аккаунтов ${deletedUsersCount}, перенесено связей команд ${movedMembershipsCount}, удалено дублей связей ${removedDuplicateMembershipsCount}, обновлено игр ${updatedGamesCount}.`,
+      }))
+
+      setDuplicatePhonePreviewByValue((prev) => ({
+        ...prev,
+        [normalizedPhone]: null,
+      }))
+
+      await handleLoadUsersWithDuplicatePhones()
+    } catch (requestError) {
+      setMergeDuplicatePhoneFeedbackByValue((prev) => ({
+        ...prev,
+        [normalizedPhone]:
+          requestError?.message || 'Ошибка объединения дублирующихся аккаунтов',
+      }))
+    } finally {
+      setIsApplyingDuplicatePhoneMergeByValue((prev) => ({
+        ...prev,
+        [normalizedPhone]: false,
+      }))
     }
   }
 
@@ -777,6 +1006,152 @@ const DeveloperPage = ({ session: initialSession }) => {
                 <p className="mt-2 text-xs">
                   Все проверенные пользователи имеют телефон.
                 </p>
+              )}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Дубликаты номеров телефона
+          </h3>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Поиск пользователей, у которых один и тот же номер телефона.
+          </p>
+          <div className="mt-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <CabinetButton
+                onClick={handleLoadUsersWithDuplicatePhones}
+                variant="primary"
+                tone="brand"
+                disabled={isLoadingUsersWithDuplicatePhones}
+              >
+                {isLoadingUsersWithDuplicatePhones
+                  ? 'Проверяем...'
+                  : 'Проверить дубликаты телефонов'}
+              </CabinetButton>
+              <CabinetButton
+                onClick={handleExportDuplicatePhonesJson}
+                variant="secondary"
+                tone="neutral"
+                disabled={!usersWithDuplicatePhonesResult}
+              >
+                Скачать JSON
+              </CabinetButton>
+            </div>
+          </div>
+
+          {usersWithDuplicatePhonesError ? (
+            <p className="mt-4 rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+              {usersWithDuplicatePhonesError}
+            </p>
+          ) : null}
+
+          {usersWithDuplicatePhonesResult ? (
+            <div className="mt-4 rounded-xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-200">
+              <p>
+                Номеров с дубликатами:{' '}
+                {usersWithDuplicatePhonesResult.duplicatePhonesCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Пользователей в дубликатных группах:{' '}
+                {usersWithDuplicatePhonesResult.usersCount ?? 0}
+              </p>
+
+              {Array.isArray(usersWithDuplicatePhonesResult.groups) &&
+              usersWithDuplicatePhonesResult.groups.length > 0 ? (
+                <div className="mt-3 max-h-96 space-y-3 overflow-y-auto pr-1">
+                  {usersWithDuplicatePhonesResult.groups.map((group) => (
+                    <div
+                      key={String(group.phone)}
+                      className="rounded-lg border border-amber-300/70 bg-white/80 px-3 py-2 text-xs text-slate-700 dark:border-amber-500/30 dark:bg-slate-900/50 dark:text-slate-200"
+                    >
+                      <p className="font-semibold">
+                        +{group.phone} · пользователей: {group.usersCount ?? 0}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <CabinetButton
+                          size="sm"
+                          variant="secondary"
+                          tone="neutral"
+                          disabled={isPreviewingDuplicatePhoneByValue[group.phone]}
+                          onClick={() =>
+                            handlePreviewDuplicatePhoneGroup(group.phone)
+                          }
+                        >
+                          {isPreviewingDuplicatePhoneByValue[group.phone]
+                            ? 'Проверяем...'
+                            : 'Проверить изменения'}
+                        </CabinetButton>
+                        <CabinetButton
+                          size="sm"
+                          variant="secondary"
+                          tone="neutral"
+                          disabled={isApplyingDuplicatePhoneMergeByValue[group.phone]}
+                          onClick={() =>
+                            handleMergeDuplicatePhoneGroup(group.phone)
+                          }
+                        >
+                          {isApplyingDuplicatePhoneMergeByValue[group.phone]
+                            ? 'Объединяем...'
+                            : 'Применить объединение'}
+                        </CabinetButton>
+                        {mergeDuplicatePhoneFeedbackByValue[group.phone] ? (
+                          <span className="text-[11px] text-slate-600 dark:text-slate-300">
+                            {mergeDuplicatePhoneFeedbackByValue[group.phone]}
+                          </span>
+                        ) : null}
+                      </div>
+                      {duplicatePhonePreviewByValue[group.phone] ? (
+                        <div className="mt-2 rounded-md border border-amber-300/70 bg-amber-100/60 px-2 py-1 text-[11px] dark:border-amber-500/40 dark:bg-slate-900/50 dark:text-amber-200">
+                          <p>
+                            Будет удалено аккаунтов:{' '}
+                            {duplicatePhonePreviewByValue[group.phone]
+                              ?.usersToDeleteCount ?? 0}
+                          </p>
+                          <p>
+                            TeamsUsers: переносов{' '}
+                            {duplicatePhonePreviewByValue[group.phone]?.teamsUsers
+                              ?.movedMembershipsCount ?? 0}
+                            , удалений дублей{' '}
+                            {duplicatePhonePreviewByValue[group.phone]?.teamsUsers
+                              ?.removedDuplicateMembershipsCount ?? 0}
+                          </p>
+                          <p>
+                            Games.result.teamsUsers: игр{' '}
+                            {duplicatePhonePreviewByValue[group.phone]
+                              ?.gamesResultSnapshots?.affectedGamesCount ?? 0}
+                            , переносов{' '}
+                            {duplicatePhonePreviewByValue[group.phone]
+                              ?.gamesResultSnapshots?.movedMembershipsCount ?? 0}
+                            , удалений дублей{' '}
+                            {duplicatePhonePreviewByValue[group.phone]
+                              ?.gamesResultSnapshots
+                              ?.removedDuplicateMembershipsCount ?? 0}
+                          </p>
+                        </div>
+                      ) : null}
+                      <div className="mt-2 space-y-1">
+                        {Array.isArray(group.users) && group.users.length > 0 ? (
+                          group.users.map((user) => (
+                            <p key={user.id}>
+                              {user.name || 'Без имени'}{' '}
+                              {user.username ? `(@${user.username})` : ''} · ID:{' '}
+                              {user.id} · Telegram:{' '}
+                              {user.telegramId ?? '—'} · Роль:{' '}
+                              {user.role || 'client'} · Город:{' '}
+                              {user.accountLocation || '—'}
+                            </p>
+                          ))
+                        ) : (
+                          <p>Нет данных по пользователям в группе.</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs">Дубликаты телефонов не найдены.</p>
               )}
             </div>
           ) : null}

@@ -17,7 +17,49 @@ const isPrivilegedRole = (role) => {
   return normalizedRole === 'admin' || normalizedRole === 'dev'
 }
 
-const AdminUserCard = ({ user, onOpenView, onOpenEdit, onOpenPush }) => (
+const hasUserPhone = (value) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && value > 0
+  }
+  if (typeof value === 'string') {
+    return value.trim().length > 0
+  }
+  return false
+}
+
+const PhoneMissingIcon = () => (
+  <span
+    className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-400/70 bg-rose-50 text-rose-600 dark:border-rose-500/60 dark:bg-rose-500/15 dark:text-rose-300"
+    title="У пользователя не указан номер телефона"
+    aria-label="У пользователя не указан номер телефона"
+  >
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true">
+      <path
+        d="M22 16.92V20a2 2 0 0 1-2.18 2 19.84 19.84 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.84 19.84 0 0 1 2.1 4.18 2 2 0 0 1 4.1 2h3.09a2 2 0 0 1 2 1.72c.14 1.06.38 2.09.72 3.08a2 2 0 0 1-.45 2.11L8.1 10.3a16 16 0 0 0 5.6 5.6l1.39-1.36a2 2 0 0 1 2.11-.45c.99.34 2.02.58 3.08.72A2 2 0 0 1 22 16.92Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 20L20 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  </span>
+)
+
+const AdminUserCard = ({
+  user,
+  onOpenView,
+  onOpenEdit,
+  onOpenPush,
+  showMissingPhoneIndicator,
+}) => (
   <SelectableCard
     as="button"
     onClick={() => onOpenView(user)}
@@ -49,6 +91,9 @@ const AdminUserCard = ({ user, onOpenView, onOpenEdit, onOpenPush }) => (
       </div>
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center gap-2">
+          {showMissingPhoneIndicator && !hasUserPhone(user.phone) ? (
+            <PhoneMissingIcon />
+          ) : null}
           {resolveRatingBadge(user.rating) ? (
             <span className="px-2 py-1 text-xs font-semibold text-cyan-700 bg-cyan-50 border border-cyan-300 rounded-full dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
               {resolveRatingBadge(user.rating)}
@@ -110,6 +155,7 @@ AdminUserCard.propTypes = {
       rank: PropTypes.number,
     }),
     gamesCount: PropTypes.number,
+    phone: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     teams: PropTypes.arrayOf(
       PropTypes.shape({
         id: PropTypes.string,
@@ -120,6 +166,11 @@ AdminUserCard.propTypes = {
   onOpenView: PropTypes.func.isRequired,
   onOpenEdit: PropTypes.func.isRequired,
   onOpenPush: PropTypes.func.isRequired,
+  showMissingPhoneIndicator: PropTypes.bool,
+}
+
+AdminUserCard.defaultProps = {
+  showMissingPhoneIndicator: false,
 }
 
 export default AdminUserCard

@@ -245,6 +245,20 @@ const normalizeLocationFilter = (value) => {
   return normalized
 }
 
+const normalizeWithoutPhoneOnly = (value) => {
+  if (typeof value === 'boolean') {
+    return value
+  }
+  if (typeof value === 'number') {
+    return value === 1
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    return ['1', 'true', 'yes', 'on'].includes(normalized)
+  }
+  return false
+}
+
 const fetchAdminUsersForCabinet = async ({
   db,
   offset = 0,
@@ -254,6 +268,7 @@ const fetchAdminUsersForCabinet = async ({
   sortBy = DEFAULT_SORT,
   location = null,
   locationFilter = 'all',
+  withoutPhoneOnly = false,
 }) => {
   if (!db) {
     return { users: [], hasMore: false }
@@ -287,6 +302,20 @@ const fetchAdminUsersForCabinet = async ({
         delete usersQuery[key]
       })
       usersQuery.$and = [existingQuery, locationCondition]
+    }
+  }
+  if (normalizeWithoutPhoneOnly(withoutPhoneOnly)) {
+    const withoutPhoneCondition = {
+      $or: [{ phone: null }, { phone: { $exists: false } }, { phone: 0 }],
+    }
+    if (Object.keys(usersQuery).length === 0) {
+      Object.assign(usersQuery, withoutPhoneCondition)
+    } else {
+      const existingQuery = { ...usersQuery }
+      Object.keys(usersQuery).forEach((key) => {
+        delete usersQuery[key]
+      })
+      usersQuery.$and = [existingQuery, withoutPhoneCondition]
     }
   }
   const resolvedSortBy = normalizeSortBy(sortBy)

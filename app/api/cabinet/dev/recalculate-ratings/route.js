@@ -358,6 +358,10 @@ export async function POST() {
     let teamsUpdatedOperations = 0
     let gamesWithRebuiltResults = 0
     let gamesSkippedNoSnapshots = 0
+    let finalGlobalRatingsRebuild = {
+      usersUpdated: 0,
+      teamsUpdated: 0,
+    }
 
     for (const gameSource of ratedGames) {
       let game = gameSource
@@ -409,6 +413,20 @@ export async function POST() {
       teamsUpdatedOperations += Number(ratingUpdateInfo?.teamsUpdated) || 0
     }
 
+    const globalRatingSourceGame =
+      ratedGames.length > 0 ? ratedGames[ratedGames.length - 1] : null
+    if (globalRatingSourceGame?._id) {
+      finalGlobalRatingsRebuild = await updateParticipantsRatings({
+        db,
+        game: globalRatingSourceGame,
+        updateAllEntities: true,
+      })
+      usersUpdatedOperations +=
+        Number(finalGlobalRatingsRebuild?.usersUpdated) || 0
+      teamsUpdatedOperations +=
+        Number(finalGlobalRatingsRebuild?.teamsUpdated) || 0
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -420,6 +438,7 @@ export async function POST() {
           teamsStatsUpdatedOperations,
           usersUpdatedOperations,
           teamsUpdatedOperations,
+          finalGlobalRatingsRebuild,
         },
       },
       { status: 200 },

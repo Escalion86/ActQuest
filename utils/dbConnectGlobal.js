@@ -22,6 +22,8 @@ if (!globalConnections) {
   globalConnections = global.mongooseGlobal = {}
 }
 
+let phoneUniqueIndexPromise = null
+
 const ensureModel = (connection, name, schemaFactory) => {
   const hasModel = Boolean(connection.models?.[name])
   if (!hasModel) {
@@ -123,7 +125,29 @@ async function dbConnectGlobal() {
     mongoose.Schema(aiSystemPromptsSchema, { timestamps: true }),
   )
 
-  return globalConnections.global.asPromise()
+  const connection = await globalConnections.global.asPromise()
+
+  if (!phoneUniqueIndexPromise) {
+    phoneUniqueIndexPromise = connection
+      .model('Users')
+      .collection.createIndex(
+        { phone: 1 },
+        {
+          unique: true,
+          name: 'uniq_users_phone_number',
+          partialFilterExpression: { phone: { $type: 'number' } },
+        },
+      )
+      .catch((error) => {
+        console.error(
+          'dbConnectGlobal: failed to create Users.phone unique index',
+          error,
+        )
+      })
+  }
+
+  await phoneUniqueIndexPromise
+  return connection
 }
 
 export default dbConnectGlobal

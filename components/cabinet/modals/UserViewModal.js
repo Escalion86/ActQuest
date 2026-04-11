@@ -37,7 +37,41 @@ const resolveLocationLabel = (locationKey) => {
   return rawName.charAt(0).toUpperCase() + rawName.slice(1)
 }
 
-const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam }) => {
+const formatPhoneValue = (value) => {
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim()
+  }
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return String(value)
+  }
+  return ''
+}
+
+const normalizePhoneHref = (value) => {
+  const raw = formatPhoneValue(value)
+  if (!raw) {
+    return ''
+  }
+
+  const normalized = raw.replace(/[^\d+]/g, '')
+  return normalized
+}
+
+const normalizeTelegramUsername = (value) => {
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  return value.trim().replace(/^@+/, '')
+}
+
+const UserViewModal = ({
+  userId,
+  isOpen,
+  onClose,
+  onOpenTeam,
+  canViewContacts,
+}) => {
   const isDeveloper = useAtomValue(isDeveloperAtom)
   const {
     data: user,
@@ -168,6 +202,10 @@ const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam }) => {
   }
 
   const displayName = user?.name || 'Без имени'
+  const phoneValue = formatPhoneValue(user?.phone)
+  const phoneHref = normalizePhoneHref(user?.phone)
+  const telegramUsername = normalizeTelegramUsername(user?.username)
+  const telegramId = user?.telegramId || ''
 
   const shouldBeOpen = isOpen && (isLoading || user)
   console.log(
@@ -396,6 +434,61 @@ const UserViewModal = ({ userId, isOpen, onClose, onOpenTeam }) => {
                 </div>
               )}
             </FormSectionCard>
+
+            {canViewContacts ? (
+              <FormSectionCard className="space-y-4">
+                <h3 className={modalSectionTitleClass}>Контакты</h3>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <p className="text-xs text-slate-500">Телефон</p>
+                    {phoneValue && phoneHref ? (
+                      <a
+                        href={`tel:${phoneHref}`}
+                        className="mt-1 inline-block text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
+                      >
+                        {phoneValue}
+                      </a>
+                    ) : (
+                      <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
+                        Не указан
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Telegram username</p>
+                    {telegramUsername ? (
+                      <a
+                        href={`https://t.me/${telegramUsername}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-block text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
+                      >
+                        @{telegramUsername}
+                      </a>
+                    ) : (
+                      <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
+                        Не указан
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Telegram ID</p>
+                    {telegramId ? (
+                      <a
+                        href={`tg://user?id=${telegramId}`}
+                        className="mt-1 inline-block text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
+                      >
+                        {telegramId}
+                      </a>
+                    ) : (
+                      <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
+                        Не указан
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </FormSectionCard>
+            ) : null}
           </div>
         ) : null}
       </Modal>
@@ -427,11 +520,13 @@ UserViewModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onOpenTeam: PropTypes.func,
+  canViewContacts: PropTypes.bool,
 }
 
 UserViewModal.defaultProps = {
   userId: null,
   onOpenTeam: null,
+  canViewContacts: false,
 }
 
 export default UserViewModal

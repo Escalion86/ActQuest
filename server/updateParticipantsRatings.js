@@ -19,6 +19,32 @@ const resolveTeamRatingKey = (teamId) => {
   return normalized ? `team:${normalized}` : null
 }
 
+const resolveUserFilterByRatingKey = (key) => {
+  if (typeof key !== 'string') {
+    return null
+  }
+
+  if (key.startsWith('uid:')) {
+    const userId = toStringId(key.slice(4))
+    return userId ? { _id: userId } : null
+  }
+
+  if (key.startsWith('tg:')) {
+    const telegramId = Number(key.slice(3))
+    return Number.isFinite(telegramId) ? { telegramId } : null
+  }
+
+  return null
+}
+
+const resolveTeamIdByRatingKey = (key) => {
+  if (typeof key !== 'string' || !key.startsWith('team:')) {
+    return null
+  }
+
+  return toStringId(key.slice(5))
+}
+
 const getAverage = (values = []) => {
   if (!Array.isArray(values) || values.length === 0) {
     return null
@@ -330,7 +356,11 @@ const buildRatingSnapshot = ({
   }
 }
 
-const updateParticipantsRatings = async ({ db, game }) => {
+const updateParticipantsRatings = async ({
+  db,
+  game,
+  updateAllEntities = false,
+}) => {
   if (!db || !game) {
     return { usersUpdated: 0, teamsUpdated: 0 }
   }
@@ -373,7 +403,7 @@ const updateParticipantsRatings = async ({ db, game }) => {
     }
   })
 
-  if (!currentUserRefs.size && !currentTeamRefs.size) {
+  if (!updateAllEntities && !currentUserRefs.size && !currentTeamRefs.size) {
     return { usersUpdated: 0, teamsUpdated: 0 }
   }
 
@@ -404,48 +434,107 @@ const updateParticipantsRatings = async ({ db, game }) => {
   const teamRatings = buildRanks(teamMetrics)
 
   const usersBulkOps = []
-  currentUserRefs.forEach((filter, key) => {
-    const rating = playerRatings.get(key)
-    if (!rating) {
+  const appendUserRatingOperation = (filter, snapshot) => {
+    if (!filter || !snapshot) {
       return
     }
 
-    const snapshot = buildRatingSnapshot({
-      rating,
-      location: null,
-      sourceGameId: gameId,
-      entityType: 'player',
-    })
+    if (filter._id) {
+      usersBulkOps.push({
+        updateOne: {
+          filter,
+          update: { $set: { rating: snapshot } },
+        },
+      })
+      return
+    }
 
     usersBulkOps.push({
-      updateOne: {
+      updateMany: {
         filter,
         update: { $set: { rating: snapshot } },
       },
     })
-  })
+  }
+
+  if (updateAllEntities) {
+    playerRatings.forEach((rating, key) => {
+      const filter = resolveUserFilterByRatingKey(key)
+      if (!filter) {
+        return
+      }
+
+      const snapshot = buildRatingSnapshot({
+        rating,
+        location: null,
+        sourceGameId: gameId,
+        entityType: 'player',
+      })
+
+      appendUserRatingOperation(filter, snapshot)
+    })
+  } else {
+    currentUserRefs.forEach((filter, key) => {
+      const rating = playerRatings.get(key)
+      if (!rating) {
+        return
+      }
+
+      const snapshot = buildRatingSnapshot({
+        rating,
+        location: null,
+        sourceGameId: gameId,
+        entityType: 'player',
+      })
+
+      appendUserRatingOperation(filter, snapshot)
+    })
+  }
 
   const teamsBulkOps = []
-  currentTeamRefs.forEach((teamId, key) => {
-    const rating = teamRatings.get(key)
-    if (!rating) {
-      return
-    }
+  if (updateAllEntities) {
+    teamRatings.forEach((rating, key) => {
+      const teamId = resolveTeamIdByRatingKey(key)
+      if (!teamId) {
+        return
+      }
 
-    const snapshot = buildRatingSnapshot({
-      rating,
-      location: null,
-      sourceGameId: gameId,
-      entityType: 'team',
-    })
+      const snapshot = buildRatingSnapshot({
+        rating,
+        location: null,
+        sourceGameId: gameId,
+        entityType: 'team',
+      })
 
-    teamsBulkOps.push({
-      updateOne: {
-        filter: { _id: teamId },
-        update: { $set: { rating: snapshot } },
-      },
+      teamsBulkOps.push({
+        updateOne: {
+          filter: { _id: teamId },
+          update: { $set: { rating: snapshot } },
+        },
+      })
     })
-  })
+  } else {
+    currentTeamRefs.forEach((teamId, key) => {
+      const rating = teamRatings.get(key)
+      if (!rating) {
+        return
+      }
+
+      const snapshot = buildRatingSnapshot({
+        rating,
+        location: null,
+        sourceGameId: gameId,
+        entityType: 'team',
+      })
+
+      teamsBulkOps.push({
+        updateOne: {
+          filter: { _id: teamId },
+          update: { $set: { rating: snapshot } },
+        },
+      })
+    })
+  }
 
   if (usersBulkOps.length > 0) {
     await db.model('Users').bulkWrite(usersBulkOps)

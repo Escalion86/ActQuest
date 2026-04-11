@@ -110,6 +110,7 @@ const ManageUsersPage = ({
   const [roleFilter, setRoleFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
   const [sortBy, setSortBy] = useState('registration_desc')
+  const [withoutPhoneOnly, setWithoutPhoneOnly] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [hasMoreUsers, setHasMoreUsers] = useState(Boolean(initialHasMore))
@@ -145,7 +146,8 @@ const ManageUsersPage = ({
       searchQuery ||
       roleFilter !== 'all' ||
       locationFilter !== 'all' ||
-      sortBy !== 'registration_desc'
+      sortBy !== 'registration_desc' ||
+      withoutPhoneOnly
 
     if (hasActiveFilter) {
       console.log(
@@ -180,6 +182,7 @@ const ManageUsersPage = ({
     roleFilter,
     locationFilter,
     sortBy,
+    withoutPhoneOnly,
   ])
 
   useEffect(() => {
@@ -463,6 +466,7 @@ const ManageUsersPage = ({
         roleFilter,
         searchQuery,
         sortBy,
+        withoutPhoneOnly,
         'safeInitialUsers.length': safeInitialUsers.length,
       },
     )
@@ -475,6 +479,7 @@ const ManageUsersPage = ({
         roleFilter,
         locationFilter,
         sortBy,
+        withoutPhoneOnly,
       })
       setIsLoadingMoreUsers(true)
       setFeedback(null)
@@ -493,6 +498,9 @@ const ManageUsersPage = ({
         }
         if (locationFilter && locationFilter !== 'all') {
           params.set('location', locationFilter)
+        }
+        if (withoutPhoneOnly) {
+          params.set('withoutPhoneOnly', '1')
         }
         const { json } = await requestApiJson(
           `${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`,
@@ -546,6 +554,7 @@ const ManageUsersPage = ({
     safeInitialUsers.length,
     searchQuery,
     sortBy,
+    withoutPhoneOnly,
   ])
 
   const selectedUser = useMemo(
@@ -1242,6 +1251,9 @@ const ManageUsersPage = ({
       if (locationFilter && locationFilter !== 'all') {
         params.set('location', locationFilter)
       }
+      if (withoutPhoneOnly) {
+        params.set('withoutPhoneOnly', '1')
+      }
       const { json } = await requestApiJson(
         `${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`,
         {
@@ -1275,6 +1287,7 @@ const ManageUsersPage = ({
     roleFilter,
     searchQuery,
     sortBy,
+    withoutPhoneOnly,
     users.length,
   ])
 
@@ -1394,6 +1407,20 @@ const ManageUsersPage = ({
                 <option value="games_desc">По количеству игр</option>
                 <option value="registration_desc">По дате регистрации</option>
               </CabinetSelectField>
+
+              <label
+                htmlFor="user-without-phone-only"
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200"
+              >
+                <input
+                  id="user-without-phone-only"
+                  type="checkbox"
+                  checked={withoutPhoneOnly}
+                  onChange={(event) => setWithoutPhoneOnly(event.target.checked)}
+                  className="h-4 w-4"
+                />
+                <span>Показать только без указанного номера телефона</span>
+              </label>
             </FormSectionCard>
 
             {users.length > 0 ? (
@@ -1407,6 +1434,7 @@ const ManageUsersPage = ({
                           onOpenView={handleOpenUserViewModal}
                           onOpenEdit={handleOpenUserEditModal}
                           onOpenPush={handleOpenUserPushModal}
+                          showMissingPhoneIndicator={isAdmin || isDeveloper}
                         />
                       </li>
                     )
@@ -1444,6 +1472,7 @@ const ManageUsersPage = ({
           userId={selectedUserId}
           isOpen={isUserViewModalOpen}
           onClose={closeUserViewModal}
+          canViewContacts={isAdmin || isDeveloper}
           onOpenTeam={handleOpenUserTeamModal}
         />
 

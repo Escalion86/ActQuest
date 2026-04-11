@@ -246,6 +246,7 @@ const execute = (request, params) =>
             await updateParticipantsRatings({
               db,
               game: finalGameForMetrics,
+              updateAllEntities: true,
             })
           } catch (metricsError) {
             console.error('Failed to update participants metrics on game close', metricsError)

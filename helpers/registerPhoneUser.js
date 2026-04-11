@@ -3,6 +3,7 @@ import syncLegacyUserByLocation from '@helpers/syncLegacyUserByLocation'
 import upsertGlobalUser from '@helpers/upsertGlobalUser'
 import normalizeAuthPhone from '@helpers/normalizeAuthPhone'
 import { createPasswordHash, validatePassword } from '@helpers/passwordHash'
+import isMongoDuplicatePhoneError from '@helpers/isMongoDuplicatePhoneError'
 
 const errorResponse = (code, message, details = null) => ({
   success: false,
@@ -140,6 +141,13 @@ const registerPhoneUser = async ({ location, rawData }) => {
       },
     }
   } catch (error) {
+    if (isMongoDuplicatePhoneError(error)) {
+      return errorResponse(
+        'ACCOUNT_ALREADY_REGISTERED',
+        'Аккаунт с таким номером уже зарегистрирован. Войдите по паролю или через VK.',
+      )
+    }
+
     return errorResponse(
       'USER_UPDATE_FAILED',
       'Ошибка при регистрации пользователя.',

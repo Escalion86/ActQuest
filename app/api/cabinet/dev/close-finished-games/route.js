@@ -63,6 +63,11 @@ export async function POST() {
     let gamesSkippedMetrics = 0
     let usersUpdatedOperations = 0
     let teamsUpdatedOperations = 0
+    let finalGlobalRatingsRebuild = {
+      usersUpdated: 0,
+      teamsUpdated: 0,
+    }
+    let lastClosedGameForGlobalRating = null
 
     for (const gameSource of finishedGames) {
       let game = gameSource
@@ -112,6 +117,7 @@ export async function POST() {
       }
 
       gamesClosed += 1
+      lastClosedGameForGlobalRating = updatedGame
 
       const hasTeamsPlacesOnUpdatedGame =
         updatedGame?.result?.teamsPlaces &&
@@ -139,6 +145,18 @@ export async function POST() {
         (Number(updateRatingsInfo?.teamsUpdated) || 0)
     }
 
+    if (lastClosedGameForGlobalRating?._id) {
+      finalGlobalRatingsRebuild = await updateParticipantsRatings({
+        db,
+        game: lastClosedGameForGlobalRating,
+        updateAllEntities: true,
+      })
+      usersUpdatedOperations +=
+        Number(finalGlobalRatingsRebuild?.usersUpdated) || 0
+      teamsUpdatedOperations +=
+        Number(finalGlobalRatingsRebuild?.teamsUpdated) || 0
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -150,6 +168,7 @@ export async function POST() {
           gamesSkippedMetrics,
           usersUpdatedOperations,
           teamsUpdatedOperations,
+          finalGlobalRatingsRebuild,
         },
       },
       { status: 200 },

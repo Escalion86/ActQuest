@@ -14,6 +14,20 @@ const parsePositiveInteger = (value, fallback) => {
   return Math.floor(numeric)
 }
 
+const parseBoolean = (value) => {
+  if (typeof value === 'boolean') {
+    return value
+  }
+  if (typeof value === 'number') {
+    return value === 1
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    return ['1', 'true', 'yes', 'on'].includes(normalized)
+  }
+  return false
+}
+
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user || !isUserAdmin({ role: session.user.role })) {
@@ -48,6 +62,9 @@ export async function GET(request) {
       typeof requestUrl.searchParams.get('location') === 'string'
         ? requestUrl.searchParams.get('location')
         : 'all'
+    const withoutPhoneOnly = parseBoolean(
+      requestUrl.searchParams.get('withoutPhoneOnly'),
+    )
     const location =
       typeof session?.user?.location === 'string' ? session.user.location : null
 
@@ -60,6 +77,7 @@ export async function GET(request) {
       sortBy,
       location,
       locationFilter,
+      withoutPhoneOnly,
     })
 
     return NextResponse.json(

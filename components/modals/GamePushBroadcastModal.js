@@ -58,7 +58,7 @@ const GamePushBroadcastModal = ({
             className="mt-0.5 h-4 w-4"
           />
           <span className="min-w-0 text-slate-700 dark:text-[#d7e7ff]">
-            Отправить анонс игры всем пользователям
+            Отправить анонс игры всем пользователям в городе проведения игры
           </span>
         </label>
 

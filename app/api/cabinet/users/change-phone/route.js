@@ -5,6 +5,7 @@ import { authOptions } from '@server/auth/authOptions'
 import normalizeAuthPhone from '@helpers/normalizeAuthPhone'
 import resolveSessionUserFilter from '@helpers/resolveSessionUserFilter'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import isMongoDuplicatePhoneError from '@helpers/isMongoDuplicatePhoneError'
 
 const FLOW = 'change_phone'
 
@@ -104,6 +105,10 @@ export async function POST(request) {
       { status: 200 },
     )
   } catch (error) {
+    if (isMongoDuplicatePhoneError(error)) {
+      return errorJson(400, 'Такой номер уже зарегистрирован в другом профиле.')
+    }
+
     console.error('Failed to change user phone (app)', error)
     return errorJson(500, 'Не удалось обновить номер телефона. Попробуйте позже.')
   }

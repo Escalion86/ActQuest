@@ -56,6 +56,14 @@ const sanitizeCustomMessage = (value) => {
   return value.trim()
 }
 
+const normalizeLocationKey = (value) => {
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  return value.trim().toLowerCase()
+}
+
 const isManagerOfGame = ({ sessionUser, game }) => {
   if (!sessionUser || !game) {
     return false
@@ -141,13 +149,33 @@ const getUsersForGameRegistrations = async ({ db, gameId }) => {
   return Array.from(uniqueUsersByTelegramId.values())
 }
 
-const getAllUsersForBroadcast = async ({ db }) => {
+const getAllUsersForBroadcast = async ({ db, gameLocation }) => {
   const Users = db.model('Users')
+  const normalizedGameLocation = normalizeLocationKey(gameLocation)
   const users = await Users.find({})
-    .select({ _id: 1, telegramId: 1, pushSubscriptions: 1 })
+    .select({
+      _id: 1,
+      telegramId: 1,
+      pushSubscriptions: 1,
+      currentLocation: 1,
+      accountLocation: 1,
+    })
     .lean()
 
-  return users.filter((user) => Number.isFinite(Number(user?.telegramId)))
+  return users.filter((user) => {
+    if (!Number.isFinite(Number(user?.telegramId))) {
+      return false
+    }
+
+    const userParticipationLocation = normalizeLocationKey(
+      user?.currentLocation || user?.accountLocation || '',
+    )
+
+    return (
+      normalizedGameLocation.length > 0 &&
+      userParticipationLocation === normalizedGameLocation
+    )
+  })
 }
 
 export async function POST(request, { params }) {
@@ -251,8 +279,22 @@ export async function POST(request, { params }) {
       )
     }
 
+    if (
+      isAnnouncementForAll &&
+      normalizeLocationKey(game?.location).length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'У игры не указан город проведения. Невозможно отправить анонс по городу.',
+        },
+        { status: 400 },
+      )
+    }
+
     const users = isAnnouncementForAll
-      ? await getAllUsersForBroadcast({ db })
+      ? await getAllUsersForBroadcast({ db, gameLocation: game.location })
       : await getUsersForGameRegistrations({ db, gameId })
 
     const gameName =

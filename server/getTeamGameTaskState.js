@@ -31,33 +31,6 @@ const parseDurationSeconds = (value, fallback) => {
   return Math.max(Math.floor(numeric), 0)
 }
 
-const formatSecondsForCountdown = (totalSeconds) => {
-  if (!Number.isFinite(totalSeconds)) return '00:00:00'
-
-  const safeSeconds = Math.max(Math.floor(totalSeconds), 0)
-  const hours = Math.floor(safeSeconds / 3600)
-  const minutes = Math.floor((safeSeconds % 3600) / 60)
-  const seconds = safeSeconds % 60
-  const pad = (num) => String(num).padStart(2, '0')
-
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-}
-
-const createCountdownSpan = (secondsLeft, targetTimestamp) => {
-  const attributes = [
-    'data-task-countdown="break"',
-    'data-refresh-on-complete="true"',
-  ]
-  if (Number.isFinite(targetTimestamp)) {
-    attributes.push(`data-target="${targetTimestamp}"`)
-  }
-  if (Number.isFinite(secondsLeft)) {
-    attributes.push(`data-seconds="${secondsLeft}"`)
-  }
-
-  return `<span ${attributes.join(' ')}>${formatSecondsForCountdown(secondsLeft)}</span>`
-}
-
 export const GAME_TASK_ERRORS = {
   INVALID_PARAMS: 'INVALID_PARAMS',
   GAME_NOT_FOUND: 'GAME_NOT_FOUND',
@@ -299,7 +272,6 @@ const computeTaskHtml = async ({
       const activeTaskStartTime = ensureDateValue(startTimes[activeTaskIndex])
 
       let breakSecondsLeft = null
-      let breakTargetTimestamp = null
       let breakReason = null
 
       if (breakDurationSeconds > 0) {
@@ -312,8 +284,6 @@ const computeTaskHtml = async ({
           )
           if (elapsed < breakDurationSeconds) {
             breakSecondsLeft = breakDurationSeconds - elapsed
-            breakTargetTimestamp =
-              activeTaskEndTime.getTime() + breakDurationSeconds * 1000
             breakReason = 'success'
           }
         } else if (activeTaskStartTime && taskDurationSeconds > 0) {
@@ -325,9 +295,6 @@ const computeTaskHtml = async ({
             const overtime = elapsedSinceStart - taskDurationSeconds
             if (overtime < breakDurationSeconds) {
               breakSecondsLeft = breakDurationSeconds - overtime
-              breakTargetTimestamp =
-                activeTaskStartTime.getTime() +
-                (taskDurationSeconds + breakDurationSeconds) * 1000
               breakReason = 'timeout'
             }
           }
@@ -347,12 +314,6 @@ const computeTaskHtml = async ({
         breakParts.push('<br /><br /><b>Перерыв.</b>')
         breakParts.push(
           '<br /><br /><b>Ожидайте следующее задание после перерыва.</b>',
-        )
-        breakParts.push(
-          `<br /><br /><b>Время до окончания перерыва:</b> ${createCountdownSpan(
-            breakSecondsLeft,
-            breakTargetTimestamp,
-          )}`,
         )
         taskHtml = breakParts.join('')
         taskState = 'break'
