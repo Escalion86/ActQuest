@@ -26,6 +26,74 @@ const normalizeStringId = (value) => {
 const isElevatedRole = (role) => role === 'admin' || role === 'dev'
 const isModeratorRole = (role) => role === 'moder'
 
+const normalizeText = (value) =>
+  typeof value === 'string' ? value.trim() : ''
+
+const normalizeCodeEntry = (value) => {
+  if (typeof value === 'string') {
+    const code = value.trim()
+    return code ? { code, image: '' } : null
+  }
+
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const code =
+    normalizeText(value.code) ||
+    normalizeText(value.value) ||
+    normalizeText(value.text)
+  if (!code) {
+    return null
+  }
+
+  return {
+    code,
+    image: normalizeText(value.image),
+  }
+}
+
+const normalizeTaskPreview = (task, index) => {
+  const clues = Array.isArray(task?.clues)
+    ? task.clues.map((clue) => ({
+        clue: normalizeText(clue?.clue),
+        clueRich: normalizeText(clue?.clueRich),
+      }))
+    : []
+
+  const mainCodes = Array.isArray(task?.codes)
+    ? task.codes
+        .map((item) => normalizeText(item))
+        .filter(Boolean)
+    : []
+
+  const codePhotos = Array.isArray(task?.codePhotos)
+    ? task.codePhotos.map((item) => normalizeText(item)).slice(0, mainCodes.length)
+    : []
+
+  const bonusCodes = Array.isArray(task?.bonusCodes)
+    ? task.bonusCodes.map(normalizeCodeEntry).filter(Boolean)
+    : []
+
+  const penaltyCodes = Array.isArray(task?.penaltyCodes)
+    ? task.penaltyCodes.map(normalizeCodeEntry).filter(Boolean)
+    : []
+
+  return {
+    id: normalizeText(task?.id) || `task-${index + 1}`,
+    title: normalizeText(task?.title),
+    task: normalizeText(task?.task),
+    taskRich: normalizeText(task?.taskRich),
+    howToSolve: normalizeText(task?.howToSolve),
+    coordinates: task?.coordinates || null,
+    clues,
+    codes: mainCodes,
+    codePhotos,
+    bonusCodes,
+    penaltyCodes,
+  }
+}
+
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -226,6 +294,21 @@ export async function GET(request) {
         const afterEnd = getSecondsBetween(finishTime, now)
         breakTimeLeftSeconds = Math.max(0, breakDuration - afterEnd)
       }
+      const isBreakFinishedWaitingForNextTask =
+        isTeamOnBreak && breakTimeLeftSeconds <= 0
+
+      // Время завершения текущего (предыдущего для периода перерыва) задания
+      let completedTaskSeconds = 0
+      if (startTime[activeTaskIndex] && isActiveTaskFinished) {
+        if (endTime[activeTaskIndex]) {
+          completedTaskSeconds = getSecondsBetween(
+            startTime[activeTaskIndex],
+            endTime[activeTaskIndex],
+          )
+        } else {
+          completedTaskSeconds = taskDuration
+        }
+      }
 
       // Подсказки на текущем задании
       let cluesReceived = 0
@@ -277,6 +360,8 @@ export async function GET(request) {
         sumTimeSeconds,
         currentTaskSeconds,
         breakTimeLeftSeconds,
+        completedTaskSeconds,
+        isBreakFinishedWaitingForNextTask,
         cluesReceived,
         currentPhotosCount,
       }
@@ -305,6 +390,9 @@ export async function GET(request) {
     const taskTitles = Array.isArray(game.tasks)
       ? game.tasks.map((t) => t?.title ?? '')
       : []
+    const tasksPreview = Array.isArray(game.tasks)
+      ? game.tasks.map((task, index) => normalizeTaskPreview(task, index))
+      : []
 
     return NextResponse.json(
       {
@@ -319,6 +407,7 @@ export async function GET(request) {
           breakDuration,
           tasksCount,
           taskTitles,
+          tasks: tasksPreview,
           teams: teamsStatus,
           serverTime: now.toISOString(),
         },

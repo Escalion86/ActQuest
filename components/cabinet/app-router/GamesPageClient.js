@@ -152,6 +152,7 @@ const createPenaltyCode = () => ({
   code: '',
   penalty: 0,
   description: '',
+  image: '',
 })
 
 const createBonusCode = () => ({
@@ -160,6 +161,7 @@ const createBonusCode = () => ({
   code: '',
   bonus: 0,
   description: '',
+  image: '',
 })
 
 const gameLocationOptions = Object.entries(LOCATIONS)
@@ -205,6 +207,20 @@ const isGameConducted = (game) => {
   return Boolean(game.dateStartFact || game.dateEndFact)
 }
 
+const toValidTimestamp = (value, fallback) => {
+  if (!value) {
+    return fallback
+  }
+  const numeric = new Date(value).getTime()
+  return Number.isFinite(numeric) ? numeric : fallback
+}
+
+const resolvePastSortTimestamp = (game) =>
+  toValidTimestamp(
+    game?.dateStartFact || game?.dateStart || game?.dateEndFact,
+    Number.NEGATIVE_INFINITY,
+  )
+
 const normalizeVisibleStatus = (status, canSeeClosedStatus) => {
   if (isClosedStatus(status) && !canSeeClosedStatus) {
     return 'finished'
@@ -247,6 +263,7 @@ const createTask = () => ({
   subTasks: [],
   images: [],
   codes: [],
+  codePhotos: [],
   coordinates: { latitude: null, longitude: null, radius: null },
   penaltyCodes: [],
   bonusCodes: [],
@@ -269,6 +286,9 @@ const sanitizeStringArray = (values = []) =>
   (Array.isArray(values) ? values : [])
     .map((item) => (typeof item === 'string' ? item.trim() : ''))
     .filter((item) => item !== '')
+
+const sanitizeCodePhotosArray = (values = [], codesLength = 0) =>
+  sanitizeStringArray(values).slice(0, Math.max(0, Number(codesLength) || 0))
 
 const stripHtmlToPlainText = (value) =>
   String(value || '')
@@ -490,6 +510,11 @@ const buildUpdatePayload = (game) => {
   }))
 
   const tasks = (game.tasks ?? []).map((task) => {
+    const normalizedCodes = sanitizeStringArray(task.codes)
+    const normalizedCodePhotos = sanitizeCodePhotosArray(
+      task.codePhotos,
+      normalizedCodes.length,
+    )
     const normalizedCoordinates = {
       latitude: toNullableNumber(task.coordinates?.latitude),
       longitude: toNullableNumber(task.coordinates?.longitude),
@@ -568,7 +593,8 @@ const buildUpdatePayload = (game) => {
           })
         : [],
       images: sanitizeStringArray(task.images),
-      codes: sanitizeStringArray(task.codes),
+      codes: normalizedCodes,
+      codePhotos: normalizedCodePhotos,
       coordinates: hasCoordinatesValue
         ? normalizedCoordinates
         : { latitude: null, longitude: null, radius: null },
@@ -578,6 +604,7 @@ const buildUpdatePayload = (game) => {
           penalty: Number(penalty.penalty) || 0,
           description:
             typeof penalty.description === 'string' ? penalty.description : '',
+          image: typeof penalty.image === 'string' ? penalty.image.trim() : '',
         }
 
         if (penalty.mongoId) {
@@ -592,6 +619,7 @@ const buildUpdatePayload = (game) => {
           bonus: Number(bonus.bonus) || 0,
           description:
             typeof bonus.description === 'string' ? bonus.description : '',
+          image: typeof bonus.image === 'string' ? bonus.image.trim() : '',
         }
 
         if (bonus.mongoId) {
@@ -1372,12 +1400,14 @@ const GamesPage = ({
 
       if (gamesView === 'upcoming') {
         return [...validItems].sort((first, second) => {
-          const firstTime = first?.dateStart
-            ? new Date(first.dateStart).getTime()
-            : Number.POSITIVE_INFINITY
-          const secondTime = second?.dateStart
-            ? new Date(second.dateStart).getTime()
-            : Number.POSITIVE_INFINITY
+          const firstTime = toValidTimestamp(
+            first?.dateStart,
+            Number.POSITIVE_INFINITY,
+          )
+          const secondTime = toValidTimestamp(
+            second?.dateStart,
+            Number.POSITIVE_INFINITY,
+          )
 
           if (firstTime !== secondTime) {
             return firstTime - secondTime
@@ -1392,12 +1422,8 @@ const GamesPage = ({
 
       if (gamesView === 'past') {
         return [...validItems].sort((first, second) => {
-          const firstTime = first?.dateStart
-            ? new Date(first.dateStart).getTime()
-            : Number.NEGATIVE_INFINITY
-          const secondTime = second?.dateStart
-            ? new Date(second.dateStart).getTime()
-            : Number.NEGATIVE_INFINITY
+          const firstTime = resolvePastSortTimestamp(first)
+          const secondTime = resolvePastSortTimestamp(second)
 
           if (firstTime !== secondTime) {
             return secondTime - firstTime
@@ -3140,6 +3166,7 @@ const GamesPage = ({
     isGameModerator,
     selectedGame,
   ])
+  const canViewCodePhotos = canEditSelectedGame
 
   const canViewRestrictedGameInfo = canEditSelectedGame
 
@@ -3565,7 +3592,10 @@ const GamesPage = ({
 
   const handleAddTaskCode = useCallback(
     (taskId) => {
-      updateTask(taskId, (task) => ({ codes: [...(task.codes ?? []), ''] }))
+      updateTask(taskId, (task) => ({
+        codes: [...(task.codes ?? []), ''],
+        codePhotos: [...(task.codePhotos ?? []), ''],
+      }))
     },
     [updateTask],
   )
@@ -3581,10 +3611,24 @@ const GamesPage = ({
     [updateTask],
   )
 
+  const handleTaskCodePhotoChange = useCallback(
+    (taskId, index, value) => {
+      updateTask(taskId, (task) => {
+        const nextPhotos = [...(task.codePhotos ?? [])]
+        nextPhotos[index] = value
+        return { codePhotos: nextPhotos }
+      })
+    },
+    [updateTask],
+  )
+
   const handleRemoveTaskCode = useCallback(
     (taskId, index) => {
       updateTask(taskId, (task) => ({
         codes: (task.codes ?? []).filter((_, codeIndex) => codeIndex !== index),
+        codePhotos: (task.codePhotos ?? []).filter(
+          (_, codeIndex) => codeIndex !== index,
+        ),
       }))
     },
     [updateTask],
@@ -4784,12 +4828,18 @@ const GamesPage = ({
 
   const renderGameListItem = useCallback(
     (game) => {
-      const startDateLabel = game.dateStart
-        ? new Date(game.dateStart).toLocaleString('ru-RU', {
+      const cardStartDateRaw =
+        gamesView === 'past'
+          ? game.dateStartFact || game.dateStart
+          : game.dateStart
+      const startDateLabel = cardStartDateRaw
+        ? new Date(cardStartDateRaw).toLocaleString('ru-RU', {
             dateStyle: 'short',
             timeStyle: 'short',
           })
-        : 'Дата не задана'
+        : gamesView === 'past'
+          ? 'Факт. старт не указан'
+          : 'Дата не задана'
 
       const canManageThisGame = canManageGame(game)
       const canEditThisGame = canOpenGameEditModal(game)
@@ -4906,7 +4956,11 @@ const GamesPage = ({
                       {game.name || 'Без названия'}
                     </p>
                     <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
-                      <span className="text-slate-500">{startDateLabel}</span>
+                      <span className="text-slate-500">
+                        {gamesView === 'past'
+                          ? `Факт. старт: ${startDateLabel}`
+                          : startDateLabel}
+                      </span>
                     </div>
                     <p className="mt-1 text-xs text-slate-400">
                       {getNounTeams(game.teamsCount)}
@@ -5112,6 +5166,7 @@ const GamesPage = ({
       canManageGameStatus,
       canEditAllGames,
       canSeeClosedStatus,
+      gamesView,
       canViewResultsForGame,
       canViewTasksForGame,
       currentUserDbId,
@@ -5134,12 +5189,18 @@ const GamesPage = ({
 
   const renderGameTileItem = useCallback(
     (game) => {
-      const startDateLabel = game.dateStart
-        ? new Date(game.dateStart).toLocaleString('ru-RU', {
+      const cardStartDateRaw =
+        gamesView === 'past'
+          ? game.dateStartFact || game.dateStart
+          : game.dateStart
+      const startDateLabel = cardStartDateRaw
+        ? new Date(cardStartDateRaw).toLocaleString('ru-RU', {
             dateStyle: 'short',
             timeStyle: 'short',
           })
-        : 'Дата не задана'
+        : gamesView === 'past'
+          ? 'Факт. старт не указан'
+          : 'Дата не задана'
 
       const canManageThisGame = canManageGame(game)
       const canEditThisGame = canOpenGameEditModal(game)
@@ -5244,7 +5305,11 @@ const GamesPage = ({
               <p className="text-sm font-semibold aq-line-clamp-2 text-primary dark:text-slate-100">
                 {game.name || 'Без названия'}
               </p>
-              <p className="text-xs text-slate-500">{startDateLabel}</p>
+              <p className="text-xs text-slate-500">
+                {gamesView === 'past'
+                  ? `Факт. старт: ${startDateLabel}`
+                  : startDateLabel}
+              </p>
               <p className="text-xs text-slate-400">
                 {getNounTeams(game.teamsCount)}
               </p>
@@ -5452,6 +5517,7 @@ const GamesPage = ({
       canManageGameStatus,
       canEditAllGames,
       canSeeClosedStatus,
+      gamesView,
       canViewResultsForGame,
       canViewTasksForGame,
       currentUserDbId,
@@ -6134,6 +6200,7 @@ const GamesPage = ({
                 handleTaskCoordinateChange={handleTaskCoordinateChange}
                 handleAddTaskCode={handleAddTaskCode}
                 handleTaskCodeChange={handleTaskCodeChange}
+                handleTaskCodePhotoChange={handleTaskCodePhotoChange}
                 handleRemoveTaskCode={handleRemoveTaskCode}
                 handleAddTaskImage={handleAddTaskImage}
                 handleTaskImageChange={handleTaskImageChange}
@@ -6190,6 +6257,7 @@ const GamesPage = ({
                 registerTeams={registerTeams}
                 currentUserId={currentUserDbId}
                 currentUserRole={userRole}
+                canViewCodePhotos={canViewCodePhotos}
                 isCreateGameModalOpen={isCreateGameModalOpen}
                 handleCloseCreateGameModal={handleCloseCreateGameModal}
                 isCreatingGame={isCreatingGame}
@@ -6357,6 +6425,7 @@ const penaltyCodeShape = PropTypes.shape({
   code: PropTypes.string,
   penalty: PropTypes.number,
   description: PropTypes.string,
+  image: PropTypes.string,
 })
 
 const bonusCodeShape = PropTypes.shape({
@@ -6365,6 +6434,7 @@ const bonusCodeShape = PropTypes.shape({
   code: PropTypes.string,
   bonus: PropTypes.number,
   description: PropTypes.string,
+  image: PropTypes.string,
 })
 
 const coordinatesShape = PropTypes.shape({
@@ -6448,6 +6518,7 @@ GamesPage.propTypes = {
           subTasks: PropTypes.arrayOf(subTaskShape),
           images: PropTypes.arrayOf(PropTypes.string),
           codes: PropTypes.arrayOf(PropTypes.string),
+          codePhotos: PropTypes.arrayOf(PropTypes.string),
           coordinates: coordinatesShape,
           penaltyCodes: PropTypes.arrayOf(penaltyCodeShape),
           bonusCodes: PropTypes.arrayOf(bonusCodeShape),

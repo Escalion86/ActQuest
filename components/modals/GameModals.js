@@ -37,6 +37,7 @@ const GameModals = ({
   handleTaskCoordinateChange,
   handleAddTaskCode,
   handleTaskCodeChange,
+  handleTaskCodePhotoChange,
   handleRemoveTaskCode,
   handleAddTaskImage,
   handleTaskImageChange,
@@ -93,6 +94,7 @@ const GameModals = ({
   registerTeams,
   currentUserId,
   currentUserRole,
+  canViewCodePhotos,
   isCreateGameModalOpen,
   handleCloseCreateGameModal,
   isCreatingGame,
@@ -191,6 +193,7 @@ const GameModals = ({
           handleTaskCoordinateChange={handleTaskCoordinateChange}
           handleAddTaskCode={handleAddTaskCode}
           handleTaskCodeChange={handleTaskCodeChange}
+          handleTaskCodePhotoChange={handleTaskCodePhotoChange}
           handleRemoveTaskCode={handleRemoveTaskCode}
           handleAddTaskImage={handleAddTaskImage}
           handleTaskImageChange={handleTaskImageChange}
@@ -234,6 +237,7 @@ const GameModals = ({
           isEditGameSeasonsLoading={isEditGameSeasonsLoading}
           isEditGameSeasonCreating={isEditGameSeasonCreating}
           handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+          canViewCodePhotos={canViewCodePhotos}
         />
       ) : null}
 
@@ -262,6 +266,7 @@ const GameModals = ({
           handleTaskCoordinateChange={handleTaskCoordinateChange}
           handleAddTaskCode={handleAddTaskCode}
           handleTaskCodeChange={handleTaskCodeChange}
+          handleTaskCodePhotoChange={handleTaskCodePhotoChange}
           handleRemoveTaskCode={handleRemoveTaskCode}
           handleAddTaskImage={handleAddTaskImage}
           handleTaskImageChange={handleTaskImageChange}
@@ -307,6 +312,7 @@ const GameModals = ({
           handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
           sectionMode="tasks"
           modalTitleOverride={`Редактор заданий «${gameForEdit?.name || 'Без названия'}»`}
+          canViewCodePhotos={canViewCodePhotos}
         />
       ) : null}
 
@@ -418,6 +424,7 @@ const GameModals = ({
           isTasksViewModalOpen={isTasksViewModalOpen}
           handleCloseTasksViewModal={handleCloseTasksViewModal}
           selectedGame={selectedGame}
+          canViewCodePhotos={canViewCodePhotos}
         />
       ) : null}
     </>
@@ -491,6 +498,7 @@ GameModals.propTypes = {
   handleTaskCoordinateChange: PropTypes.func.isRequired,
   handleAddTaskCode: PropTypes.func.isRequired,
   handleTaskCodeChange: PropTypes.func.isRequired,
+  handleTaskCodePhotoChange: PropTypes.func.isRequired,
   handleRemoveTaskCode: PropTypes.func.isRequired,
   handleAddTaskImage: PropTypes.func.isRequired,
   handleTaskImageChange: PropTypes.func.isRequired,
@@ -558,6 +566,7 @@ GameModals.propTypes = {
   ).isRequired,
   currentUserId: PropTypes.string,
   currentUserRole: PropTypes.string,
+  canViewCodePhotos: PropTypes.bool,
   isCreateGameModalOpen: PropTypes.bool.isRequired,
   handleCloseCreateGameModal: PropTypes.func.isRequired,
   isCreatingGame: PropTypes.bool.isRequired,
@@ -695,6 +704,7 @@ GameModals.defaultProps = {
   registerFeedback: null,
   currentUserId: null,
   currentUserRole: null,
+  canViewCodePhotos: false,
   isCloneSourceGamesLoading: false,
   selectedTeamToAdd: '',
   createGameSeasons: [],

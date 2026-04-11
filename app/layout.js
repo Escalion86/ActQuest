@@ -1,6 +1,7 @@
 import './globals.css'
 import AppProviders from './providers'
 import ThemeInitializerClient from './ThemeInitializerClient'
+import PwaStandalonePullToRefresh from '@components/PwaStandalonePullToRefresh'
 
 const siteUrl =
   process.env.NEXTAUTH_URL ||
@@ -80,6 +81,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <ThemeInitializerClient />
+        <PwaStandalonePullToRefresh />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

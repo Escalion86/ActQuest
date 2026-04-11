@@ -29,13 +29,51 @@ const getTaskCoordinates = (task) => {
     return null
   }
 
+  // Исторический дефолт: 0,0 трактуем как "координаты не заданы".
+  if (Math.abs(latitude) < 1e-9 && Math.abs(longitude) < 1e-9) {
+    return null
+  }
+
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return null
+  }
+
   return { latitude, longitude }
 }
+
+const normalizeCodeRows = (values) =>
+  (Array.isArray(values) ? values : [])
+    .map((item) => {
+      if (typeof item === 'string') {
+        const code = item.trim()
+        return code ? { code, image: '' } : null
+      }
+
+      if (!item || typeof item !== 'object') {
+        return null
+      }
+
+      const code =
+        (typeof item.code === 'string' && item.code.trim()) ||
+        (typeof item.value === 'string' && item.value.trim()) ||
+        (typeof item.text === 'string' && item.text.trim()) ||
+        ''
+
+      if (!code) {
+        return null
+      }
+
+      const image = typeof item.image === 'string' ? item.image.trim() : ''
+      return { code, image }
+    })
+    .filter(Boolean)
 
 const GameTasksViewModal = ({
   isTasksViewModalOpen,
   handleCloseTasksViewModal,
   selectedGame,
+  canViewCodePhotos,
+  showAllTaskDetails,
 }) => {
   const [expandedTaskIds, setExpandedTaskIds] = useState([])
   const [taskRevealState, setTaskRevealState] = useState({})
@@ -100,6 +138,90 @@ const GameTasksViewModal = ({
     })
   }, [])
 
+  const renderCodeGroup = (title, rows, tone) => {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return null
+    }
+
+    const palette =
+      tone === 'bonus'
+        ? {
+            badge:
+              'border-emerald-300/70 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200',
+            summary:
+              'text-emerald-700 dark:text-emerald-200',
+          }
+        : tone === 'penalty'
+          ? {
+              badge:
+                'border-red-300/70 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200',
+              summary:
+                'text-red-700 dark:text-red-200',
+            }
+          : {
+              badge:
+                'border-cyan-300/70 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-200',
+              summary:
+                'text-cyan-700 dark:text-cyan-200',
+            }
+
+    const photos = canViewCodePhotos
+      ? rows
+          .map((item, index) => ({
+            key: `${title}-${index}`,
+            code: item.code,
+            image:
+              typeof item.image === 'string' ? item.image.trim() : '',
+          }))
+          .filter((item) => Boolean(item.image))
+      : []
+
+    return (
+      <div className="space-y-2">
+        <p className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
+          {title}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {rows.map((item, index) => (
+            <span
+              key={`${title}-${item.code}-${index}`}
+              className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold ${palette.badge}`}
+            >
+              {item.code}
+            </span>
+          ))}
+        </div>
+        {photos.length > 0 && (
+          <details className="rounded-lg border border-slate-200/80 bg-white/60 px-2.5 py-2 dark:border-slate-700 dark:bg-slate-900/50">
+            <summary
+              className={`cursor-pointer select-none text-xs font-semibold ${palette.summary}`}
+            >
+              Фото кодов ({photos.length})
+            </summary>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {photos.map((item) => (
+                <a
+                  key={`${item.key}-${item.code}`}
+                  href={item.image}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="block overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
+                  title={`Открыть фото для кода ${item.code}`}
+                >
+                  <img
+                    src={item.image}
+                    alt={`Фото для кода ${item.code}`}
+                    className="h-24 w-full object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          </details>
+        )}
+      </div>
+    )
+  }
+
   const renderAnswer = (task) => {
     const coordinates = getTaskCoordinates(task)
     const hasCoordinates = Boolean(coordinates)
@@ -149,11 +271,18 @@ const GameTasksViewModal = ({
       )
     }
 
-    const codes = (Array.isArray(task?.codes) ? task.codes : [])
-      .map((code) => (typeof code === 'string' ? code.trim() : ''))
-      .filter(Boolean)
+    const mainCodes = normalizeCodeRows(
+      (Array.isArray(task?.codes) ? task.codes : []).map((code, index) => ({
+        code,
+        image: Array.isArray(task?.codePhotos) ? task.codePhotos[index] : '',
+      })),
+    )
+    const bonusCodes = normalizeCodeRows(task?.bonusCodes)
+    const penaltyCodes = normalizeCodeRows(task?.penaltyCodes)
+    const hasAnyCodes =
+      mainCodes.length > 0 || bonusCodes.length > 0 || penaltyCodes.length > 0
 
-    if (codes.length === 0) {
+    if (!hasAnyCodes) {
       return (
         <p className="text-sm text-slate-500 dark:text-slate-300">
           Ответ для этого задания не задан.
@@ -163,21 +292,9 @@ const GameTasksViewModal = ({
 
     return (
       <div className="space-y-3">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
-            Коды ответа
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {codes.map((code, index) => (
-              <span
-                key={`${task.id}-answer-code-${index}`}
-                className="inline-flex items-center rounded-lg border border-emerald-300/70 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200"
-              >
-                {code}
-              </span>
-            ))}
-          </div>
-        </div>
+        {renderCodeGroup('Основные коды', mainCodes, 'main')}
+        {renderCodeGroup('Бонусные коды', bonusCodes, 'bonus')}
+        {renderCodeGroup('Штрафные коды', penaltyCodes, 'penalty')}
         {hasCoordinates && (
           <div className="space-y-2">
             <p className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
@@ -230,13 +347,20 @@ const GameTasksViewModal = ({
             const isExpanded = expandedTaskIds.includes(taskId)
             const clues = Array.isArray(task.clues) ? task.clues : []
             const revealState = getTaskRevealState(taskRevealState, taskId)
-            const visibleClues = clues.slice(0, revealState.cluesOpened)
-            const hasMoreClues = revealState.cluesOpened < clues.length
-            const canShowAnswer = !hasMoreClues && !revealState.answerOpened
+            const visibleClues = showAllTaskDetails
+              ? clues
+              : clues.slice(0, revealState.cluesOpened)
+            const hasMoreClues = showAllTaskDetails
+              ? false
+              : revealState.cluesOpened < clues.length
+            const canShowAnswer =
+              !showAllTaskDetails && !hasMoreClues && !revealState.answerOpened
             const canRevealNext = hasMoreClues || canShowAnswer
             const actionLabel = hasMoreClues
               ? 'Открыть подсказку'
               : 'Показать ответ'
+            const isAnswerVisible =
+              showAllTaskDetails || revealState.answerOpened
 
             return (
               <ModalSection key={taskId} className="overflow-hidden" noPadding>
@@ -295,7 +419,7 @@ const GameTasksViewModal = ({
                       </div>
                     )}
 
-                    {revealState.answerOpened && (
+                    {isAnswerVisible && (
                       <div className="px-3 py-3 space-y-2 border rounded-xl border-emerald-300/60 bg-emerald-50/70 dark:border-emerald-500/35 dark:bg-emerald-500/10">
                         <ModalSectionTitle>Ответ</ModalSectionTitle>
                         {renderAnswer(task)}
@@ -346,6 +470,8 @@ const GameTasksViewModal = ({
 GameTasksViewModal.propTypes = {
   isTasksViewModalOpen: PropTypes.bool.isRequired,
   handleCloseTasksViewModal: PropTypes.func.isRequired,
+  canViewCodePhotos: PropTypes.bool,
+  showAllTaskDetails: PropTypes.bool,
   selectedGame: PropTypes.shape({
     id: PropTypes.string,
     name: PropTypes.string,
@@ -362,6 +488,19 @@ GameTasksViewModal.propTypes = {
           longitude: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
         }),
         codes: PropTypes.arrayOf(PropTypes.string),
+        codePhotos: PropTypes.arrayOf(PropTypes.string),
+        bonusCodes: PropTypes.arrayOf(
+          PropTypes.shape({
+            code: PropTypes.string,
+            image: PropTypes.string,
+          }),
+        ),
+        penaltyCodes: PropTypes.arrayOf(
+          PropTypes.shape({
+            code: PropTypes.string,
+            image: PropTypes.string,
+          }),
+        ),
         clues: PropTypes.arrayOf(
           PropTypes.shape({
             clue: PropTypes.string,
@@ -375,6 +514,8 @@ GameTasksViewModal.propTypes = {
 
 GameTasksViewModal.defaultProps = {
   selectedGame: null,
+  canViewCodePhotos: false,
+  showAllTaskDetails: false,
 }
 
 export default memo(GameTasksViewModal)

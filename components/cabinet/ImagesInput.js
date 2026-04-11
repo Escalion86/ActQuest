@@ -82,6 +82,7 @@ const ImagesInput = ({
   disabled,
   maxImages,
   previewShape,
+  uploadLabel,
 }) => {
   const fileInputRef = useRef(null)
   const dragStateRef = useRef({
@@ -98,6 +99,12 @@ const ImagesInput = ({
   const normalizedImages = useMemo(() => normalizeImages(images), [images])
   const isCirclePreview = previewShape === 'circle'
   const isSquarePreview = previewShape === 'square'
+  const resolvedUploadLabel =
+    typeof uploadLabel === 'string' && uploadLabel.trim()
+      ? uploadLabel.trim()
+      : isSquarePreview
+        ? 'Загрузить обложку'
+        : 'Загрузить фото'
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return
@@ -390,7 +397,7 @@ const ImagesInput = ({
             disabled={disabled || isUploading}
             className="inline-flex h-28 w-28 cursor-pointer items-center justify-center rounded-full border border-dashed border-primary/50 bg-slate-50 p-3 text-center text-xs font-semibold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#00D1FF]/70 dark:bg-[#070015]/90 dark:text-[#bdf4ff] dark:shadow-[0_0_0_1px_rgba(0,209,255,0.2)] dark:hover:bg-[#00D1FF]/12 dark:hover:text-[#e9fbff]"
           >
-            {isUploading ? 'Загрузка…' : 'Загрузить фото'}
+            {isUploading ? 'Загрузка…' : resolvedUploadLabel}
           </button>
         ) : isSquarePreview ? (
           <button
@@ -399,7 +406,7 @@ const ImagesInput = ({
             disabled={disabled || isUploading}
             className="inline-flex h-40 w-40 cursor-pointer items-center justify-center rounded-xl border border-dashed border-primary/50 bg-slate-50 p-3 text-center text-xs font-semibold text-primary transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#00D1FF]/70 dark:bg-[#070015]/90 dark:text-[#bdf4ff] dark:shadow-[0_0_0_1px_rgba(0,209,255,0.2)] dark:hover:bg-[#00D1FF]/12 dark:hover:text-[#e9fbff]"
           >
-            {isUploading ? 'Загрузка…' : 'Загрузить обложку'}
+            {isUploading ? 'Загрузка…' : resolvedUploadLabel}
           </button>
         ) : (
           <p className="text-sm text-slate-500">Изображения отсутствуют.</p>
@@ -425,7 +432,7 @@ const ImagesInput = ({
             disabled={disabled || isUploading}
             className="inline-flex cursor-pointer justify-center rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
-            {isUploading ? 'Загрузка...' : 'Загрузить фото'}
+            {isUploading ? 'Загрузка...' : resolvedUploadLabel}
           </button>
         )}
         {maxImages > 1 && (
@@ -454,6 +461,7 @@ ImagesInput.propTypes = {
   disabled: PropTypes.bool,
   maxImages: PropTypes.number,
   previewShape: PropTypes.oneOf(['rect', 'circle', 'square']),
+  uploadLabel: PropTypes.string,
 }
 
 ImagesInput.defaultProps = {
@@ -466,6 +474,7 @@ ImagesInput.defaultProps = {
   disabled: false,
   maxImages: 10,
   previewShape: 'rect',
+  uploadLabel: null,
 }
 
 export default ImagesInput

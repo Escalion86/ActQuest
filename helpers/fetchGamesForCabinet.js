@@ -32,10 +32,15 @@ const resolveGamesSort = (view) => {
     return { dateStart: 1, _id: 1 }
   }
   if (view === 'past') {
-    return { dateStart: -1, _id: 1 }
+    return { dateStartFact: -1, dateStart: -1, _id: 1 }
   }
   return { updatedAt: -1, _id: 1 }
 }
+
+const resolvePastGameSortDate = (game) =>
+  toDate(game?.dateStartFact) ||
+  toDate(game?.dateStart) ||
+  toDate(game?.dateEndFact)
 
 const sortGamesByView = (games, view) => {
   const items = Array.isArray(games) ? [...games] : []
@@ -62,8 +67,8 @@ const sortGamesByView = (games, view) => {
 
   if (view === 'past') {
     return items.sort((first, second) => {
-      const firstDate = toDate(first?.dateStart)
-      const secondDate = toDate(second?.dateStart)
+      const firstDate = resolvePastGameSortDate(first)
+      const secondDate = resolvePastGameSortDate(second)
       const firstTime = firstDate
         ? firstDate.getTime()
         : Number.NEGATIVE_INFINITY
@@ -425,14 +430,14 @@ const fetchGamesForCabinet = async ({
       : null
 
     // Для finished/closed — из result.teams, для остальных — из GamesTeams
-    let teamsCount = 0
-    if (gameStatus === 'finished' || gameStatus === 'closed') {
-      teamsCount = Array.isArray(game?.result?.teams)
-        ? game.result.teams.length
-        : 0
-    } else {
-      teamsCount = gameId ? teamsCountByGameId[gameId] || 0 : 0
-    }
+    const teamsCount =
+      gameStatus === 'finished' || gameStatus === 'closed'
+        ? Array.isArray(game?.result?.teams)
+          ? game.result.teams.length
+          : 0
+        : gameId
+          ? teamsCountByGameId[gameId] || 0
+          : 0
 
     return normalizeGameForCabinet({
       ...game,

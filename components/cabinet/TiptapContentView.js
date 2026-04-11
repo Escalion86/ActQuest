@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types'
+import normalizeAudioMessageHtml from '@helpers/normalizeAudioMessageHtml'
 
 const escapeHtml = (value) =>
   String(value || '')
@@ -55,12 +56,13 @@ const TiptapContentView = ({
       .replaceAll('&nbsp;', ' ')
       .replaceAll('\u00A0', ' ')
   )
+  const htmlWithNormalizedAudio = normalizeAudioMessageHtml(normalizedHtmlContent)
 
-  if (normalizedHtmlContent) {
+  if (htmlWithNormalizedAudio) {
     return (
       <div
         className={`aq-tiptap-view aq-rich-text-base aq-task-content max-w-none break-words [overflow-wrap:anywhere] [&_*]:max-w-full [&_*]:break-words ${className}`}
-        dangerouslySetInnerHTML={{ __html: normalizedHtmlContent }}
+        dangerouslySetInnerHTML={{ __html: htmlWithNormalizedAudio }}
       />
     )
   }

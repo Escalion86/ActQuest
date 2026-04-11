@@ -181,6 +181,7 @@ const normalizePenaltyCodes = (penaltyCodes = []) => {
     code: ensureString(penaltyCode?.code, ''),
     penalty: ensureNumber(penaltyCode?.penalty, 0),
     description: ensureString(penaltyCode?.description, ''),
+    image: normalizeMediaUrl(penaltyCode?.image),
   }))
 }
 
@@ -195,6 +196,7 @@ const normalizeBonusCodes = (bonusCodes = []) => {
     code: ensureString(bonusCode?.code, ''),
     bonus: ensureNumber(bonusCode?.bonus, 0),
     description: ensureString(bonusCode?.description, ''),
+    image: normalizeMediaUrl(bonusCode?.image),
   }))
 }
 
@@ -283,7 +285,14 @@ const normalizeTasks = (tasks = []) => {
     return []
   }
 
-  return tasks.map((task, index) => ({
+  return tasks.map((task, index) => {
+    const normalizedCodes = normalizeStringArray(task?.codes)
+    const normalizedCodePhotos = normalizeStringArray(task?.codePhotos).slice(
+      0,
+      normalizedCodes.length,
+    )
+
+    return {
     id: ensureString(task?._id ?? task?.id, `task-${index}`),
     mongoId: task?._id ? ensureString(task._id) : null,
     title: ensureString(task?.title, ''),
@@ -295,7 +304,8 @@ const normalizeTasks = (tasks = []) => {
     clues: normalizeClues(task?.clues),
     subTasks: normalizeSubTasks(task?.subTasks),
     images: normalizeStringArray(task?.images),
-    codes: normalizeStringArray(task?.codes),
+    codes: normalizedCodes,
+    codePhotos: normalizedCodePhotos,
     coordinates: normalizeCoordinates(task?.coordinates),
     penaltyCodes: normalizePenaltyCodes(task?.penaltyCodes),
     bonusCodes: normalizeBonusCodes(task?.bonusCodes),
@@ -303,7 +313,8 @@ const normalizeTasks = (tasks = []) => {
     postMessage: ensureString(task?.postMessage, ''),
     canceled: ensureBoolean(task?.canceled, false),
     isBonusTask: ensureBoolean(task?.isBonusTask, false),
-  }))
+    }
+  })
 }
 
 const computeTasksStats = (tasks = []) => {

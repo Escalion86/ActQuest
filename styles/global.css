@@ -281,7 +281,7 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   min-height: 1.333333em;
 }
 
-.aq-rich-text-base p + p {
+.aq-rich-text-base p+p {
   margin-top: 0;
 }
 
@@ -327,11 +327,9 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   margin: 0.45rem 0;
   border-left: 3px solid rgba(14, 165, 233, 0.9) !important;
   border-radius: 10px;
-  background: linear-gradient(
-    120deg,
-    rgba(14, 165, 233, 0.12),
-    rgba(59, 130, 246, 0.06)
-  );
+  background: linear-gradient(120deg,
+      rgba(14, 165, 233, 0.12),
+      rgba(59, 130, 246, 0.06));
   padding: 0.55rem 0.75rem;
   color: #0f3b67;
   overflow-wrap: anywhere;
@@ -385,6 +383,115 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   max-width: 100%;
 }
 
+.aq-task-content .aq-audio-message,
+.aq-task-content audio-message,
+.aq-rich-text-base .aq-audio-message,
+.aq-rich-text-base audio-message {
+  display: block;
+  margin: 12px 0;
+  max-width: 560px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 221, 255, 0.3);
+  background: linear-gradient(132deg,
+      rgba(8, 30, 68, 0.95),
+      rgba(16, 23, 53, 0.95) 52%,
+      rgba(24, 16, 58, 0.95));
+  box-shadow:
+    0 0 0 1px rgba(0, 221, 255, 0.08),
+    0 12px 32px rgba(2, 6, 23, 0.28);
+  padding: 11px 12px;
+  color: #e7f9ff;
+}
+
+.aq-task-content .aq-audio-message__meta,
+.aq-rich-text-base .aq-audio-message__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.aq-task-content .aq-audio-message__dot,
+.aq-rich-text-base .aq-audio-message__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22d3ee;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.24);
+}
+
+.aq-task-content .aq-audio-message__title,
+.aq-rich-text-base .aq-audio-message__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dbeafe;
+  letter-spacing: 0.01em;
+}
+
+.aq-task-content .aq-audio-message__native-wrap,
+.aq-rich-text-base .aq-audio-message__native-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aq-task-content .aq-audio-message audio,
+.aq-task-content audio-message audio,
+.aq-rich-text-base .aq-audio-message audio,
+.aq-rich-text-base audio-message audio {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  border-radius: 10px;
+  filter: saturate(1.08) contrast(1.02);
+}
+
+.aq-task-content .aq-audio-message__download,
+.aq-rich-text-base .aq-audio-message__download {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  color: #bae6fd;
+  background: rgba(15, 23, 42, 0.34);
+  text-decoration: none;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.aq-task-content .aq-audio-message__download svg,
+.aq-rich-text-base .aq-audio-message__download svg {
+  width: 15px;
+  height: 15px;
+}
+
+.aq-task-content .aq-audio-message__download:hover,
+.aq-task-content .aq-audio-message__download:focus-visible,
+.aq-rich-text-base .aq-audio-message__download:hover,
+.aq-rich-text-base .aq-audio-message__download:focus-visible {
+  border-color: rgba(34, 211, 238, 0.8);
+  color: #e0f2fe;
+  background: rgba(14, 116, 144, 0.28);
+}
+
+.dark .aq-task-content .aq-audio-message,
+.dark .aq-task-content audio-message,
+.dark .aq-rich-text-base .aq-audio-message,
+.dark .aq-rich-text-base audio-message {
+  border-color: rgba(0, 221, 255, 0.34);
+  background: linear-gradient(132deg,
+      rgba(8, 30, 68, 0.95),
+      rgba(15, 23, 42, 0.95) 52%,
+      rgba(30, 27, 75, 0.95));
+}
+
 .aq-rich-text-base .aq-frame-box {
   margin: 12px 0;
   padding: 12px 14px;
@@ -394,11 +501,11 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   box-shadow: 0 0 0 1px rgba(0, 221, 255, 0.08);
 }
 
-.aq-rich-text-base .aq-frame-box > :first-child {
+.aq-rich-text-base .aq-frame-box> :first-child {
   margin-top: 0;
 }
 
-.aq-rich-text-base .aq-frame-box > :last-child {
+.aq-rich-text-base .aq-frame-box> :last-child {
   margin-bottom: 0;
 }
 
@@ -414,11 +521,9 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 
 .dark .aq-rich-text-base blockquote {
   border-left-color: rgba(56, 189, 248, 0.9) !important;
-  background: linear-gradient(
-    120deg,
-    rgba(14, 116, 144, 0.35),
-    rgba(30, 58, 138, 0.2)
-  );
+  background: linear-gradient(120deg,
+      rgba(14, 116, 144, 0.35),
+      rgba(30, 58, 138, 0.2));
   color: #dbeafe;
 }
 
@@ -545,7 +650,8 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 
 /* Unified select arrow position for cabinet and modal forms */
 .cabinet-neon select,
-[role='dialog'] select {
+[role='dialog'] select,
+select:not([multiple]):not([size]) {
   -webkit-appearance: none;
   appearance: none;
   cursor: pointer;
@@ -554,20 +660,22 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
     box-shadow 180ms ease,
     background-color 180ms ease,
     color 180ms ease;
-  padding-right: 2.5rem !important;
-  background-repeat: no-repeat;
-  background-position: right 0.9rem center;
-  background-size: 0.95rem 0.95rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5l5 5 5-5' stroke='%23547594' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  padding-right: 2.75rem !important;
+  background-repeat: no-repeat !important;
+  background-position: right 1.05rem center !important;
+  background-size: 1.08rem 1.08rem !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5l5 5 5-5' stroke='%23547594' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
 }
 
 .cabinet-neon select:hover,
-[role='dialog'] select:hover {
+[role='dialog'] select:hover,
+select:not([multiple]):not([size]):hover {
   border-color: rgba(0, 209, 255, 0.48) !important;
 }
 
 .cabinet-neon select:focus,
-[role='dialog'] select:focus {
+[role='dialog'] select:focus,
+select:not([multiple]):not([size]):focus {
   outline: none;
   border-color: rgba(0, 209, 255, 0.62) !important;
   box-shadow:
@@ -576,8 +684,9 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 }
 
 .dark .cabinet-neon select,
-.dark [role='dialog'] select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5l5 5 5-5' stroke='%239fd9ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+.dark [role='dialog'] select,
+.dark select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5l5 5 5-5' stroke='%239fd9ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
 }
 
 /* Neon snackbar */
@@ -605,12 +714,10 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   left: -42%;
   width: 38%;
   pointer-events: none;
-  background: linear-gradient(
-    120deg,
-    rgba(170, 240, 255, 0) 0%,
-    rgba(170, 240, 255, 0.32) 46%,
-    rgba(170, 240, 255, 0) 100%
-  );
+  background: linear-gradient(120deg,
+      rgba(170, 240, 255, 0) 0%,
+      rgba(170, 240, 255, 0.32) 46%,
+      rgba(170, 240, 255, 0) 100%);
   transform: skewX(-20deg);
   animation: aq-toast-sheen 1.35s ease-out 90ms 1;
 }
@@ -621,6 +728,7 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
     transform: translate3d(36px, 0, 0) scale(0.98);
     filter: saturate(0.8);
   }
+
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
@@ -632,6 +740,7 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   from {
     left: -42%;
   }
+
   to {
     left: 118%;
   }
@@ -700,44 +809,57 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 }
 
 .dark .cabinet-neon select:hover,
-.dark [role='dialog'] select:hover {
+.dark [role='dialog'] select:hover,
+.dark select:not([multiple]):not([size]):hover {
   border-color: rgba(0, 209, 255, 0.58) !important;
   background-color: rgba(9, 0, 24, 0.95) !important;
 }
 
 .dark .cabinet-neon select:focus,
-.dark [role='dialog'] select:focus {
+.dark [role='dialog'] select:focus,
+.dark select:not([multiple]):not([size]):focus {
   border-color: rgba(0, 209, 255, 0.72) !important;
   box-shadow:
     0 0 0 1px rgba(0, 209, 255, 0.3),
     0 0 18px rgba(0, 209, 255, 0.2);
 }
 
-.cabinet-neon select.aq-select-compact {
-  padding-right: 2.9rem !important;
-  background-position: right 0.5rem center;
+.cabinet-neon select.aq-select-compact,
+select.aq-select-compact {
+  padding-right: 3rem !important;
+  background-position: right 0.9rem center !important;
+}
+
+/* Tighter arrow position for compact control select on game-control page */
+select.aq-select-game-control:not([multiple]):not([size]) {
+  padding-right: 2.28rem !important;
+  background-position: right 0.4rem center !important;
 }
 
 .cabinet-neon select option,
-[role='dialog'] select option {
+[role='dialog'] select option,
+select:not([multiple]):not([size]) option {
   background-color: #f8fbff;
   color: #0f172a;
 }
 
 .cabinet-neon select optgroup,
-[role='dialog'] select optgroup {
+[role='dialog'] select optgroup,
+select:not([multiple]):not([size]) optgroup {
   background-color: #eef6ff;
   color: #1e293b;
 }
 
 .dark .cabinet-neon select option,
-.dark [role='dialog'] select option {
+.dark [role='dialog'] select option,
+.dark select:not([multiple]):not([size]) option {
   background-color: #090018;
   color: #e8f6ff;
 }
 
 .dark .cabinet-neon select optgroup,
-.dark [role='dialog'] select optgroup {
+.dark [role='dialog'] select optgroup,
+.dark select:not([multiple]):not([size]) optgroup {
   background-color: #13052e;
   color: #c6e8ff;
 }
@@ -903,6 +1025,7 @@ html {
 /* Cabinet pages: hide global document scrolling only on desktop.
    On mobile we keep native page overscroll to allow pull-to-refresh. */
 @media (min-width: 960px) {
+
   html.aq-cabinet-lock-page-scroll,
   body.aq-cabinet-lock-page-scroll {
     overflow: hidden;
@@ -973,28 +1096,28 @@ html {
   transition: opacity 120ms ease, transform 120ms ease;
 }
 
-.aq-neon-checkbox-input:focus-visible + .aq-neon-checkbox-box,
-.aq-neon-checkbox-input:focus-visible ~ .aq-neon-checkbox-box {
+.aq-neon-checkbox-input:focus-visible+.aq-neon-checkbox-box,
+.aq-neon-checkbox-input:focus-visible~.aq-neon-checkbox-box {
   outline: none;
   box-shadow: 0 0 0 2px rgba(0, 209, 255, 0.32), 0 0 0 1px rgba(122, 0, 255, 0.2) inset;
 }
 
-.aq-neon-checkbox-input:checked + .aq-neon-checkbox-box,
-.aq-neon-checkbox-input:checked ~ .aq-neon-checkbox-box {
+.aq-neon-checkbox-input:checked+.aq-neon-checkbox-box,
+.aq-neon-checkbox-input:checked~.aq-neon-checkbox-box {
   border-color: rgba(0, 209, 255, 0.7);
   background: linear-gradient(180deg, rgba(12, 114, 196, 0.95) 0%, rgba(2, 67, 133, 0.95) 100%);
   color: #d9f6ff;
   box-shadow: 0 0 0 1px rgba(0, 209, 255, 0.22) inset, 0 0 16px rgba(0, 209, 255, 0.3);
 }
 
-.aq-neon-checkbox-input:checked + .aq-neon-checkbox-box .aq-neon-checkbox-icon,
-.aq-neon-checkbox-input:checked ~ .aq-neon-checkbox-box .aq-neon-checkbox-icon {
+.aq-neon-checkbox-input:checked+.aq-neon-checkbox-box .aq-neon-checkbox-icon,
+.aq-neon-checkbox-input:checked~.aq-neon-checkbox-box .aq-neon-checkbox-icon {
   opacity: 1;
   transform: scale(1);
 }
 
-.aq-neon-checkbox-input:active + .aq-neon-checkbox-box,
-.aq-neon-checkbox-input:active ~ .aq-neon-checkbox-box {
+.aq-neon-checkbox-input:active+.aq-neon-checkbox-box,
+.aq-neon-checkbox-input:active~.aq-neon-checkbox-box {
   transform: scale(0.96);
 }
 
@@ -1023,8 +1146,8 @@ html {
   box-shadow: 0 0 0 1px rgba(13, 53, 110, 0.65) inset;
 }
 
-.dark .aq-neon-checkbox-input:checked + .aq-neon-checkbox-box,
-.dark .aq-neon-checkbox-input:checked ~ .aq-neon-checkbox-box {
+.dark .aq-neon-checkbox-input:checked+.aq-neon-checkbox-box,
+.dark .aq-neon-checkbox-input:checked~.aq-neon-checkbox-box {
   border-color: rgba(0, 209, 255, 0.85);
   background: linear-gradient(180deg, rgba(0, 142, 222, 0.92) 0%, rgba(0, 96, 176, 0.92) 100%);
   color: #ebfbff;
@@ -1048,9 +1171,11 @@ html {
   0% {
     transform: translate3d(0, 0, 0);
   }
+
   50% {
     transform: translate3d(0, -10px, 0);
   }
+
   100% {
     transform: translate3d(0, 0, 0);
   }

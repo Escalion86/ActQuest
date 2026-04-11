@@ -1,10 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PropTypes from 'prop-types'
 
 import requestApiJson from '@helpers/requestApiJson'
+import CardActionIconButton, {
+  TargetCardIcon,
+} from '@components/cabinet/CardActionIconButton'
+import GameTasksViewModal from '@components/modals/GameTasksViewModal'
 
 const formatTime = (totalSeconds) => {
   const sec = Math.max(0, Math.floor(totalSeconds))
@@ -14,7 +18,12 @@ const formatTime = (totalSeconds) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-const AUTO_REFRESH_INTERVAL = 15000
+const AUTO_REFRESH_OPTIONS = [
+  { value: 5000, label: '5 сек' },
+  { value: 10000, label: '10 сек' },
+  { value: 15000, label: '15 сек' },
+  { value: 30000, label: '30 сек' },
+]
 
 const teamStatusLabel = (team) => {
   if (team.isTeamFinished) return 'Финиш'
@@ -43,6 +52,38 @@ const statusDotColor = (team) => {
   return 'bg-cyan-400 animate-pulse'
 }
 
+const normalizeCodes = (values) =>
+  (Array.isArray(values) ? values : [])
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+
+const renderCodesBadges = (codes, tone = 'default') => {
+  const normalized = normalizeCodes(codes)
+  if (normalized.length === 0) {
+    return <span className="text-xs text-slate-500">—</span>
+  }
+
+  const toneClass =
+    tone === 'bonus'
+      ? 'border-emerald-500/40 bg-emerald-500/12 text-emerald-200'
+      : tone === 'penalty'
+        ? 'border-red-500/40 bg-red-500/12 text-red-200'
+        : 'border-cyan-500/40 bg-cyan-500/12 text-cyan-200'
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {normalized.map((code, index) => (
+        <span
+          key={`${code}-${index}`}
+          className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-xs ${toneClass}`}
+        >
+          {code}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 export default function GameControlPageClient({ session }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -52,7 +93,9 @@ export default function GameControlPageClient({ session }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [autoRefreshIntervalMs, setAutoRefreshIntervalMs] = useState(15000)
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [isTasksViewModalOpen, setIsTasksViewModalOpen] = useState(false)
   const intervalRef = useRef(null)
 
   const fetchStatus = useCallback(async () => {
@@ -83,7 +126,7 @@ export default function GameControlPageClient({ session }) {
 
   useEffect(() => {
     if (autoRefresh && gameId) {
-      intervalRef.current = setInterval(fetchStatus, AUTO_REFRESH_INTERVAL)
+      intervalRef.current = setInterval(fetchStatus, autoRefreshIntervalMs)
     }
     return () => {
       if (intervalRef.current) {
@@ -91,7 +134,17 @@ export default function GameControlPageClient({ session }) {
         intervalRef.current = null
       }
     }
-  }, [autoRefresh, gameId, fetchStatus])
+  }, [autoRefresh, autoRefreshIntervalMs, gameId, fetchStatus])
+
+  const gameForTasksModal = useMemo(
+    () => ({
+      id: String(data?.gameId || ''),
+      name: String(data?.gameName || ''),
+      type: String(data?.gameType || 'classic'),
+      tasks: Array.isArray(data?.tasks) ? data.tasks : [],
+    }),
+    [data],
+  )
 
   if (!gameId) {
     return (
@@ -135,7 +188,8 @@ export default function GameControlPageClient({ session }) {
 
   if (!data) return null
 
-  const { gameName, gameType, tasksCount, taskDuration, teams } = data
+  const { gameName, gameType, tasksCount, taskDuration, cluesDuration, teams } =
+    data
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
@@ -175,6 +229,24 @@ export default function GameControlPageClient({ session }) {
             />
             Авто
           </label>
+          <select
+            value={String(autoRefreshIntervalMs)}
+            onChange={(event) => {
+              const parsed = Number(event.target.value)
+              if (Number.isFinite(parsed) && parsed > 0) {
+                setAutoRefreshIntervalMs(parsed)
+              }
+            }}
+            disabled={!autoRefresh}
+            className="aq-select-game-control h-8 min-w-[82px] rounded-lg border border-slate-600/70 bg-slate-800/70 pl-2.5 text-xs text-slate-200 outline-none transition focus:border-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Интервал автообновления"
+          >
+            {AUTO_REFRESH_OPTIONS.map((option) => (
+              <option key={option.value} value={String(option.value)}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             onClick={fetchStatus}
@@ -258,19 +330,27 @@ export default function GameControlPageClient({ session }) {
                 <span className="rounded-full border border-slate-600/50 bg-slate-700/50 px-2.5 py-0.5 text-xs font-medium text-slate-300">
                   {teamStatusLabel(team)}
                 </span>
+                <CardActionIconButton
+                  onClick={() => setIsTasksViewModalOpen(true)}
+                  label="Открыть просмотр заданий игры"
+                  title="Просмотр заданий игры"
+                  className="h-8 w-8"
+                >
+                  <TargetCardIcon />
+                </CardActionIconButton>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+              <div className="mt-3 space-y-2 text-sm">
                 <div>
                   <span className="text-slate-500">Задание: </span>
                   <span className="font-medium text-slate-200">
                     {team.isTeamFinished
-                      ? `${tasksCount}/${tasksCount}`
-                      : `${team.activeTaskIndex + 1}/${tasksCount}`}
+                      ? 'Завершено'
+                      : `${team.activeTaskIndex + 1}. ${team.currentTaskTitle || 'Без названия'}`}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500">Коды: </span>
+                  <span className="text-slate-500">Найденные коды: </span>
                   <span className="font-medium text-green-400">
                     {team.findedCodesCount}
                   </span>
@@ -279,48 +359,110 @@ export default function GameControlPageClient({ session }) {
                       ({team.wrongCodesCount} неверн.)
                     </span>
                   )}
+                  <div className="mt-1">
+                    {renderCodesBadges(team.findedCodes)}
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-500">Время: </span>
-                  <span className="font-mono font-medium text-slate-200">
-                    {formatTime(team.sumTimeSeconds)}
-                  </span>
-                </div>
-                {!team.isTeamFinished &&
-                  !team.isTeamOnBreak &&
-                  !team.isActiveTaskFailed && (
-                    <div>
-                      <span className="text-slate-500">На задании: </span>
-                      <span className="font-mono font-medium text-cyan-300">
-                        {formatTime(team.currentTaskSeconds)}
-                      </span>
-                    </div>
-                  )}
-                {team.isTeamOnBreak && team.breakTimeLeftSeconds > 0 && (
+                {team.bonusCodesCount > 0 && (
                   <div>
-                    <span className="text-slate-500">Перерыв: </span>
-                    <span className="font-mono font-medium text-yellow-300">
-                      {formatTime(team.breakTimeLeftSeconds)}
+                    <span className="text-slate-500">Бонусные коды: </span>
+                    <span className="font-medium text-emerald-400">
+                      {team.bonusCodesCount}
+                    </span>
+                    <div className="mt-1">
+                      {renderCodesBadges(team.bonusCodes, 'bonus')}
+                    </div>
+                  </div>
+                )}
+                {team.penaltyCodesCount > 0 && (
+                  <div>
+                    <span className="text-slate-500">Штрафные коды: </span>
+                    <span className="font-medium text-red-400">
+                      {team.penaltyCodesCount}
+                    </span>
+                    <div className="mt-1">
+                      {renderCodesBadges(team.penaltyCodes, 'penalty')}
+                    </div>
+                  </div>
+                )}
+                {!team.isTeamFinished &&
+                  !(
+                    team.isTeamOnBreak &&
+                    team.isBreakFinishedWaitingForNextTask
+                  ) && (
+                  <div>
+                    <span className="text-slate-500">
+                      {team.isTeamOnBreak ? 'Перерыв: ' : 'На задании: '}
+                    </span>
+                    <span
+                      className={`font-mono font-medium ${
+                        team.isTeamOnBreak ? 'text-yellow-300' : 'text-cyan-300'
+                      }`}
+                    >
+                      {formatTime(
+                        team.isTeamOnBreak
+                          ? team.breakTimeLeftSeconds
+                          : team.currentTaskSeconds,
+                      )}
                     </span>
                   </div>
                 )}
+                {!team.isTeamFinished &&
+                  !team.isTeamOnBreak &&
+                  !team.isActiveTaskFailed && (
+                    <>
+                      {Number(cluesDuration) > 0 && (
+                        <div>
+                          <span className="text-slate-500">До подсказки: </span>
+                          <span className="font-mono font-medium text-violet-300">
+                            {(() => {
+                              const elapsed = Math.max(
+                                0,
+                                Math.floor(team.currentTaskSeconds || 0),
+                              )
+                              const clueInterval = Math.max(
+                                1,
+                                Math.floor(cluesDuration),
+                              )
+                              const mod = elapsed % clueInterval
+                              const remaining = mod === 0 ? clueInterval : clueInterval - mod
+                              return formatTime(remaining)
+                            })()}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-slate-500">
+                          До провала задания:{' '}
+                        </span>
+                        <span className="font-mono font-medium text-rose-300">
+                          {formatTime(
+                            Math.max(
+                              0,
+                              Math.floor(taskDuration || 0) -
+                                Math.floor(team.currentTaskSeconds || 0),
+                            ),
+                          )}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                {team.isTeamOnBreak && team.completedTaskSeconds > 0 && (
+                  <div>
+                    <span className="text-slate-500">
+                      Предыдущее задание завершено за:{' '}
+                    </span>
+                    <span className="font-mono font-medium text-emerald-300">
+                      {formatTime(team.completedTaskSeconds)}
+                    </span>
+                  </div>
+                )}
+                {team.isBreakFinishedWaitingForNextTask && (
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-medium text-amber-200">
+                    Перерыв окончен, но следующее задание еще не начато.
+                  </div>
+                )}
               </div>
-
-              {/* Бонусы/штрафы */}
-              {(team.bonusCodesCount > 0 || team.penaltyCodesCount > 0) && (
-                <div className="mt-2 flex gap-3 text-xs">
-                  {team.bonusCodesCount > 0 && (
-                    <span className="text-emerald-400">
-                      +{team.bonusCodesCount} бонус
-                    </span>
-                  )}
-                  {team.penaltyCodesCount > 0 && (
-                    <span className="text-red-400">
-                      {team.penaltyCodesCount} штраф
-                    </span>
-                  )}
-                </div>
-              )}
 
               {/* Подсказки */}
               {team.cluesReceived > 0 && (
@@ -339,6 +481,14 @@ export default function GameControlPageClient({ session }) {
           ))}
         </div>
       )}
+
+      <GameTasksViewModal
+        isTasksViewModalOpen={isTasksViewModalOpen}
+        handleCloseTasksViewModal={() => setIsTasksViewModalOpen(false)}
+        selectedGame={gameForTasksModal}
+        canViewCodePhotos
+        showAllTaskDetails
+      />
     </div>
   )
 }

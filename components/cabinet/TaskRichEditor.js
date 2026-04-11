@@ -17,6 +17,7 @@ import { NodeSelection } from '@tiptap/pm/state'
 import Modal from '@components/Modal'
 import SystemPromptMdEditor from '@components/cabinet/SystemPromptMdEditor'
 import { sendImage } from '@helpers/cloudinary'
+import { LOCATIONS } from '@server/serverConstants'
 
 const FONT_OPTIONS = [
   { value: '', label: 'Шрифт по умолчанию' },
@@ -61,6 +62,8 @@ const DEFAULT_PICKER_COLOR = '#111827'
 const NO_COLOR_TOKEN = '__no_color__'
 const AI_SYSTEM_PROMPTS_SECTION = 'task_rich_editor'
 const AI_UI_QUESTIONS_PREFIX = 'AQ_UI_QUESTIONS'
+const AI_GAMES_PAGE_LIMIT = 100
+const AI_GAMES_MAX_ITEMS = 500
 
 const getEditorViewSafe = (editorInstance) => {
   if (!editorInstance) return null
@@ -455,6 +458,88 @@ const buildAnswersMessage = (questionsPayload, answersMap = {}) => {
     return `- ${question.label}: ${normalizedAnswer || 'Не указано'}`
   })
   return `Ответы на уточняющие вопросы:\n${lines.join('\n')}`
+}
+
+const normalizeAiGameContext = (value) => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const id =
+    typeof value.id === 'string' && value.id.trim() ? value.id.trim() : ''
+  if (!id) {
+    return null
+  }
+
+  return {
+    id,
+    name: typeof value.name === 'string' ? value.name.trim() : '',
+    description:
+      typeof value.description === 'string' ? value.description.trim() : '',
+    dateStart:
+      typeof value.dateStart === 'string' ? value.dateStart.trim() : '',
+    type: value.type === 'photo' ? 'photo' : 'classic',
+    location:
+      typeof value.location === 'string' ? value.location.trim().toLowerCase() : '',
+  }
+}
+
+const resolveGameTypeLabel = (value) => (value === 'photo' ? 'Фотоквест' : 'Классика')
+
+const resolveGameLocationLabel = (locationKey) => {
+  const normalized =
+    typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
+  if (!normalized) {
+    return 'Не указан'
+  }
+
+  const townRu = LOCATIONS?.[normalized]?.townRu
+  if (!townRu || typeof townRu !== 'string') {
+    return normalized
+  }
+
+  return townRu.charAt(0).toUpperCase() + townRu.slice(1)
+}
+
+const formatPlannedDateForAiContext = (value) => {
+  if (!value) {
+    return ''
+  }
+
+  const timestamp = new Date(value).getTime()
+  if (!Number.isFinite(timestamp)) {
+    return ''
+  }
+
+  return new Date(timestamp).toLocaleString('ru-RU', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  })
+}
+
+const buildAiGameContextSystemPrompt = (game) => {
+  if (!game) {
+    return ''
+  }
+
+  const lines = [
+    'Контекст игры ActQuest (используй как входные данные для генерации):',
+    `- Заголовок: ${game.name || 'Не указан'}`,
+    `- Описание: ${game.description || 'Не указано'}`,
+  ]
+
+  const formattedDate = formatPlannedDateForAiContext(game.dateStart)
+  if (formattedDate) {
+    lines.push(`- Планируемая дата проведения: ${formattedDate}`)
+  }
+
+  lines.push(`- Тип игры: ${resolveGameTypeLabel(game.type)}`)
+  lines.push(`- Город проведения: ${resolveGameLocationLabel(game.location)}`)
+  lines.push(
+    'Учитывай этот контекст при ответе. Если чего-то не хватает, задай уточняющие вопросы в согласованном формате.',
+  )
+
+  return lines.join('\n')
 }
 
 const toHexColor = (value) => {
@@ -1121,6 +1206,7 @@ const TaskRichEditor = ({
   disabled,
   placeholder,
   contentMaxHeight,
+  aiInitialGame,
 }) => {
   const fileInputRef = useRef(null)
   const editorContentWrapperRef = useRef(null)
@@ -1173,6 +1259,10 @@ const TaskRichEditor = ({
   const [aiConversationHistory, setAiConversationHistory] = useState([])
   const [aiQuestionsPayload, setAiQuestionsPayload] = useState(null)
   const [aiQuestionsAnswers, setAiQuestionsAnswers] = useState({})
+  const [aiGames, setAiGames] = useState([])
+  const [isAiGamesLoading, setIsAiGamesLoading] = useState(false)
+  const [aiGamesError, setAiGamesError] = useState('')
+  const [selectedAiGameId, setSelectedAiGameId] = useState('')
 
   const normalizedValue = typeof value === 'string' ? value : ''
   const normalizedContentValue = useMemo(
@@ -1237,6 +1327,82 @@ const TaskRichEditor = ({
       ) || null,
     [aiSystemPrompts, selectedAiSystemPromptId],
   )
+  const normalizedAiInitialGame = useMemo(
+    () => normalizeAiGameContext(aiInitialGame),
+    [aiInitialGame],
+  )
+  const selectedAiGame = useMemo(() => {
+    const selectedId = String(selectedAiGameId || '').trim()
+    if (!selectedId) {
+      return null
+    }
+
+    const foundInList =
+      aiGames.find((item) => String(item?.id || '').trim() === selectedId) || null
+    if (foundInList) {
+      return foundInList
+    }
+
+    if (normalizedAiInitialGame?.id === selectedId) {
+      return normalizedAiInitialGame
+    }
+
+    return null
+  }, [aiGames, normalizedAiInitialGame, selectedAiGameId])
+
+  const loadAiGames = useCallback(async () => {
+    setIsAiGamesLoading(true)
+    setAiGamesError('')
+
+    try {
+      let offset = 0
+      let hasMore = true
+      const collected = []
+
+      while (hasMore && collected.length < AI_GAMES_MAX_ITEMS) {
+        const params = new URLSearchParams({
+          view: 'all',
+          offset: String(offset),
+          limit: String(AI_GAMES_PAGE_LIMIT),
+        })
+
+        const json = await requestJson(
+          `/api/cabinet/games-list?${params.toString()}`,
+          { cache: 'no-store' },
+          'Не удалось загрузить список игр',
+        )
+
+        const pageItems = Array.isArray(json?.data) ? json.data : []
+        collected.push(...pageItems)
+        hasMore = Boolean(json?.meta?.hasMore) && pageItems.length > 0
+        offset += AI_GAMES_PAGE_LIMIT
+      }
+
+      const uniqueById = new Map()
+      collected.forEach((item) => {
+        const normalized = normalizeAiGameContext(item)
+        if (!normalized?.id || uniqueById.has(normalized.id)) {
+          return
+        }
+        uniqueById.set(normalized.id, normalized)
+      })
+
+      if (normalizedAiInitialGame?.id && !uniqueById.has(normalizedAiInitialGame.id)) {
+        uniqueById.set(normalizedAiInitialGame.id, normalizedAiInitialGame)
+      }
+
+      const sorted = Array.from(uniqueById.values()).sort((left, right) =>
+        String(left?.name || '').localeCompare(String(right?.name || ''), 'ru'),
+      )
+
+      setAiGames(sorted)
+    } catch (error) {
+      setAiGames([])
+      setAiGamesError(error?.message || 'Не удалось загрузить список игр')
+    } finally {
+      setIsAiGamesLoading(false)
+    }
+  }, [normalizedAiInitialGame])
 
   const loadAiSystemPrompts = useCallback(async () => {
     setIsAiSystemPromptsLoading(true)
@@ -1819,14 +1985,38 @@ const TaskRichEditor = ({
     setIsAiModalOpen(true)
     setAiError('')
     setAiPreviewHtml('')
+    if (normalizedAiInitialGame?.id) {
+      setSelectedAiGameId(normalizedAiInitialGame.id)
+    }
     void loadAiSystemPrompts()
-  }, [disabled, hasCurrentEditorText, loadAiSystemPrompts])
+    void loadAiGames()
+  }, [
+    disabled,
+    hasCurrentEditorText,
+    loadAiGames,
+    loadAiSystemPrompts,
+    normalizedAiInitialGame?.id,
+  ])
 
   const closeAiModal = useCallback(() => {
     if (isAiLoading) return
     setIsAiModalOpen(false)
     setAiError('')
   }, [isAiLoading])
+
+  useEffect(() => {
+    if (!normalizedAiInitialGame?.id) {
+      return
+    }
+
+    setSelectedAiGameId((prev) => {
+      const prevValue = String(prev || '').trim()
+      if (prevValue) {
+        return prevValue
+      }
+      return normalizedAiInitialGame.id
+    })
+  }, [normalizedAiInitialGame?.id])
 
   const requestAiRewrite = useCallback(
     async ({ overrideUserContent = '' } = {}) => {
@@ -1855,6 +2045,10 @@ const TaskRichEditor = ({
           : ''
       if (baseSystemPrompt) {
         systemPromptParts.push(baseSystemPrompt)
+      }
+      const gameContextSystemPrompt = buildAiGameContextSystemPrompt(selectedAiGame)
+      if (gameContextSystemPrompt) {
+        systemPromptParts.push(gameContextSystemPrompt)
       }
       systemPromptParts.push(AI_UI_QUESTIONS_INSTRUCTIONS)
       const effectiveSystemPrompt = systemPromptParts.join('\n\n')
@@ -1949,6 +2143,7 @@ const TaskRichEditor = ({
       editor,
       isAiLoading,
       selectedAiSystemPrompt?.promptMd,
+      selectedAiGame,
     ],
   )
 
@@ -2411,6 +2606,71 @@ const TaskRichEditor = ({
         }
       >
         <div className="space-y-4">
+          <div className="space-y-2">
+            <label
+              htmlFor="aq-ai-game"
+              className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"
+            >
+              Игра для контекста
+            </label>
+            <div className="flex items-center gap-2">
+              <select
+                id="aq-ai-game"
+                value={selectedAiGameId}
+                onChange={(event) => {
+                  setSelectedAiGameId(String(event.target.value || ''))
+                  resetAiConversationContext()
+                }}
+                disabled={isAiLoading || isAiGamesLoading}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              >
+                <option value="">Без контекста игры</option>
+                {aiGames.map((gameItem) => (
+                  <option key={gameItem.id} value={gameItem.id}>
+                    {gameItem.name || 'Без названия'}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  void loadAiGames()
+                }}
+                disabled={isAiLoading || isAiGamesLoading}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                title="Обновить список игр"
+              >
+                Обновить
+              </button>
+            </div>
+            {isAiGamesLoading ? (
+              <p className="text-xs text-slate-500 dark:text-slate-300">
+                Загружаем игры...
+              </p>
+            ) : null}
+            {aiGamesError ? (
+              <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                {aiGamesError}
+              </p>
+            ) : null}
+            {selectedAiGame ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
+                <p>
+                  <span className="font-semibold">Выбрано:</span>{' '}
+                  {selectedAiGame.name || 'Без названия'}
+                </p>
+                <p>
+                  <span className="font-semibold">Тип:</span>{' '}
+                  {resolveGameTypeLabel(selectedAiGame.type)}
+                </p>
+                <p>
+                  <span className="font-semibold">Город:</span>{' '}
+                  {resolveGameLocationLabel(selectedAiGame.location)}
+                </p>
+              </div>
+            ) : null}
+          </div>
+
           <div className="space-y-2">
             <label
               htmlFor="aq-ai-system-prompt"
@@ -3039,6 +3299,14 @@ TaskRichEditor.propTypes = {
   disabled: PropTypes.bool,
   placeholder: PropTypes.string,
   contentMaxHeight: PropTypes.string,
+  aiInitialGame: PropTypes.shape({
+    id: PropTypes.string,
+    name: PropTypes.string,
+    description: PropTypes.string,
+    dateStart: PropTypes.string,
+    type: PropTypes.oneOf(['classic', 'photo']),
+    location: PropTypes.string,
+  }),
 }
 
 TaskRichEditor.defaultProps = {
@@ -3048,6 +3316,7 @@ TaskRichEditor.defaultProps = {
   disabled: false,
   placeholder: '',
   contentMaxHeight: '56vh',
+  aiInitialGame: null,
 }
 
 export default TaskRichEditor

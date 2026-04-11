@@ -78,7 +78,6 @@ const gamesSchema = {
       {
         title: {
           type: String,
-          required: [true, 'Введите название задания'],
           default: '',
           trim: true,
         },
@@ -154,6 +153,10 @@ const gamesSchema = {
           type: [{ type: String, trim: true }],
           default: [],
         },
+        codePhotos: {
+          type: [{ type: String, trim: true }],
+          default: [],
+        },
         coordinates: {
           latitude: Number, // Широта
           longitude: Number, // Долгота
@@ -165,6 +168,7 @@ const gamesSchema = {
               code: { type: String, trim: true },
               penalty: Number,
               description: { type: String, trim: true },
+              image: { type: String, trim: true, default: '' },
             },
           ],
           default: [],
@@ -175,6 +179,7 @@ const gamesSchema = {
               code: { type: String, trim: true },
               bonus: Number,
               description: { type: String, trim: true },
+              image: { type: String, trim: true, default: '' },
             },
           ],
           default: [],

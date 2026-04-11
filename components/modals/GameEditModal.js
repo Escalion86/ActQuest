@@ -110,6 +110,7 @@ const GameEditModal = ({
   handleTaskCoordinateChange,
   handleAddTaskCode,
   handleTaskCodeChange,
+  handleTaskCodePhotoChange,
   handleRemoveTaskCode,
   handleAddTaskImage,
   handleTaskImageChange,
@@ -155,6 +156,7 @@ const GameEditModal = ({
   handleCreateSeasonForEditGame,
   sectionMode,
   modalTitleOverride,
+  canViewCodePhotos,
 }) => {
   const isTasksOnly = sectionMode === 'tasks'
   const isClosedGame =
@@ -465,6 +467,14 @@ const GameEditModal = ({
                   selectedGame.descriptionRich || selectedGame.description || ''
                 }
                 directory={`games/${selectedGame.id || 'draft'}/description/editor`}
+                aiInitialGame={{
+                  id: selectedGame.id || '',
+                  name: selectedGame.name || '',
+                  description: selectedGame.description || '',
+                  dateStart: selectedGame.dateStart || '',
+                  type: selectedGame.type === 'photo' ? 'photo' : 'classic',
+                  location: selectedGame.location || '',
+                }}
                 disabled={!canEditSelectedGame || isSaving}
                 placeholder="Введите описание игры. Можно использовать форматирование, картинки и аудио."
                 onChange={({ html, plainText, media }) => {
@@ -1106,6 +1116,17 @@ const GameEditModal = ({
                             <TaskRichEditor
                               value={task.taskRich || task.task || ''}
                               directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/editor`}
+                              aiInitialGame={{
+                                id: selectedGame.id || '',
+                                name: selectedGame.name || '',
+                                description: selectedGame.description || '',
+                                dateStart: selectedGame.dateStart || '',
+                                type:
+                                  selectedGame.type === 'photo'
+                                    ? 'photo'
+                                    : 'classic',
+                                location: selectedGame.location || '',
+                              }}
                               disabled={!canEditSelectedGame || isSaving}
                               placeholder="Введите описание задания. Можно использовать форматирование, картинки и аудио."
                               onChange={({ html, plainText, media }) => {
@@ -1210,6 +1231,19 @@ const GameEditModal = ({
                                       <TaskRichEditor
                                         value={clue.clueRich || clue.clue || ''}
                                         directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}/editor`}
+                                        aiInitialGame={{
+                                          id: selectedGame.id || '',
+                                          name: selectedGame.name || '',
+                                          description:
+                                            selectedGame.description || '',
+                                          dateStart:
+                                            selectedGame.dateStart || '',
+                                          type:
+                                            selectedGame.type === 'photo'
+                                              ? 'photo'
+                                              : 'classic',
+                                          location: selectedGame.location || '',
+                                        }}
                                         disabled={
                                           !canEditSelectedGame || isSaving
                                         }
@@ -1407,38 +1441,66 @@ const GameEditModal = ({
                                   {task.codes.map((codeValue, codeIndex) => (
                                     <div
                                       key={`${task.id}-code-${codeIndex}`}
-                                      className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                                      className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60"
                                     >
-                                      <CabinetInputField
-                                        id={`task-code-${task.id}-${codeIndex}`}
-                                        label={null}
-                                        type="text"
-                                        value={codeValue}
-                                        onChange={(event) =>
-                                          handleTaskCodeChange(
-                                            task.id,
-                                            codeIndex,
-                                            event.target.value,
-                                          )
-                                        }
-                                        placeholder="Код"
-                                        containerClassName="w-full space-y-0"
-                                        inputClassName={compactInputClassName}
-                                      />
-                                      <CabinetButton
-                                        onClick={() =>
-                                          handleRemoveTaskCode(
-                                            task.id,
-                                            codeIndex,
-                                          )
-                                        }
-                                        variant="secondary"
-                                        tone="danger"
-                                        size="sm"
-                                        className="inline-flex items-center justify-center"
-                                      >
-                                        Удалить
-                                      </CabinetButton>
+                                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                        <CabinetInputField
+                                          id={`task-code-${task.id}-${codeIndex}`}
+                                          label={null}
+                                          type="text"
+                                          value={codeValue}
+                                          onChange={(event) =>
+                                            handleTaskCodeChange(
+                                              task.id,
+                                              codeIndex,
+                                              event.target.value,
+                                            )
+                                          }
+                                          placeholder="Код"
+                                          containerClassName="w-full space-y-0"
+                                          inputClassName={compactInputClassName}
+                                        />
+                                        <CabinetButton
+                                          onClick={() =>
+                                            handleRemoveTaskCode(
+                                              task.id,
+                                              codeIndex,
+                                            )
+                                          }
+                                          variant="secondary"
+                                          tone="danger"
+                                          size="sm"
+                                          className="inline-flex items-center justify-center"
+                                        >
+                                          Удалить
+                                        </CabinetButton>
+                                      </div>
+                                      {canViewCodePhotos && (
+                                        <ImagesInput
+                                          label="Фото кода"
+                                          images={[
+                                            (Array.isArray(task.codePhotos)
+                                              ? task.codePhotos[codeIndex]
+                                              : '') || '',
+                                          ].filter(Boolean)}
+                                          onChange={(nextImages) =>
+                                            handleTaskCodePhotoChange(
+                                              task.id,
+                                              codeIndex,
+                                              Array.isArray(nextImages) &&
+                                                nextImages.length > 0
+                                                ? nextImages[0]
+                                                : '',
+                                            )
+                                          }
+                                          directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/codes/${codeIndex}`}
+                                          imageName={`task-code-${codeIndex + 1}`}
+                                          maxImages={1}
+                                          uploadLabel="Загрузить фото"
+                                          disabled={!canEditSelectedGame || isSaving}
+                                          previewShape="square"
+                                        />
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -1654,6 +1716,31 @@ const GameEditModal = ({
                                         labelClassName={compactLabelClassName}
                                         inputClassName={compactInputClassName}
                                       />
+                                      {canViewCodePhotos && (
+                                        <ImagesInput
+                                          label="Фото кода"
+                                          images={[penalty.image || ''].filter(
+                                            Boolean,
+                                          )}
+                                          onChange={(nextImages) =>
+                                            handlePenaltyCodeChange(
+                                              task.id,
+                                              penalty.id,
+                                              'image',
+                                              Array.isArray(nextImages) &&
+                                                nextImages.length > 0
+                                                ? nextImages[0]
+                                                : '',
+                                            )
+                                          }
+                                          directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/penalty-codes/${penalty.id}`}
+                                          imageName={`penalty-code-${penalty.id}`}
+                                          maxImages={1}
+                                          uploadLabel="Загрузить фото"
+                                          disabled={!canEditSelectedGame || isSaving}
+                                          previewShape="square"
+                                        />
+                                      )}
                                       <div className="flex justify-end">
                                         <CabinetButton
                                           onClick={() =>
@@ -1757,6 +1844,31 @@ const GameEditModal = ({
                                         labelClassName={compactLabelClassName}
                                         inputClassName={compactInputClassName}
                                       />
+                                      {canViewCodePhotos && (
+                                        <ImagesInput
+                                          label="Фото кода"
+                                          images={[bonus.image || ''].filter(
+                                            Boolean,
+                                          )}
+                                          onChange={(nextImages) =>
+                                            handleBonusCodeChange(
+                                              task.id,
+                                              bonus.id,
+                                              'image',
+                                              Array.isArray(nextImages) &&
+                                                nextImages.length > 0
+                                                ? nextImages[0]
+                                                : '',
+                                            )
+                                          }
+                                          directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/bonus-codes/${bonus.id}`}
+                                          imageName={`bonus-code-${bonus.id}`}
+                                          maxImages={1}
+                                          uploadLabel="Загрузить фото"
+                                          disabled={!canEditSelectedGame || isSaving}
+                                          previewShape="square"
+                                        />
+                                      )}
                                       <div className="flex justify-end">
                                         <CabinetButton
                                           onClick={() =>
@@ -2268,6 +2380,7 @@ GameEditModal.propTypes = {
   handleTaskCoordinateChange: PropTypes.func.isRequired,
   handleAddTaskCode: PropTypes.func.isRequired,
   handleTaskCodeChange: PropTypes.func.isRequired,
+  handleTaskCodePhotoChange: PropTypes.func.isRequired,
   handleRemoveTaskCode: PropTypes.func.isRequired,
   handleAddTaskImage: PropTypes.func.isRequired,
   handleTaskImageChange: PropTypes.func.isRequired,
@@ -2332,6 +2445,7 @@ GameEditModal.propTypes = {
   isEditGameSeasonsLoading: PropTypes.bool,
   isEditGameSeasonCreating: PropTypes.bool,
   handleCreateSeasonForEditGame: PropTypes.func.isRequired,
+  canViewCodePhotos: PropTypes.bool,
   sectionMode: PropTypes.oneOf(['full', 'tasks']),
   modalTitleOverride: PropTypes.string,
 }
@@ -2343,6 +2457,7 @@ GameEditModal.defaultProps = {
   editGameSeasons: [],
   isEditGameSeasonsLoading: false,
   isEditGameSeasonCreating: false,
+  canViewCodePhotos: false,
   sectionMode: 'full',
   modalTitleOverride: null,
 }
