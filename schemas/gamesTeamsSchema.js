@@ -18,6 +18,28 @@ const gamesTeamsSchema = {
   ],
   findedPenaltyCodes: [[String]],
   findedBonusCodes: [[String]],
+  codeAttempts: [
+    {
+      taskIndex: Number,
+      code: String,
+      category: {
+        type: String,
+        enum: ['main', 'bonus', 'penalty', 'wrong'],
+        default: 'wrong',
+      },
+      status: {
+        type: String,
+        enum: ['accepted', 'rejected'],
+        default: 'rejected',
+      },
+      source: {
+        type: String,
+        enum: ['telegram', 'web'],
+        default: 'web',
+      },
+      createdAt: Date,
+    },
+  ],
   startTime: [Date],
   endTime: [Date],
   forcedClues: [Number],

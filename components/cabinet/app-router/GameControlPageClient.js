@@ -7,8 +7,10 @@ import PropTypes from 'prop-types'
 import requestApiJson from '@helpers/requestApiJson'
 import CardActionIconButton, {
   TargetCardIcon,
+  TeamStatsCardIcon,
 } from '@components/cabinet/CardActionIconButton'
 import GameTasksViewModal from '@components/modals/GameTasksViewModal'
+import GameControlTeamStatsModal from '@components/modals/GameControlTeamStatsModal'
 
 const formatTime = (totalSeconds) => {
   const sec = Math.max(0, Math.floor(totalSeconds))
@@ -96,6 +98,7 @@ export default function GameControlPageClient({ session }) {
   const [autoRefreshIntervalMs, setAutoRefreshIntervalMs] = useState(15000)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [isTasksViewModalOpen, setIsTasksViewModalOpen] = useState(false)
+  const [selectedTeamForStatsId, setSelectedTeamForStatsId] = useState('')
   const intervalRef = useRef(null)
 
   const fetchStatus = useCallback(async () => {
@@ -145,6 +148,17 @@ export default function GameControlPageClient({ session }) {
     }),
     [data],
   )
+  const selectedTeamForStats = useMemo(
+    () => {
+      const teamsList = Array.isArray(data?.teams) ? data.teams : []
+      return (
+        teamsList.find(
+          (item) => String(item?.teamId) === selectedTeamForStatsId,
+        ) || null
+      )
+    },
+    [data?.teams, selectedTeamForStatsId],
+  )
 
   if (!gameId) {
     return (
@@ -190,7 +204,6 @@ export default function GameControlPageClient({ session }) {
 
   const { gameName, gameType, tasksCount, taskDuration, cluesDuration, teams } =
     data
-
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
       {/* Шапка */}
@@ -327,17 +340,27 @@ export default function GameControlPageClient({ session }) {
                     {team.teamName}
                   </h3>
                 </div>
-                <span className="rounded-full border border-slate-600/50 bg-slate-700/50 px-2.5 py-0.5 text-xs font-medium text-slate-300">
-                  {teamStatusLabel(team)}
-                </span>
-                <CardActionIconButton
-                  onClick={() => setIsTasksViewModalOpen(true)}
-                  label="Открыть просмотр заданий игры"
-                  title="Просмотр заданий игры"
-                  className="h-8 w-8"
-                >
-                  <TargetCardIcon />
-                </CardActionIconButton>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-slate-600/50 bg-slate-700/50 px-2.5 py-0.5 text-xs font-medium text-slate-300">
+                    {teamStatusLabel(team)}
+                  </span>
+                  <CardActionIconButton
+                    onClick={() => setIsTasksViewModalOpen(true)}
+                    label="Открыть просмотр заданий игры"
+                    title="Просмотр заданий игры"
+                    className="h-8 w-8"
+                  >
+                    <TargetCardIcon />
+                  </CardActionIconButton>
+                  <CardActionIconButton
+                    onClick={() => setSelectedTeamForStatsId(String(team.teamId || ''))}
+                    label="Открыть статистику команды"
+                    title="Статистика команды"
+                    className="h-8 w-8"
+                  >
+                    <TeamStatsCardIcon />
+                  </CardActionIconButton>
+                </div>
               </div>
 
               <div className="mt-3 space-y-2 text-sm">
@@ -410,42 +433,53 @@ export default function GameControlPageClient({ session }) {
                 {!team.isTeamFinished &&
                   !team.isTeamOnBreak &&
                   !team.isActiveTaskFailed && (
-                    <>
-                      {Number(cluesDuration) > 0 && (
+                    (() => {
+                      const elapsed = Math.max(
+                        0,
+                        Math.floor(team.currentTaskSeconds || 0),
+                      )
+                      const failRemaining = Math.max(
+                        0,
+                        Math.floor(taskDuration || 0) - elapsed,
+                      )
+                      const clueInterval = Math.max(
+                        1,
+                        Math.floor(cluesDuration || 0),
+                      )
+                      const mod = elapsed % clueInterval
+                      const clueRemaining =
+                        clueInterval > 0
+                          ? mod === 0
+                            ? clueInterval
+                            : clueInterval - mod
+                          : Number.POSITIVE_INFINITY
+                      const canShowClueTimer =
+                        Number(cluesDuration) > 0 && clueRemaining < failRemaining
+
+                      if (canShowClueTimer) {
+                        return (
+                          <div>
+                            <span className="text-slate-500">
+                              До подсказки:{' '}
+                            </span>
+                            <span className="font-mono font-medium text-violet-300">
+                              {formatTime(clueRemaining)}
+                            </span>
+                          </div>
+                        )
+                      }
+
+                      return (
                         <div>
-                          <span className="text-slate-500">До подсказки: </span>
-                          <span className="font-mono font-medium text-violet-300">
-                            {(() => {
-                              const elapsed = Math.max(
-                                0,
-                                Math.floor(team.currentTaskSeconds || 0),
-                              )
-                              const clueInterval = Math.max(
-                                1,
-                                Math.floor(cluesDuration),
-                              )
-                              const mod = elapsed % clueInterval
-                              const remaining = mod === 0 ? clueInterval : clueInterval - mod
-                              return formatTime(remaining)
-                            })()}
+                          <span className="text-slate-500">
+                            До провала задания:{' '}
+                          </span>
+                          <span className="font-mono font-medium text-rose-300">
+                            {formatTime(failRemaining)}
                           </span>
                         </div>
-                      )}
-                      <div>
-                        <span className="text-slate-500">
-                          До провала задания:{' '}
-                        </span>
-                        <span className="font-mono font-medium text-rose-300">
-                          {formatTime(
-                            Math.max(
-                              0,
-                              Math.floor(taskDuration || 0) -
-                                Math.floor(team.currentTaskSeconds || 0),
-                            ),
-                          )}
-                        </span>
-                      </div>
-                    </>
+                      )
+                    })()
                   )}
                 {team.isTeamOnBreak && team.completedTaskSeconds > 0 && (
                   <div>
@@ -488,6 +522,12 @@ export default function GameControlPageClient({ session }) {
         selectedGame={gameForTasksModal}
         canViewCodePhotos
         showAllTaskDetails
+      />
+      <GameControlTeamStatsModal
+        isOpen={Boolean(selectedTeamForStatsId)}
+        onClose={() => setSelectedTeamForStatsId('')}
+        teamName={selectedTeamForStats?.teamName || ''}
+        stats={selectedTeamForStats?.teamProgressStats || null}
       />
     </div>
   )

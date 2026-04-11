@@ -13,6 +13,7 @@ const buildResetPayload = () => ({
   wrongCodes: [],
   findedPenaltyCodes: [],
   findedBonusCodes: [],
+  codeAttempts: [],
   startTime: [],
   endTime: [],
   photos: [],

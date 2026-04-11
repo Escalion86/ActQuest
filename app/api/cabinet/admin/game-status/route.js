@@ -27,7 +27,11 @@ const isElevatedRole = (role) => role === 'admin' || role === 'dev'
 const isModeratorRole = (role) => role === 'moder'
 
 const normalizeText = (value) =>
-  typeof value === 'string' ? value.trim() : ''
+  typeof value === 'string'
+    ? value.trim()
+    : Number.isFinite(value)
+      ? String(value).trim()
+      : ''
 
 const normalizeCodeEntry = (value) => {
   if (typeof value === 'string') {
@@ -94,6 +98,113 @@ const normalizeTaskPreview = (task, index) => {
   }
 }
 
+const normalizeCode = (value) => {
+  if (typeof value === 'string') {
+    return value.trim().toLowerCase()
+  }
+
+  if (Number.isFinite(value)) {
+    return String(value).trim().toLowerCase()
+  }
+
+  if (!value || typeof value !== 'object') {
+    return ''
+  }
+
+  const fromCode =
+    (typeof value.code === 'string' && value.code.trim()) ||
+    (Number.isFinite(value.code) ? String(value.code).trim() : '')
+  if (fromCode) {
+    return fromCode.toLowerCase()
+  }
+
+  const fromValue =
+    (typeof value.value === 'string' && value.value.trim()) ||
+    (Number.isFinite(value.value) ? String(value.value).trim() : '')
+  if (fromValue) {
+    return fromValue.toLowerCase()
+  }
+
+  const fromText =
+    (typeof value.text === 'string' && value.text.trim()) ||
+    (Number.isFinite(value.text) ? String(value.text).trim() : '')
+  if (fromText) {
+    return fromText.toLowerCase()
+  }
+
+  return ''
+}
+
+const normalizeIsoDate = (value) => {
+  if (!value) return null
+  const parsed = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
+}
+
+const normalizeCodeAttemptEntry = (entry) => {
+  if (!entry || typeof entry !== 'object') {
+    return null
+  }
+
+  const taskIndex = Number(entry.taskIndex)
+  if (!Number.isInteger(taskIndex) || taskIndex < 0) {
+    return null
+  }
+
+  const code = normalizeCode(entry.code)
+  if (!code) {
+    return null
+  }
+
+  const category = normalizeText(entry.category)
+  const normalizedCategory =
+    category === 'main' ||
+    category === 'bonus' ||
+    category === 'penalty' ||
+    category === 'wrong'
+      ? category
+      : 'wrong'
+
+  const status = normalizeText(entry.status)
+  const normalizedStatus =
+    status === 'accepted' || status === 'rejected' ? status : 'rejected'
+
+  const source = normalizeText(entry.source)
+  const normalizedSource = source === 'telegram' ? 'telegram' : 'web'
+
+  return {
+    taskIndex,
+    code,
+    category: normalizedCategory,
+    status: normalizedStatus,
+    source: normalizedSource,
+    createdAt: normalizeIsoDate(entry.createdAt),
+  }
+}
+
+const sortAttemptsByTime = (a, b) => {
+  const aDate = a?.createdAt ? Date.parse(a.createdAt) : Number.NaN
+  const bDate = b?.createdAt ? Date.parse(b.createdAt) : Number.NaN
+  const aHasDate = Number.isFinite(aDate)
+  const bHasDate = Number.isFinite(bDate)
+
+  if (aHasDate && bHasDate) {
+    return aDate - bDate
+  }
+  if (aHasDate && !bHasDate) {
+    return -1
+  }
+  if (!aHasDate && bHasDate) {
+    return 1
+  }
+  return 0
+}
+
+const normalizeCodesArray = (value) =>
+  (Array.isArray(value) ? value : [])
+    .map((item) => normalizeCode(item))
+    .filter(Boolean)
+
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -138,6 +249,8 @@ export async function GET(request) {
         taskDuration: 1,
         cluesDuration: 1,
         breakDuration: 1,
+        taskFailurePenalty: 1,
+        manyCodesPenalty: 1,
         tasks: 1,
         moderators: 1,
       })
@@ -219,6 +332,9 @@ export async function GET(request) {
         : []
       const findedPenaltyCodes = Array.isArray(gt.findedPenaltyCodes)
         ? gt.findedPenaltyCodes
+        : []
+      const codeAttempts = Array.isArray(gt.codeAttempts)
+        ? gt.codeAttempts.map(normalizeCodeAttemptEntry).filter(Boolean)
         : []
       const photos = Array.isArray(gt.photos) ? gt.photos : []
 
@@ -338,6 +454,217 @@ export async function GET(request) {
             : 0
           : 0
 
+      const attemptsByTask = Array.from({ length: tasksCount }, (_, taskIndex) =>
+        codeAttempts
+          .filter((item) => item.taskIndex === taskIndex)
+          .sort(sortAttemptsByTime),
+      )
+
+      const taskStats = Array.from({ length: tasksCount }, (_, taskIndex) => {
+        const attempts = attemptsByTask[taskIndex]
+        const mainCodesFound = normalizeCodesArray(findedCodes[taskIndex])
+        const bonusCodesFound = normalizeCodesArray(findedBonusCodes[taskIndex])
+        const penaltyCodesFound = normalizeCodesArray(
+          findedPenaltyCodes[taskIndex],
+        )
+        const wrongCodesFound = normalizeCodesArray(wrongCodes[taskIndex])
+        const taskSource = Array.isArray(game.tasks) ? game.tasks[taskIndex] : null
+        const isCanceledTask = Boolean(taskSource?.canceled)
+        const isBonusTask = Boolean(taskSource?.isBonusTask)
+        const shouldCountInTotals = !isCanceledTask && !isBonusTask
+        const hasConfiguredBonusCodes = Array.isArray(taskSource?.bonusCodes)
+          ? taskSource.bonusCodes.length > 0
+          : false
+        const hasConfiguredPenaltyCodes = Array.isArray(taskSource?.penaltyCodes)
+          ? taskSource.penaltyCodes.length > 0
+          : false
+        const penaltyByCodesSeconds = (Array.isArray(taskSource?.penaltyCodes)
+          ? taskSource.penaltyCodes
+          : []
+        )
+          .filter((item) => penaltyCodesFound.includes(normalizeCode(item?.code)))
+          .reduce((acc, item) => acc + (Number(item?.penalty) || 0), 0)
+        const bonusByCodesSeconds = (Array.isArray(taskSource?.bonusCodes)
+          ? taskSource.bonusCodes
+          : []
+        )
+          .filter((item) => bonusCodesFound.includes(normalizeCode(item?.code)))
+          .reduce((acc, item) => acc + (Number(item?.bonus) || 0), 0)
+        const manyCodesPenaltyLimit = Number(game?.manyCodesPenalty?.[0]) || 0
+        const manyCodesPenaltySeconds = Number(game?.manyCodesPenalty?.[1]) || 0
+        const taskFailurePenaltySecondsBase =
+          Number(game?.taskFailurePenalty) || 0
+        const penaltyByManyWrongSeconds =
+          manyCodesPenaltyLimit > 0 && manyCodesPenaltySeconds > 0
+            ? Math.floor(wrongCodesFound.length / manyCodesPenaltyLimit) *
+              manyCodesPenaltySeconds
+            : 0
+
+        const startAt = normalizeIsoDate(startTime[taskIndex])
+        const endAt = normalizeIsoDate(endTime[taskIndex])
+        const startMs = startAt ? Date.parse(startAt) : Number.NaN
+        const endMs = endAt ? Date.parse(endAt) : Number.NaN
+        const nextStartAt = normalizeIsoDate(startTime[taskIndex + 1])
+        const nextStartMs = nextStartAt ? Date.parse(nextStartAt) : Number.NaN
+        const activeTaskIndexInt = Number.isInteger(activeNum) ? activeNum : 0
+
+        let completedSeconds = null
+        const normalizedTaskDuration = Math.max(0, Math.floor(taskDuration || 0))
+
+        if (Number.isFinite(startMs) && Number.isFinite(endMs)) {
+          completedSeconds = Math.max(0, Math.floor((endMs - startMs) / 1000))
+        } else if (
+          Number.isFinite(startMs) &&
+          Number.isFinite(nextStartMs) &&
+          nextStartMs >= startMs
+        ) {
+          const diffByNextStart = Math.max(
+            0,
+            Math.floor((nextStartMs - startMs) / 1000),
+          )
+          completedSeconds =
+            normalizedTaskDuration > 0
+              ? Math.min(diffByNextStart, normalizedTaskDuration)
+              : diffByNextStart
+        } else if (Number.isFinite(startMs) && taskIndex < activeTaskIndexInt) {
+          completedSeconds = normalizedTaskDuration
+        } else if (Number.isFinite(startMs) && taskIndex === activeTaskIndexInt) {
+          const elapsedForActiveTask = Math.max(
+            0,
+            Math.floor((Date.now() - startMs) / 1000),
+          )
+          completedSeconds =
+            normalizedTaskDuration > 0
+              ? Math.min(elapsedForActiveTask, normalizedTaskDuration)
+              : elapsedForActiveTask
+        }
+        const isFailedTask =
+          Number.isFinite(startMs) &&
+          !Number.isFinite(endMs) &&
+          (taskIndex < activeTaskIndexInt ||
+            (Number.isFinite(completedSeconds) &&
+              normalizedTaskDuration > 0 &&
+              completedSeconds >= normalizedTaskDuration))
+        const penaltyByTaskFailureSeconds =
+          shouldCountInTotals && isFailedTask
+            ? Math.max(0, taskFailurePenaltySecondsBase)
+            : 0
+
+        const enrichCodes = (codes, category) =>
+          codes.map((code) => {
+            const matched = attempts.find(
+              (entry) =>
+                entry.category === category &&
+                entry.status === 'accepted' &&
+                entry.code === code,
+            )
+            return {
+              code,
+              enteredAt: matched?.createdAt || null,
+              source: matched?.source || null,
+            }
+          })
+
+        const wrongAttemptsWithTime = attempts
+          .filter((entry) => entry.status === 'rejected' || entry.category === 'wrong')
+          .map((entry) => ({
+            code: entry.code,
+            enteredAt: entry.createdAt || null,
+            source: entry.source || null,
+          }))
+
+        if (wrongAttemptsWithTime.length === 0 && wrongCodesFound.length > 0) {
+          wrongCodesFound.forEach((code) => {
+            wrongAttemptsWithTime.push({
+              code,
+              enteredAt: null,
+              source: null,
+            })
+          })
+        }
+
+        return {
+          taskIndex,
+          taskTitle: normalizeText(game.tasks?.[taskIndex]?.title) || 'Без названия',
+          startedAt: startAt,
+          endedAt: endAt,
+          completedSeconds,
+          isFailedTask,
+          penaltyByTaskFailureSeconds,
+          penaltyByCodesSeconds,
+          penaltyByManyWrongSeconds,
+          bonusByCodesSeconds,
+          hasConfiguredBonusCodes,
+          hasConfiguredPenaltyCodes,
+          mainCodes: enrichCodes(mainCodesFound, 'main'),
+          bonusCodes: enrichCodes(bonusCodesFound, 'bonus'),
+          penaltyCodes: enrichCodes(penaltyCodesFound, 'penalty'),
+          wrongCodes: wrongAttemptsWithTime,
+        }
+      })
+
+      const completedTasksCount = taskStats.filter(
+        (task) => Number.isFinite(task.completedSeconds),
+      ).length
+      const totalTasksTimeSeconds = taskStats.reduce(
+        (acc, task) => acc + (Number(task.completedSeconds) || 0),
+        0,
+      )
+      const totalCodesPenaltySeconds = taskStats.reduce(
+        (acc, task) =>
+          acc +
+          (Number(task.penaltyByTaskFailureSeconds) || 0) +
+          (Number(task.penaltyByCodesSeconds) || 0) +
+          (Number(task.penaltyByManyWrongSeconds) || 0),
+        0,
+      )
+      const totalCodesBonusSeconds = taskStats.reduce(
+        (acc, task) => acc + (Number(task.bonusByCodesSeconds) || 0),
+        0,
+      )
+      const timeAddingsNormalized = Array.isArray(gt.timeAddings)
+        ? gt.timeAddings
+            .map((item) => {
+              const seconds = Number(item?.time)
+              if (!Number.isFinite(seconds) || seconds === 0) {
+                return null
+              }
+              return {
+                seconds,
+                name: normalizeText(item?.name),
+                taskIndex: Number.isInteger(item?.taskIndex) ? item.taskIndex : null,
+              }
+            })
+            .filter(Boolean)
+        : []
+      const totalAddingsPenaltySeconds = timeAddingsNormalized.reduce(
+        (acc, item) => (item.seconds > 0 ? acc + item.seconds : acc),
+        0,
+      )
+      const totalAddingsBonusSeconds = timeAddingsNormalized.reduce(
+        (acc, item) => (item.seconds < 0 ? acc + Math.abs(item.seconds) : acc),
+        0,
+      )
+      const totalPenaltySeconds =
+        totalCodesPenaltySeconds + totalAddingsPenaltySeconds
+      const totalBonusSeconds = totalCodesBonusSeconds + totalAddingsBonusSeconds
+      const totalFinalSeconds = Math.max(
+        0,
+        totalTasksTimeSeconds + totalPenaltySeconds - totalBonusSeconds,
+      )
+      const totalAcceptedCodesCount = taskStats.reduce(
+        (acc, task) =>
+          acc +
+          task.mainCodes.length +
+          task.bonusCodes.length +
+          task.penaltyCodes.length,
+        0,
+      )
+      const totalWrongCodesCount = taskStats.reduce(
+        (acc, task) => acc + task.wrongCodes.length,
+        0,
+      )
+
       return {
         teamId,
         teamName: team?.name ?? 'Без названия',
@@ -364,6 +691,21 @@ export async function GET(request) {
         isBreakFinishedWaitingForNextTask,
         cluesReceived,
         currentPhotosCount,
+        teamProgressStats: {
+          completedTasksCount,
+          totalTasksCount: tasksCount,
+          totalTasksTimeSeconds,
+          totalPenaltySeconds,
+          totalBonusSeconds,
+          totalFinalSeconds,
+          totalCodesPenaltySeconds,
+          totalCodesBonusSeconds,
+          totalAddingsPenaltySeconds,
+          totalAddingsBonusSeconds,
+          totalAcceptedCodesCount,
+          totalWrongCodesCount,
+          tasks: taskStats,
+        },
       }
     })
 

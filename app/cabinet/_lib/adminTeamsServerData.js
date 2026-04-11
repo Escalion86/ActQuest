@@ -11,15 +11,10 @@ export const loadCabinetAppAdminTeams = async ({
     return { teams: [], hasMore: false }
   }
 
-  const location =
-    typeof session?.user?.location === 'string' ? session.user.location : null
-  if (!location) {
-    return { teams: [], hasMore: false }
-  }
-
   const result = await fetchTeamsForCabinet({
     db,
-    location,
+    location: null,
+    teamLocationFilter: 'all',
     offset,
     limit,
     returnMeta: true,

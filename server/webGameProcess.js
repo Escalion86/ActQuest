@@ -83,6 +83,7 @@ const initializeTeamProgress = async (gameTeam, game, GamesTeams) => {
     wrongCodes,
     findedPenaltyCodes,
     findedBonusCodes,
+    codeAttempts: [],
     photos,
     timeAddings: filteredAddings,
     forcedClues: new Array(tasksCount).fill(0),
@@ -185,6 +186,15 @@ const preparePhotosProgress = (photos, taskIndex, tasksCount) => {
 
   return normalizedPhotos
 }
+
+const buildCodeAttemptEntry = ({ taskIndex, code, category, status, source }) => ({
+  taskIndex,
+  code: String(code || '').trim().toLowerCase(),
+  category,
+  status,
+  source,
+  createdAt: new Date(),
+})
 
 /**
  * Обработчик игрового процесса для web-кабинета.
@@ -375,7 +385,18 @@ const webGameProcess = async ({
     ]
 
     await GamesTeams.findByIdAndUpdate(effectiveTeamId, {
-      findedBonusCodes: nextBonusProgress,
+      $set: {
+        findedBonusCodes: nextBonusProgress,
+      },
+      $push: {
+        codeAttempts: buildCodeAttemptEntry({
+          taskIndex: activeTaskIndex,
+          code: normalizedCode,
+          category: 'bonus',
+          status: 'accepted',
+          source: 'web',
+        }),
+      },
     })
 
     const followUpMessage = taskText({
@@ -418,7 +439,18 @@ const webGameProcess = async ({
     ]
 
     await GamesTeams.findByIdAndUpdate(effectiveTeamId, {
-      findedPenaltyCodes: nextPenaltyProgress,
+      $set: {
+        findedPenaltyCodes: nextPenaltyProgress,
+      },
+      $push: {
+        codeAttempts: buildCodeAttemptEntry({
+          taskIndex: activeTaskIndex,
+          code: normalizedCode,
+          category: 'penalty',
+          status: 'accepted',
+          source: 'web',
+        }),
+      },
     })
 
     const followUpMessage = taskText({
@@ -467,7 +499,18 @@ const webGameProcess = async ({
     nextWrongProgress[activeTaskIndex] = [...wrongCodesInTask, normalizedCode]
 
     await GamesTeams.findByIdAndUpdate(effectiveTeamId, {
-      wrongCodes: nextWrongProgress,
+      $set: {
+        wrongCodes: nextWrongProgress,
+      },
+      $push: {
+        codeAttempts: buildCodeAttemptEntry({
+          taskIndex: activeTaskIndex,
+          code: normalizedCode,
+          category: 'wrong',
+          status: 'rejected',
+          source: 'web',
+        }),
+      },
     })
 
     const followUpMessage = taskText({
@@ -535,7 +578,18 @@ const webGameProcess = async ({
         ...(forcedCluesTemp ? { forcedClues: forcedCluesTemp } : {}),
       }
 
-      await GamesTeams.findByIdAndUpdate(effectiveTeamId, updates)
+      await GamesTeams.findByIdAndUpdate(effectiveTeamId, {
+        $set: updates,
+        $push: {
+          codeAttempts: buildCodeAttemptEntry({
+            taskIndex: activeTaskIndex,
+            code: normalizedCode,
+            category: 'main',
+            status: 'accepted',
+            source: 'web',
+          }),
+        },
+      })
 
       return {
         message: buildGameFinishedMessage(resolvedGame),
@@ -546,8 +600,19 @@ const webGameProcess = async ({
     // При активном перерыве выводим сообщение и оставляем команду на паузе.
     if (breakDuration > 0) {
       await GamesTeams.findByIdAndUpdate(effectiveTeamId, {
-        findedCodes: nextFindedProgress,
-        endTime: endTimeTemp,
+        $set: {
+          findedCodes: nextFindedProgress,
+          endTime: endTimeTemp,
+        },
+        $push: {
+          codeAttempts: buildCodeAttemptEntry({
+            taskIndex: activeTaskIndex,
+            code: normalizedCode,
+            category: 'main',
+            status: 'accepted',
+            source: 'web',
+          }),
+        },
       })
 
       return {
@@ -574,7 +639,18 @@ const webGameProcess = async ({
       ...(forcedCluesTemp ? { forcedClues: forcedCluesTemp } : {}),
     }
 
-    await GamesTeams.findByIdAndUpdate(effectiveTeamId, updates)
+    await GamesTeams.findByIdAndUpdate(effectiveTeamId, {
+      $set: updates,
+      $push: {
+        codeAttempts: buildCodeAttemptEntry({
+          taskIndex: activeTaskIndex,
+          code: normalizedCode,
+          category: 'main',
+          status: 'accepted',
+          source: 'web',
+        }),
+      },
+    })
 
     const nextForcedClues = forcedCluesTemp
       ? forcedCluesTemp[nextTaskIndex]
@@ -613,7 +689,18 @@ const webGameProcess = async ({
     }
   }
 
-  await GamesTeams.findByIdAndUpdate(effectiveTeamId, updates)
+  await GamesTeams.findByIdAndUpdate(effectiveTeamId, {
+    $set: updates,
+    $push: {
+      codeAttempts: buildCodeAttemptEntry({
+        taskIndex: activeTaskIndex,
+        code: normalizedCode,
+        category: 'main',
+        status: 'accepted',
+        source: 'web',
+      }),
+    },
+  })
 
   const followUpMessage = taskText({
     game: resolvedGame,

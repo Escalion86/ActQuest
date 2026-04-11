@@ -50,6 +50,15 @@ const resetForcedClueForTask = (forcedClues, taskIndex, gameTasksLength) => {
   return forcedCluesTemp
 }
 
+const buildCodeAttemptEntry = ({ taskIndex, code, category, status, source }) => ({
+  taskIndex,
+  code: String(code || '').trim().toLowerCase(),
+  category,
+  status,
+  source,
+  createdAt: new Date(),
+})
+
 const teamGameStart = async (gameTeam, game, GamesTeams) => {
   const { _id: gameTeamId, timeAddings } = gameTeam
   const gameTasksCount = game.tasks.length
@@ -73,6 +82,7 @@ const teamGameStart = async (gameTeam, game, GamesTeams) => {
     wrongCodes,
     findedPenaltyCodes,
     findedBonusCodes,
+    codeAttempts: [],
     photos,
     timeAddings: filteredAddings,
     forcedClues: new Array(gameTasksCount).fill(0),
@@ -792,14 +802,8 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
     }
   }
 
-  const {
-    task,
-    codes,
-    numCodesToCompliteTask,
-    images,
-    penaltyCodes,
-    bonusCodes,
-  } = currentTask
+  const { codes, numCodesToCompliteTask, images, penaltyCodes, bonusCodes } =
+    currentTask
 
   if (gameType === 'photo') {
     // Если получаем фото-ответ на задание
@@ -807,7 +811,7 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       const existedPhotos =
         typeof photos?.length === 'number'
           ? [...photos]
-          : createTaskPhotosArray(gameTasksCount)
+          : createTaskPhotosArray(game.tasks.length)
       if (!existedPhotos[taskNum]) {
         existedPhotos[taskNum] = createTaskPhotoEntry()
       }
@@ -942,7 +946,18 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       const newFindedBonusCodesInTask = [...findedBonusCodesInTask, code]
       newAllFindedBonusCodes[taskNum] = newFindedBonusCodesInTask
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-        findedBonusCodes: newAllFindedBonusCodes,
+        $set: {
+          findedBonusCodes: newAllFindedBonusCodes,
+        },
+        $push: {
+          codeAttempts: buildCodeAttemptEntry({
+            taskIndex: taskNum,
+            code,
+            category: 'bonus',
+            status: 'accepted',
+            source: 'telegram',
+          }),
+        },
       })
 
       const statusMessage = `КОД "${code}" - БОНУСНЫЙ!`
@@ -984,7 +999,18 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       const newFindedPenaltyCodesInTask = [...findedPenaltyCodesInTask, code]
       newAllFindedPenaltyCodes[taskNum] = newFindedPenaltyCodesInTask
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-        findedPenaltyCodes: newAllFindedPenaltyCodes,
+        $set: {
+          findedPenaltyCodes: newAllFindedPenaltyCodes,
+        },
+        $push: {
+          codeAttempts: buildCodeAttemptEntry({
+            taskIndex: taskNum,
+            code,
+            category: 'penalty',
+            status: 'accepted',
+            source: 'telegram',
+          }),
+        },
       })
 
       const statusMessage = `КОД "${code}" - ШТРАФНОЙ!\nОписание штрафа: "${
@@ -1032,17 +1058,13 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
         numOfCodesToFind - newFindedCodesInTask.length
       const isTaskComplite = numOfCodesToFindLeft <= 0
 
-      var endTimeTemp = endTime
-      var startTimeTemp = startTime
+      let endTimeTemp
+      let startTimeTemp
       const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
 
       if (isTaskComplite) {
         endTimeTemp = endTimeSet(endTime, taskNum, game.tasks.length)
         startTimeTemp = startTimeNextSet(startTime, taskNum, game.tasks.length)
-
-        const usersTelegramIdsOfTeam = teamUsers.map(
-          (teamUser) => teamUser.userTelegramId
-        )
 
         // Если игра завершена
         if (newActiveNum > game.tasks.length - 1) {
@@ -1060,9 +1082,18 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
           }
           if (forcedCluesTemp) updates.forcedClues = forcedCluesTemp
 
-          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, updates)
-
-          const keyboard = keyboardFormer([mainMenuButton])
+          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+            $set: updates,
+            $push: {
+              codeAttempts: buildCodeAttemptEntry({
+                taskIndex: taskNum,
+                code,
+                category: 'main',
+                status: 'accepted',
+                source: 'telegram',
+              }),
+            },
+          })
 
           // return await Promise.all(
           //   usersTelegramIdsOfTeam.map(async (telegramId) => {
@@ -1088,8 +1119,19 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
           //Если должен быть перерыв
           if (breakDuration > 0) {
             await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-              findedCodes: newAllFindedCodes,
-              endTime: endTimeTemp,
+              $set: {
+                findedCodes: newAllFindedCodes,
+                endTime: endTimeTemp,
+              },
+              $push: {
+                codeAttempts: buildCodeAttemptEntry({
+                  taskIndex: taskNum,
+                  code,
+                  category: 'main',
+                  status: 'accepted',
+                  source: 'telegram',
+                }),
+              },
             })
 
             return {
@@ -1133,7 +1175,18 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
           }
           if (forcedCluesTemp) updates.forcedClues = forcedCluesTemp
 
-          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, updates)
+          await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
+            $set: updates,
+            $push: {
+              codeAttempts: buildCodeAttemptEntry({
+                taskIndex: taskNum,
+                code,
+                category: 'main',
+                status: 'accepted',
+                source: 'telegram',
+              }),
+            },
+          })
 
           return {
             message: taskText({
@@ -1166,7 +1219,18 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       }
 
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-        findedCodes: newAllFindedCodes,
+        $set: {
+          findedCodes: newAllFindedCodes,
+        },
+        $push: {
+          codeAttempts: buildCodeAttemptEntry({
+            taskIndex: taskNum,
+            code,
+            category: 'main',
+            status: 'accepted',
+            source: 'telegram',
+          }),
+        },
       })
 
       const statusMessage = `КОД "${code}" ПРИНЯТ`
@@ -1213,7 +1277,18 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
       newAllWrongCodes[taskNum] = newWrongCodesInTask
 
       await GamesTeams.findByIdAndUpdate(jsonCommand?.gameTeamId, {
-        wrongCodes: newAllWrongCodes,
+        $set: {
+          wrongCodes: newAllWrongCodes,
+        },
+        $push: {
+          codeAttempts: buildCodeAttemptEntry({
+            taskIndex: taskNum,
+            code,
+            category: 'wrong',
+            status: 'rejected',
+            source: 'telegram',
+          }),
+        },
       })
       const statusMessage = `Код "${code}" не верен.`
       const promptMessage = `<b>${

@@ -1702,11 +1702,12 @@ const GamesPage = ({
     }
 
     if (!gamesFilterLocation) {
-      setGames([])
-      setPersistedGames([])
-      setSelectedGameId(null)
-      setHasMoreGames(false)
-      setLocationFilterError('Выберите город для загрузки игр.')
+      if (defaultGamesFilterLocation) {
+        setGamesFilterLocation(defaultGamesFilterLocation)
+        setLocationFilterError(null)
+      } else {
+        setLocationFilterError('Выберите город для загрузки игр.')
+      }
       return
     }
 
@@ -1748,6 +1749,7 @@ const GamesPage = ({
     }
   }, [
     fetchGamesPage,
+    defaultGamesFilterLocation,
     gamesFilterLocation,
     isGamesFilterLocationHydrated,
     shouldShowLocationFilter,
@@ -6164,8 +6166,7 @@ const GamesPage = ({
               </div>
             ) : (
               <div className="p-6 text-sm text-center bg-white border shadow-sm text-slate-500 dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl">
-                Для выбранного города пока нет игр. Создайте сценарий в
-                телеграм-боте, чтобы он появился здесь.
+                Для выбранного города пока нет игр.
               </div>
             )}
           </div>
