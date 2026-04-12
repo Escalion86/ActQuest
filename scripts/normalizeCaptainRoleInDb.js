@@ -1,8 +1,55 @@
 /* eslint-disable no-console */
 const mongoose = require('mongoose')
+const fs = require('fs')
+const path = require('path')
+
+const applyEnvLines = (fileContent) => {
+  String(fileContent || '')
+    .split(/\r?\n/g)
+    .forEach((line) => {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) {
+        return
+      }
+
+      const separatorIndex = trimmed.indexOf('=')
+      if (separatorIndex <= 0) {
+        return
+      }
+
+      const key = trimmed.slice(0, separatorIndex).trim()
+      if (!key) {
+        return
+      }
+
+      let value = trimmed.slice(separatorIndex + 1).trim()
+      if (
+        (value.startsWith("'") && value.endsWith("'")) ||
+        (value.startsWith('"') && value.endsWith('"'))
+      ) {
+        value = value.slice(1, -1)
+      }
+
+      process.env[key] = value
+    })
+}
 
 try {
-  require('dotenv').config()
+  const envLocalPath = path.resolve(process.cwd(), '.env.local')
+  const envPath = path.resolve(process.cwd(), '.env')
+  const envFilePath = fs.existsSync(envLocalPath) ? envLocalPath : envPath
+
+  try {
+    const dotenv = require('dotenv')
+    if (fs.existsSync(envFilePath)) {
+      dotenv.config({ path: envFilePath, override: true })
+    }
+  } catch (_dotenvError) {
+    if (fs.existsSync(envFilePath)) {
+      const raw = fs.readFileSync(envFilePath, 'utf8')
+      applyEnvLines(raw)
+    }
+  }
 } catch (_error) {
   // dotenv optional
 }
@@ -253,4 +300,3 @@ main()
     console.error(error)
     process.exit(1)
   })
-
