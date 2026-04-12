@@ -224,7 +224,7 @@ const GameDescriptionModal = ({
                   disabled={isRegistrationSubmitting}
                   className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
                 >
-                  Отменить регистрацию
+                  Снять команду с игры
                 </button>
               )}
             </div>

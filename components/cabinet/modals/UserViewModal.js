@@ -17,7 +17,7 @@ import requestApiJson from '@helpers/requestApiJson'
 import CopyableId from '@components/cabinet/CopyableId'
 import UnifiedGameDescriptionModal from '@components/modals/UnifiedGameDescriptionModal'
 import { LOCATIONS } from '@server/serverConstants'
-import { isDeveloperAtom } from '@state/atoms/cabinetSessionAtom'
+import { isAdminAtom } from '@state/atoms/cabinetSessionAtom'
 
 const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
 const modalItemTitleClass = 'aq-modal-item-title text-lg font-semibold'
@@ -67,20 +67,21 @@ const normalizeTelegramUsername = (value) => {
 
 const UserViewModal = ({
   userId,
+  telegramId,
   isOpen,
   onClose,
   onOpenTeam,
   canViewContacts,
 }) => {
-  const isDeveloper = useAtomValue(isDeveloperAtom)
+  const canViewIds = useAtomValue(isAdminAtom)
   const {
     data: user,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['user', userId],
-    queryFn: () => fetchCabinetUserDetails({ userId }),
-    enabled: isOpen && !!userId,
+    queryKey: ['user', userId, telegramId],
+    queryFn: () => fetchCabinetUserDetails({ userId, telegramId }),
+    enabled: isOpen && (!!userId || !!telegramId),
     staleTime: 1000 * 60 * 5, // 5 минут
   })
 
@@ -205,7 +206,7 @@ const UserViewModal = ({
   const phoneValue = formatPhoneValue(user?.phone)
   const phoneHref = normalizePhoneHref(user?.phone)
   const telegramUsername = normalizeTelegramUsername(user?.username)
-  const telegramId = user?.telegramId || ''
+  const userTelegramId = user?.telegramId || ''
 
   const shouldBeOpen = isOpen && (isLoading || user)
   console.log(
@@ -398,7 +399,7 @@ const UserViewModal = ({
                       : 'Неизвестно'}
                   </p>
                 </div>
-                {isDeveloper && user.id ? (
+                {canViewIds && user.id ? (
                   <div>
                     <p className="text-xs text-slate-500">ID</p>
                     <div className="mt-1">
@@ -473,12 +474,12 @@ const UserViewModal = ({
                   </div>
                   <div>
                     <p className="text-xs text-slate-500">Telegram ID</p>
-                    {telegramId ? (
+                    {userTelegramId ? (
                       <a
-                        href={`tg://user?id=${telegramId}`}
+                        href={`tg://user?id=${userTelegramId}`}
                         className="mt-1 inline-block text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
                       >
-                        {telegramId}
+                        {userTelegramId}
                       </a>
                     ) : (
                       <p className="mt-1 text-sm text-slate-700 dark:text-slate-100">
@@ -517,6 +518,7 @@ const UserViewModal = ({
 
 UserViewModal.propTypes = {
   userId: PropTypes.string,
+  telegramId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onOpenTeam: PropTypes.func,
@@ -525,6 +527,7 @@ UserViewModal.propTypes = {
 
 UserViewModal.defaultProps = {
   userId: null,
+  telegramId: null,
   onOpenTeam: null,
   canViewContacts: false,
 }

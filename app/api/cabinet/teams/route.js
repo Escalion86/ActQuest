@@ -7,6 +7,7 @@ import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import logSiteEvent from '@helpers/logSiteEvent'
 import { toStringId } from '@helpers/idAndDate'
+import { TEAM_ROLE_CAPTAIN } from '@helpers/teamRoles'
 
 const collectTeamIds = (searchParams) => {
   const rawIds = []
@@ -175,7 +176,7 @@ export async function POST(request) {
     await TeamsUsersModel.create({
       teamId: toStringId(createdTeam?._id),
       userId: actorUserId,
-      role: 'capitan',
+      role: TEAM_ROLE_CAPTAIN,
     })
 
     const createdTeamId = toStringId(createdTeam?._id)

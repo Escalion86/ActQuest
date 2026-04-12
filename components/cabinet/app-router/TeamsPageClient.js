@@ -11,6 +11,7 @@ import TeamCreateModal from '@components/modals/TeamCreateModal'
 import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
 import TeamEditModal from '@components/modals/TeamEditModal'
 import TeamJoinModal from '@components/modals/TeamJoinModal'
+import UserViewModal from '@components/cabinet/modals/UserViewModal'
 import requestApiJson from '@helpers/requestApiJson'
 import formatDate from '@helpers/formatDate'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
@@ -121,6 +122,9 @@ const TeamsPage = ({
   const copyTimeoutRef = useRef(null)
   const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] =
     useState(false)
+  const [isMemberViewModalOpen, setIsMemberViewModalOpen] = useState(false)
+  const [selectedMemberUserId, setSelectedMemberUserId] = useState(null)
+  const [selectedMemberTelegramId, setSelectedMemberTelegramId] = useState(null)
   const [isLeavingTeam, setIsLeavingTeam] = useState(false)
   const [isDeletingTeam, setIsDeletingTeam] = useState(false)
   const snackbar = useSnackbar()
@@ -208,6 +212,12 @@ const TeamsPage = ({
 
   const closeTeamDescriptionModal = useCallback(() => {
     setIsTeamDescriptionModalOpen(false)
+  }, [])
+
+  const closeMemberViewModal = useCallback(() => {
+    setIsMemberViewModalOpen(false)
+    setSelectedMemberUserId(null)
+    setSelectedMemberTelegramId(null)
   }, [])
 
   useEffect(
@@ -441,6 +451,29 @@ const TeamsPage = ({
 
     setIsEditModalOpen(false)
   }, [isSaving])
+
+  const handleOpenTeamMemberProfile = useCallback((member) => {
+    if (!member) {
+      return
+    }
+
+    const nextUserId =
+      typeof member.userId === 'string' && member.userId.trim()
+        ? member.userId.trim()
+        : null
+    const nextTelegramId =
+      typeof member.telegramId === 'string' || typeof member.telegramId === 'number'
+        ? String(member.telegramId).trim()
+        : null
+
+    if (!nextUserId && !nextTelegramId) {
+      return
+    }
+
+    setSelectedMemberUserId(nextUserId)
+    setSelectedMemberTelegramId(nextTelegramId)
+    setIsMemberViewModalOpen(true)
+  }, [])
 
   const handleCopyTeamId = useCallback(() => {
     const value = selectedTeam?.id
@@ -842,7 +875,7 @@ const TeamsPage = ({
           fetch(`${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: { role: 'capitan' } }),
+            body: JSON.stringify({ data: { role: 'captain' } }),
           }),
         ]
 
@@ -869,7 +902,7 @@ const TeamsPage = ({
 
         const updatedMembers = (selectedTeam.members ?? []).map((item) => {
           if (item.id === memberId) {
-            return { ...item, role: 'capitan', isCaptain: true }
+            return { ...item, role: 'captain', isCaptain: true }
           }
 
           if (item.id === currentCaptain?.id) {
@@ -1363,6 +1396,14 @@ const TeamsPage = ({
           canLeaveTeam={canLeaveSelectedTeam}
           isLeavingTeam={isLeavingTeam}
           onLeaveTeam={handleLeaveSelectedTeam}
+          onOpenMember={handleOpenTeamMemberProfile}
+        />
+        <UserViewModal
+          userId={selectedMemberUserId}
+          telegramId={selectedMemberTelegramId}
+          isOpen={isMemberViewModalOpen}
+          onClose={closeMemberViewModal}
+          canViewContacts={isAdmin}
         />
       </CabinetLayout>
     </>

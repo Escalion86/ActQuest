@@ -1,6 +1,10 @@
 import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
 import { ensureDateISOString } from '@helpers/idAndDate'
 import resolveEntityRating from '@helpers/resolveEntityRating'
+import {
+  isCaptainRole,
+  normalizeTeamRoleForWrite,
+} from '@helpers/teamRoles'
 
 const ensureString = (value, fallback = '') => {
   if (typeof value === 'string') {
@@ -54,7 +58,7 @@ const normalizeMembers = (members = []) => {
   }
 
   const normalized = members.map((member, index) => {
-    const role = member?.role === 'capitan' ? 'capitan' : 'participant'
+    const role = normalizeTeamRoleForWrite(member?.role)
     const user = member?.user ?? {}
 
     const rawTelegramId =
@@ -78,7 +82,7 @@ const normalizeMembers = (members = []) => {
       userId: ensureString(rawUserId, ''),
       telegramId: ensureString(rawTelegramId, ''),
       role,
-      isCaptain: role === 'capitan',
+      isCaptain: isCaptainRole(role),
       name: ensureString(user?.name, fallbackName),
       username: ensureString(user?.username, ''),
       phone: ensurePhone(user?.phone),

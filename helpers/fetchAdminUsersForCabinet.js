@@ -2,6 +2,10 @@ import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import ensureRole from '@helpers/ensureRole'
 import { ensureDateISOString, toStringId } from '@helpers/idAndDate'
 import resolveEntityRating from '@helpers/resolveEntityRating'
+import {
+  isCaptainRole,
+  normalizeTeamRoleForWrite,
+} from '@helpers/teamRoles'
 
 const DEFAULT_SORT = 'registration_desc'
 const ALLOWED_SORTS = new Set(['rating', 'games_desc', 'registration_desc'])
@@ -85,7 +89,7 @@ const normalizeUserForAdmin = ({
         return null
       }
 
-      const role = membership.role === 'capitan' ? 'capitan' : 'participant'
+      const role = normalizeTeamRoleForWrite(membership.role)
       const teamGamesCount = Number.isFinite(Number(team?.gamesCount))
         ? Number(team.gamesCount)
         : 0
@@ -94,7 +98,7 @@ const normalizeUserForAdmin = ({
         id: teamId,
         name: team.name,
         role,
-        isCaptain: role === 'capitan',
+        isCaptain: isCaptainRole(role),
         gamesCount: teamGamesCount,
         updatedAt: ensureDateISOString(team.updatedAt),
       }
@@ -162,7 +166,7 @@ const resolveMembershipsForUser = (userDoc, membershipsDocs) => {
       seenTeamIds.add(teamId)
       return {
         teamId,
-        role: doc?.role === 'capitan' ? 'capitan' : 'participant',
+        role: normalizeTeamRoleForWrite(doc?.role),
       }
     })
     .filter(Boolean)

@@ -4,6 +4,7 @@ import { getData } from '@helpers/CRUD'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PASTEL_COLORS } from '@helpers/constants'
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import { isCaptainRole } from '@helpers/teamRoles'
 import cn from 'classnames'
 import NeonCheckbox from '@components/NeonCheckbox'
 
@@ -267,7 +268,7 @@ function EventPage({ params }) {
 
   const usersWithLocation = result?.users
     ? result.users.filter(
-        ({ location, roleInTeam }) => roleInTeam === 'capitan' && location
+        ({ location, roleInTeam }) => isCaptainRole(roleInTeam) && location
       )
     : []
 

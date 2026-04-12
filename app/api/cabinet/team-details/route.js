@@ -48,13 +48,13 @@ export async function GET(request) {
     }
 
     const role = normalizeRole(session?.user?.role)
-    const location =
-      typeof session?.user?.location === 'string' ? session.user.location : null
-
     const teams = await fetchTeamsForCabinet({
       db,
       teamIds: [teamId],
-      location,
+      // Для запроса конкретной команды по teamId не фильтруем по городу сессии,
+      // иначе команда из другого города может "пропадать".
+      location: null,
+      teamLocationFilter: 'all',
       sortBy: 'registration_desc',
       limit: 1,
       offset: 0,

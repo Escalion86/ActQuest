@@ -810,14 +810,19 @@ const ManageUsersPage = ({
   }, [])
 
   const handleOpenUserTeamModal = useCallback(async (team) => {
-    if (!team?.id) {
+    const teamId =
+      (typeof team?.id === 'string' && team.id.trim()) ||
+      (typeof team?.teamId === 'string' && team.teamId.trim()) ||
+      ''
+
+    if (!teamId) {
       return
     }
 
     setFeedback(null)
 
     try {
-      const detailedTeam = await fetchCabinetTeamDetails({ teamId: team.id })
+      const detailedTeam = await fetchCabinetTeamDetails({ teamId })
 
       setSelectedUserTeam(detailedTeam)
       setIsUserTeamModalOpen(true)

@@ -13,6 +13,7 @@ import sendMessage from 'telegram/sendMessage'
 import secondsToTime from 'telegram/func/secondsToTime'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import removeCluePenalties from '@helpers/removeCluePenalties'
+import { isCaptainRole } from '@helpers/teamRoles'
 
 const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
   timeZone: 'Asia/Krasnoyarsk',
@@ -131,7 +132,6 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
     )
 
   const currentTeamUser = getTeamUserByTelegramId(telegramId)
-  const isCaptainRole = (role) => role === 'capitan'
   const isCaptain = isCaptainRole(currentTeamUser?.role)
   const telegramIdStr = String(telegramId ?? '')
 

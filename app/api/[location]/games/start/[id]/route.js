@@ -3,6 +3,14 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
 import { toStringId } from '@helpers/idAndDate'
 
+const runInBackground = (label, job) => {
+  Promise.resolve()
+    .then(job)
+    .catch((error) => {
+      console.error(`[background] ${label} failed`, error)
+    })
+}
+
 const getRegisteredUsersByGame = async ({ db, gameId }) => {
   const normalizedGameId = toStringId(gameId)
   if (!normalizedGameId) {
@@ -93,7 +101,7 @@ export async function GET(request, { params }) {
           }
           const message = result.message
 
-          try {
+          runInBackground('game start push notifications', async () => {
             const game = await db
               .model('Games')
               .findById(id)
@@ -127,9 +135,7 @@ export async function GET(request, { params }) {
                 },
               })
             }
-          } catch (pushError) {
-            console.error('Failed to send push notifications on game start', pushError)
-          }
+          })
 
           return res.status(200).json({ success: true, message })
         }

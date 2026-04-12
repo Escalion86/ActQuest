@@ -2,12 +2,17 @@ import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
-import mainMenu from './mainMenu'
-import keyboardFormer from 'telegram/func/keyboardFormer'
-import mainMenuButton from './menuItems/mainMenuButton'
 import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
 
-const gameStop = async ({ telegramId, jsonCommand, location, db }) => {
+const runInBackground = (label, job) => {
+  Promise.resolve()
+    .then(job)
+    .catch((error) => {
+      console.error(`[background] ${label} failed`, error)
+    })
+}
+
+const gameStop = async ({ telegramId: _telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -50,9 +55,13 @@ const gameStop = async ({ telegramId, jsonCommand, location, db }) => {
   })
 
   const teamsUsers = Array.isArray(snapshots.teamsUsers) ? snapshots.teamsUsers : []
-  // Получаем telegramId всчех участников игры
-  const allUsersTelegramIds = teamsUsers.map(
-    (teamUser) => teamUser.userTelegramId
+  // Получаем telegramId всех участников игры (только валидные числа)
+  const allUsersTelegramIds = Array.from(
+    new Set(
+      teamsUsers
+        .map((teamUser) => Number(teamUser?.userTelegramId))
+        .filter((telegramId) => Number.isFinite(telegramId)),
+    ),
   )
 
   await db.model('LastCommands').updateMany(
@@ -67,25 +76,23 @@ const gameStop = async ({ telegramId, jsonCommand, location, db }) => {
     { upsert: true }
   )
 
-  const keyboard = keyboardFormer([mainMenuButton])
-
-  await Promise.all(
-    allUsersTelegramIds.map(async (telegramId) => {
-      const mainMenuButtons = await mainMenu({ telegramId }).buttons
-      await sendMessage({
-        chat_id: telegramId,
-        text: `\u{26D4}\u{26D4}\u{26D4} СТОП ИГРА \u{26D4}\u{26D4}\u{26D4}\n\n\nКоды больше не принимаются. ${
-          game.finishingPlace
-            ? `Просим все команды прибыть на точку сбора: ${game.finishingPlace}`
-            : ''
-        }`,
-        keyboard,
-        location,
-      })
+  if (allUsersTelegramIds.length > 0) {
+    runInBackground('game stop telegram notifications', async () => {
+      await Promise.allSettled(
+        allUsersTelegramIds.map((telegramId) =>
+          sendMessage({
+            chat_id: telegramId,
+            text: `\u{26D4}\u{26D4}\u{26D4} СТОП ИГРА \u{26D4}\u{26D4}\u{26D4}\n\n\nКоды больше не принимаются. ${
+              game.finishingPlace
+                ? `Просим все команды прибыть на точку сбора: ${game.finishingPlace}`
+                : ''
+            }`,
+            location,
+          }),
+        ),
+      )
     })
-  )
-  // })
-  // )
+  }
 
   return {
     message: `СТОП ИГРА!!\n\nИгра ${formatGameName(

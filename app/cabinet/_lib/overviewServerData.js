@@ -4,6 +4,7 @@ import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
 import resolveEntityRating from '@helpers/resolveEntityRating'
 import resolveSessionUserFilter from '@helpers/resolveSessionUserFilter'
+import { isCaptainRole } from '@helpers/teamRoles'
 import { LOCATIONS } from '@server/serverConstants'
 
 const normalizeRole = (value) => {
@@ -165,7 +166,7 @@ export const loadCabinetAppOverview = async (session) => {
       const roleValue = String(membership?.role ?? '')
         .trim()
         .toLowerCase()
-      const isCaptain = roleValue === 'capitan'
+      const isCaptain = isCaptainRole(roleValue)
 
       if (!acc[teamId]) {
         acc[teamId] = {

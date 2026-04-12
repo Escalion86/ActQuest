@@ -7,6 +7,7 @@ import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import logSiteEvent from '@helpers/logSiteEvent'
 import { toStringId } from '@helpers/idAndDate'
+import { getCaptainRoleQuery } from '@helpers/teamRoles'
 
 const normalizeGameTeamEntry = (doc) => {
   const id = toStringId(doc?._id ?? doc?.id)
@@ -263,7 +264,7 @@ export async function POST(request, { params }) {
 
       const captainMembership = await TeamsUsersModel.findOne({
         teamId,
-        role: 'capitan',
+        role: getCaptainRoleQuery(),
         $or: membershipOr,
       })
         .select({ _id: 1 })
@@ -280,7 +281,7 @@ export async function POST(request, { params }) {
       const teamLocation = normalizeLocation(team?.location)
       if (gameLocation && gameLocation !== teamLocation) {
         const captainMemberships = await TeamsUsersModel.find({
-          role: 'capitan',
+          role: getCaptainRoleQuery(),
           $or: membershipOr,
         })
           .select({ teamId: 1 })
@@ -436,7 +437,7 @@ export async function DELETE(request, { params }) {
 
       const captainMemberships = await TeamsUsersModel.find({
         teamId: { $in: teamIds },
-        role: 'capitan',
+        role: getCaptainRoleQuery(),
         $or: membershipOr,
       })
         .select({ teamId: 1 })

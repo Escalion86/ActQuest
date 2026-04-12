@@ -1,5 +1,6 @@
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import { toStringId } from '@helpers/idAndDate'
+import { isCaptainRole } from '@helpers/teamRoles'
 
 const toPositiveInteger = (value, fallback) => {
   const numeric = Number(value)
@@ -410,7 +411,7 @@ const fetchGamesForCabinet = async ({
         participationByGameId[gId].push({
           teamId: tId,
           teamName: teamsNamesById[tId] || '',
-          isCaptain: role === 'captain',
+          isCaptain: isCaptainRole(role),
         })
       }
     }

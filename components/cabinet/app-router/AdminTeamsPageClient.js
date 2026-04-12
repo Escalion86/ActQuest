@@ -494,7 +494,7 @@ const AdminTeamsPage = ({
           fetch(`/api/cabinet/teams/members/${memberId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: { role: 'capitan' } }),
+            body: JSON.stringify({ data: { role: 'captain' } }),
           }),
         ]
 
@@ -521,7 +521,7 @@ const AdminTeamsPage = ({
 
         const updatedMembers = (selectedTeam.members ?? []).map((item) => {
           if (item.id === memberId) {
-            return { ...item, role: 'capitan', isCaptain: true }
+            return { ...item, role: 'captain', isCaptain: true }
           }
 
           if (item.id === currentCaptain?.id) {

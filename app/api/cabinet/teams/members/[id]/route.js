@@ -4,6 +4,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
+import {
+  getCaptainRoleQuery,
+  isCaptainRole,
+  normalizeTeamRoleForWrite,
+} from '@helpers/teamRoles'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -47,7 +52,7 @@ const ensureCanManageMembership = async ({
   const TeamsUsersModel = db.model('TeamsUsers')
   const captainMembership = await TeamsUsersModel.findOne({
     teamId: membership.teamId,
-    role: 'capitan',
+    role: getCaptainRoleQuery(),
     userId: actorUserId,
   })
     .select({ _id: 1 })
@@ -107,10 +112,8 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    const role = String(membership.role ?? '')
-      .trim()
-      .toLowerCase()
-    const isCaptain = role === 'capitan'
+    const role = normalizeTeamRoleForWrite(membership.role)
+    const isCaptain = isCaptainRole(role)
     if (isCaptain && !isElevatedRole(actorRole)) {
       return NextResponse.json(
         {
@@ -159,15 +162,20 @@ export async function PUT(request, { params }) {
 
   const body = await request.json().catch(() => ({}))
   const payload = body?.data && typeof body.data === 'object' ? body.data : body
-  const nextRole = String(payload?.role ?? '')
+  const rawNextRole = String(payload?.role ?? '')
     .trim()
     .toLowerCase()
-  if (nextRole !== 'capitan' && nextRole !== 'participant') {
+  if (
+    rawNextRole !== 'captain' &&
+    rawNextRole !== 'capitan' &&
+    rawNextRole !== 'participant'
+  ) {
     return NextResponse.json(
       { success: false, error: 'Некорректная роль участника' },
       { status: 400 },
     )
   }
+  const nextRole = normalizeTeamRoleForWrite(rawNextRole)
 
   try {
     const db = await dbConnectGlobal()

@@ -37,7 +37,7 @@ const GameStatusModal = ({
           {actions.map((action) => (
             <div
               key={action.id}
-              className="rounded-xl border border-slate-200/80 p-3 dark:border-slate-700/80"
+              className="p-3 border rounded-xl border-slate-200/80 dark:border-slate-700/80"
             >
               <CabinetButton
                 onClick={() => onAction(action.id)}
@@ -63,13 +63,13 @@ const GameStatusModal = ({
         </p>
       )}
       <p className="text-xs text-slate-500 dark:text-slate-300">
-        «СТАРТ ИГРЫ» и «СТОП ИГРЫ» запускают серверные сценарии с оповещением
+        «СТАРТ ИГРЫ» и «СТОП ИГРА» запускают серверные сценарии с оповещением
         игроков.
       </p>
       {isSaving && progressMessage ? (
-        <div className="flex items-center gap-3 rounded-xl border border-sky-300/70 bg-sky-50/80 px-4 py-3 dark:border-sky-500/50 dark:bg-sky-500/10">
+        <div className="flex items-center gap-3 px-4 py-3 border rounded-xl border-sky-300/70 bg-sky-50/80 dark:border-sky-500/50 dark:bg-sky-500/10">
           <svg
-            className="h-5 w-5 shrink-0 animate-spin text-sky-600 dark:text-sky-300"
+            className="w-5 h-5 shrink-0 animate-spin text-sky-600 dark:text-sky-300"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

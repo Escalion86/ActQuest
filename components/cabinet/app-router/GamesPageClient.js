@@ -532,8 +532,7 @@ const buildUpdatePayload = (game) => {
         typeof task.task === 'string' && task.task.trim() !== ''
           ? task.task
           : stripHtmlToPlainText(task.taskRich),
-      howToSolve:
-        typeof task.howToSolve === 'string' ? task.howToSolve : '',
+      howToSolve: typeof task.howToSolve === 'string' ? task.howToSolve : '',
       taskRich: typeof task.taskRich === 'string' ? task.taskRich : '',
       taskMedia: (Array.isArray(task.taskMedia) ? task.taskMedia : [])
         .map((media, index) => ({
@@ -1272,7 +1271,7 @@ const GamesPage = ({
       return [
         {
           id: 'stop_game',
-          label: 'СТОП ИГРЫ',
+          label: 'СТОП ИГРА',
           description:
             'Завершит игру, зафиксирует результат и оповестит всех участников.',
           variant: 'primary',
@@ -2281,8 +2280,8 @@ const GamesPage = ({
         .join(', ')
       const confirmMessage =
         captainParticipations.length > 1
-          ? `Отменить регистрацию команд ${teamsLabel} на игру «${game.name || 'Без названия'}»?`
-          : `Отменить регистрацию команды ${teamsLabel} на игру «${game.name || 'Без названия'}»?`
+          ? `Снять команды ${teamsLabel} с игры «${game.name || 'Без названия'}»?`
+          : `Снять команду ${teamsLabel} с игры «${game.name || 'Без названия'}»?`
 
       if (typeof window !== 'undefined') {
         const isConfirmed = window.confirm(confirmMessage)
@@ -2311,7 +2310,7 @@ const GamesPage = ({
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ teamIds: teamIdsToDelete }),
-            fallbackMessage: 'Не удалось отменить регистрацию команды',
+            fallbackMessage: 'Не удалось снять команду с игры',
           },
         )
 
@@ -2345,7 +2344,7 @@ const GamesPage = ({
 
         setFeedback({
           type: 'success',
-          message: 'Регистрация на игру отменена',
+          message: 'Команда снята с игры',
         })
       } catch (error) {
         console.error('Failed to cancel game registration', error)
@@ -2353,7 +2352,7 @@ const GamesPage = ({
           type: 'error',
           message:
             extractErrorMessage(error) ||
-            'Не удалось отменить регистрацию команды',
+            'Не удалось снять команду с игры',
         })
       } finally {
         setCancellingRegistrationGameIds((prev) =>
@@ -3349,7 +3348,9 @@ const GamesPage = ({
         .filter(Boolean)
       if (issueTaskIds.length > 0) {
         setExpandedTaskIds((prev) =>
-          Array.from(new Set([...(Array.isArray(prev) ? prev : []), ...issueTaskIds])),
+          Array.from(
+            new Set([...(Array.isArray(prev) ? prev : []), ...issueTaskIds]),
+          ),
         )
       }
 
@@ -5002,7 +5003,7 @@ const GamesPage = ({
                           disabled={isCancellingRegistration}
                           className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
                         >
-                          Отменить регистрацию
+                          Снять команду с игры
                         </button>
                       )}
                     </div>
@@ -5405,7 +5406,7 @@ const GamesPage = ({
                           disabled={isCancellingRegistration}
                           className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-rose-300/70 bg-rose-50/80 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/50 dark:bg-rose-500/12 dark:text-rose-200 dark:hover:bg-rose-500/20"
                         >
-                          Отменить регистрацию
+                          Снять команду с игры
                         </button>
                       )}
                     </div>

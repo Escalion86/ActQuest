@@ -6,15 +6,16 @@ import ensureRole from '@helpers/ensureRole'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import { ensureDateISOString, toStringId } from '@helpers/idAndDate'
 import isUserAdmin from '@helpers/isUserAdmin'
+import {
+  isCaptainRole,
+  normalizeTeamRoleForWrite,
+} from '@helpers/teamRoles'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
 const normalizeTelegramId = (value) => {
   const numeric = Number(value)
   return Number.isFinite(numeric) && numeric !== 0 ? numeric : null
 }
-
-const normalizeMembershipRole = (value) =>
-  value === 'capitan' ? 'capitan' : 'participant'
 
 export async function GET(request) {
   const session = await getServerSession(authOptions)
@@ -115,12 +116,12 @@ export async function GET(request) {
         }
 
         const team = teamsById[teamId]
-        const role = normalizeMembershipRole(membership?.role)
+        const role = normalizeTeamRoleForWrite(membership?.role)
 
         return {
           ...team,
           role,
-          isCaptain: role === 'capitan',
+          isCaptain: isCaptainRole(role),
         }
       })
       .filter(Boolean)

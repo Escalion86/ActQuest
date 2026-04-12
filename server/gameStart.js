@@ -1,14 +1,20 @@
 import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
-import keyboardFormer from 'telegram/func/keyboardFormer'
-import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 import createTaskProgressArrays from '@helpers/createTaskProgressArrays'
 import removeCluePenalties from '@helpers/removeCluePenalties'
 import { getGameValidationErrors } from '@helpers/isGameHaveErrors'
 
-const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
+const runInBackground = (label, job) => {
+  Promise.resolve()
+    .then(job)
+    .catch((error) => {
+      console.error(`[background] ${label} failed`, error)
+    })
+}
+
+const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db }) => {
   const checkData = check(jsonCommand, ['gameId'])
   if (checkData) return checkData
 
@@ -102,7 +108,19 @@ const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
       })
     )
 
-    const cluesDuration = game.cluesDuration ?? 1200
+    const gameName =
+      typeof game?.name === 'string' && game.name.trim()
+        ? game.name.trim()
+        : 'Без названия'
+    const gameStartedMessage = [
+      'Игра началась!',
+      `Название игры: ${gameName}`,
+      '',
+      'Перейдите на сайт и зайдите в игру:',
+      'https://actquest.ru/cabinet/games-upcoming',
+    ].join('\n')
+
+    const telegramRecipients = new Set()
 
     await Promise.all(
       teamsIds.map(async (teamId) => {
@@ -111,9 +129,8 @@ const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
         )
         const usersTelegramIdsOfTeam = teamsUsers
           .filter((teamUser) => teamUser.teamId === teamId)
-          .map((teamUser) => teamUser.userTelegramId)
-
-        const taskNum = gameTeam?.activeNum ?? 0
+          .map((teamUser) => Number(teamUser?.userTelegramId))
+          .filter((telegramId) => Number.isFinite(telegramId))
 
         await db.model('LastCommands').updateMany(
           {
@@ -127,31 +144,26 @@ const gameStart = async ({ telegramId, jsonCommand, location, db }) => {
           { upsert: true }
         )
 
-        const findedCodes = gameTeam?.findedCodes ?? []
-        // const { task, codes, numCodesToCompliteTask } = game.tasks[taskNum]
-
-        const keyboard = keyboardFormer([
-          {
-            c: { c: 'gameProcess', gameTeamId: String(gameTeam._id) },
-            text: '\u{1F504} Обновить',
-          },
-        ])
-
-        await Promise.all(
-          usersTelegramIdsOfTeam.map(async (telegramId) => {
-            await sendMessage({
-              chat_id: telegramId,
-              text: `\u{26A0}\u{26A0}\u{26A0} ИГРА НАЧАЛАСЬ \u{26A0}\u{26A0}\u{26A0}\n\n\n${taskText(
-                { game, taskNum, findedCodes, cluesDuration }
-              )}`,
-              keyboard,
-              images: game.tasks[taskNum].images,
-              location,
-            })
-          })
-        )
+        usersTelegramIdsOfTeam.forEach((telegramId) => {
+          telegramRecipients.add(telegramId)
+        })
       })
     )
+
+    if (telegramRecipients.size > 0) {
+      const recipients = Array.from(telegramRecipients)
+      runInBackground('game start telegram notifications', async () => {
+        await Promise.allSettled(
+          recipients.map((telegramId) =>
+            sendMessage({
+              chat_id: telegramId,
+              text: gameStartedMessage,
+              location,
+            }),
+          ),
+        )
+      })
+    }
 
     return {
       message: `Игра ${formatGameName(

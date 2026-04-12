@@ -5,6 +5,7 @@ import { authOptions } from '@server/auth/authOptions'
 import { LOCATIONS } from '@server/serverConstants'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import logSiteEvent from '@helpers/logSiteEvent'
+import { getCaptainRoleQuery } from '@helpers/teamRoles'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) {
@@ -166,7 +167,7 @@ export async function PUT(request, { params }) {
 
       const captainMembership = await TeamsUsersModel.findOne({
         teamId,
-        role: 'capitan',
+        role: getCaptainRoleQuery(),
         userId,
       })
         .select({ _id: 1 })
@@ -286,7 +287,7 @@ export async function DELETE(request, { params }) {
 
       const captainMembership = await TeamsUsersModel.findOne({
         teamId,
-        role: 'capitan',
+        role: getCaptainRoleQuery(),
         userId,
       })
         .select({ _id: 1 })

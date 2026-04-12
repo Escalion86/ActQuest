@@ -4,6 +4,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
+import {
+  TEAM_ROLE_CAPTAIN,
+  isCaptainRole,
+  normalizeTeamRoleForWrite,
+} from '@helpers/teamRoles'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -34,7 +39,7 @@ export async function POST(request) {
   const requestedRole = String(payload?.role ?? 'participant')
     .trim()
     .toLowerCase()
-  const role = requestedRole === 'capitan' ? 'capitan' : 'participant'
+  const role = normalizeTeamRoleForWrite(requestedRole)
 
   if (!teamId) {
     return NextResponse.json(
@@ -139,7 +144,7 @@ export async function POST(request) {
               id: toStringId(createdMembership?._id),
               name: targetUserDoc.name || null,
               username: targetUserDoc.username || null,
-              isCaptain: false,
+              isCaptain: role === TEAM_ROLE_CAPTAIN,
               hasLinkedUser: true,
             },
           },
@@ -148,7 +153,7 @@ export async function POST(request) {
       )
     }
 
-    if (!isElevatedRole(actorRole) && role === 'capitan') {
+    if (!isElevatedRole(actorRole) && isCaptainRole(role)) {
       return NextResponse.json(
         {
           success: false,
