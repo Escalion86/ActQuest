@@ -49,6 +49,9 @@ const normalizeComparablePlainText = (value) =>
 const hasMeaningfulRichMarkup = (value) =>
   /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(String(value || ''))
 
+const isObjectIdLike = (value) =>
+  typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value.trim())
+
 const normalizeComparableRichText = (richValue, plainValue) => {
   const rich = typeof richValue === 'string' ? richValue.trim() : ''
   if (!rich) {
@@ -952,6 +955,14 @@ const GameEditModal = ({
                     !hasFilledClue ||
                     (!isPhotoGame && normalizedCodes.length === 0) ||
                     hasCodesOverflowError
+                  const previewGameId =
+                    typeof selectedGame?.mongoId === 'string' &&
+                    isObjectIdLike(selectedGame.mongoId)
+                      ? selectedGame.mongoId
+                      : typeof selectedGame?.id === 'string' &&
+                          isObjectIdLike(selectedGame.id)
+                        ? selectedGame.id
+                        : ''
 
                   return (
                     <div
@@ -1030,6 +1041,75 @@ const GameEditModal = ({
                       {isExpanded && (
                         <div className="space-y-5 px-4 py-5">
                           <div className="space-y-4">
+                            <div className="flex justify-end">
+                              <CabinetButton
+                                type="button"
+                                variant="secondary"
+                                onClick={() => {
+                                  if (typeof window === 'undefined') {
+                                    return
+                                  }
+
+                                  const previewUrl = previewGameId
+                                    ? `/cabinet/admin/task-preview?gameId=${encodeURIComponent(
+                                        previewGameId,
+                                      )}&taskIndex=${encodeURIComponent(String(index))}`
+                                    : (() => {
+                                    const draftKey = `aq-task-preview-draft-${Date.now()}-${Math.random()
+                                      .toString(36)
+                                      .slice(2, 8)}`
+                                    const draftPayload = {
+                                      game: {
+                                        id:
+                                          typeof selectedGame?.id === 'string'
+                                            ? selectedGame.id
+                                            : '',
+                                        name:
+                                          typeof selectedGame?.name === 'string'
+                                            ? selectedGame.name
+                                            : '',
+                                        type:
+                                          selectedGame?.type === 'photo'
+                                            ? 'photo'
+                                            : 'classic',
+                                        location:
+                                          typeof selectedGame?.location ===
+                                          'string'
+                                            ? selectedGame.location
+                                            : '',
+                                        status:
+                                          typeof selectedGame?.status ===
+                                          'string'
+                                            ? selectedGame.status
+                                            : '',
+                                        taskDuration:
+                                          Number(selectedGame?.taskDuration) ||
+                                          3600,
+                                        cluesDuration:
+                                          Number(selectedGame?.cluesDuration) ||
+                                          1200,
+                                        breakDuration:
+                                          Number(selectedGame?.breakDuration) ||
+                                          0,
+                                      },
+                                      tasks: Array.isArray(selectedGame?.tasks)
+                                        ? selectedGame.tasks
+                                        : [],
+                                    }
+                                    window.localStorage.setItem(
+                                      draftKey,
+                                      JSON.stringify(draftPayload),
+                                    )
+                                    return `/cabinet/admin/task-preview?draftKey=${encodeURIComponent(
+                                        draftKey,
+                                      )}&taskIndex=${encodeURIComponent(String(index))}`
+                                  })()
+                                  window.open(previewUrl, '_blank', 'noopener,noreferrer')
+                                }}
+                              >
+                                Предпросмотр для игроков
+                              </CabinetButton>
+                            </div>
                             <div className="flex flex-col gap-2 md:items-start">
                               <NeonCheckbox
                                 id={`task-is-bonus-${task.id}`}

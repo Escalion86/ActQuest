@@ -10,6 +10,8 @@ import { useSession } from 'next-auth/react'
 
 import { LOCATIONS } from '@server/serverConstants'
 import normalizeAudioMessageHtml from '@helpers/normalizeAudioMessageHtml'
+import RichTaskContentView from '@components/game/RichTaskContentView'
+import TaskDisplayWithClues from '@components/game/TaskDisplayWithClues'
 
 const statusLabels = {
   active: 'Ещё не началась',
@@ -155,11 +157,21 @@ const formatCityName = (locationKey) => {
 
 const normalizeTaskPayload = ({
   taskHtml = '',
+  taskDisplayHtml = '',
+  taskDisplayText = '',
+  taskDisplayTaskHtml = '',
+  taskDisplayTaskText = '',
+  taskDisplayClues = [],
   taskState = 'idle',
   result = null,
   postCompletionMessage = '',
 }) => ({
   html: taskHtml || '',
+  displayHtml: taskDisplayHtml || '',
+  displayText: taskDisplayText || '',
+  displayTaskHtml: taskDisplayTaskHtml || '',
+  displayTaskText: taskDisplayTaskText || '',
+  displayClues: Array.isArray(taskDisplayClues) ? taskDisplayClues : [],
   state: taskState || 'idle',
   result: result || null,
   postCompletionMessage: postCompletionMessage || '',
@@ -167,30 +179,14 @@ const normalizeTaskPayload = ({
 
 const areTaskPayloadsEqual = (prev, next) =>
   prev.html === next.html &&
+  prev.displayHtml === next.displayHtml &&
+  prev.displayText === next.displayText &&
+  prev.displayTaskHtml === next.displayTaskHtml &&
+  prev.displayTaskText === next.displayTaskText &&
+  prev.displayClues === next.displayClues &&
   prev.state === next.state &&
   prev.result === next.result &&
   prev.postCompletionMessage === next.postCompletionMessage
-
-const stripPhotoOnlySectionsForClassic = (html, gameType) => {
-  if (typeof html !== 'string' || !html) {
-    return ''
-  }
-
-  if (
-    String(gameType || '')
-      .trim()
-      .toLowerCase() === 'photo'
-  ) {
-    return html
-  }
-
-  return html
-    .replace(
-      /\n*<b>За выполнение основного задания<\/b>:[\s\S]*?(?=\n\n<b>|$)/gi,
-      '',
-    )
-    .replace(/\n*<b>Доп\. задания<\/b>:[\s\S]*?(?=\n\n<b>|$)/gi, '')
-}
 
 const resolveThemePreference = () => {
   if (typeof window === 'undefined') {
@@ -223,6 +219,11 @@ function GameTeamPage({
   isGameFinished,
   result,
   taskHtml,
+  taskDisplayHtml,
+  taskDisplayText,
+  taskDisplayTaskHtml,
+  taskDisplayTaskText,
+  taskDisplayClues,
   taskState,
   postCompletionMessage,
   error,
@@ -255,6 +256,11 @@ function GameTeamPage({
   const [taskData, setTaskData] = useState(() =>
     normalizeTaskPayload({
       taskHtml,
+      taskDisplayHtml,
+      taskDisplayText,
+      taskDisplayTaskHtml,
+      taskDisplayTaskText,
+      taskDisplayClues,
       taskState,
       result,
       postCompletionMessage,
@@ -363,6 +369,11 @@ function GameTeamPage({
   useEffect(() => {
     updateTaskData({
       taskHtml,
+      taskDisplayHtml,
+      taskDisplayText,
+      taskDisplayTaskHtml,
+      taskDisplayTaskText,
+      taskDisplayClues,
       taskState,
       result,
       postCompletionMessage,
@@ -373,7 +384,18 @@ function GameTeamPage({
       }
       return prev
     })
-  }, [postCompletionMessage, result, taskHtml, taskState, updateTaskData])
+  }, [
+    postCompletionMessage,
+    result,
+    taskHtml,
+    taskDisplayHtml,
+    taskDisplayText,
+    taskDisplayTaskHtml,
+    taskDisplayTaskText,
+    taskDisplayClues,
+    taskState,
+    updateTaskData,
+  ])
 
   useEffect(() => {
     const nextMessages = collectResultMessages({
@@ -510,6 +532,11 @@ function GameTeamPage({
   const statusLabel = statusLabels[status] ?? 'Статус неизвестен'
   const {
     html: currentTaskHtml,
+    displayHtml: currentTaskDisplayHtml,
+    displayText: currentTaskDisplayText,
+    displayTaskHtml: currentTaskDisplayTaskHtml,
+    displayTaskText: currentTaskDisplayTaskText,
+    displayClues: currentTaskDisplayClues,
     state: currentTaskState,
     result: currentResult,
     postCompletionMessage: currentPostCompletionMessage,
@@ -542,20 +569,48 @@ function GameTeamPage({
   }, [game?.type])
 
   const formattedTaskMessage = useMemo(
-    () =>
-      transformHtml(
-        stripPhotoOnlySectionsForClassic(currentTaskHtml ?? '', game?.type),
-      ),
-    [currentTaskHtml, game?.type],
+    () => transformHtml(currentTaskHtml ?? ''),
+    [currentTaskHtml],
+  )
+  const visibleTaskHtml = useMemo(
+    () => transformHtml(currentTaskDisplayHtml || ''),
+    [currentTaskDisplayHtml],
+  )
+  const visibleTaskText = useMemo(
+    () => String(currentTaskDisplayText || ''),
+    [currentTaskDisplayText],
+  )
+  const visibleTaskOnlyHtml = useMemo(
+    () => transformHtml(currentTaskDisplayTaskHtml || ''),
+    [currentTaskDisplayTaskHtml],
+  )
+  const visibleTaskOnlyText = useMemo(
+    () => String(currentTaskDisplayTaskText || ''),
+    [currentTaskDisplayTaskText],
+  )
+  const visibleTaskClues = useMemo(
+    () => Array.isArray(currentTaskDisplayClues) ? currentTaskDisplayClues : [],
+    [currentTaskDisplayClues],
+  )
+  const isBreakState = currentTaskState === 'break'
+  const isCompletedState = currentTaskState === 'completed'
+  const isGameCompletion = isGameFinished || isCompletedState
+  const fallbackTaskHtml = useMemo(
+    () => (isBreakState ? formattedTaskMessage : ''),
+    [formattedTaskMessage, isBreakState],
+  )
+  const resolvedTaskHtml = useMemo(
+    () => visibleTaskOnlyHtml || visibleTaskHtml || fallbackTaskHtml,
+    [visibleTaskOnlyHtml, visibleTaskHtml, fallbackTaskHtml],
+  )
+  const resolvedTaskText = useMemo(
+    () => visibleTaskOnlyText || visibleTaskText,
+    [visibleTaskOnlyText, visibleTaskText],
   )
   const normalizedTaskMessage = useMemo(
     () => normalizeForComparison(currentTaskHtml),
     [currentTaskHtml],
   )
-
-  const isBreakState = currentTaskState === 'break'
-  const isCompletedState = currentTaskState === 'completed'
-  const isGameCompletion = isGameFinished || isCompletedState
 
   const activeTaskResultMessages = useMemo(
     () =>
@@ -709,7 +764,8 @@ function GameTeamPage({
   const shouldShowAnswerForm = !isGameCompletion && !isBreakState
   const shouldShowGameCompletedBlock = isGameCompletion
   const shouldShowCurrentTaskBlock =
-    Boolean(formattedTaskMessage) && !shouldShowGameCompletedBlock
+    Boolean(resolvedTaskHtml || resolvedTaskText || visibleTaskClues.length > 0) &&
+    !shouldShowGameCompletedBlock
   const statusNotice = useMemo(() => {
     if (error) return null
     if (!isGameStarted && status === 'active') {
@@ -1076,12 +1132,15 @@ function GameTeamPage({
                   </button>
                 </div>
                 {!isPostCompletionMessageCollapsed ? (
-                  <div
-                    className="mt-4 text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100 aq-task-content"
-                    dangerouslySetInnerHTML={{
-                      __html: postCompletionMessageHtml,
-                    }}
-                  />
+                  <div className="mt-4">
+                    <RichTaskContentView
+                      html={postCompletionMessageHtml}
+                      text=""
+                      className="text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100"
+                      textClassName="text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100"
+                      directory={`games/process/post-message/${String(gameId || 'game')}/${String(teamId || 'team')}/${String(currentTaskState || 'state')}`}
+                    />
+                  </div>
                 ) : null}
               </section>
             ) : null}
@@ -1126,9 +1185,29 @@ function GameTeamPage({
                     />
                   </button>
                 </div>
+                <div ref={taskContentRef}>
+                  <div
+                    className="hidden"
+                    aria-hidden="true"
+                    dangerouslySetInnerHTML={{ __html: formattedTaskMessage }}
+                  />
+                </div>
+                <TaskDisplayWithClues
+                  taskHtml={resolvedTaskHtml}
+                  taskText={resolvedTaskText}
+                  clues={visibleTaskClues}
+                  directoryBase={`games/process/task/${String(gameId || 'game')}/${String(teamId || 'team')}/${String(currentTaskState || 'state')}`}
+                  taskClassName="mt-4 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
+                  taskTextClassName="mt-4 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
+                  cluesWrapperClassName="mt-4 space-y-4"
+                  clueCardClassName="rounded-2xl border border-cyan-300/70 bg-cyan-50/80 p-4 dark:border-cyan-500/40 dark:bg-cyan-500/10"
+                  clueTitleClassName="text-sm font-semibold text-cyan-900 dark:text-cyan-100"
+                  clueContentClassName="mt-2 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
+                  clueContentTextClassName="mt-2 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
+                />
                 <div
                   ref={countdownPanelRef}
-                  className="mt-3 inline-flex items-center gap-2 rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-3 py-1.5 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-100"
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-3 py-1.5 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-100"
                   style={{ display: 'none' }}
                 >
                   <span ref={countdownPanelLabelRef} />
@@ -1142,11 +1221,6 @@ function GameTeamPage({
                     {taskRefreshError}
                   </p>
                 ) : null}
-                <div
-                  className="mt-4 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200 aq-task-content [&_blockquote]:mt-3 [&_blockquote]:rounded-2xl [&_blockquote]:border [&_blockquote]:border-cyan-300/70 [&_blockquote]:bg-cyan-50/80 [&_blockquote]:px-4 [&_blockquote]:py-3 [&_blockquote]:text-gray-800 dark:[&_blockquote]:border-cyan-500/40 dark:[&_blockquote]:bg-slate-800/80 dark:[&_blockquote]:text-slate-100"
-                  ref={taskContentRef}
-                  dangerouslySetInnerHTML={{ __html: formattedTaskMessage }}
-                />
               </section>
             ) : null}
 
@@ -1159,9 +1233,16 @@ function GameTeamPage({
                   {displayedResultMessages.map((html, index) => (
                     <div
                       key={`result-message-${index}`}
-                      className="rounded-2xl border border-violet-300/60 bg-violet-50/75 px-4 py-3 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:border-violet-500/35 dark:bg-violet-500/12 dark:text-slate-200 aq-task-content [&_blockquote]:mt-2 [&_blockquote]:rounded-2xl [&_blockquote]:border [&_blockquote]:border-violet-300/70 [&_blockquote]:bg-violet-50/90 [&_blockquote]:px-3 [&_blockquote]:py-2 dark:[&_blockquote]:border-violet-500/35 dark:[&_blockquote]:bg-slate-800/70"
-                      dangerouslySetInnerHTML={{ __html: html }}
-                    />
+                      className="rounded-2xl border border-violet-300/60 bg-violet-50/75 px-4 py-3 dark:border-violet-500/35 dark:bg-violet-500/12"
+                    >
+                      <RichTaskContentView
+                        html={html}
+                        text=""
+                        className="text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200 [&_blockquote]:mt-2 [&_blockquote]:rounded-2xl [&_blockquote]:border [&_blockquote]:border-violet-300/70 [&_blockquote]:bg-violet-50/90 [&_blockquote]:px-3 [&_blockquote]:py-2 dark:[&_blockquote]:border-violet-500/35 dark:[&_blockquote]:bg-slate-800/70"
+                        textClassName="text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
+                        directory={`games/process/messages/${String(gameId || 'game')}/${String(teamId || 'team')}/${index}`}
+                      />
+                    </div>
                   ))}
                 </div>
               </section>
@@ -1288,6 +1369,18 @@ GameTeamPage.propTypes = {
     shouldResetMessages: PropTypes.bool,
   }),
   taskHtml: PropTypes.string,
+  taskDisplayHtml: PropTypes.string,
+  taskDisplayText: PropTypes.string,
+  taskDisplayTaskHtml: PropTypes.string,
+  taskDisplayTaskText: PropTypes.string,
+  taskDisplayClues: PropTypes.arrayOf(
+    PropTypes.shape({
+      index: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      label: PropTypes.string,
+      html: PropTypes.string,
+      text: PropTypes.string,
+    }),
+  ),
   taskState: PropTypes.oneOf(['idle', 'active', 'break', 'completed']),
   postCompletionMessage: PropTypes.string,
   error: PropTypes.string,
@@ -1302,6 +1395,11 @@ GameTeamPage.defaultProps = {
   team: null,
   result: null,
   taskHtml: '',
+  taskDisplayHtml: '',
+  taskDisplayText: '',
+  taskDisplayTaskHtml: '',
+  taskDisplayTaskText: '',
+  taskDisplayClues: [],
   taskState: 'idle',
   postCompletionMessage: '',
   error: null,

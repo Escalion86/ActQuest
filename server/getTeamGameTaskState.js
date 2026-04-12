@@ -4,6 +4,7 @@ import webGameProcess from '@server/webGameProcess'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import taskText from 'telegram/func/taskText'
 import sanitize from '@helpers/sanitize'
+import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
 
 const ensureDateValue = (value) => {
   if (!value) return null
@@ -227,6 +228,11 @@ const computeTaskHtml = async ({
   }
 
   let taskHtml = ''
+  let taskDisplayHtml = ''
+  let taskDisplayText = ''
+  let taskDisplayTaskHtml = ''
+  let taskDisplayTaskText = ''
+  let taskDisplayClues = []
   let taskState = 'idle'
   let postCompletionMessage = null
 
@@ -332,6 +338,7 @@ const computeTaskHtml = async ({
             ? Math.max(Math.floor(elapsedSeconds / cluesDurationSeconds), 0)
             : 0
         const visibleCluesCount = Math.max(timedCluesCount, forcedCluesCount)
+        const activeTask = tasks[activeTaskIndex] ?? null
 
         taskHtml = taskText({
           game,
@@ -348,6 +355,17 @@ const computeTaskHtml = async ({
           includeActionPrompt: false,
           format: 'web',
         })
+        const displayContent = buildTaskDisplayContent({
+          task: activeTask,
+          visibleCluesCount,
+        })
+        taskDisplayHtml = displayContent.html
+        taskDisplayText = displayContent.text
+        taskDisplayTaskHtml = displayContent.taskHtml || ''
+        taskDisplayTaskText = displayContent.taskText || ''
+        taskDisplayClues = Array.isArray(displayContent.clues)
+          ? displayContent.clues
+          : []
 
         taskState = 'active'
 
@@ -377,6 +395,11 @@ const computeTaskHtml = async ({
 
   return {
     taskHtml,
+    taskDisplayHtml,
+    taskDisplayText,
+    taskDisplayTaskHtml,
+    taskDisplayTaskText,
+    taskDisplayClues,
     taskState,
     processResult,
     effectiveGameTeam,
@@ -497,6 +520,11 @@ const getTeamGameTaskState = async ({
 
     const {
       taskHtml,
+      taskDisplayHtml,
+      taskDisplayText,
+      taskDisplayTaskHtml,
+      taskDisplayTaskText,
+      taskDisplayClues,
       taskState,
       processResult: finalResult,
       postCompletionMessage,
@@ -519,6 +547,17 @@ const getTeamGameTaskState = async ({
         isGameFinished,
         result: finalResult ? safeSerialize(finalResult) : null,
         taskHtml,
+        taskDisplayHtml:
+          typeof taskDisplayHtml === 'string' ? taskDisplayHtml : '',
+        taskDisplayText:
+          typeof taskDisplayText === 'string' ? taskDisplayText : '',
+        taskDisplayTaskHtml:
+          typeof taskDisplayTaskHtml === 'string' ? taskDisplayTaskHtml : '',
+        taskDisplayTaskText:
+          typeof taskDisplayTaskText === 'string' ? taskDisplayTaskText : '',
+        taskDisplayClues: Array.isArray(taskDisplayClues)
+          ? safeSerialize(taskDisplayClues)
+          : [],
         taskState,
         gameTeamId: String(gameTeam._id),
         postCompletionMessage:

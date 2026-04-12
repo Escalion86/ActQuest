@@ -596,12 +596,34 @@ const formatAudioClock = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+const buildAudioDownloadFilename = ({ title, src }) => {
+  const safeTitle = String(title || 'audio')
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+
+  const source = String(src || '')
+  const extensionMatch = source.match(/\.([a-z0-9]{2,6})(?:[?#]|$)/i)
+  const extension = extensionMatch?.[1]
+    ? `.${extensionMatch[1].toLowerCase()}`
+    : '.mp3'
+
+  if (!safeTitle) {
+    return `audio${extension}`
+  }
+
+  return safeTitle.toLowerCase().endsWith(extension)
+    ? safeTitle
+    : `${safeTitle}${extension}`
+}
+
 const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
   const audioRef = useRef(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
   const [volume, setVolume] = useState(1)
+  const [isVolumeExpanded, setIsVolumeExpanded] = useState(false)
 
   const src = typeof node?.attrs?.src === 'string' ? node.attrs.src : ''
   const title =
@@ -643,6 +665,28 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
       audio.removeEventListener('volumechange', onVolume)
     }
   }, [src])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const media = window.matchMedia('(min-width: 641px)')
+    const onChange = (event) => {
+      if (event.matches) {
+        setIsVolumeExpanded(false)
+      }
+    }
+
+    if (media.matches) {
+      setIsVolumeExpanded(false)
+    }
+
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', onChange)
+      return () => media.removeEventListener('change', onChange)
+    }
+
+    media.addListener(onChange)
+    return () => media.removeListener(onChange)
+  }, [])
 
   const progress =
     duration > 0
@@ -699,6 +743,38 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
     updateAttributes({ title: nextTitle.trim() || 'Аудио' })
   }
 
+  const handleDownload = async (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (!src) return
+
+    const fallbackOpen = () => {
+      if (typeof window !== 'undefined') {
+        window.open(src, '_blank', 'noopener,noreferrer')
+      }
+    }
+
+    try {
+      const response = await fetch(src)
+      if (!response.ok) {
+        fallbackOpen()
+        return
+      }
+
+      const blob = await response.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = buildAudioDownloadFilename({ title, src })
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(blobUrl)
+    } catch {
+      fallbackOpen()
+    }
+  }
+
   return (
     <NodeViewWrapper
       as="div"
@@ -750,20 +826,64 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
           </div>
         </div>
 
-        <div className="aq-audio-message__volume-wrap">
-          <span className="aq-audio-message__volume-icon" aria-hidden="true">
-            {volume <= 0.01 ? '🔇' : volume < 0.55 ? '🔉' : '🔊'}
-          </span>
-          <input
-            className="aq-audio-message__volume"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={volume}
-            onChange={handleVolume}
+        <div
+          className={`aq-audio-message__volume-wrap ${
+            isVolumeExpanded ? 'is-open' : ''
+          }`}
+        >
+          <button
+            type="button"
+            className="aq-audio-message__volume-icon"
             aria-label="Громкость"
-          />
+            aria-expanded={isVolumeExpanded}
+            onClick={() => setIsVolumeExpanded((prev) => !prev)}
+          >
+            {volume <= 0.01 ? '🔇' : volume < 0.55 ? '🔉' : '🔊'}
+          </button>
+          <div className="aq-audio-message__volume-slider-wrap">
+            <input
+              className="aq-audio-message__volume"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={handleVolume}
+              aria-label="Громкость"
+            />
+          </div>
+          <a
+            className="aq-audio-message__download-btn"
+            href={src}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Скачать аудио"
+            aria-label="Скачать аудио"
+            onClick={handleDownload}
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 4v9"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <path
+                d="M8.5 10.5L12 14l3.5-3.5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M5 18h14"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+          </a>
         </div>
       </div>
 
@@ -1084,7 +1204,9 @@ const ResizableImageNodeView = ({
   return (
     <NodeViewWrapper
       as="div"
-      className={`aq-image-node ${selected ? 'aq-image-node--selected' : ''}`}
+      className={`aq-image-node ${
+        selected && editor?.isEditable ? 'aq-image-node--selected' : ''
+      }`}
       data-aq-image-node="true"
     >
       <img
@@ -1204,6 +1326,8 @@ const TaskRichEditor = ({
   onChange,
   directory,
   disabled,
+  hideToolbar,
+  compactReadOnly,
   placeholder,
   contentMaxHeight,
   aiInitialGame,
@@ -1270,6 +1394,25 @@ const TaskRichEditor = ({
     [normalizedValue],
   )
 
+  const editorClassName = useMemo(() => {
+    const classNames = [
+      'ProseMirror',
+      'aq-rich-text-base',
+      'max-w-none',
+      'px-5',
+      'py-4',
+      'text-slate-800',
+      'focus:outline-none',
+      'dark:text-slate-100',
+    ]
+
+    if (!(disabled && compactReadOnly)) {
+      classNames.push('min-h-[220px]')
+    }
+
+    return classNames.join(' ')
+  }, [compactReadOnly, disabled])
+
   const extensions = useMemo(
     () => [
       StarterKit.configure({
@@ -1307,15 +1450,14 @@ const TaskRichEditor = ({
       immediatelyRender: false,
       editorProps: {
         attributes: {
-          class:
-            'ProseMirror aq-rich-text-base max-w-none min-h-[220px] px-5 py-4 text-slate-800 focus:outline-none dark:text-slate-100',
+          class: editorClassName,
         },
       },
       onUpdate: ({ editor: nextEditor }) => {
         propagateEditorState(nextEditor)
       },
     },
-    [extensions, disabled],
+    [extensions, disabled, editorClassName],
   )
   const hasCurrentEditorText = getEditorPlainTextSafe(editor).trim().length > 0
   const selectedAiSystemPrompt = useMemo(
@@ -2319,7 +2461,8 @@ const TaskRichEditor = ({
   return (
     <>
       <div className="relative overflow-visible bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/70">
-        <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-slate-200/80 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-800/60">
+        {!hideToolbar ? (
+          <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-slate-200/80 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-800/60">
           <select
             value={toolbarState.blockType}
             onChange={(event) => {
@@ -2489,7 +2632,8 @@ const TaskRichEditor = ({
             onClick={openAiModal}
             disabled={disabled || isAiLoading}
           />
-        </div>
+          </div>
+        ) : null}
 
         <input
           ref={fileInputRef}
@@ -3077,7 +3221,7 @@ const TaskRichEditor = ({
 
         .ProseMirror .aq-audio-message--custom .aq-audio-message__shell {
           display: grid;
-          grid-template-columns: 40px minmax(0, 1fr) 88px;
+          grid-template-columns: 40px minmax(0, 1fr) 124px;
           align-items: center;
           gap: 10px;
         }
@@ -3221,15 +3365,81 @@ const TaskRichEditor = ({
         }
 
         .ProseMirror .aq-audio-message--custom .aq-audio-message__volume-icon {
+          width: 24px;
+          height: 24px;
+          border: 0;
+          background: transparent;
+          padding: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
           font-size: 12px;
           line-height: 1;
-          opacity: 0.85;
+          opacity: 0.9;
+          border-radius: 999px;
+        }
+
+        .ProseMirror
+          .aq-audio-message--custom
+          .aq-audio-message__volume-icon:focus-visible {
+          outline: 1px solid rgba(103, 232, 249, 0.8);
+          outline-offset: 1px;
+        }
+
+        .ProseMirror
+          .aq-audio-message--custom
+          .aq-audio-message__volume-slider-wrap {
+          width: 70px;
+          display: inline-flex;
+          align-items: center;
         }
 
         .ProseMirror .aq-audio-message--custom .aq-audio-message__volume {
-          width: 62px;
+          width: 100%;
           accent-color: #22d3ee;
           cursor: pointer;
+        }
+
+        .ProseMirror
+          .aq-audio-message--custom
+          .aq-audio-message__download-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 999px;
+          border: 1px solid rgba(0, 221, 255, 0.45);
+          color: #67e8f9;
+          background: rgba(6, 182, 212, 0.12);
+          text-decoration: none;
+          transition:
+            transform 0.18s ease,
+            background-color 0.18s ease,
+            border-color 0.18s ease,
+            color 0.18s ease;
+        }
+
+        .ProseMirror
+          .aq-audio-message--custom
+          .aq-audio-message__download-btn:hover,
+        .ProseMirror
+          .aq-audio-message--custom
+          .aq-audio-message__download-btn:focus-visible {
+          border-color: rgba(103, 232, 249, 0.92);
+          background: rgba(6, 182, 212, 0.22);
+          color: #a5f3fc;
+          transform: translateY(-1px);
+          outline: none;
+        }
+
+        .ProseMirror
+          .aq-audio-message--custom
+          .aq-audio-message__download-btn
+          svg {
+          width: 14px;
+          height: 14px;
         }
 
         .ProseMirror .aq-audio-message--custom .aq-audio-message__native {
@@ -3278,6 +3488,86 @@ const TaskRichEditor = ({
           );
         }
 
+        @media (max-width: 640px) {
+          .ProseMirror .aq-audio-message,
+          .ProseMirror audio-message {
+            max-width: 100%;
+            padding: 10px;
+          }
+
+          .ProseMirror .aq-audio-message--custom .aq-audio-message__play {
+            width: 34px;
+            height: 34px;
+          }
+
+          .ProseMirror .aq-audio-message--custom .aq-audio-message__play-icon {
+            border-top-width: 6px;
+            border-bottom-width: 6px;
+            border-left-width: 9px;
+          }
+
+          .ProseMirror
+            .aq-audio-message--custom
+            .aq-audio-message__pause-icon {
+            width: 10px;
+            height: 12px;
+            background: linear-gradient(
+              to right,
+              #0f172a 0 3px,
+              transparent 3px 7px,
+              #0f172a 7px 10px
+            );
+          }
+
+          .ProseMirror .aq-audio-message--custom .aq-audio-message__shell {
+            grid-template-columns: 34px minmax(0, 1fr) auto;
+            gap: 8px;
+          }
+
+          .ProseMirror .aq-audio-message--custom .aq-audio-message__body {
+            gap: 4px;
+          }
+
+          .ProseMirror .aq-audio-message__title {
+            font-size: 11px;
+            max-width: 100%;
+          }
+
+          .ProseMirror .aq-audio-message__time {
+            font-size: 11px;
+          }
+
+          .ProseMirror .aq-audio-message--custom .aq-audio-message__volume-wrap {
+            gap: 4px;
+          }
+
+          .ProseMirror
+            .aq-audio-message--custom
+            .aq-audio-message__volume-slider-wrap {
+            width: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition:
+              width 0.2s ease,
+              opacity 0.2s ease;
+          }
+
+          .ProseMirror
+            .aq-audio-message--custom
+            .aq-audio-message__volume-wrap.is-open
+            .aq-audio-message__volume-slider-wrap {
+            width: 72px;
+            opacity: 1;
+          }
+
+          .ProseMirror
+            .aq-audio-message--custom
+            .aq-audio-message__download-btn {
+            width: 26px;
+            height: 26px;
+          }
+        }
+
         .dark .ProseMirror .aq-image-node--selected .aq-image-node__image {
           outline-color: rgba(103, 232, 249, 0.95);
         }
@@ -3297,6 +3587,8 @@ TaskRichEditor.propTypes = {
   onChange: PropTypes.func,
   directory: PropTypes.string,
   disabled: PropTypes.bool,
+  hideToolbar: PropTypes.bool,
+  compactReadOnly: PropTypes.bool,
   placeholder: PropTypes.string,
   contentMaxHeight: PropTypes.string,
   aiInitialGame: PropTypes.shape({
@@ -3314,6 +3606,8 @@ TaskRichEditor.defaultProps = {
   onChange: () => {},
   directory: 'games/draft/tasks/draft/editor',
   disabled: false,
+  hideToolbar: false,
+  compactReadOnly: false,
   placeholder: '',
   contentMaxHeight: '56vh',
   aiInitialGame: null,
