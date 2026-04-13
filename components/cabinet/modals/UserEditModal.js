@@ -41,10 +41,16 @@ const UserEditModal = ({ userId, isOpen, onClose }) => {
 
   const initializedEditingUser = editingUser ?? (user ? cloneUser(user) : null)
 
-  const handleFieldChange = useCallback((field, value) => {
-    setEditingUser((prev) => (prev ? { ...prev, [field]: value } : null))
-    setFeedback(null)
-  }, [])
+  const handleFieldChange = useCallback(
+    (field, value) => {
+      setEditingUser((prev) => {
+        const base = prev ?? (user ? cloneUser(user) : null)
+        return base ? { ...base, [field]: value } : null
+      })
+      setFeedback(null)
+    },
+    [user],
+  )
 
   const updateUserMutation = useOptimisticMutation({
     queryKey: ['user', userId],
@@ -52,7 +58,7 @@ const UserEditModal = ({ userId, isOpen, onClose }) => {
       const { json } = await requestApiJson(
         `/api/cabinet/admin/users/${userId}`,
         {
-          method: 'PATCH',
+          method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -67,11 +73,9 @@ const UserEditModal = ({ userId, isOpen, onClose }) => {
       return { ...oldUser, ...payload }
     },
     onSuccess: () => {
-      setFeedback({
-        type: 'success',
-        message: 'Пользователь успешно обновлен',
-      })
       setEditingUser(null)
+      setFeedback(null)
+      onClose()
     },
     onError: (err) => {
       setFeedback({
@@ -147,6 +151,30 @@ const UserEditModal = ({ userId, isOpen, onClose }) => {
       isOpen={isOpen && (isLoading || initializedEditingUser)}
       onClose={handleClose}
       title={`Редактирование — ${displayName}`}
+      footer={
+        initializedEditingUser && !isLoading && !error ? (
+          <>
+            <CabinetButton
+              onClick={handleReset}
+              disabled={updateUserMutation.isPending}
+              variant="secondary"
+              tone="brand"
+            >
+              Отменить
+            </CabinetButton>
+            <CabinetButton
+              onClick={handleSave}
+              disabled={updateUserMutation.isPending}
+              variant="primary"
+              className={updateUserMutation.isPending ? 'cursor-wait' : ''}
+            >
+              {updateUserMutation.isPending
+                ? 'Сохранение…'
+                : 'Сохранить и закрыть'}
+            </CabinetButton>
+          </>
+        ) : null
+      }
     >
       {isLoading ? (
         <div className="space-y-4">
@@ -256,26 +284,6 @@ const UserEditModal = ({ userId, isOpen, onClose }) => {
               <option value="admin">Администратор</option>
             </CabinetSelectField>
 
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <CabinetButton
-                onClick={handleSave}
-                disabled={updateUserMutation.isPending}
-                variant="primary"
-                className={updateUserMutation.isPending ? 'cursor-wait' : ''}
-              >
-                {updateUserMutation.isPending
-                  ? 'Сохранение…'
-                  : 'Сохранить изменения'}
-              </CabinetButton>
-              <CabinetButton
-                onClick={handleReset}
-                disabled={updateUserMutation.isPending}
-                variant="secondary"
-                tone="brand"
-              >
-                Отменить
-              </CabinetButton>
-            </div>
           </FormSectionCard>
         </div>
       ) : null}
