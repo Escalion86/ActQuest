@@ -205,6 +205,7 @@ const UserViewModal = ({
   const displayName = user?.name || 'Без имени'
   const phoneValue = formatPhoneValue(user?.phone)
   const phoneHref = normalizePhoneHref(user?.phone)
+  const telegramByPhonePath = phoneHref || ''
   const telegramUsername = normalizeTelegramUsername(user?.username)
   const userTelegramId = user?.telegramId || ''
 
@@ -487,6 +488,21 @@ const UserViewModal = ({
                       </p>
                     )}
                   </div>
+                  {telegramByPhonePath ? (
+                    <div>
+                      <p className="text-xs text-slate-500">
+                        Telegram по номеру телефона
+                      </p>
+                      <a
+                        href={`https://t.me/${telegramByPhonePath}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-block text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
+                      >
+                        {`t.me/${telegramByPhonePath}`}
+                      </a>
+                    </div>
+                  ) : null}
                 </div>
               </FormSectionCard>
             ) : null}
