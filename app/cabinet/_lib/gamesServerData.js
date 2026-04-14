@@ -1,5 +1,6 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import fetchGamesForCabinet from '@helpers/fetchGamesForCabinet'
+import { LOCATIONS } from '@server/serverConstants'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -19,7 +20,15 @@ const normalizeLocation = (value) => {
   }
 
   const normalized = value.trim().toLowerCase()
-  return normalized || null
+  if (!normalized || normalized === 'all') {
+    return null
+  }
+
+  if (!LOCATIONS?.[normalized] || LOCATIONS[normalized]?.hidden) {
+    return null
+  }
+
+  return normalized
 }
 
 export const loadCabinetAppGames = async ({ session, view }) => {

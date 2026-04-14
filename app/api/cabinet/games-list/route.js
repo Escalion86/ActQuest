@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import fetchGamesForCabinet from '@helpers/fetchGamesForCabinet'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { LOCATIONS } from '@server/serverConstants'
 
 const isSessionDebugEnabled = process.env.SESSION_DEBUG === '1'
 const sessionDebugLog = (stage, payload = null) => {
@@ -47,6 +48,22 @@ const normalizeRole = (value) => {
     : null
 }
 
+const normalizeLocationKey = (value) => {
+  if (typeof value !== 'string') {
+    return ''
+  }
+  return value.trim().toLowerCase()
+}
+
+const isAllowedLocationKey = (value) => {
+  const normalized = normalizeLocationKey(value)
+  if (!normalized || normalized === 'all') {
+    return false
+  }
+
+  return Boolean(LOCATIONS?.[normalized] && !LOCATIONS[normalized]?.hidden)
+}
+
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   const requestUrl = new URL(request.url)
@@ -86,7 +103,25 @@ export async function GET(request) {
   const locationFromQuery = hasLocationQueryParam ? query.get('location') : null
   const locationFromSession =
     typeof session?.user?.location === 'string' ? session.user.location : null
+  const normalizedSessionLocation = normalizeLocationKey(locationFromSession)
+  const hasValidSessionLocation = isAllowedLocationKey(normalizedSessionLocation)
   const canSelectAnyLocation = userRole === 'admin' || userRole === 'dev'
+
+  if (!canSelectAnyLocation && !hasValidSessionLocation) {
+    return NextResponse.json(
+      {
+        success: true,
+        data: [],
+        meta: {
+          offset: parsePositiveInteger(query.get('offset'), 0),
+          limit: parsePositiveInteger(query.get('limit'), 10),
+          hasMore: false,
+        },
+      },
+      { status: 200 },
+    )
+  }
+
   const locationBase =
     canSelectAnyLocation && hasLocationQueryParam
       ? locationFromQuery

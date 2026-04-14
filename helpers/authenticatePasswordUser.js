@@ -101,7 +101,9 @@ const authenticatePasswordUser = async ({ location, rawData }) => {
       typeof user?.currentLocation === 'string' && user.currentLocation.trim()
         ? user.currentLocation.trim().toLowerCase()
         : null
-    const effectiveLocation = persistedLocation || resolvedLocation || null
+    // Не назначаем город автоматически в процессе входа.
+    // Если у пользователя в профиле город не задан, он должен выбрать его в кабинете.
+    const effectiveLocation = persistedLocation || null
 
     const updates = {
       authMethod: 'phone',

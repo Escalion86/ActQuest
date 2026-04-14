@@ -45,6 +45,21 @@ const normalizeLocationName = (locationKey) => {
   return rawName.charAt(0).toUpperCase() + rawName.slice(1)
 }
 
+const normalizeLocationKey = (value) => {
+  if (typeof value !== 'string') {
+    return ''
+  }
+  return value.trim().toLowerCase()
+}
+
+const isAllowedLocationKey = (value) => {
+  const normalized = normalizeLocationKey(value)
+  if (!normalized || normalized === 'all') {
+    return false
+  }
+  return Boolean(LOCATIONS?.[normalized] && !LOCATIONS[normalized]?.hidden)
+}
+
 const baseMenuItems = [
   { id: 'dashboard', label: 'Обзор', href: '/cabinet', icon: faGaugeHigh },
   { id: 'games', label: 'Игры', href: '/cabinet/games', icon: faGamepad },
@@ -157,7 +172,12 @@ const resolveInitialTheme = () => {
     return null
   }
 
-  const storedTheme = window.localStorage.getItem('cabinet-theme')
+  let storedTheme
+  try {
+    storedTheme = window.localStorage.getItem('cabinet-theme')
+  } catch {
+    storedTheme = undefined
+  }
   if (storedTheme === 'dark' || storedTheme === 'light') {
     return storedTheme
   }
@@ -260,7 +280,10 @@ const CabinetLayout = ({
   const userName =
     session?.user?.name || session?.user?.username || 'Пользователь'
   const userAvatar = getUserAvatarSrc(session?.user ?? null)
-  const locationKey = session?.user?.location ?? null
+  const sessionLocationKey = normalizeLocationKey(session?.user?.location)
+  const locationKey = isAllowedLocationKey(sessionLocationKey)
+    ? sessionLocationKey
+    : null
   const hasUserIdentity =
     Boolean(session?.user?.globalUserId) ||
     Boolean(session?.user?._id) ||
@@ -362,7 +385,11 @@ const CabinetLayout = ({
       return
     }
 
-    window.localStorage.setItem('cabinet-theme', theme)
+    try {
+      window.localStorage.setItem('cabinet-theme', theme)
+    } catch {
+      // ignore localStorage write errors on restricted browsers
+    }
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-theme', theme)
       document.documentElement.classList.toggle('dark', isDarkTheme)
@@ -393,10 +420,14 @@ const CabinetLayout = ({
     }
   }, [shouldForceLocationSelection])
 
-  const applyTheme = useCallback((nextTheme) => {
+const applyTheme = useCallback((nextTheme) => {
     const isDark = nextTheme === 'dark'
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('cabinet-theme', nextTheme)
+      try {
+        window.localStorage.setItem('cabinet-theme', nextTheme)
+      } catch {
+        // ignore localStorage write errors on restricted browsers
+      }
     }
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-theme', nextTheme)

@@ -340,11 +340,7 @@ const GameTeamsModal = ({
                                     <span className="text-xs font-medium px-2 py-1 rounded-full border border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
                                       {ratingBadge}
                                     </span>
-                                  ) : (
-                                    <span className="text-xs font-medium px-2 py-1 rounded-full border border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
-                                      Без рейтинга
-                                    </span>
-                                  )}
+                                  ) : null}
                                   <span
                                     className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium ${
                                       team.open

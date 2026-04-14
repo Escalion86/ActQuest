@@ -80,6 +80,34 @@ const normalizeExternalUrl = (value) => {
   return `https://${trimmed}`
 }
 
+const safeLocalStorageGet = (key, fallback = null) => {
+  if (typeof window === 'undefined') return fallback
+  try {
+    const value = window.localStorage.getItem(key)
+    return value === null ? fallback : value
+  } catch {
+    return fallback
+  }
+}
+
+const safeLocalStorageSet = (key, value) => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // ignore localStorage write errors on restricted browsers
+  }
+}
+
+const safeLocalStorageRemove = (key) => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // ignore localStorage write errors on restricted browsers
+  }
+}
+
 const orientation = (p, q, r) => {
   const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
   if (Math.abs(val) < 0.0001) return 0
@@ -710,7 +738,7 @@ const Index2Page = () => {
 
   useEffect(() => {
     const isOpen =
-      typeof window !== 'undefined' && localStorage.getItem(ACCESS_KEY) === '1'
+      typeof window !== 'undefined' && safeLocalStorageGet(ACCESS_KEY) === '1'
 
     if (isOpen) {
       setStage('main')
@@ -777,7 +805,7 @@ const Index2Page = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const savedArchiveImage = localStorage.getItem(ARCHIVE_IMAGE_KEY) || ''
+    const savedArchiveImage = safeLocalStorageGet(ARCHIVE_IMAGE_KEY) || ''
     if (savedArchiveImage) {
       setArchiveImage(savedArchiveImage)
     }
@@ -836,7 +864,7 @@ const Index2Page = () => {
 
     const savedOrderSolved =
       typeof window !== 'undefined' &&
-      localStorage.getItem(PROCESS_ORDER_SOLVED_KEY) === '1'
+      safeLocalStorageGet(PROCESS_ORDER_SOLVED_KEY) === '1'
     if (savedOrderSolved) {
       setProcessRowsState(flowRows)
       setIsProcessOrderLocked(true)
@@ -847,8 +875,8 @@ const Index2Page = () => {
     setGrabbedProcessRowId(null)
 
     if (typeof window !== 'undefined') {
-      const savedSecret = localStorage.getItem(MAP_SECRET_FOUND_KEY) === '1'
-      const savedComplete = localStorage.getItem(MAP_GAME_COMPLETE_KEY) === '1'
+      const savedSecret = safeLocalStorageGet(MAP_SECRET_FOUND_KEY) === '1'
+      const savedComplete = safeLocalStorageGet(MAP_GAME_COMPLETE_KEY) === '1'
 
       if (savedSecret) {
         setSecretFound(true)
@@ -857,10 +885,10 @@ const Index2Page = () => {
       if (savedComplete) {
         try {
           const savedPath = JSON.parse(
-            localStorage.getItem(MAP_GAME_PATH_KEY) || '[]',
+            safeLocalStorageGet(MAP_GAME_PATH_KEY) || '[]',
           )
           const savedSegments = JSON.parse(
-            localStorage.getItem(MAP_GAME_SEGMENTS_KEY) || '[]',
+            safeLocalStorageGet(MAP_GAME_SEGMENTS_KEY) || '[]',
           )
           if (Array.isArray(savedPath) && Array.isArray(savedSegments)) {
             setSecretFound(true)
@@ -902,7 +930,7 @@ const Index2Page = () => {
       setIsProcessOrderLocked(true)
       setGrabbedProcessRowId(null)
       if (typeof window !== 'undefined') {
-        localStorage.setItem(PROCESS_ORDER_SOLVED_KEY, '1')
+        safeLocalStorageSet(PROCESS_ORDER_SOLVED_KEY, '1')
       }
     }
   }, [isProcessOrderLocked, processRowsState, stage])
@@ -972,7 +1000,7 @@ const Index2Page = () => {
       setScenarioAccessGlitch(false)
       const isDone =
         typeof window !== 'undefined' &&
-        localStorage.getItem(SCENARIO_FALLBACK_DONE_KEY) === '1'
+        safeLocalStorageGet(SCENARIO_FALLBACK_DONE_KEY) === '1'
       setIsScenarioFallbackConfirmed(isDone)
       setScenarioAccessState(isDone ? 'allowed' : 'idle')
       return
@@ -1353,7 +1381,7 @@ const Index2Page = () => {
 
   const openRiddleReveal = (finalAnswer) => {
     if (answerStartedAt && typeof window !== 'undefined') {
-      localStorage.setItem(
+      safeLocalStorageSet(
         REACTION_MS_KEY,
         String(Date.now() - answerStartedAt),
       )
@@ -1436,7 +1464,7 @@ const Index2Page = () => {
     setIsScenarioFallbackConfirmed(true)
     setScenarioAccessState('allowed')
     if (typeof window !== 'undefined') {
-      localStorage.setItem(SCENARIO_FALLBACK_DONE_KEY, '1')
+      safeLocalStorageSet(SCENARIO_FALLBACK_DONE_KEY, '1')
     }
   }
 
@@ -1581,9 +1609,9 @@ const Index2Page = () => {
       setGameComplete(true)
       setGameStatus('Маршрут собран. Доступ к следующему уровню открыт.')
       if (typeof window !== 'undefined') {
-        localStorage.setItem(MAP_GAME_COMPLETE_KEY, '1')
-        localStorage.setItem(MAP_GAME_PATH_KEY, JSON.stringify(nextPath))
-        localStorage.setItem(
+        safeLocalStorageSet(MAP_GAME_COMPLETE_KEY, '1')
+        safeLocalStorageSet(MAP_GAME_PATH_KEY, JSON.stringify(nextPath))
+        safeLocalStorageSet(
           MAP_GAME_SEGMENTS_KEY,
           JSON.stringify(nextSegments),
         )
@@ -1705,8 +1733,8 @@ const Index2Page = () => {
     const resultAnswer = submittedRiddleAnswer || canonicalAnswer
 
     if (typeof window !== 'undefined') {
-      localStorage.setItem(ACCESS_KEY, '1')
-      localStorage.setItem(FIRST_ANSWER_KEY, resultAnswer)
+      safeLocalStorageSet(ACCESS_KEY, '1')
+      safeLocalStorageSet(FIRST_ANSWER_KEY, resultAnswer)
     }
 
     setAnswer(canonicalAnswer)
@@ -1715,15 +1743,15 @@ const Index2Page = () => {
 
   const handleResetProgress = () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(ACCESS_KEY)
-      localStorage.removeItem(FIRST_ANSWER_KEY)
-      localStorage.removeItem(REACTION_MS_KEY)
-      localStorage.removeItem(MAP_SECRET_FOUND_KEY)
-      localStorage.removeItem(MAP_GAME_COMPLETE_KEY)
-      localStorage.removeItem(MAP_GAME_PATH_KEY)
-      localStorage.removeItem(MAP_GAME_SEGMENTS_KEY)
-      localStorage.removeItem(ARCHIVE_IMAGE_KEY)
-      localStorage.removeItem(PROCESS_ORDER_SOLVED_KEY)
+      safeLocalStorageRemove(ACCESS_KEY)
+      safeLocalStorageRemove(FIRST_ANSWER_KEY)
+      safeLocalStorageRemove(REACTION_MS_KEY)
+      safeLocalStorageRemove(MAP_SECRET_FOUND_KEY)
+      safeLocalStorageRemove(MAP_GAME_COMPLETE_KEY)
+      safeLocalStorageRemove(MAP_GAME_PATH_KEY)
+      safeLocalStorageRemove(MAP_GAME_SEGMENTS_KEY)
+      safeLocalStorageRemove(ARCHIVE_IMAGE_KEY)
+      safeLocalStorageRemove(PROCESS_ORDER_SOLVED_KEY)
     }
 
     setStage('prelude')
@@ -1800,7 +1828,7 @@ const Index2Page = () => {
     setArchiveStatus('')
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(ARCHIVE_IMAGE_KEY, dataUrl)
+        safeLocalStorageSet(ARCHIVE_IMAGE_KEY, dataUrl)
       } catch {
         setArchiveStatus(
           'Не удалось сохранить файл: превышен лимит локального хранилища.',
@@ -2446,7 +2474,7 @@ const Index2Page = () => {
                     onClick={() => {
                       setSecretFound(true)
                       if (typeof window !== 'undefined') {
-                        localStorage.setItem(MAP_SECRET_FOUND_KEY, '1')
+                        safeLocalStorageSet(MAP_SECRET_FOUND_KEY, '1')
                       }
                     }}
                     className="absolute w-10 h-10 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 cursor-pointer"
@@ -3284,3 +3312,4 @@ const Index2Page = () => {
 }
 
 export default Index2Page
+

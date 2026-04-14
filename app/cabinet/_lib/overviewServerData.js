@@ -25,7 +25,15 @@ const normalizeLocation = (value) => {
   }
 
   const normalized = value.trim().toLowerCase()
-  return normalized || null
+  if (!normalized || normalized === 'all') {
+    return null
+  }
+
+  if (!LOCATIONS?.[normalized] || LOCATIONS[normalized]?.hidden) {
+    return null
+  }
+
+  return normalized
 }
 
 const normalizeLocationName = (locationKey) => {

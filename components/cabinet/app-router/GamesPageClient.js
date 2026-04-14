@@ -95,6 +95,25 @@ const DEFAULT_CREATE_GAME_CLONE_OPTIONS = {
 const normalizeGamesViewValue = (value) =>
   value === 'upcoming' || value === 'past' ? value : 'all'
 
+const safeLocalStorageGet = (key, fallback = null) => {
+  if (typeof window === 'undefined') return fallback
+  try {
+    const value = window.localStorage.getItem(key)
+    return value === null ? fallback : value
+  } catch {
+    return fallback
+  }
+}
+
+const safeLocalStorageSet = (key, value) => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // ignore localStorage write errors on restricted browsers
+  }
+}
+
 const toMinutes = (seconds) => {
   const numeric = Number(seconds)
   if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -1129,12 +1148,12 @@ const GamesPage = ({
       return
     }
 
-    const savedLocationFromUnifiedKey = window.localStorage.getItem(
+    const savedLocationFromUnifiedKey = safeLocalStorageGet(
       GAMES_FILTER_LOCATION_STORAGE_KEY,
     )
     const legacyStorageKey = `cabinet_games_location_filter_${gamesView}`
     const savedLocationFromLegacyKey =
-      window.localStorage.getItem(legacyStorageKey)
+      safeLocalStorageGet(legacyStorageKey)
     const savedLocation =
       savedLocationFromUnifiedKey || savedLocationFromLegacyKey
     const isSavedLocationValid =
@@ -1175,7 +1194,7 @@ const GamesPage = ({
       return
     }
 
-    window.localStorage.setItem(
+    safeLocalStorageSet(
       GAMES_FILTER_LOCATION_STORAGE_KEY,
       gamesFilterLocation,
     )
@@ -1195,11 +1214,11 @@ const GamesPage = ({
       return
     }
 
-    const savedModeFromUnifiedKey = window.localStorage.getItem(
+    const savedModeFromUnifiedKey = safeLocalStorageGet(
       GAMES_DISPLAY_MODE_STORAGE_KEY,
     )
     const legacyStorageKey = `cabinet_games_display_mode_${gamesView}`
-    const savedModeFromLegacyKey = window.localStorage.getItem(legacyStorageKey)
+    const savedModeFromLegacyKey = safeLocalStorageGet(legacyStorageKey)
     const savedMode = savedModeFromUnifiedKey || savedModeFromLegacyKey
 
     if (savedMode === 'list' || savedMode === 'cards') {
@@ -1212,7 +1231,7 @@ const GamesPage = ({
       return
     }
 
-    window.localStorage.setItem(
+    safeLocalStorageSet(
       GAMES_DISPLAY_MODE_STORAGE_KEY,
       gamesDisplayMode,
     )
@@ -3550,7 +3569,7 @@ const GamesPage = ({
         tasks: Array.isArray(gameForPreview?.tasks) ? gameForPreview.tasks : [],
       }
 
-      window.localStorage.setItem(draftKey, JSON.stringify(draftPayload))
+      safeLocalStorageSet(draftKey, JSON.stringify(draftPayload))
       router.push(
         `/cabinet/admin/task-preview?draftKey=${encodeURIComponent(draftKey)}&taskIndex=${encodeURIComponent(String(normalizedTaskIndex))}`,
       )

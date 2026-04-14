@@ -24,7 +24,7 @@ import { LOCATIONS } from '@server/serverConstants'
 const PUBLIC_API_BASE = '/api/public'
 
 const defaultLocation =
-  Object.entries(LOCATIONS).find(([, value]) => !value.hidden)?.[0] ?? 'dev'
+  Object.entries(LOCATIONS).find(([, value]) => !value.hidden)?.[0] ?? ''
 const isVkDebugEnabled =
   process.env.NEXT_PUBLIC_VK_AUTH_DEBUG === 'true' ||
   process.env.NEXT_PUBLIC_VK_DEBUG_LOGS === 'true'
@@ -97,7 +97,18 @@ const CabinetLoginPage = ({
   const currentPath = `${pathname || ''}${
     searchParams?.toString() ? `?${searchParams.toString()}` : ''
   }`
-  const authLocation = session?.user?.location || defaultLocation
+  const normalizedSessionLocation =
+    typeof session?.user?.location === 'string'
+      ? session.user.location.trim().toLowerCase()
+      : ''
+  const authLocation =
+    normalizedSessionLocation &&
+    normalizedSessionLocation !== 'all' &&
+    LOCATIONS?.[normalizedSessionLocation] &&
+    !LOCATIONS[normalizedSessionLocation]?.hidden
+      ? normalizedSessionLocation
+      : ''
+  const siteAccessLocation = authLocation || defaultLocation
   const isVkSignInEnabled =
     isVkAuthVisible && siteAccess.allowSiteAuth && siteAccess.enableVkOneTap
   const isAuthResolvedAsGuest = status === 'unauthenticated'
@@ -138,22 +149,22 @@ const CabinetLoginPage = ({
   }, [isAuthenticating])
 
   useEffect(() => {
-    if (!isClient || !authLocation) {
+    if (!isClient || !siteAccessLocation) {
       return undefined
     }
 
     let cancelled = false
 
     const fetchSiteAccess = async () => {
-      appendAuthDebug('site_access_fetch_start', { location: authLocation })
+      appendAuthDebug('site_access_fetch_start', { location: siteAccessLocation })
       setIsSiteAccessLoading(true)
       try {
         const response = await fetch(
-          `${PUBLIC_API_BASE}/site-access?location=${encodeURIComponent(authLocation)}`,
+          `${PUBLIC_API_BASE}/site-access?location=${encodeURIComponent(siteAccessLocation)}`,
         )
         const json = await response.json()
         appendAuthDebug('site_access_fetch_response', {
-          location: authLocation,
+          location: siteAccessLocation,
           ok: response.ok,
           success: json?.success ?? null,
           data: json?.data ?? null,
@@ -176,7 +187,7 @@ const CabinetLoginPage = ({
 
       if (!cancelled) {
         setSiteAccess(defaultSiteAccess)
-        appendAuthDebug('site_access_fallback_default', { location: authLocation })
+        appendAuthDebug('site_access_fallback_default', { location: siteAccessLocation })
       }
     }
 
@@ -185,7 +196,7 @@ const CabinetLoginPage = ({
     return () => {
       cancelled = true
     }
-  }, [authLocation, isClient])
+  }, [isClient, siteAccessLocation])
 
   useEffect(() => {
     if (!isClient || !isVkDebugEnabled) return undefined
@@ -280,7 +291,7 @@ const CabinetLoginPage = ({
         const result = await signIn('vk', {
           redirect: false,
           callbackUrl: absoluteCallbackUrl,
-          location: authLocation,
+          location: authLocation || undefined,
           mode: 'login',
           code,
           deviceId,
@@ -416,7 +427,7 @@ const CabinetLoginPage = ({
           redirect: false,
           callbackUrl: absoluteCallbackUrl,
           data: payload,
-          location: authLocation,
+          location: authLocation || undefined,
         })
 
         if (result?.error) {

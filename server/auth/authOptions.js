@@ -542,6 +542,13 @@ export const authOptions = {
 
         session.user = normalizeUserForSession(user, fallbackUser)
 
+        if (user) {
+          // Если пользователь загружен из БД, используем только значение локации из БД.
+          // Важно: null из БД не должен подменяться старым token.location.
+          session.user.location =
+            user.location ?? user.currentLocation ?? user.accountLocation ?? null
+        }
+
         // Если разработчик импер сонирует, добавить индикатор
         if (isDeveloperImpersonating) {
           session.user.isDeveloperImpersonating = true
@@ -595,7 +602,9 @@ export const authOptions = {
         token.globalUserId ??
         token.userId ??
         null
-      session.user.location = token.location ?? session.user.location ?? null
+      // Приоритет у актуального значения из БД (session.user.location),
+      // а token.location используем только как fallback.
+      session.user.location = session.user.location ?? token.location ?? null
       session.user.role = session.user.role ?? token.role ?? 'client'
       session.user.isTestAuth = Boolean(token.isTestAuth)
 
