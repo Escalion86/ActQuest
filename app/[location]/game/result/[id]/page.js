@@ -5,6 +5,7 @@ import { getData } from '@helpers/CRUD'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { useSession } from 'next-auth/react'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 // import Image from 'next/image'
 import cn from 'classnames'
@@ -374,6 +375,7 @@ const TimeResult = ({
 
 const GameBlock = ({ game, isDarkTheme }) => {
   if (!game) return null
+  const { data: session } = useSession()
   const [start, setStart] = useState(false)
   const [duration, setDuration] = useState(40) //totalSeconds / 100
   const [isForceFinished, setIsForceFinished] = useState(false)
@@ -404,6 +406,40 @@ const GameBlock = ({ game, isDarkTheme }) => {
       teamResult,
     ]),
   )
+  const userParticipationTeamIds = useMemo(() => {
+    const sessionUser = session?.user ?? {}
+    const sessionUserId = normalizeId(
+      sessionUser?.globalUserId ??
+        sessionUser?.userId ??
+        sessionUser?._id ??
+        null,
+    )
+    const sessionTelegramId = normalizeId(sessionUser?.id)
+
+    if (!sessionUserId && !sessionTelegramId) {
+      return new Set()
+    }
+
+    return new Set(
+      teamsUsers
+        .filter((membership) => {
+          const membershipUserId = normalizeId(membership?.userId)
+          const membershipTelegramId = normalizeId(membership?.userTelegramId)
+
+          if (sessionUserId && membershipUserId === sessionUserId) {
+            return true
+          }
+
+          if (sessionTelegramId && membershipTelegramId === sessionTelegramId) {
+            return true
+          }
+
+          return false
+        })
+        .map((membership) => normalizeId(membership?.teamId))
+        .filter(Boolean),
+    )
+  }, [session?.user, teamsUsers])
   const teamById = new Map(
     teams.map((team) => [normalizeId(team?._id ?? team?.id), team]),
   )
@@ -413,12 +449,22 @@ const GameBlock = ({ game, isDarkTheme }) => {
     return {
       ...gameTeam,
       registrationOrder: index,
+      teamId,
+      outOfCompetition: Boolean(gameTeam?.outOfCompetition),
       team: teamById.get(teamId),
       computedTeam: computedByTeamId.get(teamId) || null,
     }
   })
   const gameTeamsWithTeams = useMemo(() => {
-    const sorted = [...gameTeamsWithTeamsBase]
+    const visibleTeams = gameTeamsWithTeamsBase.filter((item) => {
+      if (!item?.outOfCompetition) {
+        return true
+      }
+
+      return userParticipationTeamIds.has(normalizeId(item?.teamId))
+    })
+
+    const sorted = [...visibleTeams]
 
     if (sortMode === 'registration') {
       sorted.sort((a, b) => {
@@ -456,7 +502,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
     })
 
     return sorted
-  }, [gameTeamsWithTeamsBase, sortMode])
+  }, [gameTeamsWithTeamsBase, sortMode, userParticipationTeamIds])
 
   const totalSeconds = getSecondsBetween(game.dateStartFact, game.dateEndFact)
 

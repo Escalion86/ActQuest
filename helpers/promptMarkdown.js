@@ -7,6 +7,13 @@ const escapeHtml = (value) =>
 
 const normalizeLineBreaks = (value) => String(value || '').replace(/\r\n?/g, '\n')
 
+const normalizePastedMarkdownArtifacts = (value) =>
+  normalizeLineBreaks(value)
+    // Иногда при копировании markdown превращается в текстовые <br>
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Иногда fenced-блоки попадают как экранированные \`\`\`
+    .replace(/\\`\\`\\`/g, '```')
+
 const formatInlineMarkdownToHtml = (value) => {
   const escaped = escapeHtml(value)
 
@@ -19,10 +26,11 @@ const formatInlineMarkdownToHtml = (value) => {
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/~~([^~]+)~~/g, '<del>$1</del>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>')
 }
 
 export const markdownToHtml = (markdownValue) => {
-  const source = normalizeLineBreaks(markdownValue).trim()
+  const source = normalizePastedMarkdownArtifacts(markdownValue).trim()
   if (!source) {
     return '<p></p>'
   }
@@ -59,7 +67,7 @@ export const markdownToHtml = (markdownValue) => {
         index += 1
       }
       blocks.push(
-        `<blockquote><p>${formatInlineMarkdownToHtml(quoteLines.join('<br>'))}</p></blockquote>`,
+        `<blockquote><p>${formatInlineMarkdownToHtml(quoteLines.join('\n'))}</p></blockquote>`,
       )
       continue
     }
@@ -111,7 +119,7 @@ export const markdownToHtml = (markdownValue) => {
       paragraphLines.push(lines[index].trim())
       index += 1
     }
-    blocks.push(`<p>${formatInlineMarkdownToHtml(paragraphLines.join('<br>'))}</p>`)
+    blocks.push(`<p>${formatInlineMarkdownToHtml(paragraphLines.join('\n'))}</p>`)
   }
 
   return blocks.join('') || '<p></p>'

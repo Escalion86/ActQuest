@@ -117,10 +117,12 @@ const collectResultMessages = ({
       if (isBreakState && /перерыв/i.test(normalized)) {
         return false
       }
+      if (/(^|\s)введите\s+код/i.test(normalized)) {
+        return false
+      }
       if (
         isGameCompletion &&
-        (/(^|\s)введите\s+код/i.test(normalized) ||
-          /код\s+не\s+верен/i.test(normalized))
+        /код\s+не\s+верен/i.test(normalized)
       ) {
         return false
       }
@@ -162,6 +164,7 @@ const normalizeTaskPayload = ({
   taskDisplayTaskHtml = '',
   taskDisplayTaskText = '',
   taskDisplayClues = [],
+  taskDisplayMeta = null,
   taskState = 'idle',
   result = null,
   postCompletionMessage = '',
@@ -172,6 +175,10 @@ const normalizeTaskPayload = ({
   displayTaskHtml: taskDisplayTaskHtml || '',
   displayTaskText: taskDisplayTaskText || '',
   displayClues: Array.isArray(taskDisplayClues) ? taskDisplayClues : [],
+  displayMeta:
+    taskDisplayMeta && typeof taskDisplayMeta === 'object'
+      ? taskDisplayMeta
+      : null,
   state: taskState || 'idle',
   result: result || null,
   postCompletionMessage: postCompletionMessage || '',
@@ -184,6 +191,7 @@ const areTaskPayloadsEqual = (prev, next) =>
   prev.displayTaskHtml === next.displayTaskHtml &&
   prev.displayTaskText === next.displayTaskText &&
   prev.displayClues === next.displayClues &&
+  prev.displayMeta === next.displayMeta &&
   prev.state === next.state &&
   prev.result === next.result &&
   prev.postCompletionMessage === next.postCompletionMessage
@@ -224,6 +232,7 @@ function GameTeamPage({
   taskDisplayTaskHtml,
   taskDisplayTaskText,
   taskDisplayClues,
+  taskDisplayMeta,
   taskState,
   postCompletionMessage,
   error,
@@ -261,6 +270,7 @@ function GameTeamPage({
       taskDisplayTaskHtml,
       taskDisplayTaskText,
       taskDisplayClues,
+      taskDisplayMeta,
       taskState,
       result,
       postCompletionMessage,
@@ -374,6 +384,7 @@ function GameTeamPage({
       taskDisplayTaskHtml,
       taskDisplayTaskText,
       taskDisplayClues,
+      taskDisplayMeta,
       taskState,
       result,
       postCompletionMessage,
@@ -393,6 +404,7 @@ function GameTeamPage({
     taskDisplayTaskHtml,
     taskDisplayTaskText,
     taskDisplayClues,
+    taskDisplayMeta,
     taskState,
     updateTaskData,
   ])
@@ -537,6 +549,7 @@ function GameTeamPage({
     displayTaskHtml: currentTaskDisplayTaskHtml,
     displayTaskText: currentTaskDisplayTaskText,
     displayClues: currentTaskDisplayClues,
+    displayMeta: currentTaskDisplayMeta,
     state: currentTaskState,
     result: currentResult,
     postCompletionMessage: currentPostCompletionMessage,
@@ -1196,6 +1209,7 @@ function GameTeamPage({
                   taskHtml={resolvedTaskHtml}
                   taskText={resolvedTaskText}
                   clues={visibleTaskClues}
+                  taskMeta={currentTaskDisplayMeta}
                   directoryBase={`games/process/task/${String(gameId || 'game')}/${String(teamId || 'team')}/${String(currentTaskState || 'state')}`}
                   taskClassName="mt-4 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
                   taskTextClassName="mt-4 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
@@ -1204,6 +1218,8 @@ function GameTeamPage({
                   clueTitleClassName="text-sm font-semibold text-cyan-900 dark:text-cyan-100"
                   clueContentClassName="mt-2 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
                   clueContentTextClassName="mt-2 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
+                  metaWrapperClassName="mt-4 space-y-1"
+                  metaTextClassName="text-base font-semibold leading-relaxed text-gray-700 dark:text-slate-200"
                 />
                 <div
                   ref={countdownPanelRef}
@@ -1381,6 +1397,12 @@ GameTeamPage.propTypes = {
       text: PropTypes.string,
     }),
   ),
+  taskDisplayMeta: PropTypes.shape({
+    mainCodesCount: PropTypes.number,
+    requiredCodesCount: PropTypes.number,
+    bonusCodesCount: PropTypes.number,
+    penaltyCodesCount: PropTypes.number,
+  }),
   taskState: PropTypes.oneOf(['idle', 'active', 'break', 'completed']),
   postCompletionMessage: PropTypes.string,
   error: PropTypes.string,
@@ -1400,6 +1422,7 @@ GameTeamPage.defaultProps = {
   taskDisplayTaskHtml: '',
   taskDisplayTaskText: '',
   taskDisplayClues: [],
+  taskDisplayMeta: null,
   taskState: 'idle',
   postCompletionMessage: '',
   error: null,

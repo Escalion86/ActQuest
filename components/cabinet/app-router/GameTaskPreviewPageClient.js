@@ -9,12 +9,58 @@ import RichTaskContentView from '@components/game/RichTaskContentView'
 import TaskDisplayWithClues from '@components/game/TaskDisplayWithClues'
 
 const gameTypeLabel = (type) => (type === 'photo' ? 'Фотоквест' : 'Автоквест')
+const resolveBackHrefByGameStatus = (statusValue) => {
+  const status = String(statusValue || '')
+    .trim()
+    .toLowerCase()
+
+  if (['finished', 'closed', 'canceled'].includes(status)) {
+    return '/cabinet/games-past'
+  }
+
+  return '/cabinet/games-upcoming'
+}
+const buildBackHref = ({ status, gameId }) => {
+  const baseHref = resolveBackHrefByGameStatus(status)
+  const normalizedGameId =
+    typeof gameId === 'string' ? gameId.trim() : String(gameId || '').trim()
+
+  if (!normalizedGameId) {
+    return baseHref
+  }
+
+  const params = new URLSearchParams()
+  params.set('gameId', normalizedGameId)
+  params.set('open', 'tasks')
+  return `${baseHref}?${params.toString()}`
+}
+const normalizeString = (value) =>
+  typeof value === 'string' ? value.trim() : ''
+
+const toFiniteNonNegativeIntegerOrNull = (value) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return null
+  const normalized = Math.floor(numeric)
+  return normalized >= 0 ? normalized : null
+}
+
+const buildTaskDisplayMeta = (task) => ({
+  mainCodesCount: Array.isArray(task?.codes) ? task.codes.length : 0,
+  requiredCodesCount: toFiniteNonNegativeIntegerOrNull(
+    task?.numCodesToCompliteTask,
+  ),
+  bonusCodesCount: Array.isArray(task?.bonusCodes) ? task.bonusCodes.length : 0,
+  penaltyCodesCount: Array.isArray(task?.penaltyCodes)
+    ? task.penaltyCodes.length
+    : 0,
+})
 
 export default function GameTaskPreviewPageClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const gameId = searchParams.get('gameId')
   const draftKey = searchParams.get('draftKey')
+  const variantParam = searchParams.get('variant')
   const taskIndexRaw = Number(searchParams.get('taskIndex') || 0)
   const taskIndex = Number.isFinite(taskIndexRaw) ? Math.max(0, taskIndexRaw) : 0
 
@@ -43,7 +89,15 @@ export default function GameTaskPreviewPageClient() {
           Array.isArray(json.data.variants) && json.data.variants.length > 0
             ? String(json.data.variants[0].id)
             : 'task'
-        setSelectedVariantId(firstVariantId)
+        const preferredVariant = normalizeString(variantParam)
+        const variantExists = Array.isArray(json.data.variants)
+          ? json.data.variants.some(
+              (variant) => String(variant?.id) === preferredVariant,
+            )
+          : false
+        setSelectedVariantId(
+          variantExists && preferredVariant ? preferredVariant : firstVariantId,
+        )
       } else if (draftKey) {
         const rawPayload = window.localStorage.getItem(draftKey)
         if (!rawPayload) {
@@ -95,10 +149,17 @@ export default function GameTaskPreviewPageClient() {
             title: String(task?.title || ''),
             postMessage: String(task?.postMessage || ''),
             cluesCount: clues.length,
+            displayMeta: buildTaskDisplayMeta(task),
           },
           variants,
         })
-        setSelectedVariantId('task')
+        const preferredVariant = normalizeString(variantParam)
+        const variantExists = variants.some(
+          (variant) => String(variant?.id) === preferredVariant,
+        )
+        setSelectedVariantId(
+          variantExists && preferredVariant ? preferredVariant : 'task',
+        )
       } else {
         throw new Error('Не указан идентификатор игры или черновика')
       }
@@ -108,7 +169,7 @@ export default function GameTaskPreviewPageClient() {
     } finally {
       setLoading(false)
     }
-  }, [draftKey, gameId, taskIndex])
+  }, [draftKey, gameId, taskIndex, variantParam])
 
   useEffect(() => {
     fetchPreview()
@@ -125,6 +186,14 @@ export default function GameTaskPreviewPageClient() {
       variants[0] ||
       null,
     [selectedVariantId, variants],
+  )
+  const backHref = useMemo(
+    () =>
+      buildBackHref({
+        status: data?.game?.status,
+        gameId: data?.game?.id,
+      }),
+    [data?.game?.id, data?.game?.status],
   )
   const selectedTaskHtml = useMemo(
     () => String(selectedVariant?.taskHtml || selectedVariant?.html || ''),
@@ -146,15 +215,21 @@ export default function GameTaskPreviewPageClient() {
     taskIndex < Number(data?.game?.tasksCount) - 1
 
   const openTask = (nextTaskIndex) => {
+    const params = new URLSearchParams()
+    params.set('taskIndex', String(nextTaskIndex))
+    if (selectedVariant?.id) {
+      params.set('variant', String(selectedVariant.id))
+    }
+
     if (gameId) {
       router.push(
-        `/cabinet/admin/task-preview?gameId=${encodeURIComponent(gameId)}&taskIndex=${encodeURIComponent(String(nextTaskIndex))}`,
+        `/cabinet/admin/task-preview?gameId=${encodeURIComponent(gameId)}&${params.toString()}`,
       )
       return
     }
     if (draftKey) {
       router.push(
-        `/cabinet/admin/task-preview?draftKey=${encodeURIComponent(draftKey)}&taskIndex=${encodeURIComponent(String(nextTaskIndex))}`,
+        `/cabinet/admin/task-preview?draftKey=${encodeURIComponent(draftKey)}&${params.toString()}`,
       )
     }
   }
@@ -191,30 +266,32 @@ export default function GameTaskPreviewPageClient() {
           <div>
             <button
               type="button"
-              onClick={() => router.back()}
-              className="mb-2 text-sm text-slate-400 transition hover:text-slate-200"
+              onClick={() => {
+                router.push(backHref)
+              }}
+              className="mb-2 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
             >
               ← Назад
             </button>
-            <h1 className="text-xl font-semibold text-slate-100 sm:text-2xl">
+            <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100 sm:text-2xl">
               Предпросмотр задания
             </h1>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
               {data?.game?.name || 'Игра'} · {gameTypeLabel(data?.game?.type)}
             </p>
           </div>
         </div>
 
-        <div className="mb-5 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4">
+        <div className="mb-5 rounded-2xl border border-slate-300 bg-slate-100 p-4 dark:border-slate-700/60 dark:bg-slate-900/60">
           <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 Сценарий показа
               </span>
               <select
                 value={selectedVariant?.id || ''}
                 onChange={(event) => setSelectedVariantId(event.target.value)}
-                className="w-full rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               >
                 {variants.map((variant) => (
                   <option key={variant.id} value={variant.id}>
@@ -228,7 +305,7 @@ export default function GameTaskPreviewPageClient() {
               type="button"
               onClick={() => openTask(taskIndex - 1)}
               disabled={!canGoPrev}
-              className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 transition hover:border-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 transition hover:border-cyan-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
             >
               ← Предыдущее
             </button>
@@ -237,7 +314,7 @@ export default function GameTaskPreviewPageClient() {
               type="button"
               onClick={() => openTask(taskIndex + 1)}
               disabled={!canGoNext}
-              className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-200 transition hover:border-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 transition hover:border-cyan-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
             >
               Следующее →
             </button>
@@ -249,7 +326,7 @@ export default function GameTaskPreviewPageClient() {
             <h2 className="text-lg font-semibold text-primary dark:text-white">
               Текущее задание
             </h2>
-            <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-200">
+            <span className="rounded-full border border-cyan-300 bg-cyan-100 px-2.5 py-1 text-xs font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
               {Number(data?.task?.index) + 1}. {data?.task?.title || 'Без названия'}
             </span>
           </div>
@@ -262,6 +339,11 @@ export default function GameTaskPreviewPageClient() {
               taskHtml={selectedTaskHtml}
               taskText={selectedTaskText}
               clues={selectedClues}
+              taskMeta={
+                data?.task?.displayMeta && typeof data.task.displayMeta === 'object'
+                  ? data.task.displayMeta
+                  : null
+              }
               directoryBase={`games/preview/task/${String(data?.game?.id || 'draft')}/${String(data?.task?.index || 0)}/${String(selectedVariant?.id || 'task')}`}
               taskClassName="text-base leading-relaxed text-gray-700 dark:text-slate-200"
               taskTextClassName="text-base leading-relaxed text-gray-700 dark:text-slate-200"
@@ -270,6 +352,8 @@ export default function GameTaskPreviewPageClient() {
               clueTitleClassName="text-sm font-semibold text-cyan-900 dark:text-cyan-100"
               clueContentClassName="mt-2 text-base leading-relaxed text-gray-700 dark:text-slate-200"
               clueContentTextClassName="mt-2 text-base leading-relaxed text-gray-700 dark:text-slate-200"
+              metaWrapperClassName="mt-4 space-y-1"
+              metaTextClassName="text-base font-semibold leading-relaxed text-gray-700 dark:text-slate-200"
             />
           </div>
         </section>

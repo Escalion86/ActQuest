@@ -830,6 +830,12 @@ select.aq-select-compact {
   background-position: right 0.9rem center !important;
 }
 
+/* TaskRichEditor: keep chevron closer to the right edge only inside editor */
+.aq-task-rich-editor select:not([multiple]):not([size]) {
+  padding-right: 2.25rem !important;
+  background-position: right 0.46rem center !important;
+}
+
 /* Tighter arrow position for compact control select on game-control page */
 select.aq-select-game-control:not([multiple]):not([size]) {
   padding-right: 2.28rem !important;

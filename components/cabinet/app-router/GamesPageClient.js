@@ -470,6 +470,9 @@ const getUserParticipationTeams = (game) =>
     })
     .filter(Boolean)
 
+const isObjectIdLike = (value) =>
+  typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value.trim())
+
 const cloneGameDraft = (game) => {
   if (!game || typeof game !== 'object') {
     return null
@@ -964,6 +967,8 @@ const GamesPage = ({
   const [selectedTeamToAdd, setSelectedTeamToAdd] = useState('')
   const [isAddingTeam, setIsAddingTeam] = useState(false)
   const [removingTeamIds, setRemovingTeamIds] = useState([])
+  const [updatingOutOfCompetitionTeamIds, setUpdatingOutOfCompetitionTeamIds] =
+    useState([])
   const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
   const [isResultsModalOpen, setIsResultsModalOpen] = useState(false)
@@ -1357,35 +1362,9 @@ const GamesPage = ({
     })
     setSelectedTeamToAdd('')
     setRemovingTeamIds([])
+    setUpdatingOutOfCompetitionTeamIds([])
     setSelectedModeratorToAdd('')
   }, [isEditModalOpen, isTasksModalOpen, selectedGameId])
-
-  useEffect(() => {
-    const requestedGameId = searchParams?.get('gameId')
-
-    if (!requestedGameId || typeof requestedGameId !== 'string') {
-      return
-    }
-
-    const targetGame = games.find((game) => game?.id === requestedGameId)
-    if (!targetGame) {
-      return
-    }
-
-    setSelectedGameId(targetGame.id)
-    setIsDescriptionModalOpen(true)
-    setIsEditModalOpen(false)
-    setIsTasksModalOpen(false)
-    setIsTeamsModalOpen(false)
-    setIsTasksViewModalOpen(false)
-
-    const nextQuery = new URLSearchParams(searchParams?.toString() || '')
-    nextQuery.delete('gameId')
-    const nextUrl = nextQuery.toString()
-      ? `${pathname}?${nextQuery.toString()}`
-      : pathname
-    router.replace(nextUrl, { scroll: false })
-  }, [games, pathname, router, searchParams])
 
   const sortGamesForCurrentView = useCallback(
     (items) => {
@@ -3226,6 +3205,51 @@ const GamesPage = ({
     [canManageGameStatus],
   )
 
+  useEffect(() => {
+    const requestedGameId = searchParams?.get('gameId')
+    const requestedOpen = String(searchParams?.get('open') || '')
+      .trim()
+      .toLowerCase()
+
+    if (!requestedGameId || typeof requestedGameId !== 'string') {
+      return
+    }
+
+    const targetGame = games.find((game) => game?.id === requestedGameId)
+    if (!targetGame) {
+      return
+    }
+
+    if (requestedOpen === 'tasks' && canManageGame(targetGame)) {
+      setSelectedGameId(targetGame.id)
+      const draft = cloneGameDraft(targetGame)
+      setEditingGame(draft)
+      setEditingBaselineGame(cloneGameDraft(draft))
+      setIsDescriptionModalOpen(false)
+      setIsEditModalOpen(false)
+      setIsTasksModalOpen(true)
+      setIsTeamsModalOpen(false)
+      setIsTasksViewModalOpen(false)
+      setIsResultsModalOpen(false)
+    } else {
+      setSelectedGameId(targetGame.id)
+      setIsDescriptionModalOpen(true)
+      setIsEditModalOpen(false)
+      setIsTasksModalOpen(false)
+      setIsTeamsModalOpen(false)
+      setIsTasksViewModalOpen(false)
+      setIsResultsModalOpen(false)
+    }
+
+    const nextQuery = new URLSearchParams(searchParams?.toString() || '')
+    nextQuery.delete('gameId')
+    nextQuery.delete('open')
+    const nextUrl = nextQuery.toString()
+      ? `${pathname}?${nextQuery.toString()}`
+      : pathname
+    router.replace(nextUrl, { scroll: false })
+  }, [canManageGame, games, pathname, router, searchParams])
+
   const canOpenGameEditModal = useCallback(
     (game) => {
       if (!game) {
@@ -3416,6 +3440,134 @@ const GamesPage = ({
       setIsSaving(false)
     }
   }, [canEditSelectedGame, editingGame, selectedGame])
+
+  const handleSaveAndOpenTaskPreview = useCallback(
+    async (taskIndex) => {
+      const normalizedTaskIndex = Number.isFinite(Number(taskIndex))
+        ? Math.max(0, Math.trunc(Number(taskIndex)))
+        : 0
+      const gameToPreview = editingGame ?? selectedGame
+
+      if (!gameToPreview) {
+        return
+      }
+
+      let gameForPreview = gameToPreview
+
+      if (canEditSelectedGame && isDirty) {
+        setIsSaving(true)
+        setFeedback(null)
+
+        try {
+          const { json } = await requestApiJson(
+            `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameToPreview.id)}`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                data: buildUpdatePayload(gameToPreview),
+              }),
+              fallbackMessage: 'Не удалось сохранить задания перед предпросмотром',
+            },
+          )
+
+          const normalizedGame = normalizeGameForCabinet({
+            ...json.data,
+            teamsCount: gameToPreview.teamsCount,
+          })
+
+          setGames((prevGames) =>
+            prevGames.map((game) =>
+              game.id === normalizedGame.id ? normalizedGame : game,
+            ),
+          )
+          setPersistedGames((prevGames) =>
+            prevGames.map((game) =>
+              game.id === normalizedGame.id ? normalizedGame : game,
+            ),
+          )
+          setEditingGame(cloneGameDraft(normalizedGame))
+          setEditingBaselineGame(cloneGameDraft(normalizedGame))
+          setFeedback({ type: 'success', message: 'Задания сохранены' })
+
+          gameForPreview = normalizedGame
+        } catch (error) {
+          console.error('Failed to save game before task preview', error)
+          setFeedback({
+            type: 'error',
+            message:
+              error?.message ||
+              'Не удалось сохранить задания перед предпросмотром',
+          })
+          return
+        } finally {
+          setIsSaving(false)
+        }
+      }
+
+      const previewGameId =
+        typeof gameForPreview?.mongoId === 'string' &&
+        isObjectIdLike(gameForPreview.mongoId)
+          ? gameForPreview.mongoId
+          : typeof gameForPreview?.id === 'string' &&
+              isObjectIdLike(gameForPreview.id)
+            ? gameForPreview.id
+            : ''
+
+      if (previewGameId) {
+        router.push(
+          `/cabinet/admin/task-preview?gameId=${encodeURIComponent(previewGameId)}&taskIndex=${encodeURIComponent(String(normalizedTaskIndex))}`,
+        )
+        return
+      }
+
+      if (typeof window === 'undefined') {
+        return
+      }
+
+      const draftKey = `aq-task-preview-draft-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`
+      const draftPayload = {
+        game: {
+          id:
+            typeof gameForPreview?.id === 'string' ? gameForPreview.id : '',
+          name:
+            typeof gameForPreview?.name === 'string' ? gameForPreview.name : '',
+          type: gameForPreview?.type === 'photo' ? 'photo' : 'classic',
+          location:
+            typeof gameForPreview?.location === 'string'
+              ? gameForPreview.location
+              : '',
+          status:
+            typeof gameForPreview?.status === 'string'
+              ? gameForPreview.status
+              : '',
+          taskDuration: Number(gameForPreview?.taskDuration) || 3600,
+          cluesDuration: Number(gameForPreview?.cluesDuration) || 1200,
+          breakDuration: Number(gameForPreview?.breakDuration) || 0,
+        },
+        tasks: Array.isArray(gameForPreview?.tasks) ? gameForPreview.tasks : [],
+      }
+
+      window.localStorage.setItem(draftKey, JSON.stringify(draftPayload))
+      router.push(
+        `/cabinet/admin/task-preview?draftKey=${encodeURIComponent(draftKey)}&taskIndex=${encodeURIComponent(String(normalizedTaskIndex))}`,
+      )
+    },
+    [
+      canEditSelectedGame,
+      editingGame,
+      isDirty,
+      router,
+      selectedGame,
+      setFeedback,
+      setGames,
+      setPersistedGames,
+      setEditingGame,
+      setEditingBaselineGame,
+    ],
+  )
 
   const handleAddPrice = useCallback(() => {
     if (!canEditSelectedGame) return
@@ -3943,6 +4095,7 @@ const GamesPage = ({
           return {
             id: entryId,
             teamId,
+            outOfCompetition: Boolean(entry?.outOfCompetition),
             teamName: teamInfo?.name || 'Неизвестная команда',
             teamDescription: teamInfo?.description || '',
             teamImage: teamInfo?.image || '',
@@ -4084,6 +4237,55 @@ const GamesPage = ({
       }
     },
     [loadTeamsModalData, selectedGame, teamsModalState.gameTeams],
+  )
+
+  const handleToggleTeamOutOfCompetition = useCallback(
+    async ({ gameTeamId, outOfCompetition }) => {
+      if (!selectedGame || !gameTeamId) {
+        return
+      }
+
+      setUpdatingOutOfCompetitionTeamIds((prev) =>
+        prev.includes(gameTeamId) ? prev : [...prev, gameTeamId],
+      )
+      setTeamsModalState((prev) => ({ ...prev, error: null }))
+
+      try {
+        await requestApiJson(
+          `${CABINET_GAMES_API_BASE}/${encodeURIComponent(selectedGame.id)}/teams`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              gameTeamId,
+              outOfCompetition: Boolean(outOfCompetition),
+            }),
+            fallbackMessage: 'Не удалось обновить флаг «Вне зачёта»',
+          },
+        )
+
+        setResultsCacheByGameId((prev) => {
+          const next = { ...prev }
+          delete next[selectedGame.id]
+          return next
+        })
+
+        await loadTeamsModalData()
+      } catch (error) {
+        console.error('Failed to toggle out-of-competition state', error)
+        setTeamsModalState((prev) => ({
+          ...prev,
+          error:
+            extractErrorMessage(error) ||
+            'Не удалось обновить флаг «Вне зачёта»',
+        }))
+      } finally {
+        setUpdatingOutOfCompetitionTeamIds((prev) =>
+          prev.filter((id) => id !== gameTeamId),
+        )
+      }
+    },
+    [loadTeamsModalData, selectedGame],
   )
 
   useEffect(() => {
@@ -6237,11 +6439,17 @@ const GamesPage = ({
                 handleCloseTeamsModal={handleCloseTeamsModal}
                 teamsModalState={teamsModalState}
                 removingTeamIds={removingTeamIds}
+                updatingOutOfCompetitionTeamIds={
+                  updatingOutOfCompetitionTeamIds
+                }
                 selectedTeamToAdd={selectedTeamToAdd}
                 setSelectedTeamToAdd={setSelectedTeamToAdd}
                 handleAddTeamToGame={handleAddTeamToGame}
                 isAddingTeam={isAddingTeam}
                 handleRemoveTeamFromGame={handleRemoveTeamFromGame}
+                handleToggleTeamOutOfCompetition={
+                  handleToggleTeamOutOfCompetition
+                }
                 isTeamsModalReadOnly={isTeamsModalReadOnly}
                 isRegisterModalOpen={isRegisterModalOpen}
                 handleCloseRegisterModal={handleCloseRegisterModal}
@@ -6347,6 +6555,7 @@ const GamesPage = ({
                   ],
                 )}
                 handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+                handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
                 taskDurationLabel={taskDurationLabel}
                 cluesDurationLabel={cluesDurationLabel}
                 clueModeDetails={clueModeDetails}

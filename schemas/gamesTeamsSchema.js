@@ -7,6 +7,10 @@ const gamesTeamsSchema = {
     type: String,
     required: [true, 'Необходимо указать id игры'],
   },
+  outOfCompetition: {
+    type: Boolean,
+    default: false,
+  },
   activeNum: {
     type: Number,
     default: 0,

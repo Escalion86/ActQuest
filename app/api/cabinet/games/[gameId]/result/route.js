@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
 
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import buildGameResultComputed from '@server/buildGameResultComputed'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
+import { authOptions } from '@server/auth/authOptions'
 import { toStringId } from '@helpers/idAndDate'
 
 const normalizeTeamsPlaces = (teamsPlaces) => {
@@ -35,9 +37,82 @@ const normalizeTeamsPlaces = (teamsPlaces) => {
   return {}
 }
 
-const buildRows = (result) => {
+const normalizeSessionIdentity = (session) => {
+  const sessionUser = session?.user ?? {}
+  const userId = toStringId(
+    sessionUser.globalUserId ??
+      sessionUser.userId ??
+      sessionUser._id ??
+      sessionUser.id ??
+      null,
+  )
+  const userTelegramId =
+    typeof sessionUser.id === 'string' && sessionUser.id.trim()
+      ? sessionUser.id.trim()
+      : null
+
+  return {
+    userId,
+    userTelegramId,
+  }
+}
+
+const resolveUserParticipationTeamIds = ({ result, session }) => {
+  const identity = normalizeSessionIdentity(session)
+  if (!identity.userId && !identity.userTelegramId) {
+    return []
+  }
+
+  const teamsUsers = Array.isArray(result?.teamsUsers) ? result.teamsUsers : []
+  const userId = identity.userId
+  const userTelegramId = identity.userTelegramId
+
+  return Array.from(
+    new Set(
+      teamsUsers
+        .filter((membership) => {
+          const membershipUserId = toStringId(membership?.userId)
+          const membershipTelegramId =
+            typeof membership?.userTelegramId === 'number'
+              ? String(membership.userTelegramId)
+              : typeof membership?.userTelegramId === 'string'
+                ? membership.userTelegramId.trim()
+                : ''
+
+          if (userId && membershipUserId && membershipUserId === userId) {
+            return true
+          }
+
+          if (
+            userTelegramId &&
+            membershipTelegramId &&
+            membershipTelegramId === userTelegramId
+          ) {
+            return true
+          }
+
+          return false
+        })
+        .map((membership) => toStringId(membership?.teamId))
+        .filter(Boolean),
+    ),
+  )
+}
+
+const buildRows = ({ result, includeTeamIds = [] }) => {
   const teams = Array.isArray(result?.teams) ? result.teams : []
   const teamsPlaces = normalizeTeamsPlaces(result?.teamsPlaces)
+  const includeSet = new Set(
+    (Array.isArray(includeTeamIds) ? includeTeamIds : [])
+      .map((item) => toStringId(item))
+      .filter(Boolean),
+  )
+  const outOfCompetitionTeamIds = new Set(
+    (Array.isArray(result?.gameTeams) ? result.gameTeams : [])
+      .filter((entry) => Boolean(entry?.outOfCompetition))
+      .map((entry) => toStringId(entry?.teamId))
+      .filter(Boolean),
+  )
 
   const rows = teams.map((team) => {
     const teamId = toStringId(team?._id ?? team?.id)
@@ -55,7 +130,20 @@ const buildRows = (result) => {
     }
   })
 
-  return rows.sort((a, b) => {
+  return rows
+    .filter((row) => {
+      const normalizedTeamId = toStringId(row.teamId)
+      if (!normalizedTeamId) {
+        return false
+      }
+
+      if (outOfCompetitionTeamIds.has(normalizedTeamId)) {
+        return includeSet.has(normalizedTeamId)
+      }
+
+      return true
+    })
+    .sort((a, b) => {
     const aPlace = Number.isFinite(a.place) ? a.place : Number.MAX_SAFE_INTEGER
     const bPlace = Number.isFinite(b.place) ? b.place : Number.MAX_SAFE_INTEGER
 
@@ -63,11 +151,11 @@ const buildRows = (result) => {
       return aPlace - bPlace
     }
 
-    return a.teamName.localeCompare(b.teamName, 'ru')
-  })
+      return a.teamName.localeCompare(b.teamName, 'ru')
+    })
 }
 
-const resolveInteractiveResultsUrl = ({ gameId, game, result }) => {
+const resolveInteractiveResultsUrl = ({ gameId, result }) => {
   const explicitUrlCandidates = [
     result?.interactiveTableUrl,
     result?.interactiveResultsUrl,
@@ -83,20 +171,24 @@ const resolveInteractiveResultsUrl = ({ gameId, game, result }) => {
   return `/game/${encodeURIComponent(gameId)}/result`
 }
 
-const buildResponseData = ({ gameId, game, result, rows }) => {
+const buildResponseData = ({ gameId, game: _game, result, rows, userParticipationTeamIds }) => {
   const safeGameName =
-    typeof game.name === 'string' && game.name.trim().length > 0
-      ? game.name.trim()
+    typeof _game.name === 'string' && _game.name.trim().length > 0
+      ? _game.name.trim()
       : 'Без названия'
+  const participantsCount =
+    Number(result?.computed?.summary?.participantsCount) ||
+    (Array.isArray(result?.teamsUsers) ? result.teamsUsers.length : 0)
 
   return {
     gameId,
     gameName: safeGameName,
     rows,
     teamsCount: rows.length,
-    participantsCount: Array.isArray(result?.teamsUsers) ? result.teamsUsers.length : 0,
+    participantsCount,
     computed: result?.computed && typeof result.computed === 'object' ? result.computed : null,
-    interactiveResultsUrl: resolveInteractiveResultsUrl({ gameId, game, result }),
+    interactiveResultsUrl: resolveInteractiveResultsUrl({ gameId, result }),
+    userParticipationTeamIds,
   }
 }
 
@@ -124,6 +216,7 @@ const handleRequest = async ({ request, params, method }) => {
   }
 
   try {
+    const session = await getServerSession(authOptions)
     const db = await dbConnectGlobal()
 
     if (!db) {
@@ -237,7 +330,14 @@ const handleRequest = async ({ request, params, method }) => {
         updatedGame?.result && typeof updatedGame.result === 'object'
           ? updatedGame.result
           : nextResult
-      const rows = buildRows(updatedResult)
+      const userParticipationTeamIds = resolveUserParticipationTeamIds({
+        result: updatedResult,
+        session,
+      })
+      const rows = buildRows({
+        result: updatedResult,
+        includeTeamIds: userParticipationTeamIds,
+      })
 
       return NextResponse.json(
         {
@@ -247,6 +347,7 @@ const handleRequest = async ({ request, params, method }) => {
             game: updatedGame || game,
             result: updatedResult,
             rows,
+            userParticipationTeamIds,
           }),
           ratingUpdate: ratingsUpdateInfo,
         },
@@ -255,12 +356,22 @@ const handleRequest = async ({ request, params, method }) => {
     }
 
     const result = game.result && typeof game.result === 'object' ? game.result : {}
-    const rows = buildRows(result)
+    const userParticipationTeamIds = resolveUserParticipationTeamIds({
+      result,
+      session,
+    })
+    const rows = buildRows({ result, includeTeamIds: userParticipationTeamIds })
 
     return NextResponse.json(
       {
         success: true,
-        data: buildResponseData({ gameId: normalizedGameId, game, result, rows }),
+        data: buildResponseData({
+          gameId: normalizedGameId,
+          game,
+          result,
+          rows,
+          userParticipationTeamIds,
+        }),
       },
       { status: 200 },
     )

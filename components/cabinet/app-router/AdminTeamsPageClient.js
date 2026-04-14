@@ -29,6 +29,23 @@ const CABINET_ADMIN_API_BASE = '/api/cabinet/admin'
 const resolveRatingBadge = (rating) =>
   rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
 
+const OpenDoorIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    className="h-3.5 w-3.5"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M4 3h11v18H4z" />
+    <path d="M15 6h4l1 3v9l-1 3h-4" />
+    <circle cx="10.5" cy="12" r="0.8" fill="currentColor" stroke="none" />
+  </svg>
+)
+
 const serializeTeamForComparison = (team) => {
   if (!team) {
     return null
@@ -889,13 +906,14 @@ const AdminTeamsPage = ({
                             </span>
                           ) : null}
                           <span
-                            className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            className={`inline-flex items-center justify-center text-xs font-medium rounded-full ${
                               team.open
-                                ? 'border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
+                                ? 'h-7 w-7 border border-sky-300 bg-sky-100 text-sky-700 dark:border-[#00D1FF]/35 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff]'
                                 : 'border border-violet-300 bg-violet-100 text-violet-700 dark:border-[#7A00FF]/35 dark:bg-[#7A00FF]/12 dark:text-[#d9c8ff]'
                             }`}
+                            title={team.open ? 'Открыта' : 'Закрыта'}
                           >
-                            {team.open ? 'Открыта' : 'Закрыта'}
+                            {team.open ? <OpenDoorIcon /> : 'Закрыта'}
                           </span>
                           {canManageSelectedTeam ? (
                             <CardActionIconButton

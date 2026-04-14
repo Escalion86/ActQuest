@@ -72,11 +72,13 @@ const GameModals = ({
   handleCloseTeamsModal,
   teamsModalState,
   removingTeamIds,
+  updatingOutOfCompetitionTeamIds,
   selectedTeamToAdd,
   setSelectedTeamToAdd,
   handleAddTeamToGame,
   isAddingTeam,
   handleRemoveTeamFromGame,
+  handleToggleTeamOutOfCompetition,
   isTeamsModalReadOnly,
   isRegisterModalOpen,
   handleCloseRegisterModal,
@@ -152,6 +154,7 @@ const GameModals = ({
   isEditGameSeasonsLoading,
   isEditGameSeasonCreating,
   handleCreateSeasonForEditGame,
+  handleSaveAndOpenTaskPreview,
   taskDurationLabel,
   cluesDurationLabel,
   clueModeDetails,
@@ -237,6 +240,7 @@ const GameModals = ({
           isEditGameSeasonsLoading={isEditGameSeasonsLoading}
           isEditGameSeasonCreating={isEditGameSeasonCreating}
           handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+          handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
           canViewCodePhotos={canViewCodePhotos}
         />
       ) : null}
@@ -310,6 +314,7 @@ const GameModals = ({
           isEditGameSeasonsLoading={isEditGameSeasonsLoading}
           isEditGameSeasonCreating={isEditGameSeasonCreating}
           handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
+          handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
           sectionMode="tasks"
           modalTitleOverride={`Редактор заданий «${gameForEdit?.name || 'Без названия'}»`}
           canViewCodePhotos={canViewCodePhotos}
@@ -323,11 +328,13 @@ const GameModals = ({
           handleCloseTeamsModal={handleCloseTeamsModal}
           teamsModalState={teamsModalState}
           removingTeamIds={removingTeamIds}
+          updatingOutOfCompetitionTeamIds={updatingOutOfCompetitionTeamIds}
           selectedTeamToAdd={selectedTeamToAdd}
           setSelectedTeamToAdd={setSelectedTeamToAdd}
           handleAddTeamToGame={handleAddTeamToGame}
           isAddingTeam={isAddingTeam}
           handleRemoveTeamFromGame={handleRemoveTeamFromGame}
+          handleToggleTeamOutOfCompetition={handleToggleTeamOutOfCompetition}
           currentUserRole={currentUserRole}
           isReadOnly={isTeamsModalReadOnly}
         />
@@ -441,6 +448,7 @@ const teamShape = PropTypes.shape({
   teamName: PropTypes.string,
   teamDescription: PropTypes.string,
   teamId: PropTypes.string,
+  outOfCompetition: PropTypes.bool,
 })
 
 const availableTeamShape = PropTypes.shape({
@@ -542,11 +550,14 @@ GameModals.propTypes = {
     availableTeams: PropTypes.arrayOf(availableTeamShape).isRequired,
   }).isRequired,
   removingTeamIds: PropTypes.arrayOf(PropTypes.string).isRequired,
+  updatingOutOfCompetitionTeamIds: PropTypes.arrayOf(PropTypes.string)
+    .isRequired,
   selectedTeamToAdd: PropTypes.string,
   setSelectedTeamToAdd: PropTypes.func.isRequired,
   handleAddTeamToGame: PropTypes.func.isRequired,
   isAddingTeam: PropTypes.bool.isRequired,
   handleRemoveTeamFromGame: PropTypes.func.isRequired,
+  handleToggleTeamOutOfCompetition: PropTypes.func.isRequired,
   isTeamsModalReadOnly: PropTypes.bool,
   isRegisterModalOpen: PropTypes.bool.isRequired,
   handleCloseRegisterModal: PropTypes.func.isRequired,
@@ -668,6 +679,7 @@ GameModals.propTypes = {
   isEditGameSeasonsLoading: PropTypes.bool,
   isEditGameSeasonCreating: PropTypes.bool,
   handleCreateSeasonForEditGame: PropTypes.func.isRequired,
+  handleSaveAndOpenTaskPreview: PropTypes.func.isRequired,
   taskDurationLabel: PropTypes.string.isRequired,
   cluesDurationLabel: PropTypes.string.isRequired,
   clueModeDetails: PropTypes.shape({

@@ -14,6 +14,29 @@ const normalizeClues = (value) =>
     }))
     .filter((clue) => Boolean(clue.html || clue.text))
 
+const normalizeTaskMeta = (value) => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const mainCodesCount = Number(value.mainCodesCount)
+  const requiredCodesCount = Number(value.requiredCodesCount)
+  const bonusCodesCount = Number(value.bonusCodesCount)
+  const penaltyCodesCount = Number(value.penaltyCodesCount)
+
+  return {
+    mainCodesCount: Number.isFinite(mainCodesCount) ? Math.max(0, mainCodesCount) : 0,
+    requiredCodesCount:
+      Number.isFinite(requiredCodesCount) && requiredCodesCount > 0
+        ? requiredCodesCount
+        : null,
+    bonusCodesCount:
+      Number.isFinite(bonusCodesCount) ? Math.max(0, bonusCodesCount) : 0,
+    penaltyCodesCount:
+      Number.isFinite(penaltyCodesCount) ? Math.max(0, penaltyCodesCount) : 0,
+  }
+}
+
 const TaskDisplayWithClues = ({
   taskHtml,
   taskText,
@@ -26,8 +49,18 @@ const TaskDisplayWithClues = ({
   clueTitleClassName,
   clueContentClassName,
   clueContentTextClassName,
+  taskMeta,
+  metaWrapperClassName,
+  metaTextClassName,
 }) => {
   const normalizedClues = normalizeClues(clues)
+  const normalizedMeta = normalizeTaskMeta(taskMeta)
+  const shouldShowReducedRequiredCodes =
+    normalizedMeta?.requiredCodesCount &&
+    normalizedMeta.requiredCodesCount < normalizedMeta.mainCodesCount
+  const hasBonusOrPenaltyCodes =
+    (normalizedMeta?.bonusCodesCount || 0) > 0 ||
+    (normalizedMeta?.penaltyCodesCount || 0) > 0
 
   return (
     <>
@@ -58,6 +91,35 @@ const TaskDisplayWithClues = ({
           ))}
         </div>
       ) : null}
+
+      {normalizedMeta ? (
+        <div className={metaWrapperClassName}>
+          <p className={metaTextClassName}>
+            Количество кодов на локации: {normalizedMeta.mainCodesCount}
+          </p>
+          {shouldShowReducedRequiredCodes ? (
+            <p className={metaTextClassName}>
+              Для выполнения задания достаточно ввести кодов:{' '}
+              {normalizedMeta.requiredCodesCount}
+            </p>
+          ) : null}
+          {normalizedMeta.bonusCodesCount > 0 ? (
+            <p className={metaTextClassName}>
+              Есть бонусные коды: {normalizedMeta.bonusCodesCount}
+            </p>
+          ) : null}
+          {normalizedMeta.penaltyCodesCount > 0 ? (
+            <p className={metaTextClassName}>
+              Есть штрафные коды: {normalizedMeta.penaltyCodesCount}
+            </p>
+          ) : null}
+          {hasBonusOrPenaltyCodes ? (
+            <p className={metaTextClassName}>
+              Бонусные и штрафные коды работают до ввода основных кодов.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </>
   )
 }
@@ -81,6 +143,14 @@ TaskDisplayWithClues.propTypes = {
   clueTitleClassName: PropTypes.string,
   clueContentClassName: PropTypes.string,
   clueContentTextClassName: PropTypes.string,
+  taskMeta: PropTypes.shape({
+    mainCodesCount: PropTypes.number,
+    requiredCodesCount: PropTypes.number,
+    bonusCodesCount: PropTypes.number,
+    penaltyCodesCount: PropTypes.number,
+  }),
+  metaWrapperClassName: PropTypes.string,
+  metaTextClassName: PropTypes.string,
 }
 
 TaskDisplayWithClues.defaultProps = {
@@ -100,7 +170,10 @@ TaskDisplayWithClues.defaultProps = {
     'mt-2 text-base leading-relaxed text-gray-700 dark:text-slate-200',
   clueContentTextClassName:
     'mt-2 text-base leading-relaxed text-gray-700 dark:text-slate-200',
+  taskMeta: null,
+  metaWrapperClassName: 'mt-4 space-y-2',
+  metaTextClassName:
+    'text-base font-semibold leading-relaxed text-gray-700 dark:text-slate-200',
 }
 
 export default TaskDisplayWithClues
-

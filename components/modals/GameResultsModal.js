@@ -82,6 +82,11 @@ const GameResultsModal = ({
       ? resultsModalState.computed
       : null
   const computedTeams = Array.isArray(computed?.teams) ? computed.teams : []
+  const computedOutOfCompetitionTeams = Array.isArray(
+    computed?.outOfCompetitionTeams,
+  )
+    ? computed.outOfCompetitionTeams
+    : []
   const rows = Array.isArray(resultsModalState?.rows) ? resultsModalState.rows : []
   const taskBoards = Array.isArray(computed?.taskBoards) ? computed.taskBoards : []
   const interactiveResultsUrl =
@@ -105,23 +110,6 @@ const GameResultsModal = ({
       ? computed.highlights
       : null
 
-  const rankingRows =
-    computedTeams.length > 0
-      ? computedTeams.map((team) => ({
-          teamId: team.teamId,
-          teamName: team.teamName,
-          place: team.place,
-          baseDisplay: team.baseDisplay,
-          finalDisplay: team.finalDisplay,
-        }))
-      : rows.map((row) => ({
-          teamId: row.teamId,
-          teamName: row.teamName,
-          place: row.place,
-          baseDisplay: null,
-          finalDisplay: null,
-        }))
-
   const userParticipationTeamIds = useMemo(
     () =>
       new Set(
@@ -134,6 +122,45 @@ const GameResultsModal = ({
       ),
     [resultsModalState?.userParticipationTeamIds],
   )
+
+  const selfOutOfCompetitionRows = useMemo(
+    () =>
+      computedOutOfCompetitionTeams
+        .filter((team) =>
+          userParticipationTeamIds.has(String(team?.teamId || '').trim()),
+        )
+        .map((team) => ({
+          teamId: team.teamId,
+          teamName: team.teamName,
+          place: null,
+          baseDisplay: team.baseDisplay,
+          finalDisplay: team.finalDisplay,
+          outOfCompetition: true,
+        })),
+    [computedOutOfCompetitionTeams, userParticipationTeamIds],
+  )
+
+  const rankingRows =
+    computedTeams.length > 0
+      ? [
+          ...computedTeams.map((team) => ({
+            teamId: team.teamId,
+            teamName: team.teamName,
+            place: team.place,
+            baseDisplay: team.baseDisplay,
+            finalDisplay: team.finalDisplay,
+            outOfCompetition: false,
+          })),
+          ...selfOutOfCompetitionRows,
+        ]
+      : rows.map((row) => ({
+          teamId: row.teamId,
+          teamName: row.teamName,
+          place: row.place,
+          baseDisplay: null,
+          finalDisplay: null,
+          outOfCompetition: false,
+        }))
 
   const hasCurrentUserTeamInTable = useMemo(
     () =>
@@ -300,7 +327,11 @@ const GameResultsModal = ({
                       {rankingRows.map((row) => (
                         <tr key={row.teamId || row.teamName} className="border-b border-slate-100 dark:border-slate-800">
                           <td className="px-3 py-2 text-slate-700 dark:text-slate-200">
-                            {Number.isFinite(Number(row.place)) ? row.place : '—'}
+                            {row.outOfCompetition
+                              ? 'ВЗ'
+                              : Number.isFinite(Number(row.place))
+                                ? row.place
+                                : '—'}
                           </td>
                           <td className="px-3 py-2 text-slate-700 dark:text-slate-200">
                             {userParticipationTeamIds.has(
@@ -315,6 +346,11 @@ const GameResultsModal = ({
                               </span>
                             ) : null}
                             {row.teamName}
+                            {row.outOfCompetition ? (
+                              <span className="ml-2 inline-flex rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                                Вне зачёта
+                              </span>
+                            ) : null}
                           </td>
                           <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{row.baseDisplay || '—'}</td>
                           <td className="px-3 py-2 text-slate-700 dark:text-slate-200">{row.finalDisplay || '—'}</td>

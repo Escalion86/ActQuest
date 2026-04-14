@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import dynamic from 'next/dynamic'
 
@@ -49,9 +49,6 @@ const normalizeComparablePlainText = (value) =>
 const hasMeaningfulRichMarkup = (value) =>
   /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(String(value || ''))
 
-const isObjectIdLike = (value) =>
-  typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value.trim())
-
 const normalizeComparableRichText = (richValue, plainValue) => {
   const rich = typeof richValue === 'string' ? richValue.trim() : ''
   if (!rich) {
@@ -88,6 +85,59 @@ const getClueText = (clue) => {
   }
   return stripHtmlToPlainText(clue?.clueRich)
 }
+
+const compactSingleLine = (value) =>
+  String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const truncateWithDots = (value, maxLength = 56) => {
+  const normalized = compactSingleLine(value)
+  if (!normalized) {
+    return ''
+  }
+  if (normalized.length <= maxLength) {
+    return normalized
+  }
+  return `${normalized.slice(0, Math.max(0, maxLength - 3)).trim()}...`
+}
+
+const CodePhotoBadgeIcon = () => (
+  <svg
+    className="h-3.5 w-3.5"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="7" width="18" height="14" rx="2" />
+    <path d="M9 7l1.5-2h3L15 7" />
+    <circle cx="12" cy="14" r="3.2" />
+  </svg>
+)
+
+const AccordionChevronIcon = ({ isOpen }) => (
+  <span
+    className={`inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition-transform duration-200 dark:border-slate-600 dark:bg-slate-900/80 dark:text-slate-200 ${
+      isOpen ? 'rotate-180' : 'rotate-0'
+    }`}
+    aria-hidden="true"
+  >
+    <svg viewBox="0 0 20 20" className="h-3.5 w-3.5">
+      <path
+        d="M4 7.5l6 6 6-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  </span>
+)
 
 const GameEditModal = ({
   selectedGame,
@@ -157,6 +207,7 @@ const GameEditModal = ({
   isEditGameSeasonsLoading,
   isEditGameSeasonCreating,
   handleCreateSeasonForEditGame,
+  handleSaveAndOpenTaskPreview,
   sectionMode,
   modalTitleOverride,
   canViewCodePhotos,
@@ -164,6 +215,9 @@ const GameEditModal = ({
   const isTasksOnly = sectionMode === 'tasks'
   const isClosedGame =
     String(selectedGame?.status || '').toLowerCase() === 'closed'
+  const [expandedCodeAccordions, setExpandedCodeAccordions] = useState(
+    () => new Set(),
+  )
   const isPhotoGame = selectedGame?.type === 'photo'
   const amountInputClassName =
     'aq-amount-step-input h-10 w-full rounded-xl border border-slate-200 bg-white px-12 py-2 text-center text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
@@ -239,6 +293,12 @@ const GameEditModal = ({
       )}
     </>
   )
+
+  useEffect(() => {
+    if (!isEditModalOpen) {
+      setExpandedCodeAccordions(new Set())
+    }
+  }, [isEditModalOpen, selectedGame?.id])
 
   if (!selectedGame) {
     console.error(
@@ -955,15 +1015,6 @@ const GameEditModal = ({
                     !hasFilledClue ||
                     (!isPhotoGame && normalizedCodes.length === 0) ||
                     hasCodesOverflowError
-                  const previewGameId =
-                    typeof selectedGame?.mongoId === 'string' &&
-                    isObjectIdLike(selectedGame.mongoId)
-                      ? selectedGame.mongoId
-                      : typeof selectedGame?.id === 'string' &&
-                          isObjectIdLike(selectedGame.id)
-                        ? selectedGame.id
-                        : ''
-
                   return (
                     <div
                       key={task.id}
@@ -1045,69 +1096,10 @@ const GameEditModal = ({
                               <CabinetButton
                                 type="button"
                                 variant="secondary"
-                                onClick={() => {
-                                  if (typeof window === 'undefined') {
-                                    return
-                                  }
-
-                                  const previewUrl = previewGameId
-                                    ? `/cabinet/admin/task-preview?gameId=${encodeURIComponent(
-                                        previewGameId,
-                                      )}&taskIndex=${encodeURIComponent(String(index))}`
-                                    : (() => {
-                                    const draftKey = `aq-task-preview-draft-${Date.now()}-${Math.random()
-                                      .toString(36)
-                                      .slice(2, 8)}`
-                                    const draftPayload = {
-                                      game: {
-                                        id:
-                                          typeof selectedGame?.id === 'string'
-                                            ? selectedGame.id
-                                            : '',
-                                        name:
-                                          typeof selectedGame?.name === 'string'
-                                            ? selectedGame.name
-                                            : '',
-                                        type:
-                                          selectedGame?.type === 'photo'
-                                            ? 'photo'
-                                            : 'classic',
-                                        location:
-                                          typeof selectedGame?.location ===
-                                          'string'
-                                            ? selectedGame.location
-                                            : '',
-                                        status:
-                                          typeof selectedGame?.status ===
-                                          'string'
-                                            ? selectedGame.status
-                                            : '',
-                                        taskDuration:
-                                          Number(selectedGame?.taskDuration) ||
-                                          3600,
-                                        cluesDuration:
-                                          Number(selectedGame?.cluesDuration) ||
-                                          1200,
-                                        breakDuration:
-                                          Number(selectedGame?.breakDuration) ||
-                                          0,
-                                      },
-                                      tasks: Array.isArray(selectedGame?.tasks)
-                                        ? selectedGame.tasks
-                                        : [],
-                                    }
-                                    window.localStorage.setItem(
-                                      draftKey,
-                                      JSON.stringify(draftPayload),
-                                    )
-                                    return `/cabinet/admin/task-preview?draftKey=${encodeURIComponent(
-                                        draftKey,
-                                      )}&taskIndex=${encodeURIComponent(String(index))}`
-                                  })()
-                                  window.open(previewUrl, '_blank', 'noopener,noreferrer')
-                                }}
+                                onClick={() => handleSaveAndOpenTaskPreview(index)}
+                                disabled={isSaving}
                               >
-                                Предпросмотр для игроков
+                                Сохранить и открыть предпросмотр
                               </CabinetButton>
                             </div>
                             <div className="flex flex-col gap-2 md:items-start">
@@ -1507,7 +1499,18 @@ const GameEditModal = ({
                                   {withRequiredMark('Коды задания')}
                                 </h4>
                                 <CabinetButton
-                                  onClick={() => handleAddTaskCode(task.id)}
+                                  onClick={() => {
+                                    const nextIndex = Array.isArray(task?.codes)
+                                      ? task.codes.length
+                                      : 0
+                                    const nextAccordionKey = `${task.id}-main-${nextIndex}`
+                                    setExpandedCodeAccordions((prev) => {
+                                      const next = new Set(prev)
+                                      next.add(nextAccordionKey)
+                                      return next
+                                    })
+                                    handleAddTaskCode(task.id)
+                                  }}
                                   variant="secondary"
                                   tone="brand"
                                   size="sm"
@@ -1518,12 +1521,58 @@ const GameEditModal = ({
                               </div>
                               {task.codes?.length > 0 ? (
                                 <div className="mt-3 space-y-3">
-                                  {task.codes.map((codeValue, codeIndex) => (
-                                    <div
+                                  {task.codes.map((codeValue, codeIndex) => {
+                                    const accordionKey = `${task.id}-main-${codeIndex}`
+                                    const isExpanded =
+                                      expandedCodeAccordions.has(accordionKey)
+
+                                    return (
+                                    <details
                                       key={`${task.id}-code-${codeIndex}`}
-                                      className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60"
+                                      open={isExpanded}
+                                      onToggle={(event) => {
+                                        const isOpen = Boolean(
+                                          event.currentTarget?.open,
+                                        )
+                                        setExpandedCodeAccordions((prev) => {
+                                          const next = new Set(prev)
+                                          if (isOpen) {
+                                            next.add(accordionKey)
+                                          } else {
+                                            next.delete(accordionKey)
+                                          }
+                                          return next
+                                        })
+                                      }}
+                                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60"
                                     >
-                                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                      <summary className="flex list-none cursor-pointer items-center justify-between gap-2 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 marker:content-none dark:text-slate-100">
+                                        <div className="min-w-0 flex items-center gap-2">
+                                          <span className="rounded-full border border-cyan-300/70 bg-cyan-100/70 px-2 py-0.5 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                            Код
+                                          </span>
+                                          <span className="truncate font-semibold">
+                                            {compactSingleLine(codeValue) ||
+                                              `Код ${codeIndex + 1}`}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          {(Array.isArray(task.codePhotos)
+                                            ? task.codePhotos[codeIndex]
+                                            : '') ? (
+                                            <span
+                                              className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
+                                              title="Фото добавлено"
+                                            >
+                                              <CodePhotoBadgeIcon />
+                                            </span>
+                                          ) : null}
+                                          <AccordionChevronIcon
+                                            isOpen={isExpanded}
+                                          />
+                                        </div>
+                                      </summary>
+                                      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                                         <CabinetInputField
                                           id={`task-code-${task.id}-${codeIndex}`}
                                           label={null}
@@ -1556,33 +1605,36 @@ const GameEditModal = ({
                                         </CabinetButton>
                                       </div>
                                       {canViewCodePhotos && (
-                                        <ImagesInput
-                                          label="Фото кода"
-                                          images={[
-                                            (Array.isArray(task.codePhotos)
-                                              ? task.codePhotos[codeIndex]
-                                              : '') || '',
-                                          ].filter(Boolean)}
-                                          onChange={(nextImages) =>
-                                            handleTaskCodePhotoChange(
-                                              task.id,
-                                              codeIndex,
-                                              Array.isArray(nextImages) &&
-                                                nextImages.length > 0
-                                                ? nextImages[0]
-                                                : '',
-                                            )
-                                          }
-                                          directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/codes/${codeIndex}`}
-                                          imageName={`task-code-${codeIndex + 1}`}
-                                          maxImages={1}
-                                          uploadLabel="Загрузить фото"
-                                          disabled={!canEditSelectedGame || isSaving}
-                                          previewShape="square"
-                                        />
+                                        <div className="mt-2">
+                                          <ImagesInput
+                                            label="Фото кода"
+                                            images={[
+                                              (Array.isArray(task.codePhotos)
+                                                ? task.codePhotos[codeIndex]
+                                                : '') || '',
+                                            ].filter(Boolean)}
+                                            onChange={(nextImages) =>
+                                              handleTaskCodePhotoChange(
+                                                task.id,
+                                                codeIndex,
+                                                Array.isArray(nextImages) &&
+                                                  nextImages.length > 0
+                                                  ? nextImages[0]
+                                                  : '',
+                                              )
+                                            }
+                                            directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/codes/${codeIndex}`}
+                                            imageName={`task-code-${codeIndex + 1}`}
+                                            maxImages={1}
+                                            uploadLabel="Загрузить фото"
+                                            disabled={!canEditSelectedGame || isSaving}
+                                            previewShape="square"
+                                          />
+                                        </div>
                                       )}
-                                    </div>
-                                  ))}
+                                    </details>
+                                    )
+                                  })}
                                 </div>
                               ) : (
                                 <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">
@@ -1727,7 +1779,20 @@ const GameEditModal = ({
                                   Штрафные коды
                                 </h4>
                                 <CabinetButton
-                                  onClick={() => handleAddPenaltyCode(task.id)}
+                                  onClick={() => {
+                                    const nextIndex = Array.isArray(
+                                      task?.penaltyCodes,
+                                    )
+                                      ? task.penaltyCodes.length
+                                      : 0
+                                    const nextAccordionKey = `${task.id}-penalty-${nextIndex}`
+                                    setExpandedCodeAccordions((prev) => {
+                                      const next = new Set(prev)
+                                      next.add(nextAccordionKey)
+                                      return next
+                                    })
+                                    handleAddPenaltyCode(task.id)
+                                  }}
                                   variant="secondary"
                                   tone="brand"
                                   size="sm"
@@ -1738,12 +1803,65 @@ const GameEditModal = ({
                               </div>
                               {task.penaltyCodes?.length > 0 ? (
                                 <div className="mt-3 space-y-4">
-                                  {task.penaltyCodes.map((penalty) => (
-                                    <div
+                                  {task.penaltyCodes.map((penalty, penaltyIndex) => {
+                                    const accordionKey = `${task.id}-penalty-${penaltyIndex}`
+                                    const isExpanded =
+                                      expandedCodeAccordions.has(accordionKey)
+
+                                    return (
+                                    <details
                                       key={penalty.id}
-                                      className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                                      open={isExpanded}
+                                      onToggle={(event) => {
+                                        const isOpen = Boolean(
+                                          event.currentTarget?.open,
+                                        )
+                                        setExpandedCodeAccordions((prev) => {
+                                          const next = new Set(prev)
+                                          if (isOpen) {
+                                            next.add(accordionKey)
+                                          } else {
+                                            next.delete(accordionKey)
+                                          }
+                                          return next
+                                        })
+                                      }}
+                                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
                                     >
-                                      <div className="grid gap-3 md:grid-cols-4">
+                                      <summary className="flex list-none cursor-pointer items-center justify-between gap-2 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 marker:content-none dark:text-slate-100">
+                                        <div className="min-w-0 flex items-center gap-2">
+                                          <span className="rounded-full border border-rose-300/70 bg-rose-100/80 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                                            Штраф
+                                          </span>
+                                          <span className="truncate font-semibold">
+                                            {compactSingleLine(penalty.code) ||
+                                              'Код не указан'}
+                                          </span>
+                                          {truncateWithDots(
+                                            penalty.description,
+                                          ) ? (
+                                            <span className="max-w-[240px] truncate text-xs font-normal text-slate-500 dark:text-slate-300">
+                                              {truncateWithDots(
+                                                penalty.description,
+                                              )}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          {penalty.image ? (
+                                            <span
+                                              className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
+                                              title="Фото добавлено"
+                                            >
+                                              <CodePhotoBadgeIcon />
+                                            </span>
+                                          ) : null}
+                                          <AccordionChevronIcon
+                                            isOpen={isExpanded}
+                                          />
+                                        </div>
+                                      </summary>
+                                      <div className="mt-2 grid gap-3 md:grid-cols-4">
                                         <CabinetInputField
                                           id={`task-penalty-code-${penalty.id}`}
                                           label="Код"
@@ -1797,29 +1915,31 @@ const GameEditModal = ({
                                         inputClassName={compactInputClassName}
                                       />
                                       {canViewCodePhotos && (
-                                        <ImagesInput
-                                          label="Фото кода"
-                                          images={[penalty.image || ''].filter(
-                                            Boolean,
-                                          )}
-                                          onChange={(nextImages) =>
-                                            handlePenaltyCodeChange(
-                                              task.id,
-                                              penalty.id,
-                                              'image',
-                                              Array.isArray(nextImages) &&
-                                                nextImages.length > 0
-                                                ? nextImages[0]
-                                                : '',
-                                            )
-                                          }
-                                          directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/penalty-codes/${penalty.id}`}
-                                          imageName={`penalty-code-${penalty.id}`}
-                                          maxImages={1}
-                                          uploadLabel="Загрузить фото"
-                                          disabled={!canEditSelectedGame || isSaving}
-                                          previewShape="square"
-                                        />
+                                        <div className="mt-2">
+                                          <ImagesInput
+                                            label="Фото кода"
+                                            images={[penalty.image || ''].filter(
+                                              Boolean,
+                                            )}
+                                            onChange={(nextImages) =>
+                                              handlePenaltyCodeChange(
+                                                task.id,
+                                                penalty.id,
+                                                'image',
+                                                Array.isArray(nextImages) &&
+                                                  nextImages.length > 0
+                                                  ? nextImages[0]
+                                                  : '',
+                                              )
+                                            }
+                                            directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/penalty-codes/${penalty.id}`}
+                                            imageName={`penalty-code-${penalty.id}`}
+                                            maxImages={1}
+                                            uploadLabel="Загрузить фото"
+                                            disabled={!canEditSelectedGame || isSaving}
+                                            previewShape="square"
+                                          />
+                                        </div>
                                       )}
                                       <div className="flex justify-end">
                                         <CabinetButton
@@ -1837,8 +1957,9 @@ const GameEditModal = ({
                                           Удалить штраф
                                         </CabinetButton>
                                       </div>
-                                    </div>
-                                  ))}
+                                    </details>
+                                    )
+                                  })}
                                 </div>
                               ) : (
                                 <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">
@@ -1855,7 +1976,20 @@ const GameEditModal = ({
                                   Бонусные коды
                                 </h4>
                                 <CabinetButton
-                                  onClick={() => handleAddBonusCode(task.id)}
+                                  onClick={() => {
+                                    const nextIndex = Array.isArray(
+                                      task?.bonusCodes,
+                                    )
+                                      ? task.bonusCodes.length
+                                      : 0
+                                    const nextAccordionKey = `${task.id}-bonus-${nextIndex}`
+                                    setExpandedCodeAccordions((prev) => {
+                                      const next = new Set(prev)
+                                      next.add(nextAccordionKey)
+                                      return next
+                                    })
+                                    handleAddBonusCode(task.id)
+                                  }}
                                   variant="secondary"
                                   tone="brand"
                                   size="sm"
@@ -1866,12 +2000,65 @@ const GameEditModal = ({
                               </div>
                               {task.bonusCodes?.length > 0 ? (
                                 <div className="mt-3 space-y-4">
-                                  {task.bonusCodes.map((bonus) => (
-                                    <div
+                                  {task.bonusCodes.map((bonus, bonusIndex) => {
+                                    const accordionKey = `${task.id}-bonus-${bonusIndex}`
+                                    const isExpanded =
+                                      expandedCodeAccordions.has(accordionKey)
+
+                                    return (
+                                    <details
                                       key={bonus.id}
-                                      className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                                      open={isExpanded}
+                                      onToggle={(event) => {
+                                        const isOpen = Boolean(
+                                          event.currentTarget?.open,
+                                        )
+                                        setExpandedCodeAccordions((prev) => {
+                                          const next = new Set(prev)
+                                          if (isOpen) {
+                                            next.add(accordionKey)
+                                          } else {
+                                            next.delete(accordionKey)
+                                          }
+                                          return next
+                                        })
+                                      }}
+                                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
                                     >
-                                      <div className="grid gap-3 md:grid-cols-4">
+                                      <summary className="flex list-none cursor-pointer items-center justify-between gap-2 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 marker:content-none dark:text-slate-100">
+                                        <div className="min-w-0 flex items-center gap-2">
+                                          <span className="rounded-full border border-emerald-300/70 bg-emerald-100/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+                                            Бонус
+                                          </span>
+                                          <span className="truncate font-semibold">
+                                            {compactSingleLine(bonus.code) ||
+                                              'Код не указан'}
+                                          </span>
+                                          {truncateWithDots(
+                                            bonus.description,
+                                          ) ? (
+                                            <span className="max-w-[240px] truncate text-xs font-normal text-slate-500 dark:text-slate-300">
+                                              {truncateWithDots(
+                                                bonus.description,
+                                              )}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          {bonus.image ? (
+                                            <span
+                                              className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
+                                              title="Фото добавлено"
+                                            >
+                                              <CodePhotoBadgeIcon />
+                                            </span>
+                                          ) : null}
+                                          <AccordionChevronIcon
+                                            isOpen={isExpanded}
+                                          />
+                                        </div>
+                                      </summary>
+                                      <div className="mt-2 grid gap-3 md:grid-cols-4">
                                         <CabinetInputField
                                           id={`task-bonus-code-${bonus.id}`}
                                           label="Код"
@@ -1925,29 +2112,31 @@ const GameEditModal = ({
                                         inputClassName={compactInputClassName}
                                       />
                                       {canViewCodePhotos && (
-                                        <ImagesInput
-                                          label="Фото кода"
-                                          images={[bonus.image || ''].filter(
-                                            Boolean,
-                                          )}
-                                          onChange={(nextImages) =>
-                                            handleBonusCodeChange(
-                                              task.id,
-                                              bonus.id,
-                                              'image',
-                                              Array.isArray(nextImages) &&
-                                                nextImages.length > 0
-                                                ? nextImages[0]
-                                                : '',
-                                            )
-                                          }
-                                          directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/bonus-codes/${bonus.id}`}
-                                          imageName={`bonus-code-${bonus.id}`}
-                                          maxImages={1}
-                                          uploadLabel="Загрузить фото"
-                                          disabled={!canEditSelectedGame || isSaving}
-                                          previewShape="square"
-                                        />
+                                        <div className="mt-2">
+                                          <ImagesInput
+                                            label="Фото кода"
+                                            images={[bonus.image || ''].filter(
+                                              Boolean,
+                                            )}
+                                            onChange={(nextImages) =>
+                                              handleBonusCodeChange(
+                                                task.id,
+                                                bonus.id,
+                                                'image',
+                                                Array.isArray(nextImages) &&
+                                                  nextImages.length > 0
+                                                  ? nextImages[0]
+                                                  : '',
+                                              )
+                                            }
+                                            directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/bonus-codes/${bonus.id}`}
+                                            imageName={`bonus-code-${bonus.id}`}
+                                            maxImages={1}
+                                            uploadLabel="Загрузить фото"
+                                            disabled={!canEditSelectedGame || isSaving}
+                                            previewShape="square"
+                                          />
+                                        </div>
                                       )}
                                       <div className="flex justify-end">
                                         <CabinetButton
@@ -1965,8 +2154,9 @@ const GameEditModal = ({
                                           Удалить бонус
                                         </CabinetButton>
                                       </div>
-                                    </div>
-                                  ))}
+                                    </details>
+                                    )
+                                  })}
                                 </div>
                               ) : (
                                 <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">
@@ -2525,6 +2715,7 @@ GameEditModal.propTypes = {
   isEditGameSeasonsLoading: PropTypes.bool,
   isEditGameSeasonCreating: PropTypes.bool,
   handleCreateSeasonForEditGame: PropTypes.func.isRequired,
+  handleSaveAndOpenTaskPreview: PropTypes.func.isRequired,
   canViewCodePhotos: PropTypes.bool,
   sectionMode: PropTypes.oneOf(['full', 'tasks']),
   modalTitleOverride: PropTypes.string,
@@ -2540,6 +2731,14 @@ GameEditModal.defaultProps = {
   canViewCodePhotos: false,
   sectionMode: 'full',
   modalTitleOverride: null,
+}
+
+AccordionChevronIcon.propTypes = {
+  isOpen: PropTypes.bool,
+}
+
+AccordionChevronIcon.defaultProps = {
+  isOpen: false,
 }
 
 export default memo(GameEditModal)

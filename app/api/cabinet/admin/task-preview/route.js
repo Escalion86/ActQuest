@@ -49,6 +49,24 @@ const normalizeTaskForPreview = (task) => ({
   penaltyCodes: Array.isArray(task?.penaltyCodes) ? task.penaltyCodes : [],
 })
 
+const toFiniteNonNegativeIntegerOrNull = (value) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return null
+  const normalized = Math.floor(numeric)
+  return normalized >= 0 ? normalized : null
+}
+
+const buildTaskDisplayMeta = (task) => ({
+  mainCodesCount: Array.isArray(task?.codes) ? task.codes.length : 0,
+  requiredCodesCount: toFiniteNonNegativeIntegerOrNull(
+    task?.numCodesToCompliteTask,
+  ),
+  bonusCodesCount: Array.isArray(task?.bonusCodes) ? task.bonusCodes.length : 0,
+  penaltyCodesCount: Array.isArray(task?.penaltyCodes)
+    ? task.penaltyCodes.length
+    : 0,
+})
+
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -179,6 +197,7 @@ export async function GET(request) {
             title: normalizeString(task.title),
             postMessage: normalizeString(task.postMessage),
             cluesCount: clues.length,
+            displayMeta: buildTaskDisplayMeta(task),
           },
           variants,
         },

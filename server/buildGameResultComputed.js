@@ -748,6 +748,12 @@ const buildGameResultComputed = async ({ game }) => {
   const teamsUsers = Array.isArray(snapshots.teamsUsers)
     ? snapshots.teamsUsers
     : []
+  const outOfCompetitionTeamIds = new Set(
+    gameTeams
+      .filter((item) => Boolean(item?.outOfCompetition))
+      .map((item) => toStringId(item?.teamId))
+      .filter(Boolean),
+  )
 
   const isPhotoGame = game?.type === 'photo'
   const teamsResults = teams.map((team) => {
@@ -755,12 +761,21 @@ const buildGameResultComputed = async ({ game }) => {
     const gameTeam = gameTeams.find(
       (item) => toStringId(item?.teamId) === teamId,
     )
-    return isPhotoGame
+    const baseResult = isPhotoGame
       ? buildPhotoTeamResult(team, gameTeam, game)
       : buildTeamResult(team, gameTeam, game)
+    return {
+      ...baseResult,
+      outOfCompetition: Boolean(teamId && outOfCompetitionTeamIds.has(teamId)),
+    }
   })
 
-  const sortedTeams = [...teamsResults].sort((first, second) => {
+  const rankedTeams = teamsResults.filter((item) => !item?.outOfCompetition)
+  const outOfCompetitionTeams = teamsResults.filter((item) =>
+    Boolean(item?.outOfCompetition),
+  )
+
+  const sortedTeams = [...rankedTeams].sort((first, second) => {
     if (isPhotoGame) {
       const a = Number(first?.finalPoints)
       const b = Number(second?.finalPoints)
@@ -783,9 +798,17 @@ const buildGameResultComputed = async ({ game }) => {
     }
   })
 
+  outOfCompetitionTeams.forEach((teamResult) => {
+    teamResult.place = null
+  })
+
   const taskBoards = buildTaskBoards(sortedTeams, game)
   const highlights = buildHighlights(taskBoards)
   const duration = resolveGameDuration({ game, gameTeams })
+  const rankedTeamIds = new Set(Object.keys(teamsPlaces))
+  const rankedParticipantsCount = teamsUsers.filter((membership) =>
+    rankedTeamIds.has(toStringId(membership?.teamId) || ''),
+  ).length
 
   return {
     snapshots: {
@@ -800,7 +823,8 @@ const buildGameResultComputed = async ({ game }) => {
       summary: {
         scoringMode: isPhotoGame ? 'points' : 'time',
         teamsCount: sortedTeams.length,
-        participantsCount: teamsUsers.length,
+        participantsCount: rankedParticipantsCount,
+        outOfCompetitionTeamsCount: outOfCompetitionTeams.length,
         tasksCount: Array.isArray(game?.tasks) ? game.tasks.length : 0,
         gameDurationSeconds: duration.gameDurationSeconds,
         gameDurationDisplay: duration.gameDurationDisplay,
@@ -808,6 +832,7 @@ const buildGameResultComputed = async ({ game }) => {
         gameEndedAt: duration.gameEndedAt,
       },
       teams: sortedTeams,
+      outOfCompetitionTeams,
       taskBoards,
       highlights,
     },

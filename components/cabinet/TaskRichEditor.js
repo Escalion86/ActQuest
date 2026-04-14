@@ -20,7 +20,7 @@ import { sendImage } from '@helpers/cloudinary'
 import { LOCATIONS } from '@server/serverConstants'
 
 const FONT_OPTIONS = [
-  { value: '', label: 'Шрифт по умолчанию' },
+  { value: '', label: 'Шрифт' },
   { value: 'Inter, sans-serif', label: 'Inter' },
   { value: '"Futura PT", sans-serif', label: 'Futura PT' },
   { value: 'Georgia, serif', label: 'Georgia' },
@@ -69,6 +69,16 @@ const getEditorViewSafe = (editorInstance) => {
   if (!editorInstance) return null
   try {
     return editorInstance.view ?? null
+  } catch {
+    return null
+  }
+}
+
+const getEditorViewDomSafe = (editorInstance) => {
+  const view = getEditorViewSafe(editorInstance)
+  if (!view) return null
+  try {
+    return view.dom ?? null
   } catch {
     return null
   }
@@ -188,7 +198,10 @@ const plainTextToEditorHtml = (value) => {
 
   return normalizedText
     .split(/\n{2,}/)
-    .map((paragraph) => `<p>${escapeHtmlText(paragraph).replace(/\n/g, '<br>')}</p>`)
+    .map(
+      (paragraph) =>
+        `<p>${escapeHtmlText(paragraph).replace(/\n/g, '<br>')}</p>`,
+    )
     .join('')
 }
 
@@ -209,7 +222,10 @@ const htmlToPlainText = (html) => {
   const source = String(html || '')
   if (!source.trim()) return ''
 
-  if (typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.DOMParser === 'undefined'
+  ) {
     return source.replace(/<[^>]*>/g, ' ')
   }
 
@@ -247,9 +263,14 @@ const buildAiRequestContent = ({ currentHtml, includeCurrentText, prompt }) => {
   const currentText = includeCurrentText
     ? buildCurrentTextForAiPrompt(currentHtml)
     : ''
+  const editorBlocksContext = includeCurrentText
+    ? buildEditorBlocksContext(currentHtml)
+    : ''
   const cleanPrompt = normalizeTextWhitespace(prompt)
 
-  return [currentText, cleanPrompt].filter(Boolean).join('\n\n')
+  return [currentText, editorBlocksContext, cleanPrompt]
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 const isSafeLinkHref = (value) => /^https?:\/\/\S+$/i.test(String(value || ''))
@@ -258,14 +279,26 @@ const sanitizeAiHtmlPreview = (html) => {
   const source = String(html || '')
   if (!source.trim()) return ''
 
-  if (typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.DOMParser === 'undefined'
+  ) {
     return source.replace(/<[^>]*>/g, '')
   }
 
   try {
     const parser = new window.DOMParser()
     const doc = parser.parseFromString(source, 'text/html')
-    const allowedTags = new Set(['b', 'br', 'i', 'u', 'del', 'strong', 'em', 'a'])
+    const allowedTags = new Set([
+      'b',
+      'br',
+      'i',
+      'u',
+      'del',
+      'strong',
+      'em',
+      'a',
+    ])
 
     const allElements = Array.from(doc.body.querySelectorAll('*'))
     allElements.forEach((element) => {
@@ -371,6 +404,76 @@ ${AI_UI_QUESTIONS_PREFIX}
 - После получения ответов верни финальный результат задания обычным текстом.
 `.trim()
 
+const AI_TIPTAP_FORMAT_INSTRUCTIONS = `
+Контент приходит из редактора TipTap.
+Во входных данных могут быть:
+- обычный текст, заголовки, списки, ссылки;
+- медиа-блоки (аудио, видео, изображения).
+
+Правила работы с контентом редактора:
+- учитывай медиа-блоки как часть смысла задания;
+- не придумывай несуществующие URL, названия файлов и медиа-данные;
+- если пользователь не просил удалить/заменить медиа, не предлагай их убирать;
+- редактируй формулировки и структуру текста, сохраняя логику задания.
+`.trim()
+
+const extractTagAttribute = (tagSource, attributeName) => {
+  const source = String(tagSource || '')
+  const attr = String(attributeName || '').trim()
+  if (!attr) return ''
+
+  const regexp = new RegExp(`${attr}\\s*=\\s*"([^"]*)"`, 'i')
+  const match = source.match(regexp)
+  return match?.[1] ? String(match[1]).trim() : ''
+}
+
+const collectTags = (source, regexp, type) => {
+  const html = String(source || '')
+  const matches = Array.from(html.matchAll(regexp))
+  return matches.map((match, index) => {
+    const tagSource = String(match?.[0] || '')
+    return {
+      type,
+      order: index + 1,
+      title:
+        extractTagAttribute(tagSource, 'title') ||
+        extractTagAttribute(tagSource, 'alt') ||
+        '',
+      src: extractTagAttribute(tagSource, 'src'),
+    }
+  })
+}
+
+const buildEditorBlocksContext = (currentHtml) => {
+  const source = String(currentHtml || '')
+  if (!source.trim()) return ''
+
+  const audioBlocks = collectTags(source, /<audio-message\b[^>]*>/gi, 'audio')
+  const videoBlocks = collectTags(source, /<video-message\b[^>]*>/gi, 'video')
+  const imageBlocks = collectTags(source, /<img\b[^>]*>/gi, 'image')
+  const allBlocks = [...audioBlocks, ...videoBlocks, ...imageBlocks]
+
+  if (allBlocks.length === 0) {
+    return 'Структура TipTap: медиа-блоки не обнаружены.'
+  }
+
+  const lines = [
+    `Структура TipTap: найдено медиа-блоков ${allBlocks.length}.`,
+    ...allBlocks.map((block, index) => {
+      const labelParts = [`${index + 1}. ${block.type.toUpperCase()}`]
+      if (block.title) {
+        labelParts.push(`title="${block.title}"`)
+      }
+      if (block.src) {
+        labelParts.push(`src="${block.src}"`)
+      }
+      return labelParts.join(' | ')
+    }),
+  ]
+
+  return lines.join('\n')
+}
+
 const extractAiQuestionsPayload = (responseText) => {
   const source = String(responseText || '').trim()
   if (!source || !source.includes(AI_UI_QUESTIONS_PREFIX)) {
@@ -453,11 +556,78 @@ const buildAnswersMessage = (questionsPayload, answersMap = {}) => {
   if (!questionsPayload?.questions?.length) return ''
   const lines = questionsPayload.questions.map((question) => {
     const rawAnswer =
-      typeof answersMap?.[question.id] === 'string' ? answersMap[question.id] : ''
+      typeof answersMap?.[question.id] === 'string'
+        ? answersMap[question.id]
+        : ''
     const normalizedAnswer = rawAnswer.trim()
-    return `- ${question.label}: ${normalizedAnswer || 'Не указано'}`
+
+    let answerForDisplay = normalizedAnswer
+    if (question.type === 'single_choice' && normalizedAnswer) {
+      const selectedOption = Array.isArray(question.options)
+        ? question.options.find(
+            (option) => String(option?.value || '') === normalizedAnswer,
+          )
+        : null
+      answerForDisplay =
+        typeof selectedOption?.label === 'string' && selectedOption.label.trim()
+          ? selectedOption.label.trim()
+          : normalizedAnswer
+    }
+
+    return `- ${question.label}: ${answerForDisplay || 'Не указано'}`
   })
   return `Ответы на уточняющие вопросы:\n${lines.join('\n')}`
+}
+
+const parseAnswersMessageLines = (value) => {
+  const source = String(value || '').trim()
+  if (!source) return null
+
+  if (!/^Ответы на уточняющие вопросы:/i.test(source)) {
+    return null
+  }
+
+  const lines = source
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.replace(/^-+\s*/, '').trim())
+    .filter(Boolean)
+
+  if (lines.length === 0) {
+    return null
+  }
+
+  return lines
+}
+
+const buildAiChatMessageCopyText = (message) => {
+  if (!message || typeof message !== 'object') {
+    return ''
+  }
+
+  if (message.displayType === 'questions') {
+    const title =
+      typeof message?.questions?.title === 'string'
+        ? message.questions.title.trim()
+        : 'Уточняющие вопросы'
+    const questions = Array.isArray(message?.questions?.questions)
+      ? message.questions.questions
+      : []
+    const lines = questions
+      .map((question) => String(question?.label || '').trim())
+      .filter(Boolean)
+    return [title, ...lines.map((line, index) => `${index + 1}. ${line}`)]
+      .filter(Boolean)
+      .join('\n')
+  }
+
+  if (message.displayType === 'answers') {
+    const answers = Array.isArray(message?.answers) ? message.answers : []
+    return ['Ваши ответы', ...answers].join('\n')
+  }
+
+  return String(message?.content || '').trim()
 }
 
 const normalizeAiGameContext = (value) => {
@@ -480,11 +650,14 @@ const normalizeAiGameContext = (value) => {
       typeof value.dateStart === 'string' ? value.dateStart.trim() : '',
     type: value.type === 'photo' ? 'photo' : 'classic',
     location:
-      typeof value.location === 'string' ? value.location.trim().toLowerCase() : '',
+      typeof value.location === 'string'
+        ? value.location.trim().toLowerCase()
+        : '',
   }
 }
 
-const resolveGameTypeLabel = (value) => (value === 'photo' ? 'Фотоквест' : 'Классика')
+const resolveGameTypeLabel = (value) =>
+  value === 'photo' ? 'Фотоквест' : 'Классика'
 
 const resolveGameLocationLabel = (locationKey) => {
   const normalized =
@@ -564,7 +737,9 @@ const toHexColor = (value) => {
     const values = [rgbMatch[1], rgbMatch[2], rgbMatch[3]].map((item) =>
       Number(item),
     )
-    if (values.some((item) => !Number.isFinite(item) || item < 0 || item > 255)) {
+    if (
+      values.some((item) => !Number.isFinite(item) || item < 0 || item > 255)
+    ) {
       return ''
     }
     return `#${values.map((item) => item.toString(16).padStart(2, '0')).join('')}`
@@ -630,6 +805,7 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
     typeof node?.attrs?.title === 'string' && node.attrs.title.trim()
       ? node.attrs.title.trim()
       : 'Аудио'
+  const canEditAudioTitle = Boolean(editor?.isEditable)
 
   useEffect(() => {
     const audio = audioRef.current
@@ -698,7 +874,7 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
     if (!audio) return
 
     if (audio.paused) {
-      const editorRoot = getEditorViewSafe(editor)?.dom
+      const editorRoot = getEditorViewDomSafe(editor)
       if (editorRoot instanceof HTMLElement) {
         editorRoot
           .querySelectorAll('audio[data-aq-audio-native="true"]')
@@ -738,6 +914,7 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
   }
 
   const handleRename = () => {
+    if (!canEditAudioTitle) return
     const nextTitle = window.prompt('Введите название аудио', title)
     if (nextTitle === null) return
     updateAttributes({ title: nextTitle.trim() || 'Аудио' })
@@ -813,8 +990,10 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
             <button
               type="button"
               className="aq-audio-message__title"
-              onDoubleClick={handleRename}
-              title="Двойной клик для переименования"
+              onDoubleClick={canEditAudioTitle ? handleRename : undefined}
+              title={
+                canEditAudioTitle ? 'Двойной клик для переименования' : title
+              }
             >
               {title}
             </button>
@@ -1366,12 +1545,16 @@ const TaskRichEditor = ({
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiIncludeCurrentText, setAiIncludeCurrentText] = useState(true)
   const [aiUseDeepReasoning, setAiUseDeepReasoning] = useState(false)
+  const [aiChatStarted, setAiChatStarted] = useState(false)
+  const [aiChatInput, setAiChatInput] = useState('')
+  const [copiedAiMessageKey, setCopiedAiMessageKey] = useState('')
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
   const [aiPreviewHtml, setAiPreviewHtml] = useState('')
   const [aiSystemPrompts, setAiSystemPrompts] = useState([])
   const [selectedAiSystemPromptId, setSelectedAiSystemPromptId] = useState('')
-  const [isAiSystemPromptsLoading, setIsAiSystemPromptsLoading] = useState(false)
+  const [isAiSystemPromptsLoading, setIsAiSystemPromptsLoading] =
+    useState(false)
   const [aiSystemPromptsError, setAiSystemPromptsError] = useState('')
   const [isSystemPromptModalOpen, setIsSystemPromptModalOpen] = useState(false)
   const [systemPromptModalMode, setSystemPromptModalMode] = useState('create')
@@ -1480,7 +1663,8 @@ const TaskRichEditor = ({
     }
 
     const foundInList =
-      aiGames.find((item) => String(item?.id || '').trim() === selectedId) || null
+      aiGames.find((item) => String(item?.id || '').trim() === selectedId) ||
+      null
     if (foundInList) {
       return foundInList
     }
@@ -1529,7 +1713,10 @@ const TaskRichEditor = ({
         uniqueById.set(normalized.id, normalized)
       })
 
-      if (normalizedAiInitialGame?.id && !uniqueById.has(normalizedAiInitialGame.id)) {
+      if (
+        normalizedAiInitialGame?.id &&
+        !uniqueById.has(normalizedAiInitialGame.id)
+      ) {
         uniqueById.set(normalizedAiInitialGame.id, normalizedAiInitialGame)
       }
 
@@ -1638,7 +1825,9 @@ const TaskRichEditor = ({
       })
 
       if (!hasText) {
-        const fallbackColor = toHexColor(editor.getAttributes('textStyle').color)
+        const fallbackColor = toHexColor(
+          editor.getAttributes('textStyle').color,
+        )
         return {
           color: fallbackColor || DEFAULT_PICKER_COLOR,
           active: Boolean(fallbackColor),
@@ -1888,7 +2077,8 @@ const TaskRichEditor = ({
     if (!editor || disabled) return undefined
 
     const view = getEditorViewSafe(editor)
-    if (!view?.dom) return undefined
+    const viewDom = getEditorViewDomSafe(editor)
+    if (!view || !(viewDom instanceof HTMLElement)) return undefined
 
     const resolveAudioMessagePos = (targetNode) => {
       if (!(targetNode instanceof HTMLElement)) return null
@@ -1948,9 +2138,9 @@ const TaskRichEditor = ({
       propagateEditorState(editor)
     }
 
-    view.dom.addEventListener('dblclick', handleDoubleClick)
+    viewDom.addEventListener('dblclick', handleDoubleClick)
     return () => {
-      view.dom.removeEventListener('dblclick', handleDoubleClick)
+      viewDom.removeEventListener('dblclick', handleDoubleClick)
     }
   }, [disabled, editor, propagateEditorState])
 
@@ -1996,7 +2186,10 @@ const TaskRichEditor = ({
       const fallbackMode = modeOverride || uploadModeRef.current || uploadMode
       const resolvedMode = detectUploadModeByFile(file, fallbackMode)
 
-      if (resolvedMode === 'video' && Number(file.size) > MAX_VIDEO_SIZE_BYTES) {
+      if (
+        resolvedMode === 'video' &&
+        Number(file.size) > MAX_VIDEO_SIZE_BYTES
+      ) {
         setUploadError('Видео слишком большое. Максимальный размер: 40 МБ.')
         return
       }
@@ -2125,6 +2318,8 @@ const TaskRichEditor = ({
     if (disabled) return
     setAiIncludeCurrentText(hasCurrentEditorText)
     setIsAiModalOpen(true)
+    setAiChatStarted(aiConversationHistory.length > 0)
+    setAiChatInput('')
     setAiError('')
     setAiPreviewHtml('')
     if (normalizedAiInitialGame?.id) {
@@ -2133,6 +2328,7 @@ const TaskRichEditor = ({
     void loadAiSystemPrompts()
     void loadAiGames()
   }, [
+    aiConversationHistory.length,
     disabled,
     hasCurrentEditorText,
     loadAiGames,
@@ -2177,7 +2373,7 @@ const TaskRichEditor = ({
       if (!content) {
         setAiError('Введите запрос или включите передачу текущего текста.')
         setAiPreviewHtml('')
-        return
+        return null
       }
 
       const systemPromptParts = []
@@ -2188,7 +2384,9 @@ const TaskRichEditor = ({
       if (baseSystemPrompt) {
         systemPromptParts.push(baseSystemPrompt)
       }
-      const gameContextSystemPrompt = buildAiGameContextSystemPrompt(selectedAiGame)
+      systemPromptParts.push(AI_TIPTAP_FORMAT_INSTRUCTIONS)
+      const gameContextSystemPrompt =
+        buildAiGameContextSystemPrompt(selectedAiGame)
       if (gameContextSystemPrompt) {
         systemPromptParts.push(gameContextSystemPrompt)
       }
@@ -2233,7 +2431,9 @@ const TaskRichEditor = ({
           throw new Error('Не удалось получить ответ от ИИ')
         }
 
-        const parsedQuestions = normalizeAiQuestions(extractAiQuestionsPayload(aiText))
+        const parsedQuestions = normalizeAiQuestions(
+          extractAiQuestionsPayload(aiText),
+        )
         if (parsedQuestions) {
           setAiQuestionsPayload(parsedQuestions)
           setAiQuestionsAnswers((prev) => {
@@ -2245,7 +2445,10 @@ const TaskRichEditor = ({
                 nextAnswers[question.id] = existing
                 return
               }
-              if (question.type === 'single_choice' && question.options.length > 0) {
+              if (
+                question.type === 'single_choice' &&
+                question.options.length > 0
+              ) {
                 nextAnswers[question.id] = question.options[0].value
               } else {
                 nextAnswers[question.id] = ''
@@ -2269,9 +2472,11 @@ const TaskRichEditor = ({
           { role: 'user', content },
           { role: 'assistant', content: aiText },
         ])
+        return aiText
       } catch (error) {
         setAiError(error?.message || 'Не удалось получить ответ от ИИ')
         setAiPreviewHtml('')
+        return null
       } finally {
         setIsAiLoading(false)
       }
@@ -2313,7 +2518,10 @@ const TaskRichEditor = ({
       return
     }
 
-    const answersMessage = buildAnswersMessage(aiQuestionsPayload, aiQuestionsAnswers)
+    const answersMessage = buildAnswersMessage(
+      aiQuestionsPayload,
+      aiQuestionsAnswers,
+    )
     if (!answersMessage) {
       setAiError('Не удалось собрать уточнения для ИИ.')
       return
@@ -2324,12 +2532,101 @@ const TaskRichEditor = ({
   }, [aiQuestionsAnswers, aiQuestionsPayload, requestAiRewrite])
 
   const resetAiConversationContext = useCallback(() => {
+    setAiChatStarted(false)
+    setAiChatInput('')
     setAiConversationHistory([])
     setAiQuestionsPayload(null)
     setAiQuestionsAnswers({})
     setAiPreviewHtml('')
     setAiError('')
   }, [])
+
+  const startAiChat = useCallback(async () => {
+    if (isAiLoading) return
+    setAiChatStarted(true)
+    await requestAiRewrite()
+  }, [isAiLoading, requestAiRewrite])
+
+  const sendAiChatMessage = useCallback(async () => {
+    if (isAiLoading || aiQuestionsPayload) return
+    const nextMessage = String(aiChatInput || '').trim()
+    if (!nextMessage) {
+      setAiError('Введите сообщение для ИИ.')
+      return
+    }
+    const resultText = await requestAiRewrite({
+      overrideUserContent: nextMessage,
+    })
+    if (resultText) {
+      setAiChatInput('')
+    }
+  }, [aiChatInput, aiQuestionsPayload, isAiLoading, requestAiRewrite])
+
+  const copyAiChatMessage = useCallback(async (message, key) => {
+    const textToCopy = buildAiChatMessageCopyText(message)
+    if (!textToCopy) return
+    try {
+      await navigator.clipboard.writeText(textToCopy)
+      setCopiedAiMessageKey(key)
+      window.setTimeout(() => {
+        setCopiedAiMessageKey((prev) => (prev === key ? '' : prev))
+      }, 1400)
+    } catch {
+      // ignore clipboard failures
+    }
+  }, [])
+
+  const aiChatMessages = useMemo(
+    () =>
+      aiConversationHistory
+        .filter(
+          (message) =>
+            message &&
+            (message.role === 'user' || message.role === 'assistant') &&
+            typeof message.content === 'string' &&
+            message.content.trim(),
+        )
+        .map((message) => {
+          const content = String(message.content || '').trim()
+
+          if (message.role === 'assistant') {
+            const questions = normalizeAiQuestions(
+              extractAiQuestionsPayload(content),
+            )
+            if (questions) {
+              return {
+                ...message,
+                displayType: 'questions',
+                questions,
+              }
+            }
+          }
+
+          if (message.role === 'user') {
+            const answers = parseAnswersMessageLines(content)
+            if (answers) {
+              return {
+                ...message,
+                displayType: 'answers',
+                answers,
+              }
+            }
+          }
+
+          return {
+            ...message,
+            displayType: 'plain',
+          }
+        }),
+    [aiConversationHistory],
+  )
+
+  const aiDialogueCount = useMemo(() => {
+    const userMessages = aiConversationHistory.filter(
+      (message) => message?.role === 'user',
+    )
+    return userMessages.length
+  }, [aiConversationHistory])
 
   const openCreateSystemPromptModal = useCallback(() => {
     setSystemPromptModalMode('create')
@@ -2460,178 +2757,180 @@ const TaskRichEditor = ({
 
   return (
     <>
-      <div className="relative overflow-visible bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/70">
+      <div className="aq-task-rich-editor relative overflow-visible bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/70">
         {!hideToolbar ? (
           <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-slate-200/80 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-800/60">
-          <select
-            value={toolbarState.blockType}
-            onChange={(event) => {
-              const nextBlock = event.target.value
-              if (nextBlock === 'h2')
-                editor.chain().focus().toggleHeading({ level: 2 }).run()
-              else if (nextBlock === 'h3')
-                editor.chain().focus().toggleHeading({ level: 3 }).run()
-              else editor.chain().focus().setParagraph().run()
-            }}
-            disabled={disabled}
-            className="px-2 py-1 text-xs font-medium bg-white border rounded-lg border-slate-200 text-slate-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100"
-            aria-label="Тип блока"
-          >
-            <option value="p">Текст</option>
-            <option value="h2">Заголовок 2</option>
-            <option value="h3">Заголовок 3</option>
-          </select>
-
-          <select
-            value={toolbarState.fontFamily}
-            onChange={(event) => {
-              const nextFont = event.target.value
-              if (!nextFont) {
-                editor.chain().focus().unsetFontFamily().run()
-                return
-              }
-              editor.chain().focus().setFontFamily(nextFont).run()
-            }}
-            disabled={disabled}
-            className="px-2 py-1 text-xs bg-white border rounded-lg border-slate-200 text-slate-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100"
-            aria-label="Шрифт"
-          >
-            {FONT_OPTIONS.map((option) => (
-              <option key={option.label} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-
-          <ToolbarButton
-            label="B"
-            isActive={toolbarState.bold}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            disabled={disabled}
-          />
-          <ToolbarButton
-            label="I"
-            isActive={toolbarState.italic}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            disabled={disabled}
-          />
-          <ToolbarButton
-            label="U"
-            isActive={toolbarState.underline}
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-            disabled={disabled}
-          />
-          <ToolbarButton
-            label="S"
-            isActive={toolbarState.strike}
-            onClick={() => editor.chain().focus().toggleStrike().run()}
-            disabled={disabled}
-          />
-
-          <label
-            className={`inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-xs transition ${
-              isMixedColorSelection
-                ? 'border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-400 dark:bg-amber-500/15 dark:text-amber-200'
-                : isColorActive
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/20 dark:text-blue-100'
-                  : 'border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100'
-            }`}
-            title={
-              isMixedColorSelection
-                ? 'В выделении несколько разных цветов'
-                : 'Цвет текста'
-            }
-          >
-            Цвет
-            <input
-              type="color"
-              value={selectedColor}
-              disabled={disabled}
+            <select
+              value={toolbarState.blockType}
               onChange={(event) => {
-                const color = event.target.value
-                setSelectedColor(color)
-                setIsMixedColorSelection(false)
-                setIsColorActive(true)
-                editor.chain().focus().setColor(color).run()
+                const nextBlock = event.target.value
+                if (nextBlock === 'h2')
+                  editor.chain().focus().toggleHeading({ level: 2 }).run()
+                else if (nextBlock === 'h3')
+                  editor.chain().focus().toggleHeading({ level: 3 }).run()
+                else editor.chain().focus().setParagraph().run()
               }}
-              className="w-6 h-5 p-0 bg-transparent cursor-pointer"
-              aria-label="Цвет текста"
+              disabled={disabled}
+              className="px-2 py-1 text-xs font-medium bg-white border rounded-lg border-slate-200 text-slate-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100"
+              aria-label="Тип блока"
+            >
+              <option value="p">Текст</option>
+              <option value="h2">Заголовок 2</option>
+              <option value="h3">Заголовок 3</option>
+            </select>
+
+            <select
+              value={toolbarState.fontFamily}
+              onChange={(event) => {
+                const nextFont = event.target.value
+                if (!nextFont) {
+                  editor.chain().focus().unsetFontFamily().run()
+                  return
+                }
+                editor.chain().focus().setFontFamily(nextFont).run()
+              }}
+              disabled={disabled}
+              className="px-2 py-1 text-xs bg-white border rounded-lg min-w-40 border-slate-200 text-slate-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100"
+              aria-label="Шрифт"
+            >
+              {FONT_OPTIONS.map((option) => (
+                <option key={option.label} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <ToolbarButton
+              label="B"
+              isActive={toolbarState.bold}
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              disabled={disabled}
             />
-          </label>
-          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+            <ToolbarButton
+              label="I"
+              isActive={toolbarState.italic}
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              disabled={disabled}
+            />
+            <ToolbarButton
+              label="U"
+              isActive={toolbarState.underline}
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+              disabled={disabled}
+            />
+            <ToolbarButton
+              label="S"
+              isActive={toolbarState.strike}
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+              disabled={disabled}
+            />
 
-          <ToolbarButton
-            label="• List"
-            isActive={toolbarState.bulletList}
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            disabled={disabled}
-          />
-          <ToolbarButton
-            label="1. List"
-            isActive={toolbarState.orderedList}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            disabled={disabled}
-          />
-          <ToolbarButton
-            label="Рамка"
-            isActive={toolbarState.frameBox}
-            onClick={() => editor.chain().focus().insertFrameBox().run()}
-            disabled={disabled}
-          />
-          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
-          <ToolbarButton
-            label="Ссылка"
-            isActive={toolbarState.link}
-            onClick={() => {
-              if (disabled) return
-              const currentHref = editor.getAttributes('link').href || ''
-              const nextHref = window.prompt('Введите ссылку', currentHref)
-              if (nextHref === null) return
-              const normalizedHref = nextHref.trim()
-              if (!normalizedHref) {
-                editor.chain().focus().unsetLink().run()
-                return
+            <label
+              className={`inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-xs transition ${
+                isMixedColorSelection
+                  ? 'border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-400 dark:bg-amber-500/15 dark:text-amber-200'
+                  : isColorActive
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/20 dark:text-blue-100'
+                    : 'border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100'
+              }`}
+              title={
+                isMixedColorSelection
+                  ? 'В выделении несколько разных цветов'
+                  : 'Цвет текста'
               }
-              editor.chain().focus().setLink({ href: normalizedHref }).run()
-            }}
-            disabled={disabled}
-          />
+            >
+              Цвет
+              <input
+                type="color"
+                value={selectedColor}
+                disabled={disabled}
+                onChange={(event) => {
+                  const color = event.target.value
+                  setSelectedColor(color)
+                  setIsMixedColorSelection(false)
+                  setIsColorActive(true)
+                  editor.chain().focus().setColor(color).run()
+                }}
+                className="w-6 h-5 p-0 bg-transparent cursor-pointer"
+                aria-label="Цвет текста"
+              />
+            </label>
+            <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
 
-          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+            <ToolbarButton
+              label="• List"
+              isActive={toolbarState.bulletList}
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              disabled={disabled}
+            />
+            <ToolbarButton
+              label="1. List"
+              isActive={toolbarState.orderedList}
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              disabled={disabled}
+            />
+            <ToolbarButton
+              label="Рамка"
+              isActive={toolbarState.frameBox}
+              onClick={() => editor.chain().focus().insertFrameBox().run()}
+              disabled={disabled}
+            />
+            <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+            <ToolbarButton
+              label="Ссылка"
+              isActive={toolbarState.link}
+              onClick={() => {
+                if (disabled) return
+                const currentHref = editor.getAttributes('link').href || ''
+                const nextHref = window.prompt('Введите ссылку', currentHref)
+                if (nextHref === null) return
+                const normalizedHref = nextHref.trim()
+                if (!normalizedHref) {
+                  editor.chain().focus().unsetLink().run()
+                  return
+                }
+                editor.chain().focus().setLink({ href: normalizedHref }).run()
+              }}
+              disabled={disabled}
+            />
 
-          <ToolbarButton
-            label={
-              isUploading && uploadMode === 'image' ? 'Загрузка...' : 'Картинка'
-            }
-            onClick={() => triggerFileInput('image')}
-            disabled={disabled || isUploading}
-          />
-          <ToolbarButton
-            label={
-              isUploading && uploadMode === 'audio' ? 'Загрузка...' : 'Аудио'
-            }
-            onClick={() => triggerFileInput('audio')}
-            disabled={disabled || isUploading}
-          />
-          <ToolbarButton
-            label={
-              isUploading && uploadMode === 'video' ? 'Загрузка...' : 'Видео'
-            }
-            onClick={() => triggerFileInput('video')}
-            disabled={disabled || isUploading}
-          />
-          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
-          <ToolbarButton
-            label="Очистить"
-            onClick={clearFormatting}
-            disabled={disabled}
-          />
-          <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
-          <ToolbarButton
-            label="ИИ"
-            onClick={openAiModal}
-            disabled={disabled || isAiLoading}
-          />
+            <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+
+            <ToolbarButton
+              label={
+                isUploading && uploadMode === 'image'
+                  ? 'Загрузка...'
+                  : 'Картинка'
+              }
+              onClick={() => triggerFileInput('image')}
+              disabled={disabled || isUploading}
+            />
+            <ToolbarButton
+              label={
+                isUploading && uploadMode === 'audio' ? 'Загрузка...' : 'Аудио'
+              }
+              onClick={() => triggerFileInput('audio')}
+              disabled={disabled || isUploading}
+            />
+            <ToolbarButton
+              label={
+                isUploading && uploadMode === 'video' ? 'Загрузка...' : 'Видео'
+              }
+              onClick={() => triggerFileInput('video')}
+              disabled={disabled || isUploading}
+            />
+            <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+            <ToolbarButton
+              label="Очистить"
+              onClick={clearFormatting}
+              disabled={disabled}
+            />
+            <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
+            <ToolbarButton
+              label="ИИ"
+              onClick={openAiModal}
+              disabled={disabled || isAiLoading}
+            />
           </div>
         ) : null}
 
@@ -2722,8 +3021,13 @@ const TaskRichEditor = ({
           <>
             <button
               type="button"
-              onClick={requestAiRewrite}
-              disabled={isAiLoading}
+              onClick={aiChatStarted ? sendAiChatMessage : startAiChat}
+              disabled={
+                isAiLoading ||
+                (aiChatStarted &&
+                  (Boolean(aiQuestionsPayload) ||
+                    !String(aiChatInput || '').trim()))
+              }
               className="aq-modal-btn aq-modal-btn-secondary"
             >
               {isAiLoading ? (
@@ -2734,8 +3038,10 @@ const TaskRichEditor = ({
                   />
                   Генерация...
                 </span>
+              ) : aiChatStarted ? (
+                'Отправить'
               ) : (
-                'Сгенерировать'
+                'Начать'
               )}
             </button>
             <button
@@ -2749,215 +3055,326 @@ const TaskRichEditor = ({
           </>
         }
       >
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label
-              htmlFor="aq-ai-game"
-              className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"
-            >
-              Игра для контекста
-            </label>
-            <div className="flex items-center gap-2">
-              <select
-                id="aq-ai-game"
-                value={selectedAiGameId}
-                onChange={(event) => {
-                  setSelectedAiGameId(String(event.target.value || ''))
-                  resetAiConversationContext()
-                }}
-                disabled={isAiLoading || isAiGamesLoading}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-              >
-                <option value="">Без контекста игры</option>
-                {aiGames.map((gameItem) => (
-                  <option key={gameItem.id} value={gameItem.id}>
-                    {gameItem.name || 'Без названия'}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => {
-                  void loadAiGames()
-                }}
-                disabled={isAiLoading || isAiGamesLoading}
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                title="Обновить список игр"
-              >
-                Обновить
-              </button>
-            </div>
-            {isAiGamesLoading ? (
-              <p className="text-xs text-slate-500 dark:text-slate-300">
-                Загружаем игры...
-              </p>
-            ) : null}
-            {aiGamesError ? (
-              <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
-                {aiGamesError}
-              </p>
-            ) : null}
-            {selectedAiGame ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
-                <p>
-                  <span className="font-semibold">Выбрано:</span>{' '}
-                  {selectedAiGame.name || 'Без названия'}
-                </p>
-                <p>
-                  <span className="font-semibold">Тип:</span>{' '}
-                  {resolveGameTypeLabel(selectedAiGame.type)}
-                </p>
-                <p>
-                  <span className="font-semibold">Город:</span>{' '}
-                  {resolveGameLocationLabel(selectedAiGame.location)}
-                </p>
+        <div
+          className={
+            aiChatStarted ? 'flex h-full min-h-0 flex-col gap-3' : 'space-y-4'
+          }
+        >
+          {!aiChatStarted ? (
+            <>
+              <div className="space-y-2">
+                <label
+                  htmlFor="aq-ai-system-prompt"
+                  className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300"
+                >
+                  Системный промпт
+                </label>
+                <div className="flex items-center gap-2">
+                  <select
+                    id="aq-ai-system-prompt"
+                    value={selectedAiSystemPromptId}
+                    onChange={(event) => {
+                      const nextId = String(event.target.value || '')
+                      setSelectedAiSystemPromptId(nextId)
+                      resetAiConversationContext()
+                    }}
+                    disabled={isAiLoading || isAiSystemPromptsLoading}
+                    className="w-full px-3 py-2 text-sm transition bg-white border outline-none rounded-xl border-slate-200 text-slate-800 focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  >
+                    <option value="">Без системного промпта</option>
+                    {aiSystemPrompts.map((promptItem) => (
+                      <option key={promptItem.id} value={promptItem.id}>
+                        {promptItem.title || 'Без названия'}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={openCreateSystemPromptModal}
+                    disabled={isAiLoading || isAiSystemPromptsLoading}
+                    className="inline-flex items-center justify-center w-10 h-10 text-lg font-semibold transition bg-white border rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                    title="Добавить системный промпт"
+                  >
+                    +
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openEditSystemPromptModal}
+                    disabled={
+                      isAiLoading ||
+                      isAiSystemPromptsLoading ||
+                      !selectedAiSystemPrompt
+                    }
+                    className="inline-flex items-center justify-center h-10 px-3 text-xs font-semibold transition bg-white border rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                    title="Редактировать системный промпт"
+                  >
+                    Изм.
+                  </button>
+                  <button
+                    type="button"
+                    onClick={deleteSelectedSystemPrompt}
+                    disabled={
+                      isAiLoading ||
+                      isAiSystemPromptsLoading ||
+                      isSystemPromptDeleting ||
+                      !selectedAiSystemPrompt
+                    }
+                    className="inline-flex items-center justify-center h-10 px-3 text-xs font-semibold transition bg-white border rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/40 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                    title="Удалить системный промпт"
+                  >
+                    Удалить
+                  </button>
+                </div>
+                {isAiSystemPromptsLoading ? (
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Загружаем системные промпты...
+                  </p>
+                ) : null}
+                {aiSystemPromptsError ? (
+                  <p className="px-3 py-2 text-xs border rounded-xl border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                    {aiSystemPromptsError}
+                  </p>
+                ) : null}
               </div>
-            ) : null}
-          </div>
 
-          <div className="space-y-2">
-            <label
-              htmlFor="aq-ai-system-prompt"
-              className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"
-            >
-              Системный промпт
-            </label>
-            <div className="flex items-center gap-2">
-              <select
-                id="aq-ai-system-prompt"
-                value={selectedAiSystemPromptId}
-                onChange={(event) => {
-                  const nextId = String(event.target.value || '')
-                  setSelectedAiSystemPromptId(nextId)
-                  resetAiConversationContext()
-                }}
-                disabled={isAiLoading || isAiSystemPromptsLoading}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-              >
-                <option value="">Без системного промпта</option>
-                {aiSystemPrompts.map((promptItem) => (
-                  <option key={promptItem.id} value={promptItem.id}>
-                    {promptItem.title || 'Без названия'}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={openCreateSystemPromptModal}
-                disabled={isAiLoading || isAiSystemPromptsLoading}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-lg font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                title="Добавить системный промпт"
-              >
-                +
-              </button>
-              <button
-                type="button"
-                onClick={openEditSystemPromptModal}
-                disabled={
-                  isAiLoading || isAiSystemPromptsLoading || !selectedAiSystemPrompt
-                }
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-                title="Редактировать системный промпт"
-              >
-                Изм.
-              </button>
-              <button
-                type="button"
-                onClick={deleteSelectedSystemPrompt}
-                disabled={
-                  isAiLoading ||
-                  isAiSystemPromptsLoading ||
-                  isSystemPromptDeleting ||
-                  !selectedAiSystemPrompt
-                }
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/40 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-500/10"
-                title="Удалить системный промпт"
-              >
-                Удалить
-              </button>
+              <div className="space-y-2">
+                <label
+                  htmlFor="aq-ai-game"
+                  className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300"
+                >
+                  Игра для контекста
+                </label>
+                <div className="flex items-center gap-2">
+                  <select
+                    id="aq-ai-game"
+                    value={selectedAiGameId}
+                    onChange={(event) => {
+                      setSelectedAiGameId(String(event.target.value || ''))
+                      resetAiConversationContext()
+                    }}
+                    disabled={isAiLoading || isAiGamesLoading}
+                    className="w-full px-3 py-2 text-sm transition bg-white border outline-none rounded-xl border-slate-200 text-slate-800 focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  >
+                    <option value="">Без контекста игры</option>
+                    {aiGames.map((gameItem) => (
+                      <option key={gameItem.id} value={gameItem.id}>
+                        {gameItem.name || 'Без названия'}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void loadAiGames()
+                    }}
+                    disabled={isAiLoading || isAiGamesLoading}
+                    className="inline-flex items-center justify-center h-10 px-3 text-xs font-semibold transition bg-white border rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                    title="Обновить список игр"
+                  >
+                    Обновить
+                  </button>
+                </div>
+                {isAiGamesLoading ? (
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Загружаем игры...
+                  </p>
+                ) : null}
+                {aiGamesError ? (
+                  <p className="px-3 py-2 text-xs border rounded-xl border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                    {aiGamesError}
+                  </p>
+                ) : null}
+                {selectedAiGame ? (
+                  <div className="px-3 py-2 text-xs border rounded-xl border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200">
+                    <p>
+                      <span className="font-semibold">Выбрано:</span>{' '}
+                      {selectedAiGame.name || 'Без названия'}
+                    </p>
+                    <p>
+                      <span className="font-semibold">Тип:</span>{' '}
+                      {resolveGameTypeLabel(selectedAiGame.type)}
+                    </p>
+                    <p>
+                      <span className="font-semibold">Город:</span>{' '}
+                      {resolveGameLocationLabel(selectedAiGame.location)}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={aiIncludeCurrentText}
+                    onChange={(event) =>
+                      setAiIncludeCurrentText(Boolean(event.target.checked))
+                    }
+                    disabled={isAiLoading || !hasCurrentEditorText}
+                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-400 dark:border-slate-600"
+                  />
+                  Передать текущий текст редактора
+                </label>
+
+                <label className="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={aiUseDeepReasoning}
+                    onChange={(event) =>
+                      setAiUseDeepReasoning(Boolean(event.target.checked))
+                    }
+                    disabled={isAiLoading}
+                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-400 dark:border-slate-600"
+                  />
+                  Deep-режим (reasoner)
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="aq-ai-prompt"
+                  className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300"
+                >
+                  Запрос к ИИ
+                </label>
+                <textarea
+                  id="aq-ai-prompt"
+                  value={aiPrompt}
+                  onChange={(event) => setAiPrompt(event.target.value)}
+                  disabled={isAiLoading}
+                  placeholder="Например: сократи текст, упростить стиль, исправить ошибки."
+                  rows={4}
+                  className="w-full px-3 py-2 text-sm transition bg-white border outline-none rounded-xl border-slate-200 text-slate-800 focus:border-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col flex-1 min-h-0 gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60">
+                <p className="text-xs text-slate-600 dark:text-slate-200">
+                  Контекст диалога:{' '}
+                  {aiDialogueCount > 0
+                    ? `${aiDialogueCount} сообщений`
+                    : 'пустой'}
+                </p>
+                <button
+                  type="button"
+                  onClick={resetAiConversationContext}
+                  disabled={isAiLoading || aiConversationHistory.length === 0}
+                  className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                >
+                  Сбросить контекст
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto border rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/50">
+                {aiChatMessages.length > 0 ? (
+                  aiChatMessages.map((message, index) => {
+                    const isUserMessage = message.role === 'user'
+                    const messageHtml = formatAiTextToPreviewHtml(
+                      message.content,
+                    )
+                    const messageKey = `ai-chat-message-${index}`
+                    return (
+                      <div
+                        key={messageKey}
+                        className={`relative rounded-xl px-3 py-2 pr-9 text-sm ${
+                          isUserMessage
+                            ? 'ml-8 border border-cyan-300/60 bg-cyan-50/90 text-cyan-900 dark:border-cyan-500/35 dark:bg-cyan-500/15 dark:text-cyan-100'
+                            : 'mr-8 border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100'
+                        }`}
+                      >
+                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide opacity-75">
+                          {isUserMessage ? 'Вы' : 'ИИ'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void copyAiChatMessage(message, messageKey)
+                          }}
+                          className="absolute right-2 top-2 inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-transparent px-1 text-[10px] font-semibold text-slate-500 transition hover:bg-slate-200/35 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/35 dark:hover:text-slate-200"
+                          title="Копировать текст сообщения"
+                          aria-label="Копировать текст сообщения"
+                        >
+                          {copiedAiMessageKey === messageKey ? 'OK' : '⧉'}
+                        </button>
+                        {message.displayType === 'questions' ? (
+                          <div className="rounded-lg border border-amber-300/70 bg-amber-50/85 px-2.5 py-2 text-xs text-amber-900 dark:border-amber-500/35 dark:bg-amber-500/12 dark:text-amber-100">
+                            <p className="font-semibold">
+                              {message.questions?.title || 'Уточняющие вопросы'}
+                            </p>
+                            <ul className="mt-1 space-y-1">
+                              {(Array.isArray(message.questions?.questions)
+                                ? message.questions.questions
+                                : []
+                              ).map((question) => (
+                                <li key={`chat-question-${question.id}`}>
+                                  {question.label}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : message.displayType === 'answers' ? (
+                          <div className="rounded-lg border border-cyan-300/70 bg-cyan-50/85 px-2.5 py-2 text-xs text-cyan-900 dark:border-cyan-500/35 dark:bg-cyan-500/12 dark:text-cyan-100">
+                            <p className="font-semibold">Ваши ответы</p>
+                            <ul className="mt-1 space-y-1">
+                              {(Array.isArray(message.answers)
+                                ? message.answers
+                                : []
+                              ).map((answerLine, answerIndex) => (
+                                <li key={`chat-answer-${index}-${answerIndex}`}>
+                                  {answerLine}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <div
+                            className="aq-rich-text-base break-words [&_*]:max-w-full [&_*]:break-words"
+                            dangerouslySetInnerHTML={{
+                              __html:
+                                messageHtml || escapeHtmlText(message.content),
+                            }}
+                          />
+                        )}
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Диалог пока пуст. Отправьте первое сообщение.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="aq-ai-chat-input"
+                  className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300"
+                >
+                  Сообщение в чат
+                </label>
+                <textarea
+                  id="aq-ai-chat-input"
+                  value={aiChatInput}
+                  onChange={(event) => setAiChatInput(event.target.value)}
+                  disabled={isAiLoading || Boolean(aiQuestionsPayload)}
+                  placeholder="Напишите уточнение или новый запрос..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm transition bg-white border outline-none rounded-xl border-slate-200 text-slate-800 focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                />
+              </div>
             </div>
-            {isAiSystemPromptsLoading ? (
-              <p className="text-xs text-slate-500 dark:text-slate-300">
-                Загружаем системные промпты...
-              </p>
-            ) : null}
-            {aiSystemPromptsError ? (
-              <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
-                {aiSystemPromptsError}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900/60">
-            <p className="text-xs text-slate-600 dark:text-slate-200">
-              Контекст диалога: {aiConversationHistory.length / 2 > 0
-                ? `${Math.floor(aiConversationHistory.length / 2)} сообщений`
-                : 'пустой'}
-            </p>
-            <button
-              type="button"
-              onClick={resetAiConversationContext}
-              disabled={isAiLoading || aiConversationHistory.length === 0}
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
-            >
-              Сбросить контекст
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="aq-ai-prompt"
-              className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"
-            >
-              Запрос к ИИ
-            </label>
-            <textarea
-              id="aq-ai-prompt"
-              value={aiPrompt}
-              onChange={(event) => setAiPrompt(event.target.value)}
-              disabled={isAiLoading}
-              placeholder="Например: сократи текст, упростить стиль, исправить ошибки."
-              rows={4}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4">
-            <label className="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
-              <input
-                type="checkbox"
-                checked={aiIncludeCurrentText}
-                onChange={(event) =>
-                  setAiIncludeCurrentText(Boolean(event.target.checked))
-                }
-                disabled={isAiLoading || !hasCurrentEditorText}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400 dark:border-slate-600"
-              />
-              Передать текущий текст редактора
-            </label>
-
-            <label className="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
-              <input
-                type="checkbox"
-                checked={aiUseDeepReasoning}
-                onChange={(event) =>
-                  setAiUseDeepReasoning(Boolean(event.target.checked))
-                }
-                disabled={isAiLoading}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400 dark:border-slate-600"
-              />
-              Deep-режим (reasoner)
-            </label>
-          </div>
+          )}
 
           {aiError ? (
-            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+            <p className="px-3 py-2 text-xs border rounded-xl border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
               {aiError}
             </p>
           ) : null}
 
           {aiQuestionsPayload ? (
-            <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-3 dark:border-amber-500/40 dark:bg-amber-500/10">
+            <div className="px-3 py-3 space-y-3 border rounded-xl border-amber-200 bg-amber-50/70 dark:border-amber-500/40 dark:bg-amber-500/10">
               <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
                 {aiQuestionsPayload.title}
               </p>
@@ -2983,7 +3400,7 @@ const TaskRichEditor = ({
                           }))
                         }
                         disabled={isAiLoading}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        className="w-full px-3 py-2 text-sm transition bg-white border outline-none rounded-xl border-slate-200 text-slate-800 focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                       />
                     ) : question.control === 'radio' ? (
                       <div className="flex flex-wrap items-center gap-3">
@@ -2997,8 +3414,9 @@ const TaskRichEditor = ({
                               name={`ai-question-${question.id}`}
                               value={option.value}
                               checked={
-                                String(aiQuestionsAnswers?.[question.id] || '') ===
-                                String(option.value)
+                                String(
+                                  aiQuestionsAnswers?.[question.id] || '',
+                                ) === String(option.value)
                               }
                               onChange={(event) =>
                                 setAiQuestionsAnswers((prev) => ({
@@ -3022,10 +3440,13 @@ const TaskRichEditor = ({
                           }))
                         }
                         disabled={isAiLoading}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        className="w-full px-3 py-2 text-sm transition bg-white border outline-none rounded-xl border-slate-200 text-slate-800 focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                       >
                         {question.options.map((option) => (
-                          <option key={`${question.id}-${option.value}`} value={option.value}>
+                          <option
+                            key={`${question.id}-${option.value}`}
+                            value={option.value}
+                          >
                             {option.label}
                           </option>
                         ))}
@@ -3043,20 +3464,6 @@ const TaskRichEditor = ({
                 >
                   Отправить уточнения
                 </button>
-              </div>
-            </div>
-          ) : null}
-
-          {aiPreviewHtml ? (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
-                Предпросмотр ответа
-              </p>
-              <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-100">
-                <div
-                  className="aq-rich-text-base break-words [&_*]:max-w-full [&_*]:break-words"
-                  dangerouslySetInnerHTML={{ __html: aiPreviewHtml }}
-                />
               </div>
             </div>
           ) : null}
@@ -3089,7 +3496,7 @@ const TaskRichEditor = ({
           <div className="space-y-2">
             <label
               htmlFor="aq-system-prompt-title"
-              className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300"
+              className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300"
             >
               Заголовок
             </label>
@@ -3097,15 +3504,17 @@ const TaskRichEditor = ({
               id="aq-system-prompt-title"
               type="text"
               value={systemPromptTitleDraft}
-              onChange={(event) => setSystemPromptTitleDraft(event.target.value)}
+              onChange={(event) =>
+                setSystemPromptTitleDraft(event.target.value)
+              }
               disabled={isSystemPromptSaving || isSystemPromptDeleting}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 text-sm transition bg-white border outline-none rounded-xl border-slate-200 text-slate-800 focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               placeholder="Например: Редактор задач ActQuest"
             />
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+            <p className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
               Текст системного промпта (Markdown)
             </p>
             <SystemPromptMdEditor
@@ -3119,7 +3528,7 @@ const TaskRichEditor = ({
           </div>
 
           {systemPromptModalError ? (
-            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+            <p className="px-3 py-2 text-xs border rounded-xl border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
               {systemPromptModalError}
             </p>
           ) : null}
@@ -3189,18 +3598,18 @@ const TaskRichEditor = ({
           margin: 12px 0;
           max-width: 560px;
           border-radius: 16px;
-          border: 1px solid rgba(0, 221, 255, 0.3);
+          border: 1px solid rgba(14, 116, 144, 0.35);
           background: linear-gradient(
             132deg,
-            rgba(8, 30, 68, 0.95),
-            rgba(16, 23, 53, 0.95) 52%,
-            rgba(24, 16, 58, 0.95)
+            rgba(240, 249, 255, 0.98),
+            rgba(224, 242, 254, 0.98) 52%,
+            rgba(239, 246, 255, 0.98)
           );
           box-shadow:
-            0 0 0 1px rgba(0, 221, 255, 0.08),
-            0 12px 32px rgba(2, 6, 23, 0.28);
+            0 0 0 1px rgba(14, 116, 144, 0.08),
+            0 8px 20px rgba(15, 23, 42, 0.12);
           padding: 11px 12px;
-          color: #e7f9ff;
+          color: #0f172a;
         }
 
         .ProseMirror .aq-video-message,
@@ -3296,7 +3705,7 @@ const TaskRichEditor = ({
           margin-top: 8px;
           border-radius: 999px;
           overflow: hidden;
-          background: rgba(148, 163, 184, 0.22);
+          background: rgba(100, 116, 139, 0.3);
         }
 
         .ProseMirror
@@ -3345,7 +3754,7 @@ const TaskRichEditor = ({
           white-space: nowrap;
           font-size: 12px;
           font-weight: 600;
-          color: #dbeafe;
+          color: #334155;
           letter-spacing: 0.01em;
           cursor: text;
         }
@@ -3354,7 +3763,7 @@ const TaskRichEditor = ({
           flex: 0 0 auto;
           font-size: 12px;
           font-variant-numeric: tabular-nums;
-          color: #cbd5e1;
+          color: #334155;
         }
 
         .ProseMirror .aq-audio-message--custom .aq-audio-message__volume-wrap {
@@ -3378,6 +3787,7 @@ const TaskRichEditor = ({
           line-height: 1;
           opacity: 0.9;
           border-radius: 999px;
+          color: #0f172a;
         }
 
         .ProseMirror
@@ -3401,18 +3811,16 @@ const TaskRichEditor = ({
           cursor: pointer;
         }
 
-        .ProseMirror
-          .aq-audio-message--custom
-          .aq-audio-message__download-btn {
+        .ProseMirror .aq-audio-message--custom .aq-audio-message__download-btn {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           width: 28px;
           height: 28px;
           border-radius: 999px;
-          border: 1px solid rgba(0, 221, 255, 0.45);
-          color: #67e8f9;
-          background: rgba(6, 182, 212, 0.12);
+          border: 1px solid rgba(14, 116, 144, 0.45);
+          color: #0e7490;
+          background: rgba(14, 116, 144, 0.1);
           text-decoration: none;
           transition:
             transform 0.18s ease,
@@ -3427,9 +3835,9 @@ const TaskRichEditor = ({
         .ProseMirror
           .aq-audio-message--custom
           .aq-audio-message__download-btn:focus-visible {
-          border-color: rgba(103, 232, 249, 0.92);
-          background: rgba(6, 182, 212, 0.22);
-          color: #a5f3fc;
+          border-color: rgba(14, 116, 144, 0.92);
+          background: rgba(14, 116, 144, 0.2);
+          color: #155e75;
           transform: translateY(-1px);
           outline: none;
         }
@@ -3506,9 +3914,7 @@ const TaskRichEditor = ({
             border-left-width: 9px;
           }
 
-          .ProseMirror
-            .aq-audio-message--custom
-            .aq-audio-message__pause-icon {
+          .ProseMirror .aq-audio-message--custom .aq-audio-message__pause-icon {
             width: 10px;
             height: 12px;
             background: linear-gradient(
@@ -3537,7 +3943,9 @@ const TaskRichEditor = ({
             font-size: 11px;
           }
 
-          .ProseMirror .aq-audio-message--custom .aq-audio-message__volume-wrap {
+          .ProseMirror
+            .aq-audio-message--custom
+            .aq-audio-message__volume-wrap {
             gap: 4px;
           }
 
@@ -3576,7 +3984,6 @@ const TaskRichEditor = ({
           border-color: #e2e8f0;
           background: #67e8f9;
         }
-
       `}</style>
     </>
   )

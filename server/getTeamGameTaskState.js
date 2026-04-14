@@ -32,6 +32,39 @@ const parseDurationSeconds = (value, fallback) => {
   return Math.max(Math.floor(numeric), 0)
 }
 
+const formatCountdownSeconds = (totalSeconds) => {
+  if (!Number.isFinite(totalSeconds)) return '00:00:00'
+
+  const safeSeconds = Math.max(Math.floor(totalSeconds), 0)
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+  const seconds = safeSeconds % 60
+  const pad = (num) => String(num).padStart(2, '0')
+
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+}
+
+const toFiniteNonNegativeIntegerOrNull = (value) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return null
+  const normalized = Math.floor(numeric)
+  return normalized >= 0 ? normalized : null
+}
+
+const buildTaskDisplayMeta = (task) => {
+  const mainCodesCount = Array.isArray(task?.codes) ? task.codes.length : 0
+  return {
+    mainCodesCount,
+    requiredCodesCount: toFiniteNonNegativeIntegerOrNull(
+      task?.numCodesToCompliteTask,
+    ),
+    bonusCodesCount: Array.isArray(task?.bonusCodes) ? task.bonusCodes.length : 0,
+    penaltyCodesCount: Array.isArray(task?.penaltyCodes)
+      ? task.penaltyCodes.length
+      : 0,
+  }
+}
+
 export const GAME_TASK_ERRORS = {
   INVALID_PARAMS: 'INVALID_PARAMS',
   GAME_NOT_FOUND: 'GAME_NOT_FOUND',
@@ -233,6 +266,7 @@ const computeTaskHtml = async ({
   let taskDisplayTaskHtml = ''
   let taskDisplayTaskText = ''
   let taskDisplayClues = []
+  let taskDisplayMeta = null
   let taskState = 'idle'
   let postCompletionMessage = null
 
@@ -312,6 +346,10 @@ const computeTaskHtml = async ({
         if (postMessage) {
           postCompletionMessage = sanitizeFragment(postMessage)
         }
+        const breakTargetTimestamp = Date.now() + breakSecondsLeft * 1000
+        const hiddenBreakCountdown = `<span style="display:none" aria-hidden="true"><span data-task-countdown="break" data-refresh-on-complete="true" data-target="${breakTargetTimestamp}" data-seconds="${Math.max(Math.floor(breakSecondsLeft), 0)}">${formatCountdownSeconds(
+          breakSecondsLeft,
+        )}</span></span>`
         const breakParts = [
           breakReason === 'timeout'
             ? '<b>Время на задание вышло.</b>'
@@ -321,6 +359,7 @@ const computeTaskHtml = async ({
         breakParts.push(
           '<br /><br /><b>Ожидайте следующее задание после перерыва.</b>',
         )
+        breakParts.push(`<br /><br />${hiddenBreakCountdown}`)
         taskHtml = breakParts.join('')
         taskState = 'break'
       } else {
@@ -366,6 +405,7 @@ const computeTaskHtml = async ({
         taskDisplayClues = Array.isArray(displayContent.clues)
           ? displayContent.clues
           : []
+        taskDisplayMeta = buildTaskDisplayMeta(activeTask)
 
         taskState = 'active'
 
@@ -400,6 +440,7 @@ const computeTaskHtml = async ({
     taskDisplayTaskHtml,
     taskDisplayTaskText,
     taskDisplayClues,
+    taskDisplayMeta,
     taskState,
     processResult,
     effectiveGameTeam,
@@ -525,6 +566,7 @@ const getTeamGameTaskState = async ({
       taskDisplayTaskHtml,
       taskDisplayTaskText,
       taskDisplayClues,
+      taskDisplayMeta,
       taskState,
       processResult: finalResult,
       postCompletionMessage,
@@ -558,6 +600,10 @@ const getTeamGameTaskState = async ({
         taskDisplayClues: Array.isArray(taskDisplayClues)
           ? safeSerialize(taskDisplayClues)
           : [],
+        taskDisplayMeta:
+          taskDisplayMeta && typeof taskDisplayMeta === 'object'
+            ? safeSerialize(taskDisplayMeta)
+            : null,
         taskState,
         gameTeamId: String(gameTeam._id),
         postCompletionMessage:

@@ -481,16 +481,23 @@ export default function GameControlPageClient({ session }) {
                       )
                     })()
                   )}
-                {team.isTeamOnBreak && team.completedTaskSeconds > 0 && (
-                  <div>
-                    <span className="text-slate-500">
-                      Предыдущее задание завершено за:{' '}
-                    </span>
-                    <span className="font-mono font-medium text-emerald-300">
-                      {formatTime(team.completedTaskSeconds)}
-                    </span>
+                {team.isTeamOnBreak && team.isActiveTaskFailed ? (
+                  <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-200">
+                    Команда провалила предыдущее задание.
                   </div>
-                )}
+                ) : null}
+                {team.isTeamOnBreak &&
+                  !team.isActiveTaskFailed &&
+                  team.completedTaskSeconds > 0 && (
+                    <div>
+                      <span className="text-slate-500">
+                        Предыдущее задание завершено за:{' '}
+                      </span>
+                      <span className="font-mono font-medium text-emerald-300">
+                        {formatTime(team.completedTaskSeconds)}
+                      </span>
+                    </div>
+                  )}
                 {team.isBreakFinishedWaitingForNextTask && (
                   <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-medium text-amber-200">
                     Перерыв окончен, но следующее задание еще не начато.

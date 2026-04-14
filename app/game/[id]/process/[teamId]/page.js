@@ -91,6 +91,7 @@ export default async function GameTeamPage({ params, searchParams }) {
           taskDisplayTaskHtml: '',
           taskDisplayTaskText: '',
           taskDisplayClues: [],
+          taskDisplayMeta: null,
           taskState: 'idle',
           postCompletionMessage: '',
           error: 'DB_CONNECTION_FAILED',
@@ -114,6 +115,7 @@ export default async function GameTeamPage({ params, searchParams }) {
           taskDisplayTaskHtml: '',
           taskDisplayTaskText: '',
           taskDisplayClues: [],
+          taskDisplayMeta: null,
           taskState: 'idle',
           postCompletionMessage: '',
           error: 'UNKNOWN_ERROR',
@@ -141,6 +143,10 @@ export default async function GameTeamPage({ params, searchParams }) {
         taskDisplayClues: Array.isArray(data.taskDisplayClues)
           ? data.taskDisplayClues
           : [],
+        taskDisplayMeta:
+          data.taskDisplayMeta && typeof data.taskDisplayMeta === 'object'
+            ? data.taskDisplayMeta
+            : null,
         taskState: data.taskState,
         postCompletionMessage: data.postCompletionMessage || '',
         error: null,
@@ -166,6 +172,7 @@ export default async function GameTeamPage({ params, searchParams }) {
       taskDisplayTaskHtml: '',
       taskDisplayTaskText: '',
       taskDisplayClues: [],
+      taskDisplayMeta: null,
       taskState: 'idle',
       postCompletionMessage: '',
       error: 'UNKNOWN_ERROR',
