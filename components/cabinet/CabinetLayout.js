@@ -263,6 +263,7 @@ const CabinetLayout = ({
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
+  const [forcedLocationKey, setForcedLocationKey] = useState('')
   const [isRouteLoading, setIsRouteLoading] = useState(false)
   const routeLoadingTimeoutRef = useRef(null)
   const authRedirectInProgressRef = useRef(false)
@@ -283,7 +284,9 @@ const CabinetLayout = ({
   const sessionLocationKey = normalizeLocationKey(session?.user?.location)
   const locationKey = isAllowedLocationKey(sessionLocationKey)
     ? sessionLocationKey
-    : null
+    : isAllowedLocationKey(forcedLocationKey)
+      ? forcedLocationKey
+      : null
   const hasUserIdentity =
     Boolean(session?.user?.globalUserId) ||
     Boolean(session?.user?._id) ||
@@ -417,6 +420,7 @@ const CabinetLayout = ({
     if (!shouldForceLocationSelection) {
       setLocationPromptValue('')
       setLocationPromptError('')
+      setForcedLocationKey('')
     }
   }, [shouldForceLocationSelection])
 
@@ -612,16 +616,31 @@ const applyTheme = useCallback((nextTheme) => {
           body: JSON.stringify({ location: nextLocation }),
         })
 
+        const payload = await response.json().catch(() => null)
+
         if (!response.ok) {
-          throw new Error('Не удалось обновить город')
+          throw new Error(
+            payload?.error || 'Не удалось обновить город. Попробуйте снова.',
+          )
         }
 
+        // Закрываем блокировку оптимистично после успешного сохранения в БД.
+        setForcedLocationKey(nextLocation)
+
         if (typeof update === 'function') {
-          await update({ location: nextLocation })
+          try {
+            await update({ location: nextLocation })
+          } catch (updateError) {
+            console.error('Failed to update session location', updateError)
+          }
         }
       } catch (error) {
         console.error('Failed to change active location', error)
-        setLocationPromptError('Не удалось сохранить город. Попробуйте снова.')
+        const message =
+          typeof error?.message === 'string' && error.message.trim()
+            ? error.message.trim()
+            : 'Не удалось сохранить город. Попробуйте снова.'
+        setLocationPromptError(message)
       } finally {
         setIsLocationSaving(false)
       }
