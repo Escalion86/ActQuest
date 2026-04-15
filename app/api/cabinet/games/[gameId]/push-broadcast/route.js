@@ -5,6 +5,7 @@ import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { broadcastNotificationToUsers } from '@server/pwaNotifications'
 import { toStringId } from '@helpers/idAndDate'
+import resolveUserCityKey from '@helpers/resolveUserCityKey'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -54,14 +55,6 @@ const sanitizeCustomMessage = (value) => {
   }
 
   return value.trim()
-}
-
-const normalizeLocationKey = (value) => {
-  if (typeof value !== 'string') {
-    return ''
-  }
-
-  return value.trim().toLowerCase()
 }
 
 const isManagerOfGame = ({ sessionUser, game }) => {
@@ -151,7 +144,10 @@ const getUsersForGameRegistrations = async ({ db, gameId }) => {
 
 const getAllUsersForBroadcast = async ({ db, gameLocation }) => {
   const Users = db.model('Users')
-  const normalizedGameLocation = normalizeLocationKey(gameLocation)
+  const normalizedGameLocation = resolveUserCityKey(
+    { currentLocation: gameLocation },
+    null,
+  )
   const users = await Users.find({})
     .select({
       _id: 1,
@@ -167,12 +163,10 @@ const getAllUsersForBroadcast = async ({ db, gameLocation }) => {
       return false
     }
 
-    const userParticipationLocation = normalizeLocationKey(
-      user?.currentLocation || user?.accountLocation || '',
-    )
+    const userParticipationLocation = resolveUserCityKey(user, null)
 
     return (
-      normalizedGameLocation.length > 0 &&
+      Boolean(normalizedGameLocation) &&
       userParticipationLocation === normalizedGameLocation
     )
   })
@@ -279,10 +273,7 @@ export async function POST(request, { params }) {
       )
     }
 
-    if (
-      isAnnouncementForAll &&
-      normalizeLocationKey(game?.location).length === 0
-    ) {
+    if (isAnnouncementForAll && !resolveUserCityKey({ currentLocation: game?.location }, null)) {
       return NextResponse.json(
         {
           success: false,

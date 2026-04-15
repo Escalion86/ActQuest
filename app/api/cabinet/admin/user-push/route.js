@@ -5,6 +5,7 @@ import { authOptions } from '@server/auth/authOptions'
 import isUserAdmin from '@helpers/isUserAdmin'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { broadcastNotificationToUsers } from '@server/pwaNotifications'
+import resolveUserCityKey from '@helpers/resolveUserCityKey'
 
 const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '')
 
@@ -98,10 +99,14 @@ export async function POST(request) {
     }
 
     const location =
-      sanitizeText(user?.currentLocation) ||
-      sanitizeText(user?.accountLocation) ||
-      sanitizeText(session?.user?.location) ||
-      'global'
+      resolveUserCityKey(
+        {
+          currentLocation: user?.currentLocation,
+          accountLocation: user?.accountLocation,
+          location: session?.user?.location,
+        },
+        null,
+      ) || 'global'
 
     const notification = {
       title: 'Сообщение администратора',

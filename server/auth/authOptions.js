@@ -6,6 +6,7 @@ import authenticateVkUser from '@helpers/authenticateVkUser'
 import authenticatePasswordUser from '@helpers/authenticatePasswordUser'
 import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
 import { exchangeVkCode, fetchVkUserInfo } from '@helpers/vkIdAuth'
+import resolveUserCityKey from '@helpers/resolveUserCityKey'
 
 const isVkDebugEnabled =
   process.env.VK_AUTH_DEBUG === 'true' || process.env.VK_DEBUG_LOGS === 'true'
@@ -55,12 +56,7 @@ const normalizeUserForSession = (user, fallback = {}) => {
     languageCode: user?.languageCode ?? fallbackData.languageCode ?? null,
     isPremium: user?.isPremium ?? fallbackData.isPremium ?? false,
     role: user?.role ?? fallbackData.role ?? 'client',
-    location:
-      user?.location ??
-      user?.currentLocation ??
-      user?.accountLocation ??
-      fallbackData.location ??
-      null,
+    location: resolveUserCityKey(user, fallbackData.location),
   }
 
   const rawId =
@@ -347,12 +343,7 @@ export const authOptions = {
         token.authMethod =
           user.authMethod ??
           (user.vkId ? 'vk' : user.phone ? 'phone' : 'telegram')
-        token.location =
-          user.location ??
-          user.currentLocation ??
-          user.accountLocation ??
-          token.location ??
-          null
+        token.location = resolveUserCityKey(user, token.location)
         token.name = user.name
         token.username = user.username
         token.photoUrl = user.photoUrl ?? token.photoUrl ?? null
@@ -492,6 +483,7 @@ export const authOptions = {
         location: token.location ?? null,
         role: token.role ?? 'client',
       }
+      let didLoadUserFromDb = false
 
       try {
         let user = null
@@ -511,6 +503,7 @@ export const authOptions = {
           if (userIdToLoad) {
             try {
               user = await globalDb.model('Users').findById(userIdToLoad).lean()
+              didLoadUserFromDb = Boolean(user)
 
               sessionDebugLog('nextauth:session:load-user:result', {
                 userIdToLoad,
@@ -545,8 +538,7 @@ export const authOptions = {
         if (user) {
           // Если пользователь загружен из БД, используем только значение локации из БД.
           // Важно: null из БД не должен подменяться старым token.location.
-          session.user.location =
-            user.location ?? user.currentLocation ?? user.accountLocation ?? null
+          session.user.location = resolveUserCityKey(user, null)
         }
 
         // Если разработчик импер сонирует, добавить индикатор
@@ -602,9 +594,11 @@ export const authOptions = {
         token.globalUserId ??
         token.userId ??
         null
-      // Приоритет у актуального значения из БД (session.user.location),
-      // а token.location используем только как fallback.
-      session.user.location = session.user.location ?? token.location ?? null
+      const normalizedSessionLocation = normalizeLocation(session.user.location)
+      const normalizedTokenLocation = normalizeLocation(token.location)
+      session.user.location = didLoadUserFromDb
+        ? normalizedSessionLocation
+        : normalizedSessionLocation ?? normalizedTokenLocation ?? null
       session.user.role = session.user.role ?? token.role ?? 'client'
       session.user.isTestAuth = Boolean(token.isTestAuth)
 

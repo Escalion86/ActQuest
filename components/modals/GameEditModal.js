@@ -1494,30 +1494,10 @@ const GameEditModal = ({
 
                           {!isPhotoGame && (
                             <div>
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
                                 <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
                                   {withRequiredMark('Коды задания')}
                                 </h4>
-                                <CabinetButton
-                                  onClick={() => {
-                                    const nextIndex = Array.isArray(task?.codes)
-                                      ? task.codes.length
-                                      : 0
-                                    const nextAccordionKey = `${task.id}-main-${nextIndex}`
-                                    setExpandedCodeAccordions((prev) => {
-                                      const next = new Set(prev)
-                                      next.add(nextAccordionKey)
-                                      return next
-                                    })
-                                    handleAddTaskCode(task.id)
-                                  }}
-                                  variant="secondary"
-                                  tone="brand"
-                                  size="sm"
-                                  className="inline-flex justify-center"
-                                >
-                                  Добавить код
-                                </CabinetButton>
                               </div>
                               {task.codes?.length > 0 ? (
                                 <div className="mt-3 space-y-3">
@@ -1641,6 +1621,28 @@ const GameEditModal = ({
                                   Кодов пока нет.
                                 </p>
                               )}
+                              <div className="mt-3">
+                                <CabinetButton
+                                  onClick={() => {
+                                    const nextIndex = Array.isArray(task?.codes)
+                                      ? task.codes.length
+                                      : 0
+                                    const nextAccordionKey = `${task.id}-main-${nextIndex}`
+                                    setExpandedCodeAccordions((prev) => {
+                                      const next = new Set(prev)
+                                      next.add(nextAccordionKey)
+                                      return next
+                                    })
+                                    handleAddTaskCode(task.id)
+                                  }}
+                                  variant="secondary"
+                                  tone="brand"
+                                  size="sm"
+                                  className="inline-flex justify-center"
+                                >
+                                  Добавить код
+                                </CabinetButton>
+                              </div>
                               <div className="mt-4">
                                 <CabinetNumberField
                                   id={`task-codes-required-${task.id}`}
@@ -1774,32 +1776,10 @@ const GameEditModal = ({
 
                           {!isPhotoGame && (
                             <div>
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
                                 <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
                                   Штрафные коды
                                 </h4>
-                                <CabinetButton
-                                  onClick={() => {
-                                    const nextIndex = Array.isArray(
-                                      task?.penaltyCodes,
-                                    )
-                                      ? task.penaltyCodes.length
-                                      : 0
-                                    const nextAccordionKey = `${task.id}-penalty-${nextIndex}`
-                                    setExpandedCodeAccordions((prev) => {
-                                      const next = new Set(prev)
-                                      next.add(nextAccordionKey)
-                                      return next
-                                    })
-                                    handleAddPenaltyCode(task.id)
-                                  }}
-                                  variant="secondary"
-                                  tone="brand"
-                                  size="sm"
-                                  className="inline-flex justify-center"
-                                >
-                                  Добавить штраф
-                                </CabinetButton>
                               </div>
                               {task.penaltyCodes?.length > 0 ? (
                                 <div className="mt-3 space-y-4">
@@ -1966,37 +1946,39 @@ const GameEditModal = ({
                                   Штрафных кодов пока нет.
                                 </p>
                               )}
-                            </div>
-                          )}
-
-                          {!isPhotoGame && (
-                            <div>
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
-                                  Бонусные коды
-                                </h4>
+                              <div className="mt-3">
                                 <CabinetButton
                                   onClick={() => {
                                     const nextIndex = Array.isArray(
-                                      task?.bonusCodes,
+                                      task?.penaltyCodes,
                                     )
-                                      ? task.bonusCodes.length
+                                      ? task.penaltyCodes.length
                                       : 0
-                                    const nextAccordionKey = `${task.id}-bonus-${nextIndex}`
+                                    const nextAccordionKey = `${task.id}-penalty-${nextIndex}`
                                     setExpandedCodeAccordions((prev) => {
                                       const next = new Set(prev)
                                       next.add(nextAccordionKey)
                                       return next
                                     })
-                                    handleAddBonusCode(task.id)
+                                    handleAddPenaltyCode(task.id)
                                   }}
                                   variant="secondary"
                                   tone="brand"
                                   size="sm"
                                   className="inline-flex justify-center"
                                 >
-                                  Добавить бонус
+                                  Добавить штраф
                                 </CabinetButton>
+                              </div>
+                            </div>
+                          )}
+
+                          {!isPhotoGame && (
+                            <div>
+                              <div>
+                                <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
+                                  Бонусные коды
+                                </h4>
                               </div>
                               {task.bonusCodes?.length > 0 ? (
                                 <div className="mt-3 space-y-4">
@@ -2163,6 +2145,30 @@ const GameEditModal = ({
                                   Бонусных кодов пока нет.
                                 </p>
                               )}
+                              <div className="mt-3">
+                                <CabinetButton
+                                  onClick={() => {
+                                    const nextIndex = Array.isArray(
+                                      task?.bonusCodes,
+                                    )
+                                      ? task.bonusCodes.length
+                                      : 0
+                                    const nextAccordionKey = `${task.id}-bonus-${nextIndex}`
+                                    setExpandedCodeAccordions((prev) => {
+                                      const next = new Set(prev)
+                                      next.add(nextAccordionKey)
+                                      return next
+                                    })
+                                    handleAddBonusCode(task.id)
+                                  }}
+                                  variant="secondary"
+                                  tone="brand"
+                                  size="sm"
+                                  className="inline-flex justify-center"
+                                >
+                                  Добавить бонус
+                                </CabinetButton>
+                              </div>
                             </div>
                           )}
 

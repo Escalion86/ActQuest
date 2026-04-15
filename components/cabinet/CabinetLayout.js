@@ -205,6 +205,9 @@ const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect
 const isClientSessionDebugEnabled =
   process.env.NEXT_PUBLIC_SESSION_DEBUG === '1'
+const isForceLocationDebugEnabled =
+  process.env.NEXT_PUBLIC_FORCE_LOCATION_DEBUG === '1' ||
+  isClientSessionDebugEnabled
 const CABINET_USERS_API_BASE = '/api/cabinet/users'
 const clientSessionDebugLog = (stage, payload = null) => {
   if (!isClientSessionDebugEnabled || typeof window === 'undefined') {
@@ -218,6 +221,20 @@ const clientSessionDebugLog = (stage, payload = null) => {
   }
 
   console.info(`[session-debug] ${time} ${stage}`, payload)
+}
+
+const forceLocationClientLog = (stage, payload = null) => {
+  if (!isForceLocationDebugEnabled || typeof window === 'undefined') {
+    return
+  }
+
+  const time = new Date().toISOString()
+  if (payload === null || payload === undefined) {
+    console.info(`[force-location][client] ${time} ${stage}`)
+    return
+  }
+
+  console.info(`[force-location][client] ${time} ${stage}`, payload)
 }
 
 const normalizePath = (value) => {
@@ -424,6 +441,26 @@ const CabinetLayout = ({
     }
   }, [shouldForceLocationSelection])
 
+  useEffect(() => {
+    forceLocationClientLog('state', {
+      hasUserIdentity,
+      sessionLocationKey,
+      forcedLocationKey,
+      resolvedLocationKey: locationKey,
+      shouldForceLocationSelection,
+      locationPromptValue,
+      isLocationSaving,
+    })
+  }, [
+    forcedLocationKey,
+    hasUserIdentity,
+    isLocationSaving,
+    locationKey,
+    locationPromptValue,
+    sessionLocationKey,
+    shouldForceLocationSelection,
+  ])
+
 const applyTheme = useCallback((nextTheme) => {
     const isDark = nextTheme === 'dark'
     if (typeof window !== 'undefined') {
@@ -601,12 +638,27 @@ const applyTheme = useCallback((nextTheme) => {
     async (event) => {
       const nextLocation = event.target.value
       if (!nextLocation || nextLocation === locationKey || isLocationSaving) {
+        forceLocationClientLog('submit_skipped', {
+          nextLocation,
+          locationKey,
+          isLocationSaving,
+          reason: !nextLocation
+            ? 'empty_location'
+            : nextLocation === locationKey
+              ? 'same_location'
+              : 'saving_in_progress',
+        })
         return
       }
 
       try {
         setIsLocationSaving(true)
         setLocationPromptError('')
+        forceLocationClientLog('submit_start', {
+          nextLocation,
+          locationKey,
+          sessionUserId: session?.user?.globalUserId || session?.user?._id || null,
+        })
         const response = await fetch(`${CABINET_USERS_API_BASE}/location`, {
           method: 'POST',
           headers: {
@@ -617,6 +669,12 @@ const applyTheme = useCallback((nextTheme) => {
         })
 
         const payload = await response.json().catch(() => null)
+        forceLocationClientLog('submit_response', {
+          nextLocation,
+          status: response.status,
+          ok: response.ok,
+          payload,
+        })
 
         if (!response.ok) {
           throw new Error(
@@ -626,16 +684,30 @@ const applyTheme = useCallback((nextTheme) => {
 
         // Закрываем блокировку оптимистично после успешного сохранения в БД.
         setForcedLocationKey(nextLocation)
+        forceLocationClientLog('forced_location_set', {
+          nextLocation,
+        })
 
         if (typeof update === 'function') {
           try {
             await update({ location: nextLocation })
+            forceLocationClientLog('session_update_success', {
+              nextLocation,
+            })
           } catch (updateError) {
             console.error('Failed to update session location', updateError)
+            forceLocationClientLog('session_update_error', {
+              nextLocation,
+              message: updateError?.message ?? null,
+            })
           }
         }
       } catch (error) {
         console.error('Failed to change active location', error)
+        forceLocationClientLog('submit_error', {
+          nextLocation,
+          message: error?.message ?? null,
+        })
         const message =
           typeof error?.message === 'string' && error.message.trim()
             ? error.message.trim()
@@ -643,9 +715,16 @@ const applyTheme = useCallback((nextTheme) => {
         setLocationPromptError(message)
       } finally {
         setIsLocationSaving(false)
+        forceLocationClientLog('submit_finish', {
+          nextLocation,
+          locationPromptError:
+            typeof locationPromptError === 'string'
+              ? locationPromptError
+              : null,
+        })
       }
     },
-    [isLocationSaving, locationKey, update],
+    [isLocationSaving, locationKey, locationPromptError, session?.user?._id, session?.user?.globalUserId, update],
   )
 
   const appBgClass = isDarkTheme ? 'bg-[#0B001A]' : 'bg-slate-100'

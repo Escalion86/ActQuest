@@ -4627,7 +4627,7 @@ const GamesPage = ({
   }, [])
 
   const canViewResultsForGame = useCallback((game) => {
-    if (!game || Boolean(game.hideResult)) {
+    if (!game) {
       return false
     }
 
@@ -4637,8 +4637,18 @@ const GamesPage = ({
 
     const status =
       typeof game.status === 'string' ? game.status.toLowerCase() : ''
-    return status === 'finished' || status === 'closed'
-  }, [])
+    const isCompleted = status === 'finished' || status === 'closed'
+    if (!isCompleted) {
+      return false
+    }
+
+    const canManageThisGameStatus = canManageGameStatus(game)
+    if (canManageThisGameStatus) {
+      return true
+    }
+
+    return !Boolean(game.hideResult)
+  }, [canManageGameStatus])
 
   const canViewTasksForGame = useCallback((game) => {
     if (!game || !Boolean(game.showTasks)) {

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { getToken } from 'next-auth/jwt'
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import resolveUserCityKey from '@helpers/resolveUserCityKey'
 
 const AUTH_COOKIE_NAMES = ['next-auth.session-token', '__Secure-next-auth.session-token']
 const isSessionDebugEnabled = process.env.SESSION_DEBUG === '1'
@@ -103,7 +104,10 @@ const mergeSessionWithToken = (session, token) => {
       telegramId: sessionUser.telegramId ?? tokenUser.telegramId ?? null,
       vkId: sessionUser.vkId ?? tokenUser.vkId ?? null,
       phone: sessionUser.phone ?? tokenUser.phone ?? null,
-      location: sessionUser.location ?? tokenUser.location ?? null,
+      location: resolveUserCityKey(
+        { currentLocation: sessionUser.location, accountLocation: null, location: null },
+        tokenUser.location,
+      ),
       role: sessionUser.role ?? tokenUser.role ?? 'client',
       isTestAuth: Boolean(sessionUser.isTestAuth ?? tokenUser.isTestAuth),
     },
@@ -195,12 +199,14 @@ const enrichSessionFromGlobalDb = async (session) => {
         telegramId: session.user.telegramId ?? userDoc.telegramId ?? null,
         vkId: session.user.vkId ?? userDoc.vkId ?? null,
         phone: session.user.phone ?? userDoc.phone ?? null,
-        location:
-          session.user.location ??
-          userDoc.currentLocation ??
-          userDoc.accountLocation ??
-          userDoc.location ??
-          null,
+        location: resolveUserCityKey(
+          {
+            currentLocation: userDoc.currentLocation,
+            accountLocation: userDoc.accountLocation,
+            location: userDoc.location,
+          },
+          session.user.location,
+        ),
         role: session.user.role ?? userDoc.role ?? 'client',
         name: session.user.name ?? userDoc.name ?? null,
         username: session.user.username ?? userDoc.username ?? null,
