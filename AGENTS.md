@@ -44,6 +44,9 @@ ActQuest — это единый репозиторий с:
 - `teamsPlaces` и `computed` должны строиться из snapshot’ов через:
   - `server/buildGameResultComputed.js`.
 - Кнопка/доступ к результатам в кабинете ориентируется на наличие `result.computed`.
+- Доступ к кнопке "Результаты" в `GamesPageClient.js`:
+  - для `admin/dev` и модераторов игры (проверка `canManageGameStatus`) — кнопка доступна всегда, если игра `finished|closed` и есть `result.computed`,
+  - для обычного пользователя — только если игра `finished|closed`, есть `result.computed` и `hideResult !== true`.
 - Если snapshot’ов нет, результат пересобрать нельзя (игра пропускается в таких операциях).
 
 ### Когда формировать snapshots
@@ -169,6 +172,44 @@ result: {
   - клик по карточке -> `Редактировать` -> ввод в поле.
 - Если есть role preview, используйте только `moder` как роль модератора.
 
+## Локация пользователя (city key)
+
+- Каноничные поля города пользователя: `currentLocation` (основное) и `accountLocation` (совместимость).
+- Поле `location` в документе пользователя может содержать geo-объект (legacy для координат), его нельзя использовать как city key.
+- Для безопасного определения города использовать `helpers/resolveUserCityKey.js`.
+- Принудительная модалка выбора города в кабинете опирается только на строковый city key.
+- API `/api/cabinet/users/location` должно обновлять одновременно `currentLocation` и `accountLocation`.
+
+## Системы логирования и debug-флаги
+
+### Session/Auth debug
+
+- Префикс: `[session-debug]`.
+- Клиент: `components/cabinet/CabinetLayout.js`, `helpers/requestApiJson.js`.
+- Сервер: `server/auth/authOptions.js`, `helpers/getSessionSafe.js`, `app/api/cabinet/games-list/route.js`.
+- Включение:
+  - сервер: `SESSION_DEBUG=1`,
+  - клиент: `NEXT_PUBLIC_SESSION_DEBUG=1`.
+
+### Принудительный выбор города
+
+- Префиксы:
+  - клиент: `[force-location][client]` (`components/cabinet/CabinetLayout.js`),
+  - сервер: `[force-location][server]` (`app/api/cabinet/users/location/route.js`).
+- Включение:
+  - сервер: `FORCE_LOCATION_DEBUG=1` (или `SESSION_DEBUG=1`),
+  - клиент: `NEXT_PUBLIC_FORCE_LOCATION_DEBUG=1` (или `NEXT_PUBLIC_SESSION_DEBUG=1`).
+- Ключевые события: `state`, `submit_start`, `submit_response`, `forced_location_set`, `session_update_success/error`, `submit_finish`, `request_received`, `try_filter`, `updated_by_filter`.
+
+### Ошибки (error-level)
+
+- Ошибки пишутся через `console.error` в auth/session/location-цепочке:
+  - `server/auth/authOptions.js`
+  - `helpers/getSessionSafe.js`
+  - `app/api/cabinet/users/location/route.js`
+  - `components/cabinet/CabinetLayout.js`
+- Для production-анализа собирать stdout/stderr процесса Next.js (PM2/systemd/docker logging driver).
+
 ## Практика изменений
 
 - Использовать React functional components.
@@ -179,6 +220,7 @@ result: {
 ## Работа с roadmap
 
 - Перед началом крупной задачи проверять актуальные roadmap-документы в `docs/` (минимум `docs/roadmap.md`, а также профильные roadmap по теме задачи).
+- Для диагностики и расследования инцидентов использовать `docs/logging-and-debug.md` как источник по debug-флагам и префиксам логов.
 - Если в рамках работы закрыт или существенно продвинут пункт roadmap, обновлять его статус в документе:
   - `[x]` — выполнено,
   - `[~]` — в процессе,
@@ -258,6 +300,15 @@ result: {
   - Она должна работать в обоих блоках: при текущем членстве и при поиске по snapshot'ам.
 - Проверить, что `userTeamPlace` НЕ `null` — если null, игра отфильтруется в Обзоре.
 - **Fallback**: при пустом `result.teamsPlaces` место должно быть = кол-во команд или 1.
+
+8. Симптом: модалка обязательного выбора города не закрывается после нажатия "Продолжить".
+
+- Проверить `POST /api/cabinet/users/location` (статус/`ok`, payload).
+- Включить debug:
+  - клиент: `NEXT_PUBLIC_FORCE_LOCATION_DEBUG=1`,
+  - сервер: `FORCE_LOCATION_DEBUG=1`.
+- Проверить, что город в профиле/сессии — строковый city key (`krsk`, `nsk`, ...), а не geo-объект.
+- Проверить, что резолв города в auth/session идёт через `helpers/resolveUserCityKey.js`.
 
 ## Частые нюансы при работе с историческими snapshot'ами
 

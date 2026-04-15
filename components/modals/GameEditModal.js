@@ -218,6 +218,9 @@ const GameEditModal = ({
   const [expandedCodeAccordions, setExpandedCodeAccordions] = useState(
     () => new Set(),
   )
+  const [expandedClueAccordions, setExpandedClueAccordions] = useState(
+    () => new Set(),
+  )
   const isPhotoGame = selectedGame?.type === 'photo'
   const amountInputClassName =
     'aq-amount-step-input h-10 w-full rounded-xl border border-slate-200 bg-white px-12 py-2 text-center text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
@@ -297,6 +300,7 @@ const GameEditModal = ({
   useEffect(() => {
     if (!isEditModalOpen) {
       setExpandedCodeAccordions(new Set())
+      setExpandedClueAccordions(new Set())
     }
   }, [isEditModalOpen, selectedGame?.id])
 
@@ -1262,44 +1266,53 @@ const GameEditModal = ({
                           </div>
 
                           <div>
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
                               <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
                                 {withRequiredMark('Подсказки')}
                               </h4>
-                              <CabinetButton
-                                onClick={() => handleAddClue(task.id)}
-                                variant="secondary"
-                                tone="brand"
-                                size="sm"
-                                className="inline-flex justify-center"
-                              >
-                                Добавить подсказку
-                              </CabinetButton>
                             </div>
                             {task.clues?.length > 0 ? (
-                              <div className="mt-3 space-y-4">
+                              <div className="mt-3 space-y-3">
                                 {task.clues.map((clue, clueIndex) => (
-                                  <div
+                                  <details
                                     key={clue.id}
-                                    className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
-                                  >
-                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                      <p className="text-sm font-semibold text-slate-700 dark:text-white">
-                                        Подсказка {clueIndex + 1}
-                                      </p>
-                                      <CabinetButton
-                                        onClick={() =>
-                                          handleRemoveClue(task.id, clue.id)
+                                    open={expandedClueAccordions.has(
+                                      `${task.id}-clue-${clue.id}`,
+                                    )}
+                                    onToggle={(event) => {
+                                      const accordionKey = `${task.id}-clue-${clue.id}`
+                                      const isOpen = Boolean(
+                                        event.currentTarget?.open,
+                                      )
+                                      setExpandedClueAccordions((prev) => {
+                                        const next = new Set(prev)
+                                        if (isOpen) {
+                                          next.add(accordionKey)
+                                        } else {
+                                          next.delete(accordionKey)
                                         }
-                                        variant="secondary"
-                                        tone="danger"
-                                        size="sm"
-                                        className="inline-flex items-center justify-center"
-                                      >
-                                        Удалить подсказку
-                                      </CabinetButton>
-                                    </div>
-                                    <div className="space-y-2">
+                                        return next
+                                      })
+                                    }}
+                                    className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60"
+                                  >
+                                    <summary className="flex list-none cursor-pointer items-center justify-between gap-2 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 marker:content-none dark:text-slate-100">
+                                      <div className="min-w-0 flex items-center gap-2">
+                                        <span className="rounded-full border border-cyan-300/70 bg-cyan-100/70 px-2 py-0.5 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                          Подсказка
+                                        </span>
+                                        <span className="truncate font-semibold">
+                                          {truncateWithDots(getClueText(clue), 72) ||
+                                            `${clueIndex + 1}`}
+                                        </span>
+                                      </div>
+                                      <AccordionChevronIcon
+                                        isOpen={expandedClueAccordions.has(
+                                          `${task.id}-clue-${clue.id}`,
+                                        )}
+                                      />
+                                    </summary>
+                                    <div className="mt-2 space-y-2">
                                       <TaskRichEditor
                                         value={clue.clueRich || clue.clue || ''}
                                         directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}/editor`}
@@ -1372,8 +1385,21 @@ const GameEditModal = ({
                                           )
                                         }}
                                       />
+                                      <div className="pt-1">
+                                        <CabinetButton
+                                          onClick={() =>
+                                            handleRemoveClue(task.id, clue.id)
+                                          }
+                                          variant="secondary"
+                                          tone="danger"
+                                          size="sm"
+                                          className="inline-flex items-center justify-center"
+                                        >
+                                          Удалить подсказку
+                                        </CabinetButton>
+                                      </div>
                                     </div>
-                                  </div>
+                                  </details>
                                 ))}
                               </div>
                             ) : (
@@ -1381,6 +1407,30 @@ const GameEditModal = ({
                                 Подсказок пока нет.
                               </p>
                             )}
+                            <div className="mt-3">
+                              <CabinetButton
+                                onClick={() => {
+                                  const nextClueId =
+                                    typeof crypto !== 'undefined' &&
+                                    typeof crypto.randomUUID === 'function'
+                                      ? crypto.randomUUID()
+                                      : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+                                  const nextAccordionKey = `${task.id}-clue-${nextClueId}`
+                                  setExpandedClueAccordions((prev) => {
+                                    const next = new Set(prev)
+                                    next.add(nextAccordionKey)
+                                    return next
+                                  })
+                                  handleAddClue(task.id, nextClueId)
+                                }}
+                                variant="secondary"
+                                tone="brand"
+                                size="sm"
+                                className="inline-flex justify-center"
+                              >
+                                Добавить подсказку
+                              </CabinetButton>
+                            </div>
                           </div>
 
                           <div className="grid gap-4">

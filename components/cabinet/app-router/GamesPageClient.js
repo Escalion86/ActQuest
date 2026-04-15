@@ -149,8 +149,11 @@ const createFinanceEntry = () => {
   }
 }
 
-const createClue = () => ({
-  id: `clue-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+const createClue = (preferredId = null) => ({
+  id:
+    typeof preferredId === 'string' && preferredId.trim()
+      ? preferredId.trim()
+      : `clue-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
   mongoId: null,
   clue: '',
   clueRich: '',
@@ -3838,8 +3841,8 @@ const GamesPage = ({
   )
 
   const handleAddClue = useCallback(
-    (taskId) => {
-      const newClue = createClue()
+    (taskId, preferredClueId = null) => {
+      const newClue = createClue(preferredClueId)
       updateTask(taskId, (task) => ({
         clues: [...(task.clues ?? []), newClue],
       }))

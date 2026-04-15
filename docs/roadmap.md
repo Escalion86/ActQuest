@@ -6,15 +6,16 @@
 - [~] В процессе
 - [ ] Не начато
 
-Актуализация статусов по коду: 2026-04-10.
+Актуализация статусов по коду: 2026-04-15.
 
 ## Последняя проверка
 
-Дата: 2026-04-10
+Дата: 2026-04-15
 
 Ключевые файлы-источники статусов:
 - `app/api/auth/[...nextauth]/route.js`
 - `server/auth/authOptions.js`
+- `helpers/resolveUserCityKey.js`
 - `helpers/authenticatePhoneUser.js`
 - `helpers/authenticateVkUser.js`
 - `helpers/authenticateTelegramUser.js`
@@ -36,6 +37,11 @@
 - `app/api/cabinet/teams/members/[id]/route.js`
 - `app/api/cabinet/games/[gameId]/teams/route.js`
 - `app/api/cabinet/games/[gameId]/push-broadcast/route.js`
+- `app/api/cabinet/users/location/route.js`
+- `components/cabinet/CabinetLayout.js`
+- `components/cabinet/app-router/GamesPageClient.js`
+- `helpers/getSessionSafe.js`
+- `helpers/requestApiJson.js`
 - `docs/app-router-migration-roadmap.md`
 - `app/layout.js`
 - `app/api/health/route.js`
@@ -89,6 +95,9 @@
 - [~] Поддержка мульти-методной авторизации: одна учетная запись может иметь телефон + VK + Telegram.
 - [~] Страница "Профиль" с миграцией Telegram -> телефон (добавлена подтверждаемая смена номера через reverse call, дальнейшая UX-доработка в процессе).
 - [~] Роль "админ" + панель управления квестами, заданиями, отчетами (добавлен раздел "События сайта" с хронологией ключевых действий).
+- [x] Принудительный выбор города в кабинете стабилизирован: API обновляет `currentLocation` + `accountLocation`, а city key в сессии определяется через `resolveUserCityKey` (без использования geo-объекта `location`).
+- [x] Добавлены safe-обертки для localStorage в критичных экранах (главная публичная страница и кабинетные фильтры) для лучшей совместимости со старыми Safari/iOS.
+- [x] Уточнена логика кнопки "Результаты": для `admin/dev` и модератора игры кнопка доступна всегда при `finished|closed` и наличии `result.computed`; для обычных пользователей учитывается `hideResult`.
 - [ ] Система офлайн QR-билетов, привязанных к квесту и пользователю.
 - [ ] Аналитика: среднее время выполнения, средний балл, heatmap по локациям.
 

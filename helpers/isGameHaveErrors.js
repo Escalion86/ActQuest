@@ -1,3 +1,73 @@
+const stripHtmlToPlainText = (value) =>
+  String(value || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h1|h2|h3|h4|h5|h6|li|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\r?\n[ \t]+/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+const hasMeaningfulRichMarkup = (value) => {
+  const rich = String(value || '')
+  if (!rich.trim()) {
+    return false
+  }
+
+  if (
+    /<(img|video|audio|iframe|figure|svg|table|code|pre|blockquote|ul|ol|li|h[1-6])\b/i.test(
+      rich,
+    )
+  ) {
+    return true
+  }
+
+  // TipTap кастомные node-рендеры (аудио/видео/изображения и т.п.)
+  if (
+    /\b(node-image|node-video|node-audio|node-audio-message|node-audioMessage|react-renderer)\b/i.test(
+      rich,
+    )
+  ) {
+    return true
+  }
+
+  return false
+}
+
+const hasMediaItems = (value) =>
+  Array.isArray(value) &&
+  value.some((item) => {
+    if (!item || typeof item !== 'object') {
+      return false
+    }
+    const type = typeof item.type === 'string' ? item.type.trim() : ''
+    const url = typeof item.url === 'string' ? item.url.trim() : ''
+    const path = typeof item.path === 'string' ? item.path.trim() : ''
+    return Boolean(type && (url || path))
+  })
+
+const isTaskDescriptionFilled = (task) => {
+  const plain = typeof task?.task === 'string' ? task.task.trim() : ''
+  if (plain) {
+    return true
+  }
+
+  const rich = typeof task?.taskRich === 'string' ? task.taskRich.trim() : ''
+  if (stripHtmlToPlainText(rich)) {
+    return true
+  }
+
+  if (hasMeaningfulRichMarkup(rich)) {
+    return true
+  }
+
+  return hasMediaItems(task?.taskMedia)
+}
+
 export const getGameValidationErrors = (game) => {
   const errors = []
   const safeGame = game && typeof game === 'object' ? game : {}
@@ -33,7 +103,7 @@ export const getGameValidationErrors = (game) => {
       errors.push(`${taskLabel}: не указано название.`)
     }
 
-    if (!task?.task) {
+    if (!isTaskDescriptionFilled(task)) {
       errors.push(`${taskLabel}: не заполнено описание задания.`)
     }
 
