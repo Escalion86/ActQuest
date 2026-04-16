@@ -79,6 +79,62 @@ const forceCompleteActiveTask = async ({ GamesTeams, game, gameTeam }) => {
   return { success: true, message: 'Задание принудительно завершено.' }
 }
 
+const forceFailActiveTask = async ({ GamesTeams, game, gameTeam }) => {
+  const tasksCount = Array.isArray(game?.tasks) ? game.tasks.length : 0
+  if (tasksCount <= 0) {
+    return { success: false, message: 'В игре нет заданий.' }
+  }
+
+  const activeNumRaw = Number.isInteger(gameTeam?.activeNum) ? gameTeam.activeNum : 0
+  if (activeNumRaw >= tasksCount) {
+    return { success: false, message: 'Команда уже завершила игру.' }
+  }
+  const activeTaskIndex = Math.max(0, Math.min(activeNumRaw, tasksCount - 1))
+
+  const startTime = ensureArrayCapacity(gameTeam?.startTime, tasksCount, null)
+  const endTime = ensureArrayCapacity(gameTeam?.endTime, tasksCount, null)
+  const forcedClues = ensureArrayCapacity(gameTeam?.forcedClues, tasksCount, 0)
+  const breakDuration =
+    Number.isFinite(game?.breakDuration) && game.breakDuration > 0
+      ? Number(game.breakDuration)
+      : 0
+  const taskDuration =
+    Number.isFinite(game?.taskDuration) && game.taskDuration > 0
+      ? Math.floor(Number(game.taskDuration))
+      : 0
+
+  if (endTime[activeTaskIndex]) {
+    return { success: false, message: 'Текущее задание уже завершено.' }
+  }
+
+  const nowMs = Date.now()
+  const consumedTaskTimeMs = taskDuration > 0 ? taskDuration * 1000 : 0
+  // Провал должен учитываться как полная длительность задания.
+  startTime[activeTaskIndex] = new Date(nowMs - consumedTaskTimeMs)
+  endTime[activeTaskIndex] = null
+
+  const nextTaskIndex = activeTaskIndex + 1
+  const updates = {
+    startTime,
+    endTime,
+    forcedClues,
+  }
+
+  if (nextTaskIndex >= tasksCount) {
+    updates.activeNum = nextTaskIndex
+  } else if (breakDuration > 0) {
+    forcedClues[nextTaskIndex] = 0
+  } else {
+    startTime[nextTaskIndex] = new Date(nowMs)
+    updates.activeNum = nextTaskIndex
+    forcedClues[nextTaskIndex] = 0
+  }
+
+  await GamesTeams.findByIdAndUpdate(gameTeam._id, { $set: updates })
+
+  return { success: true, message: 'Задание принудительно провалено.' }
+}
+
 export async function POST(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -136,6 +192,7 @@ export async function POST(request) {
         _id: 1,
         status: 1,
         tasks: 1,
+        taskDuration: 1,
         breakDuration: 1,
         moderators: 1,
       })
@@ -234,6 +291,20 @@ export async function POST(request) {
       return NextResponse.json({
         success: true,
         message: result.message || 'Задание принудительно завершено',
+      })
+    }
+
+    if (action === 'force_fail') {
+      const result = await forceFailActiveTask({ GamesTeams, game, gameTeam })
+      if (!result.success) {
+        return NextResponse.json(
+          { success: false, error: result.message || 'Не удалось провалить задание' },
+          { status: 400 },
+        )
+      }
+      return NextResponse.json({
+        success: true,
+        message: result.message || 'Задание принудительно провалено',
       })
     }
 

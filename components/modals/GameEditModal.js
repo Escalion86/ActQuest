@@ -155,6 +155,9 @@ const GameEditModal = ({
   toMinutes,
   toSeconds,
   handleAddTask,
+  handleReorderTask,
+  isTaskReorderLocked,
+  startedGameLockedTaskCount,
   handleRemoveTask,
   handleTaskFieldChange,
   handleTaskNumberChange,
@@ -221,6 +224,8 @@ const GameEditModal = ({
   const [expandedClueAccordions, setExpandedClueAccordions] = useState(
     () => new Set(),
   )
+  const [draggedTaskId, setDraggedTaskId] = useState(null)
+  const [dragOverTaskId, setDragOverTaskId] = useState(null)
   const isPhotoGame = selectedGame?.type === 'photo'
   const amountInputClassName =
     'aq-amount-step-input h-10 w-full rounded-xl border border-slate-200 bg-white px-12 py-2 text-center text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
@@ -301,6 +306,8 @@ const GameEditModal = ({
     if (!isEditModalOpen) {
       setExpandedCodeAccordions(new Set())
       setExpandedClueAccordions(new Set())
+      setDraggedTaskId(null)
+      setDragOverTaskId(null)
     }
   }, [isEditModalOpen, selectedGame?.id])
 
@@ -984,11 +991,27 @@ const GameEditModal = ({
                 Добавить задание
               </CabinetButton>
             </div>
+            {String(selectedGame?.status || '').trim().toLowerCase() ===
+              'started' && startedGameLockedTaskCount > 0 ? (
+              <p className="mt-2 text-xs text-amber-600 dark:text-amber-300">
+                Первые {startedGameLockedTaskCount}{' '}
+                {startedGameLockedTaskCount === 1
+                  ? 'задание уже пройдено'
+                  : startedGameLockedTaskCount < 5
+                    ? 'задания уже пройдены'
+                    : 'заданий уже пройдено'}{' '}
+                и не могут менять порядок.
+              </p>
+            ) : null}
 
             {selectedGame.tasks?.length > 0 ? (
               <div className="space-y-4">
                 {selectedGame.tasks.map((task, index) => {
                   const isExpanded = expandedTaskIds.includes(task.id)
+                  const isTaskOrderLocked = isTaskReorderLocked(index)
+                  const canDragTask =
+                    canEditSelectedGame && !isSaving && !isTaskOrderLocked
+                  const isDragOver = dragOverTaskId === task.id
                   const taskTitle = typeof task?.title === 'string' ? task.title.trim() : ''
                   const taskDescription = getTaskDescriptionText(task).trim()
                   const hasTaskMedia =
@@ -1042,76 +1065,198 @@ const GameEditModal = ({
                   return (
                     <div
                       key={task.id}
-                      className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/70"
+                      className={`overflow-hidden rounded-2xl border bg-white transition dark:bg-slate-900/70 ${
+                        isDragOver
+                          ? 'border-cyan-500 ring-1 ring-cyan-500/40 dark:border-cyan-400 dark:ring-cyan-400/40'
+                          : 'border-slate-200 dark:border-slate-700'
+                      }`}
+                      draggable={canDragTask}
+                      onDragStart={(event) => {
+                        if (!canDragTask) {
+                          event.preventDefault()
+                          return
+                        }
+                        setDraggedTaskId(task.id)
+                        event.dataTransfer.effectAllowed = 'move'
+                        event.dataTransfer.setData('text/plain', String(task.id))
+                      }}
+                      onDragEnd={() => {
+                        setDraggedTaskId(null)
+                        setDragOverTaskId(null)
+                      }}
+                      onDragOver={(event) => {
+                        if (
+                          !draggedTaskId ||
+                          draggedTaskId === task.id ||
+                          isTaskOrderLocked
+                        ) {
+                          return
+                        }
+                        event.preventDefault()
+                        event.dataTransfer.dropEffect = 'move'
+                        setDragOverTaskId(task.id)
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverTaskId === task.id) {
+                          setDragOverTaskId(null)
+                        }
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault()
+                        const sourceTaskId =
+                          draggedTaskId ||
+                          String(event.dataTransfer.getData('text/plain') || '')
+                        setDragOverTaskId(null)
+                        setDraggedTaskId(null)
+                        if (!sourceTaskId || sourceTaskId === task.id) {
+                          return
+                        }
+                        const sourceIndex = (selectedGame.tasks || []).findIndex(
+                          (item) => item.id === sourceTaskId,
+                        )
+                        const targetIndex = (selectedGame.tasks || []).findIndex(
+                          (item) => item.id === task.id,
+                        )
+                        if (sourceIndex < 0 || targetIndex < 0) {
+                          return
+                        }
+                        handleReorderTask(sourceIndex, targetIndex)
+                      }}
                     >
-                      <button
-                        type="button"
-                        onClick={() => toggleTaskExpansion(task.id)}
-                        className="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-white transition hover:bg-blue-50 dark:bg-slate-800/70 dark:hover:bg-sky-500/10"
-                      >
-                        <div>
-                          <p>
-                            {index + 1}. {task.title || 'Без названия'}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
-                            {task.isBonusTask
-                              ? 'Бонусное задание'
-                              : 'Основное задание'}
-                            {task.canceled ? ' · Отменено' : ''}
-                            {task.codes?.length
-                              ? ` · Код${task.codes.length === 1 ? '' : 'ы'}: ${task.codes.length}`
-                              : ''}
-                            {task.clues?.length
-                              ? ` · Подсказок: ${task.clues.length}`
-                              : ''}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {hasTaskValidationErrors ? (
-                            <span
-                              className="inline-flex h-5 w-5 items-center justify-center"
-                              title="В задании есть незаполненные обязательные поля"
-                            >
-                              <svg
-                                viewBox="0 0 24 24"
-                                className="h-5 w-5"
-                                aria-hidden="true"
-                              >
-                                <path
-                                  d="M12 3L2 21h20L12 3z"
-                                  fill="#ef4444"
-                                />
-                                <rect
-                                  x="11"
-                                  y="8"
-                                  width="2"
-                                  height="7"
-                                  rx="1"
-                                  fill="#ffffff"
-                                />
-                                <circle cx="12" cy="18" r="1.3" fill="#ffffff" />
-                              </svg>
-                            </span>
-                          ) : null}
-                          <span
-                            className={`inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition-transform duration-200 dark:border-slate-600 dark:bg-slate-900/80 dark:text-slate-200 ${
-                              isExpanded ? 'rotate-180' : 'rotate-0'
-                            }`}
-                            aria-hidden="true"
+                      <div className="flex w-full items-stretch bg-slate-50 dark:bg-slate-800/70">
+                        <button
+                          type="button"
+                          draggable={canDragTask}
+                          onDragStart={(event) => {
+                            if (!canDragTask) {
+                              event.preventDefault()
+                              return
+                            }
+                            setDraggedTaskId(task.id)
+                            event.dataTransfer.effectAllowed = 'move'
+                            event.dataTransfer.setData(
+                              'text/plain',
+                              String(task.id),
+                            )
+                          }}
+                          className={`inline-flex min-h-full w-9 shrink-0 items-center justify-center border-r text-slate-500 dark:text-slate-300 sm:w-10 ${
+                            isTaskOrderLocked
+                              ? 'cursor-not-allowed border-amber-500/40 bg-amber-500/10'
+                              : canDragTask
+                                ? 'cursor-grab border-slate-200 bg-white/80 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900/70'
+                                : 'cursor-default border-slate-200/80 bg-white/60 dark:border-slate-700/80 dark:bg-slate-900/50'
+                          }`}
+                          title={
+                            isTaskOrderLocked
+                              ? 'Порядок этого задания заблокирован'
+                              : 'Перетащите за эту область, чтобы изменить порядок'
+                          }
+                          aria-label={
+                            isTaskOrderLocked
+                              ? 'Порядок задания заблокирован'
+                              : 'Перетащить задание'
+                          }
                           >
-                            <svg viewBox="0 0 20 20" className="h-3.5 w-3.5">
+                            {isTaskOrderLocked ? (
+                            <svg viewBox="0 0 20 20" className="h-5 w-5">
                               <path
-                                d="M4 7.5l6 6 6-6"
+                                d="M6.5 8V6.8a3.5 3.5 0 1 1 7 0V8"
                                 fill="none"
                                 stroke="currentColor"
-                                strokeWidth="2.1"
+                                strokeWidth="1.7"
                                 strokeLinecap="round"
-                                strokeLinejoin="round"
+                              />
+                              <rect
+                                x="5.3"
+                                y="8"
+                                width="9.4"
+                                height="7.2"
+                                rx="1.5"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.7"
                               />
                             </svg>
-                          </span>
-                        </div>
-                      </button>
+                          ) : (
+                            <svg viewBox="0 0 20 20" className="h-5 w-5">
+                              <circle cx="7" cy="6" r="1.2" fill="currentColor" />
+                              <circle cx="13" cy="6" r="1.2" fill="currentColor" />
+                              <circle cx="7" cy="10" r="1.2" fill="currentColor" />
+                              <circle cx="13" cy="10" r="1.2" fill="currentColor" />
+                              <circle cx="7" cy="14" r="1.2" fill="currentColor" />
+                              <circle cx="13" cy="14" r="1.2" fill="currentColor" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleTaskExpansion(task.id)}
+                          className="flex min-w-0 flex-1 items-center justify-between gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-blue-50 dark:text-white dark:hover:bg-sky-500/10"
+                        >
+                          <div className="min-w-0">
+                            <p>
+                              {index + 1}. {task.title || 'Без названия'}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
+                              {task.isBonusTask
+                                ? 'Бонусное задание'
+                                : 'Основное задание'}
+                              {task.canceled ? ' · Отменено' : ''}
+                              {task.codes?.length
+                                ? ` · Код${task.codes.length === 1 ? '' : 'ы'}: ${task.codes.length}`
+                                : ''}
+                              {task.clues?.length
+                                ? ` · Подсказок: ${task.clues.length}`
+                                : ''}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {hasTaskValidationErrors ? (
+                              <span
+                                className="inline-flex h-5 w-5 items-center justify-center"
+                                title="В задании есть незаполненные обязательные поля"
+                              >
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  className="h-5 w-5"
+                                  aria-hidden="true"
+                                >
+                                  <path
+                                    d="M12 3L2 21h20L12 3z"
+                                    fill="#ef4444"
+                                  />
+                                  <rect
+                                    x="11"
+                                    y="8"
+                                    width="2"
+                                    height="7"
+                                    rx="1"
+                                    fill="#ffffff"
+                                  />
+                                  <circle cx="12" cy="18" r="1.3" fill="#ffffff" />
+                                </svg>
+                              </span>
+                            ) : null}
+                            <span
+                              className={`inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition-transform duration-200 dark:border-slate-600 dark:bg-slate-900/80 dark:text-slate-200 ${
+                                isExpanded ? 'rotate-180' : 'rotate-0'
+                              }`}
+                              aria-hidden="true"
+                            >
+                              <svg viewBox="0 0 20 20" className="h-3.5 w-3.5">
+                                <path
+                                  d="M4 7.5l6 6 6-6"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.1"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </span>
+                          </div>
+                        </button>
+                      </div>
 
                       {isExpanded && (
                         <div className="space-y-5 px-4 py-5">
@@ -2718,6 +2863,9 @@ GameEditModal.propTypes = {
   toMinutes: PropTypes.func.isRequired,
   toSeconds: PropTypes.func.isRequired,
   handleAddTask: PropTypes.func.isRequired,
+  handleReorderTask: PropTypes.func.isRequired,
+  isTaskReorderLocked: PropTypes.func.isRequired,
+  startedGameLockedTaskCount: PropTypes.number,
   handleRemoveTask: PropTypes.func.isRequired,
   handleTaskFieldChange: PropTypes.func.isRequired,
   handleTaskNumberChange: PropTypes.func.isRequired,
@@ -2805,6 +2953,7 @@ GameEditModal.defaultProps = {
   isEditGameSeasonsLoading: false,
   isEditGameSeasonCreating: false,
   canViewCodePhotos: false,
+  startedGameLockedTaskCount: 0,
   sectionMode: 'full',
   modalTitleOverride: null,
 }

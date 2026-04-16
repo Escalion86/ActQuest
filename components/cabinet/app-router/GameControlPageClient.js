@@ -492,6 +492,23 @@ export default function GameControlPageClient({ session }) {
     }
   }, [closeManualActionsModal, runManualAction, showToast])
 
+  const handleForceFailTask = useCallback(async () => {
+    if (
+      !window.confirm(
+        'Принудительно провалить текущее задание для этой команды? На задание будет засчитано полное время.',
+      )
+    ) {
+      return
+    }
+    try {
+      await runManualAction('force_fail')
+      showToast('warning', 'Задание провалено')
+      closeManualActionsModal()
+    } catch {
+      return
+    }
+  }, [closeManualActionsModal, runManualAction, showToast])
+
   if (!gameId) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -1142,6 +1159,25 @@ export default function GameControlPageClient({ session }) {
               className="aq-modal-btn aq-modal-btn-primary mt-3"
             >
               {manualActionLoading ? 'Применяем...' : 'Выполнить задание'}
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-rose-200">
+              Провал задания
+            </p>
+            <p className="mt-1 text-sm text-rose-100/90">
+              Принудительно проваливает текущее задание. Команде засчитывается
+              полная длительность задания, затем запускается стандартный
+              перерыв (если он задан).
+            </p>
+            <button
+              type="button"
+              onClick={handleForceFailTask}
+              disabled={manualActionLoading || selectedTeamForManualActions?.isTeamFinished}
+              className="aq-modal-btn aq-modal-btn-primary mt-3"
+            >
+              {manualActionLoading ? 'Применяем...' : 'Провалить задание'}
             </button>
           </div>
         </div>

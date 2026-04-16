@@ -1273,162 +1273,26 @@ const FrameBox = Node.create({
   },
 })
 
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
-
 const ResizableImageNodeView = ({
   node,
-  selected,
-  updateAttributes,
   editor,
 }) => {
-  const imageRef = useRef(null)
-  const resizeStateRef = useRef(null)
-  const frameRef = useRef(null)
-
   const src = typeof node?.attrs?.src === 'string' ? node.attrs.src : ''
   const alt = typeof node?.attrs?.alt === 'string' ? node.attrs.alt : ''
-  const width = Number(node?.attrs?.width)
-  const height = Number(node?.attrs?.height)
-
-  const normalizedWidth = Number.isFinite(width) && width > 0 ? width : null
-  const normalizedHeight = Number.isFinite(height) && height > 0 ? height : null
-
-  const applySize = useCallback(
-    (nextWidth, nextHeight) => {
-      updateAttributes({
-        width: Math.round(clamp(nextWidth, 80, 1400)),
-        height: Math.round(clamp(nextHeight, 60, 1200)),
-      })
-    },
-    [updateAttributes],
-  )
-
-  const startResize = useCallback(
-    (event, corner) => {
-      if (!editor?.isEditable) return
-      if (!(event.target instanceof HTMLElement)) return
-
-      event.preventDefault()
-      event.stopPropagation()
-
-      const imageElement = imageRef.current
-      if (!imageElement) return
-
-      const rect = imageElement.getBoundingClientRect()
-      const startWidth =
-        normalizedWidth || rect.width || imageElement.naturalWidth || 320
-      const startHeight =
-        normalizedHeight || rect.height || imageElement.naturalHeight || 180
-      const aspect =
-        startWidth > 0 && startHeight > 0 ? startWidth / startHeight : 1
-
-      resizeStateRef.current = {
-        startX: event.clientX,
-        startY: event.clientY,
-        startWidth,
-        aspect,
-        corner,
-      }
-
-      const onMove = (moveEvent) => {
-        const state = resizeStateRef.current
-        if (!state) return
-
-        const horizontalSign = state.corner.includes('e') ? 1 : -1
-        const verticalSign = state.corner.includes('s') ? 1 : -1
-
-        const deltaX = (moveEvent.clientX - state.startX) * horizontalSign
-        const deltaY = (moveEvent.clientY - state.startY) * verticalSign
-        const widthByY = deltaY * state.aspect
-        const deltaWidth =
-          Math.abs(deltaX) >= Math.abs(widthByY) ? deltaX : widthByY
-        const nextWidth = clamp(state.startWidth + deltaWidth, 80, 1400)
-        const nextHeight = clamp(nextWidth / (state.aspect || 1), 60, 1200)
-
-        if (frameRef.current) {
-          cancelAnimationFrame(frameRef.current)
-        }
-        frameRef.current = requestAnimationFrame(() => {
-          applySize(nextWidth, nextHeight)
-        })
-      }
-
-      const finish = () => {
-        if (frameRef.current) {
-          cancelAnimationFrame(frameRef.current)
-          frameRef.current = null
-        }
-        resizeStateRef.current = null
-        window.removeEventListener('pointermove', onMove)
-        window.removeEventListener('pointerup', finish)
-        window.removeEventListener('pointercancel', finish)
-      }
-
-      window.addEventListener('pointermove', onMove)
-      window.addEventListener('pointerup', finish)
-      window.addEventListener('pointercancel', finish)
-    },
-    [applySize, editor?.isEditable, normalizedHeight, normalizedWidth],
-  )
-
-  useEffect(() => {
-    return () => {
-      if (frameRef.current) {
-        cancelAnimationFrame(frameRef.current)
-      }
-      resizeStateRef.current = null
-    }
-  }, [])
 
   return (
     <NodeViewWrapper
       as="div"
-      className={`aq-image-node ${
-        selected && editor?.isEditable ? 'aq-image-node--selected' : ''
-      }`}
+      className={`aq-image-node ${editor?.isEditable ? 'aq-image-node--editable' : ''}`}
       data-aq-image-node="true"
     >
       <img
-        ref={imageRef}
         src={src}
         alt={alt}
         loading="lazy"
         draggable="false"
         className="aq-image-node__image"
-        style={{
-          width: normalizedWidth ? `${normalizedWidth}px` : undefined,
-          height: normalizedHeight ? `${normalizedHeight}px` : undefined,
-        }}
       />
-
-      {editor?.isEditable && selected ? (
-        <>
-          <button
-            type="button"
-            className="aq-image-node__handle aq-image-node__handle--nw"
-            onPointerDown={(event) => startResize(event, 'nw')}
-            aria-label="Изменить размер изображения"
-          />
-          <button
-            type="button"
-            className="aq-image-node__handle aq-image-node__handle--ne"
-            onPointerDown={(event) => startResize(event, 'ne')}
-            aria-label="Изменить размер изображения"
-          />
-          <button
-            type="button"
-            className="aq-image-node__handle aq-image-node__handle--sw"
-            onPointerDown={(event) => startResize(event, 'sw')}
-            aria-label="Изменить размер изображения"
-          />
-          <button
-            type="button"
-            className="aq-image-node__handle aq-image-node__handle--se"
-            onPointerDown={(event) => startResize(event, 'se')}
-            aria-label="Изменить размер изображения"
-          />
-        </>
-      ) : null}
     </NodeViewWrapper>
   )
 }
@@ -1446,10 +1310,7 @@ const ResizableImage = Image.extend({
             ? Math.round(parsed)
             : null
         },
-        renderHTML: (attributes) =>
-          attributes.width && Number(attributes.width) > 0
-            ? { width: String(Math.round(Number(attributes.width))) }
-            : {},
+        renderHTML: () => ({}),
       },
       height: {
         default: null,
@@ -1460,10 +1321,7 @@ const ResizableImage = Image.extend({
             ? Math.round(parsed)
             : null
         },
-        renderHTML: (attributes) =>
-          attributes.height && Number(attributes.height) > 0
-            ? { height: String(Math.round(Number(attributes.height))) }
-            : {},
+        renderHTML: () => ({}),
       },
     }
   },
@@ -3538,58 +3396,25 @@ const TaskRichEditor = ({
       <style jsx global>{`
         .ProseMirror .aq-image-node {
           position: relative;
-          display: inline-block;
+          display: block;
+          width: 100%;
+          max-width: 100%;
           margin: 12px 0;
           line-height: 0;
         }
 
         .ProseMirror .aq-image-node__image {
           display: block;
-          max-width: min(100%, 1400px);
-          height: auto;
+          width: 100% !important;
+          max-width: 100% !important;
+          height: auto !important;
+          max-height: 100vh;
+          object-fit: contain;
           border-radius: 12px;
-          outline: 1px solid transparent;
-          transition: outline-color 0.15s ease;
         }
 
-        .ProseMirror .aq-image-node--selected .aq-image-node__image {
-          outline: 2px dashed rgba(56, 189, 248, 0.95);
-          outline-offset: 2px;
-        }
-
-        .ProseMirror .aq-image-node__handle {
-          position: absolute;
-          width: 10px;
-          height: 10px;
-          border-radius: 2px;
-          border: 1px solid #0f172a;
-          background: #22d3ee;
-          padding: 0;
-          z-index: 3;
-        }
-
-        .ProseMirror .aq-image-node__handle--nw {
-          top: -6px;
-          left: -6px;
-          cursor: nwse-resize;
-        }
-
-        .ProseMirror .aq-image-node__handle--ne {
-          top: -6px;
-          right: -6px;
-          cursor: nesw-resize;
-        }
-
-        .ProseMirror .aq-image-node__handle--sw {
-          bottom: -6px;
-          left: -6px;
-          cursor: nesw-resize;
-        }
-
-        .ProseMirror .aq-image-node__handle--se {
-          bottom: -6px;
-          right: -6px;
-          cursor: nwse-resize;
+        .ProseMirror .aq-image-node--editable .aq-image-node__image {
+          outline: 1px solid rgba(56, 189, 248, 0.32);
         }
 
         .ProseMirror .aq-audio-message,
@@ -3616,14 +3441,18 @@ const TaskRichEditor = ({
         .ProseMirror video-message {
           display: block;
           margin: 12px 0;
-          max-width: min(100%, 820px);
+          width: 100%;
+          max-width: 100%;
         }
 
         .ProseMirror .aq-video-message video,
         .ProseMirror video-message video {
           display: block;
           width: 100%;
+          max-width: 100%;
           height: auto;
+          max-height: 100vh;
+          object-fit: contain;
           border-radius: 12px;
           background: #020617;
         }
@@ -3980,13 +3809,8 @@ const TaskRichEditor = ({
           }
         }
 
-        .dark .ProseMirror .aq-image-node--selected .aq-image-node__image {
-          outline-color: rgba(103, 232, 249, 0.95);
-        }
-
-        .dark .ProseMirror .aq-image-node__handle {
-          border-color: #e2e8f0;
-          background: #67e8f9;
+        .dark .ProseMirror .aq-image-node--editable .aq-image-node__image {
+          outline-color: rgba(103, 232, 249, 0.42);
         }
       `}</style>
     </>

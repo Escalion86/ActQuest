@@ -978,6 +978,8 @@ const GamesPage = ({
     })
   }, [])
   const [expandedTaskIds, setExpandedTaskIds] = useState([])
+  const [startedGameLockedTaskCount, setStartedGameLockedTaskCount] =
+    useState(0)
   const [isTeamsModalOpen, setIsTeamsModalOpen] = useState(false)
   const [isTeamsModalReadOnly, setIsTeamsModalReadOnly] = useState(false)
   const [teamsModalState, setTeamsModalState] = useState({
@@ -1244,6 +1246,7 @@ const GamesPage = ({
     () => games.find((game) => game.id === selectedGameId) ?? null,
     [games, selectedGameId],
   )
+  const activeEditGame = editingGame ?? selectedGame
   const registerModalGame = useMemo(
     () => games.find((game) => game.id === registerGameId) ?? null,
     [games, registerGameId],
@@ -3337,6 +3340,99 @@ const GamesPage = ({
     return type === 'photo'
   }, [editingGame?.type, selectedGame?.type])
 
+  const startedGameTaskOrderLockGameId = useMemo(() => {
+    if (!activeEditGame) {
+      return ''
+    }
+    if (String(activeEditGame.status || '').trim().toLowerCase() !== 'started') {
+      return ''
+    }
+
+    const mongoId =
+      typeof activeEditGame.mongoId === 'string' ? activeEditGame.mongoId : ''
+    if (isObjectIdLike(mongoId)) {
+      return mongoId
+    }
+
+    const gameId = typeof activeEditGame.id === 'string' ? activeEditGame.id : ''
+    if (isObjectIdLike(gameId)) {
+      return gameId
+    }
+
+    return ''
+  }, [activeEditGame])
+
+  useEffect(() => {
+    if (!isEditModalOpen && !isTasksModalOpen) {
+      setStartedGameLockedTaskCount(0)
+      return
+    }
+    if (!startedGameTaskOrderLockGameId) {
+      setStartedGameLockedTaskCount(0)
+      return
+    }
+
+    let isCancelled = false
+
+    const resolveLockedCountFromStatus = (statusData) => {
+      const tasksCount =
+        Number.isInteger(statusData?.tasksCount) && statusData.tasksCount > 0
+          ? statusData.tasksCount
+          : 0
+      if (tasksCount <= 0) {
+        return 0
+      }
+
+      const teams = Array.isArray(statusData?.teams) ? statusData.teams : []
+      let maxLockedCount = 0
+
+      teams.forEach((team) => {
+        const rawActiveTaskIndex = Number(team?.activeTaskIndex)
+        const activeTaskIndex = Number.isFinite(rawActiveTaskIndex)
+          ? Math.max(0, Math.floor(rawActiveTaskIndex))
+          : 0
+
+        const completedCount = team?.isTeamFinished
+          ? tasksCount
+          : team?.isTeamOnBreak || team?.isActiveTaskFailed
+            ? Math.min(tasksCount, activeTaskIndex + 1)
+            : Math.min(tasksCount, activeTaskIndex)
+
+        if (completedCount > maxLockedCount) {
+          maxLockedCount = completedCount
+        }
+      })
+
+      return maxLockedCount
+    }
+
+    ;(async () => {
+      try {
+        const { json } = await requestApiJson(
+          `/api/cabinet/admin/game-status?gameId=${encodeURIComponent(
+            startedGameTaskOrderLockGameId,
+          )}`,
+          { fallbackMessage: 'Не удалось получить прогресс команд' },
+        )
+
+        if (isCancelled) {
+          return
+        }
+
+        const nextLockedCount = resolveLockedCountFromStatus(json?.data)
+        setStartedGameLockedTaskCount(nextLockedCount)
+      } catch {
+        if (!isCancelled) {
+          setStartedGameLockedTaskCount(0)
+        }
+      }
+    })()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [isEditModalOpen, isTasksModalOpen, startedGameTaskOrderLockGameId])
+
   const handleCreateSeasonForEditGame = useCallback(async () => {
     const gameForEdit = editingGame ?? selectedGame
     const normalizedLocation =
@@ -3385,6 +3481,17 @@ const GamesPage = ({
   const handleSaveChanges = useCallback(async () => {
     const gameToSave = editingGame ?? selectedGame
     if (!gameToSave || !canEditSelectedGame) return
+
+    const isGameStarted =
+      String(gameToSave?.status || '').trim().toLowerCase() === 'started'
+    if (isGameStarted) {
+      const isConfirmed = window.confirm(
+        'Игра уже запущена. Сохранение изменений может повлиять на прохождение. Продолжить?',
+      )
+      if (!isConfirmed) {
+        return
+      }
+    }
 
     let validationWarningMessage = ''
     const validationIssues = validateTaskEditorRequirements(gameToSave)
@@ -3477,6 +3584,17 @@ const GamesPage = ({
       let gameForPreview = gameToPreview
 
       if (canEditSelectedGame && isDirty) {
+        const isStartedGame =
+          String(gameToPreview?.status || '').trim().toLowerCase() ===
+          'started'
+        if (isStartedGame) {
+          const isConfirmed = window.confirm(
+            'Игра уже запущена. Сохранение изменений может повлиять на прохождение. Продолжить?',
+          )
+          if (!isConfirmed) {
+            return
+          }
+        }
         setIsSaving(true)
         setFeedback(null)
 
@@ -3716,6 +3834,91 @@ const GamesPage = ({
       setExpandedTaskIds((prev) => prev.filter((id) => id !== taskId))
     },
     [canEditSelectedGame, updateSelectedGame],
+  )
+
+  const handleReorderTask = useCallback(
+    (fromIndex, toIndex) => {
+      if (!canEditSelectedGame) {
+        return
+      }
+
+      const from = Number(fromIndex)
+      const to = Number(toIndex)
+      if (!Number.isInteger(from) || !Number.isInteger(to) || from === to) {
+        return
+      }
+
+      const gameForUpdate = editingGame ?? selectedGame
+      const tasksCount = Array.isArray(gameForUpdate?.tasks)
+        ? gameForUpdate.tasks.length
+        : 0
+      if (tasksCount <= 1) {
+        return
+      }
+      if (from < 0 || from >= tasksCount || to < 0 || to >= tasksCount) {
+        return
+      }
+
+      const isStartedGame =
+        String(gameForUpdate?.status || '').trim().toLowerCase() === 'started'
+      if (isStartedGame) {
+        const lockedCount = Math.max(0, Number(startedGameLockedTaskCount) || 0)
+        if (from < lockedCount || to < lockedCount) {
+          setFeedback({
+            type: 'error',
+            message:
+              lockedCount === 1
+                ? 'Первое задание уже пройдено и не может менять порядок.'
+                : `Первые ${lockedCount} заданий уже пройдены и не могут менять порядок.`,
+          })
+          return
+        }
+      }
+
+      updateSelectedGame((game) => {
+        const tasks = Array.isArray(game?.tasks) ? [...game.tasks] : []
+        if (
+          tasks.length <= 1 ||
+          from < 0 ||
+          from >= tasks.length ||
+          to < 0 ||
+          to >= tasks.length
+        ) {
+          return { tasks }
+        }
+        const [movedTask] = tasks.splice(from, 1)
+        if (!movedTask) {
+          return { tasks }
+        }
+        tasks.splice(to, 0, movedTask)
+        return { tasks }
+      })
+    },
+    [
+      canEditSelectedGame,
+      editingGame,
+      selectedGame,
+      setFeedback,
+      startedGameLockedTaskCount,
+      updateSelectedGame,
+    ],
+  )
+
+  const isTaskReorderLocked = useCallback(
+    (taskIndex) => {
+      const gameForEdit = editingGame ?? selectedGame
+      const isStartedGame =
+        String(gameForEdit?.status || '').trim().toLowerCase() === 'started'
+      if (!isStartedGame) {
+        return false
+      }
+      const index = Number(taskIndex)
+      if (!Number.isInteger(index) || index < 0) {
+        return false
+      }
+      return index < (Number(startedGameLockedTaskCount) || 0)
+    },
+    [editingGame, selectedGame, startedGameLockedTaskCount],
   )
 
   const handleTaskFieldChange = useCallback(
@@ -6428,6 +6631,9 @@ const GamesPage = ({
                 toMinutes={toMinutes}
                 toSeconds={toSeconds}
                 handleAddTask={handleAddTask}
+                handleReorderTask={handleReorderTask}
+                isTaskReorderLocked={isTaskReorderLocked}
+                startedGameLockedTaskCount={startedGameLockedTaskCount}
                 handleRemoveTask={handleRemoveTask}
                 handleTaskFieldChange={handleTaskFieldChange}
                 handleTaskNumberChange={handleTaskNumberChange}

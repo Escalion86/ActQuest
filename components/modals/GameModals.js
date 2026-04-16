@@ -29,6 +29,9 @@ const GameModals = ({
   toMinutes,
   toSeconds,
   handleAddTask,
+  handleReorderTask,
+  isTaskReorderLocked,
+  startedGameLockedTaskCount,
   handleRemoveTask,
   handleTaskFieldChange,
   handleTaskNumberChange,
@@ -188,6 +191,9 @@ const GameModals = ({
           toMinutes={toMinutes}
           toSeconds={toSeconds}
           handleAddTask={handleAddTask}
+          handleReorderTask={handleReorderTask}
+          isTaskReorderLocked={isTaskReorderLocked}
+          startedGameLockedTaskCount={startedGameLockedTaskCount}
           handleRemoveTask={handleRemoveTask}
           handleTaskFieldChange={handleTaskFieldChange}
           handleTaskNumberChange={handleTaskNumberChange}
@@ -262,6 +268,9 @@ const GameModals = ({
           toMinutes={toMinutes}
           toSeconds={toSeconds}
           handleAddTask={handleAddTask}
+          handleReorderTask={handleReorderTask}
+          isTaskReorderLocked={isTaskReorderLocked}
+          startedGameLockedTaskCount={startedGameLockedTaskCount}
           handleRemoveTask={handleRemoveTask}
           handleTaskFieldChange={handleTaskFieldChange}
           handleTaskNumberChange={handleTaskNumberChange}
@@ -498,6 +507,9 @@ GameModals.propTypes = {
   toMinutes: PropTypes.func.isRequired,
   toSeconds: PropTypes.func.isRequired,
   handleAddTask: PropTypes.func.isRequired,
+  handleReorderTask: PropTypes.func.isRequired,
+  isTaskReorderLocked: PropTypes.func.isRequired,
+  startedGameLockedTaskCount: PropTypes.number,
   handleRemoveTask: PropTypes.func.isRequired,
   handleTaskFieldChange: PropTypes.func.isRequired,
   handleTaskNumberChange: PropTypes.func.isRequired,
@@ -717,6 +729,7 @@ GameModals.defaultProps = {
   currentUserId: null,
   currentUserRole: null,
   canViewCodePhotos: false,
+  startedGameLockedTaskCount: 0,
   isCloneSourceGamesLoading: false,
   selectedTeamToAdd: '',
   createGameSeasons: [],
