@@ -32,18 +32,6 @@ const parseDurationSeconds = (value, fallback) => {
   return Math.max(Math.floor(numeric), 0)
 }
 
-const formatCountdownSeconds = (totalSeconds) => {
-  if (!Number.isFinite(totalSeconds)) return '00:00:00'
-
-  const safeSeconds = Math.max(Math.floor(totalSeconds), 0)
-  const hours = Math.floor(safeSeconds / 3600)
-  const minutes = Math.floor((safeSeconds % 3600) / 60)
-  const seconds = safeSeconds % 60
-  const pad = (num) => String(num).padStart(2, '0')
-
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-}
-
 const toFiniteNonNegativeIntegerOrNull = (value) => {
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return null
@@ -51,8 +39,88 @@ const toFiniteNonNegativeIntegerOrNull = (value) => {
   return normalized >= 0 ? normalized : null
 }
 
-const buildTaskDisplayMeta = (task) => {
+const normalizeAcceptedCodes = (value) => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((item) => {
+      if (typeof item === 'string') {
+        return item.trim()
+      }
+      if (typeof item === 'number' && Number.isFinite(item)) {
+        return String(item).trim()
+      }
+      if (item && typeof item === 'object') {
+        const codeValue = item.code
+        if (typeof codeValue === 'string') {
+          return codeValue.trim()
+        }
+        if (typeof codeValue === 'number' && Number.isFinite(codeValue)) {
+          return String(codeValue).trim()
+        }
+      }
+      return ''
+    })
+    .filter(Boolean)
+}
+
+const buildAcceptedCodeItems = (codeDefinitions, acceptedCodes) => {
+  const safeDefinitions = Array.isArray(codeDefinitions) ? codeDefinitions : []
+  const safeAccepted = Array.isArray(acceptedCodes) ? acceptedCodes : []
+  const acceptedSet = new Set(safeAccepted.map((value) => value.toLowerCase()))
+
+  const indexedByCode = new Map()
+  safeDefinitions.forEach((item) => {
+    const codeValue = typeof item?.code === 'string' ? item.code.trim() : ''
+    if (!codeValue) return
+    indexedByCode.set(codeValue.toLowerCase(), {
+      code: codeValue,
+      description:
+        typeof item?.description === 'string' ? item.description.trim() : '',
+    })
+  })
+
+  return safeAccepted.map((acceptedCode) => {
+    const byDefinition = indexedByCode.get(acceptedCode.toLowerCase())
+    return {
+      code: byDefinition?.code || acceptedCode,
+      description: byDefinition?.description || '',
+      isKnown: acceptedSet.has(acceptedCode.toLowerCase()),
+    }
+  })
+}
+
+const buildTaskDisplayMeta = (task, gameTeam, taskIndex) => {
   const mainCodesCount = Array.isArray(task?.codes) ? task.codes.length : 0
+  const safeTaskIndex = Number.isFinite(Number(taskIndex))
+    ? Math.max(Math.floor(Number(taskIndex)), 0)
+    : 0
+  const acceptedMainCodes = normalizeAcceptedCodes(
+    Array.isArray(gameTeam?.findedCodes)
+      ? gameTeam.findedCodes[safeTaskIndex]
+      : [],
+  )
+  const acceptedBonusCodes = normalizeAcceptedCodes(
+    Array.isArray(gameTeam?.findedBonusCodes)
+      ? gameTeam.findedBonusCodes[safeTaskIndex]
+      : [],
+  )
+  const acceptedPenaltyCodes = normalizeAcceptedCodes(
+    Array.isArray(gameTeam?.findedPenaltyCodes)
+      ? gameTeam.findedPenaltyCodes[safeTaskIndex]
+      : [],
+  )
+  const acceptedBonusCodeItems = buildAcceptedCodeItems(
+    Array.isArray(task?.bonusCodes) ? task.bonusCodes : [],
+    acceptedBonusCodes,
+  )
+  const acceptedPenaltyCodeItems = buildAcceptedCodeItems(
+    Array.isArray(task?.penaltyCodes) ? task.penaltyCodes : [],
+    acceptedPenaltyCodes,
+  )
+
   return {
     mainCodesCount,
     requiredCodesCount: toFiniteNonNegativeIntegerOrNull(
@@ -62,6 +130,11 @@ const buildTaskDisplayMeta = (task) => {
     penaltyCodesCount: Array.isArray(task?.penaltyCodes)
       ? task.penaltyCodes.length
       : 0,
+    acceptedMainCodes,
+    acceptedBonusCodes,
+    acceptedPenaltyCodes,
+    acceptedBonusCodeItems,
+    acceptedPenaltyCodeItems,
   }
 }
 
@@ -347,9 +420,7 @@ const computeTaskHtml = async ({
           postCompletionMessage = sanitizeFragment(postMessage)
         }
         const breakTargetTimestamp = Date.now() + breakSecondsLeft * 1000
-        const hiddenBreakCountdown = `<span style="display:none" aria-hidden="true"><span data-task-countdown="break" data-refresh-on-complete="true" data-target="${breakTargetTimestamp}" data-seconds="${Math.max(Math.floor(breakSecondsLeft), 0)}">${formatCountdownSeconds(
-          breakSecondsLeft,
-        )}</span></span>`
+        const hiddenBreakCountdown = `<span style="display:none" aria-hidden="true"><span data-task-countdown="break" data-refresh-on-complete="true" data-target="${breakTargetTimestamp}" data-seconds="${Math.max(Math.floor(breakSecondsLeft), 0)}"></span></span>`
         const breakParts = [
           breakReason === 'timeout'
             ? '<b>Время на задание вышло.</b>'
@@ -359,8 +430,14 @@ const computeTaskHtml = async ({
         breakParts.push(
           '<br /><br /><b>Ожидайте следующее задание после перерыва.</b>',
         )
-        breakParts.push(`<br /><br />${hiddenBreakCountdown}`)
+        breakParts.push(hiddenBreakCountdown)
         taskHtml = breakParts.join('')
+        const breakTask = tasks[activeTaskIndex] ?? null
+        taskDisplayMeta = buildTaskDisplayMeta(
+          breakTask,
+          effectiveGameTeam,
+          activeTaskIndex,
+        )
         taskState = 'break'
       } else {
         let elapsedSeconds = 0
@@ -405,7 +482,11 @@ const computeTaskHtml = async ({
         taskDisplayClues = Array.isArray(displayContent.clues)
           ? displayContent.clues
           : []
-        taskDisplayMeta = buildTaskDisplayMeta(activeTask)
+        taskDisplayMeta = buildTaskDisplayMeta(
+          activeTask,
+          effectiveGameTeam,
+          activeTaskIndex,
+        )
 
         taskState = 'active'
 

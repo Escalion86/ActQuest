@@ -10,6 +10,25 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const SITE_AUDIO_SRC = '/sounds/Cibircatacombs.mp3'
 
+const safeLocalStorageGet = (key, fallback = null) => {
+  if (typeof window === 'undefined') return fallback
+  try {
+    const value = window.localStorage.getItem(key)
+    return value === null ? fallback : value
+  } catch {
+    return fallback
+  }
+}
+
+const safeLocalStorageSet = (key, value) => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // ignore storage errors in restricted browsers
+  }
+}
+
 // Инициализируем QueryClient один раз
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -149,14 +168,18 @@ export default function AppProviders({ children }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (typeof window.__chromium_devtools_metrics_reporter !== 'function') {
-      window.__chromium_devtools_metrics_reporter = () => {}
+    try {
+      if (typeof window.__chromium_devtools_metrics_reporter !== 'function') {
+        window.__chromium_devtools_metrics_reporter = () => {}
+      }
+    } catch {
+      // ignore non-critical debug hook assignment failures
     }
   }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const savedMuted = localStorage.getItem('aq_site_audio_muted')
+    const savedMuted = safeLocalStorageGet('aq_site_audio_muted')
     if (savedMuted === '1') {
       setIsMuted(true)
     }
@@ -166,9 +189,7 @@ export default function AppProviders({ children }) {
     const audio = audioRef.current
     if (!audio) return
     audio.muted = isMuted
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('aq_site_audio_muted', isMuted ? '1' : '0')
-    }
+    safeLocalStorageSet('aq_site_audio_muted', isMuted ? '1' : '0')
     if (isMuted) {
       audio.pause()
     }

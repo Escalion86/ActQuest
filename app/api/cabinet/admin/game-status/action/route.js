@@ -1,0 +1,256 @@
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+
+import { authOptions } from '@server/auth/authOptions'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
+import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
+import webGameProcess from '@server/webGameProcess'
+
+const normalizeStringId = (value) => {
+  if (value === null || value === undefined) {
+    return ''
+  }
+  if (typeof value === 'string') {
+    return value.trim()
+  }
+  if (typeof value?.toString === 'function') {
+    const nextValue = value.toString()
+    return nextValue === '[object Object]' ? '' : nextValue.trim()
+  }
+  return ''
+}
+
+const isElevatedRole = (role) => role === 'admin' || role === 'dev'
+const isModeratorRole = (role) => role === 'moder'
+
+const normalizeAction = (value) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
+
+const forceCompleteActiveTask = async ({ GamesTeams, game, gameTeam }) => {
+  const tasksCount = Array.isArray(game?.tasks) ? game.tasks.length : 0
+  if (tasksCount <= 0) {
+    return { success: false, message: 'В игре нет заданий.' }
+  }
+
+  const activeNumRaw = Number.isInteger(gameTeam?.activeNum) ? gameTeam.activeNum : 0
+  if (activeNumRaw >= tasksCount) {
+    return { success: false, message: 'Команда уже завершила игру.' }
+  }
+  const activeTaskIndex = Math.max(0, Math.min(activeNumRaw, tasksCount - 1))
+
+  const startTime = ensureArrayCapacity(gameTeam?.startTime, tasksCount, null)
+  const endTime = ensureArrayCapacity(gameTeam?.endTime, tasksCount, null)
+  const forcedClues = ensureArrayCapacity(gameTeam?.forcedClues, tasksCount, 0)
+  const breakDuration =
+    Number.isFinite(game?.breakDuration) && game.breakDuration > 0
+      ? Number(game.breakDuration)
+      : 0
+
+  const now = new Date()
+  if (!startTime[activeTaskIndex]) {
+    startTime[activeTaskIndex] = now
+  }
+  if (endTime[activeTaskIndex]) {
+    return { success: false, message: 'Текущее задание уже завершено.' }
+  }
+  endTime[activeTaskIndex] = now
+
+  const nextTaskIndex = activeTaskIndex + 1
+  const updates = {
+    startTime,
+    endTime,
+    forcedClues,
+  }
+
+  if (nextTaskIndex >= tasksCount) {
+    updates.activeNum = nextTaskIndex
+  } else if (breakDuration > 0) {
+    forcedClues[nextTaskIndex] = 0
+  } else {
+    const nextStartTime = ensureArrayCapacity(startTime, tasksCount, null)
+    nextStartTime[nextTaskIndex] = now
+    updates.startTime = nextStartTime
+    updates.activeNum = nextTaskIndex
+    forcedClues[nextTaskIndex] = 0
+  }
+
+  await GamesTeams.findByIdAndUpdate(gameTeam._id, { $set: updates })
+
+  return { success: true, message: 'Задание принудительно завершено.' }
+}
+
+export async function POST(request) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json(
+      { success: false, error: 'Необходима авторизация' },
+      { status: 401 },
+    )
+  }
+
+  let payload
+  try {
+    payload = await request.json()
+  } catch {
+    return NextResponse.json(
+      { success: false, error: 'Некорректное тело запроса' },
+      { status: 400 },
+    )
+  }
+
+  const gameId = normalizeStringId(payload?.gameId)
+  const teamId = normalizeStringId(payload?.teamId)
+  const action = normalizeAction(payload?.action)
+  const code = normalizeStringId(payload?.code)
+
+  if (!gameId || !teamId || !action) {
+    return NextResponse.json(
+      { success: false, error: 'Не переданы обязательные параметры' },
+      { status: 400 },
+    )
+  }
+
+  if (action === 'apply_code' && !code) {
+    return NextResponse.json(
+      { success: false, error: 'Не передан код для зачёта' },
+      { status: 400 },
+    )
+  }
+
+  const userRole =
+    typeof session.user.role === 'string'
+      ? session.user.role.trim().toLowerCase()
+      : ''
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) {
+      throw new Error('Не удалось подключиться к базе данных')
+    }
+
+    const Games = db.model('Games')
+    const GamesTeams = db.model('GamesTeams')
+
+    const game = await Games.findById(gameId)
+      .select({
+        _id: 1,
+        status: 1,
+        tasks: 1,
+        breakDuration: 1,
+        moderators: 1,
+      })
+      .lean()
+
+    if (!game?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Игра не найдена' },
+        { status: 404 },
+      )
+    }
+
+    if (!isElevatedRole(userRole)) {
+      if (isModeratorRole(userRole)) {
+        const currentUserId = normalizeStringId(
+          session.user.globalUserId ?? session.user.userId ?? session.user._id,
+        )
+        const moderatorIds = Array.isArray(game.moderators)
+          ? game.moderators.map((moderator) =>
+              normalizeStringId(moderator?._id ?? moderator),
+            )
+          : []
+        if (!moderatorIds.includes(currentUserId)) {
+          return NextResponse.json(
+            { success: false, error: 'Нет доступа к этой игре' },
+            { status: 403 },
+          )
+        }
+      } else {
+        return NextResponse.json(
+          { success: false, error: 'Недостаточно прав' },
+          { status: 403 },
+        )
+      }
+    }
+
+    if (game.status !== 'started') {
+      return NextResponse.json(
+        { success: false, error: 'Действие доступно только для запущенной игры' },
+        { status: 400 },
+      )
+    }
+
+    const gameTeam = await GamesTeams.findOne({
+      gameId: gameId,
+      $or: [{ _id: teamId }, { teamId: teamId }],
+    }).lean()
+
+    if (!gameTeam?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Команда не найдена в этой игре' },
+        { status: 404 },
+      )
+    }
+
+    if (action === 'apply_code') {
+      const processResult = await webGameProcess({
+        db,
+        game,
+        gameTeam,
+        gameTeamId: gameTeam._id,
+        message: code,
+      })
+
+      const summaryMessage =
+        typeof processResult?.message === 'string' ? processResult.message : ''
+      const lowered = summaryMessage.toLowerCase()
+      if (
+        lowered.includes('не верен') ||
+        lowered.includes('уже найден') ||
+        lowered.includes('уже нашли')
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: summaryMessage || 'Не удалось зачесть код',
+          },
+          { status: 400 },
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: summaryMessage || 'Код зачтён',
+      })
+    }
+
+    if (action === 'force_complete') {
+      const result = await forceCompleteActiveTask({ GamesTeams, game, gameTeam })
+      if (!result.success) {
+        return NextResponse.json(
+          { success: false, error: result.message || 'Не удалось завершить задание' },
+          { status: 400 },
+        )
+      }
+      return NextResponse.json({
+        success: true,
+        message: result.message || 'Задание принудительно завершено',
+      })
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'Неизвестное действие' },
+      { status: 400 },
+    )
+  } catch (error) {
+    console.error('Failed to apply admin game status action', {
+      error,
+      gameId,
+      teamId,
+      action,
+    })
+    return NextResponse.json(
+      { success: false, error: 'Не удалось выполнить действие' },
+      { status: 500 },
+    )
+  }
+}

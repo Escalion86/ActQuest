@@ -1,6 +1,23 @@
 // const withImages = require('next-images')
 // module.exports = withImages()
+const parseAllowedDevOrigins = () => {
+  const raw = process.env.NEXT_ALLOWED_DEV_ORIGINS
+  if (typeof raw !== 'string') {
+    return []
+  }
+
+  return raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+const allowedDevOrigins = parseAllowedDevOrigins()
+
 module.exports = {
+  ...(allowedDevOrigins.length > 0
+    ? { allowedDevOrigins }
+    : {}),
   // webpack: (config) => {
   //   // config.experiments = { topLevelAwait: true }
   //   return config

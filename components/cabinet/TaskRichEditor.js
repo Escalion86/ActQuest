@@ -3887,6 +3887,10 @@ const TaskRichEditor = ({
           color: #e0f2fe;
         }
 
+        .dark .ProseMirror .aq-audio-message__time {
+          color: #93c5fd;
+        }
+
         .dark .ProseMirror .aq-audio-message--custom .aq-audio-message__play {
           background: radial-gradient(
             circle at 30% 30%,

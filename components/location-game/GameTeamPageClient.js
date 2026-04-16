@@ -529,6 +529,33 @@ function GameTeamPage({
     const trimmedAnswer = answer.trim().slice(0, 20)
     if (!trimmedAnswer) return
 
+    const scrollYBeforeSubmit =
+      typeof window !== 'undefined' ? window.scrollY || 0 : 0
+    if (typeof document !== 'undefined') {
+      const activeElement = document.activeElement
+      if (activeElement instanceof HTMLElement) {
+        activeElement.blur()
+      }
+    }
+
+    const restoreScrollPosition = () => {
+      if (typeof window === 'undefined') return
+      window.requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollYBeforeSubmit,
+          left: 0,
+          behavior: 'auto',
+        })
+      })
+      window.setTimeout(() => {
+        window.scrollTo({
+          top: scrollYBeforeSubmit,
+          left: 0,
+          behavior: 'auto',
+        })
+      }, 120)
+    }
+
     setIsSubmitting(true)
     setStickyMessages([])
     try {
@@ -537,6 +564,7 @@ function GameTeamPage({
         `/game/${gameId}/process/${teamId}?message=${encodeURIComponent(trimmedAnswer)}`,
         { scroll: false },
       )
+      restoreScrollPosition()
     } finally {
       setIsSubmitting(false)
     }
@@ -606,6 +634,97 @@ function GameTeamPage({
     () => Array.isArray(currentTaskDisplayClues) ? currentTaskDisplayClues : [],
     [currentTaskDisplayClues],
   )
+  const acceptedTaskCodes = useMemo(() => {
+    if (!currentTaskDisplayMeta || typeof currentTaskDisplayMeta !== 'object') {
+      return []
+    }
+
+    const rawMain = Array.isArray(currentTaskDisplayMeta.acceptedMainCodes)
+      ? currentTaskDisplayMeta.acceptedMainCodes
+      : []
+    const rawBonus = Array.isArray(currentTaskDisplayMeta.acceptedBonusCodes)
+      ? currentTaskDisplayMeta.acceptedBonusCodes
+      : []
+    const rawPenalty = Array.isArray(currentTaskDisplayMeta.acceptedPenaltyCodes)
+      ? currentTaskDisplayMeta.acceptedPenaltyCodes
+      : []
+    const normalizeCodeValue = (value) => {
+      if (typeof value === 'string') {
+        return value.trim()
+      }
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return String(value).trim()
+      }
+      if (value && typeof value === 'object') {
+        const codeValue = value.code
+        if (typeof codeValue === 'string') {
+          return codeValue.trim()
+        }
+        if (typeof codeValue === 'number' && Number.isFinite(codeValue)) {
+          return String(codeValue).trim()
+        }
+      }
+      return ''
+    }
+    const excludedCodes = new Set(
+      [...rawBonus, ...rawPenalty]
+        .map((value) => normalizeCodeValue(value).toLowerCase())
+        .filter(Boolean),
+    )
+    const raw = rawMain.filter((value) => {
+      const normalized = normalizeCodeValue(value)
+      return normalized && !excludedCodes.has(normalized.toLowerCase())
+    })
+
+    if (!Array.isArray(raw) || raw.length === 0) {
+      return []
+    }
+
+    const unique = new Set()
+    return raw
+      .map((value) => normalizeCodeValue(value))
+      .filter((value) => {
+        if (!value || unique.has(value)) {
+          return false
+        }
+        unique.add(value)
+        return true
+      })
+  }, [currentTaskDisplayMeta])
+  const acceptedBonusCodeItems = useMemo(() => {
+    if (!currentTaskDisplayMeta || typeof currentTaskDisplayMeta !== 'object') {
+      return []
+    }
+    const raw = Array.isArray(currentTaskDisplayMeta.acceptedBonusCodeItems)
+      ? currentTaskDisplayMeta.acceptedBonusCodeItems
+      : []
+    return raw
+      .map((item) => {
+        const code = typeof item?.code === 'string' ? item.code.trim() : ''
+        const description =
+          typeof item?.description === 'string' ? item.description.trim() : ''
+        if (!code) return null
+        return { code, description }
+      })
+      .filter(Boolean)
+  }, [currentTaskDisplayMeta])
+  const acceptedPenaltyCodeItems = useMemo(() => {
+    if (!currentTaskDisplayMeta || typeof currentTaskDisplayMeta !== 'object') {
+      return []
+    }
+    const raw = Array.isArray(currentTaskDisplayMeta.acceptedPenaltyCodeItems)
+      ? currentTaskDisplayMeta.acceptedPenaltyCodeItems
+      : []
+    return raw
+      .map((item) => {
+        const code = typeof item?.code === 'string' ? item.code.trim() : ''
+        const description =
+          typeof item?.description === 'string' ? item.description.trim() : ''
+        if (!code) return null
+        return { code, description }
+      })
+      .filter(Boolean)
+  }, [currentTaskDisplayMeta])
   const isBreakState = currentTaskState === 'break'
   const isCompletedState = currentTaskState === 'completed'
   const isGameCompletion = isGameFinished || isCompletedState
@@ -831,15 +950,17 @@ function GameTeamPage({
         const { element, target, initialSeconds, startTimestamp } = item
         let remainingMs = null
 
-        if (Number.isFinite(target)) {
-          remainingMs = target - now
-        } else if (Number.isFinite(initialSeconds)) {
+        // В приоритете считаем от initialSeconds + локально прошедшего времени.
+        // Это устойчиво к рассинхрону часов между устройством и сервером.
+        if (Number.isFinite(initialSeconds)) {
           const base = Number.isFinite(startTimestamp) ? startTimestamp : now
           remainingMs = initialSeconds * 1000 - (now - base)
+        } else if (Number.isFinite(target)) {
+          remainingMs = target - now
         }
 
         const remainingSeconds = Math.max(
-          Math.ceil((remainingMs ?? 0) / 1000),
+          Math.floor((remainingMs ?? 0) / 1000),
           0,
         )
 
@@ -1210,7 +1331,7 @@ function GameTeamPage({
                   taskHtml={resolvedTaskHtml}
                   taskText={resolvedTaskText}
                   clues={visibleTaskClues}
-                  taskMeta={currentTaskDisplayMeta}
+                  taskMeta={isBreakState ? null : currentTaskDisplayMeta}
                   directoryBase={`games/process/task/${String(gameId || 'game')}/${String(teamId || 'team')}/${String(currentTaskState || 'state')}`}
                   taskClassName="mt-4 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
                   taskTextClassName="mt-4 text-base leading-relaxed text-gray-700 break-words whitespace-pre-wrap dark:text-slate-200"
@@ -1222,6 +1343,61 @@ function GameTeamPage({
                   metaWrapperClassName="mt-4 space-y-1"
                   metaTextClassName="text-base font-semibold leading-relaxed text-gray-700 dark:text-slate-200"
                 />
+                {!isBreakState && acceptedTaskCodes.length > 0 ? (
+                  <div className="mt-4">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+                      Принятые основные коды:
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {acceptedTaskCodes.map((code, index) => (
+                        <span
+                          key={`accepted-code-${index}-${code}`}
+                          className="inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-3 py-1 text-xs font-semibold tracking-wide text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-100"
+                        >
+                          {code}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {!isBreakState && acceptedBonusCodeItems.length > 0 ? (
+                  <div className="mt-3">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+                      Принятые бонусные коды:
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {acceptedBonusCodeItems.map((item, index) => (
+                        <span
+                          key={`accepted-bonus-code-${index}-${item.code}`}
+                          className="inline-flex items-center rounded-full border border-cyan-300/70 bg-cyan-50/90 px-3 py-1 text-xs font-semibold tracking-wide text-cyan-800 dark:border-cyan-500/50 dark:bg-cyan-500/15 dark:text-cyan-100"
+                          title={item.description || undefined}
+                        >
+                          {item.code}
+                          {item.description ? ` — ${item.description}` : ''}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {!isBreakState && acceptedPenaltyCodeItems.length > 0 ? (
+                  <div className="mt-3">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+                      Принятые штрафные коды:
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {acceptedPenaltyCodeItems.map((item, index) => (
+                        <span
+                          key={`accepted-penalty-code-${index}-${item.code}`}
+                          className="inline-flex items-center rounded-full border border-rose-300/70 bg-rose-50/90 px-3 py-1 text-xs font-semibold tracking-wide text-rose-800 dark:border-rose-500/50 dark:bg-rose-500/15 dark:text-rose-100"
+                          title={item.description || undefined}
+                        >
+                          {item.code}
+                          {item.description ? ` — ${item.description}` : ''}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div
                   ref={countdownPanelRef}
                   className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-3 py-1.5 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-100"

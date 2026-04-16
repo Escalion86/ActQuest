@@ -2,7 +2,8 @@
 
 import PropTypes from 'prop-types'
 import dynamic from 'next/dynamic'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import FullscreenImageViewer from '@components/FullscreenImageViewer'
 
 const TaskRichEditor = dynamic(() => import('@components/cabinet/TaskRichEditor'), {
   ssr: false,
@@ -32,13 +33,11 @@ const RichTaskContentView = ({
   directory,
 }) => {
   const rootRef = useRef(null)
+  const [selectedImage, setSelectedImage] = useState(null)
 
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
-
-    const proseMirror = root.querySelector('.ProseMirror')
-    if (!proseMirror) return
 
     const isVisuallyEmptyParagraph = (node) => {
       if (!(node instanceof HTMLElement)) return false
@@ -48,16 +47,59 @@ const RichTaskContentView = ({
       return true
     }
 
-    while (proseMirror.firstElementChild) {
-      const first = proseMirror.firstElementChild
-      if (!isVisuallyEmptyParagraph(first)) break
-      first.remove()
+    const trimProseMirrorEdges = () => {
+      const proseMirror = root.querySelector('.ProseMirror')
+      if (!proseMirror) {
+        return
+      }
+      while (proseMirror.firstElementChild) {
+        const first = proseMirror.firstElementChild
+        if (!isVisuallyEmptyParagraph(first)) break
+        first.remove()
+      }
+
+      while (proseMirror.lastElementChild) {
+        const last = proseMirror.lastElementChild
+        if (!isVisuallyEmptyParagraph(last)) break
+        last.remove()
+      }
+    }
+    trimProseMirrorEdges()
+
+    const handleImageClick = (event) => {
+      const target = event.target
+      if (!(target instanceof Element)) {
+        return
+      }
+      const imageElement =
+        target instanceof HTMLImageElement
+          ? target
+          : target.closest?.('img')
+      if (!(imageElement instanceof HTMLImageElement)) {
+        return
+      }
+      const src = String(imageElement.getAttribute('src') || '').trim()
+      if (!src) {
+        return
+      }
+      setSelectedImage({
+        src,
+        alt: String(imageElement.getAttribute('alt') || 'Изображение'),
+      })
     }
 
-    while (proseMirror.lastElementChild) {
-      const last = proseMirror.lastElementChild
-      if (!isVisuallyEmptyParagraph(last)) break
-      last.remove()
+    const observer = new MutationObserver(() => {
+      trimProseMirrorEdges()
+    })
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+    })
+
+    root.addEventListener('click', handleImageClick)
+    return () => {
+      observer.disconnect()
+      root.removeEventListener('click', handleImageClick)
     }
   }, [html, text, directory])
 
@@ -78,6 +120,18 @@ const RichTaskContentView = ({
         directory={directory}
         contentMaxHeight="unset"
       />
+      <FullscreenImageViewer
+        isOpen={Boolean(selectedImage?.src)}
+        src={selectedImage?.src || ''}
+        alt={selectedImage?.alt || 'Изображение'}
+        onClose={() => setSelectedImage(null)}
+      />
+      <style jsx global>{`
+        .aq-rich-task-content-view .ProseMirror img,
+        .aq-rich-task-content-view .aq-image-node__image {
+          cursor: zoom-in !important;
+        }
+      `}</style>
     </div>
   )
 }

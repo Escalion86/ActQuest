@@ -6,7 +6,6 @@ import createTaskProgressArrays, {
 import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
 import removeCluePenalties from '@helpers/removeCluePenalties'
 import sanitize from '@helpers/sanitize'
-import secondsToTime from 'telegram/func/secondsToTime'
 import taskText from 'telegram/func/taskText'
 
 const PROMPT_TEXT = {
@@ -90,7 +89,7 @@ const initializeTeamProgress = async (gameTeam, game, GamesTeams) => {
   })
 }
 
-const buildBreakMessage = ({ code, task, breakDuration }) => {
+const buildBreakMessage = ({ code, task }) => {
   const parts = [
     `<b>КОД "${code}" ПРИНЯТ.</b>`,
     '<br /><br /><b>Задание выполнено!</b>',
@@ -105,14 +104,6 @@ const buildBreakMessage = ({ code, task, breakDuration }) => {
   }
 
   parts.push('<br /><br /><b>ПЕРЕРЫВ.</b>')
-
-  if (Number.isFinite(breakDuration) && breakDuration > 0) {
-    parts.push(
-      `<br /><br /><b>Время до окончания перерыва:</b> ${secondsToTime(
-        breakDuration
-      )}`
-    )
-  }
 
   return parts.join('')
 }
@@ -619,7 +610,6 @@ const webGameProcess = async ({
         message: buildBreakMessage({
           code: codeInput,
           task: currentTask,
-          breakDuration,
         }),
         messages: [`КОД "${codeInput}" ПРИНЯТ.`],
       }

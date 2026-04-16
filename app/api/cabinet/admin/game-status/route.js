@@ -36,7 +36,7 @@ const normalizeText = (value) =>
 const normalizeCodeEntry = (value) => {
   if (typeof value === 'string') {
     const code = value.trim()
-    return code ? { code, image: '' } : null
+    return code ? { code, image: '', description: '' } : null
   }
 
   if (!value || typeof value !== 'object') {
@@ -54,6 +54,7 @@ const normalizeCodeEntry = (value) => {
   return {
     code,
     image: normalizeText(value.image),
+    description: normalizeText(value.description),
   }
 }
 
@@ -205,6 +206,73 @@ const normalizeCodesArray = (value) =>
     .map((item) => normalizeCode(item))
     .filter(Boolean)
 
+const resolveCodeDisplay = (value) => {
+  if (typeof value === 'string') {
+    return value.trim()
+  }
+
+  if (Number.isFinite(value)) {
+    return String(value).trim()
+  }
+
+  if (!value || typeof value !== 'object') {
+    return ''
+  }
+
+  const fromCode = normalizeText(value.code)
+  if (fromCode) {
+    return fromCode
+  }
+
+  const fromValue = normalizeText(value.value)
+  if (fromValue) {
+    return fromValue
+  }
+
+  const fromText = normalizeText(value.text)
+  if (fromText) {
+    return fromText
+  }
+
+  return ''
+}
+
+const buildCodeDescriptionLookup = (definitions) => {
+  const lookup = new Map()
+  ;(Array.isArray(definitions) ? definitions : []).forEach((item) => {
+    const normalizedCode = normalizeCode(item?.code)
+    if (!normalizedCode) {
+      return
+    }
+    lookup.set(normalizedCode, normalizeText(item?.description))
+  })
+  return lookup
+}
+
+const normalizeFoundCodeItems = (values, descriptionLookup) => {
+  const unique = new Set()
+  const lookup =
+    descriptionLookup instanceof Map ? descriptionLookup : new Map()
+
+  return (Array.isArray(values) ? values : [])
+    .map((value) => {
+      const code = resolveCodeDisplay(value)
+      const normalized = normalizeCode(code)
+      if (!normalized) {
+        return null
+      }
+      if (unique.has(normalized)) {
+        return null
+      }
+      unique.add(normalized)
+      return {
+        code,
+        description: lookup.get(normalized) || '',
+      }
+    })
+    .filter(Boolean)
+}
+
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -350,6 +418,23 @@ export async function GET(request) {
       const currentWrongCodes = wrongCodes[activeTaskIndex] ?? []
       const currentBonusCodes = findedBonusCodes[activeTaskIndex] ?? []
       const currentPenaltyCodes = findedPenaltyCodes[activeTaskIndex] ?? []
+      const currentTaskSource = Array.isArray(game.tasks)
+        ? game.tasks[activeTaskIndex]
+        : null
+      const bonusCodeDescriptionLookup = buildCodeDescriptionLookup(
+        currentTaskSource?.bonusCodes,
+      )
+      const penaltyCodeDescriptionLookup = buildCodeDescriptionLookup(
+        currentTaskSource?.penaltyCodes,
+      )
+      const currentBonusCodeItems = normalizeFoundCodeItems(
+        currentBonusCodes,
+        bonusCodeDescriptionLookup,
+      )
+      const currentPenaltyCodeItems = normalizeFoundCodeItems(
+        currentPenaltyCodes,
+        penaltyCodeDescriptionLookup,
+      )
 
       const isActiveTaskFinished =
         activeTaskIndex >= tasksCount ||
@@ -678,8 +763,10 @@ export async function GET(request) {
         wrongCodes: currentWrongCodes,
         bonusCodesCount: currentBonusCodes.length,
         bonusCodes: currentBonusCodes,
+        bonusCodeItems: currentBonusCodeItems,
         penaltyCodesCount: currentPenaltyCodes.length,
         penaltyCodes: currentPenaltyCodes,
+        penaltyCodeItems: currentPenaltyCodeItems,
         isTeamFinished,
         isTeamOnBreak,
         isActiveTaskFinished,

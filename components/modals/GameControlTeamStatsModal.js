@@ -86,6 +86,10 @@ const GameControlTeamStatsModal = ({ isOpen, onClose, teamName, stats }) => {
     () => (Array.isArray(stats?.tasks) ? stats.tasks : []),
     [stats?.tasks],
   )
+  const failedTasksCount = useMemo(
+    () => tasks.filter((task) => task?.isFailedTask).length,
+    [tasks],
+  )
 
   return (
     <Modal
@@ -104,15 +108,15 @@ const GameControlTeamStatsModal = ({ isOpen, onClose, teamName, stats }) => {
           </div>
           <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3 text-center">
             <div className="text-lg font-semibold text-cyan-200">
-              {stats?.totalAcceptedCodesCount || 0}
+              {stats?.completedTasksCount || 0}
             </div>
-            <div className="text-xs text-slate-400">Принятых кодов</div>
+            <div className="text-xs text-slate-400">Выполнено заданий</div>
           </div>
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center">
             <div className="text-lg font-semibold text-amber-200">
-              {stats?.totalWrongCodesCount || 0}
+              {failedTasksCount}
             </div>
-            <div className="text-xs text-slate-400">Неверных попыток</div>
+            <div className="text-xs text-slate-400">Провалено заданий</div>
           </div>
         </div>
 
