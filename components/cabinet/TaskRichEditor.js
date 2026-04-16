@@ -1273,10 +1273,7 @@ const FrameBox = Node.create({
   },
 })
 
-const ResizableImageNodeView = ({
-  node,
-  editor,
-}) => {
+const ResizableImageNodeView = ({ node, editor }) => {
   const src = typeof node?.attrs?.src === 'string' ? node.attrs.src : ''
   const alt = typeof node?.attrs?.alt === 'string' ? node.attrs.alt : ''
 
@@ -2615,7 +2612,7 @@ const TaskRichEditor = ({
 
   return (
     <>
-      <div className="aq-task-rich-editor relative overflow-visible bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/70">
+      <div className="relative overflow-visible bg-white border shadow-sm aq-task-rich-editor rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/70">
         {!hideToolbar ? (
           <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-slate-200/80 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-800/60">
             <select
@@ -2812,8 +2809,10 @@ const TaskRichEditor = ({
 
         <div
           ref={editorContentWrapperRef}
-          className="relative overflow-y-auto overscroll-contain"
-          style={{ maxHeight: contentMaxHeight }}
+          className={`relative overscroll-contain ${contentMaxHeight === 'none' ? 'overflow-visible' : 'overflow-y-auto'}`}
+          style={
+            contentMaxHeight !== 'none' ? { maxHeight: contentMaxHeight } : {}
+          }
           onKeyDown={handleEditorKeyDown}
         >
           <EditorContent editor={editor} />

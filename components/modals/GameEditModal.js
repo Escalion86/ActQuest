@@ -344,13 +344,13 @@ const GameEditModal = ({
       >
         <fieldset
           disabled={!canEditSelectedGame || isSaving}
-          className="m-0 space-y-4 border-0 p-0"
+          className="p-0 m-0 space-y-4 border-0"
         >
           <ModalSection>
             <p className="text-sm text-slate-500 dark:text-slate-300">
               Для закрытой игры можно менять только параметры публикации.
             </p>
-            <div className="mt-4 grid gap-3">
+            <div className="grid gap-3 mt-4">
               <NeonCheckbox
                 id="game-show-creator-closed"
                 checked={Boolean(selectedGame.showCreator)}
@@ -541,6 +541,7 @@ const GameEditModal = ({
                   selectedGame.descriptionRich || selectedGame.description || ''
                 }
                 directory={`games/${selectedGame.id || 'draft'}/description/editor`}
+                contentMaxHeight="none"
                 aiInitialGame={{
                   id: selectedGame.id || '',
                   name: selectedGame.name || '',
@@ -605,7 +606,7 @@ const GameEditModal = ({
             {(selectedGame?.creatorTelegramId ||
               availableOrganizersForSelect.length > 0 ||
               canEditSelectedGame) && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+              <div className="p-4 border rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60">
                 <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
                   Организатор игры
                 </h3>
@@ -664,7 +665,7 @@ const GameEditModal = ({
             )}
 
             {(selectedGameModerators.length > 0 || canEditSelectedGame) && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+              <div className="p-4 border rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60">
                 <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
                   Модераторы игры
                 </h3>
@@ -693,7 +694,7 @@ const GameEditModal = ({
                       return (
                         <li
                           key={moderatorId}
-                          className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900/80"
+                          className="flex items-center justify-between gap-3 px-3 py-2 bg-white border rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/80"
                         >
                           <div>
                             <p className="text-sm font-semibold text-slate-800 dark:text-white">
@@ -732,7 +733,7 @@ const GameEditModal = ({
                 )}
 
                 {canEditSelectedGame && (
-                  <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+                  <div className="flex flex-col gap-3 pt-4 mt-4 border-t border-slate-200 dark:border-slate-700">
                     <p className={fieldLabelClassName}>Добавить модератора</p>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                       <CabinetSelectField
@@ -991,8 +992,9 @@ const GameEditModal = ({
                 Добавить задание
               </CabinetButton>
             </div>
-            {String(selectedGame?.status || '').trim().toLowerCase() ===
-              'started' && startedGameLockedTaskCount > 0 ? (
+            {String(selectedGame?.status || '')
+              .trim()
+              .toLowerCase() === 'started' && startedGameLockedTaskCount > 0 ? (
               <p className="mt-2 text-xs text-amber-600 dark:text-amber-300">
                 Первые {startedGameLockedTaskCount}{' '}
                 {startedGameLockedTaskCount === 1
@@ -1012,7 +1014,8 @@ const GameEditModal = ({
                   const canDragTask =
                     canEditSelectedGame && !isSaving && !isTaskOrderLocked
                   const isDragOver = dragOverTaskId === task.id
-                  const taskTitle = typeof task?.title === 'string' ? task.title.trim() : ''
+                  const taskTitle =
+                    typeof task?.title === 'string' ? task.title.trim() : ''
                   const taskDescription = getTaskDescriptionText(task).trim()
                   const hasTaskMedia =
                     Array.isArray(task?.taskMedia) &&
@@ -1038,7 +1041,9 @@ const GameEditModal = ({
                       getClueText(clue).trim() !== '' ||
                       hasMeaningfulRichMarkup(clue?.clueRich),
                   )
-                  const normalizedCodes = (Array.isArray(task?.codes) ? task.codes : [])
+                  const normalizedCodes = (
+                    Array.isArray(task?.codes) ? task.codes : []
+                  )
                     .map((codeValue) =>
                       typeof codeValue === 'string' ? codeValue.trim() : '',
                     )
@@ -1078,7 +1083,10 @@ const GameEditModal = ({
                         }
                         setDraggedTaskId(task.id)
                         event.dataTransfer.effectAllowed = 'move'
-                        event.dataTransfer.setData('text/plain', String(task.id))
+                        event.dataTransfer.setData(
+                          'text/plain',
+                          String(task.id),
+                        )
                       }}
                       onDragEnd={() => {
                         setDraggedTaskId(null)
@@ -1111,19 +1119,19 @@ const GameEditModal = ({
                         if (!sourceTaskId || sourceTaskId === task.id) {
                           return
                         }
-                        const sourceIndex = (selectedGame.tasks || []).findIndex(
-                          (item) => item.id === sourceTaskId,
-                        )
-                        const targetIndex = (selectedGame.tasks || []).findIndex(
-                          (item) => item.id === task.id,
-                        )
+                        const sourceIndex = (
+                          selectedGame.tasks || []
+                        ).findIndex((item) => item.id === sourceTaskId)
+                        const targetIndex = (
+                          selectedGame.tasks || []
+                        ).findIndex((item) => item.id === task.id)
                         if (sourceIndex < 0 || targetIndex < 0) {
                           return
                         }
                         handleReorderTask(sourceIndex, targetIndex)
                       }}
                     >
-                      <div className="flex w-full items-stretch bg-slate-50 dark:bg-slate-800/70">
+                      <div className="flex items-stretch w-full bg-slate-50 dark:bg-slate-800/70">
                         <button
                           type="button"
                           draggable={canDragTask}
@@ -1156,9 +1164,9 @@ const GameEditModal = ({
                               ? 'Порядок задания заблокирован'
                               : 'Перетащить задание'
                           }
-                          >
-                            {isTaskOrderLocked ? (
-                            <svg viewBox="0 0 20 20" className="h-5 w-5">
+                        >
+                          {isTaskOrderLocked ? (
+                            <svg viewBox="0 0 20 20" className="w-5 h-5">
                               <path
                                 d="M6.5 8V6.8a3.5 3.5 0 1 1 7 0V8"
                                 fill="none"
@@ -1178,20 +1186,50 @@ const GameEditModal = ({
                               />
                             </svg>
                           ) : (
-                            <svg viewBox="0 0 20 20" className="h-5 w-5">
-                              <circle cx="7" cy="6" r="1.2" fill="currentColor" />
-                              <circle cx="13" cy="6" r="1.2" fill="currentColor" />
-                              <circle cx="7" cy="10" r="1.2" fill="currentColor" />
-                              <circle cx="13" cy="10" r="1.2" fill="currentColor" />
-                              <circle cx="7" cy="14" r="1.2" fill="currentColor" />
-                              <circle cx="13" cy="14" r="1.2" fill="currentColor" />
+                            <svg viewBox="0 0 20 20" className="w-5 h-5">
+                              <circle
+                                cx="7"
+                                cy="6"
+                                r="1.2"
+                                fill="currentColor"
+                              />
+                              <circle
+                                cx="13"
+                                cy="6"
+                                r="1.2"
+                                fill="currentColor"
+                              />
+                              <circle
+                                cx="7"
+                                cy="10"
+                                r="1.2"
+                                fill="currentColor"
+                              />
+                              <circle
+                                cx="13"
+                                cy="10"
+                                r="1.2"
+                                fill="currentColor"
+                              />
+                              <circle
+                                cx="7"
+                                cy="14"
+                                r="1.2"
+                                fill="currentColor"
+                              />
+                              <circle
+                                cx="13"
+                                cy="14"
+                                r="1.2"
+                                fill="currentColor"
+                              />
                             </svg>
                           )}
                         </button>
                         <button
                           type="button"
                           onClick={() => toggleTaskExpansion(task.id)}
-                          className="flex min-w-0 flex-1 items-center justify-between gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-blue-50 dark:text-white dark:hover:bg-sky-500/10"
+                          className="flex items-center justify-between flex-1 min-w-0 gap-3 px-4 py-3 text-sm font-semibold text-left transition text-slate-700 hover:bg-blue-50 dark:text-white dark:hover:bg-sky-500/10"
                         >
                           <div className="min-w-0">
                             <p>
@@ -1213,12 +1251,12 @@ const GameEditModal = ({
                           <div className="flex items-center gap-2">
                             {hasTaskValidationErrors ? (
                               <span
-                                className="inline-flex h-5 w-5 items-center justify-center"
+                                className="inline-flex items-center justify-center w-5 h-5"
                                 title="В задании есть незаполненные обязательные поля"
                               >
                                 <svg
                                   viewBox="0 0 24 24"
-                                  className="h-5 w-5"
+                                  className="w-5 h-5"
                                   aria-hidden="true"
                                 >
                                   <path
@@ -1233,7 +1271,12 @@ const GameEditModal = ({
                                     rx="1"
                                     fill="#ffffff"
                                   />
-                                  <circle cx="12" cy="18" r="1.3" fill="#ffffff" />
+                                  <circle
+                                    cx="12"
+                                    cy="18"
+                                    r="1.3"
+                                    fill="#ffffff"
+                                  />
                                 </svg>
                               </span>
                             ) : null}
@@ -1259,13 +1302,15 @@ const GameEditModal = ({
                       </div>
 
                       {isExpanded && (
-                        <div className="space-y-5 px-4 py-5">
+                        <div className="px-4 py-5 space-y-5">
                           <div className="space-y-4">
                             <div className="flex justify-end">
                               <CabinetButton
                                 type="button"
                                 variant="secondary"
-                                onClick={() => handleSaveAndOpenTaskPreview(index)}
+                                onClick={() =>
+                                  handleSaveAndOpenTaskPreview(index)
+                                }
                                 disabled={isSaving}
                               >
                                 Сохранить и открыть предпросмотр
@@ -1357,6 +1402,7 @@ const GameEditModal = ({
                             <TaskRichEditor
                               value={task.taskRich || task.task || ''}
                               directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/editor`}
+                              contentMaxHeight="none"
                               aiInitialGame={{
                                 id: selectedGame.id || '',
                                 name: selectedGame.name || '',
@@ -1459,16 +1505,18 @@ const GameEditModal = ({
                                         return next
                                       })
                                     }}
-                                    className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60"
+                                    className="p-3 border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
                                   >
-                                    <summary className="flex list-none cursor-pointer items-center justify-between gap-2 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 marker:content-none dark:text-slate-100">
-                                      <div className="min-w-0 flex items-center gap-2">
+                                    <summary className="flex items-center justify-between gap-2 px-2 py-1 text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
+                                      <div className="flex items-center min-w-0 gap-2">
                                         <span className="rounded-full border border-cyan-300/70 bg-cyan-100/70 px-2 py-0.5 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
                                           Подсказка
                                         </span>
-                                        <span className="truncate font-semibold">
-                                          {truncateWithDots(getClueText(clue), 72) ||
-                                            `${clueIndex + 1}`}
+                                        <span className="font-semibold truncate">
+                                          {truncateWithDots(
+                                            getClueText(clue),
+                                            72,
+                                          ) || `${clueIndex + 1}`}
                                         </span>
                                       </div>
                                       <AccordionChevronIcon
@@ -1481,6 +1529,7 @@ const GameEditModal = ({
                                       <TaskRichEditor
                                         value={clue.clueRich || clue.clue || ''}
                                         directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}/editor`}
+                                        contentMaxHeight="none"
                                         aiInitialGame={{
                                           id: selectedGame.id || '',
                                           name: selectedGame.name || '',
@@ -1655,7 +1704,7 @@ const GameEditModal = ({
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
                               Координаты
                             </h4>
-                            <div className="mt-2 grid gap-4 sm:grid-cols-3">
+                            <div className="grid gap-4 mt-2 sm:grid-cols-3">
                               <CabinetNumberField
                                 id={`task-lat-${task.id}`}
                                 label="Широта"
@@ -1722,112 +1771,118 @@ const GameEditModal = ({
                                       expandedCodeAccordions.has(accordionKey)
 
                                     return (
-                                    <details
-                                      key={`${task.id}-code-${codeIndex}`}
-                                      open={isExpanded}
-                                      onToggle={(event) => {
-                                        const isOpen = Boolean(
-                                          event.currentTarget?.open,
-                                        )
-                                        setExpandedCodeAccordions((prev) => {
-                                          const next = new Set(prev)
-                                          if (isOpen) {
-                                            next.add(accordionKey)
-                                          } else {
-                                            next.delete(accordionKey)
-                                          }
-                                          return next
-                                        })
-                                      }}
-                                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60"
-                                    >
-                                      <summary className="flex list-none cursor-pointer items-center justify-between gap-2 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 marker:content-none dark:text-slate-100">
-                                        <div className="min-w-0 flex items-center gap-2">
-                                          <span className="rounded-full border border-cyan-300/70 bg-cyan-100/70 px-2 py-0.5 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                                            Код
-                                          </span>
-                                          <span className="truncate font-semibold">
-                                            {compactSingleLine(codeValue) ||
-                                              `Код ${codeIndex + 1}`}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          {(Array.isArray(task.codePhotos)
-                                            ? task.codePhotos[codeIndex]
-                                            : '') ? (
-                                            <span
-                                              className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
-                                              title="Фото добавлено"
-                                            >
-                                              <CodePhotoBadgeIcon />
+                                      <details
+                                        key={`${task.id}-code-${codeIndex}`}
+                                        open={isExpanded}
+                                        onToggle={(event) => {
+                                          const isOpen = Boolean(
+                                            event.currentTarget?.open,
+                                          )
+                                          setExpandedCodeAccordions((prev) => {
+                                            const next = new Set(prev)
+                                            if (isOpen) {
+                                              next.add(accordionKey)
+                                            } else {
+                                              next.delete(accordionKey)
+                                            }
+                                            return next
+                                          })
+                                        }}
+                                        className="p-3 border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+                                      >
+                                        <summary className="flex items-center justify-between gap-2 px-2 py-1 text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
+                                          <div className="flex items-center min-w-0 gap-2">
+                                            <span className="rounded-full border border-cyan-300/70 bg-cyan-100/70 px-2 py-0.5 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                              Код
                                             </span>
-                                          ) : null}
-                                          <AccordionChevronIcon
-                                            isOpen={isExpanded}
-                                          />
-                                        </div>
-                                      </summary>
-                                      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                                        <CabinetInputField
-                                          id={`task-code-${task.id}-${codeIndex}`}
-                                          label={null}
-                                          type="text"
-                                          value={codeValue}
-                                          onChange={(event) =>
-                                            handleTaskCodeChange(
-                                              task.id,
-                                              codeIndex,
-                                              event.target.value,
-                                            )
-                                          }
-                                          placeholder="Код"
-                                          containerClassName="w-full space-y-0"
-                                          inputClassName={compactInputClassName}
-                                        />
-                                        <CabinetButton
-                                          onClick={() =>
-                                            handleRemoveTaskCode(
-                                              task.id,
-                                              codeIndex,
-                                            )
-                                          }
-                                          variant="secondary"
-                                          tone="danger"
-                                          size="sm"
-                                          className="inline-flex items-center justify-center"
-                                        >
-                                          Удалить
-                                        </CabinetButton>
-                                      </div>
-                                      {canViewCodePhotos && (
-                                        <div className="mt-2">
-                                          <ImagesInput
-                                            label="Фото кода"
-                                            images={[
-                                              (Array.isArray(task.codePhotos)
+                                            <span className="font-semibold truncate">
+                                              {compactSingleLine(codeValue) ||
+                                                `Код ${codeIndex + 1}`}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            {(
+                                              Array.isArray(task.codePhotos)
                                                 ? task.codePhotos[codeIndex]
-                                                : '') || '',
-                                            ].filter(Boolean)}
-                                            onChange={(nextImages) =>
-                                              handleTaskCodePhotoChange(
+                                                : ''
+                                            ) ? (
+                                              <span
+                                                className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
+                                                title="Фото добавлено"
+                                              >
+                                                <CodePhotoBadgeIcon />
+                                              </span>
+                                            ) : null}
+                                            <AccordionChevronIcon
+                                              isOpen={isExpanded}
+                                            />
+                                          </div>
+                                        </summary>
+                                        <div className="flex flex-col gap-2 mt-2 sm:flex-row sm:items-center">
+                                          <CabinetInputField
+                                            id={`task-code-${task.id}-${codeIndex}`}
+                                            label={null}
+                                            type="text"
+                                            value={codeValue}
+                                            onChange={(event) =>
+                                              handleTaskCodeChange(
                                                 task.id,
                                                 codeIndex,
-                                                Array.isArray(nextImages) &&
-                                                  nextImages.length > 0
-                                                  ? nextImages[0]
-                                                  : '',
+                                                event.target.value,
                                               )
                                             }
-                                            directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/codes/${codeIndex}`}
-                                            imageName={`task-code-${codeIndex + 1}`}
-                                            maxImages={1}
-                                            uploadLabel="Загрузить фото"
-                                            disabled={!canEditSelectedGame || isSaving}
-                                            previewShape="square"
+                                            placeholder="Код"
+                                            containerClassName="w-full space-y-0"
+                                            inputClassName={
+                                              compactInputClassName
+                                            }
                                           />
+                                          <CabinetButton
+                                            onClick={() =>
+                                              handleRemoveTaskCode(
+                                                task.id,
+                                                codeIndex,
+                                              )
+                                            }
+                                            variant="secondary"
+                                            tone="danger"
+                                            size="sm"
+                                            className="inline-flex items-center justify-center"
+                                          >
+                                            Удалить
+                                          </CabinetButton>
                                         </div>
-                                      )}
-                                    </details>
+                                        {canViewCodePhotos && (
+                                          <div className="mt-2">
+                                            <ImagesInput
+                                              label="Фото кода"
+                                              images={[
+                                                (Array.isArray(task.codePhotos)
+                                                  ? task.codePhotos[codeIndex]
+                                                  : '') || '',
+                                              ].filter(Boolean)}
+                                              onChange={(nextImages) =>
+                                                handleTaskCodePhotoChange(
+                                                  task.id,
+                                                  codeIndex,
+                                                  Array.isArray(nextImages) &&
+                                                    nextImages.length > 0
+                                                    ? nextImages[0]
+                                                    : '',
+                                                )
+                                              }
+                                              directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/codes/${codeIndex}`}
+                                              imageName={`task-code-${codeIndex + 1}`}
+                                              maxImages={1}
+                                              uploadLabel="Загрузить фото"
+                                              disabled={
+                                                !canEditSelectedGame || isSaving
+                                              }
+                                              previewShape="square"
+                                            />
+                                          </div>
+                                        )}
+                                      </details>
                                     )
                                   })}
                                 </div>
@@ -1902,7 +1957,7 @@ const GameEditModal = ({
                                   {task.subTasks.map((subTask, subIndex) => (
                                     <div
                                       key={subTask.id}
-                                      className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                                      className="p-4 space-y-4 border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
                                     >
                                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <p className="text-sm font-semibold text-slate-700 dark:text-white">
@@ -1998,163 +2053,183 @@ const GameEditModal = ({
                               </div>
                               {task.penaltyCodes?.length > 0 ? (
                                 <div className="mt-3 space-y-4">
-                                  {task.penaltyCodes.map((penalty, penaltyIndex) => {
-                                    const accordionKey = `${task.id}-penalty-${penaltyIndex}`
-                                    const isExpanded =
-                                      expandedCodeAccordions.has(accordionKey)
+                                  {task.penaltyCodes.map(
+                                    (penalty, penaltyIndex) => {
+                                      const accordionKey = `${task.id}-penalty-${penaltyIndex}`
+                                      const isExpanded =
+                                        expandedCodeAccordions.has(accordionKey)
 
-                                    return (
-                                    <details
-                                      key={penalty.id}
-                                      open={isExpanded}
-                                      onToggle={(event) => {
-                                        const isOpen = Boolean(
-                                          event.currentTarget?.open,
-                                        )
-                                        setExpandedCodeAccordions((prev) => {
-                                          const next = new Set(prev)
-                                          if (isOpen) {
-                                            next.add(accordionKey)
-                                          } else {
-                                            next.delete(accordionKey)
-                                          }
-                                          return next
-                                        })
-                                      }}
-                                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
-                                    >
-                                      <summary className="flex list-none cursor-pointer items-center justify-between gap-2 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 marker:content-none dark:text-slate-100">
-                                        <div className="min-w-0 flex items-center gap-2">
-                                          <span className="rounded-full border border-rose-300/70 bg-rose-100/80 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
-                                            Штраф
-                                          </span>
-                                          <span className="truncate font-semibold">
-                                            {compactSingleLine(penalty.code) ||
-                                              'Код не указан'}
-                                          </span>
-                                          {truncateWithDots(
-                                            penalty.description,
-                                          ) ? (
-                                            <span className="max-w-[240px] truncate text-xs font-normal text-slate-500 dark:text-slate-300">
+                                      return (
+                                        <details
+                                          key={penalty.id}
+                                          open={isExpanded}
+                                          onToggle={(event) => {
+                                            const isOpen = Boolean(
+                                              event.currentTarget?.open,
+                                            )
+                                            setExpandedCodeAccordions(
+                                              (prev) => {
+                                                const next = new Set(prev)
+                                                if (isOpen) {
+                                                  next.add(accordionKey)
+                                                } else {
+                                                  next.delete(accordionKey)
+                                                }
+                                                return next
+                                              },
+                                            )
+                                          }}
+                                          className="p-4 border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+                                        >
+                                          <summary className="flex items-center justify-between gap-2 px-2 py-1 text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
+                                            <div className="flex items-center min-w-0 gap-2">
+                                              <span className="rounded-full border border-rose-300/70 bg-rose-100/80 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                                                Штраф
+                                              </span>
+                                              <span className="font-semibold truncate">
+                                                {compactSingleLine(
+                                                  penalty.code,
+                                                ) || 'Код не указан'}
+                                              </span>
                                               {truncateWithDots(
                                                 penalty.description,
-                                              )}
-                                            </span>
-                                          ) : null}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          {penalty.image ? (
-                                            <span
-                                              className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
-                                              title="Фото добавлено"
-                                            >
-                                              <CodePhotoBadgeIcon />
-                                            </span>
-                                          ) : null}
-                                          <AccordionChevronIcon
-                                            isOpen={isExpanded}
-                                          />
-                                        </div>
-                                      </summary>
-                                      <div className="mt-2 grid gap-3 md:grid-cols-4">
-                                        <CabinetInputField
-                                          id={`task-penalty-code-${penalty.id}`}
-                                          label="Код"
-                                          type="text"
-                                          value={penalty.code}
-                                          onChange={(event) =>
-                                            handlePenaltyCodeChange(
-                                              task.id,
-                                              penalty.id,
-                                              'code',
-                                              event.target.value,
-                                            )
-                                          }
-                                          containerClassName="md:col-span-2 space-y-1"
-                                          labelClassName={compactLabelClassName}
-                                          inputClassName={compactInputClassName}
-                                        />
-                                        <CabinetNumberField
-                                          id={`task-penalty-value-${penalty.id}`}
-                                          label="Штраф"
-                                          min="0"
-                                          value={penalty.penalty ?? 0}
-                                          onChange={(event) =>
-                                            handlePenaltyCodeChange(
-                                              task.id,
-                                              penalty.id,
-                                              'penalty',
-                                              event.target.value,
-                                            )
-                                          }
-                                          containerClassName="space-y-1"
-                                          labelClassName={compactLabelClassName}
-                                          inputClassName={compactInputClassName}
-                                        />
-                                      </div>
-                                      <CabinetInputField
-                                        id={`task-penalty-description-${penalty.id}`}
-                                        label="Комментарий"
-                                        type="text"
-                                        value={penalty.description}
-                                        onChange={(event) =>
-                                          handlePenaltyCodeChange(
-                                            task.id,
-                                            penalty.id,
-                                            'description',
-                                            event.target.value,
-                                          )
-                                        }
-                                        containerClassName="space-y-1"
-                                        labelClassName={compactLabelClassName}
-                                        inputClassName={compactInputClassName}
-                                      />
-                                      {canViewCodePhotos && (
-                                        <div className="mt-2">
-                                          <ImagesInput
-                                            label="Фото кода"
-                                            images={[penalty.image || ''].filter(
-                                              Boolean,
-                                            )}
-                                            onChange={(nextImages) =>
+                                              ) ? (
+                                                <span className="max-w-[240px] truncate text-xs font-normal text-slate-500 dark:text-slate-300">
+                                                  {truncateWithDots(
+                                                    penalty.description,
+                                                  )}
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              {penalty.image ? (
+                                                <span
+                                                  className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
+                                                  title="Фото добавлено"
+                                                >
+                                                  <CodePhotoBadgeIcon />
+                                                </span>
+                                              ) : null}
+                                              <AccordionChevronIcon
+                                                isOpen={isExpanded}
+                                              />
+                                            </div>
+                                          </summary>
+                                          <div className="grid gap-3 mt-2 md:grid-cols-4">
+                                            <CabinetInputField
+                                              id={`task-penalty-code-${penalty.id}`}
+                                              label="Код"
+                                              type="text"
+                                              value={penalty.code}
+                                              onChange={(event) =>
+                                                handlePenaltyCodeChange(
+                                                  task.id,
+                                                  penalty.id,
+                                                  'code',
+                                                  event.target.value,
+                                                )
+                                              }
+                                              containerClassName="md:col-span-2 space-y-1"
+                                              labelClassName={
+                                                compactLabelClassName
+                                              }
+                                              inputClassName={
+                                                compactInputClassName
+                                              }
+                                            />
+                                            <CabinetNumberField
+                                              id={`task-penalty-value-${penalty.id}`}
+                                              label="Штраф"
+                                              min="0"
+                                              value={penalty.penalty ?? 0}
+                                              onChange={(event) =>
+                                                handlePenaltyCodeChange(
+                                                  task.id,
+                                                  penalty.id,
+                                                  'penalty',
+                                                  event.target.value,
+                                                )
+                                              }
+                                              containerClassName="space-y-1"
+                                              labelClassName={
+                                                compactLabelClassName
+                                              }
+                                              inputClassName={
+                                                compactInputClassName
+                                              }
+                                            />
+                                          </div>
+                                          <CabinetInputField
+                                            id={`task-penalty-description-${penalty.id}`}
+                                            label="Комментарий"
+                                            type="text"
+                                            value={penalty.description}
+                                            onChange={(event) =>
                                               handlePenaltyCodeChange(
                                                 task.id,
                                                 penalty.id,
-                                                'image',
-                                                Array.isArray(nextImages) &&
-                                                  nextImages.length > 0
-                                                  ? nextImages[0]
-                                                  : '',
+                                                'description',
+                                                event.target.value,
                                               )
                                             }
-                                            directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/penalty-codes/${penalty.id}`}
-                                            imageName={`penalty-code-${penalty.id}`}
-                                            maxImages={1}
-                                            uploadLabel="Загрузить фото"
-                                            disabled={!canEditSelectedGame || isSaving}
-                                            previewShape="square"
+                                            containerClassName="space-y-1"
+                                            labelClassName={
+                                              compactLabelClassName
+                                            }
+                                            inputClassName={
+                                              compactInputClassName
+                                            }
                                           />
-                                        </div>
-                                      )}
-                                      <div className="flex justify-end">
-                                        <CabinetButton
-                                          onClick={() =>
-                                            handleRemovePenaltyCode(
-                                              task.id,
-                                              penalty.id,
-                                            )
-                                          }
-                                          variant="secondary"
-                                          tone="danger"
-                                          size="sm"
-                                          className="inline-flex items-center justify-center"
-                                        >
-                                          Удалить штраф
-                                        </CabinetButton>
-                                      </div>
-                                    </details>
-                                    )
-                                  })}
+                                          {canViewCodePhotos && (
+                                            <div className="mt-2">
+                                              <ImagesInput
+                                                label="Фото кода"
+                                                images={[
+                                                  penalty.image || '',
+                                                ].filter(Boolean)}
+                                                onChange={(nextImages) =>
+                                                  handlePenaltyCodeChange(
+                                                    task.id,
+                                                    penalty.id,
+                                                    'image',
+                                                    Array.isArray(nextImages) &&
+                                                      nextImages.length > 0
+                                                      ? nextImages[0]
+                                                      : '',
+                                                  )
+                                                }
+                                                directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/penalty-codes/${penalty.id}`}
+                                                imageName={`penalty-code-${penalty.id}`}
+                                                maxImages={1}
+                                                uploadLabel="Загрузить фото"
+                                                disabled={
+                                                  !canEditSelectedGame ||
+                                                  isSaving
+                                                }
+                                                previewShape="square"
+                                              />
+                                            </div>
+                                          )}
+                                          <div className="flex justify-end">
+                                            <CabinetButton
+                                              onClick={() =>
+                                                handleRemovePenaltyCode(
+                                                  task.id,
+                                                  penalty.id,
+                                                )
+                                              }
+                                              variant="secondary"
+                                              tone="danger"
+                                              size="sm"
+                                              className="inline-flex items-center justify-center"
+                                            >
+                                              Удалить штраф
+                                            </CabinetButton>
+                                          </div>
+                                        </details>
+                                      )
+                                    },
+                                  )}
                                 </div>
                               ) : (
                                 <p className="mt-3 text-sm text-slate-500 dark:text-slate-200">
@@ -2203,86 +2278,112 @@ const GameEditModal = ({
                                       expandedCodeAccordions.has(accordionKey)
 
                                     return (
-                                    <details
-                                      key={bonus.id}
-                                      open={isExpanded}
-                                      onToggle={(event) => {
-                                        const isOpen = Boolean(
-                                          event.currentTarget?.open,
-                                        )
-                                        setExpandedCodeAccordions((prev) => {
-                                          const next = new Set(prev)
-                                          if (isOpen) {
-                                            next.add(accordionKey)
-                                          } else {
-                                            next.delete(accordionKey)
-                                          }
-                                          return next
-                                        })
-                                      }}
-                                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
-                                    >
-                                      <summary className="flex list-none cursor-pointer items-center justify-between gap-2 rounded-xl px-2 py-1 text-sm font-medium text-slate-700 marker:content-none dark:text-slate-100">
-                                        <div className="min-w-0 flex items-center gap-2">
-                                          <span className="rounded-full border border-emerald-300/70 bg-emerald-100/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
-                                            Бонус
-                                          </span>
-                                          <span className="truncate font-semibold">
-                                            {compactSingleLine(bonus.code) ||
-                                              'Код не указан'}
-                                          </span>
-                                          {truncateWithDots(
-                                            bonus.description,
-                                          ) ? (
-                                            <span className="max-w-[240px] truncate text-xs font-normal text-slate-500 dark:text-slate-300">
-                                              {truncateWithDots(
-                                                bonus.description,
-                                              )}
+                                      <details
+                                        key={bonus.id}
+                                        open={isExpanded}
+                                        onToggle={(event) => {
+                                          const isOpen = Boolean(
+                                            event.currentTarget?.open,
+                                          )
+                                          setExpandedCodeAccordions((prev) => {
+                                            const next = new Set(prev)
+                                            if (isOpen) {
+                                              next.add(accordionKey)
+                                            } else {
+                                              next.delete(accordionKey)
+                                            }
+                                            return next
+                                          })
+                                        }}
+                                        className="p-4 border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+                                      >
+                                        <summary className="flex items-center justify-between gap-2 px-2 py-1 text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
+                                          <div className="flex items-center min-w-0 gap-2">
+                                            <span className="rounded-full border border-emerald-300/70 bg-emerald-100/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+                                              Бонус
                                             </span>
-                                          ) : null}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          {bonus.image ? (
-                                            <span
-                                              className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
-                                              title="Фото добавлено"
-                                            >
-                                              <CodePhotoBadgeIcon />
+                                            <span className="font-semibold truncate">
+                                              {compactSingleLine(bonus.code) ||
+                                                'Код не указан'}
                                             </span>
-                                          ) : null}
-                                          <AccordionChevronIcon
-                                            isOpen={isExpanded}
+                                            {truncateWithDots(
+                                              bonus.description,
+                                            ) ? (
+                                              <span className="max-w-[240px] truncate text-xs font-normal text-slate-500 dark:text-slate-300">
+                                                {truncateWithDots(
+                                                  bonus.description,
+                                                )}
+                                              </span>
+                                            ) : null}
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            {bonus.image ? (
+                                              <span
+                                                className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
+                                                title="Фото добавлено"
+                                              >
+                                                <CodePhotoBadgeIcon />
+                                              </span>
+                                            ) : null}
+                                            <AccordionChevronIcon
+                                              isOpen={isExpanded}
+                                            />
+                                          </div>
+                                        </summary>
+                                        <div className="grid gap-3 mt-2 md:grid-cols-4">
+                                          <CabinetInputField
+                                            id={`task-bonus-code-${bonus.id}`}
+                                            label="Код"
+                                            type="text"
+                                            value={bonus.code}
+                                            onChange={(event) =>
+                                              handleBonusCodeChange(
+                                                task.id,
+                                                bonus.id,
+                                                'code',
+                                                event.target.value,
+                                              )
+                                            }
+                                            containerClassName="md:col-span-2 space-y-1"
+                                            labelClassName={
+                                              compactLabelClassName
+                                            }
+                                            inputClassName={
+                                              compactInputClassName
+                                            }
+                                          />
+                                          <CabinetNumberField
+                                            id={`task-bonus-value-${bonus.id}`}
+                                            label="Бонус"
+                                            min="0"
+                                            value={bonus.bonus ?? 0}
+                                            onChange={(event) =>
+                                              handleBonusCodeChange(
+                                                task.id,
+                                                bonus.id,
+                                                'bonus',
+                                                event.target.value,
+                                              )
+                                            }
+                                            containerClassName="space-y-1"
+                                            labelClassName={
+                                              compactLabelClassName
+                                            }
+                                            inputClassName={
+                                              compactInputClassName
+                                            }
                                           />
                                         </div>
-                                      </summary>
-                                      <div className="mt-2 grid gap-3 md:grid-cols-4">
                                         <CabinetInputField
-                                          id={`task-bonus-code-${bonus.id}`}
-                                          label="Код"
+                                          id={`task-bonus-description-${bonus.id}`}
+                                          label="Комментарий"
                                           type="text"
-                                          value={bonus.code}
+                                          value={bonus.description}
                                           onChange={(event) =>
                                             handleBonusCodeChange(
                                               task.id,
                                               bonus.id,
-                                              'code',
-                                              event.target.value,
-                                            )
-                                          }
-                                          containerClassName="md:col-span-2 space-y-1"
-                                          labelClassName={compactLabelClassName}
-                                          inputClassName={compactInputClassName}
-                                        />
-                                        <CabinetNumberField
-                                          id={`task-bonus-value-${bonus.id}`}
-                                          label="Бонус"
-                                          min="0"
-                                          value={bonus.bonus ?? 0}
-                                          onChange={(event) =>
-                                            handleBonusCodeChange(
-                                              task.id,
-                                              bonus.id,
-                                              'bonus',
+                                              'description',
                                               event.target.value,
                                             )
                                           }
@@ -2290,68 +2391,52 @@ const GameEditModal = ({
                                           labelClassName={compactLabelClassName}
                                           inputClassName={compactInputClassName}
                                         />
-                                      </div>
-                                      <CabinetInputField
-                                        id={`task-bonus-description-${bonus.id}`}
-                                        label="Комментарий"
-                                        type="text"
-                                        value={bonus.description}
-                                        onChange={(event) =>
-                                          handleBonusCodeChange(
-                                            task.id,
-                                            bonus.id,
-                                            'description',
-                                            event.target.value,
-                                          )
-                                        }
-                                        containerClassName="space-y-1"
-                                        labelClassName={compactLabelClassName}
-                                        inputClassName={compactInputClassName}
-                                      />
-                                      {canViewCodePhotos && (
-                                        <div className="mt-2">
-                                          <ImagesInput
-                                            label="Фото кода"
-                                            images={[bonus.image || ''].filter(
-                                              Boolean,
-                                            )}
-                                            onChange={(nextImages) =>
-                                              handleBonusCodeChange(
+                                        {canViewCodePhotos && (
+                                          <div className="mt-2">
+                                            <ImagesInput
+                                              label="Фото кода"
+                                              images={[
+                                                bonus.image || '',
+                                              ].filter(Boolean)}
+                                              onChange={(nextImages) =>
+                                                handleBonusCodeChange(
+                                                  task.id,
+                                                  bonus.id,
+                                                  'image',
+                                                  Array.isArray(nextImages) &&
+                                                    nextImages.length > 0
+                                                    ? nextImages[0]
+                                                    : '',
+                                                )
+                                              }
+                                              directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/bonus-codes/${bonus.id}`}
+                                              imageName={`bonus-code-${bonus.id}`}
+                                              maxImages={1}
+                                              uploadLabel="Загрузить фото"
+                                              disabled={
+                                                !canEditSelectedGame || isSaving
+                                              }
+                                              previewShape="square"
+                                            />
+                                          </div>
+                                        )}
+                                        <div className="flex justify-end">
+                                          <CabinetButton
+                                            onClick={() =>
+                                              handleRemoveBonusCode(
                                                 task.id,
                                                 bonus.id,
-                                                'image',
-                                                Array.isArray(nextImages) &&
-                                                  nextImages.length > 0
-                                                  ? nextImages[0]
-                                                  : '',
                                               )
                                             }
-                                            directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/bonus-codes/${bonus.id}`}
-                                            imageName={`bonus-code-${bonus.id}`}
-                                            maxImages={1}
-                                            uploadLabel="Загрузить фото"
-                                            disabled={!canEditSelectedGame || isSaving}
-                                            previewShape="square"
-                                          />
+                                            variant="secondary"
+                                            tone="danger"
+                                            size="sm"
+                                            className="inline-flex items-center justify-center"
+                                          >
+                                            Удалить бонус
+                                          </CabinetButton>
                                         </div>
-                                      )}
-                                      <div className="flex justify-end">
-                                        <CabinetButton
-                                          onClick={() =>
-                                            handleRemoveBonusCode(
-                                              task.id,
-                                              bonus.id,
-                                            )
-                                          }
-                                          variant="secondary"
-                                          tone="danger"
-                                          size="sm"
-                                          className="inline-flex items-center justify-center"
-                                        >
-                                          Удалить бонус
-                                        </CabinetButton>
-                                      </div>
-                                    </details>
+                                      </details>
                                     )
                                   })}
                                 </div>
@@ -2529,7 +2614,7 @@ const GameEditModal = ({
                   labelClassName="text-sm text-slate-600 dark:text-slate-200"
                 />
               )}
-              <div className="rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
+              <div className="p-3 border rounded-2xl border-slate-200 dark:border-slate-700">
                 <NeonCheckbox
                   id="game-max-team-players-unlimited"
                   checked={selectedGame.maxTeamPlayers === null}
@@ -2574,14 +2659,14 @@ const GameEditModal = ({
               </div>
             </div>
             {Boolean(selectedGame.isRated ?? true) && (
-              <div className="mt-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+              <div className="p-4 mt-3 border rounded-2xl border-slate-200 dark:border-slate-700">
                 <label
                   htmlFor="game-season"
                   className="block text-sm font-semibold text-slate-700 dark:text-slate-100"
                 >
                   Сезон
                 </label>
-                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <div className="flex flex-col gap-2 mt-2 sm:flex-row">
                   <select
                     id="game-season"
                     value={
@@ -2606,7 +2691,7 @@ const GameEditModal = ({
                       !canEditSelectedGame ||
                       isSaving
                     }
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                    className="w-full px-3 py-2 text-sm border rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
                   >
                     <option value="">
                       {isEditGameSeasonsLoading
@@ -2820,7 +2905,7 @@ const GameEditModal = ({
               </p>
             )}
 
-            <div className="p-4 bg-slate-50 border border-slate-200 dark:border-slate-700 dark:bg-slate-800/60 rounded-2xl">
+            <div className="p-4 border bg-slate-50 border-slate-200 dark:border-slate-700 dark:bg-slate-800/60 rounded-2xl">
               <p className="text-sm text-slate-600 dark:text-slate-200">
                 Доходы:{' '}
                 <span className="font-semibold">

@@ -5,9 +5,12 @@ import dynamic from 'next/dynamic'
 import { useEffect, useRef, useState } from 'react'
 import FullscreenImageViewer from '@components/FullscreenImageViewer'
 
-const TaskRichEditor = dynamic(() => import('@components/cabinet/TaskRichEditor'), {
-  ssr: false,
-})
+const TaskRichEditor = dynamic(
+  () => import('@components/cabinet/TaskRichEditor'),
+  {
+    ssr: false,
+  },
+)
 
 const trimEdgeEmptyParagraphs = (value) => {
   const source = String(value || '').trim()
@@ -42,7 +45,9 @@ const RichTaskContentView = ({
     const isVisuallyEmptyParagraph = (node) => {
       if (!(node instanceof HTMLElement)) return false
       if (node.tagName !== 'P') return false
-      const text = String(node.textContent || '').replace(/\u00a0/g, '').trim()
+      const text = String(node.textContent || '')
+        .replace(/\u00a0/g, '')
+        .trim()
       if (text.length > 0) return false
       return true
     }
@@ -72,9 +77,7 @@ const RichTaskContentView = ({
         return
       }
       const imageElement =
-        target instanceof HTMLImageElement
-          ? target
-          : target.closest?.('img')
+        target instanceof HTMLImageElement ? target : target.closest?.('img')
       if (!(imageElement instanceof HTMLImageElement)) {
         return
       }
@@ -118,7 +121,7 @@ const RichTaskContentView = ({
         hideToolbar
         compactReadOnly
         directory={directory}
-        contentMaxHeight="unset"
+        contentMaxHeight="none"
       />
       <FullscreenImageViewer
         isOpen={Boolean(selectedImage?.src)}
