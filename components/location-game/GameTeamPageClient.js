@@ -535,6 +535,7 @@ function GameTeamPage({
       hasClearedMessageRef.current = false
       await router.push(
         `/game/${gameId}/process/${teamId}?message=${encodeURIComponent(trimmedAnswer)}`,
+        { scroll: false },
       )
     } finally {
       setIsSubmitting(false)

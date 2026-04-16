@@ -991,9 +991,29 @@ const GameEditModal = ({
                   const isExpanded = expandedTaskIds.includes(task.id)
                   const taskTitle = typeof task?.title === 'string' ? task.title.trim() : ''
                   const taskDescription = getTaskDescriptionText(task).trim()
+                  const hasTaskMedia =
+                    Array.isArray(task?.taskMedia) &&
+                    task.taskMedia.some((item) => {
+                      if (!item || typeof item !== 'object') {
+                        return false
+                      }
+                      const type =
+                        typeof item.type === 'string' ? item.type.trim() : ''
+                      const url =
+                        typeof item.url === 'string' ? item.url.trim() : ''
+                      const path =
+                        typeof item.path === 'string' ? item.path.trim() : ''
+                      return Boolean(type && (url || path))
+                    })
+                  const hasTaskDescription =
+                    taskDescription !== '' ||
+                    hasMeaningfulRichMarkup(task?.taskRich) ||
+                    hasTaskMedia
                   const taskClues = Array.isArray(task?.clues) ? task.clues : []
                   const hasFilledClue = taskClues.some(
-                    (clue) => getClueText(clue).trim() !== '',
+                    (clue) =>
+                      getClueText(clue).trim() !== '' ||
+                      hasMeaningfulRichMarkup(clue?.clueRich),
                   )
                   const normalizedCodes = (Array.isArray(task?.codes) ? task.codes : [])
                     .map((codeValue) =>
@@ -1014,7 +1034,7 @@ const GameEditModal = ({
                     requiredCodesCount > normalizedCodes.length
                   const hasTaskValidationErrors =
                     !taskTitle ||
-                    !taskDescription ||
+                    !hasTaskDescription ||
                     taskClues.length === 0 ||
                     !hasFilledClue ||
                     (!isPhotoGame && normalizedCodes.length === 0) ||
