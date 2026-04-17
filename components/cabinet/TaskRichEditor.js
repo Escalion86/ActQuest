@@ -146,6 +146,44 @@ const normalizeUploadedUrl = (value) => {
   return ''
 }
 
+const decodeHtmlEntities = (value) => {
+  let result = String(value || '')
+  for (let index = 0; index < 3; index += 1) {
+    const decoded = result
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&amp;/gi, '&')
+    if (decoded === result) {
+      break
+    }
+    result = decoded
+  }
+  return result
+}
+
+const normalizeMediaSrc = (value) => {
+  const decoded = decodeHtmlEntities(value).trim()
+  if (!decoded) {
+    return ''
+  }
+
+  if (/^https?:\/\//i.test(decoded) || /^data:/i.test(decoded) || /^blob:/i.test(decoded)) {
+    return decoded
+  }
+
+  if (/^\/uploads\//i.test(decoded)) {
+    return `${ESCALIONCLOUD_PUBLIC_ORIGIN}${decoded}`
+  }
+
+  if (/^uploads\//i.test(decoded)) {
+    return `${ESCALIONCLOUD_PUBLIC_ORIGIN}/${decoded}`
+  }
+
+  return decoded
+}
+
 const detectUploadModeByFile = (file, fallbackMode = 'image') => {
   const mime = typeof file?.type === 'string' ? file.type.toLowerCase() : ''
   if (mime.startsWith('video/')) {
@@ -772,12 +810,12 @@ const formatAudioClock = (seconds) => {
 }
 
 const buildAudioDownloadFilename = ({ title, src }) => {
-  const safeTitle = String(title || 'audio')
+  const safeTitle = decodeHtmlEntities(String(title || 'audio'))
     .trim()
     .replace(/[\\/:*?"<>|]/g, '_')
     .replace(/\s+/g, ' ')
 
-  const source = String(src || '')
+  const source = normalizeMediaSrc(src)
   const extensionMatch = source.match(/\.([a-z0-9]{2,6})(?:[?#]|$)/i)
   const extension = extensionMatch?.[1]
     ? `.${extensionMatch[1].toLowerCase()}`
@@ -800,10 +838,11 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
   const [volume, setVolume] = useState(1)
   const [isVolumeExpanded, setIsVolumeExpanded] = useState(false)
 
-  const src = typeof node?.attrs?.src === 'string' ? node.attrs.src : ''
+  const src = normalizeMediaSrc(node?.attrs?.src)
   const title =
-    typeof node?.attrs?.title === 'string' && node.attrs.title.trim()
-      ? node.attrs.title.trim()
+    typeof node?.attrs?.title === 'string' &&
+    decodeHtmlEntities(node.attrs.title).trim()
+      ? decodeHtmlEntities(node.attrs.title).trim()
       : 'Аудио'
   const canEditAudioTitle = Boolean(editor?.isEditable)
 
@@ -1097,7 +1136,7 @@ const extractMediaFromHtml = (html) => {
   let match = imageRegex.exec(source)
   while (match) {
     if (match[1]) {
-      results.push({ type: 'image', url: match[1] })
+      results.push({ type: 'image', url: normalizeMediaSrc(match[1]) })
     }
     match = imageRegex.exec(source)
   }
@@ -1106,7 +1145,7 @@ const extractMediaFromHtml = (html) => {
   match = audioMessageRegex.exec(source)
   while (match) {
     if (match[1]) {
-      results.push({ type: 'audio', url: match[1] })
+      results.push({ type: 'audio', url: normalizeMediaSrc(match[1]) })
     }
     match = audioMessageRegex.exec(source)
   }
@@ -1115,7 +1154,7 @@ const extractMediaFromHtml = (html) => {
   match = audioRegex.exec(source)
   while (match) {
     if (match[1]) {
-      results.push({ type: 'audio', url: match[1] })
+      results.push({ type: 'audio', url: normalizeMediaSrc(match[1]) })
     }
     match = audioRegex.exec(source)
   }
@@ -1124,7 +1163,7 @@ const extractMediaFromHtml = (html) => {
   match = videoMessageRegex.exec(source)
   while (match) {
     if (match[1]) {
-      results.push({ type: 'video', url: match[1] })
+      results.push({ type: 'video', url: normalizeMediaSrc(match[1]) })
     }
     match = videoMessageRegex.exec(source)
   }
@@ -1133,7 +1172,7 @@ const extractMediaFromHtml = (html) => {
   match = videoRegex.exec(source)
   while (match) {
     if (match[1]) {
-      results.push({ type: 'video', url: match[1] })
+      results.push({ type: 'video', url: normalizeMediaSrc(match[1]) })
     }
     match = videoRegex.exec(source)
   }

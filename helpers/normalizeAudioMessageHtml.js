@@ -11,11 +11,28 @@ const escapeHtmlText = (value) =>
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
 
+const decodeHtmlEntities = (value) => {
+  let result = String(value || '')
+  for (let index = 0; index < 3; index += 1) {
+    const decoded = result
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&amp;/gi, '&')
+    if (decoded === result) {
+      break
+    }
+    result = decoded
+  }
+  return result
+}
+
 const getAttribute = (attrs, name) => {
   const match = String(attrs || '').match(
     new RegExp(`${name}\\s*=\\s*"([^"]*)"`, 'i'),
   )
-  return match?.[1] ? match[1] : ''
+  return match?.[1] ? decodeHtmlEntities(match[1]) : ''
 }
 
 const normalizeClassValue = (attrs) => {

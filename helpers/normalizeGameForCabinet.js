@@ -90,8 +90,25 @@ const normalizeStringArray = (values = []) => {
     .filter((item) => item !== '')
 }
 
+const decodeHtmlEntities = (value) => {
+  let result = ensureString(value, '')
+  for (let index = 0; index < 3; index += 1) {
+    const decoded = result
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&amp;/gi, '&')
+    if (decoded === result) {
+      break
+    }
+    result = decoded
+  }
+  return result
+}
+
 const normalizeMediaUrl = (value) => {
-  const prepared = ensureString(value, '').trim()
+  const prepared = decodeHtmlEntities(value).trim()
   if (!prepared) {
     return ''
   }

@@ -26,6 +26,10 @@ import { toStringId } from '@helpers/idAndDate'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import requestApiJson from '@helpers/requestApiJson'
 import { resolveGameEntryHrefFromGame } from '@helpers/resolveGameEntryHref'
+import {
+  getDuplicateCodeKindsLabel,
+  getTaskDuplicateCodeConflicts,
+} from '@helpers/getTaskDuplicateCodeConflicts'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { getNounTeams } from '@helpers/getNoun'
@@ -313,6 +317,17 @@ const sanitizeStringArray = (values = []) =>
 const sanitizeCodePhotosArray = (values = [], codesLength = 0) =>
   sanitizeStringArray(values).slice(0, Math.max(0, Number(codesLength) || 0))
 
+const decodeHtmlEntities = (value) =>
+  String(value || '')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&amp;/gi, '&')
+
+const normalizeMediaFieldString = (value) =>
+  decodeHtmlEntities(typeof value === 'string' ? value : '').trim()
+
 const stripHtmlToPlainText = (value) =>
   String(value || '')
     .replace(/<br\s*\/?>/gi, '\n')
@@ -577,12 +592,12 @@ const buildUpdatePayload = (game) => {
               : media?.type === 'video'
                 ? 'video'
                 : 'image',
-          url: typeof media?.url === 'string' ? media.url.trim() : '',
-          mime: typeof media?.mime === 'string' ? media.mime.trim() : '',
+          url: normalizeMediaFieldString(media?.url),
+          mime: normalizeMediaFieldString(media?.mime),
           size: Number(media?.size) || 0,
           duration: Number(media?.duration) || 0,
-          path: typeof media?.path === 'string' ? media.path.trim() : '',
-          title: typeof media?.title === 'string' ? media.title.trim() : '',
+          path: normalizeMediaFieldString(media?.path),
+          title: normalizeMediaFieldString(media?.title),
         }))
         .filter((media) => media.url !== ''),
       taskBonusForComplite: isPhotoGame
@@ -634,7 +649,7 @@ const buildUpdatePayload = (game) => {
           penalty: Number(penalty.penalty) || 0,
           description:
             typeof penalty.description === 'string' ? penalty.description : '',
-          image: typeof penalty.image === 'string' ? penalty.image.trim() : '',
+          image: normalizeMediaFieldString(penalty.image),
         }
 
         if (penalty.mongoId) {
@@ -649,7 +664,7 @@ const buildUpdatePayload = (game) => {
           bonus: Number(bonus.bonus) || 0,
           description:
             typeof bonus.description === 'string' ? bonus.description : '',
-          image: typeof bonus.image === 'string' ? bonus.image.trim() : '',
+          image: normalizeMediaFieldString(bonus.image),
         }
 
         if (bonus.mongoId) {
@@ -680,12 +695,12 @@ const buildUpdatePayload = (game) => {
               : media?.type === 'video'
                 ? 'video'
                 : 'image',
-          url: typeof media?.url === 'string' ? media.url.trim() : '',
-          mime: typeof media?.mime === 'string' ? media.mime.trim() : '',
+          url: normalizeMediaFieldString(media?.url),
+          mime: normalizeMediaFieldString(media?.mime),
           size: Number(media?.size) || 0,
           duration: Number(media?.duration) || 0,
-          path: typeof media?.path === 'string' ? media.path.trim() : '',
-          title: typeof media?.title === 'string' ? media.title.trim() : '',
+          path: normalizeMediaFieldString(media?.path),
+          title: normalizeMediaFieldString(media?.title),
         }))
         .filter((media) => media.url !== ''),
       canceled: Boolean(task.canceled),
@@ -901,6 +916,15 @@ const validateTaskEditorRequirements = (game) => {
         message: `${taskLabel}: «Кодов для выполнения» (${requiredCodesCount}) не может быть больше количества основных кодов (${codes.length}).`,
       })
     }
+
+    const duplicateCodeConflicts = getTaskDuplicateCodeConflicts(task)
+    duplicateCodeConflicts.forEach((conflict) => {
+      issues.push({
+        taskId,
+        isBlocking: true,
+        message: `${taskLabel}: код «${conflict.code}» дублируется в ${getDuplicateCodeKindsLabel(conflict.kinds)}.`,
+      })
+    })
   })
 
   return issues
@@ -3571,6 +3595,21 @@ const GamesPage = ({
       validationWarningMessage = feedbackMessage
     }
 
+    const blockingIssues = validationIssues.filter(
+      (issue) => issue?.isBlocking === true,
+    )
+    if (blockingIssues.length > 0) {
+      const firstBlockingMessage =
+        blockingIssues[0]?.message || 'Проверьте уникальность кодов в заданиях.'
+      const blockingMessage =
+        blockingIssues.length > 1
+          ? `${firstBlockingMessage} Дополнительно ошибок: ${blockingIssues.length - 1}.`
+          : firstBlockingMessage
+
+      setFeedback({ type: 'error', message: blockingMessage })
+      return
+    }
+
     setIsSaving(true)
     setFeedback(null)
 
@@ -3639,6 +3678,34 @@ const GamesPage = ({
       let gameForPreview = gameToPreview
 
       if (canEditSelectedGame && isDirty) {
+        const validationIssues = validateTaskEditorRequirements(gameToPreview)
+        const blockingIssues = validationIssues.filter(
+          (issue) => issue?.isBlocking === true,
+        )
+        if (blockingIssues.length > 0) {
+          const issueTaskIds = blockingIssues
+            .map((issue) => issue.taskId)
+            .filter(Boolean)
+          if (issueTaskIds.length > 0) {
+            setExpandedTaskIds((prev) =>
+              Array.from(
+                new Set([...(Array.isArray(prev) ? prev : []), ...issueTaskIds]),
+              ),
+            )
+          }
+
+          const firstBlockingMessage =
+            blockingIssues[0]?.message ||
+            'Проверьте уникальность кодов в заданиях.'
+          const blockingMessage =
+            blockingIssues.length > 1
+              ? `${firstBlockingMessage} Дополнительно ошибок: ${blockingIssues.length - 1}.`
+              : firstBlockingMessage
+
+          setFeedback({ type: 'error', message: blockingMessage })
+          return
+        }
+
         const isStartedGame =
           String(gameToPreview?.status || '').trim().toLowerCase() ===
           'started'

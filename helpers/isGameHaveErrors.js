@@ -1,3 +1,8 @@
+import {
+  getDuplicateCodeKindsLabel,
+  getTaskDuplicateCodeConflicts,
+} from './getTaskDuplicateCodeConflicts'
+
 const stripHtmlToPlainText = (value) =>
   String(value || '')
     .replace(/<br\s*\/?>/gi, '\n')
@@ -124,6 +129,13 @@ export const getGameValidationErrors = (game) => {
         )
       }
     }
+
+    const duplicateCodeConflicts = getTaskDuplicateCodeConflicts(task)
+    duplicateCodeConflicts.forEach((conflict) => {
+      errors.push(
+        `${taskLabel}: код «${conflict.code}» дублируется в ${getDuplicateCodeKindsLabel(conflict.kinds)}.`
+      )
+    })
 
     if (cluesDuration > 0) {
       const cluesCount = Array.isArray(task?.clues) ? task.clues.length : 0

@@ -30,8 +30,30 @@ const hasResultSnapshots = (result) =>
   Array.isArray(result?.teamsUsers) &&
   result.teamsUsers.length > 0
 
+const decodeHtmlEntities = (value) => {
+  let result = typeof value === 'string' ? value : ''
+  for (let index = 0; index < 3; index += 1) {
+    const decoded = result
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&amp;/gi, '&')
+    if (decoded === result) {
+      break
+    }
+    result = decoded
+  }
+  return result
+}
+
 const sanitizeTaskMedia = (media = []) =>
   (Array.isArray(media) ? media : [])
+    .map((item) => ({
+      ...item,
+      url: decodeHtmlEntities(item?.url),
+      title: decodeHtmlEntities(item?.title),
+    }))
     .map((item, index) => ({
       id:
         typeof item?.id === 'string' && item.id.trim().length > 0
