@@ -529,42 +529,40 @@ function GameTeamPage({
     const trimmedAnswer = answer.trim().slice(0, 20)
     if (!trimmedAnswer) return
 
-    const scrollYBeforeSubmit =
-      typeof window !== 'undefined' ? window.scrollY || 0 : 0
-    if (typeof document !== 'undefined') {
-      const activeElement = document.activeElement
-      if (activeElement instanceof HTMLElement) {
-        activeElement.blur()
-      }
-    }
-
-    const restoreScrollPosition = () => {
-      if (typeof window === 'undefined') return
-      window.requestAnimationFrame(() => {
-        window.scrollTo({
-          top: scrollYBeforeSubmit,
-          left: 0,
-          behavior: 'auto',
-        })
-      })
-      window.setTimeout(() => {
-        window.scrollTo({
-          top: scrollYBeforeSubmit,
-          left: 0,
-          behavior: 'auto',
-        })
-      }, 120)
-    }
-
     setIsSubmitting(true)
     setStickyMessages([])
     try {
       hasClearedMessageRef.current = false
-      await router.push(
-        `/game/${gameId}/process/${teamId}?message=${encodeURIComponent(trimmedAnswer)}`,
-        { scroll: false },
+      const response = await fetch('/api/webapp/game-task', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          location,
+          gameId,
+          teamId,
+          message: trimmedAnswer,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error || 'Не удалось отправить код')
+      }
+
+      const data = await response.json().catch(() => null)
+      if (!data?.success) {
+        throw new Error(data?.error || 'Не удалось отправить код')
+      }
+
+      updateTaskData(data.data || {})
+      setAnswer('')
+      setTaskRefreshError(null)
+    } catch (submitError) {
+      setTaskRefreshError(
+        submitError?.message || 'Не удалось отправить код',
       )
-      restoreScrollPosition()
     } finally {
       setIsSubmitting(false)
     }
