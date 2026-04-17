@@ -642,12 +642,6 @@ function GameTeamPage({
     const rawMain = Array.isArray(currentTaskDisplayMeta.acceptedMainCodes)
       ? currentTaskDisplayMeta.acceptedMainCodes
       : []
-    const rawBonus = Array.isArray(currentTaskDisplayMeta.acceptedBonusCodes)
-      ? currentTaskDisplayMeta.acceptedBonusCodes
-      : []
-    const rawPenalty = Array.isArray(currentTaskDisplayMeta.acceptedPenaltyCodes)
-      ? currentTaskDisplayMeta.acceptedPenaltyCodes
-      : []
     const normalizeCodeValue = (value) => {
       if (typeof value === 'string') {
         return value.trim()
@@ -666,15 +660,7 @@ function GameTeamPage({
       }
       return ''
     }
-    const excludedCodes = new Set(
-      [...rawBonus, ...rawPenalty]
-        .map((value) => normalizeCodeValue(value).toLowerCase())
-        .filter(Boolean),
-    )
-    const raw = rawMain.filter((value) => {
-      const normalized = normalizeCodeValue(value)
-      return normalized && !excludedCodes.has(normalized.toLowerCase())
-    })
+    const raw = rawMain
 
     if (!Array.isArray(raw) || raw.length === 0) {
       return []
@@ -725,6 +711,34 @@ function GameTeamPage({
       })
       .filter(Boolean)
   }, [currentTaskDisplayMeta])
+  const remainingMainCodesCount = useMemo(() => {
+    if (acceptedTaskCodes.length < 1) {
+      return null
+    }
+
+    const mainCodesCountRaw = Number(currentTaskDisplayMeta?.mainCodesCount)
+    const mainCodesCount = Number.isFinite(mainCodesCountRaw)
+      ? Math.max(0, Math.floor(mainCodesCountRaw))
+      : 0
+
+    const requiredCodesRaw = Number(currentTaskDisplayMeta?.requiredCodesCount)
+    const requiredCodesCount = Number.isFinite(requiredCodesRaw)
+      ? Math.max(0, Math.floor(requiredCodesRaw))
+      : mainCodesCount
+
+    const cappedRequiredCodes =
+      mainCodesCount > 0
+        ? Math.min(requiredCodesCount, mainCodesCount)
+        : requiredCodesCount
+
+    const remaining = Math.max(cappedRequiredCodes - acceptedTaskCodes.length, 0)
+    return remaining > 0 ? remaining : null
+  }, [
+    acceptedTaskCodes.length,
+    currentTaskDisplayMeta?.mainCodesCount,
+    currentTaskDisplayMeta?.requiredCodesCount,
+  ])
+
   const isBreakState = currentTaskState === 'break'
   const isCompletedState = currentTaskState === 'completed'
   const isGameCompletion = isGameFinished || isCompletedState
@@ -1358,6 +1372,11 @@ function GameTeamPage({
                         </span>
                       ))}
                     </div>
+                    {remainingMainCodesCount !== null ? (
+                      <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-100">
+                        Осталось ввести кодов: {remainingMainCodesCount}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
                 {!isBreakState && acceptedBonusCodeItems.length > 0 ? (

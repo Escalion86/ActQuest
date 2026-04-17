@@ -36,8 +36,18 @@ const normalizeManualAdjustment = (item, index) => {
 const isManualTeamAdjustment = (item) =>
   item &&
   typeof item === 'object' &&
-  String(item.source || '').trim().toLowerCase() ===
-    MANUAL_TEAM_ADJUSTMENT_SOURCE
+  (() => {
+    const source = String(item.source || '').trim().toLowerCase()
+    if (source === MANUAL_TEAM_ADJUSTMENT_SOURCE) {
+      return true
+    }
+
+    // Backward-compatibility: early manual entries were saved without `source`
+    // due schema strict mode. They also had no task binding.
+    const hasTaskId = typeof item.taskId === 'string' && item.taskId.trim() !== ''
+    const hasTaskIndex = Number.isFinite(Number(item.taskIndex))
+    return !source && !hasTaskId && !hasTaskIndex
+  })()
 
 const normalizeTimeAddingsForResponse = (value) =>
   (Array.isArray(value) ? value : [])
@@ -50,10 +60,16 @@ const normalizeTimeAddingsForResponse = (value) =>
         return null
       }
       const source = typeof item.source === 'string' ? item.source.trim() : ''
+      const taskId = typeof item.taskId === 'string' ? item.taskId.trim() : ''
+      const taskIndex = Number.isFinite(Number(item.taskIndex))
+        ? Number(item.taskIndex)
+        : null
       return {
         name: typeof item.name === 'string' ? item.name : '',
         time: Math.round(time),
         source,
+        taskId,
+        taskIndex,
       }
     })
     .filter(Boolean)

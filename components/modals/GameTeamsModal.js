@@ -175,14 +175,21 @@ const GameTeamsModal = ({
   const getManualAdjustmentRowsFromTeam = useCallback((team) => {
     const timeAddings = Array.isArray(team?.timeAddings) ? team.timeAddings : []
     return timeAddings
-      .filter(
-        (item) =>
-          item &&
-          typeof item === 'object' &&
-          String(item.source || '')
-            .trim()
-            .toLowerCase() === 'manual_team_adjustment',
-      )
+      .filter((item) => {
+        if (!item || typeof item !== 'object') {
+          return false
+        }
+
+        const source = String(item.source || '').trim().toLowerCase()
+        if (source === 'manual_team_adjustment') {
+          return true
+        }
+
+        const hasTaskId =
+          typeof item.taskId === 'string' && item.taskId.trim() !== ''
+        const hasTaskIndex = Number.isFinite(Number(item.taskIndex))
+        return !source && !hasTaskId && !hasTaskIndex
+      })
       .map((item, index) => {
         const rawSeconds = Number(item.time)
         const seconds = Number.isFinite(rawSeconds)
