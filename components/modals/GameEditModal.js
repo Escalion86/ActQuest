@@ -1250,17 +1250,47 @@ const GameEditModal = ({
                           <div className="min-w-0 pt-2">
                             <p>{task.title || 'Без названия'}</p>
                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
-                              {[
-                                task.canceled ? 'Отменено' : null,
-                                task.codes?.length
-                                  ? `Код${task.codes.length === 1 ? '' : 'ы'}: ${task.codes.length}`
-                                  : null,
-                                task.clues?.length
-                                  ? `Подсказок: ${task.clues.length}`
-                                  : null,
-                              ]
-                                .filter(Boolean)
-                                .join(' · ')}
+                              <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                                {task.canceled ? (
+                                  <span>Отменено</span>
+                                ) : null}
+                                <span>Коды:</span>
+                                {normalizedCodes.length > 0 ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    {requiredCodesCount !== null &&
+                                    Number.isFinite(requiredCodesCount) &&
+                                    requiredCodesCount > 0 ? (
+                                      <span className="font-semibold text-slate-600 dark:text-slate-100">
+                                        {requiredCodesCount}/
+                                      </span>
+                                    ) : null}
+                                    <span className="inline-flex min-w-5 items-center justify-center rounded-full border border-cyan-300/70 bg-cyan-100/70 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                      {normalizedCodes.length}
+                                    </span>
+                                  </span>
+                                ) : null}
+                                {(Array.isArray(task.bonusCodes)
+                                  ? task.bonusCodes.length
+                                  : 0) > 0 ? (
+                                  <span className="inline-flex min-w-5 items-center justify-center rounded-full border border-emerald-300/70 bg-emerald-100/80 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+                                    {task.bonusCodes.length}
+                                  </span>
+                                ) : null}
+                                {(Array.isArray(task.penaltyCodes)
+                                  ? task.penaltyCodes.length
+                                  : 0) > 0 ? (
+                                  <span className="inline-flex min-w-5 items-center justify-center rounded-full border border-rose-300/70 bg-rose-100/80 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                                    {task.penaltyCodes.length}
+                                  </span>
+                                ) : null}
+                                <span>·</span>
+                                <span>
+                                  Подсказок:{' '}
+                                  {Array.isArray(task.clues)
+                                    ? task.clues.length
+                                    : 0}
+                                </span>
+                              </span>
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
