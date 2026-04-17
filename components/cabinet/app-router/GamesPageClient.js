@@ -138,7 +138,6 @@ const createPrice = () => ({
 
 const createFinanceEntry = () => {
   const now = new Date()
-  const normalizedIsRated = Boolean(game.isRated ?? true)
 
   return {
     id: `finance-${now.getTime()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -956,6 +955,7 @@ const GamesPage = ({
   const [statusProgressMessage, setStatusProgressMessage] = useState('')
   const [editingGame, setEditingGame] = useState(null)
   const [editingBaselineGame, setEditingBaselineGame] = useState(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [toastEvent, setToastEvent] = useState(null)
   const setFeedback = useCallback((feedback) => {
@@ -1375,6 +1375,7 @@ const GamesPage = ({
     if (!isEditModalOpen && !isTasksModalOpen) {
       setEditingGame(null)
       setEditingBaselineGame(null)
+      setHasUnsavedChanges(false)
     }
     setIsStatusModalOpen(false)
     setStatusModalGameId('')
@@ -2888,6 +2889,7 @@ const GamesPage = ({
       const createdDraft = cloneGameDraft(createdGame)
       setEditingGame(createdDraft)
       setEditingBaselineGame(cloneGameDraft(createdDraft))
+      setHasUnsavedChanges(false)
       setIsEditModalOpen(true)
     } catch (error) {
       console.error('Failed to create game', error)
@@ -3124,12 +3126,8 @@ const GamesPage = ({
     if (!editingGame || !editingBaselineGame) {
       return false
     }
-
-    return (
-      serializeGameForComparison(editingGame) !==
-      serializeGameForComparison(editingBaselineGame)
-    )
-  }, [editingBaselineGame, editingGame])
+    return Boolean(hasUnsavedChanges)
+  }, [editingBaselineGame, editingGame, hasUnsavedChanges])
 
   const canEditSelectedGame = useMemo(() => {
     const gameForPermissions =
@@ -3250,6 +3248,7 @@ const GamesPage = ({
       const draft = cloneGameDraft(targetGame)
       setEditingGame(draft)
       setEditingBaselineGame(cloneGameDraft(draft))
+      setHasUnsavedChanges(false)
       setIsDescriptionModalOpen(false)
       setIsEditModalOpen(false)
       setIsTasksModalOpen(true)
@@ -3289,6 +3288,7 @@ const GamesPage = ({
   const updateSelectedGame = useCallback(
     (updater) => {
       if (!canEditSelectedGame || !editingGame) return
+      setHasUnsavedChanges(true)
 
       setEditingGame((prevGame) => {
         if (!prevGame) {
@@ -3475,6 +3475,7 @@ const GamesPage = ({
     if (!editingBaselineGame) return
 
     setEditingGame(cloneGameDraft(editingBaselineGame))
+    setHasUnsavedChanges(false)
     setFeedback(null)
   }, [editingBaselineGame])
 
@@ -3555,6 +3556,7 @@ const GamesPage = ({
       } else {
         setFeedback({ type: 'success', message: 'Изменения сохранены' })
       }
+      setHasUnsavedChanges(false)
       setEditingGame(null)
       setEditingBaselineGame(null)
       setIsEditModalOpen(false)
@@ -3628,6 +3630,7 @@ const GamesPage = ({
           )
           setEditingGame(cloneGameDraft(normalizedGame))
           setEditingBaselineGame(cloneGameDraft(normalizedGame))
+          setHasUnsavedChanges(false)
           setFeedback({ type: 'success', message: 'Задания сохранены' })
 
           gameForPreview = normalizedGame
@@ -4543,6 +4546,7 @@ const GamesPage = ({
       const draft = cloneGameDraft(game)
       setEditingGame(draft)
       setEditingBaselineGame(cloneGameDraft(draft))
+      setHasUnsavedChanges(false)
       setIsTeamsModalOpen(false)
       setIsResultsModalOpen(false)
       setIsTasksViewModalOpen(false)
@@ -4563,6 +4567,7 @@ const GamesPage = ({
       const draft = cloneGameDraft(game)
       setEditingGame(draft)
       setEditingBaselineGame(cloneGameDraft(draft))
+      setHasUnsavedChanges(false)
       setIsTeamsModalOpen(false)
       setIsResultsModalOpen(false)
       setIsTasksViewModalOpen(false)
@@ -4856,6 +4861,46 @@ const GamesPage = ({
     return !Boolean(game.hideResult)
   }, [canManageGameStatus])
 
+  const canGenerateResultsForGame = useCallback(
+    (game) => {
+      if (!game) {
+        return false
+      }
+
+      if (Boolean(game.isResultGenerated)) {
+        return false
+      }
+
+      const status =
+        typeof game.status === 'string' ? game.status.toLowerCase() : ''
+      const isCompleted = status === 'finished' || status === 'closed'
+      if (!isCompleted) {
+        return false
+      }
+
+      return canManageGameStatus(game)
+    },
+    [canManageGameStatus],
+  )
+
+  const canRebuildResultsForGame = useCallback(
+    (game) => {
+      if (!game) {
+        return false
+      }
+
+      const status =
+        typeof game.status === 'string' ? game.status.toLowerCase() : ''
+      const isCompleted = status === 'finished' || status === 'closed'
+      if (!isCompleted) {
+        return false
+      }
+
+      return canManageGameStatus(game)
+    },
+    [canManageGameStatus],
+  )
+
   const canViewTasksForGame = useCallback((game) => {
     if (!game || !Boolean(game.showTasks)) {
       return false
@@ -4919,6 +4964,7 @@ const GamesPage = ({
         computed: null,
         interactiveResultsUrl: null,
         userParticipationTeamIds,
+        viewerCanManageResults: canManageGameStatus(game),
       })
 
       try {
@@ -4950,6 +4996,7 @@ const GamesPage = ({
               ? json.data.interactiveResultsUrl.trim()
               : null,
           userParticipationTeamIds,
+          viewerCanManageResults: canManageGameStatus(game),
         }
 
         setResultsCacheByGameId((prev) => ({
@@ -4974,10 +5021,12 @@ const GamesPage = ({
           computed: null,
           interactiveResultsUrl: null,
           userParticipationTeamIds,
+          viewerCanManageResults: canManageGameStatus(game),
         })
       }
     },
     [
+      canManageGameStatus,
       gamesFilterLocation,
       location,
       resultsCacheByGameId,
@@ -5027,13 +5076,18 @@ const GamesPage = ({
     setIsTasksViewModalOpen(false)
   }, [])
 
-  const handleGenerateResults = useCallback(async () => {
-    if (!selectedGame || !canGenerateResults || isGeneratingResults) {
+  const handleGenerateResultsFromGame = useCallback(async (game, options = {}) => {
+    const force = Boolean(options?.force)
+    const canProceed = force
+      ? canRebuildResultsForGame(game)
+      : canGenerateResultsForGame(game)
+
+    if (!game || !canProceed || isGeneratingResults) {
       return
     }
 
     const locationForApi =
-      selectedGame.location ||
+      game.location ||
       (shouldShowLocationFilter ? gamesFilterLocation : location) ||
       ''
 
@@ -5041,8 +5095,8 @@ const GamesPage = ({
     setFeedback(null)
 
     try {
-      const { json } = await requestApiJson(
-        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(selectedGame.id)}/result`,
+        const { json } = await requestApiJson(
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(game.id)}/result`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -5052,8 +5106,8 @@ const GamesPage = ({
       )
 
       const nextData = {
-        gameId: json?.data?.gameId || selectedGame.id,
-        gameName: json?.data?.gameName || selectedGame.name || 'Без названия',
+        gameId: json?.data?.gameId || game.id,
+        gameName: json?.data?.gameName || game.name || 'Без названия',
         rows: Array.isArray(json?.data?.rows) ? json.data.rows : [],
         teamsCount: Number(json?.data?.teamsCount) || 0,
         participantsCount: Number(json?.data?.participantsCount) || 0,
@@ -5066,31 +5120,31 @@ const GamesPage = ({
           json.data.interactiveResultsUrl.trim().length > 0
             ? json.data.interactiveResultsUrl.trim()
             : null,
-        userParticipationTeamIds: getUserParticipationTeams(selectedGame).map(
+        userParticipationTeamIds: getUserParticipationTeams(game).map(
           (entry) => entry.teamId,
         ),
+        viewerCanManageResults: canManageGameStatus(game),
       }
 
       setResultsCacheByGameId((prev) => ({
         ...prev,
-        [selectedGame.id]: nextData,
+        [game.id]: nextData,
       }))
 
       setGames((prev) =>
         prev.map((gameItem) =>
-          gameItem.id === selectedGame.id
+          gameItem.id === game.id
             ? { ...gameItem, isResultGenerated: true }
             : gameItem,
         ),
       )
       setPersistedGames((prev) =>
         prev.map((gameItem) =>
-          gameItem.id === selectedGame.id
+          gameItem.id === game.id
             ? { ...gameItem, isResultGenerated: true }
             : gameItem,
         ),
       )
-
       setResultsModalState({
         isLoading: false,
         error: null,
@@ -5118,12 +5172,25 @@ const GamesPage = ({
       setIsGeneratingResults(false)
     }
   }, [
-    canGenerateResults,
+    canRebuildResultsForGame,
+    canGenerateResultsForGame,
+    canManageGameStatus,
     gamesFilterLocation,
+    getUserParticipationTeams,
     isGeneratingResults,
     location,
-    selectedGame,
     shouldShowLocationFilter,
+  ])
+
+  const handleGenerateResults = useCallback(async () => {
+    if (!selectedGame || !canGenerateResults) {
+      return
+    }
+    await handleGenerateResultsFromGame(selectedGame, { force: true })
+  }, [
+    canGenerateResults,
+    handleGenerateResultsFromGame,
+    selectedGame,
   ])
 
   const handleCloseEditModal = useCallback(() => {
@@ -5135,6 +5202,7 @@ const GamesPage = ({
     if (!isTasksModalOpen) {
       setEditingGame(null)
       setEditingBaselineGame(null)
+      setHasUnsavedChanges(false)
     }
   }, [isSaving, isTasksModalOpen])
 
@@ -5147,6 +5215,7 @@ const GamesPage = ({
     if (!isEditModalOpen) {
       setEditingGame(null)
       setEditingBaselineGame(null)
+      setHasUnsavedChanges(false)
     }
   }, [isEditModalOpen, isSaving])
 
@@ -5288,6 +5357,7 @@ const GamesPage = ({
       const canBroadcastThisGame =
         canManageThisGame && !isGameInProgressStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
+      const canGenerateThisGameResults = canGenerateResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
       const canViewGameTeams =
         typeof game?.status === 'string' && game.status !== 'canceled'
@@ -5424,6 +5494,7 @@ const GamesPage = ({
                   canManageThisGame ||
                   canManageStatusThisGame ||
                   canViewThisGameResults ||
+                  canGenerateThisGameResults ||
                   canViewThisGameTasks) && (
                   <div className="flex flex-col gap-2 mt-3 phoneH:flex-row phoneH:items-center phoneH:justify-between">
                     <div className="flex items-center order-1 gap-2 phoneH:order-2">
@@ -5449,7 +5520,8 @@ const GamesPage = ({
                     {(canJoinGame ||
                       canEnterGame ||
                       canViewThisGameTasks ||
-                      canViewThisGameResults) && (
+                      canViewThisGameResults ||
+                      canGenerateThisGameResults) && (
                       <div className="flex items-center order-2 gap-2 phoneH:order-3 phoneH:ml-auto">
                         {canEnterGame && (
                           <button
@@ -5497,6 +5569,21 @@ const GamesPage = ({
                             className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
                           >
                             Результаты
+                          </button>
+                        )}
+                        {canGenerateThisGameResults && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleGenerateResultsFromGame(game)
+                            }}
+                            disabled={isGeneratingResults}
+                            className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-amber-300/70 bg-amber-50/80 px-4 py-1.5 text-sm font-semibold text-amber-700 transition hover:border-amber-500 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-200 dark:hover:bg-amber-500/20"
+                          >
+                            {isGeneratingResults
+                              ? 'Формируем…'
+                              : 'Сформировать результаты'}
                           </button>
                         )}
                       </div>
@@ -5622,7 +5709,10 @@ const GamesPage = ({
       handleOpenRegisterModalForGame,
       handleOpenTasksViewFromGame,
       handleOpenResultsFromGame,
+      handleGenerateResultsFromGame,
       handleOpenStatusModal,
+      canGenerateResultsForGame,
+      isGeneratingResults,
       isRegistrationCancellationInProgress,
       handleSelectGameCard,
       selectedGameId,
@@ -5651,6 +5741,7 @@ const GamesPage = ({
       const canBroadcastThisGame =
         canManageThisGame && !isGameInProgressStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
+      const canGenerateThisGameResults = canGenerateResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
       const canViewGameTeams =
         typeof game?.status === 'string' && game.status !== 'canceled'
@@ -5761,6 +5852,7 @@ const GamesPage = ({
                 </p>
               )}
               {(canViewThisGameResults ||
+                canGenerateThisGameResults ||
                 canViewThisGameTasks ||
                 hasUserTeamPlace ||
                 hasParticipation ||
@@ -5776,7 +5868,8 @@ const GamesPage = ({
                   {(canJoinGame ||
                     canEnterGame ||
                     canViewThisGameTasks ||
-                    canViewThisGameResults) && (
+                    canViewThisGameResults ||
+                    canGenerateThisGameResults) && (
                     <div className="flex items-center gap-2 pb-1 overflow-x-auto">
                       {canEnterGame && (
                         <button
@@ -5824,6 +5917,21 @@ const GamesPage = ({
                           className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
                         >
                           Результаты
+                        </button>
+                      )}
+                      {canGenerateThisGameResults && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleGenerateResultsFromGame(game)
+                          }}
+                          disabled={isGeneratingResults}
+                          className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-amber-300/70 bg-amber-50/70 px-4 py-1.5 text-sm font-semibold text-amber-700 transition hover:border-amber-500 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-200 dark:hover:bg-amber-500/20"
+                        >
+                          {isGeneratingResults
+                            ? 'Формируем…'
+                            : 'Сформировать результаты'}
                         </button>
                       )}
                     </div>
@@ -5973,7 +6081,10 @@ const GamesPage = ({
       handleOpenRegisterModalForGame,
       handleOpenTasksViewFromGame,
       handleOpenResultsFromGame,
+      handleGenerateResultsFromGame,
       handleOpenStatusModal,
+      canGenerateResultsForGame,
+      isGeneratingResults,
       isRegistrationCancellationInProgress,
       handleSelectGameCard,
       selectedGameId,

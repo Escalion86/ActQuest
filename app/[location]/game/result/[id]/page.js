@@ -137,6 +137,8 @@ const normalizeId = (value) => {
   return ''
 }
 
+const normalizeRole = (value) => String(value || '').trim().toLowerCase()
+
 const Time = ({ start, seconds, duration, forceFinish = false }) => {
   const [time, setTime] = useState(0)
   const [interval, setIntervalState] = useState(null)
@@ -193,6 +195,7 @@ const TimeResult = ({
   activeAdjustmentKey,
   setActiveAdjustmentKey,
   showBestCup = false,
+  openTooltipUpward = false,
   ...props
 }) => {
   const tooltipContainerRef = useRef(null)
@@ -308,7 +311,12 @@ const TimeResult = ({
                 )}
               </button>
               {isTooltipOpen && (
-                <div className="absolute left-1/2 top-full z-30 mt-1.5 w-56 -translate-x-1/2 rounded-lg border border-cyan-300/60 bg-white/95 p-2 text-left text-[11px] text-slate-700 shadow-lg dark:border-cyan-500/35 dark:bg-[#07122a]/96 dark:text-slate-200">
+                <div
+                  className={cn(
+                    'absolute left-1/2 z-30 w-56 -translate-x-1/2 rounded-lg border border-cyan-300/60 bg-white/95 p-2 text-left text-[11px] text-slate-700 shadow-lg dark:border-cyan-500/35 dark:bg-[#07122a]/96 dark:text-slate-200',
+                    openTooltipUpward ? 'bottom-full mb-1.5' : 'top-full mt-1.5',
+                  )}
+                >
                   <p className="mb-1 font-semibold text-slate-800 dark:text-slate-100">
                     Учтённые бонусы и штрафы
                   </p>
@@ -406,6 +414,50 @@ const GameBlock = ({ game, isDarkTheme }) => {
       teamResult,
     ]),
   )
+  const sessionIdentityIds = useMemo(() => {
+    const sessionUser = session?.user ?? {}
+    const identities = [
+      sessionUser?.globalUserId,
+      sessionUser?.userId,
+      sessionUser?._id,
+      sessionUser?.id,
+      sessionUser?.telegramId,
+    ]
+      .map((value) => normalizeId(value))
+      .filter(Boolean)
+    return new Set(identities)
+  }, [session?.user])
+  const isElevatedManager = useMemo(() => {
+    const role = normalizeRole(session?.user?.role)
+    return role === 'dev' || role === 'admin'
+  }, [session?.user?.role])
+  const isGameModerator = useMemo(() => {
+    if (normalizeRole(session?.user?.role) !== 'moder') {
+      return false
+    }
+    const moderators = Array.isArray(game?.moderators) ? game.moderators : []
+    if (moderators.length === 0 || sessionIdentityIds.size === 0) {
+      return false
+    }
+
+    const moderatorIdSet = new Set(
+      moderators
+        .map((item) =>
+          normalizeId(item?.userId ?? item?._id ?? item?.id ?? item),
+        )
+        .filter(Boolean),
+    )
+
+    for (const identity of sessionIdentityIds) {
+      if (moderatorIdSet.has(identity)) {
+        return true
+      }
+    }
+
+    return false
+  }, [game?.moderators, session?.user?.role, sessionIdentityIds])
+  const canManageOutOfCompetitionVisibility =
+    isElevatedManager || isGameModerator
   const userParticipationTeamIds = useMemo(() => {
     const sessionUser = session?.user ?? {}
     const sessionUserId = normalizeId(
@@ -455,10 +507,24 @@ const GameBlock = ({ game, isDarkTheme }) => {
       computedTeam: computedByTeamId.get(teamId) || null,
     }
   })
+  const hasOutOfCompetitionTeams = useMemo(
+    () => gameTeamsWithTeamsBase.some((item) => Boolean(item?.outOfCompetition)),
+    [gameTeamsWithTeamsBase],
+  )
+  const [showOutOfCompetitionTeams, setShowOutOfCompetitionTeams] = useState(true)
+
+  useEffect(() => {
+    setShowOutOfCompetitionTeams(true)
+  }, [game?._id])
+
   const gameTeamsWithTeams = useMemo(() => {
     const visibleTeams = gameTeamsWithTeamsBase.filter((item) => {
       if (!item?.outOfCompetition) {
         return true
+      }
+
+      if (canManageOutOfCompetitionVisibility) {
+        return showOutOfCompetitionTeams
       }
 
       return userParticipationTeamIds.has(normalizeId(item?.teamId))
@@ -502,7 +568,13 @@ const GameBlock = ({ game, isDarkTheme }) => {
     })
 
     return sorted
-  }, [gameTeamsWithTeamsBase, sortMode, userParticipationTeamIds])
+  }, [
+    canManageOutOfCompetitionVisibility,
+    gameTeamsWithTeamsBase,
+    showOutOfCompetitionTeams,
+    sortMode,
+    userParticipationTeamIds,
+  ])
 
   const totalSeconds = getSecondsBetween(game.dateStartFact, game.dateEndFact)
 
@@ -1030,6 +1102,19 @@ const GameBlock = ({ game, isDarkTheme }) => {
                 <option value="result">По результативности</option>
               </select>
             </div>
+            {canManageOutOfCompetitionVisibility && hasOutOfCompetitionTeams ? (
+              <label className="flex items-center justify-center gap-x-2 text-xs tablet:text-sm text-slate-700 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 dark:border-slate-600 dark:bg-slate-900"
+                  checked={showOutOfCompetitionTeams}
+                  onChange={(event) =>
+                    setShowOutOfCompetitionTeams(Boolean(event.target.checked))
+                  }
+                />
+                Показывать команды Вне зачёта
+              </label>
+            ) : null}
             <div className="mt-1 flex items-center justify-center gap-x-2">
               <button
                 type="button"
@@ -1090,7 +1175,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
       >
         <div className="mx-auto w-fit">
           <div
-            className="overflow-hidden rounded-2xl border border-slate-300/70 bg-white/85 text-slate-800 shadow-[0_10px_26px_rgba(2,8,23,0.14)] translate-x-0 -translate-y-[19%] tablet:-translate-y-[12%] laptop:translate-y-0 scale-[60%] tablet:scale-75 laptop:scale-100 dark:border-[#00D1FF]/32 dark:bg-[#060d20]/92 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(0,209,255,0.14),0_0_26px_rgba(0,209,255,0.12),0_22px_42px_rgba(0,0,0,0.55)]"
+            className="overflow-x-hidden overflow-y-visible rounded-2xl border border-slate-300/70 bg-white/85 text-slate-800 shadow-[0_10px_26px_rgba(2,8,23,0.14)] translate-x-0 -translate-y-[19%] tablet:-translate-y-[12%] laptop:translate-y-0 scale-[60%] tablet:scale-75 laptop:scale-100 dark:border-[#00D1FF]/32 dark:bg-[#060d20]/92 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(0,209,255,0.14),0_0_26px_rgba(0,209,255,0.12),0_22px_42px_rgba(0,0,0,0.55)]"
             style={{
               position: 'relative',
               display: 'flex',
@@ -1132,7 +1217,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                 >
                   Команды
                 </div>
-                {gameTeamsWithTeams.map(({ team }, index) => {
+                {gameTeamsWithTeams.map(({ team, outOfCompetition }, index) => {
                   return (
                     <motion.div
                       key={'order' + index}
@@ -1144,7 +1229,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                         duration: isForceFinished ? 0 : start ? animationDuration : 0,
                         times: isForceFinished ? undefined : start ? [0, 0.99, 1] : 0,
                       }}
-                      className="flex items-center justify-center w-full text-lg leading-5 text-center text-slate-900 dark:text-slate-100"
+                      className="flex items-center justify-center w-full gap-2 px-2 text-lg leading-5 text-center text-slate-900 dark:text-slate-100"
                       style={{
                         height: rowHeight,
                         minHeight: rowHeight,
@@ -1155,7 +1240,12 @@ const GameBlock = ({ game, isDarkTheme }) => {
                     width={30}
                     src={`/img/medals/${place}.svg`}
                   /> */}
-                      {team?.name}
+                      {outOfCompetition ? (
+                        <span className="inline-flex shrink-0 items-center rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                          ВЗ
+                        </span>
+                      ) : null}
+                      <span className="min-w-0 truncate">{team?.name}</span>
                     </motion.div>
                   )
                 })}
@@ -1238,6 +1328,9 @@ const GameBlock = ({ game, isDarkTheme }) => {
                           !isBonusTask &&
                           Number.isFinite(bestTaskTimeByIndex[index]) &&
                           timeResult === bestTaskTimeByIndex[index]
+                        }
+                        openTooltipUpward={
+                          i >= gameTeamsWithTeams.length - 2
                         }
                         rowHeight={rowHeight}
                         forceFinish={isForceFinished}
@@ -1335,6 +1428,9 @@ const GameBlock = ({ game, isDarkTheme }) => {
                       activeAdjustmentKey={activeAdjustmentKey}
                       setActiveAdjustmentKey={setActiveAdjustmentKey}
                       addings={totalAddings[index]}
+                      openTooltipUpward={
+                        index >= gameTeamsWithTeams.length - 2
+                      }
                       rowHeight={rowHeight}
                       forceFinish={isForceFinished}
                     />
@@ -1408,6 +1504,9 @@ const GameBlock = ({ game, isDarkTheme }) => {
                       adjustmentKey={`total-${index}`}
                       activeAdjustmentKey={activeAdjustmentKey}
                       setActiveAdjustmentKey={setActiveAdjustmentKey}
+                      openTooltipUpward={
+                        index >= gameTeamsWithTeams.length - 2
+                      }
                       forceFinish={isForceFinished}
                     />
                   )
@@ -1462,7 +1561,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                       width={30}
                       src={`/img/medals/${place}.svg`}
                     /> */}
-                    {place}
+                    {gameTeamsWithTeams[index]?.outOfCompetition ? '—' : place}
                   </motion.div>
                 )
                 // return <div className="min-h-[50px]" />

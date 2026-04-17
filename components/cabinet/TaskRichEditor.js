@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import {
   EditorContent,
@@ -3816,6 +3816,39 @@ const TaskRichEditor = ({
   )
 }
 
+const areAiInitialGamesEqual = (left, right) => {
+  if (left === right) {
+    return true
+  }
+
+  if (!left && !right) {
+    return true
+  }
+
+  if (!left || !right) {
+    return false
+  }
+
+  return (
+    (left.id || '') === (right.id || '') &&
+    (left.name || '') === (right.name || '') &&
+    (left.description || '') === (right.description || '') &&
+    (left.dateStart || '') === (right.dateStart || '') &&
+    (left.type || '') === (right.type || '') &&
+    (left.location || '') === (right.location || '')
+  )
+}
+
+const areTaskRichEditorPropsEqual = (prevProps, nextProps) =>
+  (prevProps.value || '') === (nextProps.value || '') &&
+  (prevProps.directory || '') === (nextProps.directory || '') &&
+  Boolean(prevProps.disabled) === Boolean(nextProps.disabled) &&
+  Boolean(prevProps.hideToolbar) === Boolean(nextProps.hideToolbar) &&
+  Boolean(prevProps.compactReadOnly) === Boolean(nextProps.compactReadOnly) &&
+  (prevProps.placeholder || '') === (nextProps.placeholder || '') &&
+  (prevProps.contentMaxHeight || '') === (nextProps.contentMaxHeight || '') &&
+  areAiInitialGamesEqual(prevProps.aiInitialGame, nextProps.aiInitialGame)
+
 TaskRichEditor.propTypes = {
   value: PropTypes.string,
   onChange: PropTypes.func,
@@ -3847,4 +3880,4 @@ TaskRichEditor.defaultProps = {
   aiInitialGame: null,
 }
 
-export default TaskRichEditor
+export default memo(TaskRichEditor, areTaskRichEditorPropsEqual)

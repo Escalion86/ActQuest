@@ -55,6 +55,18 @@ const formatSecondsShort = (value) => {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+const formatDurationSeconds = (value) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) {
+    return null
+  }
+  const absolute = Math.max(0, Math.round(Math.abs(numeric)))
+  const hours = Math.floor(absolute / 3600)
+  const minutes = Math.floor((absolute % 3600) / 60)
+  const seconds = absolute % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
 const getAdjustmentBadgeClass = (type) =>
   type === 'bonus'
     ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
@@ -122,37 +134,89 @@ const GameResultsModal = ({
       ),
     [resultsModalState?.userParticipationTeamIds],
   )
+  const viewerCanManageResults = Boolean(resultsModalState?.viewerCanManageResults)
+  const [showOutOfCompetitionTeams, setShowOutOfCompetitionTeams] = useState(true)
+  const shouldShowOutOfCompetitionTeams = viewerCanManageResults
+    ? showOutOfCompetitionTeams
+    : true
+  const scoringMode = computed?.summary?.scoringMode === 'points' ? 'points' : 'time'
 
-  const selfOutOfCompetitionRows = useMemo(
-    () =>
-      computedOutOfCompetitionTeams
-        .filter((team) =>
-          userParticipationTeamIds.has(String(team?.teamId || '').trim()),
+  const mapComputedTeamToRankingRow = (team, outOfCompetition = false) => {
+    const finalDisplay =
+      typeof team?.finalDisplay === 'string' && team.finalDisplay.trim().length > 0
+        ? team.finalDisplay
+        : Number.isFinite(Number(team?.finalPoints))
+          ? `${Number(team.finalPoints)} б.`
+          : Number.isFinite(Number(team?.finalSeconds))
+            ? formatDurationSeconds(team.finalSeconds)
+          : null
+
+    const baseDisplay =
+      typeof team?.baseDisplay === 'string' && team.baseDisplay.trim().length > 0
+        ? team.baseDisplay
+        : Number.isFinite(Number(team?.basePoints))
+          ? `${Number(team.basePoints)} б.`
+          : Number.isFinite(Number(team?.baseSeconds))
+            ? formatDurationSeconds(team.baseSeconds)
+          : null
+
+    return {
+      teamId: team?.teamId,
+      teamName: team?.teamName,
+      place: outOfCompetition ? null : team?.place,
+      baseDisplay,
+      finalDisplay,
+      outOfCompetition,
+      finalSeconds: Number(team?.finalSeconds),
+      finalPoints: Number(team?.finalPoints),
+    }
+  }
+
+  const selfOutOfCompetitionRows = computedOutOfCompetitionTeams
+    .filter((team) =>
+      userParticipationTeamIds.has(String(team?.teamId || '').trim()),
+    )
+    .map((team) => mapComputedTeamToRankingRow(team, true))
+
+  const visibleOutOfCompetitionRows = shouldShowOutOfCompetitionTeams
+    ? viewerCanManageResults
+      ? computedOutOfCompetitionTeams.map((team) =>
+          mapComputedTeamToRankingRow(team, true),
         )
-        .map((team) => ({
-          teamId: team.teamId,
-          teamName: team.teamName,
-          place: null,
-          baseDisplay: team.baseDisplay,
-          finalDisplay: team.finalDisplay,
-          outOfCompetition: true,
-        })),
-    [computedOutOfCompetitionTeams, userParticipationTeamIds],
-  )
+      : selfOutOfCompetitionRows
+    : []
+
+  const hasComputedRankingData =
+    computedTeams.length > 0 || visibleOutOfCompetitionRows.length > 0
 
   const rankingRows =
-    computedTeams.length > 0
+    hasComputedRankingData
       ? [
-          ...computedTeams.map((team) => ({
-            teamId: team.teamId,
-            teamName: team.teamName,
-            place: team.place,
-            baseDisplay: team.baseDisplay,
-            finalDisplay: team.finalDisplay,
-            outOfCompetition: false,
-          })),
-          ...selfOutOfCompetitionRows,
-        ]
+          ...computedTeams.map((team) => mapComputedTeamToRankingRow(team, false)),
+          ...visibleOutOfCompetitionRows,
+        ].sort((first, second) => {
+          if (scoringMode === 'points') {
+            const firstPoints = Number(first?.finalPoints)
+            const secondPoints = Number(second?.finalPoints)
+            const firstOrder = Number.isFinite(firstPoints) ? firstPoints : Number.NEGATIVE_INFINITY
+            const secondOrder = Number.isFinite(secondPoints) ? secondPoints : Number.NEGATIVE_INFINITY
+            if (firstOrder !== secondOrder) {
+              return secondOrder - firstOrder
+            }
+          } else {
+            const firstSeconds = Number(first?.finalSeconds)
+            const secondSeconds = Number(second?.finalSeconds)
+            const firstOrder = Number.isFinite(firstSeconds) ? firstSeconds : Number.MAX_SAFE_INTEGER
+            const secondOrder = Number.isFinite(secondSeconds) ? secondSeconds : Number.MAX_SAFE_INTEGER
+            if (firstOrder !== secondOrder) {
+              return firstOrder - secondOrder
+            }
+          }
+          return String(first?.teamName || '').localeCompare(
+            String(second?.teamName || ''),
+            'ru',
+          )
+        })
       : rows.map((row) => ({
           teamId: row.teamId,
           teamName: row.teamName,
@@ -161,6 +225,54 @@ const GameResultsModal = ({
           finalDisplay: null,
           outOfCompetition: false,
         }))
+
+  const visibleOutOfCompetitionTaskEntriesByIndex = useMemo(() => {
+    const byIndex = new Map()
+    const visibleTeams = shouldShowOutOfCompetitionTeams
+      ? viewerCanManageResults
+      ? computedOutOfCompetitionTeams
+      : computedOutOfCompetitionTeams.filter((team) =>
+          userParticipationTeamIds.has(String(team?.teamId || '').trim()),
+        )
+      : []
+
+    visibleTeams.forEach((team) => {
+      const taskResults = Array.isArray(team?.taskResults) ? team.taskResults : []
+      taskResults.forEach((taskResult, index) => {
+        if (!taskResult) {
+          return
+        }
+        const normalizedTaskIndex = Number.isFinite(Number(taskResult?.taskIndex))
+          ? Number(taskResult.taskIndex)
+          : index
+        if (!Number.isFinite(normalizedTaskIndex)) {
+          return
+        }
+        const current = byIndex.get(normalizedTaskIndex) || []
+        current.push({
+          teamId: team?.teamId,
+          teamName: team?.teamName || 'Без названия',
+          status: taskResult?.status || '',
+          seconds: Number(taskResult?.seconds),
+          display: taskResult?.display || '—',
+          penaltySeconds: Number(taskResult?.penaltySeconds) || 0,
+          bonusSeconds: Number(taskResult?.bonusSeconds) || 0,
+          adjustments: Array.isArray(taskResult?.adjustments)
+            ? taskResult.adjustments
+            : [],
+          outOfCompetition: true,
+        })
+        byIndex.set(normalizedTaskIndex, current)
+      })
+    })
+
+    return byIndex
+  }, [
+    computedOutOfCompetitionTeams,
+    shouldShowOutOfCompetitionTeams,
+    userParticipationTeamIds,
+    viewerCanManageResults,
+  ])
 
   const hasCurrentUserTeamInTable = useMemo(
     () =>
@@ -180,7 +292,15 @@ const GameResultsModal = ({
   useEffect(() => {
     setExpandedTaskBoards({})
     setExpandedAdjustmentTeams({})
+    setShowOutOfCompetitionTeams(true)
   }, [isResultsModalOpen, resultsModalState?.gameId, taskBoards.length])
+
+  const outOfCompetitionTeamsCount = computedOutOfCompetitionTeams.length
+  const teamsCountFromComputed = computedTeams.length + outOfCompetitionTeamsCount
+  const teamsCountSource = Number(resultsModalState?.teamsCount) || teamsCountFromComputed
+  const visibleTeamsCount = shouldShowOutOfCompetitionTeams
+    ? teamsCountSource
+    : Math.max(0, teamsCountSource - outOfCompetitionTeamsCount)
 
   const areAllTaskBoardsExpanded = useMemo(() => {
     if (taskBoards.length === 0) {
@@ -268,7 +388,7 @@ const GameResultsModal = ({
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
                   <p className="text-xs text-slate-500 dark:text-slate-400">Команд</p>
                   <p className="mt-1 text-lg font-semibold text-slate-800 dark:text-slate-100">
-                    {resultsModalState?.teamsCount ?? 0}
+                    {visibleTeamsCount}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
@@ -311,7 +431,22 @@ const GameResultsModal = ({
             </ModalSection>
 
             <ModalSection className="p-4">
-              <ModalSectionTitle>Турнирная таблица</ModalSectionTitle>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <ModalSectionTitle>Турнирная таблица</ModalSectionTitle>
+                {viewerCanManageResults && outOfCompetitionTeamsCount > 0 ? (
+                  <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 dark:border-slate-600 dark:bg-slate-900 dark:checked:bg-cyan-500"
+                      checked={showOutOfCompetitionTeams}
+                      onChange={(event) =>
+                        setShowOutOfCompetitionTeams(Boolean(event.target.checked))
+                      }
+                    />
+                    Показывать команды Вне зачёта
+                  </label>
+                ) : null}
+              </div>
               {rankingRows.length > 0 ? (
                 <div className="mt-4 overflow-x-auto">
                   <table className="min-w-full text-left text-sm">
@@ -328,7 +463,7 @@ const GameResultsModal = ({
                         <tr key={row.teamId || row.teamName} className="border-b border-slate-100 dark:border-slate-800">
                           <td className="px-3 py-2 text-slate-700 dark:text-slate-200">
                             {row.outOfCompetition
-                              ? 'ВЗ'
+                              ? '—'
                               : Number.isFinite(Number(row.place))
                                 ? row.place
                                 : '—'}
@@ -432,6 +567,34 @@ const GameResultsModal = ({
                     >
                       {(() => {
                         const isExpanded = Boolean(expandedTaskBoards[String(board.taskIndex)])
+                        const regularEntries = Array.isArray(board.entries)
+                          ? board.entries.map((entry) => ({
+                              ...entry,
+                              outOfCompetition: Boolean(entry?.outOfCompetition),
+                            }))
+                          : []
+                        const outOfCompetitionEntries =
+                          visibleOutOfCompetitionTaskEntriesByIndex.get(
+                            Number(board.taskIndex),
+                          ) || []
+                        const mergedEntries = [...regularEntries, ...outOfCompetitionEntries]
+                        const sortedEntries = [...mergedEntries].sort((first, second) => {
+                          const firstSeconds = Number(first?.seconds)
+                          const secondSeconds = Number(second?.seconds)
+                          const firstOrder = Number.isFinite(firstSeconds)
+                            ? firstSeconds
+                            : Number.MAX_SAFE_INTEGER
+                          const secondOrder = Number.isFinite(secondSeconds)
+                            ? secondSeconds
+                            : Number.MAX_SAFE_INTEGER
+                          if (firstOrder !== secondOrder) {
+                            return firstOrder - secondOrder
+                          }
+                          return String(first?.teamName || '').localeCompare(
+                            String(second?.teamName || ''),
+                            'ru',
+                          )
+                        })
 
                         return (
                           <>
@@ -448,7 +611,7 @@ const GameResultsModal = ({
                               <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                                 {renderTaskTitle(
                                   {
-                                    title: `${board.canceled ? '(Отменено) ' : ''}${board.title || `Задание #${board.taskIndex + 1}`}`,
+                                    title: `${board.taskIndex + 1}. ${board.canceled ? '(Отменено) ' : ''}${board.title || `Задание #${board.taskIndex + 1}`}`,
                                     isBonusTask: Boolean(board.isBonusTask),
                                   }
                                 )}
@@ -461,9 +624,9 @@ const GameResultsModal = ({
                             </div>
                             {isExpanded ? (
                               <>
-                                {Array.isArray(board.entries) && board.entries.length > 0 ? (
+                                {sortedEntries.length > 0 ? (
                                   <ul className="mt-2 grid gap-1">
-                                    {board.entries.map((entry) => (
+                                    {sortedEntries.map((entry) => (
                                       <li
                                         key={`${board.taskIndex}-${entry.teamId}-${entry.teamName}`}
                                         className="flex flex-wrap items-center gap-2 rounded-lg bg-white/80 px-2 py-1.5 text-xs text-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
@@ -487,6 +650,11 @@ const GameResultsModal = ({
                                           </span>
                                         )}
                                         <span className="font-medium">{entry.teamName}</span>
+                                        {entry.outOfCompetition ? (
+                                          <span className="inline-flex rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                                            ВЗ
+                                          </span>
+                                        ) : null}
                                       </li>
                                     ))}
                                   </ul>
@@ -604,6 +772,7 @@ GameResultsModal.propTypes = {
     computed: PropTypes.object,
     interactiveResultsUrl: PropTypes.oneOfType([PropTypes.string, PropTypes.oneOf([null])]),
     userParticipationTeamIds: PropTypes.arrayOf(PropTypes.string),
+    viewerCanManageResults: PropTypes.bool,
   }).isRequired,
 }
 

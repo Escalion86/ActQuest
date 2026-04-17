@@ -51,10 +51,61 @@ const normalizeSessionIdentity = (session) => {
       ? sessionUser.id.trim()
       : null
 
+  const normalizeRole = (value) => {
+    if (typeof value !== 'string') {
+      return 'client'
+    }
+    const normalized = value.trim().toLowerCase()
+    return ['client', 'moder', 'admin', 'dev'].includes(normalized)
+      ? normalized
+      : 'client'
+  }
+
   return {
     userId,
     userTelegramId,
+    role: normalizeRole(sessionUser.role),
   }
+}
+
+const isElevatedRole = (role) => role === 'admin' || role === 'dev'
+
+const hasGameManageAccess = ({ identity, game }) => {
+  if (!identity || !game) {
+    return false
+  }
+
+  if (isElevatedRole(identity.role)) {
+    return true
+  }
+
+  const creatorTelegramId =
+    typeof game?.creatorTelegramId === 'string'
+      ? game.creatorTelegramId.trim()
+      : ''
+
+  if (identity.userTelegramId && creatorTelegramId) {
+    if (identity.userTelegramId === creatorTelegramId) {
+      return true
+    }
+  }
+
+  if (!identity.userId) {
+    return false
+  }
+
+  const moderators = Array.isArray(game?.moderators) ? game.moderators : []
+  return moderators.some((moderator) => {
+    if (!moderator) {
+      return false
+    }
+
+    if (typeof moderator === 'string') {
+      return toStringId(moderator) === identity.userId
+    }
+
+    return toStringId(moderator?.id ?? moderator?._id) === identity.userId
+  })
 }
 
 const resolveUserParticipationTeamIds = ({ result, session }) => {
@@ -237,6 +288,8 @@ const handleRequest = async ({ request, params, method }) => {
         taskDuration: 1,
         taskFailurePenalty: 1,
         manyCodesPenalty: 1,
+        creatorTelegramId: 1,
+        moderators: 1,
         tasks: 1,
         result: 1,
       })
@@ -272,7 +325,10 @@ const handleRequest = async ({ request, params, method }) => {
       )
     }
 
-    if (method === 'GET' && Boolean(game.hideResult)) {
+    const identity = normalizeSessionIdentity(session)
+    const canManageThisGame = hasGameManageAccess({ identity, game })
+
+    if (method === 'GET' && Boolean(game.hideResult) && !canManageThisGame) {
       return NextResponse.json(
         {
           success: false,
@@ -283,6 +339,16 @@ const handleRequest = async ({ request, params, method }) => {
     }
 
     if (method === 'POST') {
+      if (!canManageThisGame) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Недостаточно прав для формирования результатов',
+          },
+          { status: 403 },
+        )
+      }
+
       let built = null
       try {
         built = await buildGameResultComputed({ game })
