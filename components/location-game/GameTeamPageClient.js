@@ -719,10 +719,16 @@ function GameTeamPage({
       ? Math.max(0, Math.floor(mainCodesCountRaw))
       : 0
 
-    const requiredCodesRaw = Number(currentTaskDisplayMeta?.requiredCodesCount)
-    const requiredCodesCount = Number.isFinite(requiredCodesRaw)
-      ? Math.max(0, Math.floor(requiredCodesRaw))
-      : mainCodesCount
+    const requiredCodesSource = currentTaskDisplayMeta?.requiredCodesCount
+    const hasExplicitRequiredCodes =
+      requiredCodesSource !== null &&
+      requiredCodesSource !== undefined &&
+      requiredCodesSource !== ''
+    const requiredCodesRaw = Number(requiredCodesSource)
+    const requiredCodesCount =
+      hasExplicitRequiredCodes && Number.isFinite(requiredCodesRaw)
+        ? Math.max(0, Math.floor(requiredCodesRaw))
+        : mainCodesCount
 
     const cappedRequiredCodes =
       mainCodesCount > 0

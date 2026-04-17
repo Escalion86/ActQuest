@@ -33,6 +33,9 @@ const parseDurationSeconds = (value, fallback) => {
 }
 
 const toFiniteNonNegativeIntegerOrNull = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return null
   const normalized = Math.floor(numeric)

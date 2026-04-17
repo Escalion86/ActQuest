@@ -197,12 +197,17 @@ const buildCodePhotoLookup = (task) => {
   return lookup
 }
 
-const getRemainingMainCodes = (team, tasks) => {
+const getMainCodesProgress = (team, tasks) => {
   const activeTaskIndex = Number.isInteger(team?.activeTaskIndex)
     ? team.activeTaskIndex
     : -1
   if (activeTaskIndex < 0 || !Array.isArray(tasks)) {
-    return []
+    return {
+      remainingCodes: [],
+      remainingCount: 0,
+      foundCount: 0,
+      requiredCount: 0,
+    }
   }
 
   const activeTask = tasks[activeTaskIndex]
@@ -210,8 +215,27 @@ const getRemainingMainCodes = (team, tasks) => {
     (entry) => entry.code,
   )
   if (allMainCodes.length === 0) {
-    return []
+    return {
+      remainingCodes: [],
+      remainingCount: 0,
+      foundCount: 0,
+      requiredCount: 0,
+    }
   }
+
+  const requiredSource = activeTask?.numCodesToCompliteTask
+  const hasExplicitRequiredCount =
+    requiredSource !== null &&
+    requiredSource !== undefined &&
+    requiredSource !== ''
+  const rawRequiredCount = Number(requiredSource)
+  const requiredCount =
+    hasExplicitRequiredCount && Number.isFinite(rawRequiredCount)
+      ? Math.max(
+          0,
+          Math.min(Math.floor(rawRequiredCount), allMainCodes.length),
+        )
+      : allMainCodes.length
 
   const foundMainCodes = new Set(
     normalizeCodeEntries(team?.findedCodes).map((entry) =>
@@ -219,9 +243,21 @@ const getRemainingMainCodes = (team, tasks) => {
     ),
   )
 
-  return allMainCodes.filter(
+  const remainingAllCodes = allMainCodes.filter(
     (code) => !foundMainCodes.has(String(code).trim().toLowerCase()),
   )
+  const foundCount = Math.max(allMainCodes.length - remainingAllCodes.length, 0)
+  const remainingCount = Math.max(requiredCount - foundCount, 0)
+
+  return {
+    remainingCodes:
+      remainingCount > 0
+        ? remainingAllCodes.slice(0, remainingCount)
+        : [],
+    remainingCount,
+    foundCount,
+    requiredCount,
+  }
 }
 
 const getRemainingCodeEntries = ({
@@ -255,7 +291,10 @@ const getRemainingCodeEntries = ({
 }
 
 const buildManualCodeCandidates = (team, tasks) => {
-  const remainingMainCodes = getRemainingMainCodes(team, tasks)
+  const { remainingCodes: remainingMainCodes } = getMainCodesProgress(
+    team,
+    tasks,
+  )
   const remainingBonusEntries = getRemainingCodeEntries({
     team,
     tasks,
@@ -706,6 +745,7 @@ export default function GameControlPageClient({ session }) {
               ? team.penaltyCodeItems
               : team.penaltyCodes
             const foundMainEntries = normalizeCodeEntries(team.findedCodes)
+            const mainCodesProgress = getMainCodesProgress(team, data?.tasks)
             const remainingBonusEntries = getRemainingCodeEntries({
               team,
               tasks: data?.tasks,
@@ -819,10 +859,7 @@ export default function GameControlPageClient({ session }) {
                     </div>
                   ) : null}
                   {isDetailedView && (() => {
-                    const remainingMainCodes = getRemainingMainCodes(
-                      team,
-                      data?.tasks,
-                    )
+                    const remainingMainCodes = mainCodesProgress.remainingCodes
                     if (remainingMainCodes.length === 0) {
                       return null
                     }
@@ -835,6 +872,11 @@ export default function GameControlPageClient({ session }) {
                       </div>
                     )
                   })()}
+                  {mainCodesProgress.remainingCount > 0 ? (
+                    <div className="mt-1 text-xs font-medium text-slate-400">
+                      Осталось ввести кодов: {mainCodesProgress.remainingCount}
+                    </div>
+                  ) : null}
                 </div>
                 {shouldShowBonusCodes && (
                   <div>
