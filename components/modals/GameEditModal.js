@@ -1067,6 +1067,9 @@ const GameEditModal = ({
                     !hasFilledClue ||
                     (!isPhotoGame && normalizedCodes.length === 0) ||
                     hasCodesOverflowError
+                  const taskBadgeLabel = task.isBonusTask
+                    ? `${index + 1} Бонусное задание`
+                    : `${index + 1} Задание`
                   return (
                     <div
                       key={task.id}
@@ -1229,23 +1232,35 @@ const GameEditModal = ({
                         <button
                           type="button"
                           onClick={() => toggleTaskExpansion(task.id)}
-                          className="flex items-center justify-between flex-1 min-w-0 gap-3 px-4 py-3 text-sm font-semibold text-left transition text-slate-700 hover:bg-blue-50 dark:text-white dark:hover:bg-sky-500/10"
+                          className={`relative flex items-center justify-between flex-1 min-w-0 gap-3 px-4 py-3 overflow-hidden text-sm font-semibold text-left transition dark:text-white ${
+                            task.canceled
+                              ? 'bg-rose-50/80 text-rose-800 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/15'
+                              : 'text-slate-700 hover:bg-blue-50 dark:hover:bg-sky-500/10'
+                          }`}
                         >
-                          <div className="min-w-0">
-                            <p>
-                              {index + 1}. {task.title || 'Без названия'}
-                            </p>
+                          <div
+                            className={`absolute top-0 left-0 shrink-0 rounded-br-full border-b border-r px-3 py-0 text-[11px] font-semibold ${
+                              task.isBonusTask
+                                ? 'border-violet-300/70 bg-violet-100/80 text-violet-700 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-200'
+                                : 'border-cyan-300/70 bg-cyan-100/70 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200'
+                            }`}
+                          >
+                            {taskBadgeLabel}
+                          </div>
+                          <div className="min-w-0 pt-2">
+                            <p>{task.title || 'Без названия'}</p>
                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
-                              {task.isBonusTask
-                                ? 'Бонусное задание'
-                                : 'Основное задание'}
-                              {task.canceled ? ' · Отменено' : ''}
-                              {task.codes?.length
-                                ? ` · Код${task.codes.length === 1 ? '' : 'ы'}: ${task.codes.length}`
-                                : ''}
-                              {task.clues?.length
-                                ? ` · Подсказок: ${task.clues.length}`
-                                : ''}
+                              {[
+                                task.canceled ? 'Отменено' : null,
+                                task.codes?.length
+                                  ? `Код${task.codes.length === 1 ? '' : 'ы'}: ${task.codes.length}`
+                                  : null,
+                                task.clues?.length
+                                  ? `Подсказок: ${task.clues.length}`
+                                  : null,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1302,7 +1317,7 @@ const GameEditModal = ({
                       </div>
 
                       {isExpanded && (
-                        <div className="px-4 py-5 space-y-5">
+                        <div className="space-y-5 px-3 py-4 sm:px-4 sm:py-5">
                           <div className="space-y-4">
                             <div className="flex justify-end">
                               <CabinetButton
@@ -1505,25 +1520,27 @@ const GameEditModal = ({
                                         return next
                                       })
                                     }}
-                                    className="p-3 border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+                                    className="relative p-2 overflow-hidden border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
                                   >
-                                    <summary className="flex items-center justify-between gap-2 px-2 py-1 text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
-                                      <div className="flex items-center min-w-0 gap-2">
-                                        <span className="rounded-full border border-cyan-300/70 bg-cyan-100/70 px-2 py-0.5 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                                          Подсказка
-                                        </span>
-                                        <span className="font-semibold truncate">
-                                          {truncateWithDots(
-                                            getClueText(clue),
-                                            72,
-                                          ) || `${clueIndex + 1}`}
-                                        </span>
+                                    <summary className="w-full max-w-full overflow-hidden text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
+                                      <div className="absolute top-0 left-0 shrink-0 rounded-br-full border-b border-r border-cyan-300/70 bg-cyan-100/70 px-3 py-0 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                        Подсказка
                                       </div>
-                                      <AccordionChevronIcon
-                                        isOpen={expandedClueAccordions.has(
-                                          `${task.id}-clue-${clue.id}`,
-                                        )}
-                                      />
+                                      <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2px-2 py-1">
+                                        <div className="flex items-center w-full max-w-full min-w-0 gap-2 mt-2 overflow-hidden">
+                                          <span className="flex-1 block min-w-0 overflow-hidden">
+                                            <span className="block w-full font-semibold truncate">
+                                              {getClueText(clue) ||
+                                                `${clueIndex + 1}`}
+                                            </span>
+                                          </span>
+                                        </div>
+                                        <AccordionChevronIcon
+                                          isOpen={expandedClueAccordions.has(
+                                            `${task.id}-clue-${clue.id}`,
+                                          )}
+                                        />
+                                      </div>
                                     </summary>
                                     <div className="mt-2 space-y-2">
                                       <TaskRichEditor
@@ -1788,34 +1805,39 @@ const GameEditModal = ({
                                             return next
                                           })
                                         }}
-                                        className="p-3 border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+                                        className="relative p-2 overflow-hidden border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
                                       >
-                                        <summary className="flex items-center justify-between gap-2 px-2 py-1 text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
-                                          <div className="flex items-center min-w-0 gap-2">
-                                            <span className="rounded-full border border-cyan-300/70 bg-cyan-100/70 px-2 py-0.5 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                                              Код
-                                            </span>
-                                            <span className="font-semibold truncate">
-                                              {compactSingleLine(codeValue) ||
-                                                `Код ${codeIndex + 1}`}
-                                            </span>
+                                        <summary className="w-full max-w-full overflow-hidden text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
+                                          <div className="absolute top-0 left-0 shrink-0 rounded-br-full border-b border-r border-cyan-300/70 bg-cyan-100/70 px-3 py-0 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                            Код
                                           </div>
-                                          <div className="flex items-center gap-2">
-                                            {(
-                                              Array.isArray(task.codePhotos)
-                                                ? task.codePhotos[codeIndex]
-                                                : ''
-                                            ) ? (
-                                              <span
-                                                className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
-                                                title="Фото добавлено"
-                                              >
-                                                <CodePhotoBadgeIcon />
+                                          <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 py-1">
+                                            <div className="flex items-center w-full max-w-full min-w-0 gap-2 mt-2 overflow-hidden">
+                                              <span className="flex-1 block min-w-0 overflow-hidden">
+                                                <span className="block w-full font-semibold truncate">
+                                                  {compactSingleLine(
+                                                    codeValue,
+                                                  ) || `Код ${codeIndex + 1}`}
+                                                </span>
                                               </span>
-                                            ) : null}
-                                            <AccordionChevronIcon
-                                              isOpen={isExpanded}
-                                            />
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              {(
+                                                Array.isArray(task.codePhotos)
+                                                  ? task.codePhotos[codeIndex]
+                                                  : ''
+                                              ) ? (
+                                                <span
+                                                  className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
+                                                  title="Фото добавлено"
+                                                >
+                                                  <CodePhotoBadgeIcon />
+                                                </span>
+                                              ) : null}
+                                              <AccordionChevronIcon
+                                                isOpen={isExpanded}
+                                              />
+                                            </div>
                                           </div>
                                         </summary>
                                         <div className="flex flex-col gap-2 mt-2 sm:flex-row sm:items-center">
@@ -2079,40 +2101,44 @@ const GameEditModal = ({
                                               },
                                             )
                                           }}
-                                          className="p-4 border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+                                          className="relative p-2 overflow-hidden border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
                                         >
-                                          <summary className="flex items-center justify-between gap-2 px-2 py-1 text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
-                                            <div className="flex items-center min-w-0 gap-2">
-                                              <span className="rounded-full border border-rose-300/70 bg-rose-100/80 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
-                                                Штраф
-                                              </span>
-                                              <span className="font-semibold truncate">
-                                                {compactSingleLine(
-                                                  penalty.code,
-                                                ) || 'Код не указан'}
-                                              </span>
-                                              {truncateWithDots(
-                                                penalty.description,
-                                              ) ? (
-                                                <span className="max-w-[240px] truncate text-xs font-normal text-slate-500 dark:text-slate-300">
-                                                  {truncateWithDots(
-                                                    penalty.description,
-                                                  )}
-                                                </span>
-                                              ) : null}
+                                          <summary className="w-full max-w-full overflow-hidden text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
+                                            <div className="absolute top-0 left-0 shrink-0 rounded-br-full border-b border-r border-rose-300/70 bg-rose-100/80 px-3 py-0 text-[11px] font-semibold text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                                              Штраф
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                              {penalty.image ? (
-                                                <span
-                                                  className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
-                                                  title="Фото добавлено"
-                                                >
-                                                  <CodePhotoBadgeIcon />
+                                            <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 py-1">
+                                              <div className="flex items-center w-full max-w-full min-w-0 gap-2 mt-2 overflow-hidden">
+                                                <span className="flex-1 block min-w-0 overflow-hidden">
+                                                  <span className="block w-full font-semibold truncate">
+                                                    {compactSingleLine(
+                                                      penalty.code,
+                                                    ) || 'Код не указан'}
+                                                  </span>
                                                 </span>
-                                              ) : null}
-                                              <AccordionChevronIcon
-                                                isOpen={isExpanded}
-                                              />
+                                                {truncateWithDots(
+                                                  penalty.description,
+                                                ) ? (
+                                                  <span className="hidden max-w-[240px] shrink min-w-0 truncate text-xs font-normal text-slate-500 dark:text-slate-300 sm:block">
+                                                    {truncateWithDots(
+                                                      penalty.description,
+                                                    )}
+                                                  </span>
+                                                ) : null}
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                {penalty.image ? (
+                                                  <span
+                                                    className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
+                                                    title="Фото добавлено"
+                                                  >
+                                                    <CodePhotoBadgeIcon />
+                                                  </span>
+                                                ) : null}
+                                                <AccordionChevronIcon
+                                                  isOpen={isExpanded}
+                                                />
+                                              </div>
                                             </div>
                                           </summary>
                                           <div className="grid gap-3 mt-2 md:grid-cols-4">
@@ -2295,39 +2321,44 @@ const GameEditModal = ({
                                             return next
                                           })
                                         }}
-                                        className="p-4 border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+                                        className="relative p-2 overflow-hidden border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
                                       >
-                                        <summary className="flex items-center justify-between gap-2 px-2 py-1 text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
-                                          <div className="flex items-center min-w-0 gap-2">
-                                            <span className="rounded-full border border-emerald-300/70 bg-emerald-100/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
-                                              Бонус
-                                            </span>
-                                            <span className="font-semibold truncate">
-                                              {compactSingleLine(bonus.code) ||
-                                                'Код не указан'}
-                                            </span>
-                                            {truncateWithDots(
-                                              bonus.description,
-                                            ) ? (
-                                              <span className="max-w-[240px] truncate text-xs font-normal text-slate-500 dark:text-slate-300">
-                                                {truncateWithDots(
-                                                  bonus.description,
-                                                )}
-                                              </span>
-                                            ) : null}
+                                        <summary className="w-full max-w-full overflow-hidden text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
+                                          <div className="absolute top-0 left-0 shrink-0 rounded-br-full border-b border-r border-emerald-300/70 bg-emerald-100/80 px-3 py-0 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+                                            Бонус
                                           </div>
-                                          <div className="flex items-center gap-2">
-                                            {bonus.image ? (
-                                              <span
-                                                className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
-                                                title="Фото добавлено"
-                                              >
-                                                <CodePhotoBadgeIcon />
+                                          <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 py-1">
+                                            <div className="flex items-center w-full max-w-full min-w-0 gap-2 mt-2 overflow-hidden">
+                                              <span className="flex-1 block min-w-0 overflow-hidden">
+                                                <span className="block w-full font-semibold truncate">
+                                                  {compactSingleLine(
+                                                    bonus.code,
+                                                  ) || 'Код не указан'}
+                                                </span>
                                               </span>
-                                            ) : null}
-                                            <AccordionChevronIcon
-                                              isOpen={isExpanded}
-                                            />
+                                              {truncateWithDots(
+                                                bonus.description,
+                                              ) ? (
+                                                <span className="hidden max-w-[240px] shrink min-w-0 truncate text-xs font-normal text-slate-500 dark:text-slate-300 sm:block">
+                                                  {truncateWithDots(
+                                                    bonus.description,
+                                                  )}
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              {bonus.image ? (
+                                                <span
+                                                  className="inline-flex items-center text-cyan-600 dark:text-cyan-300"
+                                                  title="Фото добавлено"
+                                                >
+                                                  <CodePhotoBadgeIcon />
+                                                </span>
+                                              ) : null}
+                                              <AccordionChevronIcon
+                                                isOpen={isExpanded}
+                                              />
+                                            </div>
                                           </div>
                                         </summary>
                                         <div className="grid gap-3 mt-2 md:grid-cols-4">

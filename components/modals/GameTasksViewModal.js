@@ -336,7 +336,7 @@ const GameTasksViewModal = ({
     >
       <div className="space-y-4">
         {tasks.length === 0 ? (
-          <ModalSection className="p-5">
+          <ModalSection className="p-4 sm:p-5">
             <p className="text-sm text-slate-500 dark:text-slate-300">
               Для этой игры пока нет заданий.
             </p>

@@ -5,14 +5,7 @@ import { createPortal } from 'react-dom'
 let activeModalLocks = 0
 let previousBodyOverflow = ''
 
-const Modal = ({
-  isOpen,
-  title,
-  children,
-  onClose,
-  footer,
-  compactMobile,
-}) => {
+const Modal = ({ isOpen, title, children, onClose, footer, compactMobile }) => {
   useEffect(() => {
     if (!isOpen) {
       return undefined
@@ -68,7 +61,9 @@ const Modal = ({
       Закрыть
     </button>
   )
-  const horizontalPaddingClass = compactMobile ? 'px-3 sm:px-4 md:px-6' : 'px-6'
+  const horizontalPaddingClass = compactMobile
+    ? 'px-2 sm:px-4 md:px-6'
+    : 'px-2 sm:px-5 md:px-6'
 
   return createPortal(
     <div className="fixed inset-0 z-[120] flex items-stretch justify-center p-0 md:items-center md:px-4 md:py-6">
@@ -83,26 +78,34 @@ const Modal = ({
         aria-label={title}
         className="relative z-10 flex h-full w-full flex-col overflow-hidden border border-slate-200/90 bg-white/95 shadow-[0_18px_46px_rgba(2,8,23,0.26)] dark:border-[#7A00FF]/35 dark:bg-[#090018]/96 dark:shadow-[0_0_0_1px_rgba(122,0,255,0.18),0_28px_64px_rgba(0,0,0,0.55)] md:h-auto md:max-h-[90vh] md:max-w-5xl md:rounded-2xl"
       >
-        <div className={`flex shrink-0 items-start justify-between gap-4 border-b border-slate-200/85 bg-white/95 py-4 dark:border-[#00D1FF]/25 dark:bg-[#090018]/95 ${horizontalPaddingClass}`}>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-[#f3ecff]">{title}</h2>
+        <div
+          className={`flex shrink-0 items-start justify-between gap-4 border-b border-slate-200/85 bg-white/95 py-4 dark:border-[#00D1FF]/25 dark:bg-[#090018]/95 ${horizontalPaddingClass}`}
+        >
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-[#f3ecff]">
+            {title}
+          </h2>
           <button
             type="button"
             onClick={() => onClose?.()}
-            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-[#00D1FF]/35 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/12 dark:hover:text-[#e9fbff]"
+            className="inline-flex h-8 w-8 min-w-8 min-h-8 cursor-pointer items-center justify-center rounded-full border border-slate-300 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-[#00D1FF]/35 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/12 dark:hover:text-[#e9fbff]"
             aria-label="Закрыть"
           >
             ×
           </button>
         </div>
-        <div className={`min-h-0 flex-1 overflow-y-auto py-5 ${horizontalPaddingClass}`}>
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto py-5 ${horizontalPaddingClass}`}
+        >
           {children}
         </div>
-        <div className={`flex shrink-0 flex-row flex-wrap items-center justify-end gap-3 border-t border-slate-200/85 bg-white/95 py-4 dark:border-[#00D1FF]/25 dark:bg-[#090018]/95 ${horizontalPaddingClass}`}>
+        <div
+          className={`flex shrink-0 flex-row flex-wrap items-center justify-end gap-3 border-t border-slate-200/85 bg-white/95 py-4 dark:border-[#00D1FF]/25 dark:bg-[#090018]/95 ${horizontalPaddingClass}`}
+        >
           {resolvedFooter}
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   )
 }
 
@@ -122,4 +125,3 @@ Modal.defaultProps = {
 }
 
 export default Modal
-

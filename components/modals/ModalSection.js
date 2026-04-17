@@ -6,7 +6,7 @@ const ModalSection = ({ children, className, noPadding }) => {
     <section
       className={cn(
         'space-y-5 bg-white border shadow-sm dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl',
-        noPadding ? 'p-0' : 'p-6',
+        noPadding ? 'p-0' : 'p-4 sm:p-5 md:p-6',
         className,
       )}
     >

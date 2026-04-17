@@ -163,7 +163,7 @@ const TeamDescriptionModal = ({
       >
         {selectedTeam ? (
           <div className="space-y-6">
-            <ModalSection className="p-5">
+            <ModalSection className="p-4 sm:p-5">
               <div className="flex items-center gap-4">
                 <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
                   <img
@@ -187,7 +187,7 @@ const TeamDescriptionModal = ({
 
             {typeof selectedTeam.description === 'string' &&
             selectedTeam.description.trim() ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 dark:border-slate-700 dark:bg-slate-800/60">
                 <ModalSectionTitle>Описание</ModalSectionTitle>
                 <p className="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
                   {selectedTeam.description}
@@ -195,7 +195,7 @@ const TeamDescriptionModal = ({
               </div>
             ) : null}
 
-            <ModalSection className="p-5">
+            <ModalSection className="p-4 sm:p-5">
               <ModalSectionTitle>Информация</ModalSectionTitle>
               <dl className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
@@ -277,7 +277,7 @@ const TeamDescriptionModal = ({
               </dl>
             </ModalSection>
 
-            <ModalSection className="p-5">
+            <ModalSection className="p-4 sm:p-5">
               <ModalSectionTitle>Состав команды</ModalSectionTitle>
               {memberPreviewError ? (
                 <p className="mt-2 text-xs text-rose-500">
@@ -306,7 +306,7 @@ const TeamDescriptionModal = ({
             </ModalSection>
 
             {selectedTeam.games?.length > 0 && (
-              <ModalSection className="p-5">
+              <ModalSection className="p-4 sm:p-5">
                 <div className="flex items-center justify-between gap-3">
                   <ModalSectionTitle>Сыгранных игр</ModalSectionTitle>
                   <span className="text-xs text-slate-500 dark:text-slate-300">

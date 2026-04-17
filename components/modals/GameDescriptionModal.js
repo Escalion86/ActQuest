@@ -58,7 +58,7 @@ const GameDescriptionModal = ({
   >
     {selectedGame ? (
       <div className="space-y-6">
-        <ModalSection className="p-5">
+        <ModalSection className="p-4 sm:p-5">
           <ModalSectionTitle>Общая информация</ModalSectionTitle>
           {selectedGame.image && (
             <img
@@ -231,7 +231,7 @@ const GameDescriptionModal = ({
           )}
         </ModalSection>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 dark:border-slate-700 dark:bg-slate-800/60">
           <ModalSectionTitle>Описание</ModalSectionTitle>
           <div className="mt-3">
             <TiptapContentView
@@ -246,7 +246,7 @@ const GameDescriptionModal = ({
         </div>
 
         {canViewGameResults && (
-          <section className="rounded-2xl border border-cyan-200 bg-cyan-50 p-5 shadow-sm dark:border-cyan-500/35 dark:bg-cyan-500/10">
+          <section className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 sm:p-5 shadow-sm dark:border-cyan-500/35 dark:bg-cyan-500/10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <ModalSectionTitle>Результаты игры</ModalSectionTitle>
@@ -268,7 +268,7 @@ const GameDescriptionModal = ({
         {canViewGameResults &&
           Array.isArray(selectedGame?.result?.teams) &&
           selectedGame.result.teams.length > 0 && (
-            <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-500/35 dark:bg-emerald-500/10">
+            <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5 shadow-sm dark:border-emerald-500/35 dark:bg-emerald-500/10">
               <ModalSectionTitle className="mb-4">
                 Команды участников
               </ModalSectionTitle>
@@ -297,7 +297,7 @@ const GameDescriptionModal = ({
             </section>
           )}
 
-        <ModalSection className="p-5">
+        <ModalSection className="p-4 sm:p-5">
           <ModalSectionTitle>Параметры проведения</ModalSectionTitle>
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
@@ -369,7 +369,7 @@ const GameDescriptionModal = ({
           </dl>
         </ModalSection>
 
-        <ModalSection className="p-5">
+        <ModalSection className="p-4 sm:p-5">
           <ModalSectionTitle>Опции для капитана</ModalSectionTitle>
           <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
             <li className="flex items-center gap-2">
@@ -408,7 +408,7 @@ const GameDescriptionModal = ({
           </ul>
         </ModalSection>
 
-        <ModalSection className="p-5">
+        <ModalSection className="p-4 sm:p-5">
           <ModalSectionTitle>Стоимость участия</ModalSectionTitle>
           {selectedGame.prices?.length > 0 ? (
             <ul className="mt-4 space-y-3">
@@ -434,7 +434,7 @@ const GameDescriptionModal = ({
         </ModalSection>
 
         {canViewRestrictedGameInfo && (
-          <ModalSection className="p-5">
+          <ModalSection className="p-4 sm:p-5">
             <ModalSectionTitle>Финансы</ModalSectionTitle>
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
               <p>
