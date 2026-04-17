@@ -5377,21 +5377,23 @@ const GamesPage = ({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span
-                      className={`mb-2 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
-                    >
-                      {getGameStatusLabel(visibleStatus)}
-                    </span>
-                    {game?.isRated === true && (
-                      <span className="mb-2 ml-2 inline-flex items-center rounded-full border border-amber-400/75 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-300/60 dark:bg-amber-500/10 dark:text-amber-200">
-                        {seasonBadgeLabel}
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
+                      >
+                        {getGameStatusLabel(visibleStatus)}
                       </span>
-                    )}
-                    {isHiddenGame && (
-                      <span className="mb-2 ml-2 inline-flex items-center rounded-full border border-rose-300/70 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-200">
-                        Скрыта
-                      </span>
-                    )}
+                      {game?.isRated === true && (
+                        <span className="inline-flex items-center rounded-full border border-amber-400/75 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-300/60 dark:bg-amber-500/10 dark:text-amber-200">
+                          {seasonBadgeLabel}
+                        </span>
+                      )}
+                      {isHiddenGame && (
+                        <span className="inline-flex items-center rounded-full border border-rose-300/70 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-200">
+                          Скрыта
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm font-semibold aq-line-clamp-2 text-primary dark:text-slate-100">
                       {game.name || 'Без названия'}
                     </p>
