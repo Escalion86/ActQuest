@@ -12,6 +12,52 @@ import logSiteEvent from '@helpers/logSiteEvent'
 import { toStringId } from '@helpers/idAndDate'
 import { getCaptainRoleQuery } from '@helpers/teamRoles'
 
+const MANUAL_TEAM_ADJUSTMENT_SOURCE = 'manual_team_adjustment'
+
+const normalizeManualAdjustment = (item, index) => {
+  if (!item || typeof item !== 'object') {
+    return null
+  }
+
+  const rawName = typeof item.name === 'string' ? item.name.trim() : ''
+  const seconds = Number(item.time)
+  if (!Number.isFinite(seconds) || Math.round(seconds) === 0) {
+    return null
+  }
+
+  return {
+    name: rawName || `Ручная корректировка #${index + 1}`,
+    time: Math.round(seconds),
+    source: MANUAL_TEAM_ADJUSTMENT_SOURCE,
+    createdAt: new Date(),
+  }
+}
+
+const isManualTeamAdjustment = (item) =>
+  item &&
+  typeof item === 'object' &&
+  String(item.source || '').trim().toLowerCase() ===
+    MANUAL_TEAM_ADJUSTMENT_SOURCE
+
+const normalizeTimeAddingsForResponse = (value) =>
+  (Array.isArray(value) ? value : [])
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null
+      }
+      const time = Number(item.time)
+      if (!Number.isFinite(time) || Math.round(time) === 0) {
+        return null
+      }
+      const source = typeof item.source === 'string' ? item.source.trim() : ''
+      return {
+        name: typeof item.name === 'string' ? item.name : '',
+        time: Math.round(time),
+        source,
+      }
+    })
+    .filter(Boolean)
+
 const normalizeGameTeamEntry = (doc) => {
   const id = toStringId(doc?._id ?? doc?.id)
   const teamId = toStringId(doc?.teamId)
@@ -24,6 +70,7 @@ const normalizeGameTeamEntry = (doc) => {
     id,
     teamId,
     outOfCompetition: Boolean(doc?.outOfCompetition),
+    timeAddings: normalizeTimeAddingsForResponse(doc?.timeAddings),
   }
 }
 
@@ -199,7 +246,7 @@ export async function GET(request, { params }) {
     const gameTeamsDocs = await GamesTeamsModel.find({
       gameId: normalizedResolvedGameId,
     })
-      .select({ _id: 1, teamId: 1, outOfCompetition: 1 })
+      .select({ _id: 1, teamId: 1, outOfCompetition: 1, timeAddings: 1 })
       .lean()
 
     const entries = Array.isArray(gameTeamsDocs)
@@ -738,6 +785,123 @@ export async function PATCH(request, { params }) {
           data: {
             teamId: toStringId(updatedTeam._id),
             team: updatedTeam,
+          },
+        },
+        { status: 200 },
+      )
+    }
+
+    if (action === 'update_time_addings') {
+      const gameTeamId = toStringId(payload?.gameTeamId)
+      const manualAdjustmentsRaw = Array.isArray(payload?.manualAdjustments)
+        ? payload.manualAdjustments
+        : []
+
+      if (!gameId || !gameTeamId) {
+        return NextResponse.json(
+          { success: false, error: 'Не передан идентификатор игры или регистрации' },
+          { status: 400 },
+        )
+      }
+
+      const currentGameTeam = await GamesTeamsModel.findOne({
+        _id: gameTeamId,
+        gameId: normalizedResolvedGameId,
+      })
+        .select({ _id: 1, timeAddings: 1 })
+        .lean()
+
+      if (!currentGameTeam?._id) {
+        return NextResponse.json(
+          { success: false, error: 'Регистрация команды на игру не найдена' },
+          { status: 404 },
+        )
+      }
+
+      const manualAdjustments = manualAdjustmentsRaw
+        .map((item, index) => normalizeManualAdjustment(item, index))
+        .filter(Boolean)
+
+      const preservedAutomaticAddings = (Array.isArray(currentGameTeam.timeAddings)
+        ? currentGameTeam.timeAddings
+        : []
+      ).filter((item) => !isManualTeamAdjustment(item))
+
+      const nextTimeAddings = [...preservedAutomaticAddings, ...manualAdjustments]
+
+      await GamesTeamsModel.updateOne(
+        { _id: gameTeamId, gameId: normalizedResolvedGameId },
+        { $set: { timeAddings: nextTimeAddings } },
+      )
+
+      const currentResult =
+        game?.result && typeof game.result === 'object' ? game.result : {}
+      const shouldRebuildResult = ['finished', 'closed'].includes(
+        String(game?.status || '')
+          .trim()
+          .toLowerCase(),
+      )
+
+      let resultUpdated = false
+      let ratingUpdated = false
+      let statsUpdated = false
+
+      if (shouldRebuildResult) {
+        try {
+          const built = await buildGameResultComputed({ game })
+          const nextResult = {
+            ...currentResult,
+            teamsPlaces: built.teamsPlaces,
+            computed: built.computed,
+          }
+
+          const updatedGame = await GamesModel.findByIdAndUpdate(
+            normalizedResolvedGameId,
+            { $set: { result: nextResult } },
+            { returnDocument: 'after' },
+          ).lean()
+
+          resultUpdated = Boolean(updatedGame?._id)
+
+          if (
+            String(updatedGame?.status || '')
+              .trim()
+              .toLowerCase() === 'closed'
+          ) {
+            await updateParticipantsClosedStats({
+              db,
+              game: updatedGame || { ...game, result: nextResult },
+            })
+            statsUpdated = true
+
+            await updateParticipantsRatings({
+              db,
+              game: updatedGame || { ...game, result: nextResult },
+              updateAllEntities: true,
+            })
+            ratingUpdated = true
+          }
+        } catch (rebuildError) {
+          if (rebuildError?.code !== 'RESULT_SNAPSHOTS_MISSING') {
+            throw rebuildError
+          }
+        }
+      }
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            gameId: normalizedResolvedGameId,
+            gameTeamId,
+            manualAdjustments: manualAdjustments.map((item) => ({
+              name: item.name,
+              time: item.time,
+              source: item.source,
+            })),
+            resultUpdated,
+            ratingUpdated,
+            statsUpdated,
           },
         },
         { status: 200 },

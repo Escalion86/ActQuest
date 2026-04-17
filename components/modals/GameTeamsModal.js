@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
+import CabinetDurationField from '@components/cabinet/CabinetDurationField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import NoticeBanner from '@components/NoticeBanner'
@@ -13,6 +14,20 @@ import TeamDescriptionModal from './TeamDescriptionModal'
 
 const resolveRatingBadge = (rating) =>
   rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
+
+const formatDurationBadge = (secondsRaw) => {
+  const totalSeconds = Math.max(0, Math.round(Number(secondsRaw) || 0))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+
+  if (minutes > 0 && seconds > 0) {
+    return `${minutes}м ${seconds}с`
+  }
+  if (minutes > 0) {
+    return `${minutes}м`
+  }
+  return `${seconds}с`
+}
 
 const OpenDoorIcon = () => (
   <svg
@@ -77,6 +92,20 @@ const GameTeamsModal = ({
   const [teamToEdit, setTeamToEdit] = useState(null)
   const [isSavingTeamEdit, setIsSavingTeamEdit] = useState(false)
   const [teamEditError, setTeamEditError] = useState('')
+  const [isTeamAdjustmentsModalOpen, setIsTeamAdjustmentsModalOpen] =
+    useState(false)
+  const [teamAdjustmentsError, setTeamAdjustmentsError] = useState('')
+  const [isSavingTeamAdjustments, setIsSavingTeamAdjustments] = useState(false)
+  const [teamAdjustmentsTarget, setTeamAdjustmentsTarget] = useState(null)
+  const [teamAdjustmentRows, setTeamAdjustmentRows] = useState([])
+  const [isAdjustmentEditorOpen, setIsAdjustmentEditorOpen] = useState(false)
+  const [adjustmentEditorMode, setAdjustmentEditorMode] = useState('create')
+  const [adjustmentDraft, setAdjustmentDraft] = useState({
+    id: '',
+    type: 'penalty',
+    seconds: 60,
+    name: '',
+  })
 
   const closeTeamDetailsModal = useCallback(() => {
     setIsTeamDetailsModalOpen(false)
@@ -93,9 +122,14 @@ const GameTeamsModal = ({
     .trim()
     .toLowerCase()
   const canAddTeams =
-    !isReadOnly && gameStatus === 'active' && selectedGame?.registrationOpen !== false
+    !isReadOnly &&
+    gameStatus === 'active' &&
+    selectedGame?.registrationOpen !== false
   const canEditRegisteredTeams =
-    !isReadOnly && ['dev', 'admin', 'moder'].includes(String(currentUserRole || '').toLowerCase())
+    !isReadOnly &&
+    ['dev', 'admin', 'moder'].includes(
+      String(currentUserRole || '').toLowerCase(),
+    )
   const locationOptions = useMemo(
     () =>
       Object.entries(LOCATIONS)
@@ -122,17 +156,268 @@ const GameTeamsModal = ({
       setTeamToEdit(null)
       setIsSavingTeamEdit(false)
       setTeamEditError('')
+      setIsTeamAdjustmentsModalOpen(false)
+      setTeamAdjustmentsError('')
+      setIsSavingTeamAdjustments(false)
+      setTeamAdjustmentsTarget(null)
+      setTeamAdjustmentRows([])
+      setIsAdjustmentEditorOpen(false)
+      setAdjustmentEditorMode('create')
+      setAdjustmentDraft({
+        id: '',
+        type: 'penalty',
+        seconds: 60,
+        name: '',
+      })
     }
   }, [isTeamsModalOpen])
+
+  const getManualAdjustmentRowsFromTeam = useCallback((team) => {
+    const timeAddings = Array.isArray(team?.timeAddings) ? team.timeAddings : []
+    return timeAddings
+      .filter(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          String(item.source || '')
+            .trim()
+            .toLowerCase() === 'manual_team_adjustment',
+      )
+      .map((item, index) => {
+        const rawSeconds = Number(item.time)
+        const seconds = Number.isFinite(rawSeconds)
+          ? Math.max(1, Math.abs(Math.round(rawSeconds)))
+          : 1
+        const name = String(item.name || '').trim()
+        return {
+          id: `manual-adjustment-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+          type: rawSeconds < 0 ? 'bonus' : 'penalty',
+          seconds,
+          name: name || `Ручная корректировка #${index + 1}`,
+        }
+      })
+  }, [])
+
+  const createEmptyManualAdjustmentRow = useCallback(() => {
+    const now = Date.now()
+    return {
+      id: `manual-adjustment-new-${now}-${Math.random().toString(36).slice(2, 6)}`,
+      type: 'penalty',
+      seconds: 60,
+      name: '',
+    }
+  }, [])
+
+  const handleOpenTeamAdjustmentsModal = useCallback(
+    (team) => {
+      if (!team?.id) {
+        return
+      }
+
+      const initialRows = getManualAdjustmentRowsFromTeam(team)
+      setTeamAdjustmentsTarget({
+        gameTeamId: String(team.id),
+        teamName: String(team.teamName || 'Без названия'),
+      })
+      setTeamAdjustmentRows(
+        initialRows.length > 0
+          ? initialRows
+          : [createEmptyManualAdjustmentRow()],
+      )
+      setTeamAdjustmentsError('')
+      setIsTeamAdjustmentsModalOpen(true)
+    },
+    [createEmptyManualAdjustmentRow, getManualAdjustmentRowsFromTeam],
+  )
+
+  const handleCloseTeamAdjustmentsModal = useCallback(() => {
+    if (isSavingTeamAdjustments) {
+      return
+    }
+    setIsTeamAdjustmentsModalOpen(false)
+    setTeamAdjustmentsError('')
+    setTeamAdjustmentsTarget(null)
+    setTeamAdjustmentRows([])
+    setIsAdjustmentEditorOpen(false)
+  }, [isSavingTeamAdjustments])
+
+  const handleAddTeamAdjustmentRow = useCallback(() => {
+    const row = createEmptyManualAdjustmentRow()
+    setAdjustmentEditorMode('create')
+    setAdjustmentDraft({
+      id: row.id,
+      type: row.type,
+      seconds: row.seconds,
+      name: '',
+    })
+    setIsAdjustmentEditorOpen(true)
+  }, [createEmptyManualAdjustmentRow])
+
+  const handleRemoveTeamAdjustmentRow = useCallback((rowId) => {
+    setTeamAdjustmentRows((prev) => prev.filter((row) => row.id !== rowId))
+  }, [])
+
+  const handleUpdateTeamAdjustmentRow = useCallback((rowId, patch) => {
+    setTeamAdjustmentRows((prev) =>
+      prev.map((row) => (row.id === rowId ? { ...row, ...patch } : row)),
+    )
+  }, [])
+
+  const formatAdjustmentDuration = useCallback((secondsValue) => {
+    const totalSeconds = Math.max(0, Number(secondsValue) || 0)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    if (minutes > 0 && seconds > 0) {
+      return `${minutes} мин ${seconds} сек`
+    }
+    if (minutes > 0) {
+      return `${minutes} мин`
+    }
+    return `${seconds} сек`
+  }, [])
+
+  const handleOpenAdjustmentEditor = useCallback((row) => {
+    if (!row?.id) {
+      return
+    }
+    setAdjustmentEditorMode('edit')
+    setAdjustmentDraft({
+      id: row.id,
+      type: row.type === 'bonus' ? 'bonus' : 'penalty',
+      seconds: Math.max(1, Number(row.seconds) || 0),
+      name: String(row.name || ''),
+    })
+    setIsAdjustmentEditorOpen(true)
+  }, [])
+
+  const handleCloseAdjustmentEditor = useCallback(() => {
+    if (isSavingTeamAdjustments) {
+      return
+    }
+    setIsAdjustmentEditorOpen(false)
+  }, [isSavingTeamAdjustments])
+
+  const handleSaveAdjustmentDraft = useCallback(() => {
+    const normalizedSeconds = Math.max(
+      1,
+      Math.round(Number(adjustmentDraft?.seconds) || 0),
+    )
+    const normalizedType =
+      String(adjustmentDraft?.type || '')
+        .trim()
+        .toLowerCase() === 'bonus'
+        ? 'bonus'
+        : 'penalty'
+    const normalizedName = String(adjustmentDraft?.name || '').trim()
+    const rowId =
+      typeof adjustmentDraft?.id === 'string' && adjustmentDraft.id.trim()
+        ? adjustmentDraft.id
+        : createEmptyManualAdjustmentRow().id
+
+    if (adjustmentEditorMode === 'edit') {
+      handleUpdateTeamAdjustmentRow(rowId, {
+        type: normalizedType,
+        seconds: normalizedSeconds,
+        name: normalizedName,
+      })
+    } else {
+      setTeamAdjustmentRows((prev) => [
+        ...prev,
+        {
+          id: rowId,
+          type: normalizedType,
+          seconds: normalizedSeconds,
+          name: normalizedName,
+        },
+      ])
+    }
+
+    setIsAdjustmentEditorOpen(false)
+  }, [
+    adjustmentDraft?.id,
+    adjustmentDraft?.name,
+    adjustmentDraft?.seconds,
+    adjustmentDraft?.type,
+    adjustmentEditorMode,
+    createEmptyManualAdjustmentRow,
+    handleUpdateTeamAdjustmentRow,
+  ])
+
+  const handleSaveTeamAdjustments = useCallback(async () => {
+    if (!selectedGame?.id || !teamAdjustmentsTarget?.gameTeamId) {
+      setTeamAdjustmentsError('Не передан идентификатор игры или регистрации')
+      return
+    }
+
+    const prepared = teamAdjustmentRows
+      .map((row, index) => {
+        const secondsRaw = Number(row?.seconds)
+        if (!Number.isFinite(secondsRaw) || secondsRaw <= 0) {
+          return null
+        }
+        const seconds = Math.round(secondsRaw)
+        const normalizedType =
+          String(row?.type || '')
+            .trim()
+            .toLowerCase() === 'bonus'
+            ? 'bonus'
+            : 'penalty'
+        const rawName = String(row?.name || '').trim()
+        return {
+          name: rawName || `Ручная корректировка #${index + 1}`,
+          time: normalizedType === 'bonus' ? -seconds : seconds,
+        }
+      })
+      .filter(Boolean)
+
+    setIsSavingTeamAdjustments(true)
+    setTeamAdjustmentsError('')
+
+    try {
+      await requestApiJson(
+        `/api/cabinet/games/${encodeURIComponent(String(selectedGame.id))}/teams`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_time_addings',
+            gameTeamId: String(teamAdjustmentsTarget.gameTeamId),
+            manualAdjustments: prepared,
+          }),
+          fallbackMessage: 'Не удалось сохранить бонусы/штрафы',
+        },
+      )
+
+      if (typeof handleRefreshTeamsModalData === 'function') {
+        await handleRefreshTeamsModalData()
+      }
+
+      setIsTeamAdjustmentsModalOpen(false)
+      setTeamAdjustmentsTarget(null)
+      setTeamAdjustmentRows([])
+    } catch (error) {
+      setTeamAdjustmentsError(
+        error?.message || 'Не удалось сохранить бонусы/штрафы',
+      )
+    } finally {
+      setIsSavingTeamAdjustments(false)
+    }
+  }, [
+    handleRefreshTeamsModalData,
+    selectedGame?.id,
+    teamAdjustmentRows,
+    teamAdjustmentsTarget?.gameTeamId,
+  ])
 
   const handleOpenTeamEdit = useCallback((team) => {
     if (!team) {
       return
     }
 
-    const details = team?.teamDetails && typeof team.teamDetails === 'object'
-      ? team.teamDetails
-      : {}
+    const details =
+      team?.teamDetails && typeof team.teamDetails === 'object'
+        ? team.teamDetails
+        : {}
     const draft = {
       id: String(team?.teamId || team?.id || '').trim(),
       name: String(details?.name || team?.teamName || '').trim(),
@@ -308,6 +593,23 @@ const GameTeamsModal = ({
                       ? team.membersCount
                       : 0
                     const ratingBadge = resolveRatingBadge(team?.rating)
+                    const timeAddings = Array.isArray(team?.timeAddings)
+                      ? team.timeAddings
+                      : []
+                    const penaltySeconds = timeAddings.reduce((sum, item) => {
+                      const value = Number(item?.time)
+                      if (!Number.isFinite(value) || value <= 0) {
+                        return sum
+                      }
+                      return sum + Math.round(value)
+                    }, 0)
+                    const bonusSeconds = timeAddings.reduce((sum, item) => {
+                      const value = Number(item?.time)
+                      if (!Number.isFinite(value) || value >= 0) {
+                        return sum
+                      }
+                      return sum + Math.abs(Math.round(value))
+                    }, 0)
 
                     return (
                       <li key={team.id}>
@@ -321,23 +623,23 @@ const GameTeamsModal = ({
                               handleOpenTeamDetails(team)
                             }
                           }}
-                          className="w-full cursor-pointer text-left p-4 border rounded-2xl transition border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50 dark:hover:border-[#7A00FF]/60 dark:hover:bg-[#110a24]"
+                          className="w-full cursor-pointer text-left p-3 border rounded-2xl transition sm:p-4 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/80 hover:border-primary hover:bg-blue-50 dark:hover:border-[#7A00FF]/60 dark:hover:bg-[#110a24]"
                         >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0 flex items-center gap-3">
-                              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex items-start min-w-0 gap-3">
+                              <div className="overflow-hidden border rounded-full h-11 w-11 shrink-0 border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80">
                                 <img
                                   src={
                                     team.teamImage || '/img/avatars/team.png'
                                   }
                                   alt={`Иконка команды ${team.teamName}`}
-                                  className="h-full w-full object-cover"
+                                  className="object-cover w-full h-full"
                                 />
                               </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
                                   {ratingBadge ? (
-                                    <span className="text-xs font-medium px-2 py-1 rounded-full border border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                    <span className="px-2 py-1 text-xs font-medium border rounded-full border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
                                       {ratingBadge}
                                     </span>
                                   ) : null}
@@ -349,23 +651,41 @@ const GameTeamsModal = ({
                                     }`}
                                     title={team.open ? 'Открыта' : 'Закрыта'}
                                   >
-                                    {team.open ? <OpenDoorIcon /> : <ClosedDoorIcon />}
+                                    {team.open ? (
+                                      <OpenDoorIcon />
+                                    ) : (
+                                      <ClosedDoorIcon />
+                                    )}
                                   </span>
                                   {team.outOfCompetition ? (
-                                    <span className="text-xs font-medium px-2 py-1 rounded-full border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                                    <span className="px-2 py-1 text-xs font-medium border rounded-full border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
                                       Вне зачёта
                                     </span>
                                   ) : null}
-                                  <p className="text-sm font-semibold text-primary dark:text-slate-100">
+                                  <p className="min-w-0 text-sm font-semibold break-words text-primary dark:text-slate-100">
                                     {team.teamName}
                                   </p>
                                 </div>
-                                <p className="text-xs text-slate-500">
+                                <p className="mt-1 text-xs text-slate-500">
                                   Участников: {membersCount}
                                 </p>
+                                {bonusSeconds > 0 || penaltySeconds > 0 ? (
+                                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                                    {bonusSeconds > 0 ? (
+                                      <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/45 dark:bg-emerald-500/15 dark:text-emerald-200">
+                                        Бонус: -{formatDurationBadge(bonusSeconds)}
+                                      </span>
+                                    ) : null}
+                                    {penaltySeconds > 0 ? (
+                                      <span className="inline-flex items-center rounded-full border border-rose-300 bg-rose-100/80 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:border-rose-500/45 dark:bg-rose-500/15 dark:text-rose-200">
+                                        Штраф: +{formatDurationBadge(penaltySeconds)}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                ) : null}
                                 {!isReadOnly ? (
                                   <label
-                                    className="mt-2 inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300"
+                                    className="inline-flex items-center gap-2 mt-2 text-xs text-slate-600 dark:text-slate-300"
                                     onClick={(event) => event.stopPropagation()}
                                   >
                                     <input
@@ -384,14 +704,14 @@ const GameTeamsModal = ({
                                           ),
                                         })
                                       }}
-                                      className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400 dark:border-slate-600"
+                                      className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400 dark:border-slate-600"
                                     />
                                     Вне зачёта
                                   </label>
                                 ) : null}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 pl-14 sm:pl-0">
                               {canEditRegisteredTeams ? (
                                 <button
                                   type="button"
@@ -401,10 +721,10 @@ const GameTeamsModal = ({
                                   }}
                                   aria-label={`Редактировать команду ${team.teamName || ''}`}
                                   title="Редактировать команду"
-                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-600 transition hover:border-cyan-400 hover:bg-cyan-100 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-400/65 dark:hover:bg-cyan-500/20"
+                                  className="flex items-center justify-center w-9 h-9 transition border rounded-lg border-cyan-200 bg-cyan-50 text-cyan-600 hover:border-cyan-400 hover:bg-cyan-100 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-400/65 dark:hover:bg-cyan-500/20 sm:h-8 sm:w-8"
                                 >
                                   <svg
-                                    className="h-4 w-4"
+                                    className="w-4 h-4"
                                     viewBox="0 0 20 20"
                                     fill="none"
                                     xmlns="http://www.w3.org/2000/svg"
@@ -421,6 +741,40 @@ const GameTeamsModal = ({
                                       stroke="currentColor"
                                       strokeWidth="1.5"
                                       strokeLinecap="round"
+                                    />
+                                  </svg>
+                                </button>
+                              ) : null}
+                              {canEditRegisteredTeams ? (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    handleOpenTeamAdjustmentsModal(team)
+                                  }}
+                                  aria-label={`Редактировать бонусы и штрафы команды ${team.teamName || ''}`}
+                                  title="Редактировать бонусы/штрафы за игру"
+                                  className="flex items-center justify-center w-9 h-9 transition border rounded-lg border-violet-200 bg-violet-50 text-violet-600 hover:border-violet-400 hover:bg-violet-100 dark:border-violet-500/35 dark:bg-violet-500/10 dark:text-violet-300 dark:hover:border-violet-400/65 dark:hover:bg-violet-500/20 sm:h-8 sm:w-8"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    viewBox="0 0 20 20"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      d="M10 3v14M3 10h14"
+                                      stroke="currentColor"
+                                      strokeWidth="1.6"
+                                      strokeLinecap="round"
+                                    />
+                                    <circle
+                                      cx="10"
+                                      cy="10"
+                                      r="6.5"
+                                      stroke="currentColor"
+                                      strokeWidth="1.4"
+                                      opacity="0.5"
                                     />
                                   </svg>
                                 </button>
@@ -454,7 +808,7 @@ const GameTeamsModal = ({
                                     teamsModalState.isLoading
                                   }
                                   aria-label={`Удалить команду ${team.teamName || ''} из игры`}
-                                  className={`flex h-8 w-8 items-center justify-center rounded-lg border transition
+                                  className={`flex h-9 w-9 items-center justify-center rounded-lg border transition sm:h-8 sm:w-8
                                     ${
                                       isRemoving || teamsModalState.isLoading
                                         ? 'cursor-wait border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-600'
@@ -463,7 +817,7 @@ const GameTeamsModal = ({
                                 >
                                   {isRemoving ? (
                                     <svg
-                                      className="h-4 w-4 animate-spin"
+                                      className="w-4 h-4 animate-spin"
                                       viewBox="0 0 24 24"
                                       fill="none"
                                     >
@@ -483,7 +837,7 @@ const GameTeamsModal = ({
                                     </svg>
                                   ) : (
                                     <svg
-                                      className="h-4 w-4"
+                                      className="w-4 h-4"
                                       viewBox="0 0 24 24"
                                       fill="none"
                                       stroke="currentColor"
@@ -514,12 +868,12 @@ const GameTeamsModal = ({
             </div>
 
             {canAddTeams && (
-              <FormSectionCard className="bg-slate-50 p-4 dark:bg-slate-800/60">
+              <FormSectionCard className="p-4 bg-slate-50 dark:bg-slate-800/60">
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                   Добавить команду
                 </h3>
                 {teamsModalState.availableTeams.length > 0 ? (
-                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex flex-col gap-3 mt-3 sm:flex-row sm:items-center">
                     <CabinetSelectField
                       id="game-team-to-add"
                       label={null}
@@ -650,7 +1004,7 @@ const GameTeamsModal = ({
               onChange={(event) =>
                 handleTeamEditFieldChange('name', event.target.value)
               }
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+              className="w-full px-4 py-2 mt-2 text-sm bg-white border rounded-xl border-slate-200 text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
             />
           </div>
           <CabinetSelectField
@@ -684,7 +1038,7 @@ const GameTeamsModal = ({
               onChange={(event) =>
                 handleTeamEditFieldChange('description', event.target.value)
               }
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+              className="w-full px-4 py-2 mt-2 text-sm bg-white border rounded-xl border-slate-200 text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
             />
           </div>
           <div>
@@ -701,7 +1055,7 @@ const GameTeamsModal = ({
               onChange={(event) =>
                 handleTeamEditFieldChange('image', event.target.value)
               }
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+              className="w-full px-4 py-2 mt-2 text-sm bg-white border rounded-xl border-slate-200 text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
             />
           </div>
           <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
@@ -711,10 +1065,249 @@ const GameTeamsModal = ({
               onChange={(event) =>
                 handleTeamEditFieldChange('open', event.target.checked)
               }
-              className="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-400 dark:border-slate-600"
+              className="w-4 h-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-400 dark:border-slate-600"
             />
             Команда открыта для вступления
           </label>
+        </div>
+      </Modal>
+      <Modal
+        isOpen={isTeamAdjustmentsModalOpen}
+        onClose={handleCloseTeamAdjustmentsModal}
+        title={`Бонусы/штрафы — ${teamAdjustmentsTarget?.teamName || 'Команда'}`}
+        footer={
+          <>
+            <button
+              type="button"
+              className="aq-modal-btn aq-modal-btn-secondary"
+              onClick={handleCloseTeamAdjustmentsModal}
+              disabled={isSavingTeamAdjustments}
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              className={`aq-modal-btn aq-modal-btn-primary ${isSavingTeamAdjustments ? 'cursor-wait' : ''}`}
+              onClick={handleSaveTeamAdjustments}
+              disabled={isSavingTeamAdjustments}
+            >
+              {isSavingTeamAdjustments ? 'Сохранение…' : 'Сохранить и закрыть'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {teamAdjustmentsError ? (
+            <NoticeBanner tone="error" variant="neon">
+              {teamAdjustmentsError}
+            </NoticeBanner>
+          ) : null}
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Здесь можно задать только ручные корректировки за игру. Бонус
+            уменьшает итоговое время, штраф увеличивает.
+          </p>
+          <div className="space-y-3">
+            {teamAdjustmentRows.map((row, index) => (
+              <div
+                key={row.id}
+                className="relative p-3 pt-8 overflow-hidden border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70"
+              >
+                <span
+                  className={`absolute left-0 top-0 inline-flex items-center rounded-br-full border-b border-r px-3 py-0.5 text-[11px] font-semibold ${
+                    row.type === 'bonus'
+                      ? 'border-emerald-300 bg-emerald-100/80 text-emerald-700 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-200'
+                      : 'border-rose-300 bg-rose-100/80 text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/15 dark:text-rose-200'
+                  }`}
+                >
+                  {row.type === 'bonus' ? 'Бонус' : 'Штраф'}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTeamAdjustmentRow(row.id)}
+                  disabled={isSavingTeamAdjustments}
+                  className="absolute inline-flex items-center justify-center transition border rounded-lg right-3 top-2 h-7 w-7 border-rose-200 bg-rose-50 text-rose-500 hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:border-rose-400/65 dark:hover:bg-rose-500/20"
+                  aria-label="Удалить корректировку"
+                  title="Удалить корректировку"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M3 6h14"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M6 6l.7 9.2A1.5 1.5 0 0 0 8.2 16.6h3.6a1.5 1.5 0 0 0 1.5-1.4L14 6"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M8 6V4.8c0-.45.35-.8.8-.8h2.4c.45 0 .8.35.8.8V6"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M8.8 8.5v5M11.2 8.5v5"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenAdjustmentEditor(row)}
+                  disabled={isSavingTeamAdjustments}
+                  className="absolute inline-flex items-center justify-center transition border rounded-lg right-11 top-2 h-7 w-7 border-cyan-200 bg-cyan-50 text-cyan-600 hover:border-cyan-400 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-400/65 dark:hover:bg-cyan-500/20"
+                  aria-label="Редактировать корректировку"
+                  title="Редактировать корректировку"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M4 13.5V16h2.5L15 7.5l-2.5-2.5L4 13.5z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M11.5 5l2.5 2.5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+
+                <div className="space-y-1">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                      {String(row.name || '').trim() ||
+                        `Корректировка #${index + 1}`}
+                    </p>
+                  </div>
+                  <div>
+                    <p
+                      className={`text-sm font-semibold ${
+                        row.type === 'bonus'
+                          ? 'text-emerald-600 dark:text-emerald-300'
+                          : 'text-rose-600 dark:text-rose-300'
+                      }`}
+                    >
+                      {row.type === 'bonus' ? '−' : '+'}
+                      {formatAdjustmentDuration(row.seconds)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={handleAddTeamAdjustmentRow}
+              className="aq-modal-btn aq-modal-btn-secondary"
+              disabled={isSavingTeamAdjustments}
+            >
+              Добавить корректировку
+            </button>
+          </div>
+        </div>
+      </Modal>
+      <Modal
+        isOpen={isAdjustmentEditorOpen}
+        onClose={handleCloseAdjustmentEditor}
+        title={
+          adjustmentEditorMode === 'edit'
+            ? 'Редактирование корректировки'
+            : 'Новая корректировка'
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              className="aq-modal-btn aq-modal-btn-secondary"
+              onClick={handleCloseAdjustmentEditor}
+              disabled={isSavingTeamAdjustments}
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              className="aq-modal-btn aq-modal-btn-primary"
+              onClick={handleSaveAdjustmentDraft}
+              disabled={isSavingTeamAdjustments}
+            >
+              Готово
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
+              Тип
+            </label>
+            <select
+              value={adjustmentDraft.type}
+              onChange={(event) =>
+                setAdjustmentDraft((prev) => ({
+                  ...prev,
+                  type: event.target.value === 'bonus' ? 'bonus' : 'penalty',
+                }))
+              }
+              className="w-full px-3 py-2 mt-1 text-sm bg-white border rounded-xl border-slate-200 text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+            >
+              <option value="penalty">Штраф</option>
+              <option value="bonus">Бонус</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
+              Комментарий
+            </label>
+            <input
+              type="text"
+              value={adjustmentDraft.name}
+              onChange={(event) =>
+                setAdjustmentDraft((prev) => ({
+                  ...prev,
+                  name: event.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 mt-1 text-sm bg-white border rounded-xl border-slate-200 text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+              placeholder="Комментарий корректировки"
+            />
+          </div>
+          <CabinetDurationField
+            id="team-adjustment-draft-duration"
+            label="Время"
+            valueSeconds={adjustmentDraft.seconds}
+            onChangeSeconds={(nextSeconds) =>
+              setAdjustmentDraft((prev) => ({
+                ...prev,
+                seconds: Math.max(1, Number(nextSeconds) || 0),
+              }))
+            }
+            disabled={isSavingTeamAdjustments}
+            minutesLabel="мин"
+            secondsLabel="сек"
+          />
         </div>
       </Modal>
     </>
@@ -736,6 +1329,13 @@ const teamShape = PropTypes.shape({
     isEligible: PropTypes.bool,
   }),
   teamDetails: PropTypes.object,
+  timeAddings: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string,
+      time: PropTypes.number,
+      source: PropTypes.string,
+    }),
+  ),
 })
 
 const availableTeamShape = PropTypes.shape({

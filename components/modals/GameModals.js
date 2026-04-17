@@ -1,7 +1,8 @@
 import { memo } from 'react'
 import PropTypes from 'prop-types'
 
-import GameEditModal from './GameEditModal'
+import GameSettingsEditModal from './GameSettingsEditModal'
+import GameTasksEditModal from './GameTasksEditModal'
 import GameTeamsModal from './GameTeamsModal'
 import GameRegisterModal from './GameRegisterModal'
 import GameCreateModal from './GameCreateModal'
@@ -82,6 +83,7 @@ const GameModals = ({
   isAddingTeam,
   handleRemoveTeamFromGame,
   handleToggleTeamOutOfCompetition,
+  handleRefreshTeamsModalData,
   isTeamsModalReadOnly,
   isRegisterModalOpen,
   handleCloseRegisterModal,
@@ -175,7 +177,7 @@ const GameModals = ({
   return (
     <>
       {gameForEdit ? (
-        <GameEditModal
+        <GameSettingsEditModal
           selectedGame={gameForEdit}
           isEditModalOpen={isEditModalOpen}
           handleCloseEditModal={handleCloseEditModal}
@@ -252,7 +254,7 @@ const GameModals = ({
       ) : null}
 
       {gameForEdit ? (
-        <GameEditModal
+        <GameTasksEditModal
           selectedGame={gameForEdit}
           isEditModalOpen={isTasksModalOpen}
           handleCloseEditModal={handleCloseTasksModal}
@@ -324,8 +326,6 @@ const GameModals = ({
           isEditGameSeasonCreating={isEditGameSeasonCreating}
           handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
           handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
-          sectionMode="tasks"
-          modalTitleOverride={`Редактор заданий «${gameForEdit?.name || 'Без названия'}»`}
           canViewCodePhotos={canViewCodePhotos}
         />
       ) : null}
@@ -344,6 +344,7 @@ const GameModals = ({
           isAddingTeam={isAddingTeam}
           handleRemoveTeamFromGame={handleRemoveTeamFromGame}
           handleToggleTeamOutOfCompetition={handleToggleTeamOutOfCompetition}
+          handleRefreshTeamsModalData={handleRefreshTeamsModalData}
           currentUserRole={currentUserRole}
           isReadOnly={isTeamsModalReadOnly}
         />
@@ -570,6 +571,7 @@ GameModals.propTypes = {
   isAddingTeam: PropTypes.bool.isRequired,
   handleRemoveTeamFromGame: PropTypes.func.isRequired,
   handleToggleTeamOutOfCompetition: PropTypes.func.isRequired,
+  handleRefreshTeamsModalData: PropTypes.func,
   isTeamsModalReadOnly: PropTypes.bool,
   isRegisterModalOpen: PropTypes.bool.isRequired,
   handleCloseRegisterModal: PropTypes.func.isRequired,
@@ -732,6 +734,7 @@ GameModals.defaultProps = {
   startedGameLockedTaskCount: 0,
   isCloneSourceGamesLoading: false,
   selectedTeamToAdd: '',
+  handleRefreshTeamsModalData: undefined,
   createGameSeasons: [],
   isCreateGameSeasonsLoading: false,
   isCreateGameSeasonCreating: false,

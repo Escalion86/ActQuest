@@ -832,8 +832,26 @@ const validateTaskEditorRequirements = (game) => {
     const taskLabel = `Задание ${index + 1}`
     const title = typeof task?.title === 'string' ? task.title.trim() : ''
     const description = getTaskDescriptionText(task)
+    const hasTaskMedia =
+      Array.isArray(task?.taskMedia) &&
+      task.taskMedia.some((item) => {
+        if (!item || typeof item !== 'object') {
+          return false
+        }
+        const type = typeof item.type === 'string' ? item.type.trim() : ''
+        const url = typeof item.url === 'string' ? item.url.trim() : ''
+        const path = typeof item.path === 'string' ? item.path.trim() : ''
+        return Boolean(type && (url || path))
+      })
+    const hasTaskDescription =
+      description.trim() !== '' ||
+      hasMeaningfulRichMarkup(task?.taskRich) ||
+      hasTaskMedia
     const clues = Array.isArray(task?.clues) ? task.clues : []
-    const hasFilledClue = clues.some((clue) => getClueText(clue).trim() !== '')
+    const hasFilledClue = clues.some(
+      (clue) =>
+        getClueText(clue).trim() !== '' || hasMeaningfulRichMarkup(clue?.clueRich),
+    )
 
     if (!title) {
       issues.push({
@@ -842,7 +860,7 @@ const validateTaskEditorRequirements = (game) => {
       })
     }
 
-    if (!description.trim()) {
+    if (!hasTaskDescription) {
       issues.push({
         taskId,
         message: `${taskLabel}: заполните обязательное поле «Описание задания».`,
@@ -4359,6 +4377,9 @@ const GamesPage = ({
             id: entryId,
             teamId,
             outOfCompetition: Boolean(entry?.outOfCompetition),
+            timeAddings: Array.isArray(entry?.timeAddings)
+              ? entry.timeAddings
+              : [],
             teamName: teamInfo?.name || 'Неизвестная команда',
             teamDescription: teamInfo?.description || '',
             teamImage: teamInfo?.image || '',
@@ -6836,6 +6857,7 @@ const GamesPage = ({
                 handleToggleTeamOutOfCompetition={
                   handleToggleTeamOutOfCompetition
                 }
+                handleRefreshTeamsModalData={loadTeamsModalData}
                 isTeamsModalReadOnly={isTeamsModalReadOnly}
                 isRegisterModalOpen={isRegisterModalOpen}
                 handleCloseRegisterModal={handleCloseRegisterModal}
