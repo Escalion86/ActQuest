@@ -42,10 +42,14 @@ const isManualTeamAdjustment = (item) =>
       return true
     }
 
-    // Backward-compatibility: early manual entries were saved without `source`
-    // due schema strict mode. They also had no task binding.
+    // Backward-compatibility: старые ручные корректировки могли быть без source.
+    // Считаем ручными записи без source и без task binding.
     const hasTaskId = typeof item.taskId === 'string' && item.taskId.trim() !== ''
-    const hasTaskIndex = Number.isFinite(Number(item.taskIndex))
+    const hasTaskIndex =
+      item?.taskIndex !== null &&
+      item?.taskIndex !== undefined &&
+      item?.taskIndex !== '' &&
+      Number.isFinite(Number(item.taskIndex))
     return !source && !hasTaskId && !hasTaskIndex
   })()
 

@@ -185,9 +185,15 @@ const GameTeamsModal = ({
           return true
         }
 
+        // Legacy fallback: старые ручные корректировки могли быть без source.
+        // Считаем ручными записи без source и без task binding.
         const hasTaskId =
           typeof item.taskId === 'string' && item.taskId.trim() !== ''
-        const hasTaskIndex = Number.isFinite(Number(item.taskIndex))
+        const hasTaskIndex =
+          item?.taskIndex !== null &&
+          item?.taskIndex !== undefined &&
+          item?.taskIndex !== '' &&
+          Number.isFinite(Number(item.taskIndex))
         return !source && !hasTaskId && !hasTaskIndex
       })
       .map((item, index) => {
@@ -222,19 +228,24 @@ const GameTeamsModal = ({
       }
 
       const initialRows = getManualAdjustmentRowsFromTeam(team)
+      console.info('[team-adjustments][client] open_modal', {
+        gameId: String(selectedGame?.id || ''),
+        gameName: String(selectedGame?.name || ''),
+        gameTeamId: String(team?.id || ''),
+        teamId: String(team?.teamId || ''),
+        teamName: String(team?.teamName || ''),
+        teamTimeAddings: Array.isArray(team?.timeAddings) ? team.timeAddings : [],
+        parsedManualAdjustments: initialRows,
+      })
       setTeamAdjustmentsTarget({
         gameTeamId: String(team.id),
         teamName: String(team.teamName || 'Без названия'),
       })
-      setTeamAdjustmentRows(
-        initialRows.length > 0
-          ? initialRows
-          : [createEmptyManualAdjustmentRow()],
-      )
+      setTeamAdjustmentRows(initialRows)
       setTeamAdjustmentsError('')
       setIsTeamAdjustmentsModalOpen(true)
     },
-    [createEmptyManualAdjustmentRow, getManualAdjustmentRowsFromTeam],
+    [getManualAdjustmentRowsFromTeam, selectedGame?.id, selectedGame?.name],
   )
 
   const handleCloseTeamAdjustmentsModal = useCallback(() => {
@@ -1114,115 +1125,121 @@ const GameTeamsModal = ({
             уменьшает итоговое время, штраф увеличивает.
           </p>
           <div className="space-y-3">
-            {teamAdjustmentRows.map((row, index) => (
-              <div
-                key={row.id}
-                className="relative p-3 pt-8 overflow-hidden border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70"
-              >
-                <span
-                  className={`absolute left-0 top-0 inline-flex items-center rounded-br-full border-b border-r px-3 py-0.5 text-[11px] font-semibold ${
-                    row.type === 'bonus'
-                      ? 'border-emerald-300 bg-emerald-100/80 text-emerald-700 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-200'
-                      : 'border-rose-300 bg-rose-100/80 text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/15 dark:text-rose-200'
-                  }`}
+            {teamAdjustmentRows.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-300">
+                Ручные корректировки пока не добавлены.
+              </p>
+            ) : (
+              teamAdjustmentRows.map((row, index) => (
+                <div
+                  key={row.id}
+                  className="relative p-3 pt-8 overflow-hidden border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70"
                 >
-                  {row.type === 'bonus' ? 'Бонус' : 'Штраф'}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTeamAdjustmentRow(row.id)}
-                  disabled={isSavingTeamAdjustments}
-                  className="absolute inline-flex items-center justify-center transition border rounded-lg right-3 top-2 h-7 w-7 border-rose-200 bg-rose-50 text-rose-500 hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:border-rose-400/65 dark:hover:bg-rose-500/20"
-                  aria-label="Удалить корректировку"
-                  title="Удалить корректировку"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+                  <span
+                    className={`absolute left-0 top-0 inline-flex items-center rounded-br-full border-b border-r px-3 py-0.5 text-[11px] font-semibold ${
+                      row.type === 'bonus'
+                        ? 'border-emerald-300 bg-emerald-100/80 text-emerald-700 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-200'
+                        : 'border-rose-300 bg-rose-100/80 text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/15 dark:text-rose-200'
+                    }`}
                   >
-                    <path
-                      d="M3 6h14"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M6 6l.7 9.2A1.5 1.5 0 0 0 8.2 16.6h3.6a1.5 1.5 0 0 0 1.5-1.4L14 6"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M8 6V4.8c0-.45.35-.8.8-.8h2.4c.45 0 .8.35.8.8V6"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M8.8 8.5v5M11.2 8.5v5"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
+                    {row.type === 'bonus' ? 'Бонус' : 'Штраф'}
+                  </span>
 
-                <button
-                  type="button"
-                  onClick={() => handleOpenAdjustmentEditor(row)}
-                  disabled={isSavingTeamAdjustments}
-                  className="absolute inline-flex items-center justify-center transition border rounded-lg right-11 top-2 h-7 w-7 border-cyan-200 bg-cyan-50 text-cyan-600 hover:border-cyan-400 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-400/65 dark:hover:bg-cyan-500/20"
-                  aria-label="Редактировать корректировку"
-                  title="Редактировать корректировку"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTeamAdjustmentRow(row.id)}
+                    disabled={isSavingTeamAdjustments}
+                    className="absolute inline-flex items-center justify-center transition border rounded-lg right-3 top-2 h-7 w-7 border-rose-200 bg-rose-50 text-rose-500 hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:border-rose-400/65 dark:hover:bg-rose-500/20"
+                    aria-label="Удалить корректировку"
+                    title="Удалить корректировку"
                   >
-                    <path
-                      d="M4 13.5V16h2.5L15 7.5l-2.5-2.5L4 13.5z"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M11.5 5l2.5 2.5"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-
-                <div className="space-y-1">
-                  <div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                      {String(row.name || '').trim() ||
-                        `Корректировка #${index + 1}`}
-                    </p>
-                  </div>
-                  <div>
-                    <p
-                      className={`text-sm font-semibold ${
-                        row.type === 'bonus'
-                          ? 'text-emerald-600 dark:text-emerald-300'
-                          : 'text-rose-600 dark:text-rose-300'
-                      }`}
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
                     >
-                      {row.type === 'bonus' ? '−' : '+'}
-                      {formatAdjustmentDuration(row.seconds)}
-                    </p>
+                      <path
+                        d="M3 6h14"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M6 6l.7 9.2A1.5 1.5 0 0 0 8.2 16.6h3.6a1.5 1.5 0 0 0 1.5-1.4L14 6"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M8 6V4.8c0-.45.35-.8.8-.8h2.4c.45 0 .8.35.8.8V6"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M8.8 8.5v5M11.2 8.5v5"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAdjustmentEditor(row)}
+                    disabled={isSavingTeamAdjustments}
+                    className="absolute inline-flex items-center justify-center transition border rounded-lg right-11 top-2 h-7 w-7 border-cyan-200 bg-cyan-50 text-cyan-600 hover:border-cyan-400 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-400/65 dark:hover:bg-cyan-500/20"
+                    aria-label="Редактировать корректировку"
+                    title="Редактировать корректировку"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M4 13.5V16h2.5L15 7.5l-2.5-2.5L4 13.5z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M11.5 5l2.5 2.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+
+                  <div className="space-y-1">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                        {String(row.name || '').trim() ||
+                          `Корректировка #${index + 1}`}
+                      </p>
+                    </div>
+                    <div>
+                      <p
+                        className={`text-sm font-semibold ${
+                          row.type === 'bonus'
+                            ? 'text-emerald-600 dark:text-emerald-300'
+                            : 'text-rose-600 dark:text-rose-300'
+                        }`}
+                      >
+                        {row.type === 'bonus' ? '−' : '+'}
+                        {formatAdjustmentDuration(row.seconds)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
           <div>
             <button
