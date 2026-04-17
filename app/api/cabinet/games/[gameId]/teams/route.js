@@ -828,7 +828,7 @@ export async function PATCH(request, { params }) {
         _id: gameTeamId,
         gameId: normalizedResolvedGameId,
       })
-        .select({ _id: 1, timeAddings: 1 })
+        .select({ _id: 1, teamId: 1, timeAddings: 1 })
         .lean()
 
       if (!currentGameTeam?._id) {
@@ -856,6 +856,27 @@ export async function PATCH(request, { params }) {
 
       const currentResult =
         game?.result && typeof game.result === 'object' ? game.result : {}
+      const currentGameTeamTeamId = toStringId(currentGameTeam?.teamId)
+      const snapshotGameTeams = Array.isArray(currentResult?.gameTeams)
+        ? currentResult.gameTeams.map((entry) => {
+            const entryId = toStringId(entry?._id ?? entry?.id)
+            const entryTeamId = toStringId(entry?.teamId)
+            const isSameEntry =
+              (entryId && entryId === gameTeamId) ||
+              (currentGameTeamTeamId &&
+                entryTeamId &&
+                entryTeamId === currentGameTeamTeamId)
+
+            if (!isSameEntry) {
+              return entry
+            }
+
+            return {
+              ...entry,
+              timeAddings: nextTimeAddings,
+            }
+          })
+        : null
       const shouldRebuildResult = ['finished', 'closed'].includes(
         String(game?.status || '')
           .trim()
@@ -868,9 +889,25 @@ export async function PATCH(request, { params }) {
 
       if (shouldRebuildResult) {
         try {
-          const built = await buildGameResultComputed({ game })
+          const gameForRebuild =
+            Array.isArray(snapshotGameTeams) && snapshotGameTeams.length > 0
+              ? {
+                  ...game,
+                  result: {
+                    ...currentResult,
+                    gameTeams: snapshotGameTeams,
+                  },
+                }
+              : game
+
+          const built = await buildGameResultComputed({ game: gameForRebuild })
           const nextResult = {
-            ...currentResult,
+            ...(gameForRebuild?.result && typeof gameForRebuild.result === 'object'
+              ? gameForRebuild.result
+              : currentResult),
+            ...(Array.isArray(snapshotGameTeams) && snapshotGameTeams.length > 0
+              ? { gameTeams: snapshotGameTeams }
+              : {}),
             teamsPlaces: built.teamsPlaces,
             computed: built.computed,
           }
@@ -905,7 +942,19 @@ export async function PATCH(request, { params }) {
           if (rebuildError?.code !== 'RESULT_SNAPSHOTS_MISSING') {
             throw rebuildError
           }
+
+          if (Array.isArray(snapshotGameTeams) && snapshotGameTeams.length > 0) {
+            await GamesModel.updateOne(
+              { _id: normalizedResolvedGameId },
+              { $set: { 'result.gameTeams': snapshotGameTeams } },
+            )
+          }
         }
+      } else if (Array.isArray(snapshotGameTeams) && snapshotGameTeams.length > 0) {
+        await GamesModel.updateOne(
+          { _id: normalizedResolvedGameId },
+          { $set: { 'result.gameTeams': snapshotGameTeams } },
+        )
       }
 
       return NextResponse.json(
