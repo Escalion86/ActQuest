@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import Modal from '@components/Modal'
 import AmountStepperInput from '@components/cabinet/AmountStepperInput'
 import CabinetButton from '@components/cabinet/CabinetButton'
+import CabinetDurationField from '@components/cabinet/CabinetDurationField'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
@@ -790,31 +791,27 @@ const GameEditModal = ({
               Настройки заданий и подсказок
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
-              <CabinetNumberField
+              <CabinetDurationField
                 id="game-task-duration"
-                label="Продолжительность задания (мин)"
-                min="0"
-                value={toMinutes(selectedGame.taskDuration)}
-                onChange={(event) =>
+                label="Продолжительность задания"
+                valueSeconds={selectedGame.taskDuration}
+                onChangeSeconds={(nextSeconds) =>
                   updateSelectedGame({
-                    taskDuration: toSeconds(event.target.value),
+                    taskDuration: nextSeconds,
                   })
                 }
-                inputClassName={fieldInputClassName}
                 labelClassName={fieldLabelClassName}
               />
               <div>
-                <CabinetNumberField
+                <CabinetDurationField
                   id="game-clues-duration"
-                  label="Время до подсказки (мин)"
-                  min="0"
-                  value={toMinutes(selectedGame.cluesDuration)}
-                  onChange={(event) =>
+                  label="Время до подсказки"
+                  valueSeconds={selectedGame.cluesDuration}
+                  onChangeSeconds={(nextSeconds) =>
                     updateSelectedGame({
-                      cluesDuration: toSeconds(event.target.value),
+                      cluesDuration: nextSeconds,
                     })
                   }
-                  inputClassName={fieldInputClassName}
                   labelClassName={fieldLabelClassName}
                 />
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
@@ -842,63 +839,65 @@ const GameEditModal = ({
                   </option>
                 ))}
               </CabinetSelectField>
-              <CabinetNumberField
+              <CabinetDurationField
                 id="game-clue-penalty"
                 label={
                   selectedGame.clueEarlyAccessMode === 'penalty'
-                    ? 'Штраф за досрочную подсказку (мин)'
-                    : 'Дополнительное время после подсказки (мин)'
+                    ? 'Штраф за досрочную подсказку'
+                    : 'Дополнительное время после подсказки'
                 }
-                min="0"
-                value={toMinutes(selectedGame.clueEarlyPenalty)}
-                onChange={(event) =>
+                valueSeconds={selectedGame.clueEarlyPenalty}
+                onChangeSeconds={(nextSeconds) =>
                   updateSelectedGame({
-                    clueEarlyPenalty: toSeconds(event.target.value),
+                    clueEarlyPenalty: nextSeconds,
                   })
                 }
-                inputClassName={fieldInputClassName}
                 labelClassName={fieldLabelClassName}
               />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <CabinetNumberField
+              <CabinetDurationField
                 id="game-break-duration"
-                label="Перерыв между заданиями (мин)"
-                min="0"
-                value={toMinutes(selectedGame.breakDuration)}
-                onChange={(event) =>
+                label="Перерыв между заданиями"
+                valueSeconds={selectedGame.breakDuration}
+                onChangeSeconds={(nextSeconds) =>
                   updateSelectedGame({
-                    breakDuration: toSeconds(event.target.value),
+                    breakDuration: nextSeconds,
                   })
                 }
-                inputClassName={fieldInputClassName}
                 labelClassName={fieldLabelClassName}
               />
-              <CabinetNumberField
-                id="game-task-penalty"
-                label={
-                  selectedGame.type === 'photo'
-                    ? 'Штраф за невыполненное задание (баллы)'
-                    : 'Штраф за невыполненное задание (мин)'
-                }
-                min="0"
-                value={
-                  selectedGame.type === 'photo'
-                    ? Number(selectedGame.taskFailurePenalty) || 0
-                    : toMinutes(selectedGame.taskFailurePenalty)
-                }
-                onChange={(event) =>
-                  updateSelectedGame({
-                    taskFailurePenalty:
-                      selectedGame.type === 'photo'
-                        ? Math.max(0, Number(event.target.value) || 0)
-                        : toSeconds(event.target.value),
-                  })
-                }
-                inputClassName={fieldInputClassName}
-                labelClassName={fieldLabelClassName}
-              />
+              {selectedGame.type === 'photo' ? (
+                <CabinetNumberField
+                  id="game-task-penalty"
+                  label="Штраф за невыполненное задание (баллы)"
+                  min="0"
+                  value={Number(selectedGame.taskFailurePenalty) || 0}
+                  onChange={(event) =>
+                    updateSelectedGame({
+                      taskFailurePenalty: Math.max(
+                        0,
+                        Number(event.target.value) || 0,
+                      ),
+                    })
+                  }
+                  inputClassName={fieldInputClassName}
+                  labelClassName={fieldLabelClassName}
+                />
+              ) : (
+                <CabinetDurationField
+                  id="game-task-penalty"
+                  label="Штраф за невыполненное задание"
+                  valueSeconds={selectedGame.taskFailurePenalty}
+                  onChangeSeconds={(nextSeconds) =>
+                    updateSelectedGame({
+                      taskFailurePenalty: nextSeconds,
+                    })
+                  }
+                  labelClassName={fieldLabelClassName}
+                />
+              )}
             </div>
 
             {selectedGame.type !== 'photo' && (
@@ -919,20 +918,18 @@ const GameEditModal = ({
                   inputClassName={fieldInputClassName}
                   labelClassName={fieldLabelClassName}
                 />
-                <CabinetNumberField
+                <CabinetDurationField
                   id="game-many-codes-penalty"
-                  label="Штраф за превышение лимита (мин)"
-                  min="0"
-                  value={toMinutes(selectedGame.manyCodesPenalty?.[1] ?? 0)}
-                  onChange={(event) =>
+                  label="Штраф за превышение лимита"
+                  valueSeconds={selectedGame.manyCodesPenalty?.[1] ?? 0}
+                  onChangeSeconds={(nextSeconds) =>
                     updateSelectedGame({
                       manyCodesPenalty: [
                         selectedGame.manyCodesPenalty?.[0] ?? 0,
-                        toSeconds(event.target.value),
+                        nextSeconds,
                       ],
                     })
                   }
-                  inputClassName={fieldInputClassName}
                   labelClassName={fieldLabelClassName}
                 />
               </div>
@@ -1731,21 +1728,87 @@ const GameEditModal = ({
                             placeholder="Кратко опишите логику разгадки для разбора после игры"
                           />
 
-                          <CabinetTextareaField
-                            id={`task-post-message-${task.id}`}
-                            label="Сообщение после выполнения"
-                            rows={3}
-                            value={task.postMessage}
-                            onChange={(event) =>
-                              handleTaskFieldChange(
-                                task.id,
-                                'postMessage',
-                                event.target.value,
-                              )
-                            }
-                            labelClassName={fieldLabelClassName}
-                            textareaClassName={fieldInputClassName}
-                          />
+                          <div className="space-y-2">
+                            <p className={fieldLabelClassName}>
+                              Сообщение после выполнения
+                            </p>
+                            <TaskRichEditor
+                              value={
+                                task.postMessageRich || task.postMessage || ''
+                              }
+                              directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/post-message/editor`}
+                              contentMaxHeight="none"
+                              disabled={!canEditSelectedGame || isSaving}
+                              placeholder="Введите сообщение, которое команда увидит после выполнения задания."
+                              onChange={({ html, plainText, media }) => {
+                                const nextPostMessage =
+                                  plainText ||
+                                  stripHtmlToPlainText(html || '')
+                                const nextPostMessageRich =
+                                  typeof html === 'string' ? html : ''
+                                const currentPostMessage =
+                                  typeof task.postMessage === 'string'
+                                    ? task.postMessage
+                                    : ''
+                                const currentPostMessageRich =
+                                  typeof task.postMessageRich === 'string'
+                                    ? task.postMessageRich
+                                    : ''
+                                const currentPostMessageMedia = Array.isArray(
+                                  task.postMessageMedia,
+                                )
+                                  ? task.postMessageMedia
+                                  : []
+                                const nextPostMessageMedia = Array.isArray(media)
+                                  ? media
+                                  : []
+
+                                const isSamePostMessage =
+                                  normalizeComparablePlainText(
+                                    nextPostMessage,
+                                  ) ===
+                                  normalizeComparablePlainText(
+                                    currentPostMessage,
+                                  )
+                                const isSamePostMessageRich =
+                                  normalizeComparableRichText(
+                                    nextPostMessageRich,
+                                    nextPostMessage,
+                                  ) ===
+                                  normalizeComparableRichText(
+                                    currentPostMessageRich,
+                                    currentPostMessage,
+                                  )
+                                const isSamePostMessageMedia =
+                                  JSON.stringify(nextPostMessageMedia) ===
+                                  JSON.stringify(currentPostMessageMedia)
+
+                                if (
+                                  isSamePostMessage &&
+                                  isSamePostMessageRich &&
+                                  isSamePostMessageMedia
+                                ) {
+                                  return
+                                }
+
+                                handleTaskFieldChange(
+                                  task.id,
+                                  'postMessageRich',
+                                  nextPostMessageRich,
+                                )
+                                handleTaskFieldChange(
+                                  task.id,
+                                  'postMessage',
+                                  nextPostMessage,
+                                )
+                                handleTaskFieldChange(
+                                  task.id,
+                                  'postMessageMedia',
+                                  nextPostMessageMedia,
+                                )
+                              }}
+                            />
+                          </div>
 
                           <div>
                             <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
@@ -2193,25 +2256,21 @@ const GameEditModal = ({
                                                 compactInputClassName
                                               }
                                             />
-                                            <CabinetNumberField
+                                            <CabinetDurationField
                                               id={`task-penalty-value-${penalty.id}`}
                                               label="Штраф"
-                                              min="0"
-                                              value={penalty.penalty ?? 0}
-                                              onChange={(event) =>
+                                              valueSeconds={penalty.penalty ?? 0}
+                                              onChangeSeconds={(nextSeconds) =>
                                                 handlePenaltyCodeChange(
                                                   task.id,
                                                   penalty.id,
                                                   'penalty',
-                                                  event.target.value,
+                                                  nextSeconds,
                                                 )
                                               }
-                                              containerClassName="space-y-1"
+                                              containerClassName="space-y-1 md:col-span-2"
                                               labelClassName={
                                                 compactLabelClassName
-                                              }
-                                              inputClassName={
-                                                compactInputClassName
                                               }
                                             />
                                           </div>
@@ -2413,25 +2472,21 @@ const GameEditModal = ({
                                               compactInputClassName
                                             }
                                           />
-                                          <CabinetNumberField
+                                          <CabinetDurationField
                                             id={`task-bonus-value-${bonus.id}`}
                                             label="Бонус"
-                                            min="0"
-                                            value={bonus.bonus ?? 0}
-                                            onChange={(event) =>
+                                            valueSeconds={bonus.bonus ?? 0}
+                                            onChangeSeconds={(nextSeconds) =>
                                               handleBonusCodeChange(
                                                 task.id,
                                                 bonus.id,
                                                 'bonus',
-                                                event.target.value,
+                                                nextSeconds,
                                               )
                                             }
-                                            containerClassName="space-y-1"
+                                            containerClassName="space-y-1 md:col-span-2"
                                             labelClassName={
                                               compactLabelClassName
-                                            }
-                                            inputClassName={
-                                              compactInputClassName
                                             }
                                           />
                                         </div>

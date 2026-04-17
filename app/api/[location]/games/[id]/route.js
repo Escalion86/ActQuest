@@ -83,6 +83,16 @@ const sanitizeTasksRichContent = (tasks = []) =>
         clueRich,
       }
     }),
+    postMessageRich:
+      typeof task?.postMessageRich === 'string' &&
+      task.postMessageRich.trim().length > 0
+        ? sanitize(task.postMessageRich)
+        : '',
+    postMessage:
+      typeof task?.postMessage === 'string' && task.postMessage.trim().length > 0
+        ? task.postMessage.trim()
+        : stripHtmlToPlainText(task?.postMessageRich),
+    postMessageMedia: sanitizeTaskMedia(task?.postMessageMedia),
     taskMedia: sanitizeTaskMedia(task?.taskMedia),
   }))
 

@@ -155,6 +155,13 @@ const buildError = (code, extra = {}) => ({
 
 const safeSerialize = (value) => JSON.parse(JSON.stringify(value))
 const sanitizeFragment = (value) => sanitize(String(value || ''))
+const getTaskPostCompletionMessage = (task) => {
+  const rich =
+    typeof task?.postMessageRich === 'string' ? task.postMessageRich.trim() : ''
+  const plain = typeof task?.postMessage === 'string' ? task.postMessage.trim() : ''
+  const source = rich || plain
+  return source ? sanitizeFragment(source) : ''
+}
 
 // Безопасная проекция game для клиента — БЕЗ ответов/кодов/подсказок
 const safeSerializeGameForClient = (game) => {
@@ -355,8 +362,9 @@ const computeTaskHtml = async ({
           `<br /><br /><b>Точка сбора:</b> ${finishingPlace}`,
         )
       }
-      if (lastTask?.postMessage) {
-        postCompletionMessage = sanitizeFragment(lastTask.postMessage)
+      const lastTaskPostMessage = getTaskPostCompletionMessage(lastTask)
+      if (lastTaskPostMessage) {
+        postCompletionMessage = lastTaskPostMessage
       }
       taskHtml = completionParts.join('')
       taskState = 'completed'
@@ -415,9 +423,9 @@ const computeTaskHtml = async ({
       }
 
       if (breakSecondsLeft !== null) {
-        const postMessage = tasks[activeTaskIndex]?.postMessage
+        const postMessage = getTaskPostCompletionMessage(tasks[activeTaskIndex])
         if (postMessage) {
-          postCompletionMessage = sanitizeFragment(postMessage)
+          postCompletionMessage = postMessage
         }
         const breakTargetTimestamp = Date.now() + breakSecondsLeft * 1000
         const hiddenBreakCountdown = `<span style="display:none" aria-hidden="true"><span data-task-countdown="break" data-refresh-on-complete="true" data-target="${breakTargetTimestamp}" data-seconds="${Math.max(Math.floor(breakSecondsLeft), 0)}"></span></span>`
@@ -492,8 +500,9 @@ const computeTaskHtml = async ({
 
         if (activeTaskIndex > 0) {
           const previousTask = tasks[activeTaskIndex - 1] ?? null
-          if (previousTask?.postMessage) {
-            postCompletionMessage = sanitizeFragment(previousTask.postMessage)
+          const previousPostMessage = getTaskPostCompletionMessage(previousTask)
+          if (previousPostMessage) {
+            postCompletionMessage = previousPostMessage
           }
         }
       }
@@ -507,8 +516,9 @@ const computeTaskHtml = async ({
     if (finishingPlace) {
       completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)
     }
-    if (lastTask?.postMessage) {
-      postCompletionMessage = sanitizeFragment(lastTask.postMessage)
+    const lastTaskPostMessage = getTaskPostCompletionMessage(lastTask)
+    if (lastTaskPostMessage) {
+      postCompletionMessage = lastTaskPostMessage
     }
     taskHtml = completionParts.join('')
     taskState = 'completed'

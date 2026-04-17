@@ -47,6 +47,11 @@ const normalizeTaskForPreview = (task) => ({
     : [],
   bonusCodes: Array.isArray(task?.bonusCodes) ? task.bonusCodes : [],
   penaltyCodes: Array.isArray(task?.penaltyCodes) ? task.penaltyCodes : [],
+  postMessage: normalizeString(task?.postMessage),
+  postMessageRich: normalizeString(task?.postMessageRich),
+  postMessageMedia: Array.isArray(task?.postMessageMedia)
+    ? task.postMessageMedia
+    : [],
 })
 
 const toFiniteNonNegativeIntegerOrNull = (value) => {
@@ -196,6 +201,10 @@ export async function GET(request) {
             index: safeTaskIndex,
             title: normalizeString(task.title),
             postMessage: normalizeString(task.postMessage),
+            postMessageRich: normalizeString(task.postMessageRich),
+            postMessageMedia: Array.isArray(task.postMessageMedia)
+              ? task.postMessageMedia
+              : [],
             cluesCount: clues.length,
             displayMeta: buildTaskDisplayMeta(task),
           },

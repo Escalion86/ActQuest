@@ -148,6 +148,10 @@ export default function GameTaskPreviewPageClient() {
             index: safeTaskIndex,
             title: String(task?.title || ''),
             postMessage: String(task?.postMessage || ''),
+            postMessageRich: String(task?.postMessageRich || ''),
+            postMessageMedia: Array.isArray(task?.postMessageMedia)
+              ? task.postMessageMedia
+              : [],
             cluesCount: clues.length,
             displayMeta: buildTaskDisplayMeta(task),
           },
@@ -207,7 +211,12 @@ export default function GameTaskPreviewPageClient() {
     () => (Array.isArray(selectedVariant?.clues) ? selectedVariant.clues : []),
     [selectedVariant],
   )
-  const hasPostMessage = Boolean(String(data?.task?.postMessage || '').trim())
+  const postMessageHtml = useMemo(
+    () =>
+      String(data?.task?.postMessageRich || data?.task?.postMessage || '').trim(),
+    [data?.task?.postMessage, data?.task?.postMessageRich],
+  )
+  const hasPostMessage = Boolean(postMessageHtml)
 
   const canGoPrev = taskIndex > 0
   const canGoNext =
@@ -365,7 +374,7 @@ export default function GameTaskPreviewPageClient() {
             </h3>
             <div className="mt-4">
               <RichTaskContentView
-                html={String(data?.task?.postMessage || '')}
+                html={postMessageHtml}
                 text=""
                 className="text-base leading-relaxed text-purple-100"
                 textClassName="text-base leading-relaxed text-purple-100"

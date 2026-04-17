@@ -290,6 +290,8 @@ const createTask = () => ({
   bonusCodes: [],
   numCodesToCompliteTask: null,
   postMessage: '',
+  postMessageRich: '',
+  postMessageMedia: [],
   canceled: false,
   isBonusTask: false,
 })
@@ -437,6 +439,11 @@ const normalizePayloadForComparison = (payload) => {
     task: normalizePlainTextForComparison(task?.task || ''),
     howToSolve: normalizePlainTextForComparison(task?.howToSolve || ''),
     taskRich: normalizeRichTextForComparison(task?.taskRich, task?.task),
+    postMessage: normalizePlainTextForComparison(task?.postMessage || ''),
+    postMessageRich: normalizeRichTextForComparison(
+      task?.postMessageRich,
+      task?.postMessage,
+    ),
     clues: (Array.isArray(task?.clues) ? task.clues : []).map((clue) => ({
       ...clue,
       clue: normalizePlainTextForComparison(clue?.clue || ''),
@@ -652,7 +659,35 @@ const buildUpdatePayload = (game) => {
         return normalizedBonus
       }),
       numCodesToCompliteTask: toNullableNumber(task.numCodesToCompliteTask),
-      postMessage: typeof task.postMessage === 'string' ? task.postMessage : '',
+      postMessage:
+        typeof task.postMessage === 'string' && task.postMessage.trim() !== ''
+          ? task.postMessage
+          : stripHtmlToPlainText(task.postMessageRich),
+      postMessageRich:
+        typeof task.postMessageRich === 'string' ? task.postMessageRich : '',
+      postMessageMedia: (Array.isArray(task.postMessageMedia)
+        ? task.postMessageMedia
+        : []
+      )
+        .map((media, index) => ({
+          id:
+            typeof media?.id === 'string' && media.id.trim() !== ''
+              ? media.id.trim()
+              : `task-post-message-media-${index}`,
+          type:
+            media?.type === 'audio'
+              ? 'audio'
+              : media?.type === 'video'
+                ? 'video'
+                : 'image',
+          url: typeof media?.url === 'string' ? media.url.trim() : '',
+          mime: typeof media?.mime === 'string' ? media.mime.trim() : '',
+          size: Number(media?.size) || 0,
+          duration: Number(media?.duration) || 0,
+          path: typeof media?.path === 'string' ? media.path.trim() : '',
+          title: typeof media?.title === 'string' ? media.title.trim() : '',
+        }))
+        .filter((media) => media.url !== ''),
       canceled: Boolean(task.canceled),
       isBonusTask: Boolean(task.isBonusTask),
     }
@@ -7086,6 +7121,8 @@ GamesPage.propTypes = {
           bonusCodes: PropTypes.arrayOf(bonusCodeShape),
           numCodesToCompliteTask: PropTypes.number,
           postMessage: PropTypes.string,
+          postMessageRich: PropTypes.string,
+          postMessageMedia: PropTypes.arrayOf(taskMediaShape),
           canceled: PropTypes.bool,
           isBonusTask: PropTypes.bool,
         }),

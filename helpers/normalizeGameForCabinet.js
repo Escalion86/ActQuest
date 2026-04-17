@@ -311,6 +311,8 @@ const normalizeTasks = (tasks = []) => {
     bonusCodes: normalizeBonusCodes(task?.bonusCodes),
     numCodesToCompliteTask: ensureNullableNumber(task?.numCodesToCompliteTask),
     postMessage: ensureString(task?.postMessage, ''),
+    postMessageRich: ensureString(task?.postMessageRich, ''),
+    postMessageMedia: normalizeTaskMedia(task?.postMessageMedia),
     canceled: ensureBoolean(task?.canceled, false),
     isBonusTask: ensureBoolean(task?.isBonusTask, false),
     }

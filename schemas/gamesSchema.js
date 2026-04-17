@@ -193,6 +193,29 @@ const gamesSchema = {
           default: '',
           trim: true,
         },
+        postMessageRich: {
+          type: String,
+          default: '',
+        },
+        postMessageMedia: {
+          type: [
+            {
+              id: { type: String, trim: true },
+              type: {
+                type: String,
+                enum: ['image', 'audio', 'video'],
+                default: 'image',
+              },
+              url: { type: String, trim: true, default: '' },
+              mime: { type: String, trim: true, default: '' },
+              size: { type: Number, default: 0 },
+              duration: { type: Number, default: 0 },
+              path: { type: String, trim: true, default: '' },
+              title: { type: String, trim: true, default: '' },
+            },
+          ],
+          default: [],
+        },
         canceled: {
           type: Boolean,
           default: false,
