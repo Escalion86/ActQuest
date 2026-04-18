@@ -1075,19 +1075,6 @@ const GameEditModal = ({
                           ? 'border-cyan-500 ring-1 ring-cyan-500/40 dark:border-cyan-400 dark:ring-cyan-400/40'
                           : 'border-slate-200 dark:border-slate-700'
                       }`}
-                      draggable={canDragTask}
-                      onDragStart={(event) => {
-                        if (!canDragTask) {
-                          event.preventDefault()
-                          return
-                        }
-                        setDraggedTaskId(task.id)
-                        event.dataTransfer.effectAllowed = 'move'
-                        event.dataTransfer.setData(
-                          'text/plain',
-                          String(task.id),
-                        )
-                      }}
                       onDragEnd={() => {
                         setDraggedTaskId(null)
                         setDragOverTaskId(null)
