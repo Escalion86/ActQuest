@@ -5504,7 +5504,8 @@ const GamesPage = ({
       const canManageStatusThisGame =
         canEditAllGames && canManageGameStatus(game)
       const canBroadcastThisGame =
-        canManageThisGame && !isGameInProgressStatus(game.status)
+        canManageThisGame &&
+        (isActiveGameStatus(game.status) || isGameInProgressStatus(game.status))
       const canViewThisGameResults = canViewResultsForGame(game)
       const canGenerateThisGameResults = canGenerateResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
@@ -5888,7 +5889,8 @@ const GamesPage = ({
       const canManageStatusThisGame =
         canEditAllGames && canManageGameStatus(game)
       const canBroadcastThisGame =
-        canManageThisGame && !isGameInProgressStatus(game.status)
+        canManageThisGame &&
+        (isActiveGameStatus(game.status) || isGameInProgressStatus(game.status))
       const canViewThisGameResults = canViewResultsForGame(game)
       const canGenerateThisGameResults = canGenerateResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
