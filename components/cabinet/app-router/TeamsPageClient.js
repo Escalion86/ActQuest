@@ -128,6 +128,7 @@ const TeamsPage = ({
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
+  const [isAddingMember, setIsAddingMember] = useState(false)
   const [newTeamName, setNewTeamName] = useState('')
   const [newTeamDescription, setNewTeamDescription] = useState('')
   const [newTeamImage, setNewTeamImage] = useState('')
@@ -959,6 +960,81 @@ const TeamsPage = ({
     [canManageSelectedTeam, selectedTeam, selectedTeamId, snackbar],
   )
 
+  const handleAddMember = useCallback(
+    async (userId, userOption) => {
+      if (!selectedTeam || !canManageSelectedTeam || !userId) {
+        return
+      }
+
+      setIsAddingMember(true)
+
+      try {
+        const { json } = await requestApiJson(CABINET_TEAM_MEMBERS_API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: {
+              teamId: selectedTeam.id,
+              targetUserId: userId,
+              role: 'participant',
+            },
+          }),
+          fallbackMessage: 'Не удалось добавить участника',
+        })
+
+        const newMember = json?.data?.member
+          ? {
+              id: String(json.data.member.id),
+              userId: String(
+                json.data.member.userId || json.data.member.id || '',
+              ),
+              telegramId: normalizeTelegramId(json.data.member.telegramId),
+              name: json.data.member.name || userOption?.title || 'Без имени',
+              username: json.data.member.username || null,
+              phone: null,
+              userRole: null,
+              role: 'participant',
+              isCaptain: false,
+              hasLinkedUser: true,
+            }
+          : null
+
+        const patchTeam = (team) => {
+          const updatedMembers = newMember
+            ? [...(team.members ?? []), newMember]
+            : team.members ?? []
+          return {
+            ...team,
+            members: updatedMembers,
+            membersCount: updatedMembers.length,
+            captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+          }
+        }
+
+        setTeams((prevTeams) =>
+          prevTeams.map((team) =>
+            team.id === selectedTeamId ? patchTeam(team) : team,
+          ),
+        )
+        setPersistedTeams((prevTeams) =>
+          prevTeams.map((team) =>
+            team.id === selectedTeamId ? patchTeam(team) : team,
+          ),
+        )
+
+        snackbar.success(
+          `«${userOption?.title || 'Участник'}» добавлен в команду`,
+        )
+      } catch (error) {
+        console.error('Failed to add team member', error)
+        snackbar.error(error?.message || 'Не удалось добавить участника')
+      } finally {
+        setIsAddingMember(false)
+      }
+    },
+    [canManageSelectedTeam, selectedTeam, selectedTeamId, snackbar],
+  )
+
   const teamRestrictionMessage = useMemo(() => {
     if (!selectedTeam || canManageSelectedTeam) {
       return null
@@ -1377,6 +1453,8 @@ const TeamsPage = ({
           memberActionId={memberActionId}
           onSetCaptain={handleSetCaptain}
           onRemoveMember={handleRemoveMember}
+          onAddMember={handleAddMember}
+          isAddingMember={isAddingMember}
           canDeleteTeam={canDeleteSelectedTeam}
           isDeletingTeam={isDeletingTeam}
           onDeleteTeam={handleDeleteSelectedTeam}
