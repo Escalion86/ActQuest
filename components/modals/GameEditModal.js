@@ -227,6 +227,7 @@ const GameEditModal = ({
   )
   const [draggedTaskId, setDraggedTaskId] = useState(null)
   const [dragOverTaskId, setDragOverTaskId] = useState(null)
+  const [dragGhostPosition, setDragGhostPosition] = useState(null)
   const touchDragStateRef = useRef({
     active: false,
     pointerId: null,
@@ -293,6 +294,7 @@ const GameEditModal = ({
     }
     setDraggedTaskId(null)
     setDragOverTaskId(null)
+    setDragGhostPosition(null)
   }, [])
 
   const resolveTouchDragTargetTaskId = useCallback(
@@ -328,6 +330,7 @@ const GameEditModal = ({
       }
       setDraggedTaskId(String(taskId))
       setDragOverTaskId(null)
+      setDragGhostPosition({ x: event.clientX, y: event.clientY })
       if (event.currentTarget?.setPointerCapture) {
         try {
           event.currentTarget.setPointerCapture(event.pointerId)
@@ -345,6 +348,7 @@ const GameEditModal = ({
       if (!dragState.active || dragState.pointerId !== event.pointerId) {
         return
       }
+      setDragGhostPosition({ x: event.clientX, y: event.clientY })
 
       const targetTaskId = resolveTouchDragTargetTaskId(
         event.clientX,
@@ -397,6 +401,10 @@ const GameEditModal = ({
       handleReorderTask(sourceIndex, targetIndex)
     },
     [handleReorderTask, isTaskReorderLocked, resetTouchTaskDragState, selectedGame?.tasks],
+  )
+
+  const draggedTaskGhost = (selectedGame?.tasks || []).find(
+    (task) => String(task?.id) === String(draggedTaskId || ''),
   )
 
   const modalFooter = (
@@ -3166,6 +3174,38 @@ const GameEditModal = ({
             </div>
           </ModalSection>
         )}
+        {draggedTaskGhost && dragGhostPosition ? (
+          <div
+            className="pointer-events-none fixed z-[140] w-[190px] overflow-hidden rounded-lg border border-cyan-400/50 bg-slate-900/80 px-0 py-0 shadow-xl ring-1 ring-cyan-400/20 backdrop-blur-[1px]"
+            style={{
+              left: `${dragGhostPosition.x}px`,
+              top: `${dragGhostPosition.y}px`,
+              transform: 'translate(18px, -50%)',
+            }}
+            aria-hidden="true"
+          >
+            <div className="flex items-center">
+              <div className="inline-flex h-10 w-8 shrink-0 items-center justify-center border-r border-cyan-400/30 bg-slate-800/70 text-cyan-200">
+                <svg viewBox="0 0 20 20" className="h-4 w-4">
+                  <circle cx="7" cy="6" r="1.1" fill="currentColor" />
+                  <circle cx="13" cy="6" r="1.1" fill="currentColor" />
+                  <circle cx="7" cy="10" r="1.1" fill="currentColor" />
+                  <circle cx="13" cy="10" r="1.1" fill="currentColor" />
+                  <circle cx="7" cy="14" r="1.1" fill="currentColor" />
+                  <circle cx="13" cy="14" r="1.1" fill="currentColor" />
+                </svg>
+              </div>
+              <div className="min-w-0 px-2 py-1.5">
+                <div className="truncate text-[10px] font-semibold uppercase tracking-wide text-cyan-200/90">
+                  Задание
+                </div>
+                <div className="truncate text-xs font-semibold text-white/95">
+                  {draggedTaskGhost?.title || 'Без названия'}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </fieldset>
     </Modal>
   )
