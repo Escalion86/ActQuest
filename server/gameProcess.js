@@ -90,7 +90,7 @@ const teamGameStart = async (gameTeam, game, GamesTeams) => {
   })
 }
 
-async function gameProcess({ telegramId, jsonCommand, location, db }) {
+async function gameProcess({ telegramId, userId, jsonCommand, location, db }) {
   const checkData = check(jsonCommand, ['gameTeamId'])
   if (checkData) return checkData
 
@@ -126,14 +126,34 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
 
   const teamUsers = await TeamsUsers.find({ teamId: gameTeam.teamId })
 
-  const getTeamUserByTelegramId = (id) =>
-    teamUsers.find(
-      ({ userTelegramId }) => String(userTelegramId) === String(id)
-    )
+  const normalizedUserId =
+    userId !== null && userId !== undefined ? String(userId).trim() : ''
+  const normalizedTelegramId =
+    telegramId !== null && telegramId !== undefined
+      ? String(telegramId).trim()
+      : ''
 
-  const currentTeamUser = getTeamUserByTelegramId(telegramId)
+  const currentTeamUser = teamUsers.find((teamUser) => {
+    if (
+      normalizedUserId &&
+      teamUser?.userId !== null &&
+      teamUser?.userId !== undefined &&
+      String(teamUser.userId).trim() === normalizedUserId
+    ) {
+      return true
+    }
+    if (
+      normalizedTelegramId &&
+      teamUser?.userTelegramId !== null &&
+      teamUser?.userTelegramId !== undefined &&
+      String(teamUser.userTelegramId).trim() === normalizedTelegramId
+    ) {
+      return true
+    }
+    return false
+  })
   const isCaptain = isCaptainRole(currentTeamUser?.role)
-  const telegramIdStr = String(telegramId ?? '')
+  const telegramIdStr = normalizedTelegramId
 
   const {
     findedCodes,
@@ -563,9 +583,14 @@ async function gameProcess({ telegramId, jsonCommand, location, db }) {
   } = {}) => {
     if (!justStartedGame || !message) return
 
-    const recipients = teamUsers.filter(
-      ({ userTelegramId }) => String(userTelegramId) !== telegramIdStr
-    )
+    const recipients = teamUsers.filter((teamUser) => {
+      const recipientTelegramId =
+        teamUser?.userTelegramId !== null && teamUser?.userTelegramId !== undefined
+          ? String(teamUser.userTelegramId)
+          : ''
+      if (!recipientTelegramId) return false
+      return !telegramIdStr || recipientTelegramId !== telegramIdStr
+    })
 
     if (recipients.length === 0) return
 

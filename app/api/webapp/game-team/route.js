@@ -12,10 +12,16 @@ const normalizeLocation = (value) => {
 
 export async function GET(request) {
   const session = await getServerSession(authOptions)
+  const sessionUserId =
+    session?.user?.globalUserId || session?.user?.id || session?.user?._id || null
+  const sessionTelegramId =
+    session?.user?.telegramId !== null && session?.user?.telegramId !== undefined
+      ? Number(session.user.telegramId)
+      : null
 
-  if (!session?.user?.telegramId) {
+  if (!sessionUserId && !Number.isFinite(sessionTelegramId)) {
     return NextResponse.json(
-      { success: false, error: 'Необходимо войти через Telegram' },
+      { success: false, error: 'Необходимо войти в аккаунт' },
       { status: 401 },
     )
   }

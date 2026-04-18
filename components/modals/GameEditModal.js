@@ -1865,7 +1865,7 @@ const GameEditModal = ({
                                         return next
                                       })
                                     }}
-                                    className={`relative overflow-hidden rounded-2xl border bg-slate-50 p-2 transition dark:bg-slate-800/60 ${
+                                    className={`relative overflow-hidden rounded-2xl border bg-slate-50 p-0 transition dark:bg-slate-800/60 ${
                                       dragOverClueMeta &&
                                       String(dragOverClueMeta.taskId) ===
                                         String(task.id) &&
@@ -1956,7 +1956,15 @@ const GameEditModal = ({
                                       )
                                     }}
                                   >
-                                    <summary className="w-full max-w-full overflow-hidden text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
+                                    <summary
+                                      className={`relative w-full max-w-full min-h-[56px] overflow-hidden text-sm font-medium list-none cursor-pointer text-slate-700 marker:content-none dark:text-slate-100 ${
+                                        expandedClueAccordions.has(
+                                          `${task.id}-clue-${clue.id}`,
+                                        )
+                                          ? 'rounded-t-xl rounded-b-none'
+                                          : 'rounded-xl'
+                                      }`}
+                                    >
                                       <button
                                         type="button"
                                         draggable={
@@ -2067,8 +2075,8 @@ const GameEditModal = ({
                                       <div className="absolute top-0 left-8 shrink-0 rounded-br-full border-b border-r border-cyan-300/70 bg-cyan-100/70 px-3 py-0 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
                                         {`Подсказка ${clueIndex + 1}`}
                                       </div>
-                                      <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 py-1 pl-9">
-                                        <div className="flex items-center w-full max-w-full min-w-0 gap-2 mt-2 overflow-hidden">
+                                      <div className="grid h-full w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 pt-3 pb-2 pl-9">
+                                        <div className="mt-3 flex items-center w-full max-w-full min-w-0 gap-2 overflow-hidden">
                                           <span className="flex-1 block min-w-0 overflow-hidden">
                                             <span className="block w-full font-semibold truncate">
                                               {getClueText(clue) ||
@@ -2076,14 +2084,16 @@ const GameEditModal = ({
                                             </span>
                                           </span>
                                         </div>
-                                        <AccordionChevronIcon
-                                          isOpen={expandedClueAccordions.has(
-                                            `${task.id}-clue-${clue.id}`,
-                                          )}
-                                        />
+                                        <span className="inline-flex items-center justify-center self-center">
+                                          <AccordionChevronIcon
+                                            isOpen={expandedClueAccordions.has(
+                                              `${task.id}-clue-${clue.id}`,
+                                            )}
+                                          />
+                                        </span>
                                       </div>
                                     </summary>
-                                    <div className="mt-2 space-y-2">
+                                    <div className="mt-2 space-y-2 px-2 pb-2">
                                       <TaskRichEditor
                                         value={clue.clueRich || clue.clue || ''}
                                         directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}/editor`}

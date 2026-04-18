@@ -632,32 +632,28 @@ const getTeamGameTaskState = async ({
       })
     }
 
-    const actingTelegramId = telegramId
-
     let processResult = null
 
-    if (actingTelegramId) {
-      try {
-        processResult = await webGameProcess({
-          db,
-          game,
-          gameTeam,
-          gameTeamId: gameTeam._id,
-          message,
-        })
-        if (processResult) {
-          const updatedGameTeam = await gamesTeamsModel
-            .findById(gameTeam._id)
-            .lean()
-          if (updatedGameTeam) {
-            gameTeam = updatedGameTeam
-          }
+    try {
+      processResult = await webGameProcess({
+        db,
+        game,
+        gameTeam,
+        gameTeamId: gameTeam._id,
+        message,
+      })
+      if (processResult) {
+        const updatedGameTeam = await gamesTeamsModel
+          .findById(gameTeam._id)
+          .lean()
+        if (updatedGameTeam) {
+          gameTeam = updatedGameTeam
         }
-      } catch (processError) {
-        console.error('Game process execution error', processError)
-        processResult = {
-          message: 'Не удалось получить текущее состояние задания.',
-        }
+      }
+    } catch (processError) {
+      console.error('Game process execution error', processError)
+      processResult = {
+        message: 'Не удалось получить текущее состояние задания.',
       }
     }
 

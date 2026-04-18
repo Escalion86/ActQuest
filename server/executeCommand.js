@@ -9,6 +9,7 @@ import keyboardFormer from 'telegram/func/keyboardFormer'
 
 const lastCommandHandler = async (
   telegramId,
+  userId,
   jsonCommand,
   location,
   user,
@@ -19,6 +20,7 @@ const lastCommandHandler = async (
   let actualJsonCommand = { ...jsonCommand }
   const buildCommandArgs = (customJsonCommand = actualJsonCommand) => ({
     telegramId,
+    userId,
     jsonCommand: customJsonCommand,
     location,
     user,
@@ -58,6 +60,7 @@ const lastCommandHandler = async (
 
 const executeCommand = async ({
   userTelegramId,
+  userId,
   jsonCommand,
   // messageId,
   // callback_query,
@@ -72,6 +75,7 @@ const executeCommand = async ({
 
   const result = await lastCommandHandler(
     userTelegramId,
+    userId,
     jsonCommand,
     location,
     user,
@@ -121,6 +125,7 @@ const executeCommand = async ({
     if (typeof nextCommand === 'string') {
       return await executeCommand({
         userTelegramId,
+        userId,
         jsonCommand: { c: nextCommand },
         // messageId,
         // callback_query,
@@ -142,6 +147,7 @@ const executeCommand = async ({
     delete actualCommand.isDocument
     return await executeCommand({
       userTelegramId,
+      userId,
       jsonCommand: actualCommand,
       location,
       user,
@@ -156,21 +162,24 @@ const executeCommand = async ({
     delete actualCommand.isPhoto
     delete actualCommand.isVideo
     delete actualCommand.isDocument
-    const prevCommand = await actualDb.model('LastCommands').findOne({
-      userTelegramId,
-    })
-    // console.log('prevCommand :>> ', prevCommand)
-    await actualDb.model('LastCommands').findOneAndUpdate(
-      {
-        userTelegramId,
-      },
-      {
-        command: actualCommand,
-        prevCommand: prevCommand?.command,
-        // messageId,
-      },
-      { upsert: true }
-    )
+    const normalizedTelegramId = Number(userTelegramId)
+    if (Number.isFinite(normalizedTelegramId)) {
+      const prevCommand = await actualDb.model('LastCommands').findOne({
+        userTelegramId: normalizedTelegramId,
+      })
+      // console.log('prevCommand :>> ', prevCommand)
+      await actualDb.model('LastCommands').findOneAndUpdate(
+        {
+          userTelegramId: normalizedTelegramId,
+        },
+        {
+          command: actualCommand,
+          prevCommand: prevCommand?.command,
+          // messageId,
+        },
+        { upsert: true }
+      )
+    }
   }
 
   return sendResult

@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
-import TiptapContentView from '@components/cabinet/TiptapContentView'
+import RichTaskContentView from '@components/game/RichTaskContentView'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
 
@@ -382,13 +382,12 @@ const GameTasksViewModal = ({
                     <div>
                       <ModalSectionTitle>Описание задания</ModalSectionTitle>
                       <div className="mt-2">
-                        <TiptapContentView
+                        <RichTaskContentView
                           html={task?.taskRich}
                           text={task?.task}
-                          emptyText="Описание отсутствует."
                           className="text-sm leading-relaxed text-slate-700 dark:prose-invert dark:text-slate-200"
                           textClassName="text-sm leading-relaxed text-slate-700 dark:text-slate-200"
-                          emptyClassName="text-sm text-slate-500 dark:text-slate-300"
+                          directory={`games/tasks-view/${selectedGame?.id || 'draft'}/tasks/${taskId}/task`}
                         />
                       </div>
                     </div>
@@ -405,13 +404,12 @@ const GameTasksViewModal = ({
                               Подсказка {clueIndex + 1}
                             </p>
                             <div className="mt-1">
-                              <TiptapContentView
+                              <RichTaskContentView
                                 html={clue?.clueRich}
                                 text={clue?.clue}
-                                emptyText="Текст подсказки отсутствует."
                                 className="text-sm leading-relaxed text-slate-700 dark:prose-invert dark:text-slate-200"
                                 textClassName="text-sm leading-relaxed text-slate-700 dark:text-slate-200"
-                                emptyClassName="text-sm text-slate-500 dark:text-slate-300"
+                                directory={`games/tasks-view/${selectedGame?.id || 'draft'}/tasks/${taskId}/clues/${clueIndex}`}
                               />
                             </div>
                           </div>
@@ -430,12 +428,11 @@ const GameTasksViewModal = ({
                                 Как разгадать?
                               </ModalSectionTitle>
                               <div className="mt-1">
-                                <TiptapContentView
+                                <RichTaskContentView
                                   text={task.howToSolve}
-                                  emptyText="Описание разгадки не задано."
                                   className="text-sm leading-relaxed text-slate-700 dark:prose-invert dark:text-slate-200"
                                   textClassName="text-sm leading-relaxed text-slate-700 dark:text-slate-200"
-                                  emptyClassName="text-sm text-slate-500 dark:text-slate-300"
+                                  directory={`games/tasks-view/${selectedGame?.id || 'draft'}/tasks/${taskId}/how-to-solve`}
                                 />
                               </div>
                             </div>
