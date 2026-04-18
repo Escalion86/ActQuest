@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import dynamic from 'next/dynamic'
 
@@ -227,6 +227,12 @@ const GameEditModal = ({
   )
   const [draggedTaskId, setDraggedTaskId] = useState(null)
   const [dragOverTaskId, setDragOverTaskId] = useState(null)
+  const touchDragStateRef = useRef({
+    active: false,
+    pointerId: null,
+    sourceTaskId: null,
+    overTaskId: null,
+  })
   const isPhotoGame = selectedGame?.type === 'photo'
   const amountInputClassName =
     'aq-amount-step-input h-10 w-full rounded-xl border border-slate-200 bg-white px-12 py-2 text-center text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
@@ -278,6 +284,121 @@ const GameEditModal = ({
     ).map((organizer) => [organizer.telegramId, organizer]),
   )
 
+  const resetTouchTaskDragState = useCallback(() => {
+    touchDragStateRef.current = {
+      active: false,
+      pointerId: null,
+      sourceTaskId: null,
+      overTaskId: null,
+    }
+    setDraggedTaskId(null)
+    setDragOverTaskId(null)
+  }, [])
+
+  const resolveTouchDragTargetTaskId = useCallback(
+    (clientX, clientY, sourceTaskId) => {
+      const elementUnderPointer = document.elementFromPoint(clientX, clientY)
+      const taskContainer = elementUnderPointer?.closest?.('[data-task-dnd-id]')
+      const targetTaskId = taskContainer?.getAttribute('data-task-dnd-id') || ''
+      if (!targetTaskId || targetTaskId === sourceTaskId) {
+        return ''
+      }
+      const targetIndex = (selectedGame?.tasks || []).findIndex(
+        (item) => String(item?.id) === String(targetTaskId),
+      )
+      if (targetIndex < 0 || isTaskReorderLocked(targetIndex)) {
+        return ''
+      }
+      return String(targetTaskId)
+    },
+    [isTaskReorderLocked, selectedGame?.tasks],
+  )
+
+  const handleTaskHandlePointerDown = useCallback(
+    (taskId, canDragTask, event) => {
+      if (!canDragTask) {
+        return
+      }
+      event.preventDefault()
+      touchDragStateRef.current = {
+        active: true,
+        pointerId: event.pointerId,
+        sourceTaskId: String(taskId),
+        overTaskId: null,
+      }
+      setDraggedTaskId(String(taskId))
+      setDragOverTaskId(null)
+      if (event.currentTarget?.setPointerCapture) {
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId)
+        } catch {
+          // ignore
+        }
+      }
+    },
+    [],
+  )
+
+  const handleTaskHandlePointerMove = useCallback(
+    (event) => {
+      const dragState = touchDragStateRef.current
+      if (!dragState.active || dragState.pointerId !== event.pointerId) {
+        return
+      }
+
+      const targetTaskId = resolveTouchDragTargetTaskId(
+        event.clientX,
+        event.clientY,
+        dragState.sourceTaskId,
+      )
+      if (!targetTaskId) {
+        dragState.overTaskId = null
+        setDragOverTaskId(null)
+        return
+      }
+      dragState.overTaskId = targetTaskId
+      setDragOverTaskId(targetTaskId)
+    },
+    [resolveTouchDragTargetTaskId],
+  )
+
+  const handleTaskHandlePointerUp = useCallback(
+    (event) => {
+      const dragState = touchDragStateRef.current
+      if (!dragState.active || dragState.pointerId !== event.pointerId) {
+        return
+      }
+
+      if (event.currentTarget?.releasePointerCapture) {
+        try {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        } catch {
+          // ignore
+        }
+      }
+
+      const sourceTaskId = String(dragState.sourceTaskId || '')
+      const targetTaskId = String(dragState.overTaskId || '')
+      resetTouchTaskDragState()
+
+      if (!sourceTaskId || !targetTaskId || sourceTaskId === targetTaskId) {
+        return
+      }
+
+      const sourceIndex = (selectedGame?.tasks || []).findIndex(
+        (item) => String(item?.id) === sourceTaskId,
+      )
+      const targetIndex = (selectedGame?.tasks || []).findIndex(
+        (item) => String(item?.id) === targetTaskId,
+      )
+      if (sourceIndex < 0 || targetIndex < 0 || isTaskReorderLocked(targetIndex)) {
+        return
+      }
+      handleReorderTask(sourceIndex, targetIndex)
+    },
+    [handleReorderTask, isTaskReorderLocked, resetTouchTaskDragState, selectedGame?.tasks],
+  )
+
   const modalFooter = (
     <>
       <CabinetButton
@@ -307,10 +428,9 @@ const GameEditModal = ({
     if (!isEditModalOpen) {
       setExpandedCodeAccordions(new Set())
       setExpandedClueAccordions(new Set())
-      setDraggedTaskId(null)
-      setDragOverTaskId(null)
+      resetTouchTaskDragState()
     }
-  }, [isEditModalOpen, selectedGame?.id])
+  }, [isEditModalOpen, resetTouchTaskDragState, selectedGame?.id])
 
   if (!selectedGame) {
     console.error(
@@ -1011,6 +1131,7 @@ const GameEditModal = ({
                   const canDragTask =
                     canEditSelectedGame && !isSaving && !isTaskOrderLocked
                   const isDragOver = dragOverTaskId === task.id
+                  const isDraggingCurrent = draggedTaskId === task.id
                   const taskTitle =
                     typeof task?.title === 'string' ? task.title.trim() : ''
                   const taskDescription = getTaskDescriptionText(task).trim()
@@ -1070,7 +1191,12 @@ const GameEditModal = ({
                   return (
                     <div
                       key={task.id}
+                      data-task-dnd-id={String(task.id)}
                       className={`overflow-hidden rounded-2xl border bg-white transition dark:bg-slate-900/70 ${
+                        isDraggingCurrent
+                          ? 'border-cyan-500/80 opacity-85 ring-2 ring-cyan-400/30 dark:border-cyan-400 dark:ring-cyan-300/30'
+                          : ''
+                      } ${
                         isDragOver
                           ? 'border-cyan-500 ring-1 ring-cyan-500/40 dark:border-cyan-400 dark:ring-cyan-400/40'
                           : 'border-slate-200 dark:border-slate-700'
@@ -1122,6 +1248,17 @@ const GameEditModal = ({
                         <button
                           type="button"
                           draggable={canDragTask}
+                          onPointerDown={(event) =>
+                            handleTaskHandlePointerDown(
+                              task.id,
+                              canDragTask,
+                              event,
+                            )
+                          }
+                          onPointerMove={handleTaskHandlePointerMove}
+                          onPointerUp={handleTaskHandlePointerUp}
+                          onPointerCancel={resetTouchTaskDragState}
+                          onLostPointerCapture={resetTouchTaskDragState}
                           onDragStart={(event) => {
                             if (!canDragTask) {
                               event.preventDefault()
@@ -1134,11 +1271,13 @@ const GameEditModal = ({
                               String(task.id),
                             )
                           }}
-                          className={`inline-flex min-h-full w-9 shrink-0 items-center justify-center border-r text-slate-500 dark:text-slate-300 sm:w-10 ${
+                          className={`inline-flex min-h-full w-9 shrink-0 items-center justify-center border-r text-slate-500 touch-none transition-colors dark:text-slate-300 sm:w-10 ${
                             isTaskOrderLocked
                               ? 'cursor-not-allowed border-amber-500/40 bg-amber-500/10'
                               : canDragTask
-                                ? 'cursor-grab border-slate-200 bg-white/80 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900/70'
+                                ? isDraggingCurrent
+                                  ? 'cursor-grabbing border-cyan-400/70 bg-cyan-50/80 text-cyan-700 dark:border-cyan-400/70 dark:bg-cyan-500/10 dark:text-cyan-200'
+                                  : 'cursor-grab border-slate-200 bg-white/80 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900/70'
                                 : 'cursor-default border-slate-200/80 bg-white/60 dark:border-slate-700/80 dark:bg-slate-900/50'
                           }`}
                           title={
