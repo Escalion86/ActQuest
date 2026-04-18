@@ -173,6 +173,7 @@ const GameEditModal = ({
   handleTaskImageChange,
   handleRemoveTaskImage,
   handleAddClue,
+  handleReorderClue,
   handleTaskClueChange,
   handleRemoveClue,
   handleAddSubTask,
@@ -228,11 +229,22 @@ const GameEditModal = ({
   const [draggedTaskId, setDraggedTaskId] = useState(null)
   const [dragOverTaskId, setDragOverTaskId] = useState(null)
   const [dragGhostPosition, setDragGhostPosition] = useState(null)
+  const [draggedClueMeta, setDraggedClueMeta] = useState(null)
+  const [dragOverClueMeta, setDragOverClueMeta] = useState(null)
+  const [dragClueGhostPosition, setDragClueGhostPosition] = useState(null)
   const touchDragStateRef = useRef({
     active: false,
     pointerId: null,
     sourceTaskId: null,
     overTaskId: null,
+  })
+  const clueDragStateRef = useRef({
+    active: false,
+    pointerId: null,
+    sourceTaskId: null,
+    sourceClueId: null,
+    overTaskId: null,
+    overClueId: null,
   })
   const isPhotoGame = selectedGame?.type === 'photo'
   const amountInputClassName =
@@ -295,6 +307,20 @@ const GameEditModal = ({
     setDraggedTaskId(null)
     setDragOverTaskId(null)
     setDragGhostPosition(null)
+  }, [])
+
+  const resetTouchClueDragState = useCallback(() => {
+    clueDragStateRef.current = {
+      active: false,
+      pointerId: null,
+      sourceTaskId: null,
+      sourceClueId: null,
+      overTaskId: null,
+      overClueId: null,
+    }
+    setDraggedClueMeta(null)
+    setDragOverClueMeta(null)
+    setDragClueGhostPosition(null)
   }, [])
 
   const resolveTouchDragTargetTaskId = useCallback(
@@ -406,6 +432,156 @@ const GameEditModal = ({
   const draggedTaskGhost = (selectedGame?.tasks || []).find(
     (task) => String(task?.id) === String(draggedTaskId || ''),
   )
+  const draggedClueGhost = (() => {
+    if (!draggedClueMeta) {
+      return null
+    }
+    const task = (selectedGame?.tasks || []).find(
+      (item) => String(item?.id) === String(draggedClueMeta.taskId),
+    )
+    if (!task) {
+      return null
+    }
+    const clues = Array.isArray(task?.clues) ? task.clues : []
+    const clueIndex = clues.findIndex(
+      (item) => String(item?.id) === String(draggedClueMeta.clueId),
+    )
+    if (clueIndex < 0) {
+      return null
+    }
+    return {
+      taskId: String(task.id),
+      clueId: String(clues[clueIndex].id),
+      clueIndex,
+      title: getClueText(clues[clueIndex]) || `${clueIndex + 1}`,
+    }
+  })()
+
+  const resolveClueDragTarget = useCallback(
+    (clientX, clientY, sourceTaskId, sourceClueId) => {
+      const elementUnderPointer = document.elementFromPoint(clientX, clientY)
+      const clueContainer = elementUnderPointer?.closest?.(
+        '[data-clue-dnd-task-id][data-clue-dnd-id]',
+      )
+      const targetTaskId =
+        clueContainer?.getAttribute('data-clue-dnd-task-id') || ''
+      const targetClueId = clueContainer?.getAttribute('data-clue-dnd-id') || ''
+      if (!targetTaskId || !targetClueId) {
+        return { taskId: '', clueId: '' }
+      }
+      if (String(targetTaskId) !== String(sourceTaskId)) {
+        return { taskId: '', clueId: '' }
+      }
+      if (String(targetClueId) === String(sourceClueId)) {
+        return { taskId: '', clueId: '' }
+      }
+      return { taskId: String(targetTaskId), clueId: String(targetClueId) }
+    },
+    [],
+  )
+
+  const handleClueHandlePointerDown = useCallback(
+    (taskId, clueId, canDragClue, event) => {
+      if (!canDragClue) {
+        return
+      }
+      event.preventDefault()
+      clueDragStateRef.current = {
+        active: true,
+        pointerId: event.pointerId,
+        sourceTaskId: String(taskId),
+        sourceClueId: String(clueId),
+        overTaskId: null,
+        overClueId: null,
+      }
+      setDraggedClueMeta({ taskId: String(taskId), clueId: String(clueId) })
+      setDragOverClueMeta(null)
+      setDragClueGhostPosition({ x: event.clientX, y: event.clientY })
+      if (event.currentTarget?.setPointerCapture) {
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId)
+        } catch {
+          // ignore
+        }
+      }
+    },
+    [],
+  )
+
+  const handleClueHandlePointerMove = useCallback(
+    (event) => {
+      const dragState = clueDragStateRef.current
+      if (!dragState.active || dragState.pointerId !== event.pointerId) {
+        return
+      }
+      setDragClueGhostPosition({ x: event.clientX, y: event.clientY })
+      const target = resolveClueDragTarget(
+        event.clientX,
+        event.clientY,
+        dragState.sourceTaskId,
+        dragState.sourceClueId,
+      )
+      if (!target.taskId || !target.clueId) {
+        dragState.overTaskId = null
+        dragState.overClueId = null
+        setDragOverClueMeta(null)
+        return
+      }
+      dragState.overTaskId = target.taskId
+      dragState.overClueId = target.clueId
+      setDragOverClueMeta({ taskId: target.taskId, clueId: target.clueId })
+    },
+    [resolveClueDragTarget],
+  )
+
+  const handleClueHandlePointerUp = useCallback(
+    (event) => {
+      const dragState = clueDragStateRef.current
+      if (!dragState.active || dragState.pointerId !== event.pointerId) {
+        return
+      }
+      if (event.currentTarget?.releasePointerCapture) {
+        try {
+          event.currentTarget.releasePointerCapture(event.pointerId)
+        } catch {
+          // ignore
+        }
+      }
+
+      const sourceTaskId = String(dragState.sourceTaskId || '')
+      const sourceClueId = String(dragState.sourceClueId || '')
+      const targetTaskId = String(dragState.overTaskId || '')
+      const targetClueId = String(dragState.overClueId || '')
+      resetTouchClueDragState()
+
+      if (
+        !sourceTaskId ||
+        !sourceClueId ||
+        !targetTaskId ||
+        !targetClueId ||
+        sourceTaskId !== targetTaskId ||
+        sourceClueId === targetClueId
+      ) {
+        return
+      }
+
+      const task = (selectedGame?.tasks || []).find(
+        (item) => String(item?.id) === sourceTaskId,
+      )
+      const clues = Array.isArray(task?.clues) ? task.clues : []
+      const sourceIndex = clues.findIndex(
+        (item) => String(item?.id) === sourceClueId,
+      )
+      const targetIndex = clues.findIndex(
+        (item) => String(item?.id) === targetClueId,
+      )
+      if (sourceIndex < 0 || targetIndex < 0) {
+        return
+      }
+      handleReorderClue(sourceTaskId, sourceIndex, targetIndex)
+    },
+    [handleReorderClue, resetTouchClueDragState, selectedGame?.tasks],
+  )
 
   const modalFooter = (
     <>
@@ -437,8 +613,14 @@ const GameEditModal = ({
       setExpandedCodeAccordions(new Set())
       setExpandedClueAccordions(new Set())
       resetTouchTaskDragState()
+      resetTouchClueDragState()
     }
-  }, [isEditModalOpen, resetTouchTaskDragState, selectedGame?.id])
+  }, [
+    isEditModalOpen,
+    resetTouchClueDragState,
+    resetTouchTaskDragState,
+    selectedGame?.id,
+  ])
 
   if (!selectedGame) {
     console.error(
@@ -1663,6 +1845,8 @@ const GameEditModal = ({
                                 {task.clues.map((clue, clueIndex) => (
                                   <details
                                     key={clue.id}
+                                    data-clue-dnd-task-id={String(task.id)}
+                                    data-clue-dnd-id={String(clue.id)}
                                     open={expandedClueAccordions.has(
                                       `${task.id}-clue-${clue.id}`,
                                     )}
@@ -1681,13 +1865,209 @@ const GameEditModal = ({
                                         return next
                                       })
                                     }}
-                                    className="relative p-2 overflow-hidden border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+                                    className={`relative overflow-hidden rounded-2xl border bg-slate-50 p-2 transition dark:bg-slate-800/60 ${
+                                      dragOverClueMeta &&
+                                      String(dragOverClueMeta.taskId) ===
+                                        String(task.id) &&
+                                      String(dragOverClueMeta.clueId) ===
+                                        String(clue.id)
+                                        ? 'border-cyan-500 ring-1 ring-cyan-500/40 dark:border-cyan-400 dark:ring-cyan-400/40'
+                                        : draggedClueMeta &&
+                                          String(draggedClueMeta.taskId) ===
+                                            String(task.id) &&
+                                          String(draggedClueMeta.clueId) ===
+                                            String(clue.id)
+                                          ? 'border-cyan-500/80 opacity-85 ring-2 ring-cyan-400/30 dark:border-cyan-400 dark:ring-cyan-300/30'
+                                          : 'border-slate-200 dark:border-slate-700'
+                                    }`}
+                                    onDragEnd={resetTouchClueDragState}
+                                    onDragOver={(event) => {
+                                      if (
+                                        !draggedClueMeta ||
+                                        String(draggedClueMeta.taskId) !==
+                                          String(task.id) ||
+                                        String(draggedClueMeta.clueId) ===
+                                          String(clue.id)
+                                      ) {
+                                        return
+                                      }
+                                      event.preventDefault()
+                                      event.dataTransfer.dropEffect = 'move'
+                                      setDragOverClueMeta({
+                                        taskId: String(task.id),
+                                        clueId: String(clue.id),
+                                      })
+                                    }}
+                                    onDragLeave={() => {
+                                      if (
+                                        dragOverClueMeta &&
+                                        String(dragOverClueMeta.taskId) ===
+                                          String(task.id) &&
+                                        String(dragOverClueMeta.clueId) ===
+                                          String(clue.id)
+                                      ) {
+                                        setDragOverClueMeta(null)
+                                      }
+                                    }}
+                                    onDrop={(event) => {
+                                      event.preventDefault()
+                                      const transfer = String(
+                                        event.dataTransfer.getData('text/plain') ||
+                                          '',
+                                      )
+                                      const [taskIdRaw, clueIdRaw] =
+                                        transfer.split(':')
+                                      const sourceTaskId = String(
+                                        draggedClueMeta?.taskId || taskIdRaw || '',
+                                      )
+                                      const sourceClueId = String(
+                                        draggedClueMeta?.clueId || clueIdRaw || '',
+                                      )
+                                      setDragOverClueMeta(null)
+                                      setDraggedClueMeta(null)
+                                      if (
+                                        !sourceTaskId ||
+                                        !sourceClueId ||
+                                        String(sourceTaskId) !==
+                                          String(task.id) ||
+                                        String(sourceClueId) === String(clue.id)
+                                      ) {
+                                        return
+                                      }
+                                      const clues = Array.isArray(task?.clues)
+                                        ? task.clues
+                                        : []
+                                      const sourceIndex = clues.findIndex(
+                                        (item) =>
+                                          String(item?.id) ===
+                                          String(sourceClueId),
+                                      )
+                                      const targetIndex = clues.findIndex(
+                                        (item) =>
+                                          String(item?.id) === String(clue.id),
+                                      )
+                                      if (sourceIndex < 0 || targetIndex < 0) {
+                                        return
+                                      }
+                                      handleReorderClue(
+                                        String(task.id),
+                                        sourceIndex,
+                                        targetIndex,
+                                      )
+                                    }}
                                   >
                                     <summary className="w-full max-w-full overflow-hidden text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
-                                      <div className="absolute top-0 left-0 shrink-0 rounded-br-full border-b border-r border-cyan-300/70 bg-cyan-100/70 px-3 py-0 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                                        Подсказка
+                                      <button
+                                        type="button"
+                                        draggable={
+                                          canEditSelectedGame &&
+                                          !isSaving &&
+                                          task.clues.length > 1
+                                        }
+                                        onClick={(event) => {
+                                          event.preventDefault()
+                                          event.stopPropagation()
+                                        }}
+                                        onPointerDown={(event) => {
+                                          handleClueHandlePointerDown(
+                                            task.id,
+                                            clue.id,
+                                            canEditSelectedGame &&
+                                              !isSaving &&
+                                              task.clues.length > 1,
+                                            event,
+                                          )
+                                        }}
+                                        onPointerMove={handleClueHandlePointerMove}
+                                        onPointerUp={handleClueHandlePointerUp}
+                                        onPointerCancel={resetTouchClueDragState}
+                                        onLostPointerCapture={
+                                          resetTouchClueDragState
+                                        }
+                                        onDragStart={(event) => {
+                                          const canDragClue =
+                                            canEditSelectedGame &&
+                                            !isSaving &&
+                                            task.clues.length > 1
+                                          if (!canDragClue) {
+                                            event.preventDefault()
+                                            return
+                                          }
+                                          event.stopPropagation()
+                                          setDraggedClueMeta({
+                                            taskId: String(task.id),
+                                            clueId: String(clue.id),
+                                          })
+                                          event.dataTransfer.effectAllowed =
+                                            'move'
+                                          event.dataTransfer.setData(
+                                            'text/plain',
+                                            `${String(task.id)}:${String(clue.id)}`,
+                                          )
+                                        }}
+                                        className={`absolute left-0 top-0 bottom-0 inline-flex w-8 items-center justify-center border-r text-slate-500 touch-none transition-colors dark:text-slate-300 ${
+                                          canEditSelectedGame &&
+                                          !isSaving &&
+                                          task.clues.length > 1
+                                            ? draggedClueMeta &&
+                                              String(draggedClueMeta.taskId) ===
+                                                String(task.id) &&
+                                              String(draggedClueMeta.clueId) ===
+                                                String(clue.id)
+                                              ? 'cursor-grabbing border-cyan-400/70 bg-cyan-50/80 text-cyan-700 dark:border-cyan-400/70 dark:bg-cyan-500/10 dark:text-cyan-200'
+                                              : 'cursor-grab border-slate-200 bg-white/80 active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900/70'
+                                            : 'cursor-default border-slate-200/80 bg-white/60 dark:border-slate-700/80 dark:bg-slate-900/50'
+                                        }`}
+                                        title={
+                                          task.clues.length > 1
+                                            ? 'Перетащите за эту область, чтобы изменить порядок подсказок'
+                                            : 'Для перетаскивания нужно минимум 2 подсказки'
+                                        }
+                                        aria-label="Перетащить подсказку"
+                                      >
+                                        <svg viewBox="0 0 20 20" className="h-4 w-4">
+                                          <circle
+                                            cx="7"
+                                            cy="6"
+                                            r="1.1"
+                                            fill="currentColor"
+                                          />
+                                          <circle
+                                            cx="13"
+                                            cy="6"
+                                            r="1.1"
+                                            fill="currentColor"
+                                          />
+                                          <circle
+                                            cx="7"
+                                            cy="10"
+                                            r="1.1"
+                                            fill="currentColor"
+                                          />
+                                          <circle
+                                            cx="13"
+                                            cy="10"
+                                            r="1.1"
+                                            fill="currentColor"
+                                          />
+                                          <circle
+                                            cx="7"
+                                            cy="14"
+                                            r="1.1"
+                                            fill="currentColor"
+                                          />
+                                          <circle
+                                            cx="13"
+                                            cy="14"
+                                            r="1.1"
+                                            fill="currentColor"
+                                          />
+                                        </svg>
+                                      </button>
+                                      <div className="absolute top-0 left-8 shrink-0 rounded-br-full border-b border-r border-cyan-300/70 bg-cyan-100/70 px-3 py-0 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
+                                        {`Подсказка ${clueIndex + 1}`}
                                       </div>
-                                      <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2px-2 py-1">
+                                      <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 py-1 pl-9">
                                         <div className="flex items-center w-full max-w-full min-w-0 gap-2 mt-2 overflow-hidden">
                                           <span className="flex-1 block min-w-0 overflow-hidden">
                                             <span className="block w-full font-semibold truncate">
@@ -3206,6 +3586,41 @@ const GameEditModal = ({
             </div>
           </div>
         ) : null}
+        {draggedClueGhost && dragClueGhostPosition ? (
+          <div
+            className="pointer-events-none fixed z-[141] w-[210px] overflow-hidden rounded-lg border border-cyan-400/50 bg-slate-900/80 px-0 py-0 shadow-xl ring-1 ring-cyan-400/20 backdrop-blur-[1px]"
+            style={{
+              left: `${dragClueGhostPosition.x}px`,
+              top: `${dragClueGhostPosition.y}px`,
+              transform: 'translate(18px, -50%)',
+            }}
+            aria-hidden="true"
+          >
+            <div className="flex items-center">
+              <div className="inline-flex h-10 w-8 shrink-0 items-center justify-center border-r border-cyan-400/30 bg-slate-800/70 text-cyan-200">
+                <svg viewBox="0 0 20 20" className="h-4 w-4">
+                  <circle cx="7" cy="6" r="1.1" fill="currentColor" />
+                  <circle cx="13" cy="6" r="1.1" fill="currentColor" />
+                  <circle cx="7" cy="10" r="1.1" fill="currentColor" />
+                  <circle cx="13" cy="10" r="1.1" fill="currentColor" />
+                  <circle cx="7" cy="14" r="1.1" fill="currentColor" />
+                  <circle cx="13" cy="14" r="1.1" fill="currentColor" />
+                </svg>
+              </div>
+              <div className="min-w-0 px-2 py-1.5">
+                <div className="truncate text-[10px] font-semibold uppercase tracking-wide text-cyan-200/90">
+                  Подсказка{' '}
+                  {Number.isFinite(Number(draggedClueGhost?.clueIndex))
+                    ? Number(draggedClueGhost.clueIndex) + 1
+                    : ''}
+                </div>
+                <div className="truncate text-xs font-semibold text-white/95">
+                  {draggedClueGhost?.title || 'Без текста'}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </fieldset>
     </Modal>
   )
@@ -3247,6 +3662,7 @@ GameEditModal.propTypes = {
   handleTaskImageChange: PropTypes.func.isRequired,
   handleRemoveTaskImage: PropTypes.func.isRequired,
   handleAddClue: PropTypes.func.isRequired,
+  handleReorderClue: PropTypes.func.isRequired,
   handleTaskClueChange: PropTypes.func.isRequired,
   handleRemoveClue: PropTypes.func.isRequired,
   handleAddSubTask: PropTypes.func.isRequired,

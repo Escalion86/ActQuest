@@ -585,24 +585,36 @@ const AdminTeamsPage = ({
   const handleAddMember = useCallback(
     async (userId, userOption) => {
       if (!selectedTeam || !canManageSelectedTeam || !userId) {
+        console.log('[admin-teams][add-member][client] guard_block', {
+          hasSelectedTeam: Boolean(selectedTeam),
+          canManageSelectedTeam,
+          userId: userId || null,
+          selectedTeamId: selectedTeamId || null,
+        })
         return
       }
 
       setIsAddingMember(true)
       setFeedback(null)
+      const payload = {
+        teamId: selectedTeam.id,
+        targetUserId: userId,
+        role: 'participant',
+      }
+      console.log('[admin-teams][add-member][client] request_start', payload)
 
       try {
         const { json } = await requestApiJson('/api/cabinet/teams/members', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            data: {
-              teamId: selectedTeam.id,
-              targetUserId: userId,
-              role: 'participant',
-            },
+            data: payload,
           }),
           fallbackMessage: 'Не удалось добавить участника',
+        })
+        console.log('[admin-teams][add-member][client] request_success', {
+          payload,
+          response: json,
         })
 
         const newMember = json?.data?.member
@@ -641,6 +653,13 @@ const AdminTeamsPage = ({
         })
       } catch (error) {
         console.error('Failed to add team member', error)
+        console.error('[admin-teams][add-member][client] request_error', {
+          payload,
+          message: error?.message || null,
+          status: error?.status ?? null,
+          response: error?.response ?? null,
+          errorPayload: error?.payload ?? null,
+        })
         setFeedback({
           type: 'error',
           message: error?.message || 'Не удалось добавить участника',

@@ -47,6 +47,7 @@ const GameModals = ({
   handleTaskImageChange,
   handleRemoveTaskImage,
   handleAddClue,
+  handleReorderClue,
   handleTaskClueChange,
   handleRemoveClue,
   handleAddSubTask,
@@ -210,6 +211,7 @@ const GameModals = ({
           handleTaskImageChange={handleTaskImageChange}
           handleRemoveTaskImage={handleRemoveTaskImage}
           handleAddClue={handleAddClue}
+          handleReorderClue={handleReorderClue}
           handleTaskClueChange={handleTaskClueChange}
           handleRemoveClue={handleRemoveClue}
           handleAddSubTask={handleAddSubTask}
@@ -287,6 +289,7 @@ const GameModals = ({
           handleTaskImageChange={handleTaskImageChange}
           handleRemoveTaskImage={handleRemoveTaskImage}
           handleAddClue={handleAddClue}
+          handleReorderClue={handleReorderClue}
           handleTaskClueChange={handleTaskClueChange}
           handleRemoveClue={handleRemoveClue}
           handleAddSubTask={handleAddSubTask}
@@ -525,6 +528,7 @@ GameModals.propTypes = {
   handleTaskImageChange: PropTypes.func.isRequired,
   handleRemoveTaskImage: PropTypes.func.isRequired,
   handleAddClue: PropTypes.func.isRequired,
+  handleReorderClue: PropTypes.func.isRequired,
   handleTaskClueChange: PropTypes.func.isRequired,
   handleRemoveClue: PropTypes.func.isRequired,
   handleAddSubTask: PropTypes.func.isRequired,

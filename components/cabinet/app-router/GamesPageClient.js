@@ -4196,6 +4196,32 @@ const GamesPage = ({
     [updateTask],
   )
 
+  const handleReorderClue = useCallback(
+    (taskId, sourceIndex, targetIndex) => {
+      if (!Number.isInteger(sourceIndex) || !Number.isInteger(targetIndex)) {
+        return
+      }
+      if (sourceIndex === targetIndex) {
+        return
+      }
+      updateTask(taskId, (task) => {
+        const clues = Array.isArray(task?.clues) ? [...task.clues] : []
+        if (
+          sourceIndex < 0 ||
+          targetIndex < 0 ||
+          sourceIndex >= clues.length ||
+          targetIndex >= clues.length
+        ) {
+          return { clues }
+        }
+        const [moved] = clues.splice(sourceIndex, 1)
+        clues.splice(targetIndex, 0, moved)
+        return { clues }
+      })
+    },
+    [updateTask],
+  )
+
   const handleAddSubTask = useCallback(
     (taskId) => {
       if (!isEditingPhotoGame) {
@@ -6884,6 +6910,7 @@ const GamesPage = ({
                 handleTaskImageChange={handleTaskImageChange}
                 handleRemoveTaskImage={handleRemoveTaskImage}
                 handleAddClue={handleAddClue}
+                handleReorderClue={handleReorderClue}
                 handleTaskClueChange={handleTaskClueChange}
                 handleRemoveClue={handleRemoveClue}
                 handleAddSubTask={handleAddSubTask}

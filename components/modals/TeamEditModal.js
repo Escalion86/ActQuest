@@ -119,8 +119,18 @@ const TeamEditModal = ({
 
   const handleAddMemberClick = () => {
     if (!addMemberUser || !onAddMember) {
+      console.log('[team-edit][add-member][client] click_ignored', {
+        hasAddMemberUser: Boolean(addMemberUser),
+        hasOnAddMember: Boolean(onAddMember),
+        teamId: selectedTeam?.id || null,
+      })
       return
     }
+    console.log('[team-edit][add-member][client] click', {
+      teamId: selectedTeam?.id || null,
+      userId: addMemberUser.id || null,
+      userTitle: addMemberUser.title || null,
+    })
     onAddMember(addMemberUser.id, addMemberUser)
     setAddMemberUser(null)
   }

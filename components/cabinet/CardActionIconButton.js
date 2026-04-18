@@ -238,6 +238,32 @@ export const TeamStatsCardIcon = () => (
   </svg>
 )
 
+export const CopyCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <rect
+      x="7"
+      y="4.5"
+      width="8.5"
+      height="11"
+      rx="1.8"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <path
+      d="M5.5 12.8H4.7C3.76 12.8 3 12.04 3 11.1V5.7C3 4.76 3.76 4 4.7 4H10.1C11.04 4 11.8 4.76 11.8 5.7V6.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
 export const MegaphoneCardIcon = () => (
   <svg
     className="h-5 w-5"

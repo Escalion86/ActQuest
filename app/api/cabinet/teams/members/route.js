@@ -49,6 +49,19 @@ export async function POST(request) {
   }
 
   try {
+    console.log('[team-members][add][server] request_received', {
+      teamId,
+      targetUserId: toStringId(payload?.targetUserId),
+      requestedRole,
+      normalizedRole: role,
+      actor: {
+        role: session?.user?.role || null,
+        globalUserId: session?.user?.globalUserId || null,
+        id: session?.user?.id || null,
+        _id: session?.user?._id || null,
+      },
+    })
+
     const db = await dbConnectGlobal()
     if (!db) {
       throw new Error('Соединение с базой данных не установлено')
@@ -62,6 +75,7 @@ export async function POST(request) {
       .select({ _id: 1, open: 1 })
       .lean()
     if (!team?._id) {
+      console.warn('[team-members][add][server] team_not_found', { teamId })
       return NextResponse.json(
         { success: false, error: 'Команда не найдена' },
         { status: 404 },
@@ -74,6 +88,9 @@ export async function POST(request) {
     )
 
     if (!actorUserId) {
+      console.warn('[team-members][add][server] actor_user_not_resolved', {
+        actorRole,
+      })
       return NextResponse.json(
         { success: false, error: 'Не удалось определить пользователя' },
         { status: 403 },
@@ -83,7 +100,14 @@ export async function POST(request) {
     // Режим добавления произвольного пользователя (только admin/dev)
     const targetUserIdRaw = toStringId(payload?.targetUserId)
     if (targetUserIdRaw) {
+      console.log('[team-members][add][server] elevated_add_mode', {
+        targetUserIdRaw,
+        actorRole,
+      })
       if (!isElevatedRole(actorRole)) {
+        console.warn('[team-members][add][server] forbidden_not_elevated', {
+          actorRole,
+        })
         return NextResponse.json(
           {
             success: false,
@@ -94,20 +118,28 @@ export async function POST(request) {
       }
 
       const targetUserDoc = await UsersModel.findOne({
-        globalUserId: targetUserIdRaw,
+        $or: [{ _id: targetUserIdRaw }, { globalUserId: targetUserIdRaw }],
       })
         .select({ globalUserId: 1, telegramId: 1, name: 1, username: 1 })
         .lean()
 
       if (!targetUserDoc) {
+        console.warn('[team-members][add][server] target_user_not_found', {
+          targetUserIdRaw,
+        })
         return NextResponse.json(
           { success: false, error: 'Пользователь не найден' },
           { status: 404 },
         )
       }
 
-      const targetGlobalUserId = toStringId(targetUserDoc.globalUserId)
+      const targetGlobalUserId = toStringId(
+        targetUserDoc.globalUserId || targetUserDoc._id,
+      )
       if (!targetGlobalUserId) {
+        console.warn('[team-members][add][server] target_user_id_not_resolved', {
+          targetUserIdRaw,
+        })
         return NextResponse.json(
           { success: false, error: 'Не удалось идентифицировать пользователя' },
           { status: 400 },
@@ -121,6 +153,10 @@ export async function POST(request) {
         .select({ _id: 1 })
         .lean()
       if (existingMembership?._id) {
+        console.warn('[team-members][add][server] duplicate_membership', {
+          teamId,
+          targetGlobalUserId,
+        })
         return NextResponse.json(
           { success: false, error: 'Пользователь уже состоит в этой команде' },
           { status: 409 },
@@ -131,6 +167,12 @@ export async function POST(request) {
         teamId,
         userId: targetGlobalUserId,
         role,
+      })
+      console.log('[team-members][add][server] membership_created', {
+        teamId,
+        targetGlobalUserId,
+        role,
+        membershipId: toStringId(createdMembership?._id),
       })
 
       return NextResponse.json(
@@ -154,6 +196,9 @@ export async function POST(request) {
     }
 
     if (!isElevatedRole(actorRole) && isCaptainRole(role)) {
+      console.warn('[team-members][add][server] forbidden_set_captain', {
+        actorRole,
+      })
       return NextResponse.json(
         {
           success: false,
@@ -164,6 +209,9 @@ export async function POST(request) {
     }
 
     if (!isElevatedRole(actorRole) && team?.open === false) {
+      console.warn('[team-members][add][server] forbidden_team_closed', {
+        teamId,
+      })
       return NextResponse.json(
         {
           success: false,
@@ -183,6 +231,10 @@ export async function POST(request) {
       .select({ _id: 1 })
       .lean()
     if (existingMembership?._id) {
+      console.warn('[team-members][add][server] actor_already_member', {
+        teamId,
+        actorUserId,
+      })
       return NextResponse.json(
         { success: false, error: 'Вы уже состоите в этой команде' },
         { status: 409 },
@@ -193,6 +245,12 @@ export async function POST(request) {
       teamId,
       userId: actorUserId,
       role,
+    })
+    console.log('[team-members][add][server] self_membership_created', {
+      teamId,
+      actorUserId,
+      role,
+      membershipId: toStringId(createdMembership?._id),
     })
 
     return NextResponse.json(

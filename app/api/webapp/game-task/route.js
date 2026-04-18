@@ -43,6 +43,11 @@ export async function POST(request) {
       gameId: normalizedGameId,
       teamId: normalizedTeamId,
       telegramId: session.user.telegramId,
+      userId:
+        session.user.globalUserId ||
+        session.user.id ||
+        session.user._id ||
+        null,
       message: sanitizedMessage,
     })
 

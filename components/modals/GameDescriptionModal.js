@@ -2,6 +2,7 @@ import { memo } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
+import CopyableId from '@components/cabinet/CopyableId'
 import TiptapContentView from '@components/cabinet/TiptapContentView'
 import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
 import formatDate from '@helpers/formatDate'
@@ -88,6 +89,16 @@ const GameDescriptionModal = ({
                 {plannedStartLabel}
               </dd>
             </div>
+            {canViewRestrictedGameInfo && selectedGame?.id ? (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  ID
+                </dt>
+                <dd className="mt-1">
+                  <CopyableId id={selectedGame.id} label="Game ID" />
+                </dd>
+              </div>
+            ) : null}
             <div>
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Место старта

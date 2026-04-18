@@ -598,7 +598,15 @@ const getTeamGameTaskState = async ({
 
     let isTeamMember = false
 
-    if (telegramId) {
+    // Каноничная проверка членства: по userId.
+    // По telegramId проверяем только когда userId в запросе отсутствует
+    // (legacy сценарии telegram/webapp).
+    if (userId) {
+      const userIdStr = String(userId)
+      isTeamMember = teamUsers.some(
+        (teamUser) => teamUser && String(teamUser.userId ?? '') === userIdStr,
+      )
+    } else if (telegramId) {
       const telegramIdStr = String(telegramId)
       isTeamMember = teamUsers.some(
         (teamUser) =>
@@ -606,14 +614,14 @@ const getTeamGameTaskState = async ({
       )
     }
 
-    if (!isTeamMember && userId) {
-      const userIdStr = String(userId)
-      isTeamMember = teamUsers.some(
-        (teamUser) => teamUser && String(teamUser.userId ?? '') === userIdStr,
-      )
-    }
-
     if (!isTeamMember) {
+      console.error('[game-task-access] TEAM_ACCESS_DENIED', {
+        gameId: String(gameId || ''),
+        teamId: String(teamId || ''),
+        userId: userId ? String(userId) : null,
+        telegramId: telegramId ? String(telegramId) : null,
+        teamUsersCount: Array.isArray(teamUsers) ? teamUsers.length : 0,
+      })
       return buildError(GAME_TASK_ERRORS.TEAM_ACCESS_DENIED, {
         statusCode: 403,
         game: safeSerializeGameForClient(game),
