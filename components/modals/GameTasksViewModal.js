@@ -344,7 +344,9 @@ const GameTasksViewModal = ({
         ) : (
           tasks.map((task, index) => {
             const taskId = task.id || String(index)
+            const isSingleTaskView = tasks.length === 1
             const isExpanded = expandedTaskIds.includes(taskId)
+            const isTaskExpanded = isSingleTaskView || isExpanded
             const clues = Array.isArray(task.clues) ? task.clues : []
             const revealState = getTaskRevealState(taskRevealState, taskId)
             const visibleClues = showAllTaskDetails
@@ -364,20 +366,22 @@ const GameTasksViewModal = ({
 
             return (
               <ModalSection key={taskId} className="overflow-hidden" noPadding>
-                <button
-                  type="button"
-                  onClick={() => toggleTask(taskId)}
-                  className="flex items-center justify-between w-full gap-3 px-4 py-3 text-sm font-semibold text-left transition bg-slate-50 text-slate-700 hover:bg-blue-50 dark:bg-slate-800/70 dark:text-white dark:hover:bg-sky-500/10"
-                >
-                  <span>
-                    {index + 1}. {task?.title || 'Без названия'}
-                  </span>
-                  <span className="text-xs">
-                    {isExpanded ? 'Свернуть' : 'Развернуть'}
-                  </span>
-                </button>
+                {!isSingleTaskView ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleTask(taskId)}
+                    className="flex items-center justify-between w-full gap-3 px-4 py-3 text-sm font-semibold text-left transition bg-slate-50 text-slate-700 hover:bg-blue-50 dark:bg-slate-800/70 dark:text-white dark:hover:bg-sky-500/10"
+                  >
+                    <span>
+                      {index + 1}. {task?.title || 'Без названия'}
+                    </span>
+                    <span className="text-xs">
+                      {isExpanded ? 'Свернуть' : 'Развернуть'}
+                    </span>
+                  </button>
+                ) : null}
 
-                {isExpanded && (
+                {isTaskExpanded && (
                   <div className="px-4 py-4 space-y-4">
                     <div>
                       <ModalSectionTitle>Описание задания</ModalSectionTitle>

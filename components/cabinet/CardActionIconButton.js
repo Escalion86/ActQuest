@@ -299,26 +299,39 @@ const CardActionIconButton = ({
   label,
   title,
   className,
+  disabled,
   children,
 }) => {
   const baseClassName =
     'inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-cyan-300/90 bg-cyan-50/80 text-cyan-700 shadow-sm transition-all duration-150 hover:scale-105 hover:border-cyan-600 hover:bg-cyan-200 hover:text-cyan-950 hover:shadow-md active:scale-100 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/10 dark:text-[#bdf4ff] dark:shadow-[0_0_0_1px_rgba(0,209,255,0.18)] dark:hover:border-[#00D1FF]/85 dark:hover:bg-[#00D1FF]/28 dark:hover:text-white dark:hover:shadow-[0_0_0_1px_rgba(0,209,255,0.28),0_0_18px_rgba(0,209,255,0.28)] dark:focus:ring-[#00D1FF]/45'
+  const disabledClassName =
+    'cursor-not-allowed opacity-50 hover:scale-100 hover:border-cyan-300/90 hover:bg-cyan-50/80 hover:text-cyan-700 hover:shadow-sm dark:hover:border-[#00D1FF]/45 dark:hover:bg-[#00D1FF]/10 dark:hover:text-[#bdf4ff] dark:hover:shadow-[0_0_0_1px_rgba(0,209,255,0.18)]'
 
   if (Component === 'span' || Component === 'div') {
     return (
       <Component
         role="button"
-        tabIndex={0}
-        onClick={onClick}
+        tabIndex={disabled ? -1 : 0}
+        onClick={(event) => {
+          if (disabled) return
+          onClick(event)
+        }}
         onKeyDown={(event) => {
+          if (disabled) return
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
             onClick(event)
           }
         }}
-        className={cn(baseClassName, 'h-9 w-9', className)}
+        className={cn(
+          baseClassName,
+          'h-9 w-9',
+          disabled ? disabledClassName : null,
+          className,
+        )}
         aria-label={label}
         title={title || label}
+        aria-disabled={disabled ? 'true' : undefined}
       >
         {children}
       </Component>
@@ -329,9 +342,15 @@ const CardActionIconButton = ({
     <button
       type="button"
       onClick={onClick}
-      className={cn(baseClassName, 'h-9 w-9', className)}
+      className={cn(
+        baseClassName,
+        'h-9 w-9',
+        disabled ? disabledClassName : null,
+        className,
+      )}
       aria-label={label}
       title={title || label}
+      disabled={disabled}
     >
       {children}
     </button>
@@ -344,6 +363,7 @@ CardActionIconButton.propTypes = {
   label: PropTypes.string.isRequired,
   title: PropTypes.string,
   className: PropTypes.string,
+  disabled: PropTypes.bool,
   children: PropTypes.node.isRequired,
 }
 
@@ -351,6 +371,7 @@ CardActionIconButton.defaultProps = {
   as: 'button',
   title: null,
   className: '',
+  disabled: false,
 }
 
 StatusCardIcon.propTypes = {

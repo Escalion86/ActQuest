@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons'
+import { faArrowsRotate, faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
 import { useSession } from 'next-auth/react'
 
 import { LOCATIONS } from '@server/serverConstants'
@@ -709,6 +709,17 @@ function GameTeamPage({
       })
       .filter(Boolean)
   }, [currentTaskDisplayMeta])
+  const currentTaskNumber = useMemo(() => {
+    const rawFromMeta = Number(currentTaskDisplayMeta?.taskIndex)
+    if (Number.isFinite(rawFromMeta)) {
+      return Math.max(1, Math.floor(rawFromMeta) + 1)
+    }
+    const rawFromTeam = Number(team?.activeNum)
+    if (Number.isFinite(rawFromTeam)) {
+      return Math.max(1, Math.floor(rawFromTeam) + 1)
+    }
+    return 1
+  }, [currentTaskDisplayMeta?.taskIndex, team?.activeNum])
   const remainingMainCodesCount = useMemo(() => {
     if (acceptedTaskCodes.length < 1) {
       return null
@@ -1094,9 +1105,18 @@ function GameTeamPage({
               <button
                 type="button"
                 onClick={handleThemeToggle}
-                className="px-4 py-2 text-sm font-semibold text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                aria-label={
+                  effectiveTheme === 'dark'
+                    ? 'Включить светлую тему'
+                    : 'Включить тёмную тему'
+                }
+                title={effectiveTheme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
               >
-                {effectiveTheme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+                <FontAwesomeIcon
+                  icon={effectiveTheme === 'dark' ? faSun : faMoon}
+                  className="h-4 w-4"
+                />
               </button>
               {resolvedSession ? (
                 <button
@@ -1113,117 +1133,121 @@ function GameTeamPage({
 
         <main className="px-4">
           <div className="flex flex-col w-full max-w-5xl gap-8 mx-auto mt-10">
-            <section className="flex flex-col gap-6 p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                      <h1 className="text-2xl font-semibold text-primary dark:text-white">
-                        {game?.name || 'Игра'}
-                      </h1>
-                      <span className="px-3 py-1 text-xs font-semibold text-blue-700 uppercase bg-blue-100 border border-blue-200 rounded-full dark:bg-blue-500/10 dark:border-blue-400/40 dark:text-blue-200">
-                        {statusLabel}
-                      </span>
-                    </div>
-                    {!isGameInfoCollapsed ? (
-                      <div className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2 dark:text-slate-300">
-                        <div className="flex flex-col">
-                          <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
-                            ГОРОД
-                          </span>
-                          <span className="font-medium text-gray-800 dark:text-slate-100">
-                            {cityName || location}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
-                            Команда
-                          </span>
-                          <span className="font-medium text-gray-800 dark:text-slate-100">
-                            {team?.name || 'Команда без названия'}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
-                            Тип квеста
-                          </span>
-                          <span className="font-medium text-gray-800 dark:text-slate-100">
-                            {gameTypeLabel}
-                          </span>
-                        </div>
-                        {plannedStart ? (
-                          <div className="flex flex-col">
-                            <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
-                              Планируемый старт
-                            </span>
-                            <span className="font-medium text-gray-800 dark:text-slate-100">
-                              {plannedStart}
-                            </span>
-                          </div>
-                        ) : null}
-                        {actualStart ? (
-                          <div className="flex flex-col">
-                            <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
-                              Фактический старт
-                            </span>
-                            <span className="font-medium text-gray-800 dark:text-slate-100">
-                              {actualStart}
-                            </span>
-                          </div>
-                        ) : null}
-                        {actualFinish ? (
-                          <div className="flex flex-col">
-                            <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
-                              Фактическое завершение
-                            </span>
-                            <span className="font-medium text-gray-800 dark:text-slate-100">
-                              {actualFinish}
-                            </span>
-                          </div>
-                        ) : null}
+            {status !== 'started' ? (
+              <section className="flex flex-col gap-6 p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                        <h1 className="text-2xl font-semibold text-primary dark:text-white">
+                          {game?.name || 'Игра'}
+                        </h1>
+                        <span className="px-3 py-1 text-xs font-semibold text-blue-700 uppercase bg-blue-100 border border-blue-200 rounded-full dark:bg-blue-500/10 dark:border-blue-400/40 dark:text-blue-200">
+                          {statusLabel}
+                        </span>
                       </div>
-                    ) : null}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleGameInfoToggle}
-                    className="flex items-center self-start justify-center p-2 text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
-                    aria-label={
-                      isGameInfoCollapsed
-                        ? 'Развернуть информацию об игре'
-                        : 'Свернуть информацию об игре'
-                    }
-                    title={
-                      isGameInfoCollapsed
-                        ? 'Развернуть информацию об игре'
-                        : 'Свернуть информацию об игре'
-                    }
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
+                      {!isGameInfoCollapsed ? (
+                        <div className="grid gap-3 text-sm text-gray-600 sm:grid-cols-2 dark:text-slate-300">
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
+                              ГОРОД
+                            </span>
+                            <span className="font-medium text-gray-800 dark:text-slate-100">
+                              {cityName || location}
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
+                              Команда
+                            </span>
+                            <span className="font-medium text-gray-800 dark:text-slate-100">
+                              {team?.name || 'Команда без названия'}
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
+                              Тип квеста
+                            </span>
+                            <span className="font-medium text-gray-800 dark:text-slate-100">
+                              {gameTypeLabel}
+                            </span>
+                          </div>
+                          {plannedStart ? (
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
+                                Планируемый старт
+                              </span>
+                              <span className="font-medium text-gray-800 dark:text-slate-100">
+                                {plannedStart}
+                              </span>
+                            </div>
+                          ) : null}
+                          {actualStart ? (
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
+                                Фактический старт
+                              </span>
+                              <span className="font-medium text-gray-800 dark:text-slate-100">
+                                {actualStart}
+                              </span>
+                            </div>
+                          ) : null}
+                          {actualFinish ? (
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
+                                Фактическое завершение
+                              </span>
+                              <span className="font-medium text-gray-800 dark:text-slate-100">
+                                {actualFinish}
+                              </span>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGameInfoToggle}
+                      className="flex items-center self-start justify-center p-2 text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                      aria-label={
+                        isGameInfoCollapsed
+                          ? 'Развернуть информацию об игре'
+                          : 'Свернуть информацию об игре'
+                      }
+                      title={
+                        isGameInfoCollapsed
+                          ? 'Развернуть информацию об игре'
+                          : 'Свернуть информацию об игре'
+                      }
                     >
-                      <path
-                        d={
-                          isGameInfoCollapsed ? 'M6 9l6 6 6-6' : 'M6 15l6-6 6 6'
-                        }
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <span className="sr-only">
-                      {isGameInfoCollapsed
-                        ? 'Развернуть информацию об игре'
-                        : 'Свернуть информацию об игре'}
-                    </span>
-                  </button>
+                      <svg
+                        className="w-5 h-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d={
+                            isGameInfoCollapsed
+                              ? 'M6 9l6 6 6-6'
+                              : 'M6 15l6-6 6 6'
+                          }
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <span className="sr-only">
+                        {isGameInfoCollapsed
+                          ? 'Развернуть информацию об игре'
+                          : 'Свернуть информацию об игре'}
+                      </span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            ) : null}
 
             {error ? (
               <section className="p-6 text-sm text-red-700 border border-red-200 bg-red-50 rounded-3xl dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-100">
@@ -1318,7 +1342,7 @@ function GameTeamPage({
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-primary dark:text-white">
-                    Текущее задание
+                    {`Задание ${currentTaskNumber}`}
                   </h2>
                   <button
                     type="button"

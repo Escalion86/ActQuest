@@ -90,6 +90,8 @@ const normalizeTaskPreview = (task, index) => {
     task: normalizeText(task?.task),
     taskRich: normalizeText(task?.taskRich),
     howToSolve: normalizeText(task?.howToSolve),
+    numCodesToCompliteTask:
+      task?.numCodesToCompliteTask ?? task?.numCodesToCompleteTask ?? null,
     coordinates: task?.coordinates || null,
     clues,
     codes: mainCodes,
@@ -306,6 +308,8 @@ export async function GET(request) {
     const GamesModel = db.model('Games')
     const GamesTeamsModel = db.model('GamesTeams')
     const TeamsModel = db.model('Teams')
+    const TeamsUsersModel = db.model('TeamsUsers')
+    const UsersModel = db.model('Users')
 
     const game = await GamesModel.findById(gameId.trim())
       .select({
@@ -354,9 +358,15 @@ export async function GET(request) {
       }
     }
 
-    if (game.status !== 'started') {
+    const normalizedGameStatus =
+      typeof game.status === 'string' ? game.status.trim().toLowerCase() : ''
+    if (
+      normalizedGameStatus !== 'started' &&
+      normalizedGameStatus !== 'finished' &&
+      normalizedGameStatus !== 'closed'
+    ) {
       return NextResponse.json(
-        { success: false, error: 'Игра должна быть в процессе' },
+        { success: false, error: 'Статистика доступна только для начатых или завершённых игр' },
         { status: 400 },
       )
     }
@@ -384,6 +394,96 @@ export async function GET(request) {
       acc[toStringId(t._id)] = t
       return acc
     }, {})
+
+    const teamMembersByTeamId = new Map()
+    if (teamIds.length > 0) {
+      const memberships = await TeamsUsersModel.find({ teamId: { $in: teamIds } })
+        .select({ _id: 1, teamId: 1, userId: 1, userTelegramId: 1, role: 1 })
+        .lean()
+
+      const membershipUserIds = Array.from(
+        new Set(
+          memberships
+            .map((item) => normalizeStringId(item?.userId))
+            .filter(Boolean),
+        ),
+      )
+      const membershipTelegramIds = Array.from(
+        new Set(
+          memberships
+            .map((item) => Number(item?.userTelegramId))
+            .filter((value) => Number.isFinite(value)),
+        ),
+      )
+
+      const userFilter = {
+        $or: [
+          ...(membershipUserIds.length > 0
+            ? [{ _id: { $in: membershipUserIds } }]
+            : []),
+          ...(membershipTelegramIds.length > 0
+            ? [{ telegramId: { $in: membershipTelegramIds } }]
+            : []),
+        ],
+      }
+      const users =
+        userFilter.$or.length > 0
+          ? await UsersModel.find(userFilter)
+              .select({ _id: 1, name: 1, username: 1, phone: 1, telegramId: 1 })
+              .lean()
+          : []
+
+      const userById = new Map()
+      const userByTelegramId = new Map()
+      users.forEach((user) => {
+        const userId = normalizeStringId(user?._id)
+        if (userId) {
+          userById.set(userId, user)
+        }
+        const telegramId = Number(user?.telegramId)
+        if (Number.isFinite(telegramId)) {
+          userByTelegramId.set(String(telegramId), user)
+        }
+      })
+
+      memberships.forEach((membership) => {
+        const teamId = normalizeStringId(membership?.teamId)
+        if (!teamId) {
+          return
+        }
+
+        const membershipUserId = normalizeStringId(membership?.userId)
+        const membershipTelegramId = Number(membership?.userTelegramId)
+        const user =
+          (membershipUserId ? userById.get(membershipUserId) : null) ||
+          (Number.isFinite(membershipTelegramId)
+            ? userByTelegramId.get(String(membershipTelegramId))
+            : null) ||
+          null
+
+        const member = {
+          id: normalizeStringId(user?._id) || membershipUserId || '',
+          role: normalizeText(membership?.role) || 'participant',
+          name:
+            normalizeText(user?.name) ||
+            normalizeText(user?.username) ||
+            (Number.isFinite(membershipTelegramId)
+              ? `Участник ${membershipTelegramId}`
+              : 'Участник'),
+          username: normalizeText(user?.username),
+          phone: normalizeText(user?.phone),
+          telegramId: Number.isFinite(Number(user?.telegramId))
+            ? String(Number(user.telegramId))
+            : Number.isFinite(membershipTelegramId)
+              ? String(membershipTelegramId)
+              : '',
+        }
+
+        const currentMembers = teamMembersByTeamId.get(teamId) || []
+        currentMembers.push(member)
+        teamMembersByTeamId.set(teamId, currentMembers)
+      })
+    }
 
     const now = new Date()
 
@@ -753,6 +853,7 @@ export async function GET(request) {
       return {
         teamId,
         teamName: team?.name ?? 'Без названия',
+        members: teamMembersByTeamId.get(teamId) || [],
         activeTaskIndex,
         startedTasks,
         currentTaskTitle,
@@ -796,7 +897,13 @@ export async function GET(request) {
       }
     })
 
-    // Сортировка как в Telegram
+    // Сортировка в статусе игры:
+    // 1) По номеру текущего задания (более позднее выше)
+    // 2) Для одинакового задания:
+    //    - завершившие игру выше незавершивших, между собой по общему времени (меньше выше)
+    //    - команды на перерыве выше команд в активной фазе
+    //    - на перерыве: кто дольше на перерыве (меньше осталось) — выше
+    //    - в активной фазе: кто дольше на задании — выше
     teamsStatus.sort((a, b) => {
       if (b.activeTaskIndex !== a.activeTaskIndex) {
         return b.activeTaskIndex - a.activeTaskIndex
@@ -809,6 +916,13 @@ export async function GET(request) {
       if (a.isTeamOnBreak || b.isTeamOnBreak) {
         if (a.isTeamOnBreak && !b.isTeamOnBreak) return -1
         if (!a.isTeamOnBreak && b.isTeamOnBreak) return 1
+        if (a.breakTimeLeftSeconds !== b.breakTimeLeftSeconds) {
+          // Меньше осталось -> дольше уже на перерыве -> выше в списке
+          return a.breakTimeLeftSeconds - b.breakTimeLeftSeconds
+        }
+      } else if (a.currentTaskSeconds !== b.currentTaskSeconds) {
+        // Больше времени на текущем задании -> выше в списке
+        return b.currentTaskSeconds - a.currentTaskSeconds
       }
       if (b.findedCodesCount !== a.findedCodesCount) {
         return b.findedCodesCount - a.findedCodesCount

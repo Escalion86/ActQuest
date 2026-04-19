@@ -19,11 +19,6 @@ const normalizeRole = (value) => {
     : null
 }
 
-const isGameStarted = (status) =>
-  String(status || '')
-    .trim()
-    .toLowerCase() === 'started'
-
 const formatAnnouncementBody = (game) => {
   const gameName =
     typeof game?.name === 'string' && game.name.trim()
@@ -55,6 +50,26 @@ const sanitizeCustomMessage = (value) => {
   }
 
   return value.trim()
+}
+
+const dedupeUsers = (users) => {
+  const map = new Map()
+  ;(Array.isArray(users) ? users : []).forEach((user) => {
+    if (!user || typeof user !== 'object') return
+    const idKey = toStringId(user?._id)
+    const tgKey =
+      Number.isFinite(Number(user?.telegramId)) ? `tg:${Number(user.telegramId)}` : ''
+    const fallbackKey =
+      typeof user?.phone === 'number' && Number.isFinite(user.phone)
+        ? `ph:${String(user.phone)}`
+        : ''
+    const key = idKey || tgKey || fallbackKey
+    if (!key) return
+    if (!map.has(key)) {
+      map.set(key, user)
+    }
+  })
+  return Array.from(map.values())
 }
 
 const isManagerOfGame = ({ sessionUser, game }) => {
@@ -129,17 +144,51 @@ const getUsersForGameRegistrations = async ({ db, gameId }) => {
     .select({ _id: 1, telegramId: 1, pushSubscriptions: 1 })
     .lean()
 
-  const uniqueUsersByTelegramId = new Map()
-  users.forEach((user) => {
-    const telegramId = Number(user?.telegramId)
-    if (!Number.isFinite(telegramId)) {
-      return
-    }
+  return dedupeUsers(users)
+}
 
-    uniqueUsersByTelegramId.set(telegramId, user)
+const getUsersForSingleGameTeam = async ({ db, gameId, teamId }) => {
+  const GamesTeams = db.model('GamesTeams')
+  const TeamsUsers = db.model('TeamsUsers')
+  const Users = db.model('Users')
+  const teamIdAsString = toStringId(teamId)
+
+  if (!teamIdAsString) {
+    return { users: [], teamFound: false }
+  }
+
+  const gameTeams = await GamesTeams.find({ gameId }).select({ teamId: 1 }).lean()
+  const matchingGameTeam = gameTeams.find(
+    (item) => toStringId(item?.teamId) === teamIdAsString,
+  )
+  if (!matchingGameTeam) {
+    return { users: [], teamFound: false }
+  }
+
+  const rawTeamId = matchingGameTeam.teamId
+  const teamMemberships = await TeamsUsers.find({ teamId: rawTeamId })
+    .select({ userId: 1 })
+    .lean()
+
+  const userIds = Array.from(
+    new Set(teamMemberships.map((item) => toStringId(item?.userId)).filter(Boolean)),
+  )
+  const objectIdUserIds = userIds.filter((value) => /^[0-9a-fA-F]{24}$/.test(value))
+  if (objectIdUserIds.length === 0) {
+    return { users: [], teamFound: true, resolvedTeamId: toStringId(rawTeamId) }
+  }
+
+  const users = await Users.find({
+    _id: { $in: objectIdUserIds },
   })
+    .select({ _id: 1, telegramId: 1, pushSubscriptions: 1 })
+    .lean()
 
-  return Array.from(uniqueUsersByTelegramId.values())
+  return {
+    users: dedupeUsers(users),
+    teamFound: true,
+    resolvedTeamId: toStringId(rawTeamId),
+  }
 }
 
 const getAllUsersForBroadcast = async ({ db, gameLocation }) => {
@@ -158,18 +207,13 @@ const getAllUsersForBroadcast = async ({ db, gameLocation }) => {
     })
     .lean()
 
-  return users.filter((user) => {
-    if (!Number.isFinite(Number(user?.telegramId))) {
-      return false
-    }
-
+  return dedupeUsers(users.filter((user) => {
     const userParticipationLocation = resolveUserCityKey(user, null)
-
     return (
       Boolean(normalizedGameLocation) &&
       userParticipationLocation === normalizedGameLocation
     )
-  })
+  }))
 }
 
 export async function POST(request, { params }) {
@@ -194,8 +238,9 @@ export async function POST(request, { params }) {
   const mode = typeof body?.mode === 'string' ? body.mode.trim() : ''
   const isAnnouncementForAll = mode === 'announce_all_users'
   const isCustomForRegistered = mode === 'custom_for_registered'
+  const isCustomForTeam = mode === 'custom_for_team'
 
-  if (!isAnnouncementForAll && !isCustomForRegistered) {
+  if (!isAnnouncementForAll && !isCustomForRegistered && !isCustomForTeam) {
     return NextResponse.json(
       {
         success: false,
@@ -206,11 +251,11 @@ export async function POST(request, { params }) {
   }
 
   const customMessage = sanitizeCustomMessage(body?.message)
-  if (isCustomForRegistered && customMessage.length === 0) {
+  if ((isCustomForRegistered || isCustomForTeam) && customMessage.length === 0) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Введите сообщение для отправки зарегистрированным командам',
+        error: 'Введите сообщение для отправки',
       },
       { status: 400 },
     )
@@ -222,6 +267,14 @@ export async function POST(request, { params }) {
         success: false,
         error: 'Сообщение слишком длинное. Максимум 1200 символов.',
       },
+      { status: 400 },
+    )
+  }
+
+  const requestedTeamId = isCustomForTeam ? toStringId(body?.teamId) : ''
+  if (isCustomForTeam && !requestedTeamId) {
+    return NextResponse.json(
+      { success: false, error: 'Не передан идентификатор команды' },
       { status: 400 },
     )
   }
@@ -263,16 +316,6 @@ export async function POST(request, { params }) {
       )
     }
 
-    if (isGameStarted(game.status)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Во время процесса игры рассылка через карточку игры недоступна',
-        },
-        { status: 409 },
-      )
-    }
-
     if (isAnnouncementForAll && !resolveUserCityKey({ currentLocation: game?.location }, null)) {
       return NextResponse.json(
         {
@@ -284,24 +327,61 @@ export async function POST(request, { params }) {
       )
     }
 
-    const users = isAnnouncementForAll
-      ? await getAllUsersForBroadcast({ db, gameLocation: game.location })
-      : await getUsersForGameRegistrations({ db, gameId })
+    let users = []
+    let resolvedTeamId = ''
+    if (isAnnouncementForAll) {
+      users = await getAllUsersForBroadcast({ db, gameLocation: game.location })
+    } else if (isCustomForRegistered) {
+      users = await getUsersForGameRegistrations({ db, gameId })
+    } else {
+      const teamResult = await getUsersForSingleGameTeam({
+        db,
+        gameId,
+        teamId: requestedTeamId,
+      })
+      if (!teamResult.teamFound) {
+        return NextResponse.json(
+          { success: false, error: 'Команда не найдена среди зарегистрированных на игру' },
+          { status: 404 },
+        )
+      }
+      users = teamResult.users
+      resolvedTeamId = teamResult.resolvedTeamId || requestedTeamId
+    }
 
     const gameName =
       typeof game?.name === 'string' && game.name.trim()
         ? game.name.trim()
         : 'Без названия'
+    let teamName = ''
+    if (isCustomForTeam && resolvedTeamId) {
+      try {
+        const teamDoc = await db.model('Teams').findById(resolvedTeamId).select({ name: 1 }).lean()
+        teamName =
+          typeof teamDoc?.name === 'string' && teamDoc.name.trim()
+            ? teamDoc.name.trim()
+            : ''
+      } catch {
+        teamName = ''
+      }
+    }
     const notification = {
       title: isAnnouncementForAll
         ? `Анонс игры «${gameName}»`
-        : `Сообщение по игре «${gameName}»`,
+        : isCustomForTeam
+          ? `Сообщение команде${teamName ? ` «${teamName}»` : ''}`
+          : `Сообщение по игре «${gameName}»`,
       body: isAnnouncementForAll ? formatAnnouncementBody(game) : customMessage,
-      tag: `game-${gameId}-${isAnnouncementForAll ? 'announce' : 'custom'}`,
+      tag: `game-${gameId}-${isAnnouncementForAll ? 'announce' : isCustomForTeam ? `team-${resolvedTeamId || requestedTeamId}` : 'custom'}`,
       data: {
-        type: isAnnouncementForAll ? 'game_announcement' : 'game_custom_message',
+        type: isAnnouncementForAll
+          ? 'game_announcement'
+          : isCustomForTeam
+            ? 'game_team_custom_message'
+            : 'game_custom_message',
         gameId,
         gameName,
+        ...(isCustomForTeam ? { teamId: resolvedTeamId || requestedTeamId } : {}),
         location: typeof game.location === 'string' ? game.location : 'global',
         url: '/cabinet/games-upcoming',
       },
@@ -320,6 +400,7 @@ export async function POST(request, { params }) {
         data: {
           mode,
           gameId,
+          ...(isCustomForTeam ? { teamId: resolvedTeamId || requestedTeamId } : {}),
           usersMatched: users.length,
           notificationsCreated: result?.created || 0,
           pushDelivered: result?.delivered || 0,

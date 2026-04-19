@@ -11,6 +11,7 @@ import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import requestApiJson from '@helpers/requestApiJson'
 import { LOCATIONS } from '@server/serverConstants'
 import TeamDescriptionModal from './TeamDescriptionModal'
+import GameControlTeamStatsModal from './GameControlTeamStatsModal'
 
 const resolveRatingBadge = (rating) =>
   rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
@@ -64,6 +65,28 @@ const ClosedDoorIcon = () => (
   </svg>
 )
 
+const TeamStatsIcon = () => (
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <rect
+      x="3.5"
+      y="3.5"
+      width="13"
+      height="13"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <path d="M6.5 13V10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M10 13V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M13.5 13V6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+)
+
 const GameTeamsModal = ({
   selectedGame,
   isTeamsModalOpen,
@@ -106,6 +129,9 @@ const GameTeamsModal = ({
     seconds: 60,
     name: '',
   })
+  const [selectedTeamStatsName, setSelectedTeamStatsName] = useState('')
+  const [selectedTeamStats, setSelectedTeamStats] = useState(null)
+  const [isTeamStatsModalOpen, setIsTeamStatsModalOpen] = useState(false)
 
   const closeTeamDetailsModal = useCallback(() => {
     setIsTeamDetailsModalOpen(false)
@@ -130,6 +156,8 @@ const GameTeamsModal = ({
     ['dev', 'admin', 'moder'].includes(
       String(currentUserRole || '').toLowerCase(),
     )
+  const canViewTeamStats =
+    canEditRegisteredTeams && (gameStatus === 'finished' || gameStatus === 'closed')
   const locationOptions = useMemo(
     () =>
       Object.entries(LOCATIONS)
@@ -169,8 +197,50 @@ const GameTeamsModal = ({
         seconds: 60,
         name: '',
       })
+      setSelectedTeamStatsName('')
+      setSelectedTeamStats(null)
+      setIsTeamStatsModalOpen(false)
     }
   }, [isTeamsModalOpen])
+
+  const handleCloseTeamStatsModal = useCallback(() => {
+    setIsTeamStatsModalOpen(false)
+    setSelectedTeamStatsName('')
+    setSelectedTeamStats(null)
+  }, [])
+
+  const handleOpenTeamStatsModal = useCallback(
+    async (team) => {
+      if (!team?.teamId || !selectedGame?.id) {
+        return
+      }
+      setSelectedTeamStatsName(String(team?.teamName || 'Без названия'))
+      setSelectedTeamStats(null)
+      setIsTeamStatsModalOpen(true)
+
+      try {
+        const { json } = await requestApiJson(
+          `/api/cabinet/admin/game-status?gameId=${encodeURIComponent(String(selectedGame.id))}`,
+          {
+            fallbackMessage: 'Не удалось загрузить статистику команды',
+          },
+        )
+
+        const teams = Array.isArray(json?.data?.teams) ? json.data.teams : []
+        const matchedTeam = teams.find(
+          (item) =>
+            String(item?.teamId || '') === String(team.teamId || ''),
+        )
+
+        setSelectedTeamStats(matchedTeam?.teamProgressStats || null)
+      } catch (error) {
+        setSelectedTeamStats({
+          error: error?.message || 'Не удалось загрузить статистику команды',
+        })
+      }
+    },
+    [selectedGame?.id],
+  )
 
   const getManualAdjustmentRowsFromTeam = useCallback((team) => {
     const timeAddings = Array.isArray(team?.timeAddings) ? team.timeAddings : []
@@ -797,6 +867,20 @@ const GameTeamsModal = ({
                                   </svg>
                                 </button>
                               ) : null}
+                              {canViewTeamStats ? (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    handleOpenTeamStatsModal(team)
+                                  }}
+                                  aria-label={`Статистика команды ${team.teamName || ''}`}
+                                  title="Статистика команды"
+                                  className="flex items-center justify-center w-9 h-9 transition border rounded-lg border-indigo-200 bg-indigo-50 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-100 dark:border-indigo-500/35 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:border-indigo-400/65 dark:hover:bg-indigo-500/20 sm:h-8 sm:w-8"
+                                >
+                                  <TeamStatsIcon />
+                                </button>
+                              ) : null}
                               {!isReadOnly && (
                                 <button
                                   type="button"
@@ -1334,6 +1418,18 @@ const GameTeamsModal = ({
           />
         </div>
       </Modal>
+      <GameControlTeamStatsModal
+        isOpen={isTeamStatsModalOpen}
+        onClose={handleCloseTeamStatsModal}
+        teamName={selectedTeamStatsName}
+        stats={
+          selectedTeamStats &&
+          typeof selectedTeamStats === 'object' &&
+          !selectedTeamStats.error
+            ? selectedTeamStats
+            : null
+        }
+      />
     </>
   )
 }
@@ -1370,7 +1466,11 @@ const availableTeamShape = PropTypes.shape({
 })
 
 GameTeamsModal.propTypes = {
-  selectedGame: PropTypes.shape({ name: PropTypes.string }),
+  selectedGame: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    status: PropTypes.string,
+  }),
   isTeamsModalOpen: PropTypes.bool.isRequired,
   handleCloseTeamsModal: PropTypes.func.isRequired,
   teamsModalState: PropTypes.shape({

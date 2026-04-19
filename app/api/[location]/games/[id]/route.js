@@ -137,6 +137,62 @@ const execute = (request, params) =>
     request,
     params,
     handler: async (req, res) => {
+      if (req.method === 'DELETE') {
+        const {
+          query: { id, location },
+        } = req
+
+        if (!location || !id) {
+          return res
+            .status(400)
+            .json({ success: false, error: 'Не указан идентификатор игры или площадки' })
+        }
+
+        try {
+          const db = await dbConnectGlobal()
+          if (!db) {
+            return res
+              .status(500)
+              .json({ success: false, error: 'Нет подключения к базе данных' })
+          }
+
+          const Games = db.model('Games')
+          const existingGame = await Games.findById(id)
+
+          if (!existingGame) {
+            return res.status(404).json({ success: false, error: 'Игра не найдена' })
+          }
+
+          const existingGameLocation =
+            typeof existingGame.location === 'string'
+              ? existingGame.location.trim().toLowerCase()
+              : null
+          if (
+            existingGameLocation &&
+            existingGameLocation !== String(location).trim().toLowerCase()
+          ) {
+            return res
+              .status(403)
+              .json({ success: false, error: 'Игра недоступна для выбранной площадки' })
+          }
+
+          const normalizedStatus = String(existingGame.status || '').toLowerCase()
+          if (normalizedStatus === 'started' || normalizedStatus === 'closed') {
+            return res.status(400).json({
+              success: false,
+              error: 'Удаление доступно только для игр, которые не запущены и не закрыты',
+            })
+          }
+        } catch (error) {
+          console.error('Failed to validate game delete', { error, gameId: id, location })
+          return res
+            .status(500)
+            .json({ success: false, error: 'Не удалось проверить возможность удаления игры' })
+        }
+
+        return CRUD('Games', req, res)
+      }
+
       if (req.method !== 'PUT') {
         return CRUD('Games', req, res)
       }

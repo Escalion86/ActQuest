@@ -3528,7 +3528,7 @@ const TaskRichEditor = ({
           height: 0;
           border-top: 7px solid transparent;
           border-bottom: 7px solid transparent;
-          border-left: 11px solid #0f172a;
+          border-left: 11px solid #ffffff;
           margin-left: 2px;
         }
 
@@ -3538,9 +3538,9 @@ const TaskRichEditor = ({
           height: 14px;
           background: linear-gradient(
             to right,
-            #0f172a 0 4px,
+            #ffffff 0 4px,
             transparent 4px 8px,
-            #0f172a 8px 12px
+            #ffffff 8px 12px
           );
         }
 
@@ -3790,9 +3790,9 @@ const TaskRichEditor = ({
             height: 12px;
             background: linear-gradient(
               to right,
-              #0f172a 0 3px,
+              #ffffff 0 3px,
               transparent 3px 7px,
-              #0f172a 7px 10px
+              #ffffff 7px 10px
             );
           }
 

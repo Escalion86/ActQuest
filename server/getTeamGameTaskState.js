@@ -125,6 +125,7 @@ const buildTaskDisplayMeta = (task, gameTeam, taskIndex) => {
   )
 
   return {
+    taskIndex: safeTaskIndex,
     mainCodesCount,
     requiredCodesCount: toFiniteNonNegativeIntegerOrNull(
       task?.numCodesToCompliteTask,

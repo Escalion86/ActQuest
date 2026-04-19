@@ -485,6 +485,12 @@ const isGameInProgressStatus = (status) =>
   (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
   'started'
 
+const canBroadcastByGameStatus = (status) => {
+  const normalized =
+    typeof status === 'string' ? status.toLowerCase() : String(status)
+  return normalized !== 'canceled' && normalized !== 'closed'
+}
+
 const canJoinGameByStatus = (status) =>
   (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
   'active'
@@ -1371,6 +1377,14 @@ const GamesPage = ({
           variant: 'secondary',
           tone: 'danger',
         },
+        {
+          id: 'delete_game',
+          label: 'Удалить игру',
+          description:
+            'Полностью удалит игру. Действие необратимо.',
+          variant: 'secondary',
+          tone: 'danger',
+        },
       ]
     }
 
@@ -1413,6 +1427,14 @@ const GamesPage = ({
           tone: 'neutral',
           disabled: !canCloseGame,
         },
+        {
+          id: 'delete_game',
+          label: 'Удалить игру',
+          description:
+            'Полностью удалит игру. Действие необратимо.',
+          variant: 'secondary',
+          tone: 'danger',
+        },
       ]
     }
 
@@ -1424,6 +1446,14 @@ const GamesPage = ({
           description: 'Вернёт отменённую игру в статус «Активна».',
           variant: 'primary',
           tone: 'success',
+        },
+        {
+          id: 'delete_game',
+          label: 'Удалить игру',
+          description:
+            'Полностью удалит игру. Действие необратимо.',
+          variant: 'secondary',
+          tone: 'danger',
         },
       ]
     }
@@ -4791,6 +4821,15 @@ const GamesPage = ({
         }
       }
 
+      if (typeof window !== 'undefined' && actionId === 'delete_game') {
+        const shouldDelete = window.confirm(
+          'Удалить игру без возможности восстановления? Это действие необратимо.',
+        )
+        if (!shouldDelete) {
+          return
+        }
+      }
+
       setIsStatusChanging(true)
       setFeedback(null)
       setStatusProgressMessage('')
@@ -4879,6 +4918,18 @@ const GamesPage = ({
             },
           )
           successMessage = 'Игра остановлена'
+        } else if (actionId === 'delete_game') {
+          setStatusProgressMessage('Удаляем игру…')
+          await requestApiJson(
+            `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
+              statusModalGame.id,
+            )}`,
+            {
+              method: 'DELETE',
+              fallbackMessage: 'Не удалось удалить игру',
+            },
+          )
+          successMessage = 'Игра удалена'
         } else {
           let nextStatus = null
 
@@ -5504,8 +5555,7 @@ const GamesPage = ({
       const canManageStatusThisGame =
         canEditAllGames && canManageGameStatus(game)
       const canBroadcastThisGame =
-        canManageThisGame &&
-        (isActiveGameStatus(game.status) || isGameInProgressStatus(game.status))
+        canManageThisGame && canBroadcastByGameStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
       const canGenerateThisGameResults = canGenerateResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
@@ -5889,8 +5939,7 @@ const GamesPage = ({
       const canManageStatusThisGame =
         canEditAllGames && canManageGameStatus(game)
       const canBroadcastThisGame =
-        canManageThisGame &&
-        (isActiveGameStatus(game.status) || isGameInProgressStatus(game.status))
+        canManageThisGame && canBroadcastByGameStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
       const canGenerateThisGameResults = canGenerateResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)

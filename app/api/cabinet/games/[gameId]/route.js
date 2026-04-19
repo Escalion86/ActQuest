@@ -21,3 +21,21 @@ export async function PUT(request, { params }) {
     bodyText,
   })
 }
+
+export async function DELETE(request, { params }) {
+  const resolvedParams = await params
+  const gameId = resolvedParams?.gameId
+  if (!gameId) {
+    return NextResponse.json(
+      { success: false, error: 'Не передан идентификатор игры' },
+      { status: 400 },
+    )
+  }
+
+  return proxyToLocationGameRoute({
+    request,
+    gameId,
+    targetPath: '/api/:location/games/:gameId',
+    method: 'DELETE',
+  })
+}
