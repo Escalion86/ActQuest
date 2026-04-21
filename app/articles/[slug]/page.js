@@ -6,6 +6,7 @@ import {
   getSeoArticleMetadata,
   seoArticles,
 } from '@app/_lib/seoArticles'
+import SeoMetrikaTracker from '@components/analytics/SeoMetrikaTracker'
 import SeoActionLink from '@components/public/seo/SeoActionLink'
 import SeoLinksList from '@components/public/seo/SeoLinksList'
 import SeoSectionCard from '@components/public/seo/SeoSectionCard'
@@ -76,6 +77,19 @@ export default async function ArticlePage({ params }) {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      <SeoMetrikaTracker
+        viewGoal="aq_view_article"
+        viewParams={{
+          article_slug: article.slug,
+          city: article.citySlug || 'all',
+          page_type: 'article_page',
+        }}
+        scrollParams={{
+          article_slug: article.slug,
+          city: article.citySlug || 'all',
+          page_type: 'article_page',
+        }}
+      />
       {jsonLd ? (
         <script
           type="application/ld+json"
@@ -101,7 +115,17 @@ export default async function ArticlePage({ params }) {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <SeoActionLink href="/cabinet/login?mode=register" variant="primary">
+          <SeoActionLink
+            href="/cabinet/login?mode=register"
+            variant="primary"
+            metrikaGoal="aq_click_register"
+            metrikaParams={{
+              city: article.citySlug || 'all',
+              page_type: 'article_page',
+              placement: 'article_inline_cta',
+              article_slug: article.slug,
+            }}
+          >
             Записаться на игру
           </SeoActionLink>
           <SeoActionLink href="/articles" variant="secondary">

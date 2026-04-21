@@ -1,5 +1,8 @@
+'use client'
+
 import Link from 'next/link'
 import cn from 'classnames'
+import { reachAnalyticsGoal } from '@helpers/yandexMetrika'
 
 const variants = {
   primary:
@@ -15,10 +18,20 @@ export default function SeoActionLink({
   children,
   className,
   variant = 'primary',
+  openInNewTab = false,
+  metrikaGoal = '',
+  metrikaParams = {},
 }) {
   return (
     <Link
       href={href}
+      target={openInNewTab ? '_blank' : undefined}
+      rel={openInNewTab ? 'noopener noreferrer' : undefined}
+      onClick={() => {
+        if (metrikaGoal) {
+          reachAnalyticsGoal(metrikaGoal, metrikaParams)
+        }
+      }}
       className={cn(
         'inline-flex rounded-xl border px-4 py-2 text-sm font-semibold transition',
         variants[variant] || variants.primary,

@@ -1,8 +1,8 @@
-import Link from 'next/link'
-
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
 import { seoArticles } from '@app/_lib/seoArticles'
+import MetrikaTrackedLink from '@components/analytics/MetrikaTrackedLink'
+import SeoMetrikaTracker from '@components/analytics/SeoMetrikaTracker'
 import SeoActionLink from '@components/public/seo/SeoActionLink'
 import SeoContactsInfo from '@components/public/seo/SeoContactsInfo'
 import SeoFaqItems from '@components/public/seo/SeoFaqItems'
@@ -335,6 +335,11 @@ export async function CityLandingPage({ slug }) {
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <SeoMetrikaTracker
+        viewGoal="aq_view_city_page"
+        viewParams={{ city: city.locationKey, page_type: 'city_page' }}
+        scrollParams={{ city: city.locationKey, page_type: 'city_page' }}
+      />
       {jsonLdItems.map((item, index) => (
         <script
           key={`${city.slug}-jsonld-${index}`}
@@ -354,11 +359,31 @@ export async function CityLandingPage({ slug }) {
           получают рейтинг по итогам игр.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <SeoActionLink href="/cabinet/login?mode=register" variant="primary">
+          <SeoActionLink
+            href="/cabinet/login?mode=register"
+            variant="primary"
+            metrikaGoal="aq_click_register"
+            metrikaParams={{
+              city: city.locationKey,
+              page_type: 'city_page',
+              placement: 'city_hero_register_btn',
+            }}
+          >
             Записаться на игру
           </SeoActionLink>
           {projectChatDirectUrl ? (
-            <SeoActionLink href={projectChatDirectUrl} variant="secondary">
+            <SeoActionLink
+              href={projectChatDirectUrl}
+              variant="secondary"
+              openInNewTab
+              metrikaGoal="aq_click_chat"
+              metrikaParams={{
+                city: city.locationKey,
+                page_type: 'city_page',
+                chat_target: city.locationKey,
+                placement: 'city_hero_chat_btn',
+              }}
+            >
               Чат проекта
             </SeoActionLink>
           ) : null}
@@ -384,12 +409,18 @@ export async function CityLandingPage({ slug }) {
           <ul className="space-y-2 text-[#cbe8ff]">
             {upcomingGames.map((game) => (
               <li key={String(game._id)}>
-                <Link
+                <MetrikaTrackedLink
                   href={`/game/${game._id}`}
+                  goal="aq_click_schedule"
+                  params={{
+                    city: city.locationKey,
+                    page_type: 'city_page',
+                    placement: 'city_upcoming_game_link',
+                  }}
                   className="font-medium text-[#eaf7ff] underline decoration-[#00D1FF]/60 underline-offset-2 hover:text-white"
                 >
                   {game.name}
-                </Link>
+                </MetrikaTrackedLink>
                 {game.dateStart ? (
                   <span className="ml-2 text-[#9cc7e5]">
                     {new Date(game.dateStart).toLocaleDateString('ru-RU')}
@@ -411,7 +442,11 @@ export async function CityLandingPage({ slug }) {
       </SeoSectionCard>
 
       <SeoSectionCard title="Контакты и условия">
-        <SeoContactsInfo phone={city.phone} />
+        <SeoContactsInfo
+          phone={city.phone}
+          cityKey={city.locationKey}
+          pageType="city_page"
+        />
       </SeoSectionCard>
 
       <SeoSectionCard title="Полезные материалы по автоквестам">

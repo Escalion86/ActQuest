@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import PropTypes from 'prop-types'
 import { LOCATIONS } from '@server/serverConstants'
 import SeoHomepageFooterSections from '@components/public/seo/SeoHomepageFooterSections'
+import { reachAnalyticsGoal } from '@helpers/yandexMetrika'
 
 const ACCESS_KEY = 'aq_index2_access_open'
 const FIRST_ANSWER_KEY = 'aq_index2_first_answer'
@@ -2834,6 +2835,13 @@ const Index2Page = ({ seoFooter }) => {
                 )}
                 <Link
                   href="/cabinet/login?mode=register"
+                  onClick={() =>
+                    reachAnalyticsGoal('aq_click_register', {
+                      city: selectedScenarioLocation || 'all',
+                      page_type: 'home_page',
+                      placement: 'home_init_register_btn',
+                    })
+                  }
                   className="cta-pulse mt-8 inline-flex cursor-pointer rounded-2xl border border-[#00D1FF]/40 bg-[#00D1FF]/10 px-7 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#baf3ff] transition hover:bg-[#00D1FF]/20"
                 >
                   Начать игру
@@ -2844,6 +2852,14 @@ const Index2Page = ({ seoFooter }) => {
                       href={projectChatUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() =>
+                        reachAnalyticsGoal('aq_click_chat', {
+                          city: selectedScenarioLocation || 'all',
+                          page_type: 'home_page',
+                          chat_target: selectedScenarioLocation || 'all',
+                          placement: 'home_init_chat_btn',
+                        })
+                      }
                       className="inline-flex cursor-pointer rounded-xl border border-[#7A00FF]/45 bg-[#7A00FF]/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#d9c7ff] transition hover:bg-[#7A00FF]/20"
                     >
                       Чат проекта

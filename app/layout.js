@@ -1,5 +1,6 @@
 import './globals.css'
 import { Roboto } from 'next/font/google'
+import Script from 'next/script'
 import AppProviders from './providers'
 import ThemeInitializerClient from './ThemeInitializerClient'
 import PwaStandalonePullToRefresh from '@components/PwaStandalonePullToRefresh'
@@ -62,6 +63,11 @@ export const viewport = {
 }
 
 export default function RootLayout({ children }) {
+  const yandexMetrikaId = Number(process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID)
+  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''
+  const hasYandexMetrika = Number.isFinite(yandexMetrikaId) && yandexMetrikaId > 0
+  const hasGa4 = typeof gaMeasurementId === 'string' && gaMeasurementId.trim().length > 0
+
   return (
     <html
       lang="ru"
@@ -73,8 +79,62 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        {hasYandexMetrika ? (
+          <Script id="aq-yandex-metrika-init" strategy="afterInteractive">
+            {`
+              (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+              m[i].l=1*new Date();
+              for (var j = 0; j < document.scripts.length; j++) { if (document.scripts[j].src === r) { return; } }
+              k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+              (window, document, "script", "https://mc.yandex.ru/metrika/tag.js?id=${yandexMetrikaId}", "ym");
+              window.__AQ_YM_ID = ${yandexMetrikaId};
+              ym(${yandexMetrikaId}, "init", {
+                ssr:true,
+                webvisor:true,
+                clickmap:true,
+                trackLinks:true,
+                accurateTrackBounce:true,
+                ecommerce:"dataLayer",
+                referrer: document.referrer,
+                url: location.href
+              });
+            `}
+          </Script>
+        ) : null}
+        {hasGa4 ? (
+          <>
+            <Script
+              id="aq-ga4-loader"
+              src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaMeasurementId)}`}
+              strategy="afterInteractive"
+            />
+            <Script id="aq-ga4-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                window.gtag = window.gtag || gtag;
+                window.__AQ_GA_ID = "${gaMeasurementId}";
+                gtag('js', new Date());
+                gtag('config', "${gaMeasurementId}", {
+                  send_page_view: true
+                });
+              `}
+            </Script>
+          </>
+        ) : null}
       </head>
       <body>
+        {hasYandexMetrika ? (
+          <noscript>
+            <div>
+              <img
+                src={`https://mc.yandex.ru/watch/${yandexMetrikaId}`}
+                style={{ position: 'absolute', left: '-9999px' }}
+                alt=""
+              />
+            </div>
+          </noscript>
+        ) : null}
         <ThemeInitializerClient />
         <PwaStandalonePullToRefresh />
         <AppProviders>{children}</AppProviders>
