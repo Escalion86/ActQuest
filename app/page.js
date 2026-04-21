@@ -3,7 +3,6 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
 import { seoArticles } from '@app/_lib/seoArticles'
 import { cityPagesList } from '@app/_lib/cityLandingPages'
-import { getProjectBotBaseUrl } from '@helpers/telegramProjectChatConfig'
 
 const siteUrl =
   process.env.NEXTAUTH_URL ||
@@ -96,7 +95,6 @@ export default async function HomePage() {
     slug: article.slug,
     title: article.title,
   }))
-  const projectChatUrl = getProjectBotBaseUrl()
   const jsonLdItems = buildJsonLd(upcomingGames)
   const locationNames = Object.values(LOCATIONS)
     .filter((loc) => !loc.hidden)
@@ -150,10 +148,7 @@ export default async function HomePage() {
           </a>
         ))}
       </div>
-      <Index2PageClient
-        seoFooter={{ cityLinks, featuredArticles }}
-        projectChatUrl={projectChatUrl}
-      />
+      <Index2PageClient seoFooter={{ cityLinks, featuredArticles }} />
     </>
   )
 }

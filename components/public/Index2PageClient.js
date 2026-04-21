@@ -73,6 +73,14 @@ const normalize = (value) =>
 const parsePercent = (value) =>
   Number.parseFloat(String(value).replace('%', ''))
 
+const normalizeExternalUrl = (value) => {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
 const safeLocalStorageGet = (key, fallback = null) => {
   if (typeof window === 'undefined') return fallback
   try {
@@ -575,7 +583,7 @@ ScenarioCard.defaultProps = {
   onFallbackConfirm: undefined,
 }
 
-const Index2Page = ({ seoFooter, projectChatUrl }) => {
+const Index2Page = ({ seoFooter }) => {
   const router = useRouter()
   const [stage, setStage] = useState('prelude')
   const [visiblePrelude, setVisiblePrelude] = useState(0)
@@ -630,6 +638,7 @@ const Index2Page = ({ seoFooter, projectChatUrl }) => {
   const [archiveDragActive, setArchiveDragActive] = useState(false)
   const [archiveStatus, setArchiveStatus] = useState('')
   const [sledDragGhost, setSledDragGhost] = useState(null)
+  const [projectChatUrl, setProjectChatUrl] = useState('')
   const [visibleFlowCount, setVisibleFlowCount] = useState(0)
   const transitionTimeoutRef = useRef(null)
   const inputGlitchTimeoutRef = useRef(null)
@@ -727,6 +736,50 @@ const Index2Page = ({ seoFooter, projectChatUrl }) => {
       telemetrySteps.length > 0 && telemetryDoneCount >= telemetrySteps.length,
     [telemetryDoneCount, telemetrySteps],
   )
+
+  useEffect(() => {
+    if (stage !== 'main' || !selectedScenarioLocation) return
+
+    let cancelled = false
+
+    const fetchProjectChatUrl = async () => {
+      try {
+        const params = new URLSearchParams({
+          type: 'settings',
+          location: selectedScenarioLocation,
+          select: 'chatUrl',
+        })
+        const response = await fetch(
+          `/api/public/discovery?${params.toString()}`,
+        )
+        const json = await response.json()
+
+        if (!response.ok || cancelled) {
+          if (!cancelled) setProjectChatUrl('')
+          return
+        }
+
+        const settingsDoc = Array.isArray(json?.data)
+          ? json.data[0]
+          : json?.data
+        const nextUrl = normalizeExternalUrl(settingsDoc?.chatUrl)
+        if (!cancelled) {
+          setProjectChatUrl(nextUrl)
+        }
+      } catch {
+        if (!cancelled) {
+          setProjectChatUrl('')
+        }
+      }
+    }
+
+    fetchProjectChatUrl()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedScenarioLocation, stage])
+
 
   useEffect(() => {
     const isOpen =
@@ -3278,7 +3331,6 @@ const Index2Page = ({ seoFooter, projectChatUrl }) => {
 }
 
 Index2Page.propTypes = {
-  projectChatUrl: PropTypes.string,
   seoFooter: PropTypes.shape({
     cityLinks: PropTypes.arrayOf(
       PropTypes.shape({
@@ -3296,7 +3348,6 @@ Index2Page.propTypes = {
 }
 
 Index2Page.defaultProps = {
-  projectChatUrl: '',
   seoFooter: {
     cityLinks: [],
     featuredArticles: [],

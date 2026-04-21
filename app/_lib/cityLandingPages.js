@@ -9,7 +9,7 @@ import SeoFaqItems from '@components/public/seo/SeoFaqItems'
 import SeoLinksList from '@components/public/seo/SeoLinksList'
 import SeoSectionCard from '@components/public/seo/SeoSectionCard'
 import SeoTextSection from '@components/public/seo/SeoTextSection'
-import { buildProjectBotCityStartLink } from '@helpers/telegramProjectChatConfig'
+import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
 
 const siteUrl =
   process.env.NEXTAUTH_URL ||
@@ -187,6 +187,35 @@ async function getUpcomingGamesByLocation(locationKey) {
   }
 }
 
+const normalizeExternalUrl = (value) => {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
+async function getDirectCityChatUrl(locationKey) {
+  if (typeof locationKey !== 'string' || !locationKey) return ''
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) return ''
+
+    const settingsDoc = await db
+      .model('SiteSettings')
+      .findOne({})
+      .select({ chatUrl: 1, chatUrlsByLocation: 1 })
+      .lean()
+
+    const settings = normalizeSiteSettings(settingsDoc)
+    const locationUrl = settings?.chatUrlsByLocation?.[locationKey]
+    return normalizeExternalUrl(locationUrl || settings?.chatUrl || '')
+  } catch {
+    return ''
+  }
+}
+
 function buildCityJsonLd(city, upcomingGames) {
   const locationInfo = LOCATIONS[city.locationKey]
   const email = 'support@actquest.ru'
@@ -297,7 +326,7 @@ export async function CityLandingPage({ slug }) {
   const cityArticles = seoArticles
     .filter((article) => article.citySlug === city.slug)
     .slice(0, 3)
-  const projectBotCityUrl = buildProjectBotCityStartLink(city.locationKey)
+  const projectChatDirectUrl = await getDirectCityChatUrl(city.locationKey)
   const cityArticleLinks = cityArticles.map((article) => ({
     href: `/articles/${article.slug}`,
     label: article.title,
@@ -328,8 +357,8 @@ export async function CityLandingPage({ slug }) {
           <SeoActionLink href="/cabinet/login?mode=register" variant="primary">
             Записаться на игру
           </SeoActionLink>
-          {projectBotCityUrl ? (
-            <SeoActionLink href={projectBotCityUrl} variant="secondary">
+          {projectChatDirectUrl ? (
+            <SeoActionLink href={projectChatDirectUrl} variant="secondary">
               Чат проекта
             </SeoActionLink>
           ) : null}

@@ -11,6 +11,8 @@ import {
 } from '@helpers/telegramProjectChatConfig'
 
 const TELEGRAM_API_BASE = 'https://api.telegram.org'
+const TELEGRAM_HTTP_TIMEOUT_MS = 7000
+const CITY_URLS_RESOLVE_TIMEOUT_MS = 1200
 
 const PROJECT_TELEGRAM_TOKEN =
   process.env.TELEGRAM_PROJECT_TOKEN || getTelegramTokenByLocation('project')
@@ -55,6 +57,8 @@ const postTelegram = async (method, payload) => {
     throw new Error('TELEGRAM_PROJECT_TOKEN is not set')
   }
 
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), TELEGRAM_HTTP_TIMEOUT_MS)
   const response = await fetch(
     `${TELEGRAM_API_BASE}/bot${PROJECT_TELEGRAM_TOKEN}/${method}`,
     {
@@ -65,8 +69,9 @@ const postTelegram = async (method, payload) => {
       },
       body: JSON.stringify(payload),
       cache: 'no-store',
+      signal: controller.signal,
     },
-  )
+  ).finally(() => clearTimeout(timeout))
 
   const json = await response.json().catch(() => null)
   if (!response.ok || !json?.ok) {
@@ -78,6 +83,24 @@ const postTelegram = async (method, payload) => {
   }
 
   return json
+}
+
+const wait = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+
+const getCityChatUrlsFast = async () => {
+  const fallback = resolveEnvCityChatUrls()
+  try {
+    const resolved = await Promise.race([
+      getCityChatUrls(),
+      wait(CITY_URLS_RESOLVE_TIMEOUT_MS).then(() => fallback),
+    ])
+    return resolved || fallback
+  } catch {
+    return fallback
+  }
 }
 
 const buildCityChooserKeyboard = () => ({
@@ -257,7 +280,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json().catch(() => ({}))
-    const cityChatUrls = await getCityChatUrls()
+    const cityChatUrls = await getCityChatUrlsFast()
 
     if (body?.message) {
       await handleMessageUpdate(body.message, cityChatUrls)
