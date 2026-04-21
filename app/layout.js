@@ -4,6 +4,7 @@ import Script from 'next/script'
 import AppProviders from './providers'
 import ThemeInitializerClient from './ThemeInitializerClient'
 import PwaStandalonePullToRefresh from '@components/PwaStandalonePullToRefresh'
+import getSiteUrl from '@helpers/getSiteUrl'
 
 const roboto = Roboto({
   subsets: ['latin', 'cyrillic'],
@@ -11,10 +12,7 @@ const roboto = Roboto({
   display: 'swap',
 })
 
-const siteUrl =
-  process.env.NEXTAUTH_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://actquest.ru'
+const siteUrl = getSiteUrl()
 
 export const metadata = {
   metadataBase: new URL(siteUrl),

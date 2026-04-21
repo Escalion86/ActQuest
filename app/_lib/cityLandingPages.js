@@ -10,11 +10,9 @@ import SeoLinksList from '@components/public/seo/SeoLinksList'
 import SeoSectionCard from '@components/public/seo/SeoSectionCard'
 import SeoTextSection from '@components/public/seo/SeoTextSection'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
+import getSiteUrl from '@helpers/getSiteUrl'
 
-const siteUrl =
-  process.env.NEXTAUTH_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://actquest.ru'
+const siteUrl = getSiteUrl()
 
 const cityPages = {
   krasnoyarsk: {

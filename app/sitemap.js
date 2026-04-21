@@ -1,11 +1,9 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { cityPagesList } from '@app/_lib/cityLandingPages'
 import { seoArticles } from '@app/_lib/seoArticles'
+import getSiteUrl from '@helpers/getSiteUrl'
 
-const siteUrl =
-  process.env.NEXTAUTH_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://actquest.ru'
+const siteUrl = getSiteUrl()
 
 export default async function sitemap() {
   const now = new Date()

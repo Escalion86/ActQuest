@@ -2,11 +2,9 @@ import Link from 'next/link'
 
 import { seoArticles } from '@app/_lib/seoArticles'
 import SeoSectionCard from '@components/public/seo/SeoSectionCard'
+import getSiteUrl from '@helpers/getSiteUrl'
 
-const siteUrl =
-  process.env.NEXTAUTH_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://actquest.ru'
+const siteUrl = getSiteUrl()
 
 export const metadata = {
   title: 'Статьи про автоквесты',

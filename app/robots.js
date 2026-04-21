@@ -1,7 +1,6 @@
-const siteUrl =
-  process.env.NEXTAUTH_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://actquest.ru'
+import getSiteUrl from '@helpers/getSiteUrl'
+
+const siteUrl = getSiteUrl()
 
 export default function robots() {
   return {

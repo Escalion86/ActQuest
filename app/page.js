@@ -3,11 +3,9 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
 import { seoArticles } from '@app/_lib/seoArticles'
 import { cityPagesList } from '@app/_lib/cityLandingPages'
+import getSiteUrl from '@helpers/getSiteUrl'
 
-const siteUrl =
-  process.env.NEXTAUTH_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  'https://actquest.ru'
+const siteUrl = getSiteUrl()
 
 export const metadata = {
   title: 'ActQuest — городские автоквесты',
