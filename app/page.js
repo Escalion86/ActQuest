@@ -1,6 +1,9 @@
 import Index2PageClient from '@components/public/Index2PageClient'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { LOCATIONS } from '@server/serverConstants'
+import { seoArticles } from '@app/_lib/seoArticles'
+import { cityPagesList } from '@app/_lib/cityLandingPages'
+import { getProjectBotBaseUrl } from '@helpers/telegramProjectChatConfig'
 
 const siteUrl =
   process.env.NEXTAUTH_URL ||
@@ -85,6 +88,15 @@ function buildJsonLd(upcomingGames) {
 
 export default async function HomePage() {
   const upcomingGames = await getUpcomingGames()
+  const cityLinks = cityPagesList.map((city) => ({
+    slug: city.slug,
+    title: city.cityName,
+  }))
+  const featuredArticles = seoArticles.slice(0, 3).map((article) => ({
+    slug: article.slug,
+    title: article.title,
+  }))
+  const projectChatUrl = getProjectBotBaseUrl()
   const jsonLdItems = buildJsonLd(upcomingGames)
   const locationNames = Object.values(LOCATIONS)
     .filter((loc) => !loc.hidden)
@@ -132,8 +144,16 @@ export default async function HomePage() {
           </>
         )}
         <a href="/cabinet/login?mode=register">Начать игру</a>
+        {cityLinks.map((city) => (
+          <a key={city.slug} href={`/${city.slug}`}>
+            Автоквесты в {city.title}
+          </a>
+        ))}
       </div>
-      <Index2PageClient />
+      <Index2PageClient
+        seoFooter={{ cityLinks, featuredArticles }}
+        projectChatUrl={projectChatUrl}
+      />
     </>
   )
 }

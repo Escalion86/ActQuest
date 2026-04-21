@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import PropTypes from 'prop-types'
 import { LOCATIONS } from '@server/serverConstants'
+import SeoHomepageFooterSections from '@components/public/seo/SeoHomepageFooterSections'
 
 const ACCESS_KEY = 'aq_index2_access_open'
 const FIRST_ANSWER_KEY = 'aq_index2_first_answer'
@@ -71,14 +72,6 @@ const normalize = (value) =>
     .replace(/[.!?,:;-]/g, '')
 const parsePercent = (value) =>
   Number.parseFloat(String(value).replace('%', ''))
-
-const normalizeExternalUrl = (value) => {
-  if (typeof value !== 'string') return ''
-  const trimmed = value.trim()
-  if (!trimmed) return ''
-  if (/^https?:\/\//i.test(trimmed)) return trimmed
-  return `https://${trimmed}`
-}
 
 const safeLocalStorageGet = (key, fallback = null) => {
   if (typeof window === 'undefined') return fallback
@@ -582,7 +575,7 @@ ScenarioCard.defaultProps = {
   onFallbackConfirm: undefined,
 }
 
-const Index2Page = () => {
+const Index2Page = ({ seoFooter, projectChatUrl }) => {
   const router = useRouter()
   const [stage, setStage] = useState('prelude')
   const [visiblePrelude, setVisiblePrelude] = useState(0)
@@ -637,7 +630,6 @@ const Index2Page = () => {
   const [archiveDragActive, setArchiveDragActive] = useState(false)
   const [archiveStatus, setArchiveStatus] = useState('')
   const [sledDragGhost, setSledDragGhost] = useState(null)
-  const [projectChatUrl, setProjectChatUrl] = useState('')
   const [visibleFlowCount, setVisibleFlowCount] = useState(0)
   const transitionTimeoutRef = useRef(null)
   const inputGlitchTimeoutRef = useRef(null)
@@ -1111,49 +1103,6 @@ const Index2Page = () => {
       cancelled = true
     }
   }, [isScenarioFallbackMode, selectedScenarioLocation, stage])
-
-  useEffect(() => {
-    if (stage !== 'main' || !selectedScenarioLocation) return
-
-    let cancelled = false
-
-    const fetchProjectChatUrl = async () => {
-      try {
-        const params = new URLSearchParams({
-          type: 'settings',
-          location: selectedScenarioLocation,
-          select: 'chatUrl',
-        })
-        const response = await fetch(
-          `/api/public/discovery?${params.toString()}`,
-        )
-        const json = await response.json()
-
-        if (!response.ok || cancelled) {
-          if (!cancelled) setProjectChatUrl('')
-          return
-        }
-
-        const settingsDoc = Array.isArray(json?.data)
-          ? json.data[0]
-          : json?.data
-        const nextUrl = normalizeExternalUrl(settingsDoc?.chatUrl)
-        if (!cancelled) {
-          setProjectChatUrl(nextUrl)
-        }
-      } catch {
-        if (!cancelled) {
-          setProjectChatUrl('')
-        }
-      }
-    }
-
-    fetchProjectChatUrl()
-
-    return () => {
-      cancelled = true
-    }
-  }, [selectedScenarioLocation, stage])
 
   useEffect(() => {
     if (stage !== 'main') return
@@ -2850,6 +2799,17 @@ const Index2Page = () => {
                 ) : null}
               </div>
             </section>
+
+            <SeoHomepageFooterSections
+              cityLinks={
+                Array.isArray(seoFooter?.cityLinks) ? seoFooter.cityLinks : []
+              }
+              featuredArticles={
+                Array.isArray(seoFooter?.featuredArticles)
+                  ? seoFooter.featuredArticles
+                  : []
+              }
+            />
           </main>
         )}
       </div>
@@ -2887,6 +2847,12 @@ const Index2Page = () => {
         }
         .reveal-f {
           animation-delay: 330ms;
+        }
+        .reveal-g {
+          opacity: 0;
+          transform: translateY(10px);
+          animation: sectionReveal 0.65s ease-out forwards;
+          animation-delay: 370ms;
         }
 
         .logo-float {
@@ -3309,6 +3275,32 @@ const Index2Page = () => {
       `}</style>
     </>
   )
+}
+
+Index2Page.propTypes = {
+  projectChatUrl: PropTypes.string,
+  seoFooter: PropTypes.shape({
+    cityLinks: PropTypes.arrayOf(
+      PropTypes.shape({
+        slug: PropTypes.string.isRequired,
+        title: PropTypes.string.isRequired,
+      }),
+    ),
+    featuredArticles: PropTypes.arrayOf(
+      PropTypes.shape({
+        slug: PropTypes.string.isRequired,
+        title: PropTypes.string.isRequired,
+      }),
+    ),
+  }),
+}
+
+Index2Page.defaultProps = {
+  projectChatUrl: '',
+  seoFooter: {
+    cityLinks: [],
+    featuredArticles: [],
+  },
 }
 
 export default Index2Page

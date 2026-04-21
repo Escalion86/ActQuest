@@ -1,7 +1,14 @@
 import './globals.css'
+import { Roboto } from 'next/font/google'
 import AppProviders from './providers'
 import ThemeInitializerClient from './ThemeInitializerClient'
 import PwaStandalonePullToRefresh from '@components/PwaStandalonePullToRefresh'
+
+const roboto = Roboto({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['300', '400', '500', '700'],
+  display: 'swap',
+})
 
 const siteUrl =
   process.env.NEXTAUTH_URL ||
@@ -58,7 +65,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="ru"
-      className="scroll-smooth"
+      className={`${roboto.className} scroll-smooth`}
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
@@ -66,18 +73,6 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
-        />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/icon?family=Material+Icons"
-        />
-        <link
-          href="https://cdn.jsdelivr.net/npm/@tailwindcss/custom-forms@0.2.1/dist/custom-forms.css"
-          rel="stylesheet"
-        />
       </head>
       <body>
         <ThemeInitializerClient />

@@ -12,6 +12,7 @@ export default function robots() {
         disallow: ['/api/', '/cabinet/', '/legacy/'],
       },
     ],
+    host: siteUrl,
     sitemap: `${siteUrl}/sitemap.xml`,
   }
 }

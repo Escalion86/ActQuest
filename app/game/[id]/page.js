@@ -12,7 +12,14 @@ export const dynamic = 'force-dynamic'
 export async function generateMetadata({ params }) {
   const resolvedParams = await params
   const gameIdParam = resolvedParams?.id
-  if (typeof gameIdParam !== 'string') return {}
+  if (typeof gameIdParam !== 'string') {
+    return {
+      robots: {
+        index: false,
+        follow: false,
+      },
+    }
+  }
 
   try {
     const { location } = await resolveGameLocationById(gameIdParam)
@@ -31,6 +38,10 @@ export async function generateMetadata({ params }) {
     return {
       title,
       description,
+      robots: {
+        index: false,
+        follow: false,
+      },
       openGraph: {
         title,
         description,
@@ -43,7 +54,12 @@ export async function generateMetadata({ params }) {
       },
     }
   } catch {
-    return {}
+    return {
+      robots: {
+        index: false,
+        follow: false,
+      },
+    }
   }
 }
 

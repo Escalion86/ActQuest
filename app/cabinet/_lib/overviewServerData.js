@@ -100,9 +100,9 @@ const buildBaseData = (location) => ({
   recentActivity: [],
   chatUrl: '',
   chatUrlsByLocation: {
-    krsk: '',
-    nrsk: '',
-    ekb: '',
+    krsk: 'https://t.me/+5Mk6OCL-gSQ0MTUy',
+    nrsk: 'https://t.me/+5-p_yLRn_vs1NzU6',
+    ekb: 'https://t.me/+SauBS8qHNb0zZjEy',
   },
 })
 
@@ -164,34 +164,33 @@ export const loadCabinetAppOverview = async (session) => {
       })
     : []
 
-  const membershipByTeamId = (Array.isArray(memberships) ? memberships : []).reduce(
-    (acc, membership) => {
-      const teamId = membership?.teamId ? String(membership.teamId) : null
-      if (!teamId) {
-        return acc
-      }
-
-      const roleValue = String(membership?.role ?? '')
-        .trim()
-        .toLowerCase()
-      const isCaptain = isCaptainRole(roleValue)
-
-      if (!acc[teamId]) {
-        acc[teamId] = {
-          membershipId: membership?._id ? String(membership._id) : null,
-          isCaptain,
-        }
-        return acc
-      }
-
-      if (!acc[teamId].membershipId && membership?._id) {
-        acc[teamId].membershipId = String(membership._id)
-      }
-      acc[teamId].isCaptain = acc[teamId].isCaptain || isCaptain
+  const membershipByTeamId = (
+    Array.isArray(memberships) ? memberships : []
+  ).reduce((acc, membership) => {
+    const teamId = membership?.teamId ? String(membership.teamId) : null
+    if (!teamId) {
       return acc
-    },
-    {},
-  )
+    }
+
+    const roleValue = String(membership?.role ?? '')
+      .trim()
+      .toLowerCase()
+    const isCaptain = isCaptainRole(roleValue)
+
+    if (!acc[teamId]) {
+      acc[teamId] = {
+        membershipId: membership?._id ? String(membership._id) : null,
+        isCaptain,
+      }
+      return acc
+    }
+
+    if (!acc[teamId].membershipId && membership?._id) {
+      acc[teamId].membershipId = String(membership._id)
+    }
+    acc[teamId].isCaptain = acc[teamId].isCaptain || isCaptain
+    return acc
+  }, {})
 
   const participantTeams = (Array.isArray(teams) ? teams : []).map((team) => {
     const teamId = team?.id ? String(team.id) : null
@@ -225,9 +224,14 @@ export const loadCabinetAppOverview = async (session) => {
   })
 
   const nearestGame = Array.isArray(upcomingGames) ? upcomingGames[0] : null
-  const inProgressCandidates = [...(Array.isArray(upcomingGames) ? upcomingGames : []), ...(Array.isArray(pastGames) ? pastGames : [])]
+  const inProgressCandidates = [
+    ...(Array.isArray(upcomingGames) ? upcomingGames : []),
+    ...(Array.isArray(pastGames) ? pastGames : []),
+  ]
     .filter((game) => {
-      const status = String(game?.status ?? '').trim().toLowerCase()
+      const status = String(game?.status ?? '')
+        .trim()
+        .toLowerCase()
       return (
         status === 'started' &&
         Array.isArray(game?.userParticipationTeams) &&
@@ -284,11 +288,15 @@ export const loadCabinetAppOverview = async (session) => {
   const completedGamesCountFromProgress = personalProgressGames.length
   const averageFinishedPlace =
     completedGamesCountFromProgress > 0
-      ? personalProgressGames.reduce((acc, game) => acc + Number(game.place || 0), 0) /
-        completedGamesCountFromProgress
+      ? personalProgressGames.reduce(
+          (acc, game) => acc + Number(game.place || 0),
+          0,
+        ) / completedGamesCountFromProgress
       : null
 
-  const hasUpcomingRegistration = (Array.isArray(upcomingGames) ? upcomingGames : []).some(
+  const hasUpcomingRegistration = (
+    Array.isArray(upcomingGames) ? upcomingGames : []
+  ).some(
     (game) =>
       Array.isArray(game?.userParticipationTeams) &&
       game.userParticipationTeams.length > 0,
@@ -332,7 +340,8 @@ export const loadCabinetAppOverview = async (session) => {
 
   const siteSettings = normalizeSiteSettings(settingsDoc)
   const chatUrlsByLocation =
-    siteSettings?.chatUrlsByLocation && typeof siteSettings.chatUrlsByLocation === 'object'
+    siteSettings?.chatUrlsByLocation &&
+    typeof siteSettings.chatUrlsByLocation === 'object'
       ? siteSettings.chatUrlsByLocation
       : { krsk: '', nrsk: '', ekb: '' }
 
@@ -359,7 +368,7 @@ export const loadCabinetAppOverview = async (session) => {
 
   const profileCompleted = Boolean(
     String(userDoc?.name ?? session?.user?.name ?? '').trim() &&
-      String(userDoc?.username ?? session?.user?.username ?? '').trim(),
+    String(userDoc?.username ?? session?.user?.username ?? '').trim(),
   )
 
   return {
@@ -387,7 +396,8 @@ export const loadCabinetAppOverview = async (session) => {
               : null,
           userTeamName:
             Array.isArray(inProgressGame.userParticipationTeams) &&
-            typeof inProgressGame.userParticipationTeams[0]?.teamName === 'string'
+            typeof inProgressGame.userParticipationTeams[0]?.teamName ===
+              'string'
               ? inProgressGame.userParticipationTeams[0].teamName.trim()
               : '',
         }
@@ -405,9 +415,18 @@ export const loadCabinetAppOverview = async (session) => {
     recentActivity,
     chatUrl: siteSettings.chatUrl || '',
     chatUrlsByLocation: {
-      krsk: typeof chatUrlsByLocation.krsk === 'string' ? chatUrlsByLocation.krsk : '',
-      nrsk: typeof chatUrlsByLocation.nrsk === 'string' ? chatUrlsByLocation.nrsk : '',
-      ekb: typeof chatUrlsByLocation.ekb === 'string' ? chatUrlsByLocation.ekb : '',
+      krsk:
+        typeof chatUrlsByLocation.krsk === 'string'
+          ? chatUrlsByLocation.krsk
+          : '',
+      nrsk:
+        typeof chatUrlsByLocation.nrsk === 'string'
+          ? chatUrlsByLocation.nrsk
+          : '',
+      ekb:
+        typeof chatUrlsByLocation.ekb === 'string'
+          ? chatUrlsByLocation.ekb
+          : '',
     },
   }
 }
