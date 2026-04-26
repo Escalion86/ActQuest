@@ -12,9 +12,9 @@
 3. Отправить sitemap:
 - `https://actquest.ru/sitemap.xml`
 4. Проверить индексирование ключевых URL:
-- `/krasnoyarsk`
-- `/norilsk`
-- `/ekaterinburg`
+- `/krsk`
+- `/nrsk`
+- `/ekb`
 - `/articles`
 - `/articles/*`
 5. Проверить Coverage:

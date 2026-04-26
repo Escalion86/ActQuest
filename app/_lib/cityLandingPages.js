@@ -15,8 +15,9 @@ import getSiteUrl from '@helpers/getSiteUrl'
 const siteUrl = getSiteUrl()
 
 const cityPages = {
-  krasnoyarsk: {
-    slug: 'krasnoyarsk',
+  krsk: {
+    slug: 'krsk',
+    legacySlugs: ['krasnoyarsk'],
     locationKey: 'krsk',
     businessName: 'ActQuest Красноярск',
     cityName: 'Красноярск',
@@ -46,8 +47,9 @@ const cityPages = {
       },
     ],
   },
-  norilsk: {
-    slug: 'norilsk',
+  nrsk: {
+    slug: 'nrsk',
+    legacySlugs: ['norilsk'],
     locationKey: 'nrsk',
     businessName: 'ActQuest Норильск',
     cityName: 'Норильск',
@@ -77,8 +79,9 @@ const cityPages = {
       },
     ],
   },
-  ekaterinburg: {
-    slug: 'ekaterinburg',
+  ekb: {
+    slug: 'ekb',
+    legacySlugs: ['ekaterinburg'],
     locationKey: 'ekb',
     businessName: 'ActQuest Екатеринбург',
     cityName: 'Екатеринбург',

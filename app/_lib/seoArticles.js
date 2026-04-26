@@ -6,7 +6,7 @@ const siteUrl =
 export const seoArticles = [
   {
     slug: 'autokvest-krasnoyarsk-night-routes',
-    citySlug: 'krasnoyarsk',
+    citySlug: 'krsk',
     cityName: 'Красноярск',
     title: 'Автоквест в Красноярске: маршруты для вечерней игры',
     description:
@@ -39,7 +39,7 @@ export const seoArticles = [
   },
   {
     slug: 'autokvest-norilsk-beginners-guide',
-    citySlug: 'norilsk',
+    citySlug: 'nrsk',
     cityName: 'Норильск',
     title: 'Автоквест в Норильске: гайд для новичков',
     description:
@@ -72,7 +72,7 @@ export const seoArticles = [
   },
   {
     slug: 'autokvest-ekaterinburg-teambuilding',
-    citySlug: 'ekaterinburg',
+    citySlug: 'ekb',
     cityName: 'Екатеринбург',
     title: 'Автоквест в Екатеринбурге для тимбилдинга',
     description:

@@ -45,6 +45,25 @@ module.exports = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: '/krasnoyarsk',
+        destination: '/krsk',
+        permanent: true,
+      },
+      {
+        source: '/norilsk',
+        destination: '/nrsk',
+        permanent: true,
+      },
+      {
+        source: '/ekaterinburg',
+        destination: '/ekb',
+        permanent: true,
+      },
+    ]
+  },
   // images: {
   //   domains: ['uniplatform.ru, dev.uniplatform.ru, localhost'],
   // },
