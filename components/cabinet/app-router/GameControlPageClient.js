@@ -346,7 +346,7 @@ const buildManualCodeCandidates = (team, tasks) => {
   ].filter((item) => Boolean(item.code))
 }
 
-export default function GameControlPageClient({ session }) {
+export default function GameControlPageClient({ session: _session }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const gameId = searchParams.get('gameId')
@@ -457,7 +457,9 @@ export default function GameControlPageClient({ session }) {
       try {
         window.localStorage.setItem('cabinet-theme', nextTheme)
         window.localStorage.setItem('aq-theme', nextTheme)
-      } catch {}
+      } catch {
+        // localStorage может быть недоступен в приватном режиме или старых WebView.
+      }
     }
     document.documentElement.setAttribute('data-theme', nextTheme)
     document.documentElement.classList.toggle('dark', nextTheme === 'dark')

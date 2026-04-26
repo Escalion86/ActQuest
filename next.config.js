@@ -1,5 +1,3 @@
-// const withImages = require('next-images')
-// module.exports = withImages()
 const parseAllowedDevOrigins = () => {
   const raw = process.env.NEXT_ALLOWED_DEV_ORIGINS
   if (typeof raw !== 'string') {
@@ -18,10 +16,6 @@ module.exports = {
   ...(allowedDevOrigins.length > 0
     ? { allowedDevOrigins }
     : {}),
-  // webpack: (config) => {
-  //   // config.experiments = { topLevelAwait: true }
-  //   return config
-  // },
   experimental: {
     largePageDataBytes: 5 * 1024 * 1024, // 5 MB
   },
@@ -64,33 +58,4 @@ module.exports = {
       },
     ]
   },
-  // images: {
-  //   domains: ['uniplatform.ru, dev.uniplatform.ru, localhost'],
-  // },
-  // webpack(config, options) {
-  //   config.module.rules.push({
-  //     loader: '@svgr/webpack',
-  //     issuer: /\.[jt]sx?$/,
-  //     options: {
-  //       prettier: false,
-  //       svgo: true,
-  //       svgoConfig: {
-  //         plugins: [
-  //           {
-  //             name: 'preset-default',
-  //             params: {
-  //               override: {
-  //                 removeViewBox: false,
-  //               },
-  //             },
-  //           },
-  //         ],
-  //       },
-  //       titleProp: true,
-  //     },
-  //     test: /\.svg$/,
-  //   })
-
-  //   return config
-  // },
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import PropTypes from 'prop-types'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetButton from '@components/cabinet/CabinetButton'

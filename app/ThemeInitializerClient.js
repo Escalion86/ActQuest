@@ -22,7 +22,7 @@ export default function ThemeInitializerClient() {
       root.classList.toggle('dark', theme === 'dark')
       root.style.colorScheme = theme === 'dark' ? 'dark' : 'light'
       root.setAttribute('data-theme-ready', '1')
-    } catch (_error) {
+    } catch {
       const root = document.documentElement
       root.setAttribute('data-theme', 'light')
       root.classList.remove('dark')

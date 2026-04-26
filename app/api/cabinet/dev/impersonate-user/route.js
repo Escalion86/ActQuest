@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
-import { toStringId } from '@helpers/idAndDate'
 
 const isDeveloperRole = (role) => {
   return role?.trim().toLowerCase() === 'dev'
@@ -93,7 +92,7 @@ export async function POST(req) {
 }
 
 // Эндпоинт для выхода из режима impersonate
-export async function DELETE(req) {
+export async function DELETE() {
   try {
     const session = await getServerSession(authOptions)
 

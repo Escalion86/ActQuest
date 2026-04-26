@@ -1004,11 +1004,17 @@ const GamesPage = ({
   const { effectiveRole: userRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
   )
-  const currentUserTelegramId = activeSession?.user?.telegramId ?? null
+  const currentUserDbId =
+    activeSession?.user?.globalUserId ??
+    activeSession?.user?.userId ??
+    activeSession?.user?._id ??
+    activeSession?.user?.id ??
+    null
   const currentUserIdString =
-    currentUserTelegramId === null || currentUserTelegramId === undefined
+    currentUserDbId === null || currentUserDbId === undefined
       ? null
-      : String(currentUserTelegramId)
+      : String(currentUserDbId)
+  const currentUserTelegramId = activeSession?.user?.telegramId ?? null
   const currentUserTelegramIdNumber =
     currentUserTelegramId === null || currentUserTelegramId === undefined
       ? null
@@ -1017,11 +1023,6 @@ const GamesPage = ({
   const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
   const canEditOwnGames = userRole === 'moder'
   const safeInitialGames = Array.isArray(initialGames) ? initialGames : []
-  const currentUserDbId =
-    activeSession?.user?._id === null || activeSession?.user?._id === undefined
-      ? null
-      : String(activeSession.user._id)
-
   const [games, setGames] = useState(safeInitialGames)
   const [persistedGames, setPersistedGames] = useState(safeInitialGames)
   const [hasMoreGames, setHasMoreGames] = useState(Boolean(initialHasMore))
@@ -2751,14 +2752,6 @@ const GamesPage = ({
       return
     }
 
-    if (!Number.isFinite(currentUserTelegramIdNumber)) {
-      setCreateGameFeedback({
-        type: 'error',
-        message: 'Привяжите Telegram-аккаунт в профиле, чтобы создавать игры',
-      })
-      return
-    }
-
     if (isCloneMode && !cloneSourceGameId) {
       setCreateGameFeedback({
         type: 'error',
@@ -2951,7 +2944,9 @@ const GamesPage = ({
           name: trimmedName,
         }),
         location: normalizedCreateLocation,
-        creatorTelegramId: currentUserTelegramIdNumber,
+        ...(Number.isFinite(currentUserTelegramIdNumber)
+          ? { creatorTelegramId: currentUserTelegramIdNumber }
+          : {}),
       }
 
       const { json } = await requestApiJson(CABINET_GAMES_API_BASE, {
@@ -3257,7 +3252,7 @@ const GamesPage = ({
         return false
       }
 
-      const creatorId = String(gameForPermissions.creatorTelegramId || '')
+      const creatorId = String(gameForPermissions.creatorUserId || '')
       if (!creatorId) {
         return false
       }
@@ -3297,7 +3292,7 @@ const GamesPage = ({
           return false
         }
 
-        const creatorId = game?.creatorTelegramId
+        const creatorId = game?.creatorUserId
         if (creatorId && creatorId === currentUserIdString) {
           return true
         }

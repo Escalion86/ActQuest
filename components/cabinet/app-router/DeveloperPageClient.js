@@ -93,6 +93,12 @@ const DeveloperPage = ({ session: initialSession }) => {
   const [teamsUsersIntegrityResult, setTeamsUsersIntegrityResult] =
     useState(null)
   const [teamsUsersIntegrityError, setTeamsUsersIntegrityError] = useState('')
+  const [isBackfillingGameCreators, setIsBackfillingGameCreators] =
+    useState(false)
+  const [gameCreatorsBackfillResult, setGameCreatorsBackfillResult] =
+    useState(null)
+  const [gameCreatorsBackfillError, setGameCreatorsBackfillError] =
+    useState('')
   const [exportGameTasksError, setExportGameTasksError] = useState('')
   const [requestingPhoneByUserId, setRequestingPhoneByUserId] = useState({})
   const [requestPhoneFeedbackByUserId, setRequestPhoneFeedbackByUserId] =
@@ -582,6 +588,48 @@ const DeveloperPage = ({ session: initialSession }) => {
       )
     } finally {
       setIsCheckingTeamsUsersIntegrity(false)
+    }
+  }
+
+  const handleBackfillGameCreators = async ({ dryRun }) => {
+    if (isBackfillingGameCreators) {
+      return
+    }
+
+    setIsBackfillingGameCreators(true)
+    setGameCreatorsBackfillError('')
+    setGameCreatorsBackfillResult(null)
+
+    try {
+      const response = await fetch(
+        `${CABINET_DEV_API_BASE}/backfill-game-creators`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            dryRun,
+            confirmApply: !dryRun,
+          }),
+        },
+      )
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(
+          json?.error || 'Не удалось обработать creatorUserId игр',
+        )
+      }
+
+      setGameCreatorsBackfillResult(json?.data ?? null)
+    } catch (requestError) {
+      setGameCreatorsBackfillError(
+        requestError?.message || 'Не удалось обработать creatorUserId игр',
+      )
+    } finally {
+      setIsBackfillingGameCreators(false)
     }
   }
 
@@ -1153,6 +1201,114 @@ const DeveloperPage = ({ session: initialSession }) => {
               ) : (
                 <p className="mt-2 text-xs">Дубликаты телефонов не найдены.</p>
               )}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Backfill creatorUserId у игр
+          </h3>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Заполняет пустой <code>Games.creatorUserId</code> по legacy-полю{' '}
+            <code>creatorTelegramId</code>. Telegram ID остаётся в игре как
+            fallback для исторических сценариев и ботов.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <CabinetButton
+              onClick={() => handleBackfillGameCreators({ dryRun: true })}
+              variant="primary"
+              tone="brand"
+              disabled={isBackfillingGameCreators}
+            >
+              {isBackfillingGameCreators
+                ? 'Проверяем...'
+                : 'Проверить creatorUserId игр'}
+            </CabinetButton>
+            <CabinetButton
+              onClick={() => handleBackfillGameCreators({ dryRun: false })}
+              variant="primary"
+              tone="danger"
+              disabled={
+                isBackfillingGameCreators ||
+                !gameCreatorsBackfillResult ||
+                Number(gameCreatorsBackfillResult.matchedCount) <= 0
+              }
+            >
+              Применить backfill
+            </CabinetButton>
+          </div>
+
+          {gameCreatorsBackfillError ? (
+            <p className="mt-4 rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+              {gameCreatorsBackfillError}
+            </p>
+          ) : null}
+
+          {gameCreatorsBackfillResult ? (
+            <div className="mt-4 rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <p>
+                Режим:{' '}
+                {gameCreatorsBackfillResult.dryRun
+                  ? 'проверка без записи'
+                  : 'запись в БД'}
+              </p>
+              <p className="mt-1">
+                Всего игр: {gameCreatorsBackfillResult.totalGamesCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Без creatorUserId:{' '}
+                {gameCreatorsBackfillResult.missingCreatorUserIdCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Однозначных совпадений:{' '}
+                {gameCreatorsBackfillResult.matchedCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Без найденного пользователя:{' '}
+                {gameCreatorsBackfillResult.unmatchedCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Неоднозначных совпадений:{' '}
+                {gameCreatorsBackfillResult.ambiguousCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Обновлено игр: {gameCreatorsBackfillResult.updatedCount ?? 0}
+              </p>
+
+              {Array.isArray(gameCreatorsBackfillResult.unmatchedSamples) &&
+              gameCreatorsBackfillResult.unmatchedSamples.length > 0 ? (
+                <div className="mt-3 text-xs">
+                  <p className="font-semibold">Примеры без совпадения:</p>
+                  <div className="mt-2 max-h-48 space-y-2 overflow-y-auto pr-1">
+                    {gameCreatorsBackfillResult.unmatchedSamples.map((game) => (
+                      <p key={game.gameId}>
+                        {game.title || game.gameId} · Telegram:{' '}
+                        {game.creatorTelegramId ?? '—'} · Статус:{' '}
+                        {game.status || '—'}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {Array.isArray(gameCreatorsBackfillResult.ambiguousSamples) &&
+              gameCreatorsBackfillResult.ambiguousSamples.length > 0 ? (
+                <div className="mt-3 text-xs">
+                  <p className="font-semibold">Примеры дублей telegramId:</p>
+                  <div className="mt-2 max-h-48 space-y-2 overflow-y-auto pr-1">
+                    {gameCreatorsBackfillResult.ambiguousSamples.map((game) => (
+                      <p key={game.gameId}>
+                        {game.title || game.gameId} · Telegram:{' '}
+                        {game.creatorTelegramId ?? '—'} · Пользователей:{' '}
+                        {Array.isArray(game.matchedUsers)
+                          ? game.matchedUsers.length
+                          : 0}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </section>

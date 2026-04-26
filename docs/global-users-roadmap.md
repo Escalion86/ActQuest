@@ -8,7 +8,7 @@
 
 ## Последняя проверка
 
-Дата: 2026-04-10
+Дата: 2026-04-26
 
 Ключевые файлы-источники статусов:
 - `utils/dbConnectGlobal.js`
@@ -31,6 +31,11 @@
 - `app/api/cabinet/teams/members/route.js`
 - `app/api/cabinet/teams/members/[id]/route.js`
 - `app/api/cabinet/games/[gameId]/teams/route.js`
+- `app/api/cabinet/games/route.js`
+- `app/api/cabinet/game-details/route.js`
+- `app/api/cabinet/games/[gameId]/result/route.js`
+- `app/api/cabinet/games/[gameId]/push-broadcast/route.js`
+- `app/api/cabinet/dev/backfill-game-creators/route.js`
 
 Шаблон обновления:
 - Обновить дату в этом блоке.
@@ -82,6 +87,7 @@
 - [x] Убрать жёсткую привязку к `telegramId` как обязательному ключу.
 - [~] Убрать чтение/запись `Users` из городских БД там, где это уже не требуется.
 - [~] Связки `Users -> TeamsUsers -> Teams` в кабинетных API переведены на `userId` (`Users._id`); fallback по `userTelegramId` в связках отключён, legacy-ветки Telegram/WebApp ещё требуют точечного cleanup.
+- [~] Связка `Games -> creator` начала переход на `creatorUserId`: новые игры сохраняют `creatorUserId`, права управления в основных cabinet API проверяются по `creatorUserId`, `creatorTelegramId` оставлен fallback для исторических игр; добавлен dev backfill для заполнения `creatorUserId` у старых игр по однозначному совпадению `creatorTelegramId -> Users.telegramId`.
 
 ## Риски и контроль
 - Риск неправильного merge дублей.

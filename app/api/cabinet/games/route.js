@@ -41,6 +41,27 @@ const normalizeTelegramId = (value) => {
   return numeric
 }
 
+const normalizeIdOrNull = (value) => {
+  if (typeof value === 'string') {
+    return normalizeStringOrNull(value)
+  }
+
+  if (value !== null && value !== undefined && typeof value.toString === 'function') {
+    return normalizeStringOrNull(value.toString())
+  }
+
+  return null
+}
+
+const resolveSessionUserId = (sessionUser) =>
+  normalizeIdOrNull(
+    sessionUser?.globalUserId ??
+      sessionUser?.userId ??
+      sessionUser?._id ??
+      sessionUser?.id ??
+      null,
+  )
+
 export async function POST(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -78,6 +99,7 @@ export async function POST(request) {
     )
   }
 
+  const creatorUserId = resolveSessionUserId(session.user)
   const creatorTelegramId = normalizeTelegramId(session.user.telegramId)
 
   try {
@@ -93,6 +115,7 @@ export async function POST(request) {
       location: location.toLowerCase(),
       // При создании игра всегда скрыта.
       hidden: true,
+      creatorUserId,
       creatorTelegramId:
         normalizeTelegramId(payload?.creatorTelegramId) !== null
           ? normalizeTelegramId(payload?.creatorTelegramId)

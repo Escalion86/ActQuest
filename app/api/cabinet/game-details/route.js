@@ -27,6 +27,9 @@ const toObjectIdCompatible = (value) => {
   return trimmed.length > 0 ? trimmed : null
 }
 
+const isObjectIdLike = (value) =>
+  typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value.trim())
+
 const normalizeTelegramId = (value) => {
   if (value === null || value === undefined || value === '') {
     return null
@@ -73,13 +76,15 @@ export async function GET(request) {
         ? previewRole
         : sessionRole
 
+    const currentUserId =
+      session?.user?.globalUserId ??
+      session?.user?.userId ??
+      session?.user?._id ??
+      session?.user?.id ??
+      null
+    const currentUserIdString = toStringId(currentUserId)
     const rawTelegramId = session?.user?.telegramId
     const creatorTelegramId = normalizeTelegramId(rawTelegramId)
-
-    const currentUserId =
-      session?.user?._id === null || session?.user?._id === undefined
-        ? null
-        : String(session.user._id)
 
     const hasLocationQueryParam = requestUrl.searchParams.has('location')
     const locationFromQuery = hasLocationQueryParam
@@ -94,13 +99,20 @@ export async function GET(request) {
     const normalizedLocation = location === 'all' ? null : location || null
 
     const canLoadAllGames = userRole === 'admin' || userRole === 'dev'
-    const canLoadOwnGames = userRole === 'moder' && creatorTelegramId !== null
+    const canLoadOwnGames =
+      userRole === 'moder' &&
+      (Boolean(currentUserIdString) || creatorTelegramId !== null)
 
     const query = { _id: gameId }
 
     if (!canLoadAllGames) {
       if (canLoadOwnGames) {
-        query.creatorTelegramId = creatorTelegramId
+        query.$or = [
+          ...(currentUserIdString ? [{ creatorUserId: currentUserIdString }] : []),
+          ...(creatorTelegramId !== null
+            ? [{ creatorTelegramId }]
+            : []),
+        ]
       } else {
         query.hidden = { $ne: true }
       }
@@ -151,6 +163,7 @@ export async function GET(request) {
         tasks: 1,
         updatedAt: 1,
         createdAt: 1,
+        creatorUserId: 1,
         creatorTelegramId: 1,
         moderators: 1,
         location: 1,
@@ -234,12 +247,17 @@ export async function GET(request) {
         ? 'finished'
         : gameDoc?.status
 
+    const creatorUserId = toStringId(gameDoc?.creatorUserId)
     const creatorTelegramIdRaw = normalizeTelegramId(gameDoc?.creatorTelegramId)
-    const creatorDoc = creatorTelegramIdRaw !== null
-      ? await UsersModel.findOne({ telegramId: creatorTelegramIdRaw })
+    const creatorDoc = isObjectIdLike(creatorUserId)
+      ? await UsersModel.findById(creatorUserId)
           .select({ _id: 1, name: 1, username: 1, phone: 1, telegramId: 1 })
           .lean()
-      : null
+      : creatorTelegramIdRaw !== null
+        ? await UsersModel.findOne({ telegramId: creatorTelegramIdRaw })
+            .select({ _id: 1, name: 1, username: 1, phone: 1, telegramId: 1 })
+            .lean()
+        : null
 
     const normalizedGame = normalizeGameForCabinet({
       ...gameDoc,

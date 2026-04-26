@@ -153,8 +153,8 @@ const resolveSessionIdentity = (session) => {
       null,
   )
   const userTelegramId =
-    typeof sessionUser.id === 'string' && sessionUser.id.trim()
-      ? sessionUser.id.trim()
+    sessionUser.telegramId !== null && sessionUser.telegramId !== undefined
+      ? String(sessionUser.telegramId).trim()
       : null
 
   return {
@@ -173,9 +173,14 @@ const hasGameManageAccess = ({ identity, game }) => {
     return true
   }
 
+  const creatorUserId = toStringId(game?.creatorUserId)
+  if (identity.userId && creatorUserId && identity.userId === creatorUserId) {
+    return true
+  }
+
   const creatorTelegramId =
-    typeof game?.creatorTelegramId === 'string'
-      ? game.creatorTelegramId.trim()
+    game?.creatorTelegramId !== null && game?.creatorTelegramId !== undefined
+      ? String(game.creatorTelegramId).trim()
       : ''
 
   if (identity.userTelegramId && creatorTelegramId) {
@@ -680,6 +685,7 @@ export async function PATCH(request, { params }) {
       status: 1,
       location: 1,
       creatorTelegramId: 1,
+      creatorUserId: 1,
       moderators: 1,
       tasks: 1,
       taskDuration: 1,

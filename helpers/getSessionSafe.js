@@ -5,7 +5,6 @@ import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import resolveUserCityKey from '@helpers/resolveUserCityKey'
 
-const AUTH_COOKIE_NAMES = ['next-auth.session-token', '__Secure-next-auth.session-token']
 const isSessionDebugEnabled = process.env.SESSION_DEBUG === '1'
 const sessionDebugLog = (stage, payload = null) => {
   if (!isSessionDebugEnabled) {
@@ -19,25 +18,6 @@ const sessionDebugLog = (stage, payload = null) => {
   }
 
   console.info(`[session-debug] ${time} ${stage}`, payload)
-}
-
-const clearAuthCookies = (res) => {
-  if (!res || typeof res.getHeader !== 'function' || typeof res.setHeader !== 'function') {
-    return
-  }
-
-  const existingCookies = res.getHeader('Set-Cookie')
-  const normalizedExisting = existingCookies
-    ? Array.isArray(existingCookies)
-      ? existingCookies
-      : [existingCookies]
-    : []
-
-  const expiredCookies = AUTH_COOKIE_NAMES.map(
-    (name) => `${name}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax`
-  )
-
-  res.setHeader('Set-Cookie', [...normalizedExisting, ...expiredCookies])
 }
 
 const buildSessionContext = (context) => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 const ShapeEditor = ({
   imageUrl = 'https://escalioncloud.ru/uploads/polovinka_uspeha/events/a3bd5d24-d5c6-45ce-b4c0-398dc324a434.jpeg',

@@ -5,15 +5,13 @@
       "@components/*": ["components/*"],
       "@helpers/*": ["helpers/*"],
       "notistack": ["lib/notistack"],
-      "@pages/*": ["pages/*"],
       "@app/*": ["app/*"],
       "@models/*": ["models/*"],
       "@utils/*": ["utils/*"],
       "@server/*": ["server/*"],
       "@state/*": ["state/*"],
       "@styles/*": ["styles/*"],
-      "@schemas/*": ["schemas/*"],
-      "@layouts/*": ["layouts/*"]
+      "@schemas/*": ["schemas/*"]
     }
   }
 }

@@ -82,6 +82,17 @@ const isManagerOfGame = ({ sessionUser, game }) => {
     return true
   }
 
+  const sessionUserId = toStringId(
+    sessionUser.globalUserId ??
+      sessionUser.userId ??
+      sessionUser._id ??
+      sessionUser.id,
+  )
+  const gameCreatorUserId = toStringId(game.creatorUserId)
+  if (sessionUserId && gameCreatorUserId && sessionUserId === gameCreatorUserId) {
+    return true
+  }
+
   const sessionTelegramId = toStringId(sessionUser.telegramId)
   const gameCreatorTelegramId = toStringId(game.creatorTelegramId)
   if (
@@ -92,7 +103,6 @@ const isManagerOfGame = ({ sessionUser, game }) => {
     return true
   }
 
-  const sessionUserId = toStringId(sessionUser._id)
   if (!sessionUserId) {
     return false
   }
@@ -297,6 +307,7 @@ export async function POST(request, { params }) {
         dateStart: 1,
         status: 1,
         location: 1,
+        creatorUserId: 1,
         creatorTelegramId: 1,
         moderators: 1,
       })

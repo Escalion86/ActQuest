@@ -427,6 +427,7 @@ const normalizeGameForCabinet = (game) => {
     isResultGenerated: isResultGenerated(game.result),
     updatedAt: ensureDateISOString(game.updatedAt),
     createdAt: ensureDateISOString(game.createdAt),
+    creatorUserId: ensureString(game.creatorUserId, ''),
     creatorTelegramId: ensureString(game.creatorTelegramId, ''),
     creator: normalizeCreator(game.creator),
     moderators: normalizeModerators(game.moderators),

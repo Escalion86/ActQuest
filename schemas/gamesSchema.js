@@ -286,9 +286,15 @@ const gamesSchema = {
     type: Boolean,
     default: true,
   },
+  creatorUserId: {
+    type: String,
+    required: false,
+    default: null,
+    trim: true,
+  },
   creatorTelegramId: {
     type: Number,
-    required: [true, 'Введите telegramId'],
+    required: false,
     default: null,
   },
   individualStart: {

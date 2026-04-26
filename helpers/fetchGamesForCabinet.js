@@ -28,6 +28,9 @@ const normalizeTelegramId = (value) => {
   return numeric
 }
 
+const isObjectIdLike = (value) =>
+  typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value.trim())
+
 const resolveGamesSort = (view) => {
   if (view === 'upcoming') {
     return { dateStart: 1, _id: 1 }
@@ -272,6 +275,7 @@ const fetchGamesForCabinet = async ({
       tasks: 1,
       updatedAt: 1,
       createdAt: 1,
+      creatorUserId: 1,
       creatorTelegramId: 1,
       moderators: 1,
       location: 1,
@@ -321,7 +325,15 @@ const fetchGamesForCabinet = async ({
     }
   }
 
-  // Загрузить создателей
+  // Загрузить создателей. Новый источник — creatorUserId, telegramId оставлен
+  // fallback для исторических игр.
+  const creatorUserIds = Array.from(
+    new Set(
+      gamesDocs
+        .map((game) => toStringId(game?.creatorUserId))
+        .filter(isObjectIdLike),
+    ),
+  )
   const creatorTelegramIds = Array.from(
     new Set(
       gamesDocs
@@ -329,6 +341,34 @@ const fetchGamesForCabinet = async ({
         .filter((value) => value !== null),
     ),
   )
+
+  const creatorsByUserId =
+    creatorUserIds.length > 0
+      ? (
+          await db
+            .model('Users')
+            .find({ _id: { $in: creatorUserIds } })
+            .select({ _id: 1, name: 1, username: 1, phone: 1, telegramId: 1 })
+            .lean()
+        ).reduce((acc, userDoc) => {
+          const userId = toStringId(userDoc?._id)
+          if (!userId) {
+            return acc
+          }
+          acc[userId] = {
+            _id: userDoc?._id,
+            name: typeof userDoc?.name === 'string' ? userDoc.name : '',
+            username:
+              typeof userDoc?.username === 'string' ? userDoc.username : '',
+            phone:
+              userDoc?.phone === null || userDoc?.phone === undefined
+                ? ''
+                : String(userDoc.phone),
+            telegramId: normalizeTelegramId(userDoc?.telegramId),
+          }
+          return acc
+        }, {})
+      : {}
 
   const creatorsByTelegramId =
     creatorTelegramIds.length > 0
@@ -426,6 +466,7 @@ const fetchGamesForCabinet = async ({
     const gameId = game?._id ? game._id.toString() : null
     const gameStatus = String(game?.status).toLowerCase()
     const creatorTelegramIdNumber = normalizeTelegramId(game?.creatorTelegramId)
+    const creatorUserId = toStringId(game?.creatorUserId)
     const creatorKey = creatorTelegramIdNumber !== null
       ? String(creatorTelegramIdNumber)
       : null
@@ -446,7 +487,10 @@ const fetchGamesForCabinet = async ({
       teamsCount,
       userTeamPlace: null,
       userParticipationTeams: gameId ? participationByGameId[gameId] || [] : [],
-      creator: creatorKey ? (creatorsByTelegramId[creatorKey] ?? null) : null,
+      creator:
+        (creatorUserId ? creatorsByUserId[creatorUserId] : null) ??
+        (creatorKey ? creatorsByTelegramId[creatorKey] : null) ??
+        null,
     })
   })
 

@@ -13,10 +13,7 @@ import TeamEditModal from '@components/modals/TeamEditModal'
 import TeamJoinModal from '@components/modals/TeamJoinModal'
 import UserViewModal from '@components/cabinet/modals/UserViewModal'
 import requestApiJson from '@helpers/requestApiJson'
-import formatDate from '@helpers/formatDate'
-import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { getNounUsers } from '@helpers/getNoun'
-import normalizeTeamForCabinet from '@helpers/normalizeTeamForCabinet'
 import useSnackbar from '@helpers/useSnackbar'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
@@ -92,7 +89,6 @@ const normalizeTelegramId = (value) => {
 
 const TeamsPage = ({
   initialTeams,
-  initialLocation,
   session: initialSession,
 }) => {
   const router = useRouter()
@@ -100,7 +96,6 @@ const TeamsPage = ({
   const searchParams = useSearchParams()
   const safeInitialTeams = Array.isArray(initialTeams) ? initialTeams : []
   const { activeSession } = useMergedSession(initialSession)
-  const location = activeSession?.user?.location ?? initialLocation ?? null
   const { effectiveRole: userRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
   )
