@@ -184,6 +184,7 @@ export async function POST(request) {
             role,
             member: {
               id: toStringId(createdMembership?._id),
+              userId: targetGlobalUserId,
               name: targetUserDoc.name || null,
               username: targetUserDoc.username || null,
               isCaptain: role === TEAM_ROLE_CAPTAIN,

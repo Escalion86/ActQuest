@@ -821,7 +821,10 @@ const buildUpdatePayload = (game) => {
     finances,
     tasks,
     moderators: Array.from(moderatorsSet),
-    ...(Number.isFinite(Number(game.creatorTelegramId))
+    ...(typeof game.creatorUserId === 'string' && game.creatorUserId.trim()
+      ? { creatorUserId: game.creatorUserId.trim() }
+      : {}),
+    ...(!game.creatorUserId && Number.isFinite(Number(game.creatorTelegramId))
       ? { creatorTelegramId: Number(game.creatorTelegramId) }
       : {}),
   }
@@ -2944,9 +2947,7 @@ const GamesPage = ({
           name: trimmedName,
         }),
         location: normalizedCreateLocation,
-        ...(Number.isFinite(currentUserTelegramIdNumber)
-          ? { creatorTelegramId: currentUserTelegramIdNumber }
-          : {}),
+        ...(currentUserDbId ? { creatorUserId: currentUserDbId } : {}),
       }
 
       const { json } = await requestApiJson(CABINET_GAMES_API_BASE, {
@@ -3012,7 +3013,7 @@ const GamesPage = ({
     createGameSeasonId,
     createGameSeasons,
     createGameMode,
-    currentUserTelegramIdNumber,
+    currentUserDbId,
     location,
     newGameName,
     newGameIsRated,
@@ -6385,30 +6386,34 @@ const GamesPage = ({
         return
       }
 
-      const telegramId = String(moderator?.telegramId || '').trim()
-      if (!telegramId) {
+      const userId = String(moderator?.id || '').trim()
+      if (!userId) {
         return
       }
 
-      organizersMap.set(telegramId, {
-        telegramId,
+      organizersMap.set(userId, {
+        id: userId,
+        telegramId: String(moderator?.telegramId || '').trim(),
         name: typeof moderator?.name === 'string' ? moderator.name : '',
         username:
           typeof moderator?.username === 'string' ? moderator.username : '',
       })
     })
 
-    const currentOrganizerTelegramId = String(
-      modalGame?.creatorTelegramId || '',
+    const currentOrganizerUserId = String(
+      modalGame?.creatorUserId || modalGame?.creator?.id || '',
     ).trim()
     const currentOrganizer = modalGame?.creator
 
     if (
-      currentOrganizerTelegramId &&
-      !organizersMap.has(currentOrganizerTelegramId)
+      currentOrganizerUserId &&
+      !organizersMap.has(currentOrganizerUserId)
     ) {
-      organizersMap.set(currentOrganizerTelegramId, {
-        telegramId: currentOrganizerTelegramId,
+      organizersMap.set(currentOrganizerUserId, {
+        id: currentOrganizerUserId,
+        telegramId: String(
+          currentOrganizer?.telegramId || modalGame?.creatorTelegramId || '',
+        ).trim(),
         name:
           typeof currentOrganizer?.name === 'string'
             ? currentOrganizer.name

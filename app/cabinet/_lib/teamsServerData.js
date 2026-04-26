@@ -20,7 +20,12 @@ export const loadCabinetAppTeams = async (session) => {
     return []
   }
 
-  const userId = toStringOrNull(session?.user?._id)
+  const userId = toStringOrNull(
+    session?.user?.globalUserId ??
+      session?.user?.userId ??
+      session?.user?._id ??
+      session?.user?.id,
+  )
   if (!userId) {
     return []
   }

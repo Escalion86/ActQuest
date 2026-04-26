@@ -290,11 +290,11 @@ const GameEditModal = ({
       })
     }
   }
-  const organizersByTelegramId = new Map(
+  const organizersByUserId = new Map(
     (Array.isArray(availableOrganizersForSelect)
       ? availableOrganizersForSelect
       : []
-    ).map((organizer) => [organizer.telegramId, organizer]),
+    ).map((organizer) => [organizer.id, organizer]),
   )
 
   const resetTouchTaskDragState = useCallback(() => {
@@ -914,7 +914,8 @@ const GameEditModal = ({
               />
             </div>
 
-            {(selectedGame?.creatorTelegramId ||
+            {(selectedGame?.creatorUserId ||
+              selectedGame?.creator?.id ||
               availableOrganizersForSelect.length > 0 ||
               canEditSelectedGame) && (
               <div className="p-4 border rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60">
@@ -925,17 +926,23 @@ const GameEditModal = ({
                   <CabinetSelectField
                     id="edit-game-organizer"
                     label={null}
-                    value={String(selectedGame?.creatorTelegramId || '')}
+                    value={String(
+                      selectedGame?.creatorUserId ||
+                        selectedGame?.creator?.id ||
+                        '',
+                    )}
                     onChange={(event) => {
-                      const nextTelegramId = String(
+                      const nextUserId = String(
                         event.target.value || '',
                       ).trim()
                       const nextOrganizer =
-                        organizersByTelegramId.get(nextTelegramId)
+                        organizersByUserId.get(nextUserId)
                       updateSelectedGame({
-                        creatorTelegramId: nextTelegramId,
+                        creatorUserId: nextUserId,
+                        creatorTelegramId: nextOrganizer?.telegramId || '',
                         creator: nextOrganizer
                           ? {
+                              id: nextOrganizer.id || '',
                               name: nextOrganizer.name || '',
                               username: nextOrganizer.username || '',
                               telegramId: nextOrganizer.telegramId || '',
@@ -958,8 +965,8 @@ const GameEditModal = ({
 
                       return (
                         <option
-                          key={organizer.telegramId}
-                          value={organizer.telegramId}
+                          key={organizer.id}
+                          value={organizer.id}
                         >
                           {labelParts.join(' · ')}
                         </option>
@@ -3707,7 +3714,8 @@ GameEditModal.propTypes = {
   availableModeratorsMap: PropTypes.instanceOf(Map).isRequired,
   availableOrganizersForSelect: PropTypes.arrayOf(
     PropTypes.shape({
-      telegramId: PropTypes.string.isRequired,
+      id: PropTypes.string.isRequired,
+      telegramId: PropTypes.string,
       name: PropTypes.string,
       username: PropTypes.string,
     }),

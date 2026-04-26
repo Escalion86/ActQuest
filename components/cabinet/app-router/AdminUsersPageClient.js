@@ -853,7 +853,6 @@ const ManageUsersPage = ({
       try {
         loadedUser = await fetchCabinetUserDetails({
           userId: nextUserId || '',
-          telegramId: member.telegramId || null,
         })
       } catch (error) {
         void error

@@ -30,6 +30,18 @@ const hasResultSnapshots = (result) =>
   Array.isArray(result?.teamsUsers) &&
   result.teamsUsers.length > 0
 
+const isObjectIdLike = (value) =>
+  typeof value === 'string' && /^[a-f\d]{24}$/i.test(value.trim())
+
+const normalizeTelegramId = (value) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return null
+  }
+
+  return Math.trunc(numeric)
+}
+
 const decodeHtmlEntities = (value) => {
   let result = typeof value === 'string' ? value : ''
   for (let index = 0; index < 3; index += 1) {
@@ -274,6 +286,41 @@ const execute = (request, params) =>
           Object.prototype.hasOwnProperty.call(updateData, 'descriptionMedia')
         if (hasDescriptionContentKeys) {
           Object.assign(updateData, sanitizeGameDescriptionContent(updateData))
+        }
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'creatorUserId')) {
+          const creatorUserId =
+            typeof updateData.creatorUserId === 'string'
+              ? updateData.creatorUserId.trim()
+              : ''
+
+          if (!creatorUserId) {
+            updateData.creatorUserId = null
+            updateData.creatorTelegramId = null
+          } else if (!isObjectIdLike(creatorUserId)) {
+            return res.status(400).json({
+              success: false,
+              error: 'Некорректный идентификатор организатора',
+            })
+          } else {
+            const creatorDoc = await db
+              .model('Users')
+              .findById(creatorUserId)
+              .select({ _id: 1, telegramId: 1 })
+              .lean()
+
+            if (!creatorDoc) {
+              return res.status(400).json({
+                success: false,
+                error: 'Организатор игры не найден',
+              })
+            }
+
+            updateData.creatorUserId = String(creatorDoc._id)
+            updateData.creatorTelegramId = normalizeTelegramId(
+              creatorDoc.telegramId,
+            )
+          }
         }
 
         if (shouldReset) {

@@ -67,7 +67,6 @@ const normalizeTelegramUsername = (value) => {
 
 const UserViewModal = ({
   userId,
-  telegramId,
   isOpen,
   onClose,
   onOpenTeam,
@@ -79,9 +78,9 @@ const UserViewModal = ({
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['user', userId, telegramId],
-    queryFn: () => fetchCabinetUserDetails({ userId, telegramId }),
-    enabled: isOpen && (!!userId || !!telegramId),
+    queryKey: ['user', userId],
+    queryFn: () => fetchCabinetUserDetails({ userId }),
+    enabled: isOpen && !!userId,
     staleTime: 1000 * 60 * 5, // 5 минут
   })
 
@@ -107,9 +106,6 @@ const UserViewModal = ({
       const params = new URLSearchParams()
       if (typeof user.id === 'string' && user.id) {
         params.set('userId', user.id)
-      }
-      if (typeof user.telegramId === 'string' && user.telegramId) {
-        params.set('telegramId', user.telegramId)
       }
 
       const { json } = await requestApiJson(
@@ -183,15 +179,6 @@ const UserViewModal = ({
     staleTime: 1000 * 60 * 5,
   })
 
-  console.log(
-    '[UserViewModal] Rendering - user:',
-    user?.id,
-    'isOpen:',
-    isOpen,
-    'isLoading:',
-    isLoading,
-  )
-
   if (!user && !isLoading && error) {
     return (
       <Modal isOpen={isOpen} onClose={handleCloseModal} title="Ошибка загрузки">
@@ -210,16 +197,6 @@ const UserViewModal = ({
   const userTelegramId = user?.telegramId || ''
 
   const shouldBeOpen = isOpen && (isLoading || user)
-  console.log(
-    '[UserViewModal] Modal shouldBeOpen:',
-    shouldBeOpen,
-    'isOpen:',
-    isOpen,
-    'isLoading:',
-    isLoading,
-    'user:',
-    user?.id,
-  )
 
   return (
     <>
@@ -534,7 +511,6 @@ const UserViewModal = ({
 
 UserViewModal.propTypes = {
   userId: PropTypes.string,
-  telegramId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onOpenTeam: PropTypes.func,
@@ -543,7 +519,6 @@ UserViewModal.propTypes = {
 
 UserViewModal.defaultProps = {
   userId: null,
-  telegramId: null,
   onOpenTeam: null,
   canViewContacts: false,
 }

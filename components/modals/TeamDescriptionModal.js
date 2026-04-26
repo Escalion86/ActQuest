@@ -48,7 +48,6 @@ const TeamDescriptionModal = ({
   const [isMemberPreviewModalOpen, setIsMemberPreviewModalOpen] =
     useState(false)
   const [selectedMemberUserId, setSelectedMemberUserId] = useState(null)
-  const [selectedMemberTelegramId, setSelectedMemberTelegramId] = useState(null)
   const [memberPreviewError, setMemberPreviewError] = useState('')
 
   useEffect(() => {
@@ -60,7 +59,6 @@ const TeamDescriptionModal = ({
       setShowAllGames(false)
       setIsMemberPreviewModalOpen(false)
       setSelectedMemberUserId(null)
-      setSelectedMemberTelegramId(null)
       setMemberPreviewError('')
     }
   }, [isOpen])
@@ -81,19 +79,13 @@ const TeamDescriptionModal = ({
         typeof member?.userId === 'string' && member.userId.trim()
           ? member.userId.trim()
           : null
-      const nextTelegramId =
-        typeof member?.telegramId === 'string' ||
-        typeof member?.telegramId === 'number'
-          ? String(member.telegramId).trim()
-          : null
 
-      if (!nextUserId && !nextTelegramId) {
+      if (!nextUserId) {
         setMemberPreviewError('Не удалось определить идентификатор пользователя')
         return
       }
 
       setSelectedMemberUserId(nextUserId)
-      setSelectedMemberTelegramId(nextTelegramId)
       setIsMemberPreviewModalOpen(true)
     },
     [onOpenMember],
@@ -288,7 +280,7 @@ const TeamDescriptionModal = ({
                 <ul className="mt-4 space-y-3">
                   {selectedTeam.members.map((member, memberIndex) => (
                     <li
-                      key={`${member.id || member.telegramId || 'member'}-${memberIndex}`}
+                      key={`${member.id || member.userId || 'member'}-${memberIndex}`}
                     >
                       <TeamMemberCard
                         member={member}
@@ -377,12 +369,10 @@ const TeamDescriptionModal = ({
       />
       <UserViewModal
         userId={selectedMemberUserId}
-        telegramId={selectedMemberTelegramId}
         isOpen={isOpen && isMemberPreviewModalOpen}
         onClose={() => {
           setIsMemberPreviewModalOpen(false)
           setSelectedMemberUserId(null)
-          setSelectedMemberTelegramId(null)
         }}
         canViewContacts={canViewIds}
       />
@@ -430,7 +420,6 @@ TeamDescriptionModal.propTypes = {
         userRole: PropTypes.string,
         hasLinkedUser: PropTypes.bool,
         phone: PropTypes.string,
-        telegramId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
         isCaptain: PropTypes.bool,
       }),
     ),

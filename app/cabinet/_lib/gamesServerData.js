@@ -39,10 +39,16 @@ export const loadCabinetAppGames = async ({ session, view }) => {
 
   const role = normalizeRole(session?.user?.role)
   const location = normalizeLocation(session?.user?.location)
+  const currentUserIdRaw =
+    session?.user?.globalUserId ??
+    session?.user?.userId ??
+    session?.user?._id ??
+    session?.user?.id ??
+    null
   const currentUserId =
-    session?.user?._id === null || session?.user?._id === undefined
+    currentUserIdRaw === null || currentUserIdRaw === undefined
       ? null
-      : String(session.user._id)
+      : String(currentUserIdRaw)
 
   const { games } = await fetchGamesForCabinet({
     db,

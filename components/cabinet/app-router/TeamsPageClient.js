@@ -71,22 +71,6 @@ const buildTeamUpdatePayload = (team) => {
   }
 }
 
-const normalizeTelegramId = (value) => {
-  if (value === null || value === undefined) {
-    return null
-  }
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value)
-  }
-
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value.trim()
-  }
-
-  return null
-}
-
 const TeamsPage = ({
   initialTeams,
   session: initialSession,
@@ -99,19 +83,16 @@ const TeamsPage = ({
   const { effectiveRole: userRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
   )
+  const currentUserIdRaw =
+    activeSession?.user?.globalUserId ??
+    activeSession?.user?.userId ??
+    activeSession?.user?._id ??
+    activeSession?.user?.id ??
+    null
   const currentUserId =
-    activeSession?.user?._id === null || activeSession?.user?._id === undefined
+    currentUserIdRaw === null || currentUserIdRaw === undefined
       ? null
-      : String(activeSession.user._id)
-  const currentTelegramId = normalizeTelegramId(activeSession?.user?.telegramId)
-  const currentTelegramIdNumber = useMemo(() => {
-    if (!currentTelegramId) {
-      return null
-    }
-
-    const numeric = Number(currentTelegramId)
-    return Number.isFinite(numeric) ? numeric : null
-  }, [currentTelegramId])
+      : String(currentUserIdRaw).trim() || null
 
   const [teams, setTeams] = useState(safeInitialTeams)
   const [persistedTeams, setPersistedTeams] = useState(safeInitialTeams)
@@ -137,7 +118,6 @@ const TeamsPage = ({
     useState(false)
   const [isMemberViewModalOpen, setIsMemberViewModalOpen] = useState(false)
   const [selectedMemberUserId, setSelectedMemberUserId] = useState(null)
-  const [selectedMemberTelegramId, setSelectedMemberTelegramId] = useState(null)
   const [isLeavingTeam, setIsLeavingTeam] = useState(false)
   const [isDeletingTeam, setIsDeletingTeam] = useState(false)
   const snackbar = useSnackbar()
@@ -161,7 +141,7 @@ const TeamsPage = ({
         return []
       }
 
-      if (!currentUserId && !currentTelegramId) {
+      if (!currentUserId) {
         return []
       }
 
@@ -169,13 +149,8 @@ const TeamsPage = ({
         (team?.members ?? []).some((member) => {
           const memberUserId =
             typeof member?.userId === 'string' ? member.userId : null
-          const memberTelegramId = normalizeTelegramId(member?.telegramId)
 
           if (currentUserId && memberUserId === currentUserId) {
-            return true
-          }
-
-          if (currentTelegramId && memberTelegramId === currentTelegramId) {
             return true
           }
 
@@ -183,7 +158,7 @@ const TeamsPage = ({
         }),
       )
     },
-    [currentTelegramId, currentUserId],
+    [currentUserId],
   )
 
   useEffect(() => {
@@ -230,7 +205,6 @@ const TeamsPage = ({
   const closeMemberViewModal = useCallback(() => {
     setIsMemberViewModalOpen(false)
     setSelectedMemberUserId(null)
-    setSelectedMemberTelegramId(null)
   }, [])
 
   useEffect(
@@ -273,17 +247,15 @@ const TeamsPage = ({
 
   const isAdmin = userRole === 'admin' || userRole === 'dev'
   const isTeamCaptain = useMemo(() => {
-    if (!selectedTeam || (!currentUserId && !currentTelegramId)) {
+    if (!selectedTeam || !currentUserId) {
       return false
     }
 
     return selectedTeam.members?.some(
       (member) =>
-        member.isCaptain &&
-        ((currentUserId && member.userId === currentUserId) ||
-          (currentTelegramId && member.telegramId === currentTelegramId)),
+        member.isCaptain && currentUserId && member.userId === currentUserId,
     )
-  }, [currentTelegramId, currentUserId, selectedTeam])
+  }, [currentUserId, selectedTeam])
 
   const canManageSelectedTeam = isAdmin || isTeamCaptain
   const selectedTeamCurrentMember = useMemo(() => {
@@ -297,20 +269,16 @@ const TeamsPage = ({
           return true
         }
 
-        if (currentTelegramId && member.telegramId === currentTelegramId) {
-          return true
-        }
-
         return false
       }) ?? null
     )
-  }, [currentTelegramId, currentUserId, selectedTeam])
+  }, [currentUserId, selectedTeam])
 
   const canLeaveSelectedTeam =
     Boolean(selectedTeamCurrentMember) && !selectedTeamCurrentMember.isCaptain
   const canDeleteSelectedTeam = Boolean(selectedTeam && isTeamCaptain)
   const canUseSelfServiceTeams = Boolean(
-    currentUserId || currentTelegramIdNumber !== null,
+    currentUserId,
   )
   const isTeamsLimitReached = visibleTeams.length >= MAX_TEAMS_PER_USER
   const canUseSelfServiceTeamsActions =
@@ -474,17 +442,12 @@ const TeamsPage = ({
       typeof member.userId === 'string' && member.userId.trim()
         ? member.userId.trim()
         : null
-    const nextTelegramId =
-      typeof member.telegramId === 'string' || typeof member.telegramId === 'number'
-        ? String(member.telegramId).trim()
-        : null
 
-    if (!nextUserId && !nextTelegramId) {
+    if (!nextUserId) {
       return
     }
 
     setSelectedMemberUserId(nextUserId)
-    setSelectedMemberTelegramId(nextTelegramId)
     setIsMemberViewModalOpen(true)
   }, [])
 
@@ -554,7 +517,7 @@ const TeamsPage = ({
       return
     }
 
-    if (!currentUserId && currentTelegramIdNumber === null) {
+    if (!currentUserId) {
       snackbar.error(
         'Чтобы управлять командами, требуется авторизованный пользователь.',
       )
@@ -626,7 +589,6 @@ const TeamsPage = ({
     }
   }, [
     canUseSelfServiceTeamsActions,
-    currentTelegramIdNumber,
     currentUserId,
     fetchTeamsSnapshot,
     isTeamsLimitReached,
@@ -655,7 +617,7 @@ const TeamsPage = ({
       return
     }
 
-    if (!currentUserId && currentTelegramIdNumber === null) {
+    if (!currentUserId) {
       snackbar.error(
         'Чтобы присоединяться к командам, требуется авторизованный пользователь.',
       )
@@ -732,7 +694,6 @@ const TeamsPage = ({
     }
   }, [
     canUseSelfServiceTeamsActions,
-    currentTelegramIdNumber,
     currentUserId,
     fetchTeamsSnapshot,
     isTeamsLimitReached,
@@ -980,10 +941,8 @@ const TeamsPage = ({
         const newMember = json?.data?.member
           ? {
               id: String(json.data.member.id),
-              userId: String(
-                json.data.member.userId || json.data.member.id || '',
-              ),
-              telegramId: normalizeTelegramId(json.data.member.telegramId),
+              userId: String(json.data.member.userId || userId || ''),
+              telegramId: '',
               name: json.data.member.name || userOption?.title || 'Без имени',
               username: json.data.member.username || null,
               phone: null,
@@ -1061,8 +1020,8 @@ const TeamsPage = ({
       const isCaptainForCurrentUser = (team.members ?? []).some(
         (member) =>
           member.isCaptain &&
-          ((currentUserId && member.userId === currentUserId) ||
-            (currentTelegramId && member.telegramId === currentTelegramId)),
+          currentUserId &&
+          member.userId === currentUserId,
       )
 
       const canManageTeam = isAdmin || isCaptainForCurrentUser
@@ -1079,7 +1038,7 @@ const TeamsPage = ({
         isCaptain: isCaptainForCurrentUser,
       }
     })
-  }, [currentTelegramId, currentUserId, isAdmin, visibleTeams])
+  }, [currentUserId, isAdmin, visibleTeams])
 
   const handleTeamCardClick = useCallback((team) => {
     if (!team) {
@@ -1491,7 +1450,6 @@ const TeamsPage = ({
         />
         <UserViewModal
           userId={selectedMemberUserId}
-          telegramId={selectedMemberTelegramId}
           isOpen={isMemberViewModalOpen}
           onClose={closeMemberViewModal}
           canViewContacts={isAdmin}
