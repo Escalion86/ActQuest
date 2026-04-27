@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 
 import requestApiJson from '@helpers/requestApiJson'
 import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
@@ -55,6 +56,104 @@ const buildTaskDisplayMeta = (task) => ({
     : 0,
 })
 
+const buildPreviewQueryKey = ({ gameId, draftKey, taskIndex }) => [
+  'game-task-preview',
+  {
+    gameId: gameId || '',
+    draftKey: draftKey || '',
+    taskIndex,
+  },
+]
+
+const fetchTaskPreviewData = async ({ gameId, draftKey, taskIndex }) => {
+  if (gameId) {
+    const { json } = await requestApiJson(
+      `/api/cabinet/admin/task-preview?gameId=${encodeURIComponent(gameId)}&taskIndex=${encodeURIComponent(String(taskIndex))}`,
+      { fallbackMessage: 'Не удалось загрузить предпросмотр задания' },
+    )
+
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.error || 'Не удалось загрузить предпросмотр')
+    }
+
+    return json.data
+  }
+
+  if (draftKey) {
+    const rawPayload = window.localStorage.getItem(draftKey)
+    if (!rawPayload) {
+      throw new Error('Не найден черновик предпросмотра')
+    }
+    const parsed = JSON.parse(rawPayload)
+    const tasks = Array.isArray(parsed?.tasks) ? parsed.tasks : []
+    if (tasks.length === 0) {
+      throw new Error('В черновике нет заданий для предпросмотра')
+    }
+
+    const safeTaskIndex = Math.min(Math.max(taskIndex, 0), tasks.length - 1)
+    const task = tasks[safeTaskIndex] || {}
+    const clues = Array.isArray(task?.clues) ? task.clues : []
+    const buildDraftCombinedVariant = (cluesCountToShow) =>
+      buildTaskDisplayContent({
+        task,
+        visibleCluesCount: cluesCountToShow,
+      })
+
+    const baseVariant = buildDraftCombinedVariant(0)
+    const variants = [
+      {
+        id: 'task',
+        label: 'Текст задания',
+        html: baseVariant.html,
+        text: baseVariant.text,
+      },
+      ...clues.map((_, clueIndex) => ({
+        id: `clue-${clueIndex + 1}`,
+        label: `С подсказкой ${clueIndex + 1}`,
+        ...buildDraftCombinedVariant(clueIndex + 1),
+      })),
+    ]
+
+    return {
+      game: {
+        id: String(parsed?.game?.id || ''),
+        name: String(parsed?.game?.name || ''),
+        type: parsed?.game?.type === 'photo' ? 'photo' : 'classic',
+        location: String(parsed?.game?.location || ''),
+        status: String(parsed?.game?.status || ''),
+        taskDuration: Number(parsed?.game?.taskDuration) || 3600,
+        cluesDuration: Number(parsed?.game?.cluesDuration) || 1200,
+        breakDuration: Number(parsed?.game?.breakDuration) || 0,
+        tasksCount: tasks.length,
+      },
+      task: {
+        index: safeTaskIndex,
+        title: String(task?.title || ''),
+        postMessage: String(task?.postMessage || ''),
+        postMessageRich: String(task?.postMessageRich || ''),
+        postMessageMedia: Array.isArray(task?.postMessageMedia)
+          ? task.postMessageMedia
+          : [],
+        cluesCount: clues.length,
+        displayMeta: buildTaskDisplayMeta(task),
+      },
+      variants,
+    }
+  }
+
+  throw new Error('Не указан идентификатор игры или черновика')
+}
+
+const resolveSelectedVariantId = ({ data, variantParam }) => {
+  const variants = Array.isArray(data?.variants) ? data.variants : []
+  const firstVariantId = variants.length > 0 ? String(variants[0].id) : 'task'
+  const preferredVariant = normalizeString(variantParam)
+  const variantExists = variants.some(
+    (variant) => String(variant?.id) === preferredVariant,
+  )
+  return variantExists && preferredVariant ? preferredVariant : firstVariantId
+}
+
 export default function GameTaskPreviewPageClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -64,120 +163,26 @@ export default function GameTaskPreviewPageClient() {
   const taskIndexRaw = Number(searchParams.get('taskIndex') || 0)
   const taskIndex = Number.isFinite(taskIndexRaw) ? Math.max(0, taskIndexRaw) : 0
 
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [data, setData] = useState(null)
   const [selectedVariantId, setSelectedVariantId] = useState('task')
-
-  const fetchPreview = useCallback(async () => {
-    setLoading(true)
-    setError('')
-
-    try {
-      if (gameId) {
-        const { json } = await requestApiJson(
-          `/api/cabinet/admin/task-preview?gameId=${encodeURIComponent(gameId)}&taskIndex=${encodeURIComponent(String(taskIndex))}`,
-          { fallbackMessage: 'Не удалось загрузить предпросмотр задания' },
-        )
-
-        if (!json?.success || !json?.data) {
-          throw new Error(json?.error || 'Не удалось загрузить предпросмотр')
-        }
-
-        setData(json.data)
-        const firstVariantId =
-          Array.isArray(json.data.variants) && json.data.variants.length > 0
-            ? String(json.data.variants[0].id)
-            : 'task'
-        const preferredVariant = normalizeString(variantParam)
-        const variantExists = Array.isArray(json.data.variants)
-          ? json.data.variants.some(
-              (variant) => String(variant?.id) === preferredVariant,
-            )
-          : false
-        setSelectedVariantId(
-          variantExists && preferredVariant ? preferredVariant : firstVariantId,
-        )
-      } else if (draftKey) {
-        const rawPayload = window.localStorage.getItem(draftKey)
-        if (!rawPayload) {
-          throw new Error('Не найден черновик предпросмотра')
-        }
-        const parsed = JSON.parse(rawPayload)
-        const tasks = Array.isArray(parsed?.tasks) ? parsed.tasks : []
-        if (tasks.length === 0) {
-          throw new Error('В черновике нет заданий для предпросмотра')
-        }
-        const safeTaskIndex = Math.min(Math.max(taskIndex, 0), tasks.length - 1)
-        const task = tasks[safeTaskIndex] || {}
-        const clues = Array.isArray(task?.clues) ? task.clues : []
-        const buildDraftCombinedVariant = (cluesCountToShow) =>
-          buildTaskDisplayContent({
-            task,
-            visibleCluesCount: cluesCountToShow,
-          })
-
-        const baseVariant = buildDraftCombinedVariant(0)
-        const variants = [
-          {
-            id: 'task',
-            label: 'Текст задания',
-            html: baseVariant.html,
-            text: baseVariant.text,
-          },
-          ...clues.map((_, clueIndex) => ({
-            id: `clue-${clueIndex + 1}`,
-            label: `С подсказкой ${clueIndex + 1}`,
-            ...buildDraftCombinedVariant(clueIndex + 1),
-          })),
-        ]
-
-        setData({
-          game: {
-            id: String(parsed?.game?.id || ''),
-            name: String(parsed?.game?.name || ''),
-            type: parsed?.game?.type === 'photo' ? 'photo' : 'classic',
-            location: String(parsed?.game?.location || ''),
-            status: String(parsed?.game?.status || ''),
-            taskDuration: Number(parsed?.game?.taskDuration) || 3600,
-            cluesDuration: Number(parsed?.game?.cluesDuration) || 1200,
-            breakDuration: Number(parsed?.game?.breakDuration) || 0,
-            tasksCount: tasks.length,
-          },
-          task: {
-            index: safeTaskIndex,
-            title: String(task?.title || ''),
-            postMessage: String(task?.postMessage || ''),
-            postMessageRich: String(task?.postMessageRich || ''),
-            postMessageMedia: Array.isArray(task?.postMessageMedia)
-              ? task.postMessageMedia
-              : [],
-            cluesCount: clues.length,
-            displayMeta: buildTaskDisplayMeta(task),
-          },
-          variants,
-        })
-        const preferredVariant = normalizeString(variantParam)
-        const variantExists = variants.some(
-          (variant) => String(variant?.id) === preferredVariant,
-        )
-        setSelectedVariantId(
-          variantExists && preferredVariant ? preferredVariant : 'task',
-        )
-      } else {
-        throw new Error('Не указан идентификатор игры или черновика')
-      }
-    } catch (requestError) {
-      setError(requestError?.message || 'Не удалось загрузить предпросмотр')
-      setData(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [draftKey, gameId, taskIndex, variantParam])
+  const previewQueryKey = useMemo(
+    () => buildPreviewQueryKey({ gameId, draftKey, taskIndex }),
+    [draftKey, gameId, taskIndex],
+  )
+  const {
+    data,
+    error: queryError,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: previewQueryKey,
+    queryFn: () => fetchTaskPreviewData({ gameId, draftKey, taskIndex }),
+  })
+  const error = queryError?.message || ''
 
   useEffect(() => {
-    fetchPreview()
-  }, [fetchPreview])
+    if (!data) return
+    setSelectedVariantId(resolveSelectedVariantId({ data, variantParam }))
+  }, [data, variantParam])
 
   const variants = useMemo(
     () => (Array.isArray(data?.variants) ? data.variants : []),
@@ -243,7 +248,7 @@ export default function GameTaskPreviewPageClient() {
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="mx-auto flex min-h-[60vh] max-w-4xl items-center justify-center px-4 py-6">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
@@ -258,7 +263,7 @@ export default function GameTaskPreviewPageClient() {
           <p className="mb-4 text-red-300">{error}</p>
           <button
             type="button"
-            onClick={fetchPreview}
+            onClick={() => refetch()}
             className="rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-300 transition hover:bg-cyan-500/20"
           >
             Повторить

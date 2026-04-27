@@ -309,24 +309,35 @@ const cachedUser = queryClient.getQueryData(['user', userId])
 - ✅ UserEditModal.js (+ mutation)
 - ✅ TeamViewModal.js
 - ✅ TeamEditModal.js (+ mutation)
+- ✅ GameTeamsModal.js - team details loading
+- ✅ TeamDescriptionModal.js - nested game details
+- ✅ GameTaskPreviewPageClient.js - game/draft task preview
+- ✅ GameControlPageClient.js - live status polling
+
+### Paginated Lists (useInfiniteQuery)
+
+- ✅ EntitySelectField.js - paginated entity search
+- ✅ AdminUsersPageClient.js - filtered users list + submit mutations
+- ✅ AdminTeamsPageClient.js - filtered teams list + team/member mutations
 
 ### With Optimistic Updates (useOptimisticMutation)
 
 - ✅ UserEditModal.js - updateUserMutation
 - ✅ TeamEditModal.js - updateTeamMutation
+- ✅ PhotoReviewPageClient.js - task/photo checks through React Query cache
 
 ## Components to Refactor
 
 **High Priority** (simple read operations):
 
-- [ ] GameTeamsModal.js - team details loading
-- [ ] UnifiedGameDescriptionModal.js - game details
-- [ ] EntitySelectField.js - paginated search
+- [x] GameTeamsModal.js - team details loading
+- [x] TeamDescriptionModal.js - game details
+- [x] EntitySelectField.js - paginated search
 
 **Medium Priority** (list operations):
 
-- [ ] AdminUsersList - batch operations
-- [ ] AdminTeamsList - batch operations
+- [x] AdminUsersList - pagination and submit mutations migrated
+- [x] AdminTeamsList - pagination, team mutations, and member mutations migrated
 
 **Low Priority** (complex state):
 

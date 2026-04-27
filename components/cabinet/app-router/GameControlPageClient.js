@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PropTypes from 'prop-types'
+import { useQuery } from '@tanstack/react-query'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowsRotate,
@@ -346,18 +347,30 @@ const buildManualCodeCandidates = (team, tasks) => {
   ].filter((item) => Boolean(item.code))
 }
 
+const fetchGameControlStatus = async (gameId) => {
+  const normalizedGameId = String(gameId || '').trim()
+  if (!normalizedGameId) return null
+
+  const { json } = await requestApiJson(
+    `/api/cabinet/admin/game-status?gameId=${encodeURIComponent(normalizedGameId)}`,
+    { fallbackMessage: 'Не удалось загрузить данные' },
+  )
+
+  if (!json?.success || !json?.data) {
+    throw new Error(json?.error || 'Не удалось загрузить данные')
+  }
+
+  return json.data
+}
+
 export default function GameControlPageClient({ session: _session }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const gameId = searchParams.get('gameId')
 
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [isDetailedView, setIsDetailedView] = useState(true)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [autoRefreshIntervalMs, setAutoRefreshIntervalMs] = useState(15000)
-  const [lastUpdated, setLastUpdated] = useState(null)
   const [nowTs, setNowTs] = useState(() => Date.now())
   const [isTasksViewModalOpen, setIsTasksViewModalOpen] = useState(false)
   const [selectedTeamForTaskPreviewId, setSelectedTeamForTaskPreviewId] =
@@ -379,7 +392,21 @@ export default function GameControlPageClient({ session: _session }) {
   const [teamPushMessage, setTeamPushMessage] = useState('')
   const [themeMode, setThemeMode] = useState('dark')
   const isLightTheme = themeMode === 'light'
-  const intervalRef = useRef(null)
+  const {
+    data,
+    error: statusError,
+    isLoading: loading,
+    refetch: refetchStatus,
+    dataUpdatedAt,
+  } = useQuery({
+    queryKey: ['game-control-status', gameId || ''],
+    queryFn: () => fetchGameControlStatus(gameId),
+    enabled: Boolean(gameId),
+    refetchInterval: autoRefresh ? autoRefreshIntervalMs : false,
+    refetchIntervalInBackground: true,
+  })
+  const error = statusError?.message || null
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null
   const showToast = useCallback((type, message) => {
     setToastEvent({
       id: Date.now(),
@@ -387,44 +414,6 @@ export default function GameControlPageClient({ session: _session }) {
       message,
     })
   }, [])
-
-  const fetchStatus = useCallback(async () => {
-    if (!gameId) return
-
-    try {
-      const { json } = await requestApiJson(
-        `/api/cabinet/admin/game-status?gameId=${encodeURIComponent(gameId)}`,
-      )
-
-      if (json?.success && json?.data) {
-        setData(json.data)
-        setError(null)
-        setLastUpdated(new Date())
-      } else {
-        setError(json?.error ?? 'Не удалось загрузить данные')
-      }
-    } catch {
-      setError('Ошибка соединения')
-    } finally {
-      setLoading(false)
-    }
-  }, [gameId])
-
-  useEffect(() => {
-    fetchStatus()
-  }, [fetchStatus])
-
-  useEffect(() => {
-    if (autoRefresh && gameId) {
-      intervalRef.current = setInterval(fetchStatus, autoRefreshIntervalMs)
-    }
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-    }
-  }, [autoRefresh, autoRefreshIntervalMs, gameId, fetchStatus])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -582,7 +571,7 @@ export default function GameControlPageClient({ session: _session }) {
             }),
           },
         )
-        await fetchStatus()
+        await refetchStatus()
         return json
       } catch (requestError) {
         setManualActionError(
@@ -595,7 +584,7 @@ export default function GameControlPageClient({ session: _session }) {
         setManualActionLoading(false)
       }
     },
-    [fetchStatus, gameId, selectedTeamForManualActions?.teamId],
+    [gameId, refetchStatus, selectedTeamForManualActions?.teamId],
   )
 
   const handleApplyManualCode = useCallback(async () => {
@@ -744,7 +733,7 @@ export default function GameControlPageClient({ session: _session }) {
           <p className="mb-4 text-red-300">{error}</p>
           <button
             type="button"
-            onClick={fetchStatus}
+            onClick={() => refetchStatus()}
             className="px-4 py-2 text-sm transition border rounded-lg border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
           >
             Повторить
@@ -852,7 +841,7 @@ export default function GameControlPageClient({ session: _session }) {
           </select>
           <button
             type="button"
-            onClick={fetchStatus}
+            onClick={() => refetchStatus()}
             className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full border-cyan-400 bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20"
             aria-label="Обновить"
             title="Обновить"

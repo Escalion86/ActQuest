@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetButton from '@components/cabinet/CabinetButton'
@@ -76,6 +81,174 @@ const cloneUser = (user) => {
   }
 }
 
+const buildAdminUsersQueryKey = ({
+  searchQuery,
+  roleFilter,
+  locationFilter,
+  sortBy,
+  withoutPhoneOnly,
+}) => [
+  'admin-users',
+  {
+    search: searchQuery || '',
+    role: roleFilter || 'all',
+    location: locationFilter || 'all',
+    sortBy: sortBy || 'registration_desc',
+    withoutPhoneOnly: Boolean(withoutPhoneOnly),
+  },
+]
+
+const fetchAdminUsersPage = async ({
+  pageParam = 0,
+  searchQuery,
+  roleFilter,
+  locationFilter,
+  sortBy,
+  withoutPhoneOnly,
+}) => {
+  const params = new URLSearchParams({
+    offset: String(pageParam),
+    limit: String(USERS_PAGE_SIZE),
+    sortBy,
+  })
+  if (searchQuery) {
+    params.set('q', searchQuery)
+  }
+  if (roleFilter && roleFilter !== 'all') {
+    params.set('role', roleFilter)
+  }
+  if (locationFilter && locationFilter !== 'all') {
+    params.set('location', locationFilter)
+  }
+  if (withoutPhoneOnly) {
+    params.set('withoutPhoneOnly', '1')
+  }
+
+  const { json } = await requestApiJson(
+    `${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`,
+    {
+      fallbackMessage: 'Не удалось загрузить пользователей',
+    },
+  )
+
+  return {
+    users: Array.isArray(json?.data) ? json.data : [],
+    hasMore: Boolean(json?.meta?.hasMore),
+  }
+}
+
+const mapAdminUsersQueryData = (queryData, mapper) => {
+  if (!queryData || !Array.isArray(queryData.pages)) {
+    return queryData
+  }
+
+  return {
+    ...queryData,
+    pages: queryData.pages.map((page) => ({
+      ...page,
+      users: Array.isArray(page?.users) ? page.users.map(mapper) : [],
+    })),
+  }
+}
+
+const saveAdminUser = async (user) => {
+  const normalizeText = (value) =>
+    typeof value === 'string' ? value.trim() : ''
+  const normalizeNullable = (value) => {
+    const normalized = normalizeText(value)
+    return normalized.length > 0 ? normalized : null
+  }
+  const normalizePhone = (value) => {
+    if (typeof value !== 'string') {
+      return null
+    }
+
+    const digits = normalizePhoneForSubmit(value)
+    return digits.length === 11 ? Number(digits) : null
+  }
+
+  const payload = {
+    role: user.role,
+    name: normalizeText(user.name),
+    username: normalizeNullable(user.username),
+    photoUrl: normalizeNullable(user.photoUrl),
+    phone: normalizePhone(user.phone),
+    currentLocation: normalizeNullable(user.currentLocation),
+    about: normalizeText(user.about),
+    preferences: Array.isArray(user.preferences)
+      ? Array.from(
+          new Set(
+            user.preferences
+              .map((item) => normalizeText(item))
+              .filter((item) => item.length > 0),
+          ),
+        )
+      : [],
+  }
+
+  const { json } = await requestApiJson(
+    `${CABINET_ADMIN_API_BASE}/users/${user.id}`,
+    {
+      method: 'PUT',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      fallbackMessage: 'Не удалось сохранить изменения',
+    },
+  )
+
+  const updatedDoc = json.data ?? {}
+  const baseProfile = normalizeUserProfile(updatedDoc)
+
+  return {
+    ...cloneUser(user),
+    ...baseProfile,
+    telegramId: Number.isFinite(updatedDoc?.telegramId)
+      ? String(updatedDoc.telegramId)
+      : user.telegramId,
+    role: ensureRole(updatedDoc?.role),
+    createdAt: ensureDateISOString(updatedDoc?.createdAt) ?? user.createdAt,
+    updatedAt:
+      ensureDateISOString(updatedDoc?.updatedAt) ?? new Date().toISOString(),
+  }
+}
+
+const requestUserPhoneViaTelegram = async (user) => {
+  await requestApiJson(`${CABINET_USERS_API_BASE}/request-phone`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId: user.globalUserId || user.id,
+    }),
+    fallbackMessage: 'Не удалось отправить запрос номера через Telegram',
+  })
+}
+
+const sendAdminUserPushMessage = async ({ userId, message }) => {
+  const { json } = await requestApiJson(`${CABINET_ADMIN_API_BASE}/user-push`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId,
+      message,
+    }),
+    fallbackMessage: 'Не удалось отправить push-уведомление',
+  })
+
+  return {
+    created: Number(json?.data?.created || 0),
+    delivered: Number(json?.data?.delivered || 0),
+  }
+}
+
 const ManageUsersPage = ({
   initialUsers,
   initialHasMore,
@@ -89,6 +262,7 @@ const ManageUsersPage = ({
   }, [])
 
   const safeInitialUsers = Array.isArray(initialUsers) ? initialUsers : []
+  const queryClient = useQueryClient()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -112,10 +286,6 @@ const ManageUsersPage = ({
   const [sortBy, setSortBy] = useState('registration_desc')
   const [withoutPhoneOnly, setWithoutPhoneOnly] = useState(false)
   const [feedback, setFeedback] = useState(null)
-  const [isSaving, setIsSaving] = useState(false)
-  const [hasMoreUsers, setHasMoreUsers] = useState(Boolean(initialHasMore))
-  const [isLoadingMoreUsers, setIsLoadingMoreUsers] = useState(false)
-  const [isRequestingPhone, setIsRequestingPhone] = useState(false)
   const [isUserViewModalOpen, setIsUserViewModalOpen] = useState(false)
   const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false)
   const [isUserGamesModalOpen, setIsUserGamesModalOpen] = useState(false)
@@ -130,7 +300,6 @@ const ManageUsersPage = ({
   const [selectedUserTeam, setSelectedUserTeam] = useState(null)
   const [selectedUserForPush, setSelectedUserForPush] = useState(null)
   const [userPushMessage, setUserPushMessage] = useState('')
-  const [isUserPushSubmitting, setIsUserPushSubmitting] = useState(false)
   const [userPushFeedback, setUserPushFeedback] = useState(null)
 
   // Отслеживаем предыдущий userId из URL чтобы избежать race condition при закрытии модалки
@@ -139,51 +308,178 @@ const ManageUsersPage = ({
   const isIntentionallyCLosingModalRef = useRef(false)
   // Флаг чтобы отметить что мы намеренно открываем модалку (не позволяет закрыть на race condition)
   const isIntentionallyOpeningModalRef = useRef(false)
+  const isDefaultUsersQuery =
+    !searchQuery &&
+    roleFilter === 'all' &&
+    locationFilter === 'all' &&
+    sortBy === 'registration_desc' &&
+    !withoutPhoneOnly
+  const usersQuery = useInfiniteQuery({
+    queryKey: buildAdminUsersQueryKey({
+      searchQuery,
+      roleFilter,
+      locationFilter,
+      sortBy,
+      withoutPhoneOnly,
+    }),
+    queryFn: ({ pageParam }) =>
+      fetchAdminUsersPage({
+        pageParam,
+        searchQuery,
+        roleFilter,
+        locationFilter,
+        sortBy,
+        withoutPhoneOnly,
+      }),
+    enabled: isAdmin,
+    initialPageParam: 0,
+    initialData: isDefaultUsersQuery
+      ? {
+          pages: [
+            {
+              users: safeInitialUsers,
+              hasMore: Boolean(initialHasMore),
+            },
+          ],
+          pageParams: [0],
+        }
+      : undefined,
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage?.hasMore) return undefined
+      return allPages.reduce(
+        (total, page) =>
+          total + (Array.isArray(page?.users) ? page.users.length : 0),
+        0,
+      )
+    },
+  })
+  const hasMoreUsers = Boolean(usersQuery.hasNextPage)
+  const isLoadingMoreUsers = usersQuery.isFetchingNextPage
+  const isUsersSearching = usersQuery.isFetching && !usersQuery.isFetchingNextPage
+
+  const applyPersistedUserUpdate = useCallback(
+    (userId, updater) => {
+      const applyUpdate = (user) => {
+        if (user.id !== userId) {
+          return user
+        }
+
+        const updatedUser =
+          typeof updater === 'function' ? updater(user) : updater
+        return cloneUser(updatedUser)
+      }
+
+      setUsers((prevUsers) => prevUsers.map(applyUpdate))
+      setPersistedUsers((prevUsers) => prevUsers.map(applyUpdate))
+      queryClient.setQueriesData({ queryKey: ['admin-users'] }, (queryData) =>
+        mapAdminUsersQueryData(queryData, applyUpdate),
+      )
+    },
+    [queryClient],
+  )
+
+  const saveUserMutation = useMutation({
+    mutationFn: saveAdminUser,
+    onMutate: () => {
+      setFeedback(null)
+    },
+    onSuccess: (updatedUser) => {
+      applyPersistedUserUpdate(updatedUser.id, updatedUser)
+      setFeedback({
+        type: 'success',
+        message: 'Данные пользователя обновлены',
+      })
+    },
+    onError: (error) => {
+      console.error('Failed to update user role', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось сохранить изменения',
+      })
+    },
+  })
+
+  const requestPhoneMutation = useMutation({
+    mutationFn: requestUserPhoneViaTelegram,
+    onMutate: () => {
+      setFeedback(null)
+    },
+    onSuccess: () => {
+      setFeedback({
+        type: 'success',
+        message:
+          'Запрос номера отправлен пользователю в Telegram. Ожидаем отправку контакта.',
+      })
+    },
+    onError: (error) => {
+      console.error('Failed to request phone via Telegram', error)
+      setFeedback({
+        type: 'error',
+        message:
+          error?.message || 'Не удалось отправить запрос номера через Telegram',
+      })
+    },
+  })
+
+  const userPushMutation = useMutation({
+    mutationFn: sendAdminUserPushMessage,
+    onMutate: () => {
+      setUserPushFeedback(null)
+    },
+    onSuccess: ({ created, delivered }) => {
+      const successMessage =
+        created > 0
+          ? `Уведомление отправлено. Создано: ${created}, доставлено push: ${delivered}.`
+          : 'Сообщение сохранено, но push не доставлен (возможно, у пользователя нет активной подписки).'
+
+      setFeedback({
+        type: 'success',
+        message: successMessage,
+      })
+      setUserPushMessage('')
+      setIsUserPushModalOpen(false)
+      setSelectedUserForPush(null)
+    },
+    onError: (error) => {
+      const messageText =
+        error?.message || 'Не удалось отправить push-уведомление'
+      setUserPushFeedback({
+        type: 'error',
+        message: messageText,
+      })
+      setFeedback({
+        type: 'error',
+        message: messageText,
+      })
+    },
+  })
+
+  const isSaving = saveUserMutation.isPending
+  const isRequestingPhone = requestPhoneMutation.isPending
+  const isUserPushSubmitting = userPushMutation.isPending
 
   useEffect(() => {
-    // Если есть активный фильтр (поиск, ролль, город или сортировка), не перезаписывать список
-    const hasActiveFilter =
-      searchQuery ||
-      roleFilter !== 'all' ||
-      locationFilter !== 'all' ||
-      sortBy !== 'registration_desc' ||
-      withoutPhoneOnly
-
-    if (hasActiveFilter) {
-      console.log(
-        '[AdminUsers] Active filter detected, not overwriting list with initial data: searchQuery:',
-        searchQuery,
-        'filters:',
-        { roleFilter, locationFilter, sortBy },
-      )
-      return
-    }
-
-    console.log(
-      '[AdminUsers] Initial effect triggered - safeInitialUsers.length:',
-      safeInitialUsers.length,
-      'initialHasMore:',
-      initialHasMore,
+    const nextUsers = (usersQuery.data?.pages || []).flatMap((page) =>
+      Array.isArray(page?.users) ? page.users : [],
     )
-    setUsers(safeInitialUsers)
-    setPersistedUsers(safeInitialUsers)
-    setHasMoreUsers(Boolean(initialHasMore))
+    setUsers(nextUsers)
+    setPersistedUsers(nextUsers)
     setSelectedUserId((prev) => {
-      if (prev && safeInitialUsers.some((user) => user.id === prev)) {
+      if (prev && nextUsers.some((user) => user.id === prev)) {
         return prev
       }
 
-      return safeInitialUsers[0]?.id ?? null
+      return nextUsers[0]?.id ?? null
     })
-  }, [
-    initialHasMore,
-    safeInitialUsers,
-    searchQuery,
-    roleFilter,
-    locationFilter,
-    sortBy,
-    withoutPhoneOnly,
-  ])
+  }, [usersQuery.data])
+
+  useEffect(() => {
+    if (!usersQuery.error) return
+    setFeedback({
+      type: 'error',
+      message: usersQuery.error?.message || 'Не удалось загрузить пользователей',
+    })
+  }, [usersQuery.error])
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -453,110 +749,6 @@ const ManageUsersPage = ({
     }
   }, [isAdmin, searchParams])
 
-  useEffect(() => {
-    if (!isAdmin) {
-      return undefined
-    }
-
-    console.log(
-      '[AdminUsers] Effect on loadUsersByFilters triggered - checking dependencies:',
-      {
-        isAdmin,
-        locationFilter,
-        roleFilter,
-        searchQuery,
-        sortBy,
-        withoutPhoneOnly,
-        'safeInitialUsers.length': safeInitialUsers.length,
-      },
-    )
-
-    let cancelled = false
-
-    const loadUsersByFilters = async () => {
-      console.log('[AdminUsers] Loading users with filters:', {
-        searchQuery,
-        roleFilter,
-        locationFilter,
-        sortBy,
-        withoutPhoneOnly,
-      })
-      setIsLoadingMoreUsers(true)
-      setFeedback(null)
-
-      try {
-        const params = new URLSearchParams({
-          offset: '0',
-          limit: String(USERS_PAGE_SIZE),
-          sortBy,
-        })
-        if (searchQuery) {
-          params.set('q', searchQuery)
-        }
-        if (roleFilter && roleFilter !== 'all') {
-          params.set('role', roleFilter)
-        }
-        if (locationFilter && locationFilter !== 'all') {
-          params.set('location', locationFilter)
-        }
-        if (withoutPhoneOnly) {
-          params.set('withoutPhoneOnly', '1')
-        }
-        const { json } = await requestApiJson(
-          `${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`,
-          {
-            fallbackMessage: 'Не удалось загрузить пользователей',
-          },
-        )
-
-        if (cancelled) {
-          return
-        }
-
-        const nextUsers = Array.isArray(json?.data) ? json.data : []
-        const nextHasMore = Boolean(json?.meta?.hasMore)
-        console.log(
-          '[AdminUsers] Loaded users:',
-          nextUsers.length,
-          'hasMore:',
-          nextHasMore,
-          'current selectedUserId:',
-          selectedUserId,
-        )
-        setUsers(nextUsers)
-        setPersistedUsers(nextUsers)
-        setHasMoreUsers(nextHasMore)
-      } catch (error) {
-        if (cancelled) {
-          return
-        }
-        console.error('Failed to load users with selected filters', error)
-        setFeedback({
-          type: 'error',
-          message: error?.message || 'Не удалось применить фильтры',
-        })
-      } finally {
-        if (!cancelled) {
-          setIsLoadingMoreUsers(false)
-        }
-      }
-    }
-
-    loadUsersByFilters()
-
-    return () => {
-      cancelled = true
-    }
-  }, [
-    isAdmin,
-    locationFilter,
-    roleFilter,
-    safeInitialUsers.length,
-    searchQuery,
-    sortBy,
-    withoutPhoneOnly,
-  ])
-
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
     [selectedUserId, users],
@@ -566,7 +758,7 @@ const ManageUsersPage = ({
     () => persistedUsers.find((user) => user.id === selectedUserId) ?? null,
     [persistedUsers, selectedUserId],
   )
-  const isUsersListLoading = isLoadingMoreUsers && users.length === 0
+  const isUsersListLoading = isUsersSearching && users.length === 0
 
   useEffect(() => {
     console.log(
@@ -668,56 +860,11 @@ const ManageUsersPage = ({
       return
     }
 
-    setIsUserPushSubmitting(true)
-    setUserPushFeedback(null)
-
-    try {
-      const { json } = await requestApiJson(
-        `${CABINET_ADMIN_API_BASE}/user-push`,
-        {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: selectedUserForPush.id,
-            message,
-          }),
-          fallbackMessage: 'Не удалось отправить push-уведомление',
-        },
-      )
-
-      const created = Number(json?.data?.created || 0)
-      const delivered = Number(json?.data?.delivered || 0)
-
-      const successMessage =
-        created > 0
-          ? `Уведомление отправлено. Создано: ${created}, доставлено push: ${delivered}.`
-          : 'Сообщение сохранено, но push не доставлен (возможно, у пользователя нет активной подписки).'
-
-      setFeedback({
-        type: 'success',
-        message: successMessage,
-      })
-      setUserPushMessage('')
-      setIsUserPushModalOpen(false)
-      setSelectedUserForPush(null)
-    } catch (error) {
-      const messageText =
-        error?.message || 'Не удалось отправить push-уведомление'
-      setUserPushFeedback({
-        type: 'error',
-        message: messageText,
-      })
-      setFeedback({
-        type: 'error',
-        message: messageText,
-      })
-    } finally {
-      setIsUserPushSubmitting(false)
-    }
-  }, [selectedUserForPush, setFeedback, userPushMessage])
+    userPushMutation.mutate({
+      userId: selectedUserForPush.id,
+      message,
+    })
+  }, [selectedUserForPush, userPushMessage, userPushMutation])
 
   const handleOpenParticipationGame = useCallback(
     async (gameOrId) => {
@@ -1094,97 +1241,14 @@ const ManageUsersPage = ({
       return
     }
 
-    setIsSaving(true)
-    setFeedback(null)
-
-    try {
-      const normalizeText = (value) =>
-        typeof value === 'string' ? value.trim() : ''
-      const normalizeNullable = (value) => {
-        const normalized = normalizeText(value)
-        return normalized.length > 0 ? normalized : null
-      }
-      const normalizePhone = (value) => {
-        if (typeof value !== 'string') {
-          return null
-        }
-
-        const digits = normalizePhoneForSubmit(value)
-        return digits.length === 11 ? Number(digits) : null
-      }
-
-      const payload = {
-        role: selectedUser.role,
-        name: normalizeText(selectedUser.name),
-        username: normalizeNullable(selectedUser.username),
-        photoUrl: normalizeNullable(selectedUser.photoUrl),
-        phone: normalizePhone(selectedUser.phone),
-        currentLocation: normalizeNullable(selectedUser.currentLocation),
-        about: normalizeText(selectedUser.about),
-        preferences: Array.isArray(selectedUser.preferences)
-          ? Array.from(
-              new Set(
-                selectedUser.preferences
-                  .map((item) => normalizeText(item))
-                  .filter((item) => item.length > 0),
-              ),
-            )
-          : [],
-      }
-
-      const { json } = await requestApiJson(
-        `${CABINET_ADMIN_API_BASE}/users/${selectedUser.id}`,
-        {
-          method: 'PUT',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-          fallbackMessage: 'Не удалось сохранить изменения',
-        },
-      )
-
-      const updatedDoc = json.data ?? {}
-      const baseProfile = normalizeUserProfile(updatedDoc)
-      const updatedUser = {
-        ...cloneUser(selectedUser),
-        ...baseProfile,
-        telegramId: Number.isFinite(updatedDoc?.telegramId)
-          ? String(updatedDoc.telegramId)
-          : selectedUser.telegramId,
-        role: ensureRole(updatedDoc?.role),
-        createdAt:
-          ensureDateISOString(updatedDoc?.createdAt) ?? selectedUser.createdAt,
-        updatedAt:
-          ensureDateISOString(updatedDoc?.updatedAt) ??
-          new Date().toISOString(),
-      }
-
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.id === selectedUser.id ? updatedUser : user,
-        ),
-      )
-      setPersistedUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.id === selectedUser.id ? cloneUser(updatedUser) : user,
-        ),
-      )
-      setFeedback({
-        type: 'success',
-        message: 'Данные пользователя обновлены',
-      })
-    } catch (error) {
-      console.error('Failed to update user role', error)
-      setFeedback({
-        type: 'error',
-        message: error?.message || 'Не удалось сохранить изменения',
-      })
-    } finally {
-      setIsSaving(false)
-    }
-  }, [isDeveloper, isDirty, persistedSelectedUser, selectedUser])
+    saveUserMutation.mutate(selectedUser)
+  }, [
+    isDeveloper,
+    isDirty,
+    persistedSelectedUser,
+    saveUserMutation,
+    selectedUser,
+  ])
 
   const handleRequestPhoneViaTelegram = useCallback(async () => {
     if (!selectedUser || !location || isRequestingPhone) {
@@ -1199,81 +1263,17 @@ const ManageUsersPage = ({
       return
     }
 
-    setIsRequestingPhone(true)
-    setFeedback(null)
-
-    try {
-      await requestApiJson(`${CABINET_USERS_API_BASE}/request-phone`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: selectedUser.globalUserId || selectedUser.id,
-        }),
-        fallbackMessage: 'Не удалось отправить запрос номера через Telegram',
-      })
-
-      setFeedback({
-        type: 'success',
-        message:
-          'Запрос номера отправлен пользователю в Telegram. Ожидаем отправку контакта.',
-      })
-    } catch (error) {
-      console.error('Failed to request phone via Telegram', error)
-      setFeedback({
-        type: 'error',
-        message:
-          error?.message || 'Не удалось отправить запрос номера через Telegram',
-      })
-    } finally {
-      setIsRequestingPhone(false)
-    }
-  }, [isRequestingPhone, location, selectedUser])
+    requestPhoneMutation.mutate(selectedUser)
+  }, [isRequestingPhone, location, requestPhoneMutation, selectedUser])
 
   const handleLoadMoreUsers = useCallback(async () => {
     if (isLoadingMoreUsers || !hasMoreUsers) {
       return
     }
 
-    setIsLoadingMoreUsers(true)
     setFeedback(null)
-
     try {
-      const params = new URLSearchParams({
-        offset: String(users.length),
-        limit: String(USERS_PAGE_SIZE),
-        sortBy,
-      })
-      if (searchQuery) {
-        params.set('q', searchQuery)
-      }
-      if (roleFilter && roleFilter !== 'all') {
-        params.set('role', roleFilter)
-      }
-      if (locationFilter && locationFilter !== 'all') {
-        params.set('location', locationFilter)
-      }
-      if (withoutPhoneOnly) {
-        params.set('withoutPhoneOnly', '1')
-      }
-      const { json } = await requestApiJson(
-        `${CABINET_ADMIN_API_BASE}/users-list?${params.toString()}`,
-        {
-          fallbackMessage: 'Не удалось загрузить пользователей',
-        },
-      )
-
-      const nextUsers = Array.isArray(json?.data) ? json.data : []
-      const nextHasMore = Boolean(json?.meta?.hasMore)
-
-      if (nextUsers.length > 0) {
-        setUsers((prevUsers) => [...prevUsers, ...nextUsers])
-        setPersistedUsers((prevUsers) => [...prevUsers, ...nextUsers])
-      }
-
-      setHasMoreUsers(nextHasMore)
+      await usersQuery.fetchNextPage()
     } catch (error) {
       console.error('Failed to load more users', error)
       setFeedback({
@@ -1281,19 +1281,8 @@ const ManageUsersPage = ({
         message:
           error?.message || 'Не удалось загрузить дополнительных пользователей',
       })
-    } finally {
-      setIsLoadingMoreUsers(false)
     }
-  }, [
-    hasMoreUsers,
-    isLoadingMoreUsers,
-    locationFilter,
-    roleFilter,
-    searchQuery,
-    sortBy,
-    withoutPhoneOnly,
-    users.length,
-  ])
+  }, [hasMoreUsers, isLoadingMoreUsers, usersQuery])
 
   const filterOptions = useMemo(
     () => [

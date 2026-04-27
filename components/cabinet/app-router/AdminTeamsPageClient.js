@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query'
 
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
@@ -75,12 +80,220 @@ const buildTeamUpdatePayload = (team) => {
   }
 }
 
+const buildAdminTeamsQueryKey = ({ searchQuery, visibilityFilter, locationFilter, sortBy }) => [
+  'admin-teams',
+  {
+    search: searchQuery || '',
+    visibility: visibilityFilter || 'all',
+    location: locationFilter || 'all',
+    sortBy: sortBy || 'registration_desc',
+  },
+]
+
+const fetchAdminTeamsPage = async ({
+  pageParam = 0,
+  searchQuery,
+  visibilityFilter,
+  locationFilter,
+  sortBy,
+}) => {
+  const params = new URLSearchParams({
+    offset: String(pageParam),
+    limit: String(TEAMS_PAGE_SIZE),
+    sortBy,
+  })
+  if (searchQuery) {
+    params.set('search', searchQuery)
+  }
+  if (visibilityFilter && visibilityFilter !== 'all') {
+    params.set('visibility', visibilityFilter)
+  }
+  if (locationFilter && locationFilter !== 'all') {
+    params.set('location', locationFilter)
+  }
+
+  const { json } = await requestApiJson(
+    `${CABINET_ADMIN_API_BASE}/teams-list?${params.toString()}`,
+    {
+      fallbackMessage: 'Не удалось загрузить команды',
+    },
+  )
+
+  return {
+    teams: Array.isArray(json?.data) ? json.data : [],
+    hasMore: Boolean(json?.meta?.hasMore),
+  }
+}
+
+const mapAdminTeamsQueryData = (queryData, mapper) => {
+  if (!queryData || !Array.isArray(queryData.pages)) {
+    return queryData
+  }
+
+  return {
+    ...queryData,
+    pages: queryData.pages.map((page) => ({
+      ...page,
+      teams: Array.isArray(page?.teams) ? page.teams.map(mapper) : [],
+    })),
+  }
+}
+
+const filterAdminTeamsQueryData = (queryData, predicate) => {
+  if (!queryData || !Array.isArray(queryData.pages)) {
+    return queryData
+  }
+
+  return {
+    ...queryData,
+    pages: queryData.pages.map((page) => ({
+      ...page,
+      teams: Array.isArray(page?.teams) ? page.teams.filter(predicate) : [],
+    })),
+  }
+}
+
+const saveAdminTeam = async (team) => {
+  const { json } = await requestApiJson(`/api/cabinet/teams/${team.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: buildTeamUpdatePayload(team) }),
+    fallbackMessage: 'Не удалось сохранить команду',
+  })
+
+  return {
+    ...team,
+    name: json.data?.name ?? team.name,
+    description: json.data?.description ?? team.description,
+    open: Boolean(json.data?.open ?? team.open),
+    updatedAt: json.data?.updatedAt
+      ? new Date(json.data.updatedAt).toISOString()
+      : team.updatedAt,
+  }
+}
+
+const deleteAdminTeam = async (team) => {
+  await requestApiJson(`/api/cabinet/teams/${team.id}`, {
+    method: 'DELETE',
+    fallbackMessage: 'Не удалось удалить команду',
+  })
+
+  return {
+    teamId: team.id,
+    teamName: team.name || 'Без названия',
+  }
+}
+
+const removeAdminTeamMember = async ({ team, memberId }) => {
+  await requestApiJson(`/api/cabinet/teams/members/${memberId}`, {
+    method: 'DELETE',
+    fallbackMessage: 'Не удалось удалить участника',
+  })
+
+  const updatedMembers = (team.members ?? []).filter(
+    (item) => item.id !== memberId,
+  )
+
+  return {
+    team: {
+      ...team,
+      members: updatedMembers,
+      membersCount: updatedMembers.length,
+      captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+    },
+    member: (team.members ?? []).find((item) => item.id === memberId) ?? null,
+  }
+}
+
+const setAdminTeamCaptain = async ({ team, memberId }) => {
+  const currentCaptain = (team.members ?? []).find((item) => item.isCaptain)
+
+  await Promise.all([
+    requestApiJson(`/api/cabinet/teams/members/${memberId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: { role: 'captain' } }),
+      fallbackMessage: 'Не удалось обновить роль участника',
+    }),
+    currentCaptain
+      ? requestApiJson(`/api/cabinet/teams/members/${currentCaptain.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: { role: 'participant' } }),
+          fallbackMessage: 'Не удалось обновить роль участника',
+        })
+      : Promise.resolve(null),
+  ])
+
+  const updatedMembers = (team.members ?? []).map((item) => {
+    if (item.id === memberId) {
+      return { ...item, role: 'captain', isCaptain: true }
+    }
+
+    if (item.id === currentCaptain?.id) {
+      return { ...item, role: 'participant', isCaptain: false }
+    }
+
+    return item
+  })
+
+  return {
+    team: {
+      ...team,
+      members: updatedMembers,
+      captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+    },
+    member: (team.members ?? []).find((item) => item.id === memberId) ?? null,
+  }
+}
+
+const addAdminTeamMember = async ({ team, userId, userOption }) => {
+  const { json } = await requestApiJson('/api/cabinet/teams/members', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      data: {
+        teamId: team.id,
+        targetUserId: userId,
+        role: 'participant',
+      },
+    }),
+    fallbackMessage: 'Не удалось добавить участника',
+  })
+
+  const newMember = json?.data?.member
+    ? {
+        id: String(json.data.member.id),
+        name: json.data.member.name || userOption?.title || 'Без имени',
+        username: json.data.member.username || null,
+        phone: null,
+        userRole: null,
+        hasLinkedUser: true,
+        isCaptain: false,
+      }
+    : null
+
+  const updatedMembers = newMember
+    ? [...(team.members ?? []), newMember]
+    : team.members
+
+  return {
+    team: {
+      ...team,
+      members: updatedMembers,
+      membersCount: (updatedMembers ?? team.members ?? []).length,
+    },
+    userTitle: userOption?.title || 'Участник',
+  }
+}
+
 const AdminTeamsPage = ({
   initialTeams,
   initialHasMore,
   session: initialSession,
 }) => {
   const safeInitialTeams = Array.isArray(initialTeams) ? initialTeams : []
+  const queryClient = useQueryClient()
   const { activeSession } = useMergedSession(initialSession)
   const { effectiveRole } = useCabinetRolePreview(
     activeSession?.user?.role ?? 'client',
@@ -98,17 +311,11 @@ const AdminTeamsPage = ({
   const [locationFilter, setLocationFilter] = useState('all')
   const [sortBy, setSortBy] = useState('registration_desc')
   const [feedback, setFeedback] = useState(null)
-  const [isSaving, setIsSaving] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [hasMoreTeams, setHasMoreTeams] = useState(Boolean(initialHasMore))
-  const [isLoadingMoreTeams, setIsLoadingMoreTeams] = useState(false)
-  const [isSearchingTeams, setIsSearchingTeams] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
-  const [isAddingMember, setIsAddingMember] = useState(false)
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] =
     useState(false)
-  const [isDeletingTeam, setIsDeletingTeam] = useState(false)
   const copyTimeoutRef = useRef(null)
   const locationOptions = useMemo(
     () =>
@@ -127,19 +334,215 @@ const AdminTeamsPage = ({
     () => [{ value: 'all', label: 'Все города' }, ...locationOptions],
     [locationOptions],
   )
+  const isDefaultTeamsQuery =
+    !searchQuery &&
+    visibilityFilter === 'all' &&
+    locationFilter === 'all' &&
+    sortBy === 'registration_desc'
+  const teamsQuery = useInfiniteQuery({
+    queryKey: buildAdminTeamsQueryKey({
+      searchQuery,
+      visibilityFilter,
+      locationFilter,
+      sortBy,
+    }),
+    queryFn: ({ pageParam }) =>
+      fetchAdminTeamsPage({
+        pageParam,
+        searchQuery,
+        visibilityFilter,
+        locationFilter,
+        sortBy,
+      }),
+    enabled: isAdmin,
+    initialPageParam: 0,
+    initialData: isDefaultTeamsQuery
+      ? {
+          pages: [
+            {
+              teams: safeInitialTeams,
+              hasMore: Boolean(initialHasMore),
+            },
+          ],
+          pageParams: [0],
+        }
+      : undefined,
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage?.hasMore) return undefined
+      return allPages.reduce(
+        (total, page) =>
+          total + (Array.isArray(page?.teams) ? page.teams.length : 0),
+        0,
+      )
+    },
+  })
+  const hasMoreTeams = Boolean(teamsQuery.hasNextPage)
+  const isLoadingMoreTeams = teamsQuery.isFetchingNextPage
+  const isSearchingTeams = teamsQuery.isFetching && !teamsQuery.isFetchingNextPage
 
-  useEffect(() => {
-    setTeams(safeInitialTeams)
-    setPersistedTeams(safeInitialTeams)
-    setHasMoreTeams(Boolean(initialHasMore))
-    setSelectedTeamId((prev) => {
-      if (prev && safeInitialTeams.some((team) => team.id === prev)) {
-        return prev
+  const applyPersistedTeamUpdate = useCallback(
+    (teamId, updater) => {
+      const applyUpdate = (team) => {
+        if (team.id !== teamId) {
+          return team
+        }
+
+        return typeof updater === 'function' ? updater(team) : updater
       }
 
-      return safeInitialTeams[0]?.id ?? null
+      setTeams((prevTeams) => prevTeams.map(applyUpdate))
+      setPersistedTeams((prevTeams) => prevTeams.map(applyUpdate))
+      queryClient.setQueriesData({ queryKey: ['admin-teams'] }, (queryData) =>
+        mapAdminTeamsQueryData(queryData, applyUpdate),
+      )
+    },
+    [queryClient],
+  )
+
+  const removePersistedTeam = useCallback(
+    (teamId) => {
+      const keepOtherTeams = (team) => team.id !== teamId
+
+      setTeams((prevTeams) => prevTeams.filter(keepOtherTeams))
+      setPersistedTeams((prevTeams) => prevTeams.filter(keepOtherTeams))
+      queryClient.setQueriesData({ queryKey: ['admin-teams'] }, (queryData) =>
+        filterAdminTeamsQueryData(queryData, keepOtherTeams),
+      )
+    },
+    [queryClient],
+  )
+
+  const saveTeamMutation = useMutation({
+    mutationFn: saveAdminTeam,
+    onMutate: () => {
+      setFeedback(null)
+    },
+    onSuccess: (updatedTeam) => {
+      applyPersistedTeamUpdate(updatedTeam.id, updatedTeam)
+      setFeedback({ type: 'success', message: 'Изменения сохранены' })
+      setIsEditModalOpen(false)
+    },
+    onError: (error) => {
+      console.error('Failed to update team', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось сохранить команду',
+      })
+    },
+  })
+
+  const deleteTeamMutation = useMutation({
+    mutationFn: deleteAdminTeam,
+    onMutate: () => {
+      setFeedback(null)
+    },
+    onSuccess: ({ teamId, teamName }) => {
+      removePersistedTeam(teamId)
+      setIsEditModalOpen(false)
+      setFeedback({
+        type: 'success',
+        message: `Команда «${teamName}» удалена`,
+      })
+    },
+    onError: (error) => {
+      console.error('Failed to delete team', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось удалить команду',
+      })
+    },
+  })
+
+  const removeMemberMutation = useMutation({
+    mutationFn: removeAdminTeamMember,
+    onMutate: ({ memberId }) => {
+      setMemberActionId(memberId)
+      setFeedback(null)
+    },
+    onSuccess: ({ team, member }) => {
+      applyPersistedTeamUpdate(team.id, team)
+      setFeedback({
+        type: 'success',
+        message: `Участник «${member?.name || 'Без имени'}» удалён из команды`,
+      })
+    },
+    onError: (error) => {
+      console.error('Failed to remove team member', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось удалить участника',
+      })
+    },
+    onSettled: () => {
+      setMemberActionId(null)
+    },
+  })
+
+  const setCaptainMutation = useMutation({
+    mutationFn: setAdminTeamCaptain,
+    onMutate: ({ memberId }) => {
+      setMemberActionId(memberId)
+      setFeedback(null)
+    },
+    onSuccess: ({ team, member }) => {
+      applyPersistedTeamUpdate(team.id, team)
+      setFeedback({
+        type: 'success',
+        message: `«${member?.name || 'Участник'}» назначен капитаном команды`,
+      })
+    },
+    onError: (error) => {
+      console.error('Failed to promote team member', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось изменить роль участника',
+      })
+    },
+    onSettled: () => {
+      setMemberActionId(null)
+    },
+  })
+
+  const addMemberMutation = useMutation({
+    mutationFn: addAdminTeamMember,
+    onMutate: () => {
+      setFeedback(null)
+    },
+    onSuccess: ({ team, userTitle }) => {
+      applyPersistedTeamUpdate(team.id, team)
+      setFeedback({
+        type: 'success',
+        message: `«${userTitle}» добавлен в команду`,
+      })
+    },
+    onError: (error) => {
+      console.error('Failed to add team member', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось добавить участника',
+      })
+    },
+  })
+
+  const isSaving = saveTeamMutation.isPending
+  const isDeletingTeam = deleteTeamMutation.isPending
+  const isAddingMember = addMemberMutation.isPending
+
+  useEffect(() => {
+    const nextTeams = (teamsQuery.data?.pages || []).flatMap((page) =>
+      Array.isArray(page?.teams) ? page.teams : [],
+    )
+    setTeams(nextTeams)
+    setPersistedTeams(nextTeams)
+  }, [teamsQuery.data])
+
+  useEffect(() => {
+    if (!teamsQuery.error) return
+    setFeedback({
+      type: 'error',
+      message: teamsQuery.error?.message || 'Не удалось загрузить команды',
     })
-  }, [initialHasMore, safeInitialTeams])
+  }, [teamsQuery.error])
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -300,53 +703,8 @@ const AdminTeamsPage = ({
       return
     }
 
-    setIsSaving(true)
-    setFeedback(null)
-
-    try {
-      const { json } = await requestApiJson(
-        `/api/cabinet/teams/${selectedTeam.id}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: buildTeamUpdatePayload(selectedTeam) }),
-          fallbackMessage: 'Не удалось сохранить команду',
-        },
-      )
-
-      const updatedTeam = {
-        ...selectedTeam,
-        name: json.data?.name ?? selectedTeam.name,
-        description: json.data?.description ?? selectedTeam.description,
-        open: Boolean(json.data?.open ?? selectedTeam.open),
-        updatedAt: json.data?.updatedAt
-          ? new Date(json.data.updatedAt).toISOString()
-          : selectedTeam.updatedAt,
-      }
-
-      setTeams((prevTeams) =>
-        prevTeams.map((team) =>
-          team.id === selectedTeamId ? updatedTeam : team,
-        ),
-      )
-      setPersistedTeams((prevTeams) =>
-        prevTeams.map((team) =>
-          team.id === selectedTeamId ? updatedTeam : team,
-        ),
-      )
-
-      setFeedback({ type: 'success', message: 'Изменения сохранены' })
-      setIsEditModalOpen(false)
-    } catch (error) {
-      console.error('Failed to update team', error)
-      setFeedback({
-        type: 'error',
-        message: error?.message || 'Не удалось сохранить команду',
-      })
-    } finally {
-      setIsSaving(false)
-    }
-  }, [canManageSelectedTeam, selectedTeam, selectedTeamId])
+    saveTeamMutation.mutate(selectedTeam)
+  }, [canManageSelectedTeam, saveTeamMutation, selectedTeam])
 
   const handleModalPrimaryAction = useCallback(() => {
     if (!isDirty) {
@@ -395,33 +753,8 @@ const AdminTeamsPage = ({
       return
     }
 
-    setIsDeletingTeam(true)
-    setFeedback(null)
-
-    try {
-      await requestApiJson(`/api/cabinet/teams/${selectedTeam.id}`, {
-        method: 'DELETE',
-        fallbackMessage: 'Не удалось удалить команду',
-      })
-
-      const deletedTeamName = selectedTeam.name || 'Без названия'
-      setTeams((prev) => prev.filter((t) => t.id !== selectedTeam.id))
-      setPersistedTeams((prev) => prev.filter((t) => t.id !== selectedTeam.id))
-      setIsEditModalOpen(false)
-      setFeedback({
-        type: 'success',
-        message: `Команда «${deletedTeamName}» удалена`,
-      })
-    } catch (error) {
-      console.error('Failed to delete team', error)
-      setFeedback({
-        type: 'error',
-        message: error?.message || 'Не удалось удалить команду',
-      })
-    } finally {
-      setIsDeletingTeam(false)
-    }
-  }, [isAdmin, selectedTeam])
+    deleteTeamMutation.mutate(selectedTeam)
+  }, [deleteTeamMutation, isAdmin, selectedTeam])
 
   const handleRemoveMember = useCallback(
     async (memberId) => {
@@ -443,51 +776,9 @@ const AdminTeamsPage = ({
         return
       }
 
-      setMemberActionId(memberId)
-      setFeedback(null)
-
-      try {
-        await requestApiJson(`/api/cabinet/teams/members/${memberId}`, {
-          method: 'DELETE',
-          fallbackMessage: 'Не удалось удалить участника',
-        })
-
-        const updatedMembers = (selectedTeam.members ?? []).filter(
-          (item) => item.id !== memberId,
-        )
-        const updatedTeam = {
-          ...selectedTeam,
-          members: updatedMembers,
-          membersCount: updatedMembers.length,
-          captain: updatedMembers.find((item) => item.isCaptain) ?? null,
-        }
-
-        setTeams((prevTeams) =>
-          prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team,
-          ),
-        )
-        setPersistedTeams((prevTeams) =>
-          prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team,
-          ),
-        )
-
-        setFeedback({
-          type: 'success',
-          message: `Участник «${member.name || 'Без имени'}» удалён из команды`,
-        })
-      } catch (error) {
-        console.error('Failed to remove team member', error)
-        setFeedback({
-          type: 'error',
-          message: error?.message || 'Не удалось удалить участника',
-        })
-      } finally {
-        setMemberActionId(null)
-      }
+      removeMemberMutation.mutate({ team: selectedTeam, memberId })
     },
-    [canManageSelectedTeam, selectedTeam, selectedTeamId],
+    [canManageSelectedTeam, removeMemberMutation, selectedTeam],
   )
 
   const handleSetCaptain = useCallback(
@@ -501,174 +792,24 @@ const AdminTeamsPage = ({
         return
       }
 
-      const currentCaptain = selectedTeam.members.find((item) => item.isCaptain)
-
-      setMemberActionId(memberId)
-      setFeedback(null)
-
-      try {
-        const requests = [
-          fetch(`/api/cabinet/teams/members/${memberId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: { role: 'captain' } }),
-          }),
-        ]
-
-        if (currentCaptain) {
-          requests.push(
-            fetch(`/api/cabinet/teams/members/${currentCaptain.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ data: { role: 'participant' } }),
-            }),
-          )
-        }
-
-        const responses = await Promise.all(requests)
-        const payloads = await Promise.all(responses.map((res) => res.json()))
-
-        responses.forEach((res, index) => {
-          if (!res.ok || payloads[index]?.success === false) {
-            throw new Error(
-              payloads[index]?.error || 'Не удалось обновить роль участника',
-            )
-          }
-        })
-
-        const updatedMembers = (selectedTeam.members ?? []).map((item) => {
-          if (item.id === memberId) {
-            return { ...item, role: 'captain', isCaptain: true }
-          }
-
-          if (item.id === currentCaptain?.id) {
-            return { ...item, role: 'participant', isCaptain: false }
-          }
-
-          return item
-        })
-
-        const updatedTeam = {
-          ...selectedTeam,
-          members: updatedMembers,
-          captain: updatedMembers.find((item) => item.isCaptain) ?? null,
-        }
-
-        setTeams((prevTeams) =>
-          prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team,
-          ),
-        )
-        setPersistedTeams((prevTeams) =>
-          prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team,
-          ),
-        )
-
-        setFeedback({
-          type: 'success',
-          message: `«${member.name || 'Участник'}» назначен капитаном команды`,
-        })
-      } catch (error) {
-        console.error('Failed to promote team member', error)
-        setFeedback({
-          type: 'error',
-          message: error?.message || 'Не удалось изменить роль участника',
-        })
-      } finally {
-        setMemberActionId(null)
-      }
+      setCaptainMutation.mutate({ team: selectedTeam, memberId })
     },
-    [canManageSelectedTeam, selectedTeam, selectedTeamId],
+    [canManageSelectedTeam, selectedTeam, setCaptainMutation],
   )
 
   const handleAddMember = useCallback(
     async (userId, userOption) => {
       if (!selectedTeam || !canManageSelectedTeam || !userId) {
-        console.log('[admin-teams][add-member][client] guard_block', {
-          hasSelectedTeam: Boolean(selectedTeam),
-          canManageSelectedTeam,
-          userId: userId || null,
-          selectedTeamId: selectedTeamId || null,
-        })
         return
       }
 
-      setIsAddingMember(true)
-      setFeedback(null)
-      const payload = {
-        teamId: selectedTeam.id,
-        targetUserId: userId,
-        role: 'participant',
-      }
-      console.log('[admin-teams][add-member][client] request_start', payload)
-
-      try {
-        const { json } = await requestApiJson('/api/cabinet/teams/members', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            data: payload,
-          }),
-          fallbackMessage: 'Не удалось добавить участника',
-        })
-        console.log('[admin-teams][add-member][client] request_success', {
-          payload,
-          response: json,
-        })
-
-        const newMember = json?.data?.member
-          ? {
-              id: String(json.data.member.id),
-              name: json.data.member.name || userOption?.title || 'Без имени',
-              username: json.data.member.username || null,
-              phone: null,
-              userRole: null,
-              hasLinkedUser: true,
-              isCaptain: false,
-            }
-          : null
-
-        const patchTeam = (t) => {
-          const updatedMembers = newMember
-            ? [...(t.members ?? []), newMember]
-            : t.members
-          return {
-            ...t,
-            members: updatedMembers,
-            membersCount: (updatedMembers ?? t.members ?? []).length,
-          }
-        }
-
-        setTeams((prev) =>
-          prev.map((t) => (t.id === selectedTeamId ? patchTeam(t) : t)),
-        )
-        setPersistedTeams((prev) =>
-          prev.map((t) => (t.id === selectedTeamId ? patchTeam(t) : t)),
-        )
-
-        setFeedback({
-          type: 'success',
-          message: `«${userOption?.title || 'Участник'}» добавлен в команду`,
-        })
-      } catch (error) {
-        console.error('Failed to add team member', error)
-        console.error('[admin-teams][add-member][client] request_error', {
-          payload,
-          message: error?.message || null,
-          status: error?.status ?? null,
-          response: error?.response ?? null,
-          errorPayload: error?.payload ?? null,
-        })
-        setFeedback({
-          type: 'error',
-          message: error?.message || 'Не удалось добавить участника',
-        })
-      } finally {
-        setIsAddingMember(false)
-      }
+      addMemberMutation.mutate({ team: selectedTeam, userId, userOption })
     },
-    [canManageSelectedTeam, selectedTeam, selectedTeamId],
+    [
+      addMemberMutation,
+      canManageSelectedTeam,
+      selectedTeam,
+    ],
   )
 
   const teamsForList = useMemo(() => {
@@ -691,41 +832,9 @@ const AdminTeamsPage = ({
       return
     }
 
-    setIsLoadingMoreTeams(true)
     setFeedback(null)
-
     try {
-      const params = new URLSearchParams({
-        offset: String(teams.length),
-        limit: String(TEAMS_PAGE_SIZE),
-        sortBy,
-      })
-      if (searchQuery) {
-        params.set('search', searchQuery)
-      }
-      if (visibilityFilter && visibilityFilter !== 'all') {
-        params.set('visibility', visibilityFilter)
-      }
-      if (locationFilter && locationFilter !== 'all') {
-        params.set('location', locationFilter)
-      }
-
-      const { json } = await requestApiJson(
-        `${CABINET_ADMIN_API_BASE}/teams-list?${params.toString()}`,
-        {
-          fallbackMessage: 'Не удалось загрузить команды',
-        },
-      )
-
-      const nextTeams = Array.isArray(json?.data) ? json.data : []
-      const nextHasMore = Boolean(json?.meta?.hasMore)
-
-      if (nextTeams.length > 0) {
-        setTeams((prevTeams) => [...prevTeams, ...nextTeams])
-        setPersistedTeams((prevTeams) => [...prevTeams, ...nextTeams])
-      }
-
-      setHasMoreTeams(nextHasMore)
+      await teamsQuery.fetchNextPage()
     } catch (error) {
       console.error('Failed to load more teams', error)
       setFeedback({
@@ -733,85 +842,8 @@ const AdminTeamsPage = ({
         message:
           error?.message || 'Не удалось загрузить дополнительные команды',
       })
-    } finally {
-      setIsLoadingMoreTeams(false)
     }
-  }, [
-    hasMoreTeams,
-    isLoadingMoreTeams,
-    locationFilter,
-    searchQuery,
-    sortBy,
-    teams.length,
-    visibilityFilter,
-  ])
-
-  useEffect(() => {
-    if (!isAdmin) {
-      return undefined
-    }
-
-    let isCancelled = false
-
-    const loadTeams = async () => {
-      setIsSearchingTeams(true)
-      setFeedback(null)
-
-      try {
-        const params = new URLSearchParams({
-          offset: '0',
-          limit: String(TEAMS_PAGE_SIZE),
-          sortBy,
-        })
-        if (searchQuery) {
-          params.set('search', searchQuery)
-        }
-        if (visibilityFilter && visibilityFilter !== 'all') {
-          params.set('visibility', visibilityFilter)
-        }
-        if (locationFilter && locationFilter !== 'all') {
-          params.set('location', locationFilter)
-        }
-
-        const { json } = await requestApiJson(
-          `${CABINET_ADMIN_API_BASE}/teams-list?${params.toString()}`,
-          {
-            fallbackMessage: 'Не удалось загрузить команды',
-          },
-        )
-
-        if (isCancelled) {
-          return
-        }
-
-        const nextTeams = Array.isArray(json?.data) ? json.data : []
-        const nextHasMore = Boolean(json?.meta?.hasMore)
-        setTeams(nextTeams)
-        setPersistedTeams(nextTeams)
-        setHasMoreTeams(nextHasMore)
-      } catch (error) {
-        if (isCancelled) {
-          return
-        }
-
-        console.error('Failed to search teams', error)
-        setFeedback({
-          type: 'error',
-          message: error?.message || 'Не удалось выполнить поиск команд',
-        })
-      } finally {
-        if (!isCancelled) {
-          setIsSearchingTeams(false)
-        }
-      }
-    }
-
-    loadTeams()
-
-    return () => {
-      isCancelled = true
-    }
-  }, [isAdmin, locationFilter, searchQuery, sortBy, visibilityFilter])
+  }, [hasMoreTeams, isLoadingMoreTeams, teamsQuery])
 
   if (!isAdmin) {
     return (

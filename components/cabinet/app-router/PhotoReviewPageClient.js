@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import PropTypes from 'prop-types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import requestApiJson from '@helpers/requestApiJson'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
@@ -27,109 +28,179 @@ const calculateTaskScore = ({ task, checks }) => {
   }, base)
 }
 
+const buildPhotoReviewQueryKey = (gameId) => ['photo-review', gameId]
+
+const fetchPhotoReviewData = async (gameId) => {
+  const normalizedGameId = typeof gameId === 'string' ? gameId.trim() : ''
+  if (!normalizedGameId) return null
+
+  const { json } = await requestApiJson(
+    `/api/cabinet/admin/photo-review?gameId=${encodeURIComponent(normalizedGameId)}`,
+    { fallbackMessage: 'Не удалось загрузить фото для проверки' },
+  )
+
+  return json?.data || null
+}
+
+const updatePhotoReviewCheck = async ({
+  gameId,
+  gameTeamId,
+  taskIndex,
+  checkKey,
+  checked,
+}) => {
+  const { json } = await requestApiJson('/api/cabinet/admin/photo-review', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      gameId,
+      gameTeamId,
+      taskIndex,
+      checkKey,
+      checked,
+    }),
+    fallbackMessage: 'Не удалось сохранить проверку фото',
+  })
+
+  return json?.data || null
+}
+
+const applyPhotoCheckToReviewData = ({
+  data,
+  gameTeamId,
+  taskIndex,
+  checkKey,
+  checked,
+  checks,
+}) => {
+  if (!data) return data
+
+  return {
+    ...data,
+    teams: (Array.isArray(data.teams) ? data.teams : []).map((team) => {
+      if (team.gameTeamId !== gameTeamId) return team
+
+      const photos = Array.isArray(team.photos) ? [...team.photos] : []
+      const previousEntry = photos[taskIndex] || { photos: [], checks: {} }
+      photos[taskIndex] = {
+        ...previousEntry,
+        checks:
+          checks && typeof checks === 'object'
+            ? checks
+            : { ...(previousEntry.checks || {}), [checkKey]: checked },
+      }
+
+      return { ...team, photos }
+    }),
+  }
+}
+
 export default function PhotoReviewPageClient({ session: _session }) {
   const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
   const initialGameId = searchParams.get('gameId') || ''
   const [gameIdInput, setGameIdInput] = useState(initialGameId)
   const [activeGameId, setActiveGameId] = useState(initialGameId)
-  const [data, setData] = useState(null)
   const [selectedTaskIndex, setSelectedTaskIndex] = useState(0)
   const [collapsedTeams, setCollapsedTeams] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [savingKey, setSavingKey] = useState('')
-  const [error, setError] = useState('')
+  const [localError, setLocalError] = useState('')
   const [viewerImage, setViewerImage] = useState(null)
+  const normalizedActiveGameId = activeGameId.trim()
+  const photoReviewQueryKey = useMemo(
+    () => buildPhotoReviewQueryKey(normalizedActiveGameId),
+    [normalizedActiveGameId],
+  )
+  const {
+    data,
+    error: queryError,
+    isFetching,
+    refetch,
+  } = useQuery({
+    queryKey: photoReviewQueryKey,
+    queryFn: () => fetchPhotoReviewData(normalizedActiveGameId),
+    enabled: Boolean(normalizedActiveGameId),
+  })
+  const loading = isFetching
+  const error = localError || queryError?.message || ''
+
+  const updateCheckMutation = useMutation({
+    mutationFn: updatePhotoReviewCheck,
+    onMutate: async (variables) => {
+      setLocalError('')
+      const mutationQueryKey = buildPhotoReviewQueryKey(variables.gameId)
+      await queryClient.cancelQueries({ queryKey: mutationQueryKey })
+      const previousData = queryClient.getQueryData(mutationQueryKey)
+      queryClient.setQueryData(mutationQueryKey, (currentData) =>
+        applyPhotoCheckToReviewData({ data: currentData, ...variables }),
+      )
+      return { previousData, queryKey: mutationQueryKey }
+    },
+    onError: (mutationError, _variables, context) => {
+      if (context?.queryKey) {
+        queryClient.setQueryData(context.queryKey, context.previousData)
+      }
+      setLocalError(
+        mutationError?.message || 'Не удалось сохранить проверку фото',
+      )
+    },
+    onSuccess: (result, variables) => {
+      const checks =
+        result?.checks && typeof result.checks === 'object'
+          ? result.checks
+          : null
+      if (!checks) return
+
+      queryClient.setQueryData(
+        buildPhotoReviewQueryKey(variables.gameId),
+        (currentData) =>
+          applyPhotoCheckToReviewData({
+            data: currentData,
+            ...variables,
+            checks,
+          }),
+      )
+    },
+    onSettled: (_result, _error, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: buildPhotoReviewQueryKey(variables.gameId),
+      })
+    },
+  })
 
   const selectedTask = useMemo(() => {
     const tasks = Array.isArray(data?.tasks) ? data.tasks : []
     return tasks[selectedTaskIndex] || null
   }, [data?.tasks, selectedTaskIndex])
 
-  const fetchData = useCallback(async () => {
-    const normalizedGameId = activeGameId.trim()
-    if (!normalizedGameId) {
-      setData(null)
-      return
-    }
-
-    setLoading(true)
-    setError('')
-    try {
-      const { json } = await requestApiJson(
-        `/api/cabinet/admin/photo-review?gameId=${encodeURIComponent(normalizedGameId)}`,
-        { fallbackMessage: 'Не удалось загрузить фото для проверки' },
-      )
-      setData(json?.data || null)
-      setSelectedTaskIndex((prev) => {
-        const tasksCount = Array.isArray(json?.data?.tasks)
-          ? json.data.tasks.length
-          : 0
-        if (tasksCount <= 0) return 0
-        return prev >= tasksCount ? 0 : prev
-      })
-      setCollapsedTeams({})
-    } catch (requestError) {
-      setData(null)
-      setError(requestError?.message || 'Не удалось загрузить фото для проверки')
-    } finally {
-      setLoading(false)
-    }
-  }, [activeGameId])
+  useEffect(() => {
+    setLocalError('')
+    setCollapsedTeams({})
+  }, [normalizedActiveGameId])
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    if (!data) return
+    setSelectedTaskIndex((prev) => {
+      const tasksCount = Array.isArray(data?.tasks) ? data.tasks.length : 0
+      if (tasksCount <= 0) return 0
+      return prev >= tasksCount ? 0 : prev
+    })
+  }, [data])
 
   const handleLoadGame = (event) => {
     event.preventDefault()
     setActiveGameId(gameIdInput.trim())
   }
 
-  const updateCheck = async ({ team, checkKey, checked }) => {
+  const updateCheck = ({ team, checkKey, checked }) => {
     if (!data?.game?.id || !team?.gameTeamId || !selectedTask) return
 
-    const requestKey = `${team.gameTeamId}:${selectedTaskIndex}:${checkKey}`
-    setSavingKey(requestKey)
-    setError('')
-    try {
-      const { json } = await requestApiJson('/api/cabinet/admin/photo-review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          gameId: data.game.id,
-          gameTeamId: team.gameTeamId,
-          taskIndex: selectedTaskIndex,
-          checkKey,
-          checked,
-        }),
-        fallbackMessage: 'Не удалось сохранить проверку фото',
-      })
-
-      const nextChecks =
-        json?.data?.checks && typeof json.data.checks === 'object'
-          ? json.data.checks
-          : { ...getTaskPhotos(team, selectedTaskIndex).checks, [checkKey]: checked }
-
-      setData((prev) => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          teams: prev.teams.map((item) => {
-            if (item.gameTeamId !== team.gameTeamId) return item
-            const photos = Array.isArray(item.photos) ? [...item.photos] : []
-            photos[selectedTaskIndex] = {
-              ...(photos[selectedTaskIndex] || { photos: [] }),
-              checks: nextChecks,
-            }
-            return { ...item, photos }
-          }),
-        }
-      })
-    } catch (requestError) {
-      setError(requestError?.message || 'Не удалось сохранить проверку фото')
-    } finally {
-      setSavingKey('')
-    }
+    updateCheckMutation.mutate({
+      gameId: data.game.id,
+      gameTeamId: team.gameTeamId,
+      taskIndex: selectedTaskIndex,
+      checkKey,
+      checked,
+    })
   }
 
   const toggleTeam = (teamId) => {
@@ -137,6 +208,9 @@ export default function PhotoReviewPageClient({ session: _session }) {
   }
 
   const teams = Array.isArray(data?.teams) ? data.teams : []
+  const savingKey = updateCheckMutation.isPending
+    ? `${updateCheckMutation.variables?.gameTeamId}:${updateCheckMutation.variables?.taskIndex}:${updateCheckMutation.variables?.checkKey}`
+    : ''
   const teamsWithPhotosCount = teams.filter(
     (team) => getTaskPhotos(team, selectedTaskIndex).photos.length > 0,
   ).length
@@ -190,7 +264,7 @@ export default function PhotoReviewPageClient({ session: _session }) {
               <button
                 type="button"
                 className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-                onClick={fetchData}
+                onClick={() => refetch()}
                 disabled={loading}
               >
                 Обновить

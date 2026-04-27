@@ -31,15 +31,33 @@ Time estimate: 2-3 hours
 
 Time estimate: 4-6 hours
 
-- [ ] **AdminUsersList** - add create/delete/bulk operations
-  - Current: Manual mutation handling
-  - Add: useMutation for each operation
-  - Add: Optimistic updates for deletions
-  - Add: Cache invalidation on create
+- [x] **PhotoReviewPageClient.js** - photo quest review data + check mutations
+  - Migrated: manual `fetchData`/`loading`/`setData` state replaced with `useQuery`
+  - Query key: `['photo-review', gameId]`
+  - Mutations: task/photo checkboxes use `useMutation` with optimistic cache update and rollback on error
 
-- [ ] **AdminTeamsList** - similar to AdminUsersList
-  - Apply same patterns
-  - Test with filters + mutations
+- [x] **GameTaskPreviewPageClient.js** - task preview data
+  - Migrated: manual `fetchPreview`/`loading`/`error`/`data` state replaced with `useQuery`
+  - Query key: `['game-task-preview', { gameId, draftKey, taskIndex }]`
+  - Supports both saved game preview API and local draft preview through one query boundary
+
+- [x] **GameControlPageClient.js** - live game control status
+  - Migrated: manual `fetchStatus`/`setInterval`/`loading`/`error`/`data` state replaced with `useQuery`
+  - Query key: `['game-control-status', gameId]`
+  - Polling: `refetchInterval` controlled by the existing auto-refresh UI
+  - Manual game actions still use explicit POST handlers and call `refetch()` after success
+
+- [x] **AdminUsersList** - list query and submit mutations migrated
+  - Migrated: filtered list and "load more" pagination use `useInfiniteQuery`
+  - Query key: `['admin-users', { search, role, location, sortBy, withoutPhoneOnly }]`
+  - Migrated: profile save, Telegram phone request, and push message submit use `useMutation`
+  - Cache sync: successful profile save updates all active `admin-users` query pages through `queryClient.setQueriesData`
+
+- [x] **AdminTeamsList** - list query and team/member mutations migrated
+  - Migrated: filtered list and "load more" pagination use `useInfiniteQuery`
+  - Query key: `['admin-teams', { search, visibility, location, sortBy }]`
+  - Migrated: save/delete/add-member/remove-member/set-captain actions use `useMutation`
+  - Cache sync: successful mutations update all active `admin-teams` query pages through `queryClient.setQueriesData`
 
 ### Priority 3: Complex Components
 

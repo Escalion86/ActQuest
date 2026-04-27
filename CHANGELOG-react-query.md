@@ -19,10 +19,16 @@
 - `components/modals/GameTeamsModal.js` uses `useQuery` with shared `['team', teamId]` cache for team details opened from the game teams list.
 - `components/modals/TeamDescriptionModal.js` uses `useQuery` with shared `['game', gameId, location]` cache for nested game previews rendered through `UnifiedGameDescriptionModal`.
 - `components/cabinet/EntitySelectField.js` uses `useInfiniteQuery` for paginated user/game selector searches.
+- `components/cabinet/app-router/PhotoReviewPageClient.js` uses `useQuery` for photo review data and `useMutation` with optimistic cache updates for task/photo checks.
+- `components/cabinet/app-router/GameTaskPreviewPageClient.js` uses `useQuery` for saved-game and draft task preview data.
+- `components/cabinet/app-router/GameControlPageClient.js` uses `useQuery` for live game status with React Query polling via `refetchInterval`.
+- `components/cabinet/app-router/AdminUsersPageClient.js` uses `useInfiniteQuery` for filtered admin users list pagination and `useMutation` for profile save, Telegram phone request, and push message submits; profile saves sync active `admin-users` query pages.
+- `components/cabinet/app-router/AdminTeamsPageClient.js` uses `useInfiniteQuery` for filtered admin teams list pagination and `useMutation` for save/delete/add-member/remove-member/set-captain actions with active `admin-teams` query page sync.
 
 ### Still Not Done
 
-- Main list pages (`TeamsPageClient.js`, `GamesPageClient.js`, admin users/teams lists) still mostly use manual request state and should be migrated only when the query boundaries are clear.
+- Main list pages (`TeamsPageClient.js`, `GamesPageClient.js`) still mostly use manual request state and should be migrated only when the query boundaries are clear.
+- Main list pages (`TeamsPageClient.js`, `GamesPageClient.js`) are the remaining large manual-request areas.
 - React Query DevTools are not installed and should stay optional/dev-only.
 - No dedicated tests currently verify cache sharing, invalidation, or optimistic rollback behavior.
 
