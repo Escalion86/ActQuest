@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useInfiniteQuery } from '@tanstack/react-query'
 
 import Modal from '@components/Modal'
 
@@ -7,23 +8,6 @@ const PAGE_SIZE = 10
 
 const INPUT_CLASS =
   'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100'
-
-const mergeUniqueById = (prev, next) => {
-  if (!Array.isArray(next) || next.length === 0) {
-    return prev
-  }
-
-  const existing = new Set(prev.map((item) => item.id))
-  const merged = [...prev]
-  next.forEach((item) => {
-    if (!item?.id || existing.has(item.id)) {
-      return
-    }
-    existing.add(item.id)
-    merged.push(item)
-  })
-  return merged
-}
 
 const EntitySelectField = ({
   label,
@@ -40,13 +24,21 @@ const EntitySelectField = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [items, setItems] = useState([])
-  const [hasMore, setHasMore] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [error, setError] = useState('')
-  const requestIdRef = useRef(0)
-  const searchTimeoutRef = useRef(null)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  const normalizedQueryParams = useMemo(
+    () =>
+      queryParams && typeof queryParams === 'object'
+        ? Object.entries(queryParams)
+            .filter(
+              ([, value]) =>
+                value !== null && value !== undefined && value !== '',
+            )
+            .sort(([first], [second]) => first.localeCompare(second))
+            .map(([key, value]) => [key, String(value)])
+        : [],
+    [queryParams],
+  )
 
   const selectedLabel = useMemo(() => {
     if (!selectedOption) {
@@ -57,109 +49,106 @@ const EntitySelectField = ({
 
   const selectedMeta = selectedOption?.subtitle || ''
 
-  const fetchPage = useCallback(
-    async ({ offset = 0, replace = false, searchValue = '' }) => {
-      const currentRequestId = requestIdRef.current + 1
-      requestIdRef.current = currentRequestId
+  const entitiesQuery = useInfiniteQuery({
+    queryKey: [
+      'entity-select',
+      endpoint,
+      debouncedSearch.trim(),
+      normalizedQueryParams,
+    ],
+    queryFn: async ({ pageParam = 0 }) => {
+      const params = new URLSearchParams()
+      params.set('offset', String(pageParam))
+      params.set('limit', String(PAGE_SIZE))
 
-      if (replace) {
-        setIsLoading(true)
-      } else {
-        setIsLoadingMore(true)
+      if (debouncedSearch.trim()) {
+        params.set('q', debouncedSearch.trim())
       }
-      setError('')
 
-      try {
-        const params = new URLSearchParams()
-        params.set('offset', String(offset))
-        params.set('limit', String(PAGE_SIZE))
+      normalizedQueryParams.forEach(([key, value]) => {
+        params.set(key, value)
+      })
 
-        if (typeof searchValue === 'string' && searchValue.trim()) {
-          params.set('q', searchValue.trim())
-        }
+      const response = await fetch(`${endpoint}?${params.toString()}`)
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(json?.error || 'Не удалось загрузить список')
+      }
 
-        if (queryParams && typeof queryParams === 'object') {
-          Object.entries(queryParams).forEach(([key, value]) => {
-            if (value === null || value === undefined || value === '') {
-              return
-            }
-            params.set(key, String(value))
-          })
-        }
+      const items = Array.isArray(json?.data)
+        ? json.data
+            .map((item) => mapOption(item))
+            .filter((option) => option?.id && option?.title)
+        : []
 
-        const response = await fetch(`${endpoint}?${params.toString()}`)
-        const json = await response.json()
-        if (!response.ok || json?.success === false) {
-          throw new Error(json?.error || 'Не удалось загрузить список')
-        }
-
-        if (requestIdRef.current !== currentRequestId) {
-          return
-        }
-
-        const nextItems = Array.isArray(json?.data)
-          ? json.data
-              .map((item) => mapOption(item))
-              .filter((option) => option?.id && option?.title)
-          : []
-
-        if (replace) {
-          setItems(nextItems)
-        } else {
-          setItems((prev) => mergeUniqueById(prev, nextItems))
-        }
-        setHasMore(Boolean(json?.meta?.hasMore))
-      } catch (fetchError) {
-        if (requestIdRef.current === currentRequestId) {
-          setError(fetchError.message || 'Ошибка загрузки')
-        }
-      } finally {
-        if (requestIdRef.current === currentRequestId) {
-          setIsLoading(false)
-          setIsLoadingMore(false)
-        }
+      return {
+        items,
+        hasMore: Boolean(json?.meta?.hasMore),
       }
     },
-    [endpoint, mapOption, queryParams],
-  )
+    getNextPageParam: (lastPage, pages) => {
+      if (!lastPage?.hasMore) {
+        return undefined
+      }
+      return pages.reduce(
+        (acc, page) =>
+          acc + (Array.isArray(page?.items) ? page.items.length : 0),
+        0,
+      )
+    },
+    enabled: isModalOpen,
+    initialPageParam: 0,
+    staleTime: 1000 * 60 * 2,
+  })
+
+  const items = useMemo(() => {
+    const existing = new Set()
+    const merged = []
+    ;(entitiesQuery.data?.pages || []).forEach((page) => {
+      ;(Array.isArray(page?.items) ? page.items : []).forEach((item) => {
+        if (!item?.id || existing.has(item.id)) {
+          return
+        }
+        existing.add(item.id)
+        merged.push(item)
+      })
+    })
+    return merged
+  }, [entitiesQuery.data?.pages])
+
+  const isLoading = entitiesQuery.isLoading
+  const isLoadingMore = entitiesQuery.isFetchingNextPage
+  const hasMore = Boolean(entitiesQuery.hasNextPage)
+  const error = entitiesQuery.error?.message || ''
 
   const openModal = useCallback(() => {
     setIsModalOpen(true)
     setSearch('')
-    setItems([])
-    setHasMore(false)
-    fetchPage({ offset: 0, replace: true, searchValue: '' })
-  }, [fetchPage])
+    setDebouncedSearch('')
+  }, [])
 
   const loadMore = useCallback(() => {
     if (!hasMore || isLoadingMore || isLoading) {
       return
     }
-    fetchPage({ offset: items.length, replace: false, searchValue: search })
-  }, [fetchPage, hasMore, isLoading, isLoadingMore, items.length, search])
+    entitiesQuery.fetchNextPage()
+  }, [entitiesQuery, hasMore, isLoading, isLoadingMore])
 
-  const handleSearchChange = useCallback(
-    (nextValue) => {
-      setSearch(nextValue)
-      if (searchTimeoutRef.current !== null) {
-        window.clearTimeout(searchTimeoutRef.current)
-      }
-      const timeoutId = window.setTimeout(() => {
-        fetchPage({ offset: 0, replace: true, searchValue: nextValue })
-      }, 300)
-      searchTimeoutRef.current = timeoutId
-    },
-    [fetchPage],
-  )
+  const handleSearchChange = useCallback((nextValue) => {
+    setSearch(nextValue)
+  }, [])
 
-  useEffect(
-    () => () => {
-      if (searchTimeoutRef.current !== null) {
-        window.clearTimeout(searchTimeoutRef.current)
-      }
-    },
-    [],
-  )
+  useEffect(() => {
+    if (!isModalOpen) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 300)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [isModalOpen, search])
 
   const handleSelect = useCallback(
     (option) => {
@@ -200,7 +189,7 @@ const EntitySelectField = ({
             className="h-[44px] w-[44px] cursor-pointer rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
             aria-label="Сбросить выбор"
           >
-            ×
+            x
           </button>
         ) : null}
       </div>

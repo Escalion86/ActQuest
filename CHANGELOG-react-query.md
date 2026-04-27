@@ -1,5 +1,39 @@
 # CHANGELOG - React Query Integration
 
+## Current Audit - 2026-04-27
+
+### Current Versions
+
+- **Installed now**: `@tanstack/react-query` `^5.96.2` in `package.json`
+- **Provider**: `app/providers.js` still wraps the app with `QueryClientProvider`
+- **Query defaults**: `staleTime: 5min`, `gcTime: 10min`
+- **Reusable mutation hook**: `helpers/useOptimisticMutation.js`
+
+### Confirmed Implemented
+
+- `components/cabinet/modals/UserViewModal.js` uses `useQuery`.
+- `components/cabinet/modals/UserEditModal.js` uses `useQuery` + `useOptimisticMutation`.
+- `components/cabinet/modals/TeamViewModal.js` uses `useQuery`.
+- `components/cabinet/modals/TeamEditModal.js` uses `useQuery`.
+- `UserViewModal` additionally uses `useQuery` for selected game details.
+- `components/modals/GameTeamsModal.js` uses `useQuery` with shared `['team', teamId]` cache for team details opened from the game teams list.
+- `components/modals/TeamDescriptionModal.js` uses `useQuery` with shared `['game', gameId, location]` cache for nested game previews rendered through `UnifiedGameDescriptionModal`.
+- `components/cabinet/EntitySelectField.js` uses `useInfiniteQuery` for paginated user/game selector searches.
+
+### Still Not Done
+
+- Main list pages (`TeamsPageClient.js`, `GamesPageClient.js`, admin users/teams lists) still mostly use manual request state and should be migrated only when the query boundaries are clear.
+- React Query DevTools are not installed and should stay optional/dev-only.
+- No dedicated tests currently verify cache sharing, invalidation, or optimistic rollback behavior.
+
+### Current Guidance
+
+- Prefer React Query for server state that is reopened/reused across modals or pages.
+- Keep local draft/editing state separate from cached server state.
+- Use stable query keys with entity type and id, for example `['user', userId]`, `['team', teamId]`.
+- After mutations, invalidate the smallest safe query scope. Use broad invalidation only when relationships are difficult to enumerate.
+- Do not move large, highly coupled pages to React Query in one pass; migrate by bounded data ownership.
+
 ## [1.0.0] - 2026-04-07
 
 ### 🎯 Major Features Added
@@ -189,7 +223,7 @@ Testing: Build validation passed
 ## Version Info
 
 - **Package**: act_quest v0.2.2
-- **React Query**: v5.45.0
+- **React Query**: initially v5.45.0, current package range `^5.96.2`
 - **Next.js**: v16.2.1
 - **React**: v19.2.4
 - **Date**: 2026-04-07

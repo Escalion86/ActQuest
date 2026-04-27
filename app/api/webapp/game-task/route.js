@@ -15,7 +15,11 @@ const normalizeString = (value) => {
 export async function POST(request) {
   const session = await getServerSession(authOptions)
   const sessionUserId =
-    session?.user?.globalUserId || session?.user?.id || session?.user?._id || null
+    session?.user?.globalUserId ||
+    session?.user?.userId ||
+    session?.user?._id ||
+    session?.user?.id ||
+    null
   const sessionTelegramId =
     session?.user?.telegramId !== null && session?.user?.telegramId !== undefined
       ? Number(session.user.telegramId)

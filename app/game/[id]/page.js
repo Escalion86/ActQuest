@@ -120,17 +120,23 @@ export default async function GameEntryPage({ params }) {
       let isParticipant = false
       let participantTeams = []
       const currentUserId =
-        session?.user?._id === null || session?.user?._id === undefined
+        session?.user?.globalUserId ||
+        session?.user?.userId ||
+        session?.user?._id ||
+        session?.user?.id ||
+        null
+      const normalizedCurrentUserId =
+        currentUserId === null || currentUserId === undefined
           ? null
-          : String(session.user._id)
+          : String(currentUserId)
 
-      if (teamIds.length > 0 && currentUserId) {
+      if (teamIds.length > 0 && normalizedCurrentUserId) {
         const teamsUsers = await db
           .model('TeamsUsers')
           .find({ teamId: { $in: teamIds } })
           .lean()
         const memberships = teamsUsers.filter(
-          (item) => String(item.userId || '') === currentUserId,
+          (item) => String(item.userId || '') === normalizedCurrentUserId,
         )
 
         if (memberships.length > 0) {

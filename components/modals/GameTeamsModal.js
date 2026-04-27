@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useQuery } from '@tanstack/react-query'
 
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
@@ -105,9 +106,8 @@ const GameTeamsModal = ({
   isReadOnly = false,
 }) => {
   const [isTeamDetailsModalOpen, setIsTeamDetailsModalOpen] = useState(false)
-  const [isTeamDetailsLoading, setIsTeamDetailsLoading] = useState(false)
   const [selectedTeamDetails, setSelectedTeamDetails] = useState(null)
-  const [teamDetailsError, setTeamDetailsError] = useState('')
+  const [selectedTeamDetailsId, setSelectedTeamDetailsId] = useState('')
   const [isRestrictedDeleteModalOpen, setIsRestrictedDeleteModalOpen] =
     useState(false)
   const [restrictedDeleteTeamName, setRestrictedDeleteTeamName] = useState('')
@@ -133,10 +133,19 @@ const GameTeamsModal = ({
   const [selectedTeamStats, setSelectedTeamStats] = useState(null)
   const [isTeamStatsModalOpen, setIsTeamStatsModalOpen] = useState(false)
 
+  const teamDetailsQuery = useQuery({
+    queryKey: ['team', selectedTeamDetailsId],
+    queryFn: () => fetchCabinetTeamDetails({ teamId: selectedTeamDetailsId }),
+    enabled: isTeamDetailsModalOpen && Boolean(selectedTeamDetailsId),
+    staleTime: 1000 * 60 * 5,
+  })
+  const resolvedSelectedTeamDetails =
+    teamDetailsQuery.data || selectedTeamDetails
+  const teamDetailsError = teamDetailsQuery.error?.message || ''
+
   const closeTeamDetailsModal = useCallback(() => {
     setIsTeamDetailsModalOpen(false)
-    setIsTeamDetailsLoading(false)
-    setTeamDetailsError('')
+    setSelectedTeamDetailsId('')
   }, [])
 
   const closeRestrictedDeleteModal = useCallback(() => {
@@ -176,8 +185,7 @@ const GameTeamsModal = ({
     if (!isTeamsModalOpen) {
       setIsTeamDetailsModalOpen(false)
       setSelectedTeamDetails(null)
-      setIsTeamDetailsLoading(false)
-      setTeamDetailsError('')
+      setSelectedTeamDetailsId('')
       setIsRestrictedDeleteModalOpen(false)
       setRestrictedDeleteTeamName('')
       setIsTeamEditModalOpen(false)
@@ -588,7 +596,7 @@ const GameTeamsModal = ({
     }
   }, [handleRefreshTeamsModalData, selectedGame?.id, teamToEdit])
 
-  const handleOpenTeamDetails = useCallback(async (team) => {
+  const handleOpenTeamDetails = useCallback((team) => {
     if (!team) {
       return
     }
@@ -630,20 +638,8 @@ const GameTeamsModal = ({
       : fallbackTeamDetails
 
     setSelectedTeamDetails(normalizedTeamDetails)
+    setSelectedTeamDetailsId(fallbackTeamDetails.id)
     setIsTeamDetailsModalOpen(true)
-    setTeamDetailsError('')
-    setIsTeamDetailsLoading(true)
-
-    try {
-      const detailedTeam = await fetchCabinetTeamDetails({
-        teamId: fallbackTeamDetails.id,
-      })
-      setSelectedTeamDetails(detailedTeam)
-    } catch (error) {
-      setTeamDetailsError(error?.message || 'Не удалось загрузить команду')
-    } finally {
-      setIsTeamDetailsLoading(false)
-    }
   }, [])
 
   return (
@@ -1036,15 +1032,8 @@ const GameTeamsModal = ({
       <TeamDescriptionModal
         isOpen={isTeamDetailsModalOpen}
         onClose={closeTeamDetailsModal}
-        selectedTeam={selectedTeamDetails}
+        selectedTeam={resolvedSelectedTeamDetails}
       />
-      <Modal
-        isOpen={isTeamDetailsLoading}
-        onClose={() => setIsTeamDetailsLoading(false)}
-        title="Команда"
-      >
-        <p className="text-sm text-slate-500">Загружаем данные команды...</p>
-      </Modal>
       <Modal
         isOpen={isRestrictedDeleteModalOpen}
         onClose={closeRestrictedDeleteModal}

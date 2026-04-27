@@ -14,6 +14,143 @@ const roboto = Roboto({
 
 const siteUrl = getSiteUrl()
 
+const CLIENT_DIAGNOSTICS_SCRIPT = `
+(function () {
+  if (window.__AQ_CLIENT_DIAGNOSTICS_INSTALLED__) return;
+  window.__AQ_CLIENT_DIAGNOSTICS_INSTALLED__ = true;
+  window.__AQ_HYDRATED__ = false;
+
+  var endpoint = "/api/public/client-diagnostics";
+  var sent = {};
+
+  function safeString(value, maxLength) {
+    if (typeof value !== "string") return "";
+    return value.slice(0, maxLength || 1000);
+  }
+
+  function getDiagnostics() {
+    var nav = window.navigator || {};
+    var screenInfo = window.screen || {};
+    var swController = null;
+    try {
+      swController =
+        nav.serviceWorker && nav.serviceWorker.controller
+          ? {
+              scriptURL: safeString(nav.serviceWorker.controller.scriptURL || "", 1000),
+              state: safeString(nav.serviceWorker.controller.state || "", 100),
+            }
+          : null;
+    } catch (error) {
+      swController = { error: safeString(error && error.message, 300) };
+    }
+
+    return {
+      path: safeString(window.location && window.location.pathname, 500),
+      search: safeString(window.location && window.location.search, 500),
+      userAgent: safeString(nav.userAgent || "", 1200),
+      platform: safeString(nav.platform || "", 200),
+      vendor: safeString(nav.vendor || "", 200),
+      language: safeString(nav.language || "", 100),
+      languages: Array.prototype.slice.call(nav.languages || [], 0, 10),
+      cookieEnabled: nav.cookieEnabled === true,
+      onLine: nav.onLine === true,
+      standalone:
+        window.matchMedia &&
+        window.matchMedia("(display-mode: standalone)").matches === true,
+      iosStandalone: nav.standalone === true,
+      viewport: {
+        width: window.innerWidth || null,
+        height: window.innerHeight || null,
+        devicePixelRatio: window.devicePixelRatio || null,
+      },
+      screen: {
+        width: screenInfo.width || null,
+        height: screenInfo.height || null,
+      },
+      connection: nav.connection
+        ? {
+            effectiveType: safeString(nav.connection.effectiveType || "", 100),
+            downlink: nav.connection.downlink || null,
+            rtt: nav.connection.rtt || null,
+            saveData: nav.connection.saveData === true,
+          }
+        : null,
+      serviceWorker: {
+        supported: Boolean(nav.serviceWorker),
+        controlled: Boolean(swController),
+        controller: swController,
+      },
+      readyState: safeString(document.readyState || "", 100),
+      timeOrigin: window.performance && window.performance.timeOrigin
+        ? window.performance.timeOrigin
+        : null,
+      now: Date.now(),
+    };
+  }
+
+  function send(payload) {
+    try {
+      var key = [
+        payload.kind || "",
+        payload.message || "",
+        payload.filename || "",
+        payload.lineno || "",
+        payload.colno || "",
+      ].join("|");
+      if (sent[key]) return;
+      sent[key] = true;
+
+      payload.href = safeString(window.location && window.location.href, 1200);
+      payload.userAgent = safeString(navigator.userAgent || "", 1200);
+      payload.diagnostics = getDiagnostics();
+
+      var body = JSON.stringify(payload);
+      if (navigator.sendBeacon) {
+        var blob = new Blob([body], { type: "application/json" });
+        if (navigator.sendBeacon(endpoint, blob)) return;
+      }
+
+      fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: body,
+        keepalive: true,
+      }).catch(function () {});
+    } catch (error) {}
+  }
+
+  window.__AQ_REPORT_CLIENT_DIAGNOSTIC__ = send;
+
+  window.addEventListener("error", function (event) {
+    send({
+      kind: "window_error",
+      message: safeString(event.message || "Script error", 500),
+      filename: safeString(event.filename || "", 1000),
+      lineno: event.lineno || null,
+      colno: event.colno || null,
+      stack: safeString(event.error && event.error.stack, 4000),
+    });
+  });
+
+  window.addEventListener("unhandledrejection", function (event) {
+    var reason = event.reason || {};
+    send({
+      kind: "unhandled_rejection",
+      message: safeString(reason.message || String(reason), 500),
+      stack: safeString(reason.stack || "", 4000),
+    });
+  });
+
+  window.setTimeout(function () {
+    if (window.__AQ_HYDRATED__) return;
+    send({
+      kind: "hydration_timeout",
+      message: "React app did not mark hydration within 8 seconds",
+    });
+  }, 8000);
+})();
+`
+
 export const metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -77,6 +214,11 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <Script
+          id="aq-client-diagnostics"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: CLIENT_DIAGNOSTICS_SCRIPT }}
+        />
         {hasYandexMetrika ? (
           <Script id="aq-yandex-metrika-init" strategy="afterInteractive">
             {`

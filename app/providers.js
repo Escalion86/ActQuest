@@ -123,6 +123,7 @@ export default function AppProviders({ children }) {
     }
 
     if (typeof window === 'undefined') return
+    window.__AQ_HYDRATED__ = true
     if (!('serviceWorker' in navigator)) return
 
     const syncServiceWorkerMode = async () => {

@@ -11,7 +11,7 @@ Successfully migrated ActQuest project to **React Query** for centralized, optim
 
 ### Phase 1: Setup (Session 14)
 
-- ✅ Installed `@tanstack/react-query` v5.45.0
+- ✅ Installed `@tanstack/react-query` v5 (current package range: `^5.96.2`)
 - ✅ Configured QueryClient with optimal defaults (5min staleTime, 10min gcTime)
 - ✅ Wrapped app with QueryClientProvider in providers.js
 - ✅ Configured for global cache sharing

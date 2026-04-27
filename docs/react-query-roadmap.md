@@ -1,8 +1,8 @@
 # React Query Implementation Roadmap
 
-## Current Status: ✅ Phase 1 Complete
+## Current Status: ✅ Phase 1 Complete / Phase 2 Pending
 
-Completed migration of core admin modals (4 components) + custom optimistic mutation hook.
+Completed migration of core admin modals (4 components) + custom optimistic mutation hook. As of 2026-04-27, the remaining items below are still candidates for future bounded migrations.
 
 ---
 
@@ -12,20 +12,20 @@ Completed migration of core admin modals (4 components) + custom optimistic muta
 
 Time estimate: 2-3 hours
 
-- [ ] **GameTeamsModal.js** - load team details on preview
-  - Current: Manual fetch in `handleOpenTeamDetails`
-  - Migrate: useQuery(['team', teamId])
-  - Custom hook can be reused
+- [x] **GameTeamsModal.js** - load team details on preview
+  - Migrated: `handleOpenTeamDetails` now opens fallback data immediately and detailed data loads via `useQuery`
+  - Query key: `['team', teamId]`, shared with `TeamViewModal`
+  - Custom `fetchCabinetTeamDetails` helper reused
 
-- [ ] **UnifiedGameDescriptionModal.js** - game details
-  - Current: Manual loading states
-  - Migrate: useQuery(['game', gameId])
-  - Test with nested modals
+- [x] **UnifiedGameDescriptionModal.js** - nested game details
+  - Migrated caller: `TeamDescriptionModal` now loads nested game previews with `useQuery`
+  - Query key: `['game', gameId, location]`
+  - `UnifiedGameDescriptionModal` remains a presentational modal that receives the resolved game
 
-- [ ] **EntitySelectField.js** - dropdown search results
-  - Current: Custom pagination logic
-  - Challenge: Paginated queries require advanced pattern
-  - Pattern: useInfiniteQuery or manual offset/limit in queryKey
+- [x] **EntitySelectField.js** - dropdown search results
+  - Migrated: manual pagination/request state replaced with `useInfiniteQuery`
+  - Query key: `['entity-select', endpoint, search, queryParams]`
+  - Used by `UserSelectField` and `GameSelectField`
 
 ### Priority 2: List Operations with Mutations
 
@@ -303,7 +303,7 @@ const saveMutation = useOptimisticMutation({
 
 ### Phase 2 (Next)
 
-- [ ] All read-only modals migrated
+- [~] All read-only modals migrated
 - [ ] Basic mutations working
 - [ ] No prop drilling for data
 - [ ] Documentation complete
@@ -316,7 +316,7 @@ const saveMutation = useOptimisticMutation({
 
 ### Phase 4
 
-- [ ] ViewTools integrated
+- [ ] DevTools integrated
 - [ ] Team trained on patterns
 - [ ] Ready for scaling
 
@@ -344,6 +344,6 @@ Total effort: **3-4 sprints** for full coverage + documentation
 
 ---
 
-**Last Updated**: April 7, 2026  
+**Last Updated**: April 27, 2026  
 **Owner**: Architecture Team  
 **Status**: In Progress → Next Phase Ready

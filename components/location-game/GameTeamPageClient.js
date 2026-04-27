@@ -10,8 +10,12 @@ import { useSession } from 'next-auth/react'
 
 import { LOCATIONS } from '@server/serverConstants'
 import normalizeAudioMessageHtml from '@helpers/normalizeAudioMessageHtml'
+import { sendImage } from '@helpers/cloudinary'
 import RichTaskContentView from '@components/game/RichTaskContentView'
 import TaskDisplayWithClues from '@components/game/TaskDisplayWithClues'
+
+const PHOTO_ANSWER_ACCEPT_TYPES =
+  'image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/*'
 
 const statusLabels = {
   active: 'Ещё не началась',
@@ -157,6 +161,32 @@ const formatCityName = (locationKey) => {
   return trimmed[0].toUpperCase() + trimmed.slice(1)
 }
 
+const extractUrlCandidates = (value) => {
+  if (!value) return []
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed ? [trimmed] : []
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => extractUrlCandidates(item))
+  }
+  if (typeof value === 'object') {
+    return [
+      value.url,
+      value.secure_url,
+      value.src,
+      value.fileUrl,
+      value.imageUrl,
+      value.path,
+      value.location,
+      ...(Array.isArray(value.files) ? value.files : []),
+      ...(Array.isArray(value.urls) ? value.urls : []),
+      ...(Array.isArray(value.data) ? value.data : []),
+    ].flatMap((item) => extractUrlCandidates(item))
+  }
+  return []
+}
+
 const normalizeTaskPayload = ({
   taskHtml = '',
   taskDisplayHtml = '',
@@ -249,6 +279,8 @@ function GameTeamPage({
   const [theme, setTheme] = useState(null)
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false)
+  const [photoUploadError, setPhotoUploadError] = useState('')
   const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
   const [
     isPostCompletionMessageCollapsed,
@@ -568,6 +600,83 @@ function GameTeamPage({
     }
   }
 
+  const submitPhotoAnswerUrl = async (photoUrl) => {
+    const response = await fetch('/api/webapp/game-task', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        location,
+        gameId,
+        teamId,
+        message: photoUrl,
+      }),
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null)
+      throw new Error(data?.error || 'Не удалось отправить фото')
+    }
+
+    return response.json()
+  }
+
+  const handlePhotoAnswerUpload = async (event) => {
+    const files = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (files.length === 0 || isPhotoUploading) return
+
+    setIsPhotoUploading(true)
+    setIsSubmitting(true)
+    setPhotoUploadError('')
+    setStickyMessages([])
+
+    try {
+      let lastResponseData = null
+
+      for (const file of files) {
+        const uploadResult = await sendImage(
+          file,
+          null,
+          `game-photo-answers/${gameId}/${teamId}`,
+          null,
+          'actquest',
+          (message) => setPhotoUploadError(message || 'Ошибка загрузки фото'),
+        )
+
+        const uploadedUrls = Array.from(
+          new Set(
+            extractUrlCandidates(uploadResult)
+              .map((value) => (typeof value === 'string' ? value.trim() : ''))
+              .filter(Boolean),
+          ),
+        )
+
+        if (uploadedUrls.length === 0) {
+          throw new Error('Сервер не вернул ссылку на фото')
+        }
+
+        for (const photoUrl of uploadedUrls) {
+          const data = await submitPhotoAnswerUrl(photoUrl)
+          lastResponseData = data?.data || lastResponseData
+        }
+      }
+
+      if (lastResponseData) {
+        updateTaskData(lastResponseData)
+      }
+      setTaskRefreshError(null)
+    } catch (uploadError) {
+      const message = uploadError?.message || 'Не удалось отправить фото'
+      setPhotoUploadError(message)
+      setTaskRefreshError(message)
+    } finally {
+      setIsPhotoUploading(false)
+      setIsSubmitting(false)
+    }
+  }
+
   const statusLabel = statusLabels[status] ?? 'Статус неизвестен'
   const {
     html: currentTaskHtml,
@@ -607,6 +716,7 @@ function GameTeamPage({
       .toLowerCase()
     return typeValue === 'photo' ? 'Фотоквест' : 'Автоквест'
   }, [game?.type])
+  const isPhotoGame = String(game?.type || '').trim().toLowerCase() === 'photo'
 
   const formattedTaskMessage = useMemo(
     () => transformHtml(currentTaskHtml ?? ''),
@@ -1491,32 +1601,62 @@ function GameTeamPage({
             {shouldShowAnswerForm ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
                 <h2 className="text-lg font-semibold text-primary dark:text-white">
-                  Ответ на задание
+                  {isPhotoGame ? 'Фото-ответ на задание' : 'Ответ на задание'}
                 </h2>
-                <form
-                  className="flex flex-col gap-4 mt-4"
-                  onSubmit={handleSubmit}
-                >
-                  <input
-                    type="text"
-                    value={answer}
-                    maxLength={20}
-                    onChange={(event) =>
-                      setAnswer(event.target.value.slice(0, 20))
-                    }
-                    placeholder="Введите код или сообщение"
-                    className="w-full px-4 py-3 text-base transition border border-gray-300 rounded-2xl focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400"
-                  />
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting || !answer.trim()}
-                      className="px-6 py-3 text-sm font-semibold text-white transition rounded-full bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      Отправить
-                    </button>
+                {isPhotoGame ? (
+                  <div className="flex flex-col gap-4 mt-4">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Можно отправить несколько фотографий на одно задание. Статус
+                      проверки будет доступен только после публикации результатов.
+                    </p>
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-cyan-300 bg-cyan-50 px-4 py-8 text-center transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/15">
+                      <input
+                        type="file"
+                        accept={PHOTO_ANSWER_ACCEPT_TYPES}
+                        multiple
+                        onChange={handlePhotoAnswerUpload}
+                        disabled={isPhotoUploading}
+                        className="sr-only"
+                      />
+                      <span className="text-base font-semibold text-cyan-900 dark:text-cyan-100">
+                        {isPhotoUploading ? 'Загружаем фото...' : 'Выбрать фото'}
+                      </span>
+                      <span className="mt-1 text-sm text-cyan-700 dark:text-cyan-200/80">
+                        JPG, PNG, WEBP или фото с камеры
+                      </span>
+                    </label>
+                    {photoUploadError ? (
+                      <p className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                        {photoUploadError}
+                      </p>
+                    ) : null}
                   </div>
-                </form>
+                ) : (
+                  <form
+                    className="flex flex-col gap-4 mt-4"
+                    onSubmit={handleSubmit}
+                  >
+                    <input
+                      type="text"
+                      value={answer}
+                      maxLength={20}
+                      onChange={(event) =>
+                        setAnswer(event.target.value.slice(0, 20))
+                      }
+                      placeholder="Введите код или сообщение"
+                      className="w-full px-4 py-3 text-base transition border border-gray-300 rounded-2xl focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400"
+                    />
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || !answer.trim()}
+                        className="px-6 py-3 text-sm font-semibold text-white transition rounded-full bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        Отправить
+                      </button>
+                    </div>
+                  </form>
+                )}
               </section>
             ) : null}
 
@@ -1593,6 +1733,7 @@ GameTeamPage.propTypes = {
       PropTypes.string,
       PropTypes.instanceOf(Date),
     ]),
+    type: PropTypes.string,
   }),
   team: PropTypes.shape({
     name: PropTypes.string,

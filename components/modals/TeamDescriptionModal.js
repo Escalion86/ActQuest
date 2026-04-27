@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useAtomValue } from 'jotai'
+import { useQuery } from '@tanstack/react-query'
 
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CopyableId from '@components/cabinet/CopyableId'
@@ -41,20 +42,43 @@ const TeamDescriptionModal = ({
 }) => {
   const canViewIds = useAtomValue(isAdminAtom)
   const [isGamePreviewModalOpen, setIsGamePreviewModalOpen] = useState(false)
-  const [selectedGamePreview, setSelectedGamePreview] = useState(null)
-  const [isGamePreviewLoading, setIsGamePreviewLoading] = useState(false)
+  const [selectedGamePreviewSource, setSelectedGamePreviewSource] =
+    useState(null)
   const [gamePreviewError, setGamePreviewError] = useState('')
   const [showAllGames, setShowAllGames] = useState(false)
   const [isMemberPreviewModalOpen, setIsMemberPreviewModalOpen] =
     useState(false)
   const [selectedMemberUserId, setSelectedMemberUserId] = useState(null)
   const [memberPreviewError, setMemberPreviewError] = useState('')
+  const selectedGamePreviewId =
+    typeof selectedGamePreviewSource?.id === 'string'
+      ? selectedGamePreviewSource.id
+      : ''
+  const selectedGamePreviewLocation =
+    typeof selectedGamePreviewSource?.location === 'string'
+      ? selectedGamePreviewSource.location
+      : ''
+  const gamePreviewQuery = useQuery({
+    queryKey: [
+      'game',
+      selectedGamePreviewId,
+      selectedGamePreviewLocation || null,
+    ],
+    queryFn: () =>
+      fetchCabinetGameDetails({
+        gameId: selectedGamePreviewId,
+        location: selectedGamePreviewLocation || null,
+      }),
+    enabled: isOpen && isGamePreviewModalOpen && Boolean(selectedGamePreviewId),
+    staleTime: 1000 * 60 * 5,
+  })
+  const selectedGamePreview =
+    gamePreviewQuery.data || selectedGamePreviewSource
 
   useEffect(() => {
     if (!isOpen) {
       setIsGamePreviewModalOpen(false)
-      setSelectedGamePreview(null)
-      setIsGamePreviewLoading(false)
+      setSelectedGamePreviewSource(null)
       setGamePreviewError('')
       setShowAllGames(false)
       setIsMemberPreviewModalOpen(false)
@@ -92,7 +116,7 @@ const TeamDescriptionModal = ({
   )
 
   const handleOpenGameCard = useCallback(
-    async (game) => {
+    (game) => {
       if (!game) {
         return
       }
@@ -102,25 +126,20 @@ const TeamDescriptionModal = ({
         return
       }
 
-      setIsGamePreviewLoading(true)
       setGamePreviewError('')
-      try {
-        const detailedGame = await fetchCabinetGameDetails({
-          gameId: game.id,
-          location: game.location || null,
-        })
-        setSelectedGamePreview(detailedGame)
-        setIsGamePreviewModalOpen(true)
-      } catch (error) {
-        setGamePreviewError(
-          error?.message || 'Не удалось загрузить данные игры',
-        )
-      } finally {
-        setIsGamePreviewLoading(false)
-      }
+      setSelectedGamePreviewSource(game)
+      setIsGamePreviewModalOpen(true)
     },
     [onOpenGame],
   )
+
+  useEffect(() => {
+    if (gamePreviewQuery.error) {
+      setGamePreviewError(
+        gamePreviewQuery.error?.message || 'Не удалось загрузить данные игры',
+      )
+    }
+  }, [gamePreviewQuery.error])
 
   return (
     <>
@@ -347,19 +366,12 @@ const TeamDescriptionModal = ({
           </p>
         )}
       </Modal>
-      <Modal
-        isOpen={isOpen && isGamePreviewLoading}
-        onClose={() => setIsGamePreviewLoading(false)}
-        title="Игра"
-      >
-        <p className="text-sm text-slate-500">Загружаем подробности игры...</p>
-      </Modal>
       <UnifiedGameDescriptionModal
         selectedGame={selectedGamePreview}
         isOpen={isOpen && isGamePreviewModalOpen}
         onClose={() => {
           setIsGamePreviewModalOpen(false)
-          setSelectedGamePreview(null)
+          setSelectedGamePreviewSource(null)
         }}
         canViewRestrictedGameInfo
         canViewGameResults={Boolean(

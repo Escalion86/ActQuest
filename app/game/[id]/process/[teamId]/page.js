@@ -31,6 +31,13 @@ export default async function GameTeamPage({ params, searchParams }) {
     redirect(`/cabinet/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)
   }
 
+  const sessionUserId =
+    session.user.globalUserId ||
+    session.user.userId ||
+    session.user._id ||
+    session.user.id ||
+    null
+
   const messageParam =
     typeof resolvedSearchParams?.message === 'string'
       ? resolvedSearchParams.message
@@ -48,7 +55,7 @@ export default async function GameTeamPage({ params, searchParams }) {
       gameId: gameIdParam,
       teamId: teamIdParam,
       telegramId: session?.user?.telegramId,
-      userId: session?.user?.id,
+      userId: sessionUserId,
       message: sanitizedMessage,
     })
 

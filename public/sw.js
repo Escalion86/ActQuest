@@ -1,6 +1,5 @@
-const CACHE_NAME = 'actquest-cache-v4'
+const CACHE_NAME = 'actquest-cache-v5'
 const PRECACHE_URLS = [
-  '/',
   '/favicon.ico',
   '/manifest.json',
   '/icons/pwa-icon-192.png',
@@ -36,18 +35,27 @@ self.addEventListener('fetch', (event) => {
   const isSameOrigin = requestURL.origin === self.location.origin
   const isAuthRequest = requestURL.pathname.startsWith('/api/auth/')
   const isApiRequest = requestURL.pathname.startsWith('/api/')
+  const isNextAssetRequest = requestURL.pathname.startsWith('/_next/')
+  const acceptHeader = request.headers.get('accept') || ''
+  const isRscRequest =
+    requestURL.searchParams.has('_rsc') ||
+    acceptHeader.includes('text/x-component')
   const isAudioRequest =
     requestURL.pathname.startsWith('/sounds/') ||
     (request.headers.get('accept') || '').includes('audio/')
   const hasRangeHeader = request.headers.has('range')
-  const acceptHeader = request.headers.get('accept') || ''
   const isHtmlRequest =
     request.mode === 'navigate' || acceptHeader.includes('text/html')
   const cacheControl = request.headers.get('cache-control') || ''
   const shouldBypassCacheControl =
     cacheControl.includes('no-store') || request.cache === 'no-store'
 
-  if (!isSameOrigin || isAuthRequest || shouldBypassCacheControl) {
+  if (
+    !isSameOrigin ||
+    isAuthRequest ||
+    isRscRequest ||
+    shouldBypassCacheControl
+  ) {
     return
   }
 
@@ -58,6 +66,27 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (isApiRequest) {
+    return
+  }
+
+  if (isNextAssetRequest) {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone()
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseToCache)
+            })
+          }
+          return networkResponse
+        })
+        .catch(async () => {
+          const cached = await caches.match(request)
+          if (cached) return cached
+          return new Response('', { status: 504, statusText: 'Gateway Timeout' })
+        }),
+    )
     return
   }
 
@@ -86,19 +115,9 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((networkResponse) => {
-          // For navigation requests return network response even for non-2xx
-          // statuses; otherwise SW may end up returning undefined.
           if (networkResponse) {
             return networkResponse
           }
-
-          return caches.match(request)
-        })
-        .catch(() => caches.match(request))
-        .then(async (response) => {
-          if (response) return response
-          const shellResponse = await caches.match('/')
-          if (shellResponse) return shellResponse
 
           return new Response('Offline', {
             status: 503,
@@ -106,6 +125,14 @@ self.addEventListener('fetch', (event) => {
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },
           })
         })
+        .catch(
+          () =>
+            new Response('Offline', {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+            }),
+        ),
     )
     return
   }

@@ -42,6 +42,14 @@ const adminTools = [
     href: '/cabinet/admin/reports',
   },
   {
+    id: 'photo-review',
+    title: 'Проверка фотоквеста',
+    description:
+      'Проверяйте отправленные фото по заданиям, принимайте основные задания и подзадачи.',
+    action: 'Открыть проверку',
+    href: '/cabinet/admin/photo-review',
+  },
+  {
     id: 'transactions',
     title: 'Транзакции',
     description:

@@ -10,6 +10,7 @@ const siteEventsSchema = {
       'team_deleted',
       'team_registered_to_game',
       'team_unregistered_from_game',
+      'client_diagnostic',
     ],
   },
   location: {

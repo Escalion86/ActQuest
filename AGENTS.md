@@ -163,6 +163,14 @@ result: {
   - штрафы/бонусы по кодам и many-wrong-codes,
   - `timeAddings` интерпретируются как корректировки очков,
   - сортировка мест: по убыванию итоговых баллов.
+- Участники web-фотоквеста отправляют фото на странице прохождения `/game/[id]/process/[teamId]`.
+- На одно задание можно отправлять несколько фотографий; новые web-фото хранятся как URL в `GamesTeams.photos[taskIndex].photos`.
+- Старые Telegram `file_id` фотографий не считаются web-совместимыми и не требуют отображения на сайте без отдельной миграции/proxy.
+- Проверка фото выполняется отдельно от `GameControl`: `/cabinet/admin/photo-review?gameId=...`.
+- Проверка ориентирована на выбранное задание: сначала список фото одной команды, затем следующей; блоки команд должны быть сворачиваемыми.
+- Логика проверки: `photos[taskIndex].checks.accepted` принимает основное задание; подзадачи отмечаются ключами `_id` из `task.subTasks`.
+- Подзадачи должны учитываться только при принятом основном задании.
+- Команды не видят статус проверки в процессе игры; статус/баллы доступны только через опубликованные результаты с учетом `hideResult`.
 
 ## UI/Frontend инварианты
 
@@ -171,6 +179,17 @@ result: {
 - Перед изменением reset-эффектов проверять сценарий:
   - клик по карточке -> `Редактировать` -> ввод в поле.
 - Если есть role preview, используйте только `moder` как роль модератора.
+
+## React Query
+
+- Проект использует `@tanstack/react-query` через `QueryClientProvider` в `app/providers.js`.
+- Текущие defaults: `staleTime` 5 минут, `gcTime` 10 минут.
+- Для серверного состояния, которое переиспользуется между модалками/страницами, предпочитать `useQuery`.
+- Для мутаций с оптимистичным обновлением использовать `helpers/useOptimisticMutation.js`, если подходит контракт hook'а.
+- Query key должен быть стабильным и включать тип сущности + идентификатор/фильтры: `['user', userId]`, `['team', teamId]`, `['games', { location, status }]`.
+- Draft/editing state не хранить напрямую в query cache: держать локально и синхронизировать через mutation.
+- Не мигрировать крупные страницы (`GamesPageClient`, `TeamsPageClient`) одним большим PR без явных границ данных; мигрировать по отдельным fetch/mutation-сценариям.
+- Актуальный статус миграции и незакрытые пункты смотреть в `CHANGELOG-react-query.md` и `docs/react-query-roadmap.md`.
 
 ## Локация пользователя (city key)
 
@@ -382,6 +401,7 @@ TeamsUsers (члены команды - текущие)
 - Логика: `canViewGameTeams`, `canManageThisGame`, `isTeamsModalReadOnly`
 - Отображает окна в виде плиток (tile) или списка (list)
 - `handleManageTeamsFromList(game, isReadOnly)` — открывает модаль командам
+- Для `photo`-игр у организатора/модератора есть переход в `/cabinet/admin/photo-review?gameId=...`.
 
 ### GameTeamsModal.js
 
@@ -560,6 +580,38 @@ components/cabinet/CardActionIconButton.js       — содержит GameContro
 - `taskDuration` (по умолчанию 3600) — время на задание в секундах
 - `cluesDuration` (по умолчанию 1200) — интервал выдачи подсказок
 - `breakDuration` (по умолчанию 0) — перерыв между заданиями
+
+## Проверка фотоквеста (Photo Review)
+
+### Общее описание
+
+Отдельная кабинетная страница для проверки фото-ответов web-фотоквеста. Не перегружает `GameControl` и работает по логике “выбрать задание -> проверить все команды”.
+
+### Архитектура
+
+```
+app/cabinet/admin/photo-review/page.js                 — серверная страница (auth + admin/dev/moder)
+components/cabinet/app-router/PhotoReviewPageClient.js — клиентский компонент проверки
+app/api/cabinet/admin/photo-review/route.js            — GET/POST API проверки
+components/location-game/GameTeamPageClient.js         — upload фото-ответов участниками для photo-игр
+```
+
+### API `photo-review`
+
+- **GET** `/api/cabinet/admin/photo-review?gameId=...`
+  - Возвращает игру, задания, команды и `photos/checks` по каждому заданию.
+- **POST** `/api/cabinet/admin/photo-review`
+  - Payload: `gameId`, `gameTeamId`, `taskIndex`, `checkKey`, `checked`.
+  - `checkKey='accepted'` принимает основное задание.
+  - `checkKey=<subTask._id>` отмечает подзадачу.
+- **Доступ:** `admin/dev` или `moder`, включенный в `game.moderators`.
+- **Ограничение:** только `game.type === 'photo'`.
+
+### Инварианты
+
+- Проверка фото не должна публиковать статус командам в процессе игры.
+- Новые web-фото сохраняются как URL; Telegram `file_id` не отображать без отдельной миграции.
+- После проверки финальные баллы должны попадать в результаты через `server/buildGameResultComputed.js`.
 
 ## Создание игры
 
