@@ -53,7 +53,7 @@ export async function POST(request) {
     return badRequest('content is required')
   }
 
-  const model = deep ? 'deepseek-reasoner' : 'deepseek-chat'
+  const model = deep ? 'deepseek-v4-pro' : 'deepseek-v4-flash'
   const fallbackSystemPrompt = systemPrompt || 'Напиши ответ на русском языке'
   const messages =
     normalizedMessages.length > 0

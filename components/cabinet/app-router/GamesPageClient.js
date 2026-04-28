@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
@@ -20,7 +26,6 @@ import GameModals from '@components/modals/GameModals'
 import GameStatusModal from '@components/modals/GameStatusModal'
 import GamePushBroadcastModal from '@components/modals/GamePushBroadcastModal'
 import extractErrorMessage from '@helpers/extractErrorMessage'
-import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import { toStringId } from '@helpers/idAndDate'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
@@ -98,6 +103,146 @@ const DEFAULT_CREATE_GAME_CLONE_OPTIONS = {
 
 const normalizeGamesViewValue = (value) =>
   value === 'upcoming' || value === 'past' ? value : 'all'
+
+const buildCabinetGamesQueryKey = ({ gamesView, userRole, locationValue }) => [
+  'cabinet-games',
+  {
+    view: normalizeGamesViewValue(gamesView),
+    role: userRole || '',
+    location: locationValue || '',
+  },
+]
+
+const fetchCabinetGamesPage = async ({
+  pageParam = 0,
+  gamesView,
+  userRole,
+  locationValue,
+}) => {
+  const params = new URLSearchParams({
+    offset: String(pageParam),
+    limit: String(GAMES_PAGE_SIZE),
+    view: normalizeGamesViewValue(gamesView),
+  })
+  if (userRole) {
+    params.set('rolePreview', userRole)
+  }
+  if (locationValue) {
+    params.set('location', locationValue)
+  }
+
+  const { json } = await requestApiJson(
+    `${CABINET_GAMES_LIST_API_BASE}?${params.toString()}`,
+    {
+      fallbackMessage: 'Не удалось загрузить список игр',
+    },
+  )
+
+  return {
+    games: Array.isArray(json?.data)
+      ? json.data.filter((game) => game !== null && game !== undefined)
+      : [],
+    hasMore: Boolean(json?.meta?.hasMore),
+  }
+}
+
+const mapCabinetGamesQueryData = (queryData, mapper) => {
+  if (!queryData || !Array.isArray(queryData.pages)) {
+    return queryData
+  }
+
+  return {
+    ...queryData,
+    pages: queryData.pages.map((page) => ({
+      ...page,
+      games: Array.isArray(page?.games) ? page.games.map(mapper) : [],
+    })),
+  }
+}
+
+const buildGameResultsQueryKey = ({ gameId, locationValue }) => [
+  'game-results',
+  {
+    gameId: gameId || '',
+    location: locationValue || '',
+  },
+]
+
+const removeGameResultsQueries = (queryClient, gameId) => {
+  const normalizedGameId = String(gameId || '').trim()
+  if (!normalizedGameId) {
+    return
+  }
+
+  queryClient.removeQueries({
+    predicate: (query) =>
+      query.queryKey?.[0] === 'game-results' &&
+      query.queryKey?.[1]?.gameId === normalizedGameId,
+  })
+}
+
+const fetchGameResultsData = async ({
+  game,
+  locationForApi,
+  userParticipationTeamIds,
+  viewerCanManageResults,
+}) => {
+  const params = new URLSearchParams()
+  if (locationForApi) {
+    params.set('location', locationForApi)
+  }
+
+  const { json } = await requestApiJson(
+    `${CABINET_GAMES_API_BASE}/${encodeURIComponent(game.id)}/result?${params.toString()}`,
+    {
+      fallbackMessage: 'Не удалось загрузить результаты игры',
+    },
+  )
+
+  return {
+    gameId: json?.data?.gameId || game.id,
+    gameName: json?.data?.gameName || game.name || 'Без названия',
+    rows: Array.isArray(json?.data?.rows) ? json.data.rows : [],
+    teamsCount: Number(json?.data?.teamsCount) || 0,
+    participantsCount: Number(json?.data?.participantsCount) || 0,
+    computed:
+      json?.data?.computed && typeof json.data.computed === 'object'
+        ? json.data.computed
+        : null,
+    interactiveResultsUrl:
+      typeof json?.data?.interactiveResultsUrl === 'string' &&
+      json.data.interactiveResultsUrl.trim().length > 0
+        ? json.data.interactiveResultsUrl.trim()
+        : null,
+    userParticipationTeamIds,
+    viewerCanManageResults,
+  }
+}
+
+const sendGamePushBroadcast = async ({ gameId, mode, message }) => {
+  const { json } = await requestApiJson(
+    `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameId)}/push-broadcast`,
+    {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        mode,
+        message: typeof message === 'string' ? message.trim() : '',
+      }),
+      fallbackMessage: 'Не удалось отправить уведомления',
+    },
+  )
+
+  return {
+    mode,
+    usersMatched: Number(json?.data?.usersMatched) || 0,
+    notificationsCreated: Number(json?.data?.notificationsCreated) || 0,
+    pushDelivered: Number(json?.data?.pushDelivered) || 0,
+  }
+}
 
 const safeLocalStorageGet = (key, fallback = null) => {
   if (typeof window === 'undefined') return fallback
@@ -342,140 +487,8 @@ const stripHtmlToPlainText = (value) =>
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 
-const normalizePlainTextForComparison = (value) =>
-  String(value || '')
-    .replace(/\u00a0/g, ' ')
-    .replace(/\r\n?/g, '\n')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n[ \t]+/g, '\n')
-    .replace(/[ \t]{2,}/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-
 const hasMeaningfulRichMarkup = (value) =>
   /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(String(value || ''))
-
-const normalizeRichParagraphContent = (value) =>
-  String(value || '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n[ \t]+/g, '\n')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim()
-
-const extractParagraphSegmentsFromRich = (rich) => {
-  const richValue = String(rich || '')
-  const paragraphPattern = /<p\b[^>]*>([\s\S]*?)<\/p>/gi
-  const segments = []
-  let match = paragraphPattern.exec(richValue)
-
-  while (match) {
-    segments.push(normalizeRichParagraphContent(match[1] || ''))
-    match = paragraphPattern.exec(richValue)
-  }
-
-  if (segments.length > 0) {
-    return segments
-  }
-
-  const normalized = normalizePlainTextForComparison(
-    stripHtmlToPlainText(richValue),
-  )
-  return normalized ? normalized.split('\n\n') : []
-}
-
-const extractParagraphSegmentsFromPlain = (plain) => {
-  const normalized = normalizePlainTextForComparison(plain)
-  return normalized ? normalized.split('\n\n') : []
-}
-
-const areParagraphSegmentsEqual = (left, right) => {
-  if (!Array.isArray(left) || !Array.isArray(right)) {
-    return false
-  }
-
-  if (left.length !== right.length) {
-    return false
-  }
-
-  for (let index = 0; index < left.length; index += 1) {
-    if (left[index] !== right[index]) {
-      return false
-    }
-  }
-
-  return true
-}
-
-const normalizeRichTextForComparison = (richValue, plainValue) => {
-  const rich = typeof richValue === 'string' ? richValue.trim() : ''
-  if (!rich) {
-    return ''
-  }
-
-  if (!hasMeaningfulRichMarkup(rich)) {
-    const richSegments = extractParagraphSegmentsFromRich(rich)
-    const plainSegments = extractParagraphSegmentsFromPlain(plainValue || '')
-
-    if (areParagraphSegmentsEqual(richSegments, plainSegments)) {
-      return ''
-    }
-  }
-
-  const normalizedPlain = normalizePlainTextForComparison(plainValue || '')
-  const normalizedRichPlain = normalizePlainTextForComparison(
-    stripHtmlToPlainText(rich),
-  )
-
-  if (
-    normalizedRichPlain === normalizedPlain &&
-    !hasMeaningfulRichMarkup(rich)
-  ) {
-    return ''
-  }
-
-  return rich
-}
-
-const normalizePayloadForComparison = (payload) => {
-  if (!payload || typeof payload !== 'object') {
-    return payload
-  }
-
-  const normalizedTasks = (
-    Array.isArray(payload.tasks) ? payload.tasks : []
-  ).map((task) => ({
-    ...task,
-    task: normalizePlainTextForComparison(task?.task || ''),
-    howToSolve: normalizePlainTextForComparison(task?.howToSolve || ''),
-    taskRich: normalizeRichTextForComparison(task?.taskRich, task?.task),
-    postMessage: normalizePlainTextForComparison(task?.postMessage || ''),
-    postMessageRich: normalizeRichTextForComparison(
-      task?.postMessageRich,
-      task?.postMessage,
-    ),
-    clues: (Array.isArray(task?.clues) ? task.clues : []).map((clue) => ({
-      ...clue,
-      clue: normalizePlainTextForComparison(clue?.clue || ''),
-      clueRich: normalizeRichTextForComparison(clue?.clueRich, clue?.clue),
-    })),
-  }))
-
-  return {
-    ...payload,
-    description: normalizePlainTextForComparison(payload.description || ''),
-    descriptionRich: normalizeRichTextForComparison(
-      payload.descriptionRich,
-      payload.description,
-    ),
-    tasks: normalizedTasks,
-  }
-}
 
 const isActiveGameStatus = (status) =>
   (typeof status === 'string' ? status.toLowerCase() : String(status)) ===
@@ -528,21 +541,6 @@ const cloneGameDraft = (game) => {
   }
 
   return JSON.parse(JSON.stringify(game))
-}
-
-const serializeGameForComparison = (game) => {
-  if (!game) {
-    return null
-  }
-
-  const payload = buildUpdatePayload({
-    ...game,
-    prices: game.prices ?? [],
-    finances: game.finances ?? [],
-    tasks: game.tasks ?? [],
-  })
-
-  return JSON.stringify(normalizePayloadForComparison(payload))
 }
 
 const buildUpdatePayload = (game) => {
@@ -999,6 +997,7 @@ const GamesPage = ({
   availableModerators: initialAvailableModerators,
   forcedView,
 }) => {
+  const queryClient = useQueryClient()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -1027,7 +1026,7 @@ const GamesPage = ({
   const canEditOwnGames = userRole === 'moder'
   const safeInitialGames = Array.isArray(initialGames) ? initialGames : []
   const [games, setGames] = useState(safeInitialGames)
-  const [persistedGames, setPersistedGames] = useState(safeInitialGames)
+  const [, setPersistedGames] = useState(safeInitialGames)
   const [hasMoreGames, setHasMoreGames] = useState(Boolean(initialHasMore))
   const [isLoadingMoreGames, setIsLoadingMoreGames] = useState(false)
   const [selectedGameId, setSelectedGameId] = useState(
@@ -1043,7 +1042,6 @@ const GamesPage = ({
   const [editingGame, setEditingGame] = useState(null)
   const [editingBaselineGame, setEditingBaselineGame] = useState(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   const [toastEvent, setToastEvent] = useState(null)
   const setFeedback = useCallback((feedback) => {
     if (!feedback) {
@@ -1076,13 +1074,13 @@ const GamesPage = ({
     availableTeams: [],
   })
   const [selectedTeamToAdd, setSelectedTeamToAdd] = useState('')
-  const [isAddingTeam, setIsAddingTeam] = useState(false)
   const [removingTeamIds, setRemovingTeamIds] = useState([])
   const [updatingOutOfCompetitionTeamIds, setUpdatingOutOfCompetitionTeamIds] =
     useState([])
   const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
   const [isResultsModalOpen, setIsResultsModalOpen] = useState(false)
+  const [resultsModalGame, setResultsModalGame] = useState(null)
   const [isTasksViewModalOpen, setIsTasksViewModalOpen] = useState(false)
   const [resultsModalState, setResultsModalState] = useState({
     isLoading: false,
@@ -1096,8 +1094,6 @@ const GamesPage = ({
     interactiveResultsUrl: null,
     userParticipationTeamIds: [],
   })
-  const [resultsCacheByGameId, setResultsCacheByGameId] = useState({})
-  const [isGeneratingResults, setIsGeneratingResults] = useState(false)
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false)
   const [registerGameId, setRegisterGameId] = useState('')
   const [isRegisterModalFromCard, setIsRegisterModalFromCard] = useState(false)
@@ -1106,7 +1102,6 @@ const GamesPage = ({
   const [registerTeams, setRegisterTeams] = useState([])
   const [isRegisterTeamsLoading, setIsRegisterTeamsLoading] = useState(false)
   const [registerFeedback, setRegisterFeedback] = useState(null)
-  const [isRegisterSubmitting, setIsRegisterSubmitting] = useState(false)
   const [cancellingRegistrationGameIds, setCancellingRegistrationGameIds] =
     useState([])
   const [isPushBroadcastModalOpen, setIsPushBroadcastModalOpen] =
@@ -1115,8 +1110,6 @@ const GamesPage = ({
   const [pushBroadcastMode, setPushBroadcastMode] =
     useState('announce_all_users')
   const [pushBroadcastMessage, setPushBroadcastMessage] = useState('')
-  const [isPushBroadcastSubmitting, setIsPushBroadcastSubmitting] =
-    useState(false)
   const [pushBroadcastFeedback, setPushBroadcastFeedback] = useState(null)
   const [isCreateGameModalOpen, setIsCreateGameModalOpen] = useState(false)
   const [newGameName, setNewGameName] = useState('')
@@ -1135,7 +1128,6 @@ const GamesPage = ({
     DEFAULT_CREATE_GAME_CLONE_OPTIONS,
   )
   const [createGameFeedback, setCreateGameFeedback] = useState(null)
-  const [isCreatingGame, setIsCreatingGame] = useState(false)
   const [isLocationFilterLoading, setIsLocationFilterLoading] = useState(false)
   const [locationFilterError, setLocationFilterError] = useState(null)
   const [gamesDisplayMode, setGamesDisplayMode] = useState('list')
@@ -1154,7 +1146,6 @@ const GamesPage = ({
   const isPastView = gamesView === 'past'
   const shouldShowLocationFilter =
     canEditAllGames && (isUpcomingView || isPastView)
-  const isFilteredGamesView = isUpcomingView || isPastView
   const canFilterCanceledGames = canEditAllGames
   const defaultGamesFilterLocation = useMemo(() => {
     const byUser =
@@ -1169,11 +1160,6 @@ const GamesPage = ({
   )
   const [isGamesFilterLocationHydrated, setIsGamesFilterLocationHydrated] =
     useState(false)
-  const registerApiLocation = isFilteredGamesView
-    ? shouldShowLocationFilter
-      ? gamesFilterLocation
-      : location
-    : location
   const createGameSeasons = useMemo(() => {
     const locationKey =
       typeof createGameLocation === 'string'
@@ -1577,6 +1563,312 @@ const GamesPage = ({
     [gamesView],
   )
 
+  const gamesQueryLocation = shouldShowLocationFilter
+    ? gamesFilterLocation
+    : location
+  const isGamesQueryEnabled = shouldShowLocationFilter
+    ? Boolean(isGamesFilterLocationHydrated && gamesFilterLocation)
+    : true
+  const gamesQuery = useInfiniteQuery({
+    queryKey: buildCabinetGamesQueryKey({
+      gamesView,
+      userRole,
+      locationValue: gamesQueryLocation,
+    }),
+    queryFn: ({ pageParam }) =>
+      fetchCabinetGamesPage({
+        pageParam,
+        gamesView,
+        userRole,
+        locationValue: gamesQueryLocation,
+      }),
+    enabled: isGamesQueryEnabled,
+    initialPageParam: 0,
+    initialData:
+      isGamesQueryEnabled &&
+      safeInitialGames.length > 0 &&
+      (!gamesQueryLocation || gamesQueryLocation === initialLocation)
+        ? {
+            pages: [
+              {
+                games: safeInitialGames,
+                hasMore: Boolean(initialHasMore),
+              },
+            ],
+            pageParams: [0],
+          }
+        : undefined,
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage?.hasMore) return undefined
+      return allPages.reduce(
+        (total, page) =>
+          total + (Array.isArray(page?.games) ? page.games.length : 0),
+        0,
+      )
+    },
+  })
+
+  const applyPersistedGameUpdate = useCallback(
+    (gameId, updater) => {
+      const applyUpdate = (game) => {
+        if (!game || game.id !== gameId) {
+          return game
+        }
+
+        return typeof updater === 'function' ? updater(game) : updater
+      }
+
+      setGames((prev) => prev.map(applyUpdate))
+      setPersistedGames((prev) => prev.map(applyUpdate))
+      queryClient.setQueriesData(
+        { queryKey: ['cabinet-games'] },
+        (queryData) => mapCabinetGamesQueryData(queryData, applyUpdate),
+      )
+    },
+    [queryClient],
+  )
+
+  const saveGameMutation = useMutation({
+    mutationFn: async ({ game, fallbackMessage }) => {
+      const { json } = await requestApiJson(
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(game.id)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: buildUpdatePayload(game) }),
+          fallbackMessage: fallbackMessage || 'Не удалось сохранить игру',
+        },
+      )
+
+      return normalizeGameForCabinet({
+        ...json.data,
+        teamsCount: game.teamsCount,
+      })
+    },
+  })
+
+  const isSaving = saveGameMutation.isPending
+
+  const pushBroadcastMutation = useMutation({
+    mutationFn: sendGamePushBroadcast,
+    onMutate: () => {
+      setPushBroadcastFeedback(null)
+    },
+    onSuccess: ({ mode, usersMatched, notificationsCreated, pushDelivered }) => {
+      const successMessage =
+        mode === 'announce_all_users'
+          ? `Анонс отправлен: получателей ${usersMatched}, уведомлений ${notificationsCreated}, push доставлено ${pushDelivered}`
+          : `Сообщение отправлено зарегистрированным командам: получателей ${usersMatched}, уведомлений ${notificationsCreated}, push доставлено ${pushDelivered}`
+
+      setPushBroadcastFeedback({
+        type: 'success',
+        message: successMessage,
+      })
+      setFeedback({ type: 'success', message: successMessage })
+      setIsPushBroadcastModalOpen(false)
+      setPushBroadcastMessage('')
+      setPushBroadcastMode('announce_all_users')
+      setPushBroadcastGameId('')
+    },
+    onError: (error) => {
+      const message =
+        extractErrorMessage(error) || 'Не удалось отправить уведомления'
+
+      setPushBroadcastFeedback({
+        type: 'error',
+        message,
+      })
+      setFeedback({ type: 'error', message })
+    },
+  })
+
+  const isPushBroadcastSubmitting = pushBroadcastMutation.isPending
+
+  const registerTeamMutation = useMutation({
+    mutationFn: async ({ gameId, teamId }) => {
+      await requestApiJson(
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameId)}/teams`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamId }),
+          fallbackMessage: 'Не удалось зарегистрироваться на игру',
+        },
+      )
+
+      return { gameId, teamId }
+    },
+    onMutate: () => {
+      setRegisterFeedback(null)
+    },
+    onSuccess: ({ gameId, teamId }) => {
+      const selectedTeam = registerTeams.find((team) => team.id === teamId)
+      const teamName = selectedTeam?.name || 'без названия'
+
+      applyPersistedGameUpdate(gameId, (game) => {
+        const nextParticipationTeams = getUserParticipationTeams(game)
+        const hasTeamAlready = nextParticipationTeams.some(
+          (entry) => entry.teamId === teamId,
+        )
+
+        if (!hasTeamAlready) {
+          nextParticipationTeams.push({
+            teamId,
+            teamName:
+              typeof selectedTeam?.name === 'string'
+                ? selectedTeam.name.trim()
+                : '',
+            isCaptain: true,
+          })
+        }
+
+        return {
+          ...game,
+          teamsCount: (game.teamsCount ?? 0) + (hasTeamAlready ? 0 : 1),
+          userParticipationTeams: nextParticipationTeams,
+        }
+      })
+
+      const message = `Команда «${teamName}» зарегистрирована на игру`
+      setRegisterFeedback({ type: 'success', message })
+      setFeedback({ type: 'success', message })
+      setIsRegisterModalOpen(false)
+      setIsRegisterModalFromCard(false)
+      setRegisterModalGameName('')
+      setRegisterTeams([])
+      setIsRegisterTeamsLoading(false)
+      resetRegisterForm()
+    },
+    onError: (error) => {
+      console.error('Failed to register team to game', error)
+      setRegisterFeedback({
+        type: 'error',
+        message:
+          extractErrorMessage(error) || 'Не удалось зарегистрироваться на игру',
+      })
+    },
+  })
+
+  const cancelRegistrationMutation = useMutation({
+    mutationFn: async ({ game, captainParticipations }) => {
+      const captainTeamIds = new Set(
+        captainParticipations.map((entry) => entry.teamId).filter(Boolean),
+      )
+      const teamIdsToDelete = Array.from(captainTeamIds)
+
+      if (teamIdsToDelete.length === 0) {
+        throw new Error('Не найдены записи регистрации для удаления')
+      }
+
+      await requestApiJson(
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(game.id)}/teams`,
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamIds: teamIdsToDelete }),
+          fallbackMessage: 'Не удалось снять команду с игры',
+        },
+      )
+
+      return {
+        gameId: game.id,
+        captainTeamIds,
+        deletedCount: teamIdsToDelete.length,
+      }
+    },
+    onMutate: ({ game }) => {
+      setCancellingRegistrationGameIds((prev) =>
+        prev.includes(game.id) ? prev : [...prev, game.id],
+      )
+    },
+    onSuccess: ({ gameId, captainTeamIds, deletedCount }) => {
+      applyPersistedGameUpdate(gameId, (gameItem) => {
+        const nextParticipationTeams = getUserParticipationTeams(
+          gameItem,
+        ).filter((entry) => !captainTeamIds.has(entry.teamId))
+
+        return {
+          ...gameItem,
+          teamsCount: Math.max(
+            0,
+            (Number(gameItem.teamsCount) || 0) - deletedCount,
+          ),
+          userParticipationTeams: nextParticipationTeams,
+          userTeamPlace:
+            nextParticipationTeams.length > 0 ? gameItem.userTeamPlace : null,
+        }
+      })
+
+      setFeedback({
+        type: 'success',
+        message: 'Команда снята с игры',
+      })
+    },
+    onError: (error) => {
+      console.error('Failed to cancel game registration', error)
+      setFeedback({
+        type: 'error',
+        message:
+          extractErrorMessage(error) || 'Не удалось снять команду с игры',
+      })
+    },
+    onSettled: (_data, _error, variables) => {
+      const gameId = variables?.game?.id
+      if (!gameId) {
+        return
+      }
+
+      setCancellingRegistrationGameIds((prev) =>
+        prev.filter((item) => item !== gameId),
+      )
+    },
+  })
+
+  const isRegisterSubmitting = registerTeamMutation.isPending
+
+  useEffect(() => {
+    if (!gamesQuery.data) {
+      return
+    }
+
+    const nextGames = gamesQuery.data.pages.flatMap((page) =>
+      Array.isArray(page?.games) ? page.games : [],
+    )
+    const sorted = sortGamesForCurrentView(nextGames)
+    setGames(sorted)
+    setPersistedGames(sorted)
+    setHasMoreGames(Boolean(gamesQuery.hasNextPage))
+    setSelectedGameId((prev) =>
+      prev && sorted.some((game) => game.id === prev)
+        ? prev
+        : (sorted[0]?.id ?? null),
+    )
+  }, [gamesQuery.data, gamesQuery.hasNextPage, sortGamesForCurrentView])
+
+  useEffect(() => {
+    if (!gamesQuery.error) {
+      setLocationFilterError(null)
+      return
+    }
+
+    setGames([])
+    setPersistedGames([])
+    setSelectedGameId(null)
+    setHasMoreGames(false)
+    setLocationFilterError(
+      extractErrorMessage(gamesQuery.error) ||
+        (shouldShowLocationFilter
+          ? 'Не удалось загрузить игры выбранного города.'
+          : 'Не удалось загрузить список игр.'),
+    )
+  }, [gamesQuery.error, shouldShowLocationFilter])
+
+  useEffect(() => {
+    setIsLocationFilterLoading(
+      Boolean(gamesQuery.isFetching && !gamesQuery.isFetchingNextPage),
+    )
+  }, [gamesQuery.isFetching, gamesQuery.isFetchingNextPage])
+
   const loadSeasonsForLocation = useCallback(async (locationKey) => {
     const normalizedLocation =
       typeof locationKey === 'string' ? locationKey.trim().toLowerCase() : ''
@@ -1757,162 +2049,6 @@ const GamesPage = ({
     seasonsLoadingByLocation,
   ])
 
-  const fetchGamesPage = useCallback(
-    async ({ offset, replace, locationValue }) => {
-      const params = new URLSearchParams({
-        offset: String(offset),
-        limit: String(GAMES_PAGE_SIZE),
-        view: gamesView,
-      })
-      if (userRole) {
-        params.set('rolePreview', userRole)
-      }
-      if (locationValue) {
-        params.set('location', locationValue)
-      }
-
-      const { json } = await requestApiJson(
-        `${CABINET_GAMES_LIST_API_BASE}?${params.toString()}`,
-        {
-          fallbackMessage: 'Не удалось загрузить список игр',
-        },
-      )
-
-      const nextGames = Array.isArray(json?.data)
-        ? json.data.filter((game) => game !== null && game !== undefined)
-        : []
-      const nextHasMore = Boolean(json?.meta?.hasMore)
-      const sorted = sortGamesForCurrentView(nextGames)
-
-      if (replace) {
-        setGames(sorted)
-        setPersistedGames(sorted)
-        setSelectedGameId((prev) =>
-          prev && sorted.some((game) => game.id === prev)
-            ? prev
-            : (sorted[0]?.id ?? null),
-        )
-      } else if (sorted.length > 0) {
-        setGames((prev) => sortGamesForCurrentView([...prev, ...sorted]))
-        setPersistedGames((prev) =>
-          sortGamesForCurrentView([...prev, ...sorted]),
-        )
-      }
-
-      setHasMoreGames(nextHasMore)
-    },
-    [gamesView, sortGamesForCurrentView, userRole],
-  )
-
-  useEffect(() => {
-    if (!shouldShowLocationFilter) {
-      setLocationFilterError(null)
-      setIsLocationFilterLoading(false)
-      return
-    }
-
-    if (!isGamesFilterLocationHydrated) {
-      setIsLocationFilterLoading(false)
-      return
-    }
-
-    if (!gamesFilterLocation) {
-      if (defaultGamesFilterLocation) {
-        setGamesFilterLocation(defaultGamesFilterLocation)
-        setLocationFilterError(null)
-      } else {
-        setLocationFilterError('Выберите город для загрузки игр.')
-      }
-      return
-    }
-
-    let cancelled = false
-
-    const loadFirstPage = async () => {
-      setIsLocationFilterLoading(true)
-      setLocationFilterError(null)
-
-      try {
-        await fetchGamesPage({
-          offset: 0,
-          replace: true,
-          locationValue: gamesFilterLocation,
-        })
-      } catch (error) {
-        if (cancelled) {
-          return
-        }
-        setGames([])
-        setPersistedGames([])
-        setSelectedGameId(null)
-        setHasMoreGames(false)
-        setLocationFilterError(
-          extractErrorMessage(error) ||
-            'Не удалось загрузить игры выбранного города.',
-        )
-      } finally {
-        if (!cancelled) {
-          setIsLocationFilterLoading(false)
-        }
-      }
-    }
-
-    loadFirstPage()
-
-    return () => {
-      cancelled = true
-    }
-  }, [
-    fetchGamesPage,
-    defaultGamesFilterLocation,
-    gamesFilterLocation,
-    isGamesFilterLocationHydrated,
-    shouldShowLocationFilter,
-  ])
-
-  useEffect(() => {
-    if (shouldShowLocationFilter) {
-      return
-    }
-
-    let cancelled = false
-
-    const loadFirstPage = async () => {
-      setIsLocationFilterLoading(true)
-      setLocationFilterError(null)
-
-      try {
-        await fetchGamesPage({
-          offset: 0,
-          replace: true,
-          locationValue: location,
-        })
-      } catch (error) {
-        if (cancelled) {
-          return
-        }
-
-        setGames([])
-        setPersistedGames([])
-        setSelectedGameId(null)
-        setHasMoreGames(false)
-        setLocationFilterError(
-          extractErrorMessage(error) || 'Не удалось загрузить список игр.',
-        )
-      } finally {
-        if (!cancelled) {
-          setIsLocationFilterLoading(false)
-        }
-      }
-    }
-
-    loadFirstPage()
-
-    return () => {
-      cancelled = true
-    }
-  }, [fetchGamesPage, location, shouldShowLocationFilter])
-
   const handleLoadMoreGames = useCallback(async () => {
     if (isLoadingMoreGames || !hasMoreGames) {
       return
@@ -1922,13 +2058,7 @@ const GamesPage = ({
     setFeedback(null)
 
     try {
-      await fetchGamesPage({
-        offset: games.length,
-        replace: false,
-        locationValue: shouldShowLocationFilter
-          ? gamesFilterLocation
-          : location,
-      })
+      await gamesQuery.fetchNextPage()
     } catch (error) {
       setFeedback({
         type: 'error',
@@ -1940,13 +2070,9 @@ const GamesPage = ({
       setIsLoadingMoreGames(false)
     }
   }, [
-    fetchGamesPage,
-    games.length,
-    gamesFilterLocation,
+    gamesQuery,
     hasMoreGames,
     isLoadingMoreGames,
-    location,
-    shouldShowLocationFilter,
   ])
 
   const resetRegisterForm = useCallback((nextGameId = '') => {
@@ -2079,12 +2205,10 @@ const GamesPage = ({
       setRegisterTeamId('')
       setRegisterFeedback(null)
       loadRegisterTeams()
-    } else {
-      setIsRegisterSubmitting(false)
     }
   }, [isRegisterModalOpen, loadRegisterTeams])
 
-  const handleSubmitRegister = useCallback(async () => {
+  const handleSubmitRegister = useCallback(() => {
     const trimmedGameId = registerGameId.trim()
 
     if (!trimmedGameId) {
@@ -2123,116 +2247,16 @@ const GamesPage = ({
       return
     }
 
-    setIsRegisterSubmitting(true)
-    setRegisterFeedback(null)
-
-    try {
-      await requestApiJson(
-        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(trimmedGameId)}/teams`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            teamId: registerTeamId,
-          }),
-          fallbackMessage: 'Не удалось зарегистрироваться на игру',
-        },
-      )
-
-      setRegisterFeedback({
-        type: 'success',
-        message: `Команда «${selectedTeam.name || 'без названия'}» зарегистрирована на игру`,
-      })
-
-      setGames((prev) =>
-        prev.map((game) => {
-          if (game.id !== trimmedGameId) {
-            return game
-          }
-
-          const nextParticipationTeams = getUserParticipationTeams(game)
-          const hasTeamAlready = nextParticipationTeams.some(
-            (entry) => entry.teamId === registerTeamId,
-          )
-
-          if (!hasTeamAlready) {
-            nextParticipationTeams.push({
-              teamId: registerTeamId,
-              teamName:
-                typeof selectedTeam?.name === 'string'
-                  ? selectedTeam.name.trim()
-                  : '',
-              isCaptain: true,
-            })
-          }
-
-          return {
-            ...game,
-            teamsCount: (game.teamsCount ?? 0) + 1,
-            userParticipationTeams: nextParticipationTeams,
-          }
-        }),
-      )
-
-      setPersistedGames((prev) =>
-        prev.map((game) => {
-          if (game.id !== trimmedGameId) {
-            return game
-          }
-
-          const nextParticipationTeams = getUserParticipationTeams(game)
-          const hasTeamAlready = nextParticipationTeams.some(
-            (entry) => entry.teamId === registerTeamId,
-          )
-
-          if (!hasTeamAlready) {
-            nextParticipationTeams.push({
-              teamId: registerTeamId,
-              teamName:
-                typeof selectedTeam?.name === 'string'
-                  ? selectedTeam.name.trim()
-                  : '',
-              isCaptain: true,
-            })
-          }
-
-          return {
-            ...game,
-            teamsCount: (game.teamsCount ?? 0) + 1,
-            userParticipationTeams: nextParticipationTeams,
-          }
-        }),
-      )
-
-      setFeedback({
-        type: 'success',
-        message: `Команда «${selectedTeam.name || 'без названия'}» зарегистрирована на игру`,
-      })
-      setIsRegisterModalOpen(false)
-      setIsRegisterModalFromCard(false)
-      setRegisterModalGameName('')
-      setRegisterTeams([])
-      setIsRegisterTeamsLoading(false)
-      resetRegisterForm()
-    } catch (error) {
-      console.error('Failed to register team to game', error)
-      setRegisterFeedback({
-        type: 'error',
-        message:
-          extractErrorMessage(error) || 'Не удалось зарегистрироваться на игру',
-      })
-    } finally {
-      setIsRegisterSubmitting(false)
-    }
+    registerTeamMutation.mutate({
+      gameId: trimmedGameId,
+      teamId: registerTeamId,
+    })
   }, [
     currentUserDbId,
     registerGameId,
     registerTeamId,
     registerTeams,
-    resetRegisterForm,
-    setGames,
-    setFeedback,
-    setPersistedGames,
+    registerTeamMutation,
   ])
 
   const handleOpenRegisterModal = useCallback(() => {
@@ -2282,7 +2306,7 @@ const GamesPage = ({
     setPushBroadcastGameId('')
   }, [isPushBroadcastSubmitting])
 
-  const handleSubmitPushBroadcast = useCallback(async () => {
+  const handleSubmitPushBroadcast = useCallback(() => {
     if (!pushBroadcastModalGame?.id) {
       setPushBroadcastFeedback({
         type: 'error',
@@ -2302,63 +2326,16 @@ const GamesPage = ({
       return
     }
 
-    setIsPushBroadcastSubmitting(true)
-    setPushBroadcastFeedback(null)
-
-    try {
-      const { json } = await requestApiJson(
-        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
-          pushBroadcastModalGame.id,
-        )}/push-broadcast`,
-        {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            mode: pushBroadcastMode,
-            message: pushBroadcastMessage.trim(),
-          }),
-          fallbackMessage: 'Не удалось отправить уведомления',
-        },
-      )
-
-      const usersMatched = Number(json?.data?.usersMatched) || 0
-      const notificationsCreated = Number(json?.data?.notificationsCreated) || 0
-      const pushDelivered = Number(json?.data?.pushDelivered) || 0
-
-      const successMessage =
-        pushBroadcastMode === 'announce_all_users'
-          ? `Анонс отправлен: получателей ${usersMatched}, уведомлений ${notificationsCreated}, push доставлено ${pushDelivered}`
-          : `Сообщение отправлено зарегистрированным командам: получателей ${usersMatched}, уведомлений ${notificationsCreated}, push доставлено ${pushDelivered}`
-
-      setPushBroadcastFeedback({
-        type: 'success',
-        message: successMessage,
-      })
-      setFeedback({ type: 'success', message: successMessage })
-      setIsPushBroadcastModalOpen(false)
-      setPushBroadcastMessage('')
-      setPushBroadcastMode('announce_all_users')
-      setPushBroadcastGameId('')
-    } catch (error) {
-      const message =
-        extractErrorMessage(error) || 'Не удалось отправить уведомления'
-
-      setPushBroadcastFeedback({
-        type: 'error',
-        message,
-      })
-      setFeedback({ type: 'error', message })
-    } finally {
-      setIsPushBroadcastSubmitting(false)
-    }
+    pushBroadcastMutation.mutate({
+      gameId: pushBroadcastModalGame.id,
+      mode: pushBroadcastMode,
+      message: pushBroadcastMessage,
+    })
   }, [
+    pushBroadcastMutation,
     pushBroadcastMessage,
     pushBroadcastModalGame?.id,
     pushBroadcastMode,
-    setFeedback,
   ])
 
   const isRegistrationCancellationInProgress = useCallback(
@@ -2406,77 +2383,13 @@ const GamesPage = ({
         }
       }
 
-      setCancellingRegistrationGameIds((prev) =>
-        prev.includes(game.id) ? prev : [...prev, game.id],
-      )
-
-      try {
-        const captainTeamIds = new Set(
-          captainParticipations.map((entry) => entry.teamId).filter(Boolean),
-        )
-        const teamIdsToDelete = Array.from(captainTeamIds)
-
-        if (teamIdsToDelete.length === 0) {
-          throw new Error('Не найдены записи регистрации для удаления')
-        }
-
-        await requestApiJson(
-          `${CABINET_GAMES_API_BASE}/${encodeURIComponent(game.id)}/teams`,
-          {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ teamIds: teamIdsToDelete }),
-            fallbackMessage: 'Не удалось снять команду с игры',
-          },
-        )
-
-        const applyCancellationToGame = (gameItem) => {
-          if (!gameItem || gameItem.id !== game.id) {
-            return gameItem
-          }
-
-          const nextParticipationTeams = getUserParticipationTeams(
-            gameItem,
-          ).filter((entry) => !captainTeamIds.has(entry.teamId))
-
-          return {
-            ...gameItem,
-            teamsCount: Math.max(
-              0,
-              (Number(gameItem.teamsCount) || 0) - teamIdsToDelete.length,
-            ),
-            userParticipationTeams: nextParticipationTeams,
-            userTeamPlace:
-              nextParticipationTeams.length > 0 ? gameItem.userTeamPlace : null,
-          }
-        }
-
-        setGames((prev) =>
-          prev.map((gameItem) => applyCancellationToGame(gameItem)),
-        )
-        setPersistedGames((prev) =>
-          prev.map((gameItem) => applyCancellationToGame(gameItem)),
-        )
-
-        setFeedback({
-          type: 'success',
-          message: 'Команда снята с игры',
-        })
-      } catch (error) {
-        console.error('Failed to cancel game registration', error)
-        setFeedback({
-          type: 'error',
-          message:
-            extractErrorMessage(error) ||
-            'Не удалось снять команду с игры',
-        })
-      } finally {
-        setCancellingRegistrationGameIds((prev) =>
-          prev.filter((item) => item !== game.id),
-        )
-      }
+      cancelRegistrationMutation.mutate({ game, captainParticipations })
     },
-    [isRegistrationCancellationInProgress, setFeedback],
+    [
+      cancelRegistrationMutation,
+      isRegistrationCancellationInProgress,
+      setFeedback,
+    ],
   )
 
   const handleOpenCreateGameModal = useCallback(() => {
@@ -2609,7 +2522,10 @@ const GamesPage = ({
 
         return a.label.localeCompare(b.label, 'ru')
       })
-      .map(({ sortDate, ...rest }) => rest)
+      .map((item) => {
+        const { sortDate: _sortDate, ...rest } = item
+        return rest
+      })
   }, [cloneSourceGames])
 
   useEffect(() => {
@@ -2706,87 +2622,12 @@ const GamesPage = ({
     setNewGameName(sourceGame.name || '')
   }, [cloneSourceGameId, createGameCloneSourceOptions, createGameMode])
 
-  const isCreateGameActionDisabled = useMemo(() => {
-    if (isCreatingGame) {
-      return true
-    }
-
-    if (createGameMode === CREATE_GAME_MODE_CLONE) {
-      if (!cloneSourceGameId) {
-        return true
-      }
-
-      const hasAnyCloneOption = Object.values(createGameCloneOptions).some(
-        Boolean,
-      )
-      if (!hasAnyCloneOption) {
-        return true
-      }
-
-      return newGameName.trim().length === 0
-    }
-
-    return newGameName.trim().length === 0
-  }, [
-    cloneSourceGameId,
-    createGameCloneOptions,
-    createGameMode,
-    isCreatingGame,
-    newGameName,
-  ])
-
-  const handleCreateGame = useCallback(async () => {
-    const trimmedName = newGameName.trim()
-    const isCloneMode = createGameMode === CREATE_GAME_MODE_CLONE
-
-    if (!trimmedName) {
-      setCreateGameFeedback({
-        type: 'error',
-        message: 'Введите название игры',
-      })
-      return
-    }
-
-    if (!canEditAllGames) {
-      setCreateGameFeedback({
-        type: 'error',
-        message: 'Недостаточно прав для создания игры',
-      })
-      return
-    }
-
-    if (isCloneMode && !cloneSourceGameId) {
-      setCreateGameFeedback({
-        type: 'error',
-        message: 'Выберите игру-источник для клонирования',
-      })
-      return
-    }
-
-    if (isCloneMode && !Object.values(createGameCloneOptions).some(Boolean)) {
-      setCreateGameFeedback({
-        type: 'error',
-        message: 'Выберите хотя бы один блок для клонирования',
-      })
-      return
-    }
-
-    const normalizedCreateLocation =
-      typeof createGameLocation === 'string'
-        ? createGameLocation.trim().toLowerCase()
-        : ''
-    if (!normalizedCreateLocation) {
-      setCreateGameFeedback({
-        type: 'error',
-        message: 'Выберите город для новой игры',
-      })
-      return
-    }
-
-    setIsCreatingGame(true)
-    setCreateGameFeedback(null)
-
-    try {
+  const createGameMutation = useMutation({
+    mutationFn: async ({
+      trimmedName,
+      isCloneMode,
+      normalizedCreateLocation,
+    }) => {
       const baseDraft = {
         name: trimmedName,
         status: 'active',
@@ -2966,6 +2807,12 @@ const GamesPage = ({
         throw new Error('Не удалось обработать данные созданной игры')
       }
 
+      return createdGame
+    },
+    onMutate: () => {
+      setCreateGameFeedback(null)
+    },
+    onSuccess: (createdGame) => {
       setGames((prev) =>
         sortGamesForCurrentView([
           createdGame,
@@ -2978,6 +2825,7 @@ const GamesPage = ({
           ...prev.filter((game) => game.id !== createdGame.id),
         ]),
       )
+      queryClient.invalidateQueries({ queryKey: ['cabinet-games'] })
       setSelectedGameId(createdGame.id)
 
       setFeedback({
@@ -2994,34 +2842,108 @@ const GamesPage = ({
       setEditingBaselineGame(cloneGameDraft(createdDraft))
       setHasUnsavedChanges(false)
       setIsEditModalOpen(true)
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Failed to create game', error)
       setCreateGameFeedback({
         type: 'error',
         message: extractErrorMessage(error) || 'Не удалось создать игру',
       })
-    } finally {
-      setIsCreatingGame(false)
+    },
+  })
+
+  const isCreatingGame = createGameMutation.isPending
+
+  const isCreateGameActionDisabled = useMemo(() => {
+    if (isCreatingGame) {
+      return true
     }
+
+    if (createGameMode === CREATE_GAME_MODE_CLONE) {
+      if (!cloneSourceGameId) {
+        return true
+      }
+
+      const hasAnyCloneOption = Object.values(createGameCloneOptions).some(
+        Boolean,
+      )
+      if (!hasAnyCloneOption) {
+        return true
+      }
+
+      return newGameName.trim().length === 0
+    }
+
+    return newGameName.trim().length === 0
   }, [
-    buildUpdatePayload,
+    cloneSourceGameId,
+    createGameCloneOptions,
+    createGameMode,
+    isCreatingGame,
+    newGameName,
+  ])
+
+  const handleCreateGame = useCallback(async () => {
+    const trimmedName = newGameName.trim()
+    const isCloneMode = createGameMode === CREATE_GAME_MODE_CLONE
+
+    if (!trimmedName) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Введите название игры',
+      })
+      return
+    }
+
+    if (!canEditAllGames) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Недостаточно прав для создания игры',
+      })
+      return
+    }
+
+    if (isCloneMode && !cloneSourceGameId) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Выберите игру-источник для клонирования',
+      })
+      return
+    }
+
+    if (isCloneMode && !Object.values(createGameCloneOptions).some(Boolean)) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Выберите хотя бы один блок для клонирования',
+      })
+      return
+    }
+
+    const normalizedCreateLocation =
+      typeof createGameLocation === 'string'
+        ? createGameLocation.trim().toLowerCase()
+        : ''
+    if (!normalizedCreateLocation) {
+      setCreateGameFeedback({
+        type: 'error',
+        message: 'Выберите город для новой игры',
+      })
+      return
+    }
+
+    createGameMutation.mutate({
+      trimmedName,
+      isCloneMode,
+      normalizedCreateLocation,
+    })
+  }, [
     canEditAllGames,
     cloneSourceGameId,
     createGameCloneOptions,
-    createGameCloneSourceOptions,
     createGameLocation,
-    createGameSeasonId,
-    createGameSeasons,
     createGameMode,
-    currentUserDbId,
-    location,
+    createGameMutation,
     newGameName,
-    newGameIsRated,
-    setFeedback,
-    setGames,
-    setPersistedGames,
-    setSelectedGameId,
-    sortGamesForCurrentView,
   ])
 
   const availableModerators = useMemo(
@@ -3181,8 +3103,6 @@ const GamesPage = ({
     }
     setPastGamesSeasonFilter(PAST_GAMES_SEASON_FILTER_ALL)
   }, [pastGamesSeasonFilter, pastGamesSeasonOptions])
-  const isPhotoGame = selectedGame?.type === 'photo'
-
   useEffect(() => {
     if (!selectedGame) {
       setIsDescriptionModalOpen(false)
@@ -3201,11 +3121,6 @@ const GamesPage = ({
       ),
     )
   }, [selectedGame])
-
-  const persistedSelectedGame = useMemo(
-    () => persistedGames.find((game) => game.id === selectedGameId) ?? null,
-    [persistedGames, selectedGameId],
-  )
 
   const isGameModerator = useMemo(() => {
     if (!selectedGame || !currentUserDbId) {
@@ -3275,8 +3190,6 @@ const GamesPage = ({
   const canViewCodePhotos = canEditSelectedGame
 
   const canViewRestrictedGameInfo = canEditSelectedGame
-
-  const canManageTeams = canViewRestrictedGameInfo
 
   const canManageGameStatus = useCallback(
     (game) => {
@@ -3636,35 +3549,15 @@ const GamesPage = ({
       return
     }
 
-    setIsSaving(true)
     setFeedback(null)
 
     try {
-      const { json } = await requestApiJson(
-        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameToSave.id)}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: buildUpdatePayload(gameToSave) }),
-          fallbackMessage: 'Не удалось сохранить игру',
-        },
-      )
-
-      const normalizedGame = normalizeGameForCabinet({
-        ...json.data,
-        teamsCount: gameToSave.teamsCount,
+      const normalizedGame = await saveGameMutation.mutateAsync({
+        game: gameToSave,
+        fallbackMessage: 'Не удалось сохранить игру',
       })
 
-      setGames((prevGames) =>
-        prevGames.map((game) =>
-          game.id === normalizedGame.id ? normalizedGame : game,
-        ),
-      )
-      setPersistedGames((prevGames) =>
-        prevGames.map((game) =>
-          game.id === normalizedGame.id ? normalizedGame : game,
-        ),
-      )
+      applyPersistedGameUpdate(normalizedGame.id, normalizedGame)
       if (validationWarningMessage) {
         setToastEvent({
           id: `game-save-validation-warning-${Date.now()}`,
@@ -3685,10 +3578,14 @@ const GamesPage = ({
         type: 'error',
         message: error?.message || 'Не удалось сохранить игру',
       })
-    } finally {
-      setIsSaving(false)
     }
-  }, [canEditSelectedGame, editingGame, selectedGame])
+  }, [
+    applyPersistedGameUpdate,
+    canEditSelectedGame,
+    editingGame,
+    saveGameMutation,
+    selectedGame,
+  ])
 
   const handleSaveAndOpenTaskPreview = useCallback(
     async (taskIndex) => {
@@ -3743,37 +3640,16 @@ const GamesPage = ({
             return
           }
         }
-        setIsSaving(true)
         setFeedback(null)
 
         try {
-          const { json } = await requestApiJson(
-            `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameToPreview.id)}`,
-            {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                data: buildUpdatePayload(gameToPreview),
-              }),
-              fallbackMessage: 'Не удалось сохранить задания перед предпросмотром',
-            },
-          )
-
-          const normalizedGame = normalizeGameForCabinet({
-            ...json.data,
-            teamsCount: gameToPreview.teamsCount,
+          const normalizedGame = await saveGameMutation.mutateAsync({
+            game: gameToPreview,
+            fallbackMessage:
+              'Не удалось сохранить задания перед предпросмотром',
           })
 
-          setGames((prevGames) =>
-            prevGames.map((game) =>
-              game.id === normalizedGame.id ? normalizedGame : game,
-            ),
-          )
-          setPersistedGames((prevGames) =>
-            prevGames.map((game) =>
-              game.id === normalizedGame.id ? normalizedGame : game,
-            ),
-          )
+          applyPersistedGameUpdate(normalizedGame.id, normalizedGame)
           setEditingGame(cloneGameDraft(normalizedGame))
           setEditingBaselineGame(cloneGameDraft(normalizedGame))
           setHasUnsavedChanges(false)
@@ -3789,8 +3665,6 @@ const GamesPage = ({
               'Не удалось сохранить задания перед предпросмотром',
           })
           return
-        } finally {
-          setIsSaving(false)
         }
       }
 
@@ -3848,11 +3722,11 @@ const GamesPage = ({
       canEditSelectedGame,
       editingGame,
       isDirty,
+      applyPersistedGameUpdate,
       router,
+      saveGameMutation,
       selectedGame,
       setFeedback,
-      setGames,
-      setPersistedGames,
       setEditingGame,
       setEditingBaselineGame,
     ],
@@ -4361,15 +4235,6 @@ const GamesPage = ({
     )
   }, [])
 
-  const handleOpenTeamsModal = useCallback(() => {
-    if (!canManageTeams) {
-      return
-    }
-
-    setIsDescriptionModalOpen(false)
-    setIsTeamsModalOpen(true)
-  }, [canManageTeams])
-
   const handleCloseTeamsModal = useCallback(() => {
     setIsTeamsModalOpen(false)
   }, [])
@@ -4416,7 +4281,7 @@ const GamesPage = ({
           if (team?._id || team?.id) {
             try {
               return String(team._id || team.id)
-            } catch (error) {
+            } catch {
               return ''
             }
           }
@@ -4568,127 +4433,175 @@ const GamesPage = ({
     }
   }, [selectedGame])
 
-  const handleAddTeamToGame = useCallback(async () => {
-    if (!selectedGame || !selectedTeamToAdd) {
-      return
-    }
-
-    setIsAddingTeam(true)
-    setTeamsModalState((prev) => ({ ...prev, error: null }))
-
-    try {
+  const addTeamToGameMutation = useMutation({
+    mutationFn: async ({ gameId, teamId }) => {
       await requestApiJson(
-        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(selectedGame.id)}/teams`,
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameId)}/teams`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ teamId: selectedTeamToAdd }),
+          body: JSON.stringify({ teamId }),
           fallbackMessage: 'Не удалось добавить команду',
         },
       )
 
+      return { gameId }
+    },
+    onMutate: () => {
+      setTeamsModalState((prev) => ({ ...prev, error: null }))
+    },
+    onSuccess: async ({ gameId }) => {
+      removeGameResultsQueries(queryClient, gameId)
       await loadTeamsModalData()
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Failed to add team to game', error)
       setTeamsModalState((prev) => ({
         ...prev,
         error: extractErrorMessage(error) || 'Не удалось добавить команду',
       }))
-    } finally {
-      setIsAddingTeam(false)
-    }
-  }, [loadTeamsModalData, selectedGame, selectedTeamToAdd])
+    },
+  })
 
-  const handleRemoveTeamFromGame = useCallback(
-    async (gameTeamId) => {
-      if (!gameTeamId || !selectedGame) {
-        return
-      }
+  const removeTeamFromGameMutation = useMutation({
+    mutationFn: async ({ gameId, gameTeamId, teamId }) => {
+      await requestApiJson(
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameId)}/teams`,
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamIds: [teamId] }),
+          fallbackMessage: 'Не удалось удалить команду',
+        },
+      )
 
+      return { gameId, gameTeamId }
+    },
+    onMutate: ({ gameTeamId }) => {
       setRemovingTeamIds((prev) =>
         prev.includes(gameTeamId) ? prev : [...prev, gameTeamId],
       )
       setTeamsModalState((prev) => ({ ...prev, error: null }))
-
-      try {
-        const gameTeamEntry = teamsModalState.gameTeams.find(
-          (entry) => entry.id === gameTeamId,
-        )
-        if (!gameTeamEntry?.teamId) {
-          throw new Error('Не удалось определить команду для удаления')
-        }
-
-        await requestApiJson(
-          `${CABINET_GAMES_API_BASE}/${encodeURIComponent(selectedGame.id)}/teams`,
-          {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ teamIds: [gameTeamEntry.teamId] }),
-            fallbackMessage: 'Не удалось удалить команду',
-          },
-        )
-
-        await loadTeamsModalData()
-      } catch (error) {
-        console.error('Failed to remove team from game', error)
-        setTeamsModalState((prev) => ({
-          ...prev,
-          error: extractErrorMessage(error) || 'Не удалось удалить команду',
-        }))
-      } finally {
-        setRemovingTeamIds((prev) => prev.filter((id) => id !== gameTeamId))
-      }
     },
-    [loadTeamsModalData, selectedGame, teamsModalState.gameTeams],
-  )
-
-  const handleToggleTeamOutOfCompetition = useCallback(
-    async ({ gameTeamId, outOfCompetition }) => {
-      if (!selectedGame || !gameTeamId) {
+    onSuccess: async ({ gameId }) => {
+      removeGameResultsQueries(queryClient, gameId)
+      await loadTeamsModalData()
+    },
+    onError: (error) => {
+      console.error('Failed to remove team from game', error)
+      setTeamsModalState((prev) => ({
+        ...prev,
+        error: extractErrorMessage(error) || 'Не удалось удалить команду',
+      }))
+    },
+    onSettled: (_data, _error, variables) => {
+      const gameTeamId = variables?.gameTeamId
+      if (!gameTeamId) {
         return
       }
+      setRemovingTeamIds((prev) => prev.filter((id) => id !== gameTeamId))
+    },
+  })
 
+  const toggleTeamOutOfCompetitionMutation = useMutation({
+    mutationFn: async ({ gameId, gameTeamId, outOfCompetition }) => {
+      await requestApiJson(
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameId)}/teams`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gameTeamId,
+            outOfCompetition: Boolean(outOfCompetition),
+          }),
+          fallbackMessage: 'Не удалось обновить флаг «Вне зачёта»',
+        },
+      )
+
+      return { gameId, gameTeamId }
+    },
+    onMutate: ({ gameTeamId }) => {
       setUpdatingOutOfCompetitionTeamIds((prev) =>
         prev.includes(gameTeamId) ? prev : [...prev, gameTeamId],
       )
       setTeamsModalState((prev) => ({ ...prev, error: null }))
+    },
+    onSuccess: async ({ gameId }) => {
+      removeGameResultsQueries(queryClient, gameId)
+      await loadTeamsModalData()
+    },
+    onError: (error) => {
+      console.error('Failed to toggle out-of-competition state', error)
+      setTeamsModalState((prev) => ({
+        ...prev,
+        error:
+          extractErrorMessage(error) ||
+          'Не удалось обновить флаг «Вне зачёта»',
+      }))
+    },
+    onSettled: (_data, _error, variables) => {
+      const gameTeamId = variables?.gameTeamId
+      if (!gameTeamId) {
+        return
+      }
+      setUpdatingOutOfCompetitionTeamIds((prev) =>
+        prev.filter((id) => id !== gameTeamId),
+      )
+    },
+  })
 
-      try {
-        await requestApiJson(
-          `${CABINET_GAMES_API_BASE}/${encodeURIComponent(selectedGame.id)}/teams`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              gameTeamId,
-              outOfCompetition: Boolean(outOfCompetition),
-            }),
-            fallbackMessage: 'Не удалось обновить флаг «Вне зачёта»',
-          },
-        )
+  const isAddingTeam = addTeamToGameMutation.isPending
 
-        setResultsCacheByGameId((prev) => {
-          const next = { ...prev }
-          delete next[selectedGame.id]
-          return next
-        })
+  const handleAddTeamToGame = useCallback(() => {
+    if (!selectedGame || !selectedTeamToAdd) {
+      return
+    }
 
-        await loadTeamsModalData()
-      } catch (error) {
-        console.error('Failed to toggle out-of-competition state', error)
+    addTeamToGameMutation.mutate({
+      gameId: selectedGame.id,
+      teamId: selectedTeamToAdd,
+    })
+  }, [addTeamToGameMutation, selectedGame, selectedTeamToAdd])
+
+  const handleRemoveTeamFromGame = useCallback(
+    (gameTeamId) => {
+      if (!gameTeamId || !selectedGame) {
+        return
+      }
+
+      const gameTeamEntry = teamsModalState.gameTeams.find(
+        (entry) => entry.id === gameTeamId,
+      )
+      if (!gameTeamEntry?.teamId) {
         setTeamsModalState((prev) => ({
           ...prev,
-          error:
-            extractErrorMessage(error) ||
-            'Не удалось обновить флаг «Вне зачёта»',
+          error: 'Не удалось определить команду для удаления',
         }))
-      } finally {
-        setUpdatingOutOfCompetitionTeamIds((prev) =>
-          prev.filter((id) => id !== gameTeamId),
-        )
+        return
       }
+
+      removeTeamFromGameMutation.mutate({
+        gameId: selectedGame.id,
+        gameTeamId,
+        teamId: gameTeamEntry.teamId,
+      })
     },
-    [loadTeamsModalData, selectedGame],
+    [removeTeamFromGameMutation, selectedGame, teamsModalState.gameTeams],
+  )
+
+  const handleToggleTeamOutOfCompetition = useCallback(
+    ({ gameTeamId, outOfCompetition }) => {
+      if (!selectedGame || !gameTeamId) {
+        return
+      }
+
+      toggleTeamOutOfCompetitionMutation.mutate({
+        gameId: selectedGame.id,
+        gameTeamId,
+        outOfCompetition,
+      })
+    },
+    [selectedGame, toggleTeamOutOfCompetitionMutation],
   )
 
   useEffect(() => {
@@ -4970,13 +4883,7 @@ const GamesPage = ({
         }
 
         setStatusProgressMessage('Обновляем список игр…')
-        await fetchGamesPage({
-          offset: 0,
-          replace: true,
-          locationValue: shouldShowLocationFilter
-            ? gamesFilterLocation
-            : location,
-        })
+        await gamesQuery.refetch()
 
         setStatusProgressMessage('')
         setIsStatusModalOpen(false)
@@ -5002,8 +4909,7 @@ const GamesPage = ({
     [
       canEditAllGames,
       canManageGameStatus,
-      fetchGamesPage,
-      shouldShowLocationFilter,
+      gamesQuery,
       statusModalGame,
     ],
   )
@@ -5125,110 +5031,94 @@ const GamesPage = ({
     return status === 'finished' || status === 'closed'
   }, [canEditSelectedGame, selectedGame])
 
-  const loadGameResults = useCallback(
-    async (game) => {
-      if (!game?.id) {
-        return
-      }
+  const resultsModalLocationForApi =
+    resultsModalGame?.location ||
+    (shouldShowLocationFilter ? gamesFilterLocation : location) ||
+    ''
+  const resultsModalUserParticipationTeamIds = useMemo(
+    () =>
+      resultsModalGame
+        ? getUserParticipationTeams(resultsModalGame).map(
+            (entry) => entry.teamId,
+          )
+        : [],
+    [resultsModalGame],
+  )
+  const resultsModalViewerCanManageResults = useMemo(
+    () => canManageGameStatus(resultsModalGame),
+    [canManageGameStatus, resultsModalGame],
+  )
+  const gameResultsQuery = useQuery({
+    queryKey: buildGameResultsQueryKey({
+      gameId: resultsModalGame?.id,
+      locationValue: resultsModalLocationForApi,
+    }),
+    queryFn: () =>
+      fetchGameResultsData({
+        game: resultsModalGame,
+        locationForApi: resultsModalLocationForApi,
+        userParticipationTeamIds: resultsModalUserParticipationTeamIds,
+        viewerCanManageResults: resultsModalViewerCanManageResults,
+      }),
+    enabled:
+      isResultsModalOpen &&
+      Boolean(resultsModalGame?.id) &&
+      canViewResultsForGame(resultsModalGame),
+  })
 
-      const cached = resultsCacheByGameId[game.id]
-      if (cached) {
-        setResultsModalState({
-          isLoading: false,
-          error: null,
-          ...cached,
-        })
-        return
-      }
+  useEffect(() => {
+    if (!isResultsModalOpen || !resultsModalGame?.id) {
+      return
+    }
 
-      const locationForApi =
-        game.location ||
-        (shouldShowLocationFilter ? gamesFilterLocation : location) ||
-        ''
-      const userParticipationTeamIds = getUserParticipationTeams(game).map(
-        (entry) => entry.teamId,
-      )
+    const fallbackState = {
+      gameId: resultsModalGame.id,
+      gameName: resultsModalGame.name || 'Без названия',
+      rows: [],
+      teamsCount: 0,
+      participantsCount: 0,
+      computed: null,
+      interactiveResultsUrl: null,
+      userParticipationTeamIds: resultsModalUserParticipationTeamIds,
+      viewerCanManageResults: resultsModalViewerCanManageResults,
+    }
 
+    if (gameResultsQuery.data) {
+      setResultsModalState({
+        isLoading: false,
+        error: null,
+        ...gameResultsQuery.data,
+      })
+      return
+    }
+
+    if (gameResultsQuery.error) {
+      setResultsModalState({
+        isLoading: false,
+        error:
+          extractErrorMessage(gameResultsQuery.error) ||
+          'Не удалось загрузить результаты игры',
+        ...fallbackState,
+      })
+      return
+    }
+
+    if (gameResultsQuery.isFetching) {
       setResultsModalState({
         isLoading: true,
         error: null,
-        gameId: game.id,
-        gameName: game.name || 'Без названия',
-        rows: [],
-        teamsCount: 0,
-        participantsCount: 0,
-        computed: null,
-        interactiveResultsUrl: null,
-        userParticipationTeamIds,
-        viewerCanManageResults: canManageGameStatus(game),
+        ...fallbackState,
       })
-
-      try {
-        const params = new URLSearchParams()
-        if (locationForApi) {
-          params.set('location', locationForApi)
-        }
-
-        const { json } = await requestApiJson(
-          `${CABINET_GAMES_API_BASE}/${encodeURIComponent(game.id)}/result?${params.toString()}`,
-          {
-            fallbackMessage: 'Не удалось загрузить результаты игры',
-          },
-        )
-
-        const nextData = {
-          gameId: json?.data?.gameId || game.id,
-          gameName: json?.data?.gameName || game.name || 'Без названия',
-          rows: Array.isArray(json?.data?.rows) ? json.data.rows : [],
-          teamsCount: Number(json?.data?.teamsCount) || 0,
-          participantsCount: Number(json?.data?.participantsCount) || 0,
-          computed:
-            json?.data?.computed && typeof json.data.computed === 'object'
-              ? json.data.computed
-              : null,
-          interactiveResultsUrl:
-            typeof json?.data?.interactiveResultsUrl === 'string' &&
-            json.data.interactiveResultsUrl.trim().length > 0
-              ? json.data.interactiveResultsUrl.trim()
-              : null,
-          userParticipationTeamIds,
-          viewerCanManageResults: canManageGameStatus(game),
-        }
-
-        setResultsCacheByGameId((prev) => ({
-          ...prev,
-          [game.id]: nextData,
-        }))
-
-        setResultsModalState({
-          isLoading: false,
-          error: null,
-          ...nextData,
-        })
-      } catch (error) {
-        setResultsModalState({
-          isLoading: false,
-          error: error?.message || 'Не удалось загрузить результаты игры',
-          gameId: game.id,
-          gameName: game.name || 'Без названия',
-          rows: [],
-          teamsCount: 0,
-          participantsCount: 0,
-          computed: null,
-          interactiveResultsUrl: null,
-          userParticipationTeamIds,
-          viewerCanManageResults: canManageGameStatus(game),
-        })
-      }
-    },
-    [
-      canManageGameStatus,
-      gamesFilterLocation,
-      location,
-      resultsCacheByGameId,
-      shouldShowLocationFilter,
-    ],
-  )
+    }
+  }, [
+    gameResultsQuery.data,
+    gameResultsQuery.error,
+    gameResultsQuery.isFetching,
+    isResultsModalOpen,
+    resultsModalGame,
+    resultsModalUserParticipationTeamIds,
+    resultsModalViewerCanManageResults,
+  ])
 
   const handleOpenResultsFromGame = useCallback(
     (game) => {
@@ -5241,14 +5131,30 @@ const GamesPage = ({
       setIsEditModalOpen(false)
       setIsTeamsModalOpen(false)
       setIsTasksViewModalOpen(false)
+      setResultsModalGame(game)
+      setResultsModalState({
+        isLoading: true,
+        error: null,
+        gameId: game.id,
+        gameName: game.name || 'Без названия',
+        rows: [],
+        teamsCount: 0,
+        participantsCount: 0,
+        computed: null,
+        interactiveResultsUrl: null,
+        userParticipationTeamIds: getUserParticipationTeams(game).map(
+          (entry) => entry.teamId,
+        ),
+        viewerCanManageResults: canManageGameStatus(game),
+      })
       setIsResultsModalOpen(true)
-      loadGameResults(game)
     },
-    [canViewResultsForGame, loadGameResults],
+    [canManageGameStatus, canViewResultsForGame],
   )
 
   const handleCloseResultsModal = useCallback(() => {
     setIsResultsModalOpen(false)
+    setResultsModalGame(null)
   }, [])
 
   const handleOpenTasksViewFromGame = useCallback(
@@ -5272,26 +5178,9 @@ const GamesPage = ({
     setIsTasksViewModalOpen(false)
   }, [])
 
-  const handleGenerateResultsFromGame = useCallback(async (game, options = {}) => {
-    const force = Boolean(options?.force)
-    const canProceed = force
-      ? canRebuildResultsForGame(game)
-      : canGenerateResultsForGame(game)
-
-    if (!game || !canProceed || isGeneratingResults) {
-      return
-    }
-
-    const locationForApi =
-      game.location ||
-      (shouldShowLocationFilter ? gamesFilterLocation : location) ||
-      ''
-
-    setIsGeneratingResults(true)
-    setFeedback(null)
-
-    try {
-        const { json } = await requestApiJson(
+  const generateResultsMutation = useMutation({
+    mutationFn: async ({ game, locationForApi }) => {
+      const { json } = await requestApiJson(
         `${CABINET_GAMES_API_BASE}/${encodeURIComponent(game.id)}/result`,
         {
           method: 'POST',
@@ -5301,7 +5190,7 @@ const GamesPage = ({
         },
       )
 
-      const nextData = {
+      return {
         gameId: json?.data?.gameId || game.id,
         gameName: json?.data?.gameName || game.name || 'Без названия',
         rows: Array.isArray(json?.data?.rows) ? json.data.rows : [],
@@ -5321,26 +5210,24 @@ const GamesPage = ({
         ),
         viewerCanManageResults: canManageGameStatus(game),
       }
+    },
+    onMutate: () => {
+      setFeedback(null)
+    },
+    onSuccess: (nextData, { game, locationForApi }) => {
+      queryClient.setQueryData(
+        buildGameResultsQueryKey({
+          gameId: game.id,
+          locationValue: locationForApi,
+        }),
+        nextData,
+      )
 
-      setResultsCacheByGameId((prev) => ({
-        ...prev,
-        [game.id]: nextData,
+      applyPersistedGameUpdate(game.id, (gameItem) => ({
+        ...gameItem,
+        isResultGenerated: true,
       }))
 
-      setGames((prev) =>
-        prev.map((gameItem) =>
-          gameItem.id === game.id
-            ? { ...gameItem, isResultGenerated: true }
-            : gameItem,
-        ),
-      )
-      setPersistedGames((prev) =>
-        prev.map((gameItem) =>
-          gameItem.id === game.id
-            ? { ...gameItem, isResultGenerated: true }
-            : gameItem,
-        ),
-      )
       setResultsModalState({
         isLoading: false,
         error: null,
@@ -5353,7 +5240,8 @@ const GamesPage = ({
         type: 'success',
         message: 'Результаты игры сформированы',
       })
-    } catch (error) {
+    },
+    onError: (error) => {
       const message = error?.message || 'Не удалось сформировать результаты'
       setFeedback({
         type: 'error',
@@ -5364,25 +5252,42 @@ const GamesPage = ({
         type: 'error',
         message,
       })
-    } finally {
-      setIsGeneratingResults(false)
+    },
+  })
+
+  const isGeneratingResults = generateResultsMutation.isPending
+
+  const handleGenerateResultsFromGame = useCallback((game, options = {}) => {
+    const force = Boolean(options?.force)
+    const canProceed = force
+      ? canRebuildResultsForGame(game)
+      : canGenerateResultsForGame(game)
+
+    if (!game || !canProceed || isGeneratingResults) {
+      return
     }
+
+    const locationForApi =
+      game.location ||
+      (shouldShowLocationFilter ? gamesFilterLocation : location) ||
+      ''
+
+    generateResultsMutation.mutate({ game, locationForApi })
   }, [
+    generateResultsMutation,
     canRebuildResultsForGame,
     canGenerateResultsForGame,
-    canManageGameStatus,
     gamesFilterLocation,
-    getUserParticipationTeams,
     isGeneratingResults,
     location,
     shouldShowLocationFilter,
   ])
 
-  const handleGenerateResults = useCallback(async () => {
+  const handleGenerateResults = useCallback(() => {
     if (!selectedGame || !canGenerateResults) {
       return
     }
-    await handleGenerateResultsFromGame(selectedGame, { force: true })
+    handleGenerateResultsFromGame(selectedGame, { force: true })
   }, [
     canGenerateResults,
     handleGenerateResultsFromGame,
@@ -6342,7 +6247,7 @@ const GamesPage = ({
         dateStyle: 'long',
         timeStyle: 'short',
       })
-    } catch (error) {
+    } catch {
       return 'Дата не назначена'
     }
   }, [modalGame])

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useMutation } from '@tanstack/react-query'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
@@ -102,24 +103,18 @@ const TeamsPage = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   const [memberActionId, setMemberActionId] = useState(null)
-  const [isAddingMember, setIsAddingMember] = useState(false)
   const [newTeamName, setNewTeamName] = useState('')
   const [newTeamDescription, setNewTeamDescription] = useState('')
   const [newTeamImage, setNewTeamImage] = useState('')
   const [newTeamOpen, setNewTeamOpen] = useState(true)
-  const [isCreatingTeam, setIsCreatingTeam] = useState(false)
   const [joinTeamId, setJoinTeamId] = useState('')
-  const [isJoiningTeam, setIsJoiningTeam] = useState(false)
   const [isTeamIdCopied, setIsTeamIdCopied] = useState(false)
   const copyTimeoutRef = useRef(null)
   const [isTeamDescriptionModalOpen, setIsTeamDescriptionModalOpen] =
     useState(false)
   const [isMemberViewModalOpen, setIsMemberViewModalOpen] = useState(false)
   const [selectedMemberUserId, setSelectedMemberUserId] = useState(null)
-  const [isLeavingTeam, setIsLeavingTeam] = useState(false)
-  const [isDeletingTeam, setIsDeletingTeam] = useState(false)
   const snackbar = useSnackbar()
   const locationOptions = useMemo(
     () =>
@@ -338,6 +333,389 @@ const TeamsPage = ({
     return Array.isArray(json?.data) ? json.data : []
   }, [])
 
+  const upsertPersistedTeam = useCallback(
+    (team) => {
+      if (!team?.id) {
+        return
+      }
+
+      const upsert = (prev) =>
+        sortTeamsByUpdatedAt([
+          ...prev.filter((item) => item.id !== team.id),
+          team,
+        ])
+
+      setTeams(upsert)
+      setPersistedTeams(upsert)
+      setSelectedTeamId(team.id)
+    },
+    [sortTeamsByUpdatedAt],
+  )
+
+  const updatePersistedTeam = useCallback((teamId, updater) => {
+    const applyUpdate = (team) => {
+      if (team.id !== teamId) {
+        return team
+      }
+
+      return typeof updater === 'function' ? updater(team) : updater
+    }
+
+    setTeams((prevTeams) => prevTeams.map(applyUpdate))
+    setPersistedTeams((prevTeams) => prevTeams.map(applyUpdate))
+  }, [])
+
+  const removePersistedTeam = useCallback((teamId) => {
+    setTeams((prevTeams) => prevTeams.filter((team) => team.id !== teamId))
+    setPersistedTeams((prevTeams) =>
+      prevTeams.filter((team) => team.id !== teamId),
+    )
+    setSelectedTeamId((prevSelectedTeamId) =>
+      prevSelectedTeamId === teamId ? null : prevSelectedTeamId,
+    )
+  }, [])
+
+  const createTeamMutation = useMutation({
+    mutationFn: async ({ name, description, image, open }) => {
+      const createPayload = buildTeamUpdatePayload({
+        name,
+        description,
+        image: image || null,
+        open: Boolean(open),
+      })
+
+      const { json } = await requestApiJson(CABINET_TEAMS_API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createPayload),
+        fallbackMessage: 'Не удалось создать команду',
+      })
+
+      const createdTeamIdRaw = json?.data?._id ?? json?.data?.id
+      const createdTeamId =
+        typeof createdTeamIdRaw === 'string'
+          ? createdTeamIdRaw
+          : (createdTeamIdRaw?.toString?.() ?? null)
+
+      if (!createdTeamId) {
+        throw new Error('Не удалось получить идентификатор новой команды')
+      }
+
+      const [freshTeam] = await fetchTeamsSnapshot([createdTeamId])
+      if (!freshTeam) {
+        throw new Error(
+          'Команда создана, но не удалось обновить список. Обновите страницу.',
+        )
+      }
+
+      return { team: freshTeam, fallbackName: name }
+    },
+    onSuccess: ({ team, fallbackName }) => {
+      upsertPersistedTeam(team)
+      setIsCreateModalOpen(false)
+      setNewTeamName('')
+      setNewTeamDescription('')
+      setNewTeamImage('')
+      setNewTeamOpen(true)
+      snackbar.success(
+        `Команда «${team.name || fallbackName}» создана. Вы назначены капитаном.`,
+      )
+    },
+    onError: (error) => {
+      console.error('Failed to create team', error)
+      snackbar.error(error?.message || 'Не удалось создать команду')
+    },
+  })
+
+  const joinTeamMutation = useMutation({
+    mutationFn: async (teamId) => {
+      const { json: teamJson } = await requestApiJson(
+        `${CABINET_TEAMS_ENTITY_API_BASE}/${teamId}`,
+        {
+          fallbackMessage: 'Команда не найдена',
+        },
+      )
+
+      const rawOpen = teamJson?.data?.open
+      const isTeamOpen =
+        rawOpen === true ||
+        rawOpen === 'true' ||
+        rawOpen === 1 ||
+        rawOpen === '1'
+
+      if (!isTeamOpen) {
+        throw new Error(
+          'В этой команде закрыт набор. Попросите капитана добавить вас вручную.',
+        )
+      }
+
+      await requestApiJson(CABINET_TEAM_MEMBERS_API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, role: 'participant' }),
+        fallbackMessage: 'Не удалось присоединиться к команде',
+      })
+
+      const [freshTeam] = await fetchTeamsSnapshot([teamId])
+      if (!freshTeam) {
+        throw new Error(
+          'Вы вступили в команду, но не удалось обновить список. Обновите страницу.',
+        )
+      }
+
+      return freshTeam
+    },
+    onSuccess: (team) => {
+      upsertPersistedTeam(team)
+      setIsJoinModalOpen(false)
+      setJoinTeamId('')
+      snackbar.success(
+        `Вы присоединились к команде «${team.name || 'без названия'}».`,
+      )
+    },
+    onError: (error) => {
+      console.error('Failed to join team', error)
+      snackbar.error(error?.message || 'Не удалось присоединиться к команде')
+    },
+  })
+
+  const saveTeamMutation = useMutation({
+    mutationFn: async (team) => {
+      const { json } = await requestApiJson(
+        `${CABINET_TEAMS_ENTITY_API_BASE}/${team.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: buildTeamUpdatePayload(team) }),
+          fallbackMessage: 'Не удалось сохранить команду',
+        },
+      )
+
+      return {
+        ...team,
+        name: json.data?.name ?? team.name,
+        description: json.data?.description ?? team.description,
+        open: Boolean(json.data?.open ?? team.open),
+        updatedAt: json.data?.updatedAt
+          ? new Date(json.data.updatedAt).toISOString()
+          : team.updatedAt,
+      }
+    },
+    onSuccess: (team) => {
+      updatePersistedTeam(team.id, team)
+      snackbar.success('Изменения сохранены')
+      setIsEditModalOpen(false)
+    },
+    onError: (error) => {
+      console.error('Failed to update team', error)
+      snackbar.error(error?.message || 'Не удалось сохранить команду')
+    },
+  })
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async ({ team, memberId }) => {
+      await requestApiJson(`${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`, {
+        method: 'DELETE',
+        fallbackMessage: 'Не удалось удалить участника',
+      })
+
+      const updatedMembers = (team.members ?? []).filter(
+        (item) => item.id !== memberId,
+      )
+
+      return {
+        team: {
+          ...team,
+          members: updatedMembers,
+          membersCount: updatedMembers.length,
+          captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+        },
+        member: (team.members ?? []).find((item) => item.id === memberId),
+      }
+    },
+    onMutate: ({ memberId }) => {
+      setMemberActionId(memberId)
+    },
+    onSuccess: ({ team, member }) => {
+      updatePersistedTeam(team.id, team)
+      snackbar.success(
+        `Участник «${member?.name || 'Без имени'}» удалён из команды`,
+      )
+    },
+    onError: (error) => {
+      console.error('Failed to remove team member', error)
+      snackbar.error(error?.message || 'Не удалось удалить участника')
+    },
+    onSettled: () => {
+      setMemberActionId(null)
+    },
+  })
+
+  const setCaptainMutation = useMutation({
+    mutationFn: async ({ team, memberId }) => {
+      const currentCaptain = (team.members ?? []).find((item) => item.isCaptain)
+
+      await Promise.all([
+        requestApiJson(`${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: { role: 'captain' } }),
+          fallbackMessage: 'Не удалось обновить роль участника',
+        }),
+        currentCaptain
+          ? requestApiJson(
+              `${CABINET_TEAM_MEMBERS_API_BASE}/${currentCaptain.id}`,
+              {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: { role: 'participant' } }),
+                fallbackMessage: 'Не удалось обновить роль участника',
+              },
+            )
+          : Promise.resolve(null),
+      ])
+
+      const updatedMembers = (team.members ?? []).map((item) => {
+        if (item.id === memberId) {
+          return { ...item, role: 'captain', isCaptain: true }
+        }
+
+        if (item.id === currentCaptain?.id) {
+          return { ...item, role: 'participant', isCaptain: false }
+        }
+
+        return item
+      })
+
+      return {
+        team: {
+          ...team,
+          members: updatedMembers,
+          captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+        },
+        member: (team.members ?? []).find((item) => item.id === memberId),
+      }
+    },
+    onMutate: ({ memberId }) => {
+      setMemberActionId(memberId)
+    },
+    onSuccess: ({ team, member }) => {
+      updatePersistedTeam(team.id, team)
+      snackbar.success(
+        `«${member?.name || 'Участник'}» назначен капитаном команды`,
+      )
+    },
+    onError: (error) => {
+      console.error('Failed to promote team member', error)
+      snackbar.error(error?.message || 'Не удалось изменить роль участника')
+    },
+    onSettled: () => {
+      setMemberActionId(null)
+    },
+  })
+
+  const addMemberMutation = useMutation({
+    mutationFn: async ({ team, userId, userOption }) => {
+      const { json } = await requestApiJson(CABINET_TEAM_MEMBERS_API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            teamId: team.id,
+            targetUserId: userId,
+            role: 'participant',
+          },
+        }),
+        fallbackMessage: 'Не удалось добавить участника',
+      })
+
+      const newMember = json?.data?.member
+        ? {
+            id: String(json.data.member.id),
+            userId: String(json.data.member.userId || userId || ''),
+            telegramId: '',
+            name: json.data.member.name || userOption?.title || 'Без имени',
+            username: json.data.member.username || null,
+            phone: null,
+            userRole: null,
+            role: 'participant',
+            isCaptain: false,
+            hasLinkedUser: true,
+          }
+        : null
+
+      const updatedMembers = newMember
+        ? [...(team.members ?? []), newMember]
+        : (team.members ?? [])
+
+      return {
+        team: {
+          ...team,
+          members: updatedMembers,
+          membersCount: updatedMembers.length,
+          captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+        },
+        userTitle: userOption?.title || 'Участник',
+      }
+    },
+    onSuccess: ({ team, userTitle }) => {
+      updatePersistedTeam(team.id, team)
+      snackbar.success(`«${userTitle}» добавлен в команду`)
+    },
+    onError: (error) => {
+      console.error('Failed to add team member', error)
+      snackbar.error(error?.message || 'Не удалось добавить участника')
+    },
+  })
+
+  const leaveTeamMutation = useMutation({
+    mutationFn: async ({ team, member }) => {
+      await requestApiJson(`${CABINET_TEAM_MEMBERS_API_BASE}/${member.id}`, {
+        method: 'DELETE',
+        fallbackMessage: 'Не удалось выйти из команды',
+      })
+
+      return team.id
+    },
+    onSuccess: (teamId) => {
+      removePersistedTeam(teamId)
+      setIsTeamDescriptionModalOpen(false)
+      snackbar.success('Вы вышли из команды')
+    },
+    onError: (error) => {
+      console.error('Failed to leave team', error)
+      snackbar.error(error?.message || 'Не удалось выйти из команды')
+    },
+  })
+
+  const deleteTeamMutation = useMutation({
+    mutationFn: async (team) => {
+      await requestApiJson(`${CABINET_TEAMS_ENTITY_API_BASE}/${team.id}`, {
+        method: 'DELETE',
+        fallbackMessage: 'Не удалось удалить команду',
+      })
+
+      return team.id
+    },
+    onSuccess: (teamId) => {
+      removePersistedTeam(teamId)
+      setIsEditModalOpen(false)
+      setIsTeamDescriptionModalOpen(false)
+      snackbar.success('Команда удалена')
+    },
+    onError: (error) => {
+      console.error('Failed to delete team', error)
+      snackbar.error(error?.message || 'Не удалось удалить команду')
+    },
+  })
+
+  const isSaving = saveTeamMutation.isPending
+  const isAddingMember = addMemberMutation.isPending
+  const isCreatingTeam = createTeamMutation.isPending
+  const isJoiningTeam = joinTeamMutation.isPending
+  const isLeavingTeam = leaveTeamMutation.isPending
+  const isDeletingTeam = deleteTeamMutation.isPending
+
   const updateSelectedTeam = useCallback(
     (updater) => {
       if (!selectedTeamId || !canManageSelectedTeam) {
@@ -524,80 +902,22 @@ const TeamsPage = ({
       return
     }
 
-    setIsCreatingTeam(true)
-
-    try {
-      const createPayload = buildTeamUpdatePayload({
-        name: trimmedName,
-        description: trimmedDescription,
-        image: newTeamImage || null,
-        open: Boolean(newTeamOpen),
-      })
-
-      const { json } = await requestApiJson(CABINET_TEAMS_API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(createPayload),
-        fallbackMessage: 'Не удалось создать команду',
-      })
-
-      const createdTeamIdRaw = json?.data?._id ?? json?.data?.id
-      const createdTeamId =
-        typeof createdTeamIdRaw === 'string'
-          ? createdTeamIdRaw
-          : (createdTeamIdRaw?.toString?.() ?? null)
-
-      if (!createdTeamId) {
-        throw new Error('Не удалось получить идентификатор новой команды')
-      }
-
-      const [freshTeam] = await fetchTeamsSnapshot([createdTeamId])
-
-      if (!freshTeam) {
-        throw new Error(
-          'Команда создана, но не удалось обновить список. Обновите страницу.',
-        )
-      }
-
-      setTeams((prev) =>
-        sortTeamsByUpdatedAt([
-          ...prev.filter((item) => item.id !== freshTeam.id),
-          freshTeam,
-        ]),
-      )
-      setPersistedTeams((prev) =>
-        sortTeamsByUpdatedAt([
-          ...prev.filter((item) => item.id !== freshTeam.id),
-          freshTeam,
-        ]),
-      )
-      setSelectedTeamId(freshTeam.id)
-
-      setIsCreateModalOpen(false)
-      setNewTeamName('')
-      setNewTeamDescription('')
-      setNewTeamImage('')
-      setNewTeamOpen(true)
-      snackbar.success(
-        `Команда «${freshTeam.name || trimmedName}» создана. Вы назначены капитаном.`,
-      )
-    } catch (error) {
-      console.error('Failed to create team', error)
-      snackbar.error(error?.message || 'Не удалось создать команду')
-    } finally {
-      setIsCreatingTeam(false)
-    }
+    createTeamMutation.mutate({
+      name: trimmedName,
+      description: trimmedDescription,
+      image: newTeamImage,
+      open: newTeamOpen,
+    })
   }, [
     canUseSelfServiceTeamsActions,
+    createTeamMutation,
     currentUserId,
-    fetchTeamsSnapshot,
     isTeamsLimitReached,
     newTeamDescription,
     newTeamImage,
     newTeamName,
     newTeamOpen,
     snackbar,
-    sortTeamsByUpdatedAt,
   ])
 
   const handleJoinTeam = useCallback(async () => {
@@ -629,77 +949,14 @@ const TeamsPage = ({
       return
     }
 
-    setIsJoiningTeam(true)
-
-    try {
-      const { json: teamJson } = await requestApiJson(
-        `${CABINET_TEAMS_ENTITY_API_BASE}/${trimmedTeamId}`,
-        {
-          fallbackMessage: 'Команда не найдена',
-        },
-      )
-
-      const rawOpen = teamJson?.data?.open
-      const isTeamOpen =
-        rawOpen === true ||
-        rawOpen === 'true' ||
-        rawOpen === 1 ||
-        rawOpen === '1'
-
-      if (!isTeamOpen) {
-        throw new Error(
-          'В этой команде закрыт набор. Попросите капитана добавить вас вручную.',
-        )
-      }
-
-      await requestApiJson(CABINET_TEAM_MEMBERS_API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId: trimmedTeamId, role: 'participant' }),
-        fallbackMessage: 'Не удалось присоединиться к команде',
-      })
-
-      const [freshTeam] = await fetchTeamsSnapshot([trimmedTeamId])
-
-      if (!freshTeam) {
-        throw new Error(
-          'Вы вступили в команду, но не удалось обновить список. Обновите страницу.',
-        )
-      }
-
-      setTeams((prev) =>
-        sortTeamsByUpdatedAt([
-          ...prev.filter((item) => item.id !== freshTeam.id),
-          freshTeam,
-        ]),
-      )
-      setPersistedTeams((prev) =>
-        sortTeamsByUpdatedAt([
-          ...prev.filter((item) => item.id !== freshTeam.id),
-          freshTeam,
-        ]),
-      )
-      setSelectedTeamId(freshTeam.id)
-
-      setIsJoinModalOpen(false)
-      setJoinTeamId('')
-      snackbar.success(
-        `Вы присоединились к команде «${freshTeam.name || 'без названия'}».`,
-      )
-    } catch (error) {
-      console.error('Failed to join team', error)
-      snackbar.error(error?.message || 'Не удалось присоединиться к команде')
-    } finally {
-      setIsJoiningTeam(false)
-    }
+    joinTeamMutation.mutate(trimmedTeamId)
   }, [
     canUseSelfServiceTeamsActions,
     currentUserId,
-    fetchTeamsSnapshot,
     isTeamsLimitReached,
     joinTeamId,
+    joinTeamMutation,
     snackbar,
-    sortTeamsByUpdatedAt,
     teams,
   ])
 
@@ -708,48 +965,8 @@ const TeamsPage = ({
       return
     }
 
-    setIsSaving(true)
-
-    try {
-      const { json } = await requestApiJson(
-        `${CABINET_TEAMS_ENTITY_API_BASE}/${selectedTeam.id}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: buildTeamUpdatePayload(selectedTeam) }),
-          fallbackMessage: 'Не удалось сохранить команду',
-        },
-      )
-
-      const updatedTeam = {
-        ...selectedTeam,
-        name: json.data?.name ?? selectedTeam.name,
-        description: json.data?.description ?? selectedTeam.description,
-        open: Boolean(json.data?.open ?? selectedTeam.open),
-        updatedAt: json.data?.updatedAt
-          ? new Date(json.data.updatedAt).toISOString()
-          : selectedTeam.updatedAt,
-      }
-
-      setTeams((prevTeams) =>
-        prevTeams.map((team) =>
-          team.id === selectedTeamId ? updatedTeam : team,
-        ),
-      )
-      setPersistedTeams((prevTeams) =>
-        prevTeams.map((team) =>
-          team.id === selectedTeamId ? updatedTeam : team,
-        ),
-      )
-      snackbar.success('Изменения сохранены')
-      setIsEditModalOpen(false)
-    } catch (error) {
-      console.error('Failed to update team', error)
-      snackbar.error(error?.message || 'Не удалось сохранить команду')
-    } finally {
-      setIsSaving(false)
-    }
-  }, [canManageSelectedTeam, selectedTeam, selectedTeamId, snackbar])
+    saveTeamMutation.mutate(selectedTeam)
+  }, [canManageSelectedTeam, saveTeamMutation, selectedTeam])
 
   const handleModalPrimaryAction = useCallback(() => {
     if (isSaving) {
@@ -787,46 +1004,9 @@ const TeamsPage = ({
         return
       }
 
-      setMemberActionId(memberId)
-
-      try {
-        await requestApiJson(`${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`, {
-          method: 'DELETE',
-          fallbackMessage: 'Не удалось удалить участника',
-        })
-
-        const updatedMembers = (selectedTeam.members ?? []).filter(
-          (item) => item.id !== memberId,
-        )
-        const updatedTeam = {
-          ...selectedTeam,
-          members: updatedMembers,
-          membersCount: updatedMembers.length,
-          captain: updatedMembers.find((item) => item.isCaptain) ?? null,
-        }
-
-        setTeams((prevTeams) =>
-          prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team,
-          ),
-        )
-        setPersistedTeams((prevTeams) =>
-          prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team,
-          ),
-        )
-
-        snackbar.success(
-          `Участник «${member.name || 'Без имени'}» удалён из команды`,
-        )
-      } catch (error) {
-        console.error('Failed to remove team member', error)
-        snackbar.error(error?.message || 'Не удалось удалить участника')
-      } finally {
-        setMemberActionId(null)
-      }
+      removeMemberMutation.mutate({ team: selectedTeam, memberId })
     },
-    [canManageSelectedTeam, selectedTeam, selectedTeamId, snackbar],
+    [canManageSelectedTeam, removeMemberMutation, selectedTeam, snackbar],
   )
 
   const handleSetCaptain = useCallback(
@@ -840,80 +1020,9 @@ const TeamsPage = ({
         return
       }
 
-      const currentCaptain = selectedTeam.members.find((item) => item.isCaptain)
-
-      setMemberActionId(memberId)
-
-      try {
-        const requests = [
-          fetch(`${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: { role: 'captain' } }),
-          }),
-        ]
-
-        if (currentCaptain) {
-          requests.push(
-            fetch(`${CABINET_TEAM_MEMBERS_API_BASE}/${currentCaptain.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ data: { role: 'participant' } }),
-            }),
-          )
-        }
-
-        const responses = await Promise.all(requests)
-        const payloads = await Promise.all(responses.map((res) => res.json()))
-
-        responses.forEach((res, index) => {
-          if (!res.ok || payloads[index]?.success === false) {
-            throw new Error(
-              payloads[index]?.error || 'Не удалось обновить роль участника',
-            )
-          }
-        })
-
-        const updatedMembers = (selectedTeam.members ?? []).map((item) => {
-          if (item.id === memberId) {
-            return { ...item, role: 'captain', isCaptain: true }
-          }
-
-          if (item.id === currentCaptain?.id) {
-            return { ...item, role: 'participant', isCaptain: false }
-          }
-
-          return item
-        })
-
-        const updatedTeam = {
-          ...selectedTeam,
-          members: updatedMembers,
-          captain: updatedMembers.find((item) => item.isCaptain) ?? null,
-        }
-
-        setTeams((prevTeams) =>
-          prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team,
-          ),
-        )
-        setPersistedTeams((prevTeams) =>
-          prevTeams.map((team) =>
-            team.id === selectedTeamId ? updatedTeam : team,
-          ),
-        )
-
-        snackbar.success(
-          `«${member.name || 'Участник'}» назначен капитаном команды`,
-        )
-      } catch (error) {
-        console.error('Failed to promote team member', error)
-        snackbar.error(error?.message || 'Не удалось изменить роль участника')
-      } finally {
-        setMemberActionId(null)
-      }
+      setCaptainMutation.mutate({ team: selectedTeam, memberId })
     },
-    [canManageSelectedTeam, selectedTeam, selectedTeamId, snackbar],
+    [canManageSelectedTeam, selectedTeam, setCaptainMutation],
   )
 
   const handleAddMember = useCallback(
@@ -922,71 +1031,9 @@ const TeamsPage = ({
         return
       }
 
-      setIsAddingMember(true)
-
-      try {
-        const { json } = await requestApiJson(CABINET_TEAM_MEMBERS_API_BASE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            data: {
-              teamId: selectedTeam.id,
-              targetUserId: userId,
-              role: 'participant',
-            },
-          }),
-          fallbackMessage: 'Не удалось добавить участника',
-        })
-
-        const newMember = json?.data?.member
-          ? {
-              id: String(json.data.member.id),
-              userId: String(json.data.member.userId || userId || ''),
-              telegramId: '',
-              name: json.data.member.name || userOption?.title || 'Без имени',
-              username: json.data.member.username || null,
-              phone: null,
-              userRole: null,
-              role: 'participant',
-              isCaptain: false,
-              hasLinkedUser: true,
-            }
-          : null
-
-        const patchTeam = (team) => {
-          const updatedMembers = newMember
-            ? [...(team.members ?? []), newMember]
-            : team.members ?? []
-          return {
-            ...team,
-            members: updatedMembers,
-            membersCount: updatedMembers.length,
-            captain: updatedMembers.find((item) => item.isCaptain) ?? null,
-          }
-        }
-
-        setTeams((prevTeams) =>
-          prevTeams.map((team) =>
-            team.id === selectedTeamId ? patchTeam(team) : team,
-          ),
-        )
-        setPersistedTeams((prevTeams) =>
-          prevTeams.map((team) =>
-            team.id === selectedTeamId ? patchTeam(team) : team,
-          ),
-        )
-
-        snackbar.success(
-          `«${userOption?.title || 'Участник'}» добавлен в команду`,
-        )
-      } catch (error) {
-        console.error('Failed to add team member', error)
-        snackbar.error(error?.message || 'Не удалось добавить участника')
-      } finally {
-        setIsAddingMember(false)
-      }
+      addMemberMutation.mutate({ team: selectedTeam, userId, userOption })
     },
-    [canManageSelectedTeam, selectedTeam, selectedTeamId, snackbar],
+    [addMemberMutation, canManageSelectedTeam, selectedTeam],
   )
 
   const teamRestrictionMessage = useMemo(() => {
@@ -1134,37 +1181,14 @@ const TeamsPage = ({
       return
     }
 
-    setIsLeavingTeam(true)
-
-    try {
-      await requestApiJson(
-        `${CABINET_TEAM_MEMBERS_API_BASE}/${selectedTeamCurrentMember.id}`,
-        {
-          method: 'DELETE',
-          fallbackMessage: 'Не удалось выйти из команды',
-        },
-      )
-
-      setTeams((prevTeams) =>
-        prevTeams.filter((team) => team.id !== selectedTeam.id),
-      )
-      setPersistedTeams((prevTeams) =>
-        prevTeams.filter((team) => team.id !== selectedTeam.id),
-      )
-      closeTeamDescriptionModal()
-
-      snackbar.success('Вы вышли из команды')
-    } catch (error) {
-      console.error('Failed to leave team', error)
-      snackbar.error(error?.message || 'Не удалось выйти из команды')
-    } finally {
-      setIsLeavingTeam(false)
-    }
+    leaveTeamMutation.mutate({
+      team: selectedTeam,
+      member: selectedTeamCurrentMember,
+    })
   }, [
-    closeTeamDescriptionModal,
+    leaveTeamMutation,
     selectedTeam,
     selectedTeamCurrentMember,
-    snackbar,
   ])
 
   const handleDeleteSelectedTeam = useCallback(async () => {
@@ -1185,38 +1209,8 @@ const TeamsPage = ({
       return
     }
 
-    setIsDeletingTeam(true)
-
-    try {
-      await requestApiJson(
-        `${CABINET_TEAMS_ENTITY_API_BASE}/${selectedTeam.id}`,
-        {
-          method: 'DELETE',
-          fallbackMessage: 'Не удалось удалить команду',
-        },
-      )
-
-      const deletedTeamId = selectedTeam.id
-      setTeams((prevTeams) =>
-        prevTeams.filter((team) => team.id !== deletedTeamId),
-      )
-      setPersistedTeams((prevTeams) =>
-        prevTeams.filter((team) => team.id !== deletedTeamId),
-      )
-      setSelectedTeamId((prevSelectedTeamId) =>
-        prevSelectedTeamId === deletedTeamId ? null : prevSelectedTeamId,
-      )
-      setIsEditModalOpen(false)
-      setIsTeamDescriptionModalOpen(false)
-
-      snackbar.success('Команда удалена')
-    } catch (error) {
-      console.error('Failed to delete team', error)
-      snackbar.error(error?.message || 'Не удалось удалить команду')
-    } finally {
-      setIsDeletingTeam(false)
-    }
-  }, [canDeleteSelectedTeam, isDeletingTeam, selectedTeam, snackbar])
+    deleteTeamMutation.mutate(selectedTeam)
+  }, [canDeleteSelectedTeam, deleteTeamMutation, isDeletingTeam, selectedTeam])
 
   return (
     <>

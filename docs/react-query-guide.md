@@ -319,6 +319,8 @@ const cachedUser = queryClient.getQueryData(['user', userId])
 - ✅ EntitySelectField.js - paginated entity search
 - ✅ AdminUsersPageClient.js - filtered users list + submit mutations
 - ✅ AdminTeamsPageClient.js - filtered teams list + team/member mutations
+- ✅ TeamsPageClient.js - team self-service mutations
+- ✅ GamesPageClient.js - filtered games list pagination + results query + create/save/push/register/team-management/result mutations
 
 ### With Optimistic Updates (useOptimisticMutation)
 
@@ -341,8 +343,8 @@ const cachedUser = queryClient.getQueryData(['user', userId])
 
 **Low Priority** (complex state):
 
-- [ ] Main TeamsPageClient.js - controlled component
-- [ ] GamesPageClient.js - complex filtering
+- [x] Main TeamsPageClient.js - self-service mutations migrated; list stays server-provided
+- [x] GamesPageClient.js - list pagination, results loading, and main create/save/register/team-management/result mutations migrated
 
 ## Debugging
 

@@ -1,8 +1,8 @@
 # React Query Implementation Roadmap
 
-## Current Status: ✅ Phase 1 Complete / Phase 2 Pending
+## Current Status: ✅ Core Migration Complete / Optional Phase 3-4 Pending
 
-Completed migration of core admin modals (4 components) + custom optimistic mutation hook. As of 2026-04-27, the remaining items below are still candidates for future bounded migrations.
+Completed migration of core admin modals, selectors, photo review, preview/control pages, admin lists, and the main teams/games cabinet pages. As of 2026-04-28, the remaining items are optional developer-experience or test-coverage work, not required feature migration.
 
 ---
 
@@ -63,16 +63,23 @@ Time estimate: 4-6 hours
 
 Time estimate: 6-8 hours
 
-- [ ] **TeamsPageClient.js** - main teams page
-  - Current: Complex controlled component
-  - Challenge: Filtering affects queryKey
-  - Pattern: useQuery with deps in queryKey
-  - Example: `['teams', { location, search, sort }]`
+- [x] **TeamsPageClient.js** - main teams page mutations
+  - Migrated: create/join/save/add-member/remove-member/set-captain/leave/delete actions use `useMutation`
+  - Current: initial teams list still comes from server props; local draft state remains separate from persisted team state
+  - Note: no client list query was introduced because this page has no standalone client refetch/pagination boundary yet
 
-- [ ] **GamesPageClient.js** - main games page
-  - Similar complexity as TeamsPageClient
-  - Multiple filters: status, season, location
-  - Pagination support
+- [x] **GamesPageClient.js** - main games page list/query mutations migrated
+  - Migrated: filtered games list and "load more" pagination use `useInfiniteQuery`
+  - Query key: `['cabinet-games', { view, role, location }]`
+  - Migrated: status actions refresh the list through `gamesQuery.refetch()`
+  - Migrated: create game submit uses `useMutation` and invalidates `cabinet-games`
+  - Migrated: push broadcast submit uses `useMutation`
+  - Migrated: register team and cancel registration actions use `useMutation` and sync active `cabinet-games` query pages
+  - Migrated: team-management modal add/remove/out-of-competition actions use `useMutation`
+  - Migrated: result generation uses `useMutation` and syncs active `cabinet-games` query pages
+  - Migrated: game save and save-before-task-preview use `useMutation` and sync active `cabinet-games` query pages
+  - Migrated: result modal loading uses `useQuery` with `['game-results', { gameId, location }]`; team composition changes clear related result queries
+  - Remaining: no high-priority React Query boundary left; keep future changes bounded
 
 ---
 

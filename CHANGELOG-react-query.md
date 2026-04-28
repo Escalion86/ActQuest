@@ -24,11 +24,12 @@
 - `components/cabinet/app-router/GameControlPageClient.js` uses `useQuery` for live game status with React Query polling via `refetchInterval`.
 - `components/cabinet/app-router/AdminUsersPageClient.js` uses `useInfiniteQuery` for filtered admin users list pagination and `useMutation` for profile save, Telegram phone request, and push message submits; profile saves sync active `admin-users` query pages.
 - `components/cabinet/app-router/AdminTeamsPageClient.js` uses `useInfiniteQuery` for filtered admin teams list pagination and `useMutation` for save/delete/add-member/remove-member/set-captain actions with active `admin-teams` query page sync.
+- `components/cabinet/app-router/TeamsPageClient.js` uses `useMutation` for create/join/save/add-member/remove-member/set-captain/leave/delete actions while keeping server-provided initial teams and local draft state.
+- `components/cabinet/app-router/GamesPageClient.js` uses `useInfiniteQuery` for filtered games list pagination and game results loading, refreshes the list query after status actions, and uses `useMutation` for game create/save, save-before-task-preview, game push broadcasts, team registration/cancellation, team-management add/remove/out-of-competition actions, and result generation.
 
 ### Still Not Done
 
-- Main list pages (`TeamsPageClient.js`, `GamesPageClient.js`) still mostly use manual request state and should be migrated only when the query boundaries are clear.
-- Main list pages (`TeamsPageClient.js`, `GamesPageClient.js`) are the remaining large manual-request areas.
+- No high-priority React Query migration remains in `GamesPageClient.js`; future work should be limited to optional cleanup or new data boundaries.
 - React Query DevTools are not installed and should stay optional/dev-only.
 - No dedicated tests currently verify cache sharing, invalidation, or optimistic rollback behavior.
 
@@ -166,46 +167,37 @@
 ✅ TypeScript support  
 ✅ DevTools-ready (can add @tanstack/react-query-devtools)
 
-### ⚠️ Known Limitations
+### ⚠️ Current Limitations
 
-- [Future] GameTeamsModal still has manual fetch (good next target)
-- [Future] AdminTeamsList/AdminUsersList still use custom pagination
-- [Future] Complex components (TeamsPageClient) not yet migrated
-- [Feature] No advanced patterns yet (parallel queries, infinite scroll)
+- [Optional] React Query DevTools are not installed; keep them dev-only if added.
+- [Optional] Dedicated cache/invalidation/rollback tests are still missing.
+- [Optional] Some large pages intentionally keep local draft state outside React Query.
+- [Optional] Persistence/offline cache is not configured and is not currently required.
 
 ### 📋 Next Steps
 
-**Phase 2** (High Priority - 2-3 hours):
+**Completed since initial 1.0.0 notes:**
 
-- [ ] Migrate GameTeamsModal to useQuery
-- [ ] Migrate EntitySelectField paginated search
-- [ ] Add test coverage for cache behavior
+- [x] GameTeamsModal team details loading
+- [x] EntitySelectField paginated search
+- [x] AdminUsersList pagination and submit mutations
+- [x] AdminTeamsList pagination and team/member mutations
+- [x] TeamsPageClient self-service mutations
+- [x] GamesPageClient list pagination, result loading, and main mutations
 
-**Phase 3** (Medium Priority - 4-6 hours):
+**Optional follow-up:**
 
-- [ ] AdminUsersList with mutations
-- [ ] AdminTeamsList with mutations
-- [ ] Optimize filter-based queries
-
-**Phase 4** (Low Priority - 6-8 hours):
-
-- [ ] TeamsPageClient complex filtering
-- [ ] GamesPageClient complex filtering
-- [ ] Implement React Query DevTools
-
-**Nice to Have**:
-
-- [ ] Infinite query support (pagination)
-- [ ] Parallel queries
-- [ ] Offline persistence
-- [ ] Advanced cache strategies
+- [ ] Add focused tests for cache behavior and optimistic rollback
+- [ ] Add React Query DevTools only for local development
+- [ ] Add README section that links to the React Query guide/roadmap
+- [ ] Consider persistence/offline cache only if product requirements appear
 
 ### 📚 Documentation
 
 For developers working on this:
 
 1. Read `/docs/react-query-guide.md` for patterns
-2. Check `/docs/react-query-roadmap.md` for upcoming work
+2. Check `/docs/react-query-roadmap.md` for optional follow-up work
 3. Copy patterns from implemented modals
 4. Use `useOptimisticMutation` hook for mutations
 
