@@ -1684,6 +1684,12 @@ const GamesPage = ({
 
   const isPushBroadcastSubmitting = pushBroadcastMutation.isPending
 
+  const resetRegisterForm = useCallback((nextGameId = '') => {
+    setRegisterGameId(nextGameId)
+    setRegisterTeamId('')
+    setRegisterFeedback(null)
+  }, [])
+
   const registerTeamMutation = useMutation({
     mutationFn: async ({ gameId, teamId }) => {
       await requestApiJson(
@@ -2075,12 +2081,6 @@ const GamesPage = ({
     isLoadingMoreGames,
   ])
 
-  const resetRegisterForm = useCallback((nextGameId = '') => {
-    setRegisterGameId(nextGameId)
-    setRegisterTeamId('')
-    setRegisterFeedback(null)
-  }, [])
-
   const handleCloseRegisterModal = useCallback(() => {
     if (isRegisterSubmitting) {
       return
@@ -2404,24 +2404,6 @@ const GamesPage = ({
     setCreateGameCloneOptions(DEFAULT_CREATE_GAME_CLONE_OPTIONS)
     setIsCreateGameModalOpen(true)
   }, [location])
-
-  const handleCloseCreateGameModal = useCallback(() => {
-    if (isCreatingGame) {
-      return
-    }
-
-    setIsCreateGameModalOpen(false)
-    setNewGameName('')
-    setNewGameIsRated(true)
-    setCreateGameLocation(location || gameLocationOptions[0]?.key || '')
-    setCreateGameSeasonId('')
-    setCreateGameMode(CREATE_GAME_MODE_EMPTY)
-    setCloneSourceGameId('')
-    setCloneSourceGames([])
-    setIsCloneSourceGamesLoading(false)
-    setCreateGameCloneOptions(DEFAULT_CREATE_GAME_CLONE_OPTIONS)
-    setCreateGameFeedback(null)
-  }, [isCreatingGame, location])
 
   const handleChangeCreateGameCloneOption = useCallback(
     (optionKey, checked) => {
@@ -2882,6 +2864,24 @@ const GamesPage = ({
     isCreatingGame,
     newGameName,
   ])
+
+  const handleCloseCreateGameModal = useCallback(() => {
+    if (isCreatingGame) {
+      return
+    }
+
+    setIsCreateGameModalOpen(false)
+    setNewGameName('')
+    setNewGameIsRated(true)
+    setCreateGameLocation(location || gameLocationOptions[0]?.key || '')
+    setCreateGameSeasonId('')
+    setCreateGameMode(CREATE_GAME_MODE_EMPTY)
+    setCloneSourceGameId('')
+    setCloneSourceGames([])
+    setIsCloneSourceGamesLoading(false)
+    setCreateGameCloneOptions(DEFAULT_CREATE_GAME_CLONE_OPTIONS)
+    setCreateGameFeedback(null)
+  }, [isCreatingGame, location])
 
   const handleCreateGame = useCallback(async () => {
     const trimmedName = newGameName.trim()
