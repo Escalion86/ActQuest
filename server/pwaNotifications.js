@@ -159,10 +159,12 @@ const sendToUserSubscriptions = async ({ db, user, notification, notificationDoc
 
   if (invalidEndpoints.length > 0) {
     try {
-      const filter = user?._id ? { _id: user._id } : { telegramId: user.telegramId }
+      if (!user?._id) {
+        return { delivered, removed: invalidEndpoints.length }
+      }
 
       await db.model('Users').updateOne(
-        filter,
+        { _id: user._id },
         {
           $pull: {
             pushSubscriptions: {
@@ -182,7 +184,11 @@ const sendToUserSubscriptions = async ({ db, user, notification, notificationDoc
 export const ensureWebPushConfigured = () => ensureConfig()
 
 export const broadcastNotificationToUsers = async ({ db, users, notification }) => {
-  if (!Array.isArray(users) || users.length === 0) {
+  const targetUsers = (Array.isArray(users) ? users : []).filter((user) =>
+    Boolean(user?._id),
+  )
+
+  if (targetUsers.length === 0) {
     return {
       created: 0,
       delivered: 0,
@@ -197,8 +203,8 @@ export const broadcastNotificationToUsers = async ({ db, users, notification }) 
   const resolvedLocation = notification?.location || notification?.data?.location || 'global'
 
   const notificationDocs = await Notifications.insertMany(
-    users.map((user) => ({
-      userTelegramId: user.telegramId,
+    targetUsers.map((user) => ({
+      userId: String(user._id),
       location: resolvedLocation,
       title: notification?.title || 'ActQuest',
       body: notification?.body || '',
@@ -229,7 +235,8 @@ export const broadcastNotificationToUsers = async ({ db, users, notification }) 
   await Promise.all(
     notificationDocs.map((doc, index) => {
       const targetUser =
-        users[index] || users.find((item) => item.telegramId === doc.userTelegramId)
+        targetUsers[index] ||
+        targetUsers.find((item) => String(item?._id) === String(doc.userId))
 
       if (!targetUser) {
         return Promise.resolve()

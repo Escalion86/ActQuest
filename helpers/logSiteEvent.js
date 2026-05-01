@@ -100,7 +100,6 @@ const logSiteEvent = async ({
         const targetUsers = (Array.isArray(admins) ? admins : []).filter(
           (user) =>
             isAdminRole(user?.role) &&
-            Number.isFinite(Number(user?.telegramId)) &&
             Array.isArray(user?.pushSubscriptions) &&
             user.pushSubscriptions.length > 0,
         )

@@ -36,15 +36,26 @@ const mapNotification = (notification) => ({
   location: notification.location,
 })
 
+const getSessionUserId = (session) => {
+  const rawId =
+    session?.user?.globalUserId ||
+    session?.user?.userId ||
+    session?.user?._id ||
+    session?.user?.id ||
+    null
+
+  return rawId ? String(rawId) : ''
+}
+
 export async function GET(request) {
   const session = await getServerSession(authOptions)
+  const userId = getSessionUserId(session)
 
-  if (!session?.user?.telegramId) {
+  if (!userId) {
     return NextResponse.json(
       {
         success: false,
-        error:
-          'Необходимо войти через Telegram, чтобы просматривать уведомления.',
+        error: 'Необходимо войти в аккаунт, чтобы просматривать уведомления.',
       },
       { status: 401 },
     )
@@ -77,12 +88,11 @@ export async function GET(request) {
     }
 
     const Notifications = db.model('Notifications')
-    const telegramId = session.user.telegramId
     const limitParam = request.nextUrl.searchParams.get('limit')
     const limit = Math.min(Math.max(parseInt(limitParam || '50', 10), 1), 200)
 
     const notifications = await Notifications.find({
-      userTelegramId: telegramId,
+      userId,
       location,
     })
       .sort({ createdAt: -1 })
@@ -110,13 +120,13 @@ export async function GET(request) {
 
 export async function PATCH(request) {
   const session = await getServerSession(authOptions)
+  const userId = getSessionUserId(session)
 
-  if (!session?.user?.telegramId) {
+  if (!userId) {
     return NextResponse.json(
       {
         success: false,
-        error:
-          'Необходимо войти через Telegram, чтобы просматривать уведомления.',
+        error: 'Необходимо войти в аккаунт, чтобы просматривать уведомления.',
       },
       { status: 401 },
     )
@@ -149,7 +159,6 @@ export async function PATCH(request) {
     }
 
     const Notifications = db.model('Notifications')
-    const telegramId = session.user.telegramId
     const ids = body?.notificationIds
 
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -185,7 +194,7 @@ export async function PATCH(request) {
     const result = await Notifications.updateMany(
       {
         _id: { $in: objectIds },
-        userTelegramId: telegramId,
+        userId,
         location,
         readAt: { $exists: true, $eq: null },
       },

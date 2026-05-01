@@ -9,18 +9,46 @@ const normalizeUserAgent = (value) => {
   return value.slice(0, 500)
 }
 
+const getSessionUserId = (session) => {
+  const rawId =
+    session?.user?.globalUserId ||
+    session?.user?.userId ||
+    session?.user?._id ||
+    session?.user?.id ||
+    null
+
+  return rawId ? String(rawId) : ''
+}
+
+const getSessionTelegramId = (session) => {
+  const telegramId = Number(session?.user?.telegramId)
+  return Number.isFinite(telegramId) ? telegramId : null
+}
+
+const isObjectIdString = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ''))
+
 const ensureUser = async ({ db, session }) => {
   const Users = db.model('Users')
-  const telegramId = session.user.telegramId
+  const userId = getSessionUserId(session)
+  const telegramId = getSessionTelegramId(session)
 
-  let user = await Users.findOne({ telegramId })
+  let user = isObjectIdString(userId) ? await Users.findById(userId) : null
+
+  if (user) {
+    return user
+  }
+
+  if (telegramId !== null) {
+    user = await Users.findOne({ telegramId })
+  }
 
   if (user) {
     return user
   }
 
   user = await Users.create({
-    telegramId,
+    ...(isObjectIdString(userId) ? { _id: userId } : {}),
+    ...(telegramId !== null ? { telegramId } : {}),
     name: session.user?.name || 'Участник',
     username: session.user?.username ?? null,
     photoUrl: session.user?.photoUrl ?? null,
@@ -57,13 +85,14 @@ const buildSubscription = ({ subscription, userAgent }) => {
 
 export async function POST(request) {
   const session = await getServerSession(authOptions)
+  const sessionUserId = getSessionUserId(session)
+  const sessionTelegramId = getSessionTelegramId(session)
 
-  if (!session?.user?.telegramId) {
+  if (!isObjectIdString(sessionUserId) && sessionTelegramId === null) {
     return NextResponse.json(
       {
         success: false,
-        error:
-          'Авторизуйтесь через Telegram, чтобы управлять уведомлениями.',
+        error: 'Авторизуйтесь, чтобы управлять уведомлениями.',
       },
       { status: 401 },
     )
@@ -163,12 +192,15 @@ export async function POST(request) {
 export async function DELETE(request) {
   const session = await getServerSession(authOptions)
 
-  if (!session?.user?.telegramId) {
+  const sessionUserId = getSessionUserId(session)
+
+  const sessionTelegramId = getSessionTelegramId(session)
+
+  if (!isObjectIdString(sessionUserId) && sessionTelegramId === null) {
     return NextResponse.json(
       {
         success: false,
-        error:
-          'Авторизуйтесь через Telegram, чтобы управлять уведомлениями.',
+        error: 'Авторизуйтесь, чтобы управлять уведомлениями.',
       },
       { status: 401 },
     )
@@ -201,7 +233,6 @@ export async function DELETE(request) {
     }
 
     const Users = db.model('Users')
-    const telegramId = session.user.telegramId
     const endpoint = body?.endpoint || request.nextUrl.searchParams.get('endpoint')
 
     if (!endpoint) {
@@ -211,8 +242,13 @@ export async function DELETE(request) {
       )
     }
 
+    const userFilter =
+      isObjectIdString(sessionUserId)
+        ? { _id: sessionUserId }
+        : { telegramId: sessionTelegramId }
+
     const result = await Users.updateOne(
-      { telegramId },
+      userFilter,
       {
         $pull: {
           pushSubscriptions: {

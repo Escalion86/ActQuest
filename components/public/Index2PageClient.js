@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import PropTypes from 'prop-types'
 import { LOCATIONS } from '@server/serverConstants'
 import SeoHomepageFooterSections from '@components/public/seo/SeoHomepageFooterSections'
+import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import { reachAnalyticsGoal } from '@helpers/yandexMetrika'
 
 const ACCESS_KEY = 'aq_index2_access_open'
@@ -1107,6 +1108,7 @@ const Index2Page = ({ seoFooter }) => {
               id,
               name: item?.name || 'Без названия',
               dateStart: Number.isFinite(startTs) ? startTs : 0,
+              location: item?.location || location,
             }
           })
           .filter((item) => item.id)
@@ -1124,7 +1126,7 @@ const Index2Page = ({ seoFooter }) => {
         setNearestScenarioGame({
           ...nearest,
           dateLabel: nearest.dateStart
-            ? new Date(nearest.dateStart).toLocaleString('ru-RU', {
+            ? formatDateInLocationTimeZone(nearest.dateStart, nearest.location, {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',

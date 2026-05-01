@@ -1,6 +1,6 @@
 const notificationsSchema = {
-  userTelegramId: {
-    type: Number,
+  userId: {
+    type: String,
     required: true,
     index: true,
   },

@@ -87,17 +87,6 @@ export async function POST(request) {
       )
     }
 
-    const userTelegramId = Number(user?.telegramId)
-    if (!Number.isFinite(userTelegramId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'У пользователя не указан Telegram ID для отправки уведомлений',
-        },
-        { status: 400 },
-      )
-    }
-
     const location =
       resolveUserCityKey(
         {

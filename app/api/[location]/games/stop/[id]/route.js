@@ -53,16 +53,16 @@ const getRegisteredUsersByGame = async ({ db, gameId }) => {
     .select({ _id: 1, telegramId: 1, pushSubscriptions: 1 })
     .lean()
 
-  const uniqueByTelegramId = new Map()
+  const uniqueByUserId = new Map()
   users.forEach((user) => {
-    const telegramId = Number(user?.telegramId)
-    if (!Number.isFinite(telegramId)) {
+    const userId = toStringId(user?._id)
+    if (!userId) {
       return
     }
-    uniqueByTelegramId.set(telegramId, user)
+    uniqueByUserId.set(userId, user)
   })
 
-  return Array.from(uniqueByTelegramId.values())
+  return Array.from(uniqueByUserId.values())
 }
 
 export async function GET(request, { params }) {

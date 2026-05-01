@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types'
 
 import SelectableCard from '@components/cabinet/SelectableCard'
+import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 
 const GAME_STATUS_BADGE_STYLES = {
@@ -59,10 +60,10 @@ const ParticipationGameCard = ({
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
           <span className="text-slate-500">
             {game.dateStart
-              ? new Date(game.dateStart).toLocaleString('ru-RU', {
-                dateStyle: 'short',
-                timeStyle: 'short',
-              })
+              ? formatDateInLocationTimeZone(game.dateStart, game.location, {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                })
               : 'Дата не указана'}
           </span>
           {showLocation && (
@@ -96,6 +97,7 @@ ParticipationGameCard.propTypes = {
     name: PropTypes.string,
     status: PropTypes.string,
     dateStart: PropTypes.string,
+    location: PropTypes.string,
     teams: PropTypes.arrayOf(PropTypes.string),
     place: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   }).isRequired,

@@ -643,6 +643,10 @@ const CabinetDashboard = ({
                           dashboardData.inProgressGame.status || 'started',
                         dateStart:
                           dashboardData.inProgressGame.dateStart || null,
+                        location:
+                          dashboardData.inProgressGame.location ||
+                          activeSession?.user?.location ||
+                          '',
                         teams: dashboardData.inProgressGame.userTeamName
                           ? [dashboardData.inProgressGame.userTeamName]
                           : [],
@@ -687,6 +691,10 @@ const CabinetDashboard = ({
                       name: dashboardData.nearestGame.name || 'Без названия',
                       status: dashboardData.nearestGame.status || '',
                       dateStart: dashboardData.nearestGame.dateStart || null,
+                      location:
+                        dashboardData.nearestGame.location ||
+                        activeSession?.user?.location ||
+                        '',
                       teams: [],
                     }}
                     onOpen={() => {
