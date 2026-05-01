@@ -13,7 +13,10 @@ import ImagesInput from '@components/cabinet/ImagesInput'
 import CabinetNumberField from '@components/cabinet/CabinetNumberField'
 import NeonCheckbox from '@components/NeonCheckbox'
 import formatDate from '@helpers/formatDate'
-import formatDateTime from '@helpers/formatDateTime'
+import {
+  formatDateTimeLocalInLocation,
+  parseDateTimeLocalInLocation,
+} from '@helpers/dateTimeLocalInLocation'
 import ModalSection from './ModalSection'
 
 const TaskRichEditor = dynamic(
@@ -791,13 +794,19 @@ const GameEditModal = ({
                 type="datetime-local"
                 value={
                   selectedGame.dateStart
-                    ? formatDateTime(selectedGame.dateStart, true, true)
+                    ? formatDateTimeLocalInLocation(
+                        selectedGame.dateStart,
+                        selectedGame.location,
+                      )
                     : ''
                 }
                 onChange={(event) =>
                   updateSelectedGame({
                     dateStart: event.target.value
-                      ? new Date(event.target.value).toISOString()
+                      ? parseDateTimeLocalInLocation(
+                          event.target.value,
+                          selectedGame.location,
+                        )
                       : null,
                   })
                 }

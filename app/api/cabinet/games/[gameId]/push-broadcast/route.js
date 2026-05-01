@@ -6,6 +6,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { broadcastNotificationToUsers } from '@server/pwaNotifications'
 import { toStringId } from '@helpers/idAndDate'
 import resolveUserCityKey from '@helpers/resolveUserCityKey'
+import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -24,11 +25,8 @@ const formatAnnouncementBody = (game) => {
     typeof game?.name === 'string' && game.name.trim()
       ? game.name.trim()
       : 'Без названия'
-  const startDateRaw = game?.dateStart ? new Date(game.dateStart) : null
-  const hasStartDate =
-    startDateRaw instanceof Date && !Number.isNaN(startDateRaw.getTime())
-  const startDateLabel = hasStartDate
-    ? startDateRaw.toLocaleString('ru-RU', {
+  const startDateLabel = game?.dateStart
+    ? formatDateInLocationTimeZone(game.dateStart, game.location, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',

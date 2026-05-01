@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import TiptapContentView from '@components/cabinet/TiptapContentView'
+import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 
 const statusLabels = {
   active: 'Ещё не началась',
@@ -12,19 +13,13 @@ const statusLabels = {
   finished: 'Завершена',
 }
 
-const formatDateTime = (value) => {
-  if (!value) return null
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-
-  return new Intl.DateTimeFormat('ru-RU', {
+const formatDateTime = (value, locationKey) =>
+  formatDateInLocationTimeZone(value, locationKey, {
     day: 'numeric',
     month: 'long',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(date)
-}
+  })
 
 const splitDescription = (value) => {
   if (!value) return []
@@ -113,16 +108,16 @@ function GameEntryPage({
   }, [router])
 
   const plannedStart = useMemo(
-    () => formatDateTime(game?.dateStart),
-    [game?.dateStart],
+    () => formatDateTime(game?.dateStart, location),
+    [game?.dateStart, location],
   )
   const actualStart = useMemo(
-    () => formatDateTime(game?.dateStartFact),
-    [game?.dateStartFact],
+    () => formatDateTime(game?.dateStartFact, location),
+    [game?.dateStartFact, location],
   )
   const actualFinish = useMemo(
-    () => formatDateTime(game?.dateEndFact),
-    [game?.dateEndFact],
+    () => formatDateTime(game?.dateEndFact, location),
+    [game?.dateEndFact, location],
   )
 
   const descriptionParts = useMemo(

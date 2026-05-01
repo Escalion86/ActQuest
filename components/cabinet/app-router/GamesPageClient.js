@@ -27,6 +27,7 @@ import GameStatusModal from '@components/modals/GameStatusModal'
 import GamePushBroadcastModal from '@components/modals/GamePushBroadcastModal'
 import extractErrorMessage from '@helpers/extractErrorMessage'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
+import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import { toStringId } from '@helpers/idAndDate'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import requestApiJson from '@helpers/requestApiJson'
@@ -5443,7 +5444,7 @@ const GamesPage = ({
           ? game.dateStartFact || game.dateStart
           : game.dateStart
       const startDateLabel = cardStartDateRaw
-        ? new Date(cardStartDateRaw).toLocaleString('ru-RU', {
+        ? formatDateInLocationTimeZone(cardStartDateRaw, game.location, {
             dateStyle: 'short',
             timeStyle: 'short',
           })
@@ -5841,7 +5842,7 @@ const GamesPage = ({
           ? game.dateStartFact || game.dateStart
           : game.dateStart
       const startDateLabel = cardStartDateRaw
-        ? new Date(cardStartDateRaw).toLocaleString('ru-RU', {
+        ? formatDateInLocationTimeZone(cardStartDateRaw, game.location, {
             dateStyle: 'short',
             timeStyle: 'short',
           })
@@ -6243,7 +6244,7 @@ const GamesPage = ({
     }
 
     try {
-      return new Date(modalGame.dateStart).toLocaleString('ru-RU', {
+      return formatDateInLocationTimeZone(modalGame.dateStart, modalGame.location, {
         dateStyle: 'long',
         timeStyle: 'short',
       })

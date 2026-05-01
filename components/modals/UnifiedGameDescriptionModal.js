@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react'
 import PropTypes from 'prop-types'
 
 import GameDescriptionModal from '@components/modals/GameDescriptionModal'
+import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import getGameStatusLabel from '@helpers/getGameStatusLabel'
 
 const GAME_TYPE_OPTIONS = [
@@ -53,11 +54,11 @@ const UnifiedGameDescriptionModal = ({
       return 'Дата не назначена'
     }
 
-    return new Date(selectedGame.dateStart).toLocaleString('ru-RU', {
+    return formatDateInLocationTimeZone(selectedGame.dateStart, selectedGame.location, {
       dateStyle: 'full',
       timeStyle: 'short',
     })
-  }, [selectedGame?.dateStart])
+  }, [selectedGame?.dateStart, selectedGame?.location])
 
   const taskDurationLabel = useMemo(() => {
     if (!selectedGame) {
