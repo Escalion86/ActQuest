@@ -10,6 +10,14 @@ import useMergedSession from '@helpers/useMergedSession'
 
 const adminTools = [
   {
+    id: 'game-orders',
+    title: 'Заявки на игры',
+    description:
+      'Обрабатывайте корпоративные и частные заявки, согласуйте дату и создавайте закрытые игры.',
+    action: 'Открыть заявки',
+    href: '/cabinet/admin/game-orders',
+  },
+  {
     id: 'site-events',
     title: 'События сайта',
     description:

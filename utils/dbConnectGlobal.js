@@ -10,6 +10,8 @@ import siteSettingsSchema from '@schemas/siteSettingsSchema'
 import lastCommandsSchema from '@schemas/lastCommandsSchema'
 import usersGamesPaymentsSchema from '@schemas/usersGamesPaymentsSchema'
 import notificationsSchema from '@schemas/notificationsSchema'
+import gameTeamMessagesSchema from '@schemas/gameTeamMessagesSchema'
+import gameOrdersSchema from '@schemas/gameOrdersSchema'
 import gamesPaymentsSchema from '@schemas/gamesPaymentsSchema'
 import transactionsSchema from '@schemas/transactionsSchema'
 import seasonsSchema from '@schemas/seasonsSchema'
@@ -92,6 +94,12 @@ async function dbConnectGlobal() {
     ensureModel(globalConnections.global, 'Notifications', () =>
       mongoose.Schema(notificationsSchema, { timestamps: true }),
     )
+    ensureModel(globalConnections.global, 'GameTeamMessages', () =>
+      mongoose.Schema(gameTeamMessagesSchema, { timestamps: true }),
+    )
+    ensureModel(globalConnections.global, 'GameOrders', () =>
+      mongoose.Schema(gameOrdersSchema, { timestamps: true }),
+    )
     ensureModel(globalConnections.global, 'GamesPayments', () =>
       mongoose.Schema(gamesPaymentsSchema, { timestamps: true }),
     )
@@ -123,6 +131,12 @@ async function dbConnectGlobal() {
   )
   ensureModel(globalConnections.global, 'AiSystemPrompts', () =>
     mongoose.Schema(aiSystemPromptsSchema, { timestamps: true }),
+  )
+  ensureModel(globalConnections.global, 'GameTeamMessages', () =>
+    mongoose.Schema(gameTeamMessagesSchema, { timestamps: true }),
+  )
+  ensureModel(globalConnections.global, 'GameOrders', () =>
+    mongoose.Schema(gameOrdersSchema, { timestamps: true }),
   )
 
   const connection = await globalConnections.global.asPromise()

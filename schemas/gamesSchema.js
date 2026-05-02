@@ -286,6 +286,34 @@ const gamesSchema = {
     type: Boolean,
     default: true,
   },
+  isPrivate: {
+    type: Boolean,
+    default: false,
+  },
+  orderType: {
+    type: String,
+    enum: ['public', 'private', 'corporate'],
+    default: 'public',
+  },
+  sourceOrderId: {
+    type: String,
+    default: null,
+    trim: true,
+  },
+  clientName: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  clientContact: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  expectedParticipantsCount: {
+    type: Number,
+    default: null,
+  },
   creatorUserId: {
     type: String,
     required: false,

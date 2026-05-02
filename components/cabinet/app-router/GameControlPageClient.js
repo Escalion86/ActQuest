@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PropTypes from 'prop-types'
 import { useQuery } from '@tanstack/react-query'
@@ -17,7 +17,6 @@ import FullscreenImageViewer from '@components/FullscreenImageViewer'
 import FeedbackToast from '@components/FeedbackToast'
 import CardActionIconButton, {
   EditCardIcon,
-  MegaphoneCardIcon,
   TargetCardIcon,
   TeamCardIcon,
   TeamStatsCardIcon,
@@ -64,6 +63,55 @@ const teamStatusColor = (team) => {
   }
   return 'border-cyan-200 bg-white dark:border-cyan-400/25 dark:bg-slate-800/50'
 }
+
+const formatMessageDateTime = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+const adjustChatTextareaHeight = (textarea) => {
+  if (!textarea) return
+
+  textarea.style.height = 'auto'
+  const styles = window.getComputedStyle(textarea)
+  const lineHeight = Number.parseFloat(styles.lineHeight) || 20
+  const paddingTop = Number.parseFloat(styles.paddingTop) || 0
+  const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0
+  const maxHeight = lineHeight * 5 + paddingTop + paddingBottom
+  const nextHeight = Math.min(textarea.scrollHeight, maxHeight)
+  textarea.style.height = `${nextHeight}px`
+  textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden'
+}
+
+const ChatCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M4.5 5.8C4.5 4.81 5.31 4 6.3 4H13.7C14.69 4 15.5 4.81 15.5 5.8V10.4C15.5 11.39 14.69 12.2 13.7 12.2H9.1L5.7 15V12.2C5.03 12.2 4.5 11.67 4.5 11V5.8Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M7.2 7.4H12.8M7.2 9.6H10.8"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+)
 
 const statusDotColor = (team) => {
   if (team.isTeamFinished) return 'bg-green-400'
@@ -390,6 +438,13 @@ export default function GameControlPageClient({ session: _session }) {
     useState(false)
   const [teamPushLoadingId, setTeamPushLoadingId] = useState('')
   const [teamPushMessage, setTeamPushMessage] = useState('')
+  const [teamPushSendPush, setTeamPushSendPush] = useState(false)
+  const [teamMessageHistory, setTeamMessageHistory] = useState([])
+  const [teamMessageHistoryLoading, setTeamMessageHistoryLoading] =
+    useState(false)
+  const [teamMessageHistoryError, setTeamMessageHistoryError] = useState('')
+  const teamMessageHistoryListRef = useRef(null)
+  const teamPushTextareaRef = useRef(null)
   const [themeMode, setThemeMode] = useState('dark')
   const isLightTheme = themeMode === 'light'
   const {
@@ -502,12 +557,16 @@ export default function GameControlPageClient({ session: _session }) {
     )
   }, [data?.teams, selectedTeamForContactsId])
   const selectedTeamForPush = useMemo(() => {
+    if (selectedTeamForPushId === '__game__') {
+      return null
+    }
     const teamsList = Array.isArray(data?.teams) ? data.teams : []
     return (
       teamsList.find((item) => String(item?.teamId) === selectedTeamForPushId) ||
       null
     )
   }, [data?.teams, selectedTeamForPushId])
+  const isGameWideMessageModal = selectedTeamForPushId === '__game__'
   const manualCodeCandidates = useMemo(
     () =>
       selectedTeamForManualActions
@@ -548,6 +607,9 @@ export default function GameControlPageClient({ session: _session }) {
     if (teamPushLoadingId) return
     setSelectedTeamForPushId('')
     setTeamPushMessage('')
+    setTeamPushSendPush(false)
+    setTeamMessageHistory([])
+    setTeamMessageHistoryError('')
   }, [teamPushLoadingId])
 
   const runManualAction = useCallback(
@@ -646,12 +708,94 @@ export default function GameControlPageClient({ session: _session }) {
     }
     setSelectedTeamForPushId(teamId)
     setTeamPushMessage('')
+    setTeamPushSendPush(false)
   }, [showToast])
+
+  const handleOpenGameWideMessageModal = useCallback(() => {
+    setSelectedTeamForPushId('__game__')
+    setTeamPushMessage('')
+    setTeamPushSendPush(false)
+  }, [])
+
+  const loadTeamMessageHistory = useCallback(async () => {
+    if (!gameId || !selectedTeamForPushId) return
+
+    setTeamMessageHistoryLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (selectedTeamForPushId !== '__game__') {
+        params.set('teamId', selectedTeamForPushId)
+      }
+      const suffix = params.toString() ? `?${params.toString()}` : ''
+      const { json } = await requestApiJson(
+        `/api/cabinet/games/${encodeURIComponent(gameId)}/messages${suffix}`,
+      )
+      if (!json?.success) {
+        throw new Error(json?.error || 'Не удалось загрузить переписку.')
+      }
+      setTeamMessageHistory(
+        Array.isArray(json?.data?.messages) ? json.data.messages : [],
+      )
+      setTeamMessageHistoryError('')
+    } catch (historyError) {
+      setTeamMessageHistoryError(
+        historyError?.payload?.error ||
+          historyError?.message ||
+          'Не удалось загрузить переписку.',
+      )
+    } finally {
+      setTeamMessageHistoryLoading(false)
+    }
+  }, [gameId, selectedTeamForPushId])
+
+  useEffect(() => {
+    if (!selectedTeamForPushId) return
+    void loadTeamMessageHistory()
+  }, [loadTeamMessageHistory, selectedTeamForPushId])
+
+  useEffect(() => {
+    if (!selectedTeamForPushId) return undefined
+
+    const intervalId = window.setInterval(() => {
+      void loadTeamMessageHistory()
+    }, 15000)
+
+    return () => window.clearInterval(intervalId)
+  }, [loadTeamMessageHistory, selectedTeamForPushId])
+
+  useEffect(() => {
+    if (!selectedTeamForPushId) return undefined
+
+    const frameId = window.requestAnimationFrame(() => {
+      const list = teamMessageHistoryListRef.current
+      if (list) {
+        list.scrollTop = list.scrollHeight
+      }
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [selectedTeamForPushId, teamMessageHistory.length])
+
+  useEffect(() => {
+    if (!selectedTeamForPushId) return undefined
+
+    const frameId = window.requestAnimationFrame(() => {
+      adjustChatTextareaHeight(teamPushTextareaRef.current)
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [selectedTeamForPushId, teamPushMessage])
+
+  const handleTeamPushMessageChange = useCallback((event) => {
+    setTeamPushMessage(event.target.value)
+    adjustChatTextareaHeight(event.target)
+  }, [])
 
   const handleSendTeamPush = useCallback(
     async (team) => {
       const teamId = String(team?.teamId || '').trim()
-      if (!gameId || !teamId) {
+      const isGameWide = selectedTeamForPushId === '__game__'
+      if (!gameId || (!isGameWide && !teamId)) {
         showToast('error', 'Не удалось определить команду для отправки.')
         return
       }
@@ -662,17 +806,18 @@ export default function GameControlPageClient({ session: _session }) {
         return
       }
 
-      setTeamPushLoadingId(teamId)
+      setTeamPushLoadingId(isGameWide ? '__game__' : teamId)
       try {
         const { json } = await requestApiJson(
-          `/api/cabinet/games/${encodeURIComponent(gameId)}/push-broadcast`,
+          `/api/cabinet/games/${encodeURIComponent(gameId)}/messages`,
           {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({
-              mode: 'custom_for_team',
-              teamId,
-              message,
+              scope: isGameWide ? 'game' : 'team',
+              ...(isGameWide ? {} : { teamId }),
+              body: message,
+              sendPush: teamPushSendPush,
             }),
           },
         )
@@ -680,30 +825,42 @@ export default function GameControlPageClient({ session: _session }) {
         if (!json?.success) {
           showToast(
             'error',
-            json?.error || 'Не удалось отправить push-уведомление команде.',
+            json?.error || 'Не удалось отправить сообщение.',
           )
           return
         }
 
-        const usersMatched = Number(json?.data?.usersMatched || 0)
-        const pushDelivered = Number(json?.data?.pushDelivered || 0)
+        const createdMessage = json?.data?.message || {}
+        const usersMatched = Number(createdMessage?.pushUsersMatched || 0)
+        const pushDelivered = Number(createdMessage?.pushDelivered || 0)
         showToast(
           'success',
-          `Сообщение отправлено: получателей ${usersMatched}, доставлено push ${pushDelivered}.`,
+          teamPushSendPush
+            ? `Сообщение сохранено, push: получателей ${usersMatched}, доставлено ${pushDelivered}.`
+            : 'Сообщение сохранено в переписке.',
         )
-        closeTeamPushModal()
+        setTeamPushMessage('')
+        setTeamPushSendPush(false)
+        await loadTeamMessageHistory()
       } catch (errorRequest) {
         showToast(
           'error',
           errorRequest?.payload?.error ||
             errorRequest?.message ||
-            'Не удалось отправить push-уведомление команде.',
+            'Не удалось отправить сообщение.',
         )
       } finally {
         setTeamPushLoadingId('')
       }
     },
-    [closeTeamPushModal, gameId, showToast, teamPushMessage],
+    [
+      gameId,
+      loadTeamMessageHistory,
+      selectedTeamForPushId,
+      showToast,
+      teamPushMessage,
+      teamPushSendPush,
+    ],
   )
 
   if (!gameId) {
@@ -839,6 +996,13 @@ export default function GameControlPageClient({ session: _session }) {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={handleOpenGameWideMessageModal}
+            className="inline-flex h-8 items-center rounded-full border border-amber-400 bg-amber-100 px-3 text-xs font-semibold text-amber-800 transition hover:bg-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
+          >
+            Сообщение всем
+          </button>
           <button
             type="button"
             onClick={() => refetchStatus()}
@@ -1016,10 +1180,17 @@ export default function GameControlPageClient({ session: _session }) {
                     onClick={() => handleOpenTeamPushModal(team)}
                     label="Отправить сообщение команде"
                     title="Отправить сообщение команде"
-                    className="w-8 h-8"
+                    className="relative w-8 h-8"
                     disabled={teamPushLoadingId === String(team.teamId || '')}
                   >
-                    <MegaphoneCardIcon />
+                    <ChatCardIcon />
+                    {Number(team.unreadTeamMessagesCount || 0) > 0 ? (
+                      <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow">
+                        {Number(team.unreadTeamMessagesCount || 0) > 99
+                          ? '99+'
+                          : Number(team.unreadTeamMessagesCount || 0)}
+                      </span>
+                    ) : null}
                   </CardActionIconButton>
                   {!team.isTeamOnBreak ? (
                     <CardActionIconButton
@@ -1421,7 +1592,9 @@ export default function GameControlPageClient({ session: _session }) {
         isOpen={Boolean(selectedTeamForPushId)}
         onClose={closeTeamPushModal}
         title={
-          selectedTeamForPush?.teamName
+          isGameWideMessageModal
+            ? 'Сообщение всем командам'
+            : selectedTeamForPush?.teamName
             ? `Сообщение команде — ${selectedTeamForPush.teamName}`
             : 'Сообщение команде'
         }
@@ -1434,40 +1607,107 @@ export default function GameControlPageClient({ session: _session }) {
               className="aq-modal-btn aq-modal-btn-secondary"
               disabled={Boolean(teamPushLoadingId)}
             >
-              Отмена
+              Закрыть
             </button>
             <button
               type="button"
               onClick={() => handleSendTeamPush(selectedTeamForPush)}
               className="aq-modal-btn aq-modal-btn-primary"
-              disabled={Boolean(teamPushLoadingId)}
+              disabled={Boolean(teamPushLoadingId) || !teamPushMessage.trim()}
             >
               {teamPushLoadingId ? 'Отправляем...' : 'Отправить'}
             </button>
           </>
         }
       >
-        <div className="space-y-3">
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            Уведомление будет отправлено всем участникам выбранной команды.
-          </p>
+        <div className="space-y-4">
+          <div
+            ref={teamMessageHistoryListRef}
+            className="max-h-[55vh] space-y-3 overflow-y-auto pr-1"
+          >
+            {teamMessageHistoryError ? (
+              <p className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                {teamMessageHistoryError}
+              </p>
+            ) : null}
+            {teamMessageHistoryLoading && teamMessageHistory.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Загружаем сообщения...
+              </p>
+            ) : null}
+            {!teamMessageHistoryLoading && teamMessageHistory.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Сообщений пока нет.
+              </p>
+            ) : null}
+            {teamMessageHistory.map((message) => {
+              const isAdminMessage = message.direction === 'admin_to_team'
+              return (
+                <div
+                  key={message.id}
+                  className={`rounded-2xl border px-4 py-3 ${
+                    isAdminMessage
+                      ? 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-50'
+                      : 'border-cyan-300 bg-cyan-50 text-cyan-950 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-50'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-80">
+                    <span>
+                      {isAdminMessage ? 'Организатор' : 'Капитан команды'}
+                      {message.scope === 'game' ? ' · всем командам' : ''}
+                    </span>
+                    <span>{formatMessageDateTime(message.createdAt)}</span>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">
+                    {message.body}
+                  </p>
+                  {isAdminMessage && message.pushRequested ? (
+                    <p className="mt-2 text-xs opacity-80">
+                      Push: доставлено {message.pushDelivered || 0} из{' '}
+                      {message.pushUsersMatched || 0}
+                    </p>
+                  ) : null}
+                  <p className="mt-2 text-xs opacity-80">
+                    {isAdminMessage
+                      ? message.teamReadAt
+                        ? `Прочитано командой: ${formatMessageDateTime(message.teamReadAt)}`
+                        : 'Команда еще не прочитала'
+                      : message.readByAdminAt
+                        ? `Прочитано администратором: ${formatMessageDateTime(message.readByAdminAt)}`
+                        : 'Не прочитано администратором'}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
           <div>
             <label
               htmlFor="team-push-message"
-              className="block mb-1 text-xs text-slate-500"
+              className="block text-xs font-semibold text-slate-500 dark:text-slate-400"
             >
               Текст сообщения
             </label>
             <textarea
               id="team-push-message"
+              ref={teamPushTextareaRef}
               value={teamPushMessage}
-              onChange={(event) => setTeamPushMessage(event.target.value)}
-              placeholder="Введите текст push-уведомления..."
-              rows={4}
-              className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-slate-100"
+              onChange={handleTeamPushMessageChange}
+              placeholder="Введите сообщение..."
+              rows={1}
+              className="mt-2 w-full resize-none overflow-hidden rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-900 dark:text-slate-100"
               disabled={Boolean(teamPushLoadingId)}
             />
           </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <input
+              type="checkbox"
+              checked={teamPushSendPush}
+              onChange={(event) => setTeamPushSendPush(event.target.checked)}
+              disabled={Boolean(teamPushLoadingId)}
+              className="rounded border-slate-400 text-cyan-600 focus:ring-cyan-500/40"
+            />
+            Дополнительно отправить push-уведомление
+          </label>
         </div>
       </Modal>
       <Modal

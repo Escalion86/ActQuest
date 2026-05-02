@@ -1,9 +1,9 @@
 import './globals.css'
 import { Roboto } from 'next/font/google'
-import Script from 'next/script'
 import AppProviders from './providers'
 import ThemeInitializerClient from './ThemeInitializerClient'
 import PwaStandalonePullToRefresh from '@components/PwaStandalonePullToRefresh'
+import ClientRuntimeScripts from '@components/ClientRuntimeScripts'
 import getSiteUrl from '@helpers/getSiteUrl'
 
 const roboto = Roboto({
@@ -214,54 +214,6 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <Script
-          id="aq-client-diagnostics"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: CLIENT_DIAGNOSTICS_SCRIPT }}
-        />
-        {hasYandexMetrika ? (
-          <Script id="aq-yandex-metrika-init" strategy="afterInteractive">
-            {`
-              (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-              m[i].l=1*new Date();
-              for (var j = 0; j < document.scripts.length; j++) { if (document.scripts[j].src === r) { return; } }
-              k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-              (window, document, "script", "https://mc.yandex.ru/metrika/tag.js?id=${yandexMetrikaId}", "ym");
-              window.__AQ_YM_ID = ${yandexMetrikaId};
-              ym(${yandexMetrikaId}, "init", {
-                ssr:true,
-                webvisor:true,
-                clickmap:true,
-                trackLinks:true,
-                accurateTrackBounce:true,
-                ecommerce:"dataLayer",
-                referrer: document.referrer,
-                url: location.href
-              });
-            `}
-          </Script>
-        ) : null}
-        {hasGa4 ? (
-          <>
-            <Script
-              id="aq-ga4-loader"
-              src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaMeasurementId)}`}
-              strategy="afterInteractive"
-            />
-            <Script id="aq-ga4-init" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                window.gtag = window.gtag || gtag;
-                window.__AQ_GA_ID = "${gaMeasurementId}";
-                gtag('js', new Date());
-                gtag('config', "${gaMeasurementId}", {
-                  send_page_view: true
-                });
-              `}
-            </Script>
-          </>
-        ) : null}
       </head>
       <body>
         {hasYandexMetrika ? (
@@ -275,6 +227,11 @@ export default function RootLayout({ children }) {
             </div>
           </noscript>
         ) : null}
+        <ClientRuntimeScripts
+          diagnosticsScript={CLIENT_DIAGNOSTICS_SCRIPT}
+          yandexMetrikaId={hasYandexMetrika ? yandexMetrikaId : 0}
+          gaMeasurementId={hasGa4 ? gaMeasurementId : ''}
+        />
         <ThemeInitializerClient />
         <PwaStandalonePullToRefresh />
         <AppProviders>{children}</AppProviders>

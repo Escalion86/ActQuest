@@ -14,9 +14,23 @@ const formatDateInLocationTimeZone = (
     return null
   }
 
+  const hasExplicitDateTimeOptions = [
+    'weekday',
+    'era',
+    'year',
+    'month',
+    'day',
+    'dayPeriod',
+    'hour',
+    'minute',
+    'second',
+    'fractionalSecondDigits',
+  ].some((key) => Object.prototype.hasOwnProperty.call(options, key))
+
   const formatterOptions = {
-    dateStyle: 'short',
-    timeStyle: 'short',
+    ...(hasExplicitDateTimeOptions
+      ? {}
+      : { dateStyle: 'short', timeStyle: 'short' }),
     ...options,
     timeZone: options.timeZone || getLocationTimeZone(locationKey),
   }

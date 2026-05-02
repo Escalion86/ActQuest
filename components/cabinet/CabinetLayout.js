@@ -96,6 +96,11 @@ const developerMenuItem = {
 
 const adminSubmenuItems = [
   {
+    id: 'admin-game-orders',
+    label: 'Заявки на игры',
+    href: '/cabinet/admin/game-orders',
+  },
+  {
     id: 'admin-events',
     label: 'События сайта',
     href: '/cabinet/admin/events',
@@ -133,10 +138,16 @@ const gamesSubmenuItems = [
     label: 'Прошедшие игры',
     href: '/cabinet/games-past',
   },
+  {
+    id: 'game-orders',
+    label: 'Заказать игру',
+    href: '/cabinet/game-orders',
+  },
 ]
 
 const isGamesRoutePath = (pathname) =>
   pathname === '/cabinet/games' ||
+  pathname === '/cabinet/game-orders' ||
   pathname === '/cabinet/games-upcoming' ||
   pathname === '/cabinet/games-past'
 

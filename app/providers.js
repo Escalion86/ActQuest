@@ -49,11 +49,16 @@ export default function AppProviders({ children }) {
   const [lastAudioError, setLastAudioError] = useState('')
   const [isAudioHintDismissed, setIsAudioHintDismissed] = useState(false)
   const isCabinetRoute = String(pathname || '').startsWith('/cabinet')
+  const isGameRoute = String(pathname || '').startsWith('/game/')
+  const isAudioDisabledRoute =
+    isCabinetRoute ||
+    isGameRoute ||
+    String(pathname || '') === '/zakazat-avtokvest'
   const isLandingRoute = pathname === '/'
 
   const tryPlayAudio = async () => {
     const audio = audioRef.current
-    if (!audio || isMuted || isCabinetRoute) return false
+    if (!audio || isMuted || isAudioDisabledRoute) return false
 
     try {
       if (audio.readyState < 2) {
@@ -200,7 +205,7 @@ export default function AppProviders({ children }) {
     const audio = audioRef.current
     if (!audio) return
 
-    if (isCabinetRoute) {
+    if (isAudioDisabledRoute) {
       audio.pause()
       return
     }
@@ -213,12 +218,12 @@ export default function AppProviders({ children }) {
     if (!isMuted && hasStartedPlayback && audio.paused) {
       void tryPlayAudio()
     }
-  }, [pathname, isLandingRoute, isCabinetRoute, isMuted, hasStartedPlayback])
+  }, [pathname, isLandingRoute, isAudioDisabledRoute, isMuted, hasStartedPlayback])
 
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return undefined
-    if (!isLandingRoute || isMuted || isCabinetRoute || hasStartedPlayback) {
+    if (!isLandingRoute || isMuted || isAudioDisabledRoute || hasStartedPlayback) {
       return undefined
     }
 
@@ -235,11 +240,11 @@ export default function AppProviders({ children }) {
       window.removeEventListener('pageshow', tryResume)
       document.removeEventListener('visibilitychange', tryResume)
     }
-  }, [hasStartedPlayback, isCabinetRoute, isLandingRoute, isMuted])
+  }, [hasStartedPlayback, isAudioDisabledRoute, isLandingRoute, isMuted])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (isMuted || hasStartedPlayback || isCabinetRoute) return
+    if (isMuted || hasStartedPlayback || isAudioDisabledRoute) return
 
     const resumeFromGesture = () => {
       void tryPlayAudio()
@@ -254,7 +259,7 @@ export default function AppProviders({ children }) {
       window.removeEventListener('keydown', resumeFromGesture)
       window.removeEventListener('touchstart', resumeFromGesture)
     }
-  }, [isMuted, hasStartedPlayback, isCabinetRoute])
+  }, [isMuted, hasStartedPlayback, isAudioDisabledRoute])
 
   const handleAudioToggle = async () => {
     const nextMuted = !isMuted
@@ -279,7 +284,7 @@ export default function AppProviders({ children }) {
   }, [lastAudioError])
 
   const showAudioUnlockHint =
-    !isCabinetRoute &&
+    !isAudioDisabledRoute &&
     isLandingRoute &&
     !isMuted &&
     !hasStartedPlayback &&
@@ -336,7 +341,7 @@ export default function AppProviders({ children }) {
                 </div>
               </div>
             ) : null}
-            {!isCabinetRoute && isAudioReady && (
+            {!isAudioDisabledRoute && isAudioReady && (
               <button
                 type="button"
                 onClick={handleAudioToggle}

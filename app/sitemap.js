@@ -26,6 +26,12 @@ export default async function sitemap() {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
+    {
+      url: `${siteUrl}/zakazat-avtokvest`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.85,
+    },
     ...seoArticles.map((article) => ({
       url: `${siteUrl}/articles/${article.slug}`,
       lastModified: now,

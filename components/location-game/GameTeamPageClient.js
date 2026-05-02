@@ -13,6 +13,7 @@ import normalizeAudioMessageHtml from '@helpers/normalizeAudioMessageHtml'
 import { sendImage } from '@helpers/cloudinary'
 import RichTaskContentView from '@components/game/RichTaskContentView'
 import TaskDisplayWithClues from '@components/game/TaskDisplayWithClues'
+import Modal from '@components/Modal'
 
 const PHOTO_ANSWER_ACCEPT_TYPES =
   'image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/*'
@@ -161,6 +162,71 @@ const formatCityName = (locationKey) => {
   return trimmed[0].toUpperCase() + trimmed.slice(1)
 }
 
+const formatMessageDateTime = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+const adjustChatTextareaHeight = (textarea) => {
+  if (!textarea) return
+
+  textarea.style.height = 'auto'
+  const styles = window.getComputedStyle(textarea)
+  const lineHeight = Number.parseFloat(styles.lineHeight) || 20
+  const paddingTop = Number.parseFloat(styles.paddingTop) || 0
+  const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0
+  const maxHeight = lineHeight * 5 + paddingTop + paddingBottom
+  const nextHeight = Math.min(textarea.scrollHeight, maxHeight)
+  textarea.style.height = `${nextHeight}px`
+  textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden'
+}
+
+const ChatHeaderIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M4.5 5.8C4.5 4.81 5.31 4 6.3 4H13.7C14.69 4 15.5 4.81 15.5 5.8V10.4C15.5 11.39 14.69 12.2 13.7 12.2H9.1L5.7 15V12.2C5.03 12.2 4.5 11.67 4.5 11V5.8Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M7.2 7.4H12.8M7.2 9.6H10.8"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+const CloseIcon = () => (
+  <svg
+    className="h-4 w-4"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M6 6L14 14M14 6L6 14"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
 const extractUrlCandidates = (value) => {
   if (!value) return []
   if (typeof value === 'string') {
@@ -286,7 +352,18 @@ function GameTeamPage({
     isPostCompletionMessageCollapsed,
     setIsPostCompletionMessageCollapsed,
   ] = useState(false)
+  const [gameMessages, setGameMessages] = useState([])
+  const [canSendGameMessage, setCanSendGameMessage] = useState(false)
+  const [isGameMessagesModalOpen, setIsGameMessagesModalOpen] = useState(false)
+  const [gameMessagesLoading, setGameMessagesLoading] = useState(false)
+  const [gameMessagesError, setGameMessagesError] = useState('')
+  const [gameMessageDraft, setGameMessageDraft] = useState('')
+  const [isSendingGameMessage, setIsSendingGameMessage] = useState(false)
+  const [dismissedLatestAdminMessageId, setDismissedLatestAdminMessageId] =
+    useState('')
   const taskContentRef = useRef(null)
+  const gameMessagesListRef = useRef(null)
+  const gameMessageTextareaRef = useRef(null)
   const refreshRequestedRef = useRef(0)
   const hasClearedMessageRef = useRef(false)
   const [stickyMessages, setStickyMessages] = useState([])
@@ -551,6 +628,107 @@ function GameTeamPage({
     },
     [gameId, isTaskRefreshing, location, teamId, updateTaskData],
   )
+
+  const loadGameMessages = useCallback(async () => {
+    if (!gameId || !teamId) return false
+
+    setGameMessagesLoading(true)
+    try {
+      const params = new URLSearchParams({
+        gameId,
+        teamId,
+      })
+      const response = await fetch(`/api/webapp/game-messages?${params.toString()}`)
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Не удалось загрузить сообщения')
+      }
+
+      const payload = data.data || {}
+      setGameMessages(
+        Array.isArray(payload.messages) ? payload.messages : [],
+      )
+      setCanSendGameMessage(Boolean(payload.canSendToAdmin))
+      setGameMessagesError('')
+      return true
+    } catch (messagesError) {
+      setGameMessagesError(
+        messagesError?.message || 'Не удалось загрузить сообщения',
+      )
+      return false
+    } finally {
+      setGameMessagesLoading(false)
+    }
+  }, [gameId, teamId])
+
+  const handleSendGameMessage = useCallback(async () => {
+    const body = gameMessageDraft.trim()
+    if (!body || isSendingGameMessage) return
+
+    setIsSendingGameMessage(true)
+    try {
+      const response = await fetch('/api/webapp/game-messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ gameId, teamId, body }),
+      })
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Не удалось отправить сообщение')
+      }
+
+      setGameMessageDraft('')
+      await loadGameMessages()
+    } catch (sendError) {
+      setGameMessagesError(sendError?.message || 'Не удалось отправить сообщение')
+    } finally {
+      setIsSendingGameMessage(false)
+    }
+  }, [gameId, gameMessageDraft, isSendingGameMessage, loadGameMessages, teamId])
+
+  const handleGameMessageDraftChange = useCallback((event) => {
+    setGameMessageDraft(event.target.value)
+    adjustChatTextareaHeight(event.target)
+  }, [])
+
+  useEffect(() => {
+    void loadGameMessages()
+  }, [loadGameMessages])
+
+  useEffect(() => {
+    if (!isGameMessagesModalOpen) return
+
+    const frameId = window.requestAnimationFrame(() => {
+      const list = gameMessagesListRef.current
+      if (list) {
+        list.scrollTop = list.scrollHeight
+      }
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [gameMessages.length, isGameMessagesModalOpen])
+
+  useEffect(() => {
+    if (!isGameMessagesModalOpen) return
+
+    const frameId = window.requestAnimationFrame(() => {
+      adjustChatTextareaHeight(gameMessageTextareaRef.current)
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [gameMessageDraft, isGameMessagesModalOpen])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+
+    const intervalId = window.setInterval(() => {
+      void loadGameMessages()
+    }, 30000)
+
+    return () => window.clearInterval(intervalId)
+  }, [loadGameMessages])
 
   const handleLeaveGame = useCallback(() => {
     router.push(`/game/${gameId}`)
@@ -1032,6 +1210,25 @@ function GameTeamPage({
     return output
   }, [resultMessages, shouldClearMessagesForActiveTask])
 
+  const latestAdminMessage = useMemo(() => {
+    const adminMessages = gameMessages.filter(
+      (message) => message?.direction === 'admin_to_team',
+    )
+    return adminMessages.length > 0 ? adminMessages[adminMessages.length - 1] : null
+  }, [gameMessages])
+
+  const hasUnreadAdminMessages = gameMessages.some(
+    (message) =>
+      message?.direction === 'admin_to_team' &&
+      !message?.teamReadAt &&
+      message?.id !== dismissedLatestAdminMessageId,
+  )
+  const shouldShowLatestAdminMessage =
+    Boolean(latestAdminMessage) &&
+    (latestAdminMessage.id !== dismissedLatestAdminMessageId ||
+      hasUnreadAdminMessages)
+  const shouldShowGameMessagesBlock =
+    shouldShowLatestAdminMessage || (!latestAdminMessage && canSendGameMessage)
   const shouldShowLastMessage = displayedResultMessages.length > 0
   const shouldShowAnswerForm = !isGameCompletion && !isBreakState
   const shouldShowGameCompletedBlock = isGameCompletion
@@ -1212,6 +1409,15 @@ function GameTeamPage({
                */}
             </nav>
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsGameMessagesModalOpen(true)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                aria-label="Открыть переписку с организатором"
+                title="Переписка с организатором"
+              >
+                <ChatHeaderIcon />
+              </button>
               <button
                 type="button"
                 onClick={handleThemeToggle}
@@ -1448,6 +1654,56 @@ function GameTeamPage({
               </section>
             ) : null}
 
+            {shouldShowGameMessagesBlock ? (
+              <section className="p-6 border border-amber-200 shadow-lg bg-amber-50 rounded-3xl dark:bg-amber-500/10 dark:border-amber-500/30 dark:shadow-slate-950/40">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+                      Сообщения организатора
+                    </h2>
+                    {latestAdminMessage ? (
+                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-200/80">
+                        {formatMessageDateTime(latestAdminMessage.createdAt)}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {gameMessages.length > 1 || canSendGameMessage ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsGameMessagesModalOpen(true)}
+                        className="inline-flex items-center rounded-full border border-amber-300 bg-white px-3 py-1.5 text-sm font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-slate-900/60 dark:text-amber-100 dark:hover:bg-amber-500/15"
+                      >
+                        Открыть переписку
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDismissedLatestAdminMessageId(
+                          latestAdminMessage?.id || '__empty__',
+                        )
+                      }
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-700 transition hover:border-amber-400 hover:bg-amber-100 hover:text-amber-900 dark:border-amber-500/40 dark:bg-slate-900/60 dark:text-amber-100 dark:hover:bg-amber-500/15"
+                      aria-label="Закрыть сообщение организатора"
+                      title="Закрыть"
+                    >
+                      <CloseIcon />
+                    </button>
+                  </div>
+                </div>
+                {latestAdminMessage ? (
+                  <p className="mt-4 whitespace-pre-wrap break-words text-base leading-relaxed text-amber-950 dark:text-amber-50">
+                    {latestAdminMessage.body}
+                  </p>
+                ) : (
+                  <p className="mt-4 text-sm text-amber-800 dark:text-amber-100">
+                    Переписка с организатором доступна капитану команды.
+                  </p>
+                )}
+              </section>
+            ) : null}
+
             {shouldShowCurrentTaskBlock ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
                 <div className="flex items-center justify-between gap-3">
@@ -1681,6 +1937,110 @@ function GameTeamPage({
           </div>
         </main>
       </div>
+      <Modal
+        isOpen={isGameMessagesModalOpen}
+        onClose={() => setIsGameMessagesModalOpen(false)}
+        title="Переписка с организатором"
+        compactMobile
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsGameMessagesModalOpen(false)}
+              className="aq-modal-btn aq-modal-btn-secondary"
+            >
+              Закрыть
+            </button>
+            {canSendGameMessage ? (
+              <button
+                type="button"
+                onClick={handleSendGameMessage}
+                disabled={isSendingGameMessage || !gameMessageDraft.trim()}
+                className="aq-modal-btn aq-modal-btn-primary"
+              >
+                {isSendingGameMessage ? 'Отправляем...' : 'Отправить'}
+              </button>
+            ) : null}
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {gameMessagesError ? (
+            <p className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+              {gameMessagesError}
+            </p>
+          ) : null}
+          <div
+            ref={gameMessagesListRef}
+            className="max-h-[55vh] space-y-3 overflow-y-auto pr-1"
+          >
+            {gameMessagesLoading && gameMessages.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Загружаем сообщения...
+              </p>
+            ) : null}
+            {!gameMessagesLoading && gameMessages.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Сообщений пока нет.
+              </p>
+            ) : null}
+            {gameMessages.map((message) => {
+              const isAdminMessage = message.direction === 'admin_to_team'
+              return (
+                <div
+                  key={message.id}
+                  className={`rounded-2xl border px-4 py-3 ${
+                    isAdminMessage
+                      ? 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-50'
+                      : 'border-cyan-300 bg-cyan-50 text-cyan-950 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-50'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-80">
+                    <span>
+                      {isAdminMessage ? 'Организатор' : 'Капитан команды'}
+                      {message.scope === 'game' ? ' · всем командам' : ''}
+                    </span>
+                    <span>{formatMessageDateTime(message.createdAt)}</span>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">
+                    {message.body}
+                  </p>
+                  <p className="mt-2 text-xs opacity-80">
+                    {isAdminMessage
+                      ? message.teamReadAt
+                        ? `Прочитано командой: ${formatMessageDateTime(message.teamReadAt)}`
+                        : 'Не отмечено как прочитанное'
+                      : message.readByAdminAt
+                        ? `Прочитано администратором: ${formatMessageDateTime(message.readByAdminAt)}`
+                        : 'Администратор еще не прочитал'}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+          {canSendGameMessage ? (
+            <div className="border-t border-slate-200 pt-4 dark:border-slate-700">
+              <label
+                htmlFor="game-message-reply"
+                className="block text-xs font-semibold text-slate-500 dark:text-slate-400"
+              >
+                Сообщение администратору
+              </label>
+              <textarea
+                id="game-message-reply"
+                ref={gameMessageTextareaRef}
+                value={gameMessageDraft}
+                onChange={handleGameMessageDraftChange}
+                rows={1}
+                maxLength={2000}
+                className="mt-2 w-full resize-none overflow-hidden rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-900 dark:text-slate-100"
+                placeholder="Напишите сообщение организатору..."
+                disabled={isSendingGameMessage}
+              />
+            </div>
+          ) : null}
+        </div>
+      </Modal>
       <style jsx global>{`
         .aq-task-content a {
           color: #2563eb;

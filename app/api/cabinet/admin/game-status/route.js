@@ -5,6 +5,7 @@ import { authOptions } from '@server/auth/authOptions'
 import { toStringId } from '@helpers/idAndDate'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { fetchUnreadTeamMessageCounts } from '@server/gameTeamMessages'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) {
@@ -382,6 +383,10 @@ export async function GET(request) {
     const teamIds = gameTeams
       .map((gt) => toStringId(gt?.teamId))
       .filter(Boolean)
+    const unreadMessagesByTeamId = await fetchUnreadTeamMessageCounts({
+      db,
+      gameId: gameId.trim(),
+    })
 
     const teams =
       teamIds.length > 0
@@ -853,6 +858,7 @@ export async function GET(request) {
       return {
         teamId,
         teamName: team?.name ?? 'Без названия',
+        unreadTeamMessagesCount: Number(unreadMessagesByTeamId[teamId] || 0),
         members: teamMembersByTeamId.get(teamId) || [],
         activeTaskIndex,
         startedTasks,
