@@ -31,7 +31,10 @@ const CorporateOrderPageClient = ({
   const [form, setForm] = useState(() => ({
     ...initialForm,
     ...(initialValues || {}),
-    location: initialValues?.location || locationOptions[0]?.value || '',
+    location:
+      initialValues?.location ||
+      locationOptions[0]?.value ||
+      '',
   }))
   const [feedback, setFeedback] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)

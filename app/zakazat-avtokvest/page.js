@@ -20,7 +20,17 @@ export const metadata = {
   },
 }
 
-export default function CorporateOrderPage() {
+const normalizeLocation = (value, locationOptions) => {
+  if (typeof value !== 'string') {
+    return ''
+  }
+  const normalized = value.trim().toLowerCase()
+  return locationOptions.some((item) => item.value === normalized)
+    ? normalized
+    : ''
+}
+
+export default async function CorporateOrderPage({ searchParams }) {
   const locationOptions = Object.entries(LOCATIONS)
     .filter(([, value]) => !value?.hidden)
     .map(([key, value]) => ({
@@ -30,6 +40,11 @@ export default function CorporateOrderPage() {
           ? value.townRu.charAt(0).toUpperCase() + value.townRu.slice(1)
           : key,
     }))
+  const resolvedSearchParams = await searchParams
+  const initialLocation = normalizeLocation(
+    resolvedSearchParams?.location,
+    locationOptions,
+  )
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -51,7 +66,10 @@ export default function CorporateOrderPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <CorporateOrderPageClient locationOptions={locationOptions} />
+      <CorporateOrderPageClient
+        locationOptions={locationOptions}
+        initialValues={initialLocation ? { location: initialLocation } : null}
+      />
     </>
   )
 }

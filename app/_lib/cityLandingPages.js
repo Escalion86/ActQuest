@@ -332,6 +332,9 @@ export async function CityLandingPage({ slug }) {
     href: `/articles/${article.slug}`,
     label: article.title,
   }))
+  const orderGameHref = `/zakazat-avtokvest?location=${encodeURIComponent(
+    city.locationKey,
+  )}`
   const jsonLdItems = buildCityJsonLd(city, upcomingGames)
 
   return (
@@ -372,6 +375,18 @@ export async function CityLandingPage({ slug }) {
           >
             Записаться на игру
           </SeoActionLink>
+          <SeoActionLink
+            href={orderGameHref}
+            variant="secondary"
+            metrikaGoal="aq_click_order_game"
+            metrikaParams={{
+              city: city.locationKey,
+              page_type: 'city_page',
+              placement: 'city_hero_order_game_btn',
+            }}
+          >
+            Заказать игру
+          </SeoActionLink>
           {projectChatDirectUrl ? (
             <SeoActionLink
               href={projectChatDirectUrl}
@@ -405,6 +420,31 @@ export async function CityLandingPage({ slug }) {
         />
       </SeoSectionCard>
 
+      <SeoSectionCard
+        title={`Заказать автоквест в ${city.cityPrep}`}
+        description="Если нужна закрытая игра для компании, праздника или команды в свою дату, оставьте заявку на отдельный запуск."
+      >
+        <p className="text-[#b9d9ef]">
+          Подберем формат под количество участников, согласуем дату и создадим
+          приватную игру в ActQuest: она не попадет в публичное расписание, а
+          команды и результаты будут управляться через систему.
+        </p>
+        <div className="mt-4">
+          <SeoActionLink
+            href={orderGameHref}
+            variant="primary"
+            metrikaGoal="aq_click_order_game"
+            metrikaParams={{
+              city: city.locationKey,
+              page_type: 'city_page',
+              placement: 'city_order_section_btn',
+            }}
+          >
+            Оставить заявку
+          </SeoActionLink>
+        </div>
+      </SeoSectionCard>
+
       <SeoSectionCard title={`Ближайшие игры в ${city.cityAccusative}`}>
         {upcomingGames.length > 0 ? (
           <ul className="space-y-2 text-[#cbe8ff]">
@@ -436,6 +476,20 @@ export async function CityLandingPage({ slug }) {
             ближайшей игре.
           </p>
         )}
+        <div className="mt-4">
+          <SeoActionLink
+            href={orderGameHref}
+            variant={upcomingGames.length > 0 ? 'ghost' : 'primary'}
+            metrikaGoal="aq_click_order_game"
+            metrikaParams={{
+              city: city.locationKey,
+              page_type: 'city_page',
+              placement: 'city_schedule_order_fallback',
+            }}
+          >
+            Заказать игру в свою дату
+          </SeoActionLink>
+        </div>
       </SeoSectionCard>
 
       <SeoSectionCard title="FAQ">
