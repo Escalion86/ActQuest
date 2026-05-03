@@ -56,6 +56,66 @@ const gamesTeamsSchema = {
   endTime: [Date],
   forcedClues: [Number],
   photos: [{ photos: [String], checks: Map }],
+  storyProgress: {
+    type: {
+      status: {
+        type: String,
+        enum: ['not_started', 'in_progress', 'completed', 'failed'],
+        default: 'not_started',
+      },
+      startedAt: { type: Date, default: null },
+      finishedAt: { type: Date, default: null },
+      currentEndingId: { type: String, trim: true, default: null },
+      unlockedNodeIds: { type: [String], default: [] },
+      completedNodeIds: { type: [String], default: [] },
+      inventory: {
+        type: [
+          {
+            itemId: { type: String, trim: true },
+            status: {
+              type: String,
+              enum: ['active', 'consumed'],
+              default: 'active',
+            },
+            obtainedAt: { type: Date, default: null },
+            sourceNodeId: { type: String, trim: true, default: null },
+            consumedAt: { type: Date, default: null },
+            consumedAtNodeId: { type: String, trim: true, default: null },
+            consumedByActionId: { type: String, trim: true, default: null },
+          },
+        ],
+        default: [],
+      },
+      score: { type: Number, default: 0 },
+      usedClueIds: { type: [String], default: [] },
+      usedCodeIds: { type: [String], default: [] },
+      usedBonusCodeIds: { type: [String], default: [] },
+      history: {
+        type: [
+          {
+            id: { type: String, trim: true },
+            type: { type: String, trim: true },
+            at: { type: Date, default: null },
+            nodeId: { type: String, trim: true, default: null },
+            itemId: { type: String, trim: true, default: null },
+            actionId: { type: String, trim: true, default: null },
+            codeId: { type: String, trim: true, default: null },
+            clueId: { type: String, trim: true, default: null },
+            endingId: { type: String, trim: true, default: null },
+            points: { type: Number, default: 0 },
+            message: { type: String, default: '' },
+            actor: {
+              type: String,
+              enum: ['team', 'admin', 'system'],
+              default: 'system',
+            },
+          },
+        ],
+        default: [],
+      },
+    },
+    default: null,
+  },
   timerId: String,
 }
 

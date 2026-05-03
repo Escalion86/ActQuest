@@ -7,6 +7,176 @@ const TeamsSchema = new Schema(teamsSchema)
 const GamesTeamsSchema = new Schema(gamesTeamsSchema)
 const TeamsUsersSchema = new Schema(teamsUsersSchema)
 
+const StoryMediaSchema = new Schema(
+  {
+    id: { type: String, trim: true },
+    type: {
+      type: String,
+      enum: ['image', 'audio', 'video'],
+      default: 'image',
+    },
+    url: { type: String, trim: true, default: '' },
+    mime: { type: String, trim: true, default: '' },
+    size: { type: Number, default: 0 },
+    duration: { type: Number, default: 0 },
+    path: { type: String, trim: true, default: '' },
+    title: { type: String, trim: true, default: '' },
+  },
+  { _id: false },
+)
+
+const StoryCoordinatesSchema = new Schema(
+  {
+    latitude: { type: Number, default: null },
+    longitude: { type: Number, default: null },
+    radius: { type: Number, default: null },
+  },
+  { _id: false },
+)
+
+const StoryItemSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    title: { type: String, trim: true, default: '' },
+    image: { type: String, trim: true, default: '' },
+    descriptionRich: { type: String, default: '' },
+    media: { type: [StoryMediaSchema], default: [] },
+    consumableOnUse: { type: Boolean, default: false },
+    hiddenUntilObtained: { type: Boolean, default: true },
+  },
+  { _id: false },
+)
+
+const StoryEndingSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    title: { type: String, trim: true, default: '' },
+    type: {
+      type: String,
+      enum: ['success', 'failed', 'neutral', 'secret'],
+      default: 'success',
+    },
+    descriptionRich: { type: String, default: '' },
+    media: { type: [StoryMediaSchema], default: [] },
+    conditions: {
+      type: {
+        minScore: { type: Number, default: null },
+        requiredItemIds: { type: [String], default: [] },
+        requiredCompletedNodeIds: { type: [String], default: [] },
+      },
+      default: {},
+    },
+  },
+  { _id: false },
+)
+
+const StoryNodeSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    title: { type: String, trim: true, default: '' },
+    descriptionRich: { type: String, default: '' },
+    media: { type: [StoryMediaSchema], default: [] },
+    coordinates: {
+      type: StoryCoordinatesSchema,
+      default: () => ({}),
+    },
+    position: {
+      type: {
+        x: { type: Number, default: 0 },
+        y: { type: Number, default: 0 },
+      },
+      default: () => ({}),
+    },
+    visibility: {
+      type: {
+        startVisible: { type: Boolean, default: false },
+        requiredNodeIds: { type: [String], default: [] },
+        requiredItemIds: { type: [String], default: [] },
+        hiddenUntilUnlocked: { type: Boolean, default: true },
+      },
+      default: () => ({}),
+    },
+    scoring: {
+      type: {
+        scoreForComplete: { type: Number, default: 0 },
+      },
+      default: () => ({}),
+    },
+    clues: {
+      type: [
+        {
+          id: { type: String, trim: true, required: true },
+          title: { type: String, trim: true, default: '' },
+          contentRich: { type: String, default: '' },
+          media: { type: [StoryMediaSchema], default: [] },
+          scorePenalty: { type: Number, default: 0 },
+        },
+      ],
+      default: [],
+    },
+    codes: {
+      type: [
+        {
+          id: { type: String, trim: true, required: true },
+          code: { type: String, trim: true, default: '' },
+          type: {
+            type: String,
+            enum: ['complete', 'bonus', 'effect'],
+            default: 'complete',
+          },
+          scoreBonus: { type: Number, default: 0 },
+          scorePenalty: { type: Number, default: 0 },
+          requiredItemIds: { type: [String], default: [] },
+          grantsItemIds: { type: [String], default: [] },
+          consumesItemIds: { type: [String], default: [] },
+          unlocksNodeIds: { type: [String], default: [] },
+          completesNode: { type: Boolean, default: true },
+          endingId: { type: String, trim: true, default: null },
+          resultMessageRich: { type: String, default: '' },
+        },
+      ],
+      default: [],
+    },
+    actions: {
+      type: [
+        {
+          id: { type: String, trim: true, required: true },
+          label: { type: String, trim: true, default: '' },
+          descriptionRich: { type: String, default: '' },
+          requiredItemIds: { type: [String], default: [] },
+          grantsItemIds: { type: [String], default: [] },
+          consumesItemIds: { type: [String], default: [] },
+          unlocksNodeIds: { type: [String], default: [] },
+          scoreBonus: { type: Number, default: 0 },
+          scorePenalty: { type: Number, default: 0 },
+          completesNode: { type: Boolean, default: false },
+          endingId: { type: String, trim: true, default: null },
+          resultMessageRich: { type: String, default: '' },
+        },
+      ],
+      default: [],
+    },
+  },
+  { _id: false },
+)
+
+const StoryEdgeSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    fromNodeId: { type: String, trim: true, required: true },
+    toNodeId: { type: String, trim: true, required: true },
+    type: {
+      type: String,
+      enum: ['unlock', 'requires_item', 'ending'],
+      default: 'unlock',
+    },
+    itemId: { type: String, trim: true, default: null },
+    actionId: { type: String, trim: true, default: null },
+    codeId: { type: String, trim: true, default: null },
+  },
+  { _id: false },
+)
+
 const gamesSchema = {
   name: {
     type: String,
@@ -231,6 +401,38 @@ const gamesSchema = {
   type: {
     type: String,
     default: 'classic',
+  },
+  storyConfig: {
+    type: {
+      nodeLabel: { type: String, trim: true, default: 'Локация' },
+      startMode: {
+        type: String,
+        enum: ['common', 'individual'],
+        default: 'common',
+      },
+      hideTotalNodes: { type: Boolean, default: true },
+      hideTotalItems: { type: Boolean, default: true },
+      showInventory: { type: Boolean, default: true },
+      showScoreToTeam: { type: Boolean, default: false },
+      showFinalHistoryToTeam: { type: Boolean, default: false },
+    },
+    default: () => ({}),
+  },
+  storyItems: {
+    type: [StoryItemSchema],
+    default: [],
+  },
+  storyNodes: {
+    type: [StoryNodeSchema],
+    default: [],
+  },
+  storyEdges: {
+    type: [StoryEdgeSchema],
+    default: [],
+  },
+  storyEndings: {
+    type: [StoryEndingSchema],
+    default: [],
   },
   taskDuration: {
     type: Number,

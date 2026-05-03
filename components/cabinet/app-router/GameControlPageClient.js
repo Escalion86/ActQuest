@@ -411,6 +411,418 @@ const fetchGameControlStatus = async (gameId) => {
   return json.data
 }
 
+const fetchStoryControlStatus = async (gameId) => {
+  const normalizedGameId = String(gameId || '').trim()
+  if (!normalizedGameId) return null
+
+  const { json } = await requestApiJson(
+    `/api/cabinet/admin/story-control?gameId=${encodeURIComponent(normalizedGameId)}`,
+    { fallbackMessage: 'Не удалось загрузить story-контроль' },
+  )
+
+  if (!json?.success || !json?.data) {
+    throw new Error(json?.error || 'Не удалось загрузить story-контроль')
+  }
+
+  return json.data
+}
+
+const storyStatusLabels = {
+  not_started: 'Не стартовала',
+  in_progress: 'В процессе',
+  completed: 'Пройдена',
+  failed: 'Провалена',
+}
+
+const formatStoryHistoryDate = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+const StoryControlTeamCard = ({
+  game,
+  team,
+  onMutation,
+  isMutating,
+}) => {
+  const [selectedItemId, setSelectedItemId] = useState('')
+  const [selectedNodeId, setSelectedNodeId] = useState('')
+  const [selectedEndingId, setSelectedEndingId] = useState('')
+  const [scoreDelta, setScoreDelta] = useState('')
+
+  const items = Array.isArray(game?.storyItems) ? game.storyItems : []
+  const nodes = Array.isArray(game?.storyNodes) ? game.storyNodes : []
+  const endings = Array.isArray(game?.storyEndings) ? game.storyEndings : []
+  const progress = team?.progress || {}
+  const inventory = Array.isArray(progress?.inventory) ? progress.inventory : []
+  const activeInventory = inventory.filter((item) => item?.status === 'active')
+  const consumedInventory = inventory.filter((item) => item?.status === 'consumed')
+  const history = Array.isArray(progress?.history) ? progress.history : []
+  const recentHistory = history.slice(-8).reverse()
+  const availableNodeIds = Array.isArray(team?.availableNodeIds)
+    ? team.availableNodeIds
+    : []
+
+  const itemsById = new Map(
+    items.map((item) => [String(item?.id || ''), item]).filter(([id]) => id),
+  )
+  const nodesById = new Map(
+    nodes.map((node) => [String(node?.id || ''), node]).filter(([id]) => id),
+  )
+  const endingsById = new Map(
+    endings.map((ending) => [String(ending?.id || ''), ending]).filter(([id]) => id),
+  )
+
+  const selectedItem = selectedItemId || items[0]?.id || ''
+  const selectedNode = selectedNodeId || nodes[0]?.id || ''
+  const selectedEnding = selectedEndingId || endings[0]?.id || ''
+
+  const run = (endpoint, payload) =>
+    onMutation(endpoint, {
+      teamId: team?.team?.id,
+      gameTeamId: team?.team?.gameTeamId,
+      ...payload,
+    })
+
+  return (
+    <article className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/60">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            {team?.team?.name || 'Команда без названия'}
+          </h3>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            {storyStatusLabels[progress?.status] || progress?.status || '—'}
+            {' · '}
+            Баллы: {Number(progress?.score) || 0}
+            {progress?.currentEndingId
+              ? ` · Финал: ${
+                  endingsById.get(progress.currentEndingId)?.title ||
+                  progress.currentEndingId
+                }`
+              : ''}
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-300 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-800 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-100">
+          Активных локаций: {availableNodeIds.length}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+          <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+            Активные локации
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {availableNodeIds.length > 0 ? (
+              availableNodeIds.map((nodeId) => (
+                <span
+                  key={nodeId}
+                  className="rounded-full border border-cyan-300/70 bg-cyan-50 px-2 py-0.5 text-xs font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-100"
+                >
+                  {nodesById.get(nodeId)?.title || nodeId}
+                </span>
+              ))
+            ) : (
+              <span className="text-sm text-slate-500">—</span>
+            )}
+          </div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+          <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+            Инвентарь
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {activeInventory.length > 0 ? (
+              activeInventory.map((entry, index) => (
+                <span
+                  key={`${entry.itemId}-${index}`}
+                  className="rounded-full border border-emerald-300/70 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100"
+                >
+                  {itemsById.get(entry.itemId)?.title || entry.itemId}
+                </span>
+              ))
+            ) : (
+              <span className="text-sm text-slate-500">—</span>
+            )}
+          </div>
+          {consumedInventory.length > 0 ? (
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              Потрачено: {consumedInventory.length}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <select
+            value={selectedItem}
+            onChange={(event) => setSelectedItemId(event.target.value)}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          >
+            {items.length === 0 ? <option value="">Нет предметов</option> : null}
+            {items.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.title || item.id}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={isMutating || !selectedItem}
+            onClick={() => run('grant-item', { itemId: selectedItem })}
+            className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Выдать
+          </button>
+          <button
+            type="button"
+            disabled={isMutating || !selectedItem}
+            onClick={() => run('consume-item', { itemId: selectedItem })}
+            className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Изъять
+          </button>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <select
+            value={selectedNode}
+            onChange={(event) => setSelectedNodeId(event.target.value)}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          >
+            {nodes.length === 0 ? <option value="">Нет локаций</option> : null}
+            {nodes.map((node) => (
+              <option key={node.id} value={node.id}>
+                {node.title || node.id}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={isMutating || !selectedNode}
+            onClick={() => run('unlock-node', { nodeId: selectedNode })}
+            className="rounded-lg bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Открыть
+          </button>
+          <button
+            type="button"
+            disabled={isMutating || !selectedNode}
+            onClick={() => run('complete-node', { nodeId: selectedNode })}
+            className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Завершить
+          </button>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <input
+            type="number"
+            value={scoreDelta}
+            onChange={(event) => setScoreDelta(event.target.value)}
+            placeholder="Баллы, например 5 или -3"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          />
+          <button
+            type="button"
+            disabled={isMutating || !String(scoreDelta).trim()}
+            onClick={() => {
+              void run('adjust-score', {
+                points: Number(scoreDelta),
+                reason: 'admin_score_adjustment',
+              })
+              setScoreDelta('')
+            }}
+            className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Изменить баллы
+          </button>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <select
+            value={selectedEnding}
+            onChange={(event) => setSelectedEndingId(event.target.value)}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          >
+            {endings.length === 0 ? <option value="">Нет концовок</option> : null}
+            {endings.map((ending) => (
+              <option key={ending.id} value={ending.id}>
+                {ending.title || ending.id}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={isMutating || !selectedEnding}
+            onClick={() => {
+              if (!window.confirm('Завершить story-квест выбранной концовкой?')) {
+                return
+              }
+              void run('finish', { endingId: selectedEnding })
+            }}
+            className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Финал
+          </button>
+        </div>
+      </div>
+
+      {recentHistory.length > 0 ? (
+        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+          <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+            История
+          </p>
+          <div className="mt-2 space-y-1.5">
+            {recentHistory.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600 dark:text-slate-300"
+              >
+                <span className="font-mono text-slate-500">
+                  {formatStoryHistoryDate(entry.at)}
+                </span>
+                <span className="font-semibold">{entry.type}</span>
+                {entry.nodeId ? (
+                  <span>{nodesById.get(entry.nodeId)?.title || entry.nodeId}</span>
+                ) : null}
+                {entry.itemId ? (
+                  <span>{itemsById.get(entry.itemId)?.title || entry.itemId}</span>
+                ) : null}
+                {entry.endingId ? (
+                  <span>
+                    {endingsById.get(entry.endingId)?.title || entry.endingId}
+                  </span>
+                ) : null}
+                {entry.points ? <span>{entry.points > 0 ? '+' : ''}{entry.points}</span> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </article>
+  )
+}
+
+StoryControlTeamCard.propTypes = {
+  game: PropTypes.shape({
+    storyItems: PropTypes.array,
+    storyNodes: PropTypes.array,
+    storyEndings: PropTypes.array,
+  }).isRequired,
+  team: PropTypes.shape({
+    team: PropTypes.shape({
+      id: PropTypes.string,
+      name: PropTypes.string,
+      gameTeamId: PropTypes.string,
+    }),
+    progress: PropTypes.object,
+    availableNodeIds: PropTypes.arrayOf(PropTypes.string),
+  }).isRequired,
+  onMutation: PropTypes.func.isRequired,
+  isMutating: PropTypes.bool,
+}
+
+StoryControlTeamCard.defaultProps = {
+  isMutating: false,
+}
+
+const StoryControlDashboard = ({
+  storyData,
+  isLoading,
+  error,
+  onRefresh,
+  onMutation,
+  isMutating,
+}) => {
+  const game = storyData?.game || {}
+  const teams = Array.isArray(storyData?.teams) ? storyData.teams : []
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-violet-300 bg-violet-50 p-4 dark:border-violet-500/35 dark:bg-violet-500/10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-violet-950 dark:text-violet-50">
+              Story-контроль
+            </h2>
+            <p className="mt-1 text-sm text-violet-800 dark:text-violet-100/80">
+              Команд: {teams.length} · Локаций:{' '}
+              {Array.isArray(game.storyNodes) ? game.storyNodes.length : 0} ·
+              Предметов:{' '}
+              {Array.isArray(game.storyItems) ? game.storyItems.length : 0}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isLoading || isMutating}
+            className="rounded-full border border-violet-300 bg-white px-3 py-1.5 text-sm font-semibold text-violet-800 transition hover:border-violet-500 hover:text-violet-950 disabled:cursor-not-allowed disabled:opacity-60 dark:border-violet-500/40 dark:bg-slate-900/70 dark:text-violet-100"
+          >
+            Обновить story
+          </button>
+        </div>
+        {error ? (
+          <p className="mt-3 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+            {error}
+          </p>
+        ) : null}
+        {isLoading && !storyData ? (
+          <p className="mt-3 text-sm text-violet-800 dark:text-violet-100">
+            Загружаем story-контроль...
+          </p>
+        ) : null}
+      </div>
+
+      {teams.length > 0 ? (
+        <div className="space-y-3">
+          {teams.map((team) => (
+            <StoryControlTeamCard
+              key={team?.team?.gameTeamId || team?.team?.id}
+              game={game}
+              team={team}
+              onMutation={onMutation}
+              isMutating={isMutating}
+            />
+          ))}
+        </div>
+      ) : !isLoading ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-600 dark:border-slate-700/50 dark:bg-slate-800/40 dark:text-slate-400">
+          Нет зарегистрированных команд
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+StoryControlDashboard.propTypes = {
+  storyData: PropTypes.shape({
+    game: PropTypes.object,
+    teams: PropTypes.array,
+  }),
+  isLoading: PropTypes.bool,
+  error: PropTypes.string,
+  onRefresh: PropTypes.func.isRequired,
+  onMutation: PropTypes.func.isRequired,
+  isMutating: PropTypes.bool,
+}
+
+StoryControlDashboard.defaultProps = {
+  storyData: null,
+  isLoading: false,
+  error: '',
+  isMutating: false,
+}
+
 export default function GameControlPageClient({ session: _session }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -443,6 +855,7 @@ export default function GameControlPageClient({ session: _session }) {
   const [teamMessageHistoryLoading, setTeamMessageHistoryLoading] =
     useState(false)
   const [teamMessageHistoryError, setTeamMessageHistoryError] = useState('')
+  const [storyMutationLoading, setStoryMutationLoading] = useState(false)
   const teamMessageHistoryListRef = useRef(null)
   const teamPushTextareaRef = useRef(null)
   const [themeMode, setThemeMode] = useState('dark')
@@ -462,6 +875,19 @@ export default function GameControlPageClient({ session: _session }) {
   })
   const error = statusError?.message || null
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null
+  const isStoryGame = String(data?.gameType || '').trim().toLowerCase() === 'story'
+  const {
+    data: storyControlData,
+    error: storyControlError,
+    isLoading: storyControlLoading,
+    refetch: refetchStoryControl,
+  } = useQuery({
+    queryKey: ['story-control-status', gameId || ''],
+    queryFn: () => fetchStoryControlStatus(gameId),
+    enabled: Boolean(gameId && isStoryGame),
+    refetchInterval: autoRefresh && isStoryGame ? autoRefreshIntervalMs : false,
+    refetchIntervalInBackground: true,
+  })
   const showToast = useCallback((type, message) => {
     setToastEvent({
       id: Date.now(),
@@ -863,6 +1289,46 @@ export default function GameControlPageClient({ session: _session }) {
     ],
   )
 
+  const runStoryControlMutation = useCallback(
+    async (endpoint, payload) => {
+      if (!gameId || !endpoint) return null
+
+      setStoryMutationLoading(true)
+      try {
+        const { json } = await requestApiJson(
+          `/api/cabinet/admin/story-control/${endpoint}`,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              gameId,
+              ...payload,
+            }),
+          },
+        )
+
+        if (!json?.success) {
+          throw new Error(json?.error || 'Не удалось выполнить story-действие')
+        }
+
+        await refetchStoryControl()
+        showToast('success', 'Story-состояние обновлено')
+        return json.data
+      } catch (mutationError) {
+        showToast(
+          'error',
+          mutationError?.payload?.error ||
+            mutationError?.message ||
+            'Не удалось выполнить story-действие',
+        )
+        return null
+      } finally {
+        setStoryMutationLoading(false)
+      }
+    },
+    [gameId, refetchStoryControl, showToast],
+  )
+
   if (!gameId) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -911,6 +1377,7 @@ export default function GameControlPageClient({ session: _session }) {
 
   const { gameName, gameType, tasksCount, taskDuration, cluesDuration, teams } =
     data
+  const resolvedStoryControlError = storyControlError?.message || ''
   return (
     <div
       className={`max-w-4xl px-4 py-6 mx-auto transition-colors ${lightThemeOverrides}`}
@@ -947,16 +1414,24 @@ export default function GameControlPageClient({ session: _session }) {
             {gameName}
           </h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {gameType === 'photo' ? 'Фотоквест' : 'Автоквест'}
-            {' · '}
-            {tasksCount}{' '}
-            {tasksCount === 1
-              ? 'задание'
-              : tasksCount < 5
-                ? 'задания'
-                : 'заданий'}
-            {' · '}
-            {Math.floor(taskDuration / 60)} мин на задание
+            {isStoryGame
+              ? 'Story-квест'
+              : gameType === 'photo'
+                ? 'Фотоквест'
+                : 'Автоквест'}
+            {!isStoryGame ? (
+              <>
+                {' · '}
+                {tasksCount}{' '}
+                {tasksCount === 1
+                  ? 'задание'
+                  : tasksCount < 5
+                    ? 'задания'
+                    : 'заданий'}
+                {' · '}
+                {Math.floor(taskDuration / 60)} мин на задание
+              </>
+            ) : null}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -1038,6 +1513,19 @@ export default function GameControlPageClient({ session: _session }) {
         </div>
       )}
 
+      {isStoryGame ? (
+        <StoryControlDashboard
+          storyData={storyControlData}
+          isLoading={storyControlLoading}
+          error={resolvedStoryControlError}
+          onRefresh={() => {
+            void refetchStoryControl()
+          }}
+          onMutation={runStoryControlMutation}
+          isMutating={storyMutationLoading}
+        />
+      ) : (
+        <>
       {/* Сводка */}
       <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
         <div className="p-3 text-center border rounded-xl border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/60">
@@ -1454,6 +1942,8 @@ export default function GameControlPageClient({ session: _session }) {
             )
           })}
         </div>
+      )}
+        </>
       )}
 
       <GameTasksViewModal

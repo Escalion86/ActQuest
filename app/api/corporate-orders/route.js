@@ -55,7 +55,7 @@ export async function POST(request) {
   const telegram = normalizeString(payload?.telegram)
   const location = normalizeLocation(payload?.location)
   const participantsCount = Number(payload?.participantsCount)
-  const gameType = ['classic', 'photo', 'any'].includes(payload?.gameType)
+  const gameType = ['classic', 'photo', 'story', 'any'].includes(payload?.gameType)
     ? payload.gameType
     : 'any'
 

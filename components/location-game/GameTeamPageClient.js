@@ -314,6 +314,479 @@ const resolveThemePreference = () => {
   return prefersDark ? 'dark' : 'light'
 }
 
+const StoryMediaList = ({ media, directory }) => {
+  const items = Array.isArray(media) ? media : []
+  if (items.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="mt-4 grid gap-3">
+      {items.map((item, index) => {
+        const url = typeof item?.url === 'string' ? item.url.trim() : ''
+        if (!url) {
+          return null
+        }
+
+        const title = typeof item?.title === 'string' ? item.title.trim() : ''
+        const key = item?.id || `${directory}-${index}-${url}`
+        const type = String(item?.type || '').toLowerCase()
+
+        if (type === 'audio') {
+          return (
+            <div
+              key={key}
+              className="rounded-2xl border border-cyan-300/40 bg-cyan-50/70 p-3 dark:border-cyan-500/30 dark:bg-cyan-500/10"
+            >
+              {title ? (
+                <p className="mb-2 text-sm font-semibold text-cyan-900 dark:text-cyan-100">
+                  {title}
+                </p>
+              ) : null}
+              <audio controls src={url} className="w-full" />
+            </div>
+          )
+        }
+
+        if (type === 'video') {
+          return (
+            <div
+              key={key}
+              className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/70"
+            >
+              {title ? (
+                <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-100">
+                  {title}
+                </p>
+              ) : null}
+              <video controls src={url} className="max-h-[420px] w-full rounded-xl" />
+            </div>
+          )
+        }
+
+        return (
+          <figure
+            key={key}
+            className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/70"
+          >
+            <img
+              src={url}
+              alt={title || 'Медиа story-квеста'}
+              className="max-h-[420px] w-full rounded-xl object-contain"
+            />
+            {title ? (
+              <figcaption className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                {title}
+              </figcaption>
+            ) : null}
+          </figure>
+        )
+      })}
+    </div>
+  )
+}
+
+StoryMediaList.propTypes = {
+  media: PropTypes.arrayOf(PropTypes.object),
+  directory: PropTypes.string,
+}
+
+StoryMediaList.defaultProps = {
+  media: [],
+  directory: 'story-media',
+}
+
+const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
+  const [state, setState] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isMutating, setIsMutating] = useState(false)
+  const [error, setError] = useState('')
+  const [codeDrafts, setCodeDrafts] = useState({})
+  const [openedClues, setOpenedClues] = useState({})
+
+  const loadState = useCallback(async () => {
+    if (!gameId || !teamId || !isActive) return false
+
+    setIsLoading(true)
+    setError('')
+    try {
+      const params = new URLSearchParams({ teamId })
+      const response = await fetch(
+        `/api/cabinet/games/${encodeURIComponent(gameId)}/story-state?${params.toString()}`,
+      )
+      const json = await response.json().catch(() => null)
+      if (!response.ok || !json?.success) {
+        throw new Error(json?.error || 'Не удалось загрузить story-квест')
+      }
+      setState(json.data || null)
+      return true
+    } catch (loadError) {
+      setError(loadError?.message || 'Не удалось загрузить story-квест')
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }, [gameId, isActive, teamId])
+
+  useEffect(() => {
+    void loadState()
+  }, [loadState])
+
+  const postStoryAction = useCallback(
+    async (endpoint, payload) => {
+      if (isMutating) return null
+
+      setIsMutating(true)
+      setError('')
+      try {
+        const response = await fetch(
+          `/api/cabinet/games/${encodeURIComponent(gameId)}/story/${endpoint}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              teamId,
+              ...payload,
+            }),
+          },
+        )
+        const json = await response.json().catch(() => null)
+        if (!response.ok || !json?.success) {
+          throw new Error(json?.error || 'Не удалось выполнить действие')
+        }
+
+        const data = json.data || {}
+        if (data.state) {
+          setState(data.state)
+        }
+        return data
+      } catch (actionError) {
+        setError(actionError?.message || 'Не удалось выполнить действие')
+        return null
+      } finally {
+        setIsMutating(false)
+      }
+    },
+    [gameId, isMutating, teamId],
+  )
+
+  const handleCodeSubmit = useCallback(
+    async (event, nodeId) => {
+      event.preventDefault()
+      const code = String(codeDrafts[nodeId] || '').trim()
+      if (!code) return
+
+      const data = await postStoryAction('code', { nodeId, code })
+      if (data?.state) {
+        setCodeDrafts((prev) => ({ ...prev, [nodeId]: '' }))
+      }
+    },
+    [codeDrafts, postStoryAction],
+  )
+
+  const handleActionClick = useCallback(
+    async ({ nodeId, actionId }) => {
+      await postStoryAction('action', { nodeId, actionId })
+    },
+    [postStoryAction],
+  )
+
+  const handleClueClick = useCallback(
+    async ({ nodeId, clueId }) => {
+      const data = await postStoryAction('clue', { nodeId, clueId })
+      if (data?.clue) {
+        setOpenedClues((prev) => ({
+          ...prev,
+          [clueId]: data.clue,
+        }))
+      }
+    },
+    [postStoryAction],
+  )
+
+  const availableNodes = Array.isArray(state?.availableNodes)
+    ? state.availableNodes
+    : []
+  const inventory = Array.isArray(state?.inventory) ? state.inventory : []
+  const nodeLabel = state?.game?.storyConfig?.nodeLabel || 'Локация'
+  const status = state?.progress?.status || 'not_started'
+  const isFinished = status === 'completed' || status === 'failed'
+
+  return (
+    <section className="space-y-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold text-primary dark:text-white">
+              Story-квест
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Команда видит только активные {nodeLabel.toLowerCase()} и текущий
+              инвентарь.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {state?.progress?.score !== null &&
+            state?.progress?.score !== undefined ? (
+              <span className="rounded-full border border-cyan-300 bg-cyan-50 px-3 py-1 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-100">
+                Баллы: {state.progress.score}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void loadState()}
+              disabled={isLoading || isMutating}
+              className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:border-blue-400 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+            >
+              Обновить
+            </button>
+          </div>
+        </div>
+
+        {isLoading && !state ? (
+          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+            Загружаем состояние...
+          </p>
+        ) : null}
+        {error ? (
+          <p className="mt-4 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+            {error}
+          </p>
+        ) : null}
+
+        {state?.currentEnding ? (
+          <div className="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-500/35 dark:bg-emerald-500/10">
+            <p className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-200">
+              {status === 'failed' ? 'Финал: не пройдено' : 'Финал'}
+            </p>
+            <h3 className="mt-1 text-lg font-semibold text-emerald-950 dark:text-emerald-50">
+              {state.currentEnding.title || 'Концовка'}
+            </h3>
+            <RichTaskContentView
+              html={state.currentEnding.descriptionRich || ''}
+              text=""
+              className="mt-3 text-base leading-relaxed text-emerald-950 dark:text-emerald-50"
+              textClassName="mt-3 text-base leading-relaxed text-emerald-950 dark:text-emerald-50"
+              directory={`games/story/${gameId}/${teamId}/ending/${state.currentEnding.id}`}
+            />
+            <StoryMediaList
+              media={state.currentEnding.media}
+              directory={`story-ending-${state.currentEnding.id}`}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      {inventory.length > 0 ? (
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40">
+          <h2 className="text-lg font-semibold text-primary dark:text-white">
+            Инвентарь
+          </h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {inventory.map((item) => (
+              <article
+                key={item.itemId}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70"
+              >
+                <div className="flex gap-3">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.title || 'Предмет'}
+                      className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                    />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-50">
+                      {item.title || 'Предмет'}
+                    </h3>
+                    {item.descriptionRich ? (
+                      <RichTaskContentView
+                        html={item.descriptionRich}
+                        text=""
+                        className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-200"
+                        textClassName="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-200"
+                        directory={`games/story/${gameId}/${teamId}/items/${item.itemId}`}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+                <StoryMediaList
+                  media={item.media}
+                  directory={`story-item-${item.itemId}`}
+                />
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {availableNodes.length > 0 ? (
+        <div className="grid gap-6">
+          {availableNodes.map((node) => {
+            const nodeId = node.id
+            const nodeClues = Array.isArray(node.clues) ? node.clues : []
+            const nodeActions = Array.isArray(node.actions) ? node.actions : []
+
+            return (
+              <article
+                key={nodeId}
+                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">
+                  {nodeLabel}
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">
+                  {node.title || nodeLabel}
+                </h2>
+                <RichTaskContentView
+                  html={node.descriptionRich || ''}
+                  text=""
+                  className="mt-4 text-base leading-relaxed text-slate-700 dark:text-slate-200"
+                  textClassName="mt-4 text-base leading-relaxed text-slate-700 dark:text-slate-200"
+                  directory={`games/story/${gameId}/${teamId}/nodes/${nodeId}`}
+                />
+                <StoryMediaList
+                  media={node.media}
+                  directory={`story-node-${nodeId}`}
+                />
+
+                {nodeClues.length > 0 ? (
+                  <div className="mt-5 space-y-3">
+                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+                      Подсказки
+                    </h3>
+                    {nodeClues.map((clue) => {
+                      const openedClue = openedClues[clue.id]
+                      const wasUsed = Boolean(clue.isUsed || openedClue)
+                      return (
+                        <div
+                          key={clue.id}
+                          className="rounded-2xl border border-cyan-300/50 bg-cyan-50/70 p-4 dark:border-cyan-500/30 dark:bg-cyan-500/10"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-cyan-950 dark:text-cyan-50">
+                                {clue.title || 'Подсказка'}
+                              </p>
+                              {clue.scorePenalty ? (
+                                <p className="mt-1 text-xs text-cyan-700 dark:text-cyan-200/80">
+                                  Штраф: {clue.scorePenalty} баллов
+                                </p>
+                              ) : null}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleClueClick({ nodeId, clueId: clue.id })
+                              }
+                              disabled={isMutating || wasUsed}
+                              className="rounded-full border border-cyan-300 bg-white px-3 py-1.5 text-sm font-semibold text-cyan-800 transition hover:border-cyan-500 hover:text-cyan-950 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-500/40 dark:bg-slate-900/70 dark:text-cyan-100 dark:hover:border-cyan-300"
+                            >
+                              {wasUsed ? 'Открыта' : 'Открыть'}
+                            </button>
+                          </div>
+                          {openedClue ? (
+                            <div className="mt-3">
+                              <RichTaskContentView
+                                html={openedClue.contentRich || ''}
+                                text=""
+                                className="text-sm leading-relaxed text-cyan-950 dark:text-cyan-50"
+                                textClassName="text-sm leading-relaxed text-cyan-950 dark:text-cyan-50"
+                                directory={`games/story/${gameId}/${teamId}/clues/${clue.id}`}
+                              />
+                              <StoryMediaList
+                                media={openedClue.media}
+                                directory={`story-clue-${clue.id}`}
+                              />
+                            </div>
+                          ) : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
+
+                {nodeActions.length > 0 ? (
+                  <div className="mt-5 space-y-3">
+                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+                      Действия
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {nodeActions.map((action) => (
+                        <button
+                          key={action.id}
+                          type="button"
+                          onClick={() =>
+                            handleActionClick({ nodeId, actionId: action.id })
+                          }
+                          disabled={isMutating || isFinished}
+                          className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                          title={
+                            Array.isArray(action.requiredItemIds) &&
+                            action.requiredItemIds.length > 0
+                              ? `Нужно: ${action.requiredItemIds.join(', ')}`
+                              : undefined
+                          }
+                        >
+                          {action.label || 'Выполнить действие'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {!isFinished ? (
+                  <form
+                    className="mt-5 flex flex-col gap-3 sm:flex-row"
+                    onSubmit={(event) => handleCodeSubmit(event, nodeId)}
+                  >
+                    <input
+                      type="text"
+                      value={codeDrafts[nodeId] || ''}
+                      onChange={(event) =>
+                        setCodeDrafts((prev) => ({
+                          ...prev,
+                          [nodeId]: event.target.value.slice(0, 80),
+                        }))
+                      }
+                      placeholder="Введите код"
+                      className="min-w-0 flex-1 rounded-2xl border border-gray-300 px-4 py-3 text-base transition focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isMutating || !String(codeDrafts[nodeId] || '').trim()}
+                      className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Отправить
+                    </button>
+                  </form>
+                ) : null}
+              </article>
+            )
+          })}
+        </div>
+      ) : !isLoading && state ? (
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:shadow-slate-950/40">
+          {isFinished
+            ? 'Квест завершен.'
+            : 'Сейчас нет активных локаций. Дождитесь действия организатора или проверьте введенные коды.'}
+        </section>
+      ) : null}
+    </section>
+  )
+}
+
+StoryQuestProcess.propTypes = {
+  gameId: PropTypes.string.isRequired,
+  teamId: PropTypes.string.isRequired,
+  isActive: PropTypes.bool,
+}
+
+StoryQuestProcess.defaultProps = {
+  isActive: false,
+}
+
 function GameTeamPage({
   location,
   game,
@@ -892,9 +1365,13 @@ function GameTeamPage({
     const typeValue = String(game?.type || '')
       .trim()
       .toLowerCase()
+    if (typeValue === 'story') {
+      return 'Story-квест'
+    }
     return typeValue === 'photo' ? 'Фотоквест' : 'Автоквест'
   }, [game?.type])
   const isPhotoGame = String(game?.type || '').trim().toLowerCase() === 'photo'
+  const isStoryGame = String(game?.type || '').trim().toLowerCase() === 'story'
 
   const formattedTaskMessage = useMemo(
     () => transformHtml(currentTaskHtml ?? ''),
@@ -1174,7 +1651,8 @@ function GameTeamPage({
     return transformHtml(currentPostCompletionMessage)
   }, [currentPostCompletionMessage])
 
-  const shouldRenderPostCompletionMessage = Boolean(postCompletionMessageHtml)
+  const shouldRenderPostCompletionMessage =
+    Boolean(postCompletionMessageHtml) && !isStoryGame
 
   useEffect(() => {
     if (!shouldRenderPostCompletionMessage) {
@@ -1229,12 +1707,13 @@ function GameTeamPage({
       hasUnreadAdminMessages)
   const shouldShowGameMessagesBlock =
     shouldShowLatestAdminMessage || (!latestAdminMessage && canSendGameMessage)
-  const shouldShowLastMessage = displayedResultMessages.length > 0
-  const shouldShowAnswerForm = !isGameCompletion && !isBreakState
-  const shouldShowGameCompletedBlock = isGameCompletion
+  const shouldShowLastMessage = displayedResultMessages.length > 0 && !isStoryGame
+  const shouldShowAnswerForm = !isStoryGame && !isGameCompletion && !isBreakState
+  const shouldShowGameCompletedBlock = !isStoryGame && isGameCompletion
   const shouldShowCurrentTaskBlock =
     Boolean(resolvedTaskHtml || resolvedTaskText || visibleTaskClues.length > 0) &&
-    !shouldShowGameCompletedBlock
+    !shouldShowGameCompletedBlock &&
+    !isStoryGame
   const statusNotice = useMemo(() => {
     if (error) return null
     if (!isGameStarted && status === 'active') {
@@ -1702,6 +2181,14 @@ function GameTeamPage({
                   </p>
                 )}
               </section>
+            ) : null}
+
+            {isStoryGame && status === 'started' && !error ? (
+              <StoryQuestProcess
+                gameId={gameId}
+                teamId={teamId}
+                isActive={isStoryGame && status === 'started'}
+              />
             ) : null}
 
             {shouldShowCurrentTaskBlock ? (

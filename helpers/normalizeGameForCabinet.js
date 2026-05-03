@@ -80,6 +80,13 @@ const normalizeManyCodesPenalty = (value) => {
   return [ensureNumber(value[0], 0), ensureNumber(value[1], 0)]
 }
 
+const normalizeGameType = (value) => {
+  const normalized = ensureString(value, 'classic').trim().toLowerCase()
+  return ['classic', 'photo', 'story'].includes(normalized)
+    ? normalized
+    : 'classic'
+}
+
 const normalizeStringArray = (values = []) => {
   if (!Array.isArray(values) || values.length === 0) {
     return []
@@ -214,6 +221,97 @@ const normalizeBonusCodes = (bonusCodes = []) => {
     bonus: ensureNumber(bonusCode?.bonus, 0),
     description: ensureString(bonusCode?.description, ''),
     image: normalizeMediaUrl(bonusCode?.image),
+  }))
+}
+
+const normalizeStoryMedia = (media = []) => normalizeTaskMedia(media)
+
+const normalizeStoryItems = (items = []) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return []
+  }
+
+  return items.map((item, index) => ({
+    id: ensureString(item?.id, `story-item-${index}`),
+    title: ensureString(item?.title, ''),
+    image: normalizeMediaUrl(item?.image),
+    descriptionRich: ensureString(item?.descriptionRich, ''),
+    media: normalizeStoryMedia(item?.media),
+    consumableOnUse: ensureBoolean(item?.consumableOnUse, false),
+    hiddenUntilObtained: ensureBoolean(item?.hiddenUntilObtained, true),
+  }))
+}
+
+const normalizeStoryNodes = (nodes = []) => {
+  if (!Array.isArray(nodes) || nodes.length === 0) {
+    return []
+  }
+
+  return nodes.map((node, index) => ({
+    id: ensureString(node?.id, `story-node-${index}`),
+    title: ensureString(node?.title, ''),
+    descriptionRich: ensureString(node?.descriptionRich, ''),
+    media: normalizeStoryMedia(node?.media),
+    visibility: {
+      startVisible: ensureBoolean(node?.visibility?.startVisible, false),
+      requiredNodeIds: normalizeStringArray(node?.visibility?.requiredNodeIds),
+      requiredItemIds: normalizeStringArray(node?.visibility?.requiredItemIds),
+      hiddenUntilUnlocked: ensureBoolean(
+        node?.visibility?.hiddenUntilUnlocked,
+        true,
+      ),
+    },
+    scoring: {
+      scoreForComplete: ensureNumber(node?.scoring?.scoreForComplete, 0),
+    },
+    clues: Array.isArray(node?.clues) ? node.clues : [],
+    codes: Array.isArray(node?.codes) ? node.codes : [],
+    actions: Array.isArray(node?.actions) ? node.actions : [],
+    position: {
+      x: ensureNumber(node?.position?.x, 0),
+      y: ensureNumber(node?.position?.y, 0),
+    },
+  }))
+}
+
+const normalizeStoryEdges = (edges = []) => {
+  if (!Array.isArray(edges) || edges.length === 0) {
+    return []
+  }
+
+  return edges.map((edge, index) => ({
+    id: ensureString(edge?.id, `story-edge-${index}`),
+    fromNodeId: ensureString(edge?.fromNodeId, ''),
+    toNodeId: ensureString(edge?.toNodeId, ''),
+    type: ['unlock', 'requires_item', 'ending'].includes(edge?.type)
+      ? edge.type
+      : 'unlock',
+    itemId: ensureString(edge?.itemId, ''),
+    actionId: ensureString(edge?.actionId, ''),
+    codeId: ensureString(edge?.codeId, ''),
+  }))
+}
+
+const normalizeStoryEndings = (endings = []) => {
+  if (!Array.isArray(endings) || endings.length === 0) {
+    return []
+  }
+
+  return endings.map((ending, index) => ({
+    id: ensureString(ending?.id, `story-ending-${index}`),
+    title: ensureString(ending?.title, ''),
+    type: ['success', 'failed', 'neutral', 'secret'].includes(ending?.type)
+      ? ending.type
+      : 'success',
+    descriptionRich: ensureString(ending?.descriptionRich, ''),
+    media: normalizeStoryMedia(ending?.media),
+    conditions: {
+      minScore: ensureNullableNumber(ending?.conditions?.minScore),
+      requiredItemIds: normalizeStringArray(ending?.conditions?.requiredItemIds),
+      requiredCompletedNodeIds: normalizeStringArray(
+        ending?.conditions?.requiredCompletedNodeIds,
+      ),
+    },
   }))
 }
 
@@ -389,7 +487,24 @@ const normalizeGameForCabinet = (game) => {
     location: ensureString(game.location, ''),
     seasonId: ensureString(game.seasonId, ''),
     seasonName: ensureString(game.seasonName, ''),
-    type: game?.type === 'photo' ? 'photo' : 'classic',
+    type: normalizeGameType(game?.type),
+    storyConfig: {
+      nodeLabel: ensureString(game?.storyConfig?.nodeLabel, 'Локация'),
+      startMode:
+        game?.storyConfig?.startMode === 'individual' ? 'individual' : 'common',
+      hideTotalNodes: ensureBoolean(game?.storyConfig?.hideTotalNodes, true),
+      hideTotalItems: ensureBoolean(game?.storyConfig?.hideTotalItems, true),
+      showInventory: ensureBoolean(game?.storyConfig?.showInventory, true),
+      showScoreToTeam: ensureBoolean(game?.storyConfig?.showScoreToTeam, false),
+      showFinalHistoryToTeam: ensureBoolean(
+        game?.storyConfig?.showFinalHistoryToTeam,
+        false,
+      ),
+    },
+    storyItems: normalizeStoryItems(game.storyItems),
+    storyNodes: normalizeStoryNodes(game.storyNodes),
+    storyEdges: normalizeStoryEdges(game.storyEdges),
+    storyEndings: normalizeStoryEndings(game.storyEndings),
     description: ensureString(game.description, ''),
     descriptionRich: ensureString(game.descriptionRich, ''),
     descriptionMedia: normalizeTaskMedia(game.descriptionMedia),

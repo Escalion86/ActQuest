@@ -25,6 +25,9 @@ const normalizeTelegramId = (value) => {
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null
 }
 
+const normalizeGameType = (value) =>
+  ['classic', 'photo', 'story'].includes(value) ? value : 'classic'
+
 export async function POST(request, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user || !isUserAdmin({ role: session.user.role })) {
@@ -84,7 +87,7 @@ export async function POST(request, { params }) {
       description: order.comment || '',
       dateStart,
       location: order.location,
-      type: order.gameType === 'photo' ? 'photo' : 'classic',
+      type: normalizeGameType(order.gameType),
       hidden: true,
       isPrivate: true,
       orderType: 'corporate',

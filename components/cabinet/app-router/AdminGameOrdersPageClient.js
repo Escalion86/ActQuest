@@ -30,6 +30,7 @@ const ORDER_STATUSES = [
 const GAME_TYPE_LABELS = {
   classic: 'Classic',
   photo: 'Photo',
+  story: 'Story',
   any: 'Помочь выбрать',
 }
 

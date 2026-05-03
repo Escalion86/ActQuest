@@ -204,6 +204,7 @@ const CorporateOrderPageClient = ({
             <option value="any">Помогите выбрать</option>
             <option value="classic">Классический автоквест</option>
             <option value="photo">Фотоквест</option>
+            <option value="story">Индивидуальный story-квест</option>
           </select>
         </label>
         <label className={labelClass}>
@@ -265,7 +266,11 @@ const CorporateOrderPageClient = ({
               команды.
             </p>
             <div className="mt-8 grid gap-3 text-sm text-slate-100 sm:grid-cols-3">
-              {['Дата под вашу команду', 'Classic или photo формат', 'Сценарий и результаты в системе'].map(
+              {[
+                'Дата под вашу команду',
+                'Classic, photo или story',
+                'Сценарий и результаты в системе',
+              ].map(
                 (item) => (
                   <div
                     key={item}

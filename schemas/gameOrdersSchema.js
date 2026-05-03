@@ -49,7 +49,7 @@ const gameOrdersSchema = {
   },
   gameType: {
     type: String,
-    enum: ['classic', 'photo', 'any'],
+    enum: ['classic', 'photo', 'story', 'any'],
     default: 'any',
   },
   selectedGameId: {
