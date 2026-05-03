@@ -44,7 +44,6 @@ export default async function CabinetGameOrdersPage() {
       initialValues={{
         contactName: session.user.name || session.user.username || '',
         phone: session.user.phone ? String(session.user.phone) : '',
-        email: session.user.email || '',
         telegram: session.user.username ? `@${session.user.username}` : '',
         location: normalizeLocation(session.user.location),
       }}

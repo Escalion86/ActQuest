@@ -29,7 +29,6 @@ CabinetGameOrderPageClient.propTypes = {
   initialValues: PropTypes.shape({
     contactName: PropTypes.string,
     phone: PropTypes.string,
-    email: PropTypes.string,
     telegram: PropTypes.string,
     location: PropTypes.string,
   }),

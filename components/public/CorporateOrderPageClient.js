@@ -6,10 +6,8 @@ import Link from 'next/link'
 import { formatPhoneInput, normalizePhoneForSubmit } from '@helpers/phoneInputMask'
 
 const initialForm = {
-  companyName: '',
   contactName: '',
   phone: '',
-  email: '',
   telegram: '',
   location: '',
   preferredDate: '',
@@ -109,16 +107,6 @@ const CorporateOrderPageClient = ({
 
       <div className="mt-5 grid gap-4">
         <label className={labelClass}>
-          Компания
-          <input
-            name="companyName"
-            value={form.companyName}
-            onChange={handleChange}
-            className={inputClass}
-            placeholder="Название компании"
-          />
-        </label>
-        <label className={labelClass}>
           Контактное лицо
           <input
             name="contactName"
@@ -153,17 +141,6 @@ const CorporateOrderPageClient = ({
             />
           </label>
         </div>
-        <label className={labelClass}>
-          Email
-          <input
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            className={inputClass}
-            placeholder="mail@example.ru"
-          />
-        </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={labelClass}>
             Город
@@ -378,10 +355,8 @@ CorporateOrderPageClient.propTypes = {
     }),
   ).isRequired,
   initialValues: PropTypes.shape({
-    companyName: PropTypes.string,
     contactName: PropTypes.string,
     phone: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    email: PropTypes.string,
     telegram: PropTypes.string,
     location: PropTypes.string,
   }),
