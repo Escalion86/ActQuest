@@ -191,6 +191,7 @@ export async function POST(request) {
       .select({
         _id: 1,
         status: 1,
+        location: 1,
         tasks: 1,
         taskDuration: 1,
         breakDuration: 1,

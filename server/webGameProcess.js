@@ -4,6 +4,7 @@ import createTaskProgressArrays, {
   createTaskPhotosArray,
 } from '@helpers/createTaskProgressArrays'
 import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
+import getLocationTimeZone from '@helpers/locationTimeZone'
 import removeCluePenalties from '@helpers/removeCluePenalties'
 import sanitize from '@helpers/sanitize'
 import taskText from 'telegram/func/taskText'
@@ -26,14 +27,16 @@ const ensureDate = (value) => {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
-  timeZone: 'Asia/Krasnoyarsk',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-})
+const timeToCodeStr = (location) => {
+  const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: getLocationTimeZone(location),
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 
-const timeToCodeStr = () => timeFormatter.format(new Date()).replace(':', '')
+  return timeFormatter.format(new Date()).replace(':', '')
+}
 
 const endTaskForIndex = (endTime, taskIndex, tasksLength) => {
   const endTimeTemp = ensureArrayCapacity(endTime, tasksLength)
@@ -479,7 +482,8 @@ const webGameProcess = async ({
   )
 
   const isDynamicTimeCode =
-    normalizedCodes[0] === '[time]' && timeToCodeStr() === normalizedCode
+    normalizedCodes[0] === '[time]' &&
+    timeToCodeStr(resolvedGame.location) === normalizedCode
 
   const isCorrectCode =
     normalizedCodes.includes(normalizedCode) || isDynamicTimeCode
