@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
-const ESCALIONCLOUD_API_URL = 'https://api.escalioncloud.ru/api'
+const ESCALIONCLOUD_API_URL =
+  process.env.ESCALIONCLOUD_API_URL || 'https://cloud.escalion.ru/api'
 const IOS_USER_AGENT_RE = /\b(iPhone|iPad|iPod)\b/i
 const HEIC_HEIF_NAME_RE = /\.(heic|heif)$/i
 const isDevEnv = process.env.NODE_ENV !== 'production'

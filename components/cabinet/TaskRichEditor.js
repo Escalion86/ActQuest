@@ -56,7 +56,7 @@ const SLASH_COMMANDS = [
 
 const ESCALIONCLOUD_PUBLIC_ORIGIN =
   process.env.NEXT_PUBLIC_ESCALIONCLOUD_PUBLIC_ORIGIN ||
-  'https://escalioncloud.ru'
+  'https://cloud.escalion.ru'
 const MAX_VIDEO_SIZE_BYTES = 40 * 1024 * 1024
 const DEFAULT_PICKER_COLOR = '#111827'
 const NO_COLOR_TOKEN = '__no_color__'

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 
-const ESCALIONCLOUD_FILES_API_URL = 'https://api.escalioncloud.ru/api/files'
+const ESCALIONCLOUD_API_URL =
+  process.env.ESCALIONCLOUD_API_URL || 'https://cloud.escalion.ru/api'
+const ESCALIONCLOUD_FILES_API_URL = `${ESCALIONCLOUD_API_URL.replace(/\/+$/g, '')}/files`
 
 const buildError = (type, message) => ({
   success: false,
