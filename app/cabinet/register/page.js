@@ -19,9 +19,10 @@ const pickFirst = (value) => (Array.isArray(value) ? value[0] : value)
 export default async function CabinetRegisterPage({ searchParams }) {
   const session = await getServerSession(authOptions)
   const headersList = await headers()
+  const resolvedSearchParams = await searchParams
 
   const callbackState = resolveAuthCallbackFromSearchParams({
-    searchParams,
+    searchParams: resolvedSearchParams,
     headersList,
     fallback: '/cabinet',
   })
@@ -45,7 +46,7 @@ export default async function CabinetRegisterPage({ searchParams }) {
       process.env.DOMAIN ? `${process.env.DOMAIN}/api/vk-id/callback` : '',
     )
   const vkidScope = process.env.VK_ID_SCOPE || 'phone email'
-  const rawIntent = String(pickFirst(searchParams?.intent) || '')
+  const rawIntent = String(pickFirst(resolvedSearchParams?.intent) || '')
     .trim()
     .toLowerCase()
   const authIntent = rawIntent === 'recovery' ? 'recovery' : 'register'

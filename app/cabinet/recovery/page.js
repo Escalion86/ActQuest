@@ -17,9 +17,10 @@ export const dynamic = 'force-dynamic'
 export default async function CabinetRecoveryPage({ searchParams }) {
   const session = await getServerSession(authOptions)
   const headersList = await headers()
+  const resolvedSearchParams = await searchParams
 
   const callbackState = resolveAuthCallbackFromSearchParams({
-    searchParams,
+    searchParams: resolvedSearchParams,
     headersList,
     fallback: '/cabinet',
   })
