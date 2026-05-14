@@ -1,6 +1,6 @@
-import { USERS_ROLES } from 'telegram/constants'
+import { USER_ROLE_VALUES } from './userRoles'
 
 const userRole = (user) =>
-  USERS_ROLES.includes(user.role) ? user.role : 'client'
+  USER_ROLE_VALUES.includes(user?.role) ? user.role : 'client'
 
 export default userRole

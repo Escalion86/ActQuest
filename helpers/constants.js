@@ -213,9 +213,4 @@ export const ORIENTATIONS = [
   { value: 'homo', name: 'Гомосексуал', color: 'red-400' },
 ]
 
-export const USERS_ROLES = [
-  { value: 'client', name: 'Пользователь', color: 'blue-400' },
-  { value: 'moder', name: 'Модератор', color: 'green-400' },
-  { value: 'admin', name: 'Администратор', color: 'orange-400' },
-  { value: 'dev', name: 'Разработчик', color: 'danger' },
-]
+export { USER_ROLE_OPTIONS as USERS_ROLES } from './userRoles'

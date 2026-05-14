@@ -1,7 +1,7 @@
-import { USERS_ROLES_NAMES } from 'telegram/constants'
+import { USER_ROLE_NAMES } from './userRoles'
 import userRole from './userRole'
 
 const userRoleName = (user) =>
-  USERS_ROLES_NAMES[userRole(user)] || 'Пользователь'
+  USER_ROLE_NAMES[userRole(user)] || 'Пользователь'
 
 export default userRoleName
