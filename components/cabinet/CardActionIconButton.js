@@ -63,6 +63,42 @@ export const TeamCardIcon = () => (
   </svg>
 )
 
+export const AgentCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <circle
+      cx="10"
+      cy="6.5"
+      r="3"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <path
+      d="M4.5 16.5C5.35 13.7 7.35 12.25 10 12.25C12.65 12.25 14.65 13.7 15.5 16.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M6.75 5.25L4.75 4M13.25 5.25L15.25 4"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M7.75 7H12.25"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
 export const StatusCardIcon = ({ status }) => {
   const normalizedStatus = String(status || '').toLowerCase()
 

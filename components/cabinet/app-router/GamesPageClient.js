@@ -13,6 +13,7 @@ import {
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import CardActionIconButton, {
+  AgentCardIcon,
   EditCardIcon,
   GameControlCardIcon,
   MegaphoneCardIcon,
@@ -533,6 +534,21 @@ const getUserParticipationTeams = (game) =>
       }
     })
     .filter(Boolean)
+
+const isCurrentUserGameAgent = (game, currentUserId) => {
+  const normalizedUserId =
+    currentUserId === null || currentUserId === undefined
+      ? ''
+      : String(currentUserId).trim()
+  if (!normalizedUserId) {
+    return false
+  }
+
+  return (Array.isArray(game?.agents) ? game.agents : []).some((agent) => {
+    const agentUserId = String(agent?.userId || agent?.id || agent || '').trim()
+    return agentUserId === normalizedUserId && agent?.active !== false
+  })
+}
 
 const isObjectIdLike = (value) =>
   typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value.trim())
@@ -3037,6 +3053,35 @@ const GamesPage = ({
     () => new Map(availableAgents.map((agent) => [agent.id, agent])),
     [availableAgents],
   )
+
+  const modalGame =
+    (isEditModalOpen || isTasksModalOpen) && editingGame
+      ? editingGame
+      : selectedGame
+
+  const selectedGameAgents = useMemo(() => {
+    if (!modalGame) {
+      return []
+    }
+
+    return (Array.isArray(modalGame.agents) ? modalGame.agents : [])
+      .map((agent) => {
+        const userId = String(agent?.userId || agent?.id || agent || '').trim()
+        if (!userId) {
+          return null
+        }
+        const fallback = availableAgentsMap.get(userId)
+        return {
+          id: userId,
+          userId,
+          active: agent?.active !== false,
+          name: agent?.name || fallback?.name || '',
+          username: agent?.username || fallback?.username || '',
+          telegramId: agent?.telegramId || fallback?.telegramId || '',
+        }
+      })
+      .filter(Boolean)
+  }, [availableAgentsMap, modalGame])
 
   const currencyFormatter = useMemo(
     () =>
@@ -5650,6 +5695,7 @@ const GamesPage = ({
       const canViewThisGameTasks = canViewTasksForGame(game)
       const canViewGameTeams =
         typeof game?.status === 'string' && game.status !== 'canceled'
+      const canOpenAgentPanel = isCurrentUserGameAgent(game, currentUserIdString)
       const visibleStatus = normalizeVisibleStatus(
         game.status,
         canSeeClosedStatus,
@@ -5782,6 +5828,7 @@ const GamesPage = ({
                   canEditThisGame ||
                   canManageThisGame ||
                   canManageStatusThisGame ||
+                  canOpenAgentPanel ||
                   canViewThisGameResults ||
                   canGenerateThisGameResults ||
                   canViewThisGameTasks) && (
@@ -5881,8 +5928,25 @@ const GamesPage = ({
                       canManageThisGame ||
                       canManageStatusThisGame ||
                       canBroadcastThisGame ||
+                      canOpenAgentPanel ||
                       canViewGameTeams) && (
                       <div className="flex items-center self-start order-3 gap-2 phoneH:order-1 phoneH:self-auto">
+                        {canOpenAgentPanel && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              router.push(
+                                `/cabinet/agent/game-control?gameId=${encodeURIComponent(
+                                  game.id,
+                                )}`,
+                              )
+                            }}
+                            label="Панель агента"
+                            title="Открыть панель агента"
+                          >
+                            <AgentCardIcon />
+                          </CardActionIconButton>
+                        )}
                         {canEditThisGame && (
                           <CardActionIconButton
                             onClick={(event) => {
@@ -6002,6 +6066,7 @@ const GamesPage = ({
       canViewResultsForGame,
       canViewTasksForGame,
       currentUserDbId,
+      currentUserIdString,
       getNounTeams,
       handleCancelRegistrationFromGame,
       handleEditGameFromList,
@@ -6018,6 +6083,7 @@ const GamesPage = ({
       isGeneratingResults,
       isRegistrationCancellationInProgress,
       handleSelectGameCard,
+      router,
       selectedGameId,
     ],
   )
@@ -6048,6 +6114,7 @@ const GamesPage = ({
       const canViewThisGameTasks = canViewTasksForGame(game)
       const canViewGameTeams =
         typeof game?.status === 'string' && game.status !== 'canceled'
+      const canOpenAgentPanel = isCurrentUserGameAgent(game, currentUserIdString)
       const visibleStatus = normalizeVisibleStatus(
         game.status,
         canSeeClosedStatus,
@@ -6166,6 +6233,7 @@ const GamesPage = ({
                 canEditThisGame ||
                 canManageThisGame ||
                 canManageStatusThisGame ||
+                canOpenAgentPanel ||
                 canViewGameTeams) && (
                 <div className="flex flex-col gap-2 mt-3">
                   {(canJoinGame ||
@@ -6265,8 +6333,26 @@ const GamesPage = ({
                     canManageThisGame ||
                     canManageStatusThisGame ||
                     canBroadcastThisGame ||
+                    canOpenAgentPanel ||
                     canViewGameTeams) && (
                     <div className="flex items-center self-start gap-2 pointer-events-auto">
+                      {canOpenAgentPanel && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            router.push(
+                              `/cabinet/agent/game-control?gameId=${encodeURIComponent(
+                                game.id,
+                              )}`,
+                            )
+                          }}
+                          label="Панель агента"
+                          title="Открыть панель агента"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <AgentCardIcon />
+                        </CardActionIconButton>
+                      )}
                       {canEditThisGame && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -6389,6 +6475,7 @@ const GamesPage = ({
       canViewResultsForGame,
       canViewTasksForGame,
       currentUserDbId,
+      currentUserIdString,
       getNounTeams,
       handleCancelRegistrationFromGame,
       handleEditGameFromList,
@@ -6405,14 +6492,10 @@ const GamesPage = ({
       isGeneratingResults,
       isRegistrationCancellationInProgress,
       handleSelectGameCard,
+      router,
       selectedGameId,
     ],
   )
-
-  const modalGame =
-    (isEditModalOpen || isTasksModalOpen) && editingGame
-      ? editingGame
-      : selectedGame
 
   const gameTypeLabel = useMemo(() => {
     if (!modalGame) {
@@ -6465,30 +6548,6 @@ const GamesPage = ({
 
     return (modalGame.moderators ?? []).filter(Boolean)
   }, [modalGame])
-
-  const selectedGameAgents = useMemo(() => {
-    if (!modalGame) {
-      return []
-    }
-
-    return (Array.isArray(modalGame.agents) ? modalGame.agents : [])
-      .map((agent) => {
-        const userId = String(agent?.userId || agent?.id || agent || '').trim()
-        if (!userId) {
-          return null
-        }
-        const fallback = availableAgentsMap.get(userId)
-        return {
-          id: userId,
-          userId,
-          active: agent?.active !== false,
-          name: agent?.name || fallback?.name || '',
-          username: agent?.username || fallback?.username || '',
-          telegramId: agent?.telegramId || fallback?.telegramId || '',
-        }
-      })
-      .filter(Boolean)
-  }, [availableAgentsMap, modalGame])
 
   const availableModeratorsForSelect = useMemo(() => {
     if (!modalGame) {
