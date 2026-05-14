@@ -278,6 +278,8 @@ const fetchGamesForCabinet = async ({
       creatorUserId: 1,
       creatorTelegramId: 1,
       moderators: 1,
+      agents: 1,
+      agentNotifications: 1,
       location: 1,
       seasonId: 1,
       seasonName: 1,
@@ -398,6 +400,38 @@ const fetchGamesForCabinet = async ({
         }, {})
       : {}
 
+  const agentUserIds = Array.from(
+    new Set(
+      gamesDocs
+        .flatMap((game) => (Array.isArray(game?.agents) ? game.agents : []))
+        .map((agent) => toStringId(agent?.userId))
+        .filter(isObjectIdLike),
+    ),
+  )
+  const agentsByUserId =
+    agentUserIds.length > 0
+      ? (
+          await db
+            .model('Users')
+            .find({ _id: { $in: agentUserIds } })
+            .select({ _id: 1, name: 1, username: 1, telegramId: 1 })
+            .lean()
+        ).reduce((acc, userDoc) => {
+          const userId = toStringId(userDoc?._id)
+          if (!userId) {
+            return acc
+          }
+          acc[userId] = {
+            _id: userDoc?._id,
+            name: typeof userDoc?.name === 'string' ? userDoc.name : '',
+            username:
+              typeof userDoc?.username === 'string' ? userDoc.username : '',
+            telegramId: normalizeTelegramId(userDoc?.telegramId),
+          }
+          return acc
+        }, {})
+      : {}
+
   const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
 
   // Загрузить participation пользователя для каждой загруженной игры
@@ -487,6 +521,17 @@ const fetchGamesForCabinet = async ({
       teamsCount,
       userTeamPlace: null,
       userParticipationTeams: gameId ? participationByGameId[gameId] || [] : [],
+      agents: (Array.isArray(game?.agents) ? game.agents : []).map((agent) => {
+        const userId = toStringId(agent?.userId)
+        const user = userId ? agentsByUserId[userId] : null
+        return {
+          userId,
+          active: agent?.active !== false,
+          name: user?.name || '',
+          username: user?.username || '',
+          telegramId: user?.telegramId || '',
+        }
+      }),
       creator:
         (creatorUserId ? creatorsByUserId[creatorUserId] : null) ??
         (creatorKey ? creatorsByTelegramId[creatorKey] : null) ??

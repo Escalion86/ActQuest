@@ -6,6 +6,7 @@ import { toStringId } from '@helpers/idAndDate'
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { fetchUnreadTeamMessageCounts } from '@server/gameTeamMessages'
+import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) {
@@ -935,6 +936,18 @@ export async function GET(request) {
       }
       return 0
     })
+
+    await Promise.all(
+      gameTeams.map((gameTeam) => {
+        const teamId = toStringId(gameTeam?.teamId)
+        return notifyAgentsForGameTeamProgress({
+          db,
+          game,
+          gameTeam,
+          team: teamsById[teamId] || null,
+        })
+      }),
+    )
 
     const taskTitles = Array.isArray(game.tasks)
       ? game.tasks.map((t) => t?.title ?? '')

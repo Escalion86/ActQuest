@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { applyStoryCode } from '@server/storyEngine'
+import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
 import {
   buildTeamStoryStatePayload,
   loadPlayerStoryContext,
@@ -42,6 +43,15 @@ export async function POST(request, { params }) {
       { _id: context.gameTeam._id },
       { $set: { storyProgress: result.progress } },
     )
+    await notifyAgentsForGameTeamProgress({
+      db: context.db,
+      game: context.game,
+      gameTeam: {
+        ...(context.gameTeam.toObject?.() || context.gameTeam),
+        storyProgress: result.progress,
+      },
+      team: context.team,
+    })
 
     const nextContext = { ...context, progress: result.progress }
     return NextResponse.json({

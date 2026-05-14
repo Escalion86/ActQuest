@@ -102,6 +102,10 @@ const StoryNodeSchema = new Schema(
       },
       default: () => ({}),
     },
+    agentUserIds: {
+      type: [String],
+      default: [],
+    },
     clues: {
       type: [
         {
@@ -394,6 +398,10 @@ const gamesSchema = {
           type: Boolean,
           default: false,
         },
+        agentUserIds: {
+          type: [String],
+          default: [],
+        },
       },
     ],
     default: [],
@@ -596,6 +604,36 @@ const gamesSchema = {
   moderators: {
     type: [{ type: Schema.Types.ObjectId, ref: 'Users' }],
     default: [],
+  },
+  agents: {
+    type: [
+      {
+        userId: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        active: {
+          type: Boolean,
+          default: true,
+        },
+      },
+    ],
+    default: [],
+  },
+  agentNotifications: {
+    type: {
+      onPreviousTask: { type: Boolean, default: true },
+      onCurrentTask: { type: Boolean, default: true },
+      onTaskCompleted: { type: Boolean, default: false },
+      onAllTeamsPassed: { type: Boolean, default: true },
+    },
+    default: () => ({
+      onPreviousTask: true,
+      onCurrentTask: true,
+      onTaskCompleted: false,
+      onAllTeamsPassed: true,
+    }),
   },
 }
 

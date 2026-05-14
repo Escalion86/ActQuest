@@ -14,15 +14,18 @@ import mainMenuButton from './menuItems/mainMenuButton'
 import secondsToTime from 'telegram/func/secondsToTime'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
 import removeCluePenalties from '@helpers/removeCluePenalties'
+import getLocationTimeZone from '@helpers/locationTimeZone'
 
-const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
-  timeZone: 'Asia/Krasnoyarsk',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-})
+const timeToCodeStr = (locationKey) => {
+  const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: getLocationTimeZone(locationKey),
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 
-const timeToCodeStr = () => timeFormatter.format(new Date()).replace(':', '')
+  return timeFormatter.format(new Date()).replace(':', '')
+}
 
 const endTimeSet = (endTime, taskNum, gameTasksLength) => {
   const newDate = new Date()
@@ -1032,7 +1035,8 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
 
     if (
       (codes[0] !== '[time]' && codes.includes(code)) ||
-      (codes[0] === '[time]' && timeToCodeStr() === code)
+      (codes[0] === '[time]' &&
+        timeToCodeStr(game.location || location) === code)
     ) {
       // Если код введен верно и ранее его не вводили
       const newAllFindedCodes = [...allFindedCodes]
@@ -1044,8 +1048,8 @@ const gameProcess = async ({ telegramId, jsonCommand, location, db }) => {
         numOfCodesToFind - newFindedCodesInTask.length
       const isTaskComplite = numOfCodesToFindLeft <= 0
 
-      var endTimeTemp = endTime
-      var startTimeTemp = startTime
+      let endTimeTemp
+      let startTimeTemp
       const newActiveNum = isTaskComplite ? taskNum + 1 : taskNum
 
       if (isTaskComplite) {

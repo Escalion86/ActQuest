@@ -94,6 +94,13 @@ const developerMenuItem = {
   icon: faCode,
 }
 
+const agentMenuItem = {
+  id: 'agent',
+  label: 'Агент',
+  href: '/cabinet/agent',
+  icon: faGamepad,
+}
+
 const adminSubmenuItems = [
   {
     id: 'admin-game-orders',
@@ -340,6 +347,10 @@ const CabinetLayout = ({
 
     if (isUserAdmin({ role })) {
       nextItems.push(...adminMenuItems)
+    }
+
+    if (['agent', 'moder', 'admin', 'dev'].includes(role)) {
+      nextItems.push(agentMenuItem)
     }
 
     if (role === 'dev') {

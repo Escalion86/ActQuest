@@ -210,6 +210,12 @@ const GameEditModal = ({
   setSelectedModeratorToAdd,
   handleAddModerator,
   handleRemoveModerator,
+  selectedGameAgents,
+  availableAgentsForSelect,
+  selectedAgentToAdd,
+  setSelectedAgentToAdd,
+  handleAddAgent,
+  handleRemoveAgent,
   editGameLocationOptions,
   editGameSeasons,
   isEditGameSeasonsLoading,
@@ -1108,6 +1114,170 @@ const GameEditModal = ({
                 )}
               </div>
             )}
+
+            <div className="p-4 border rounded-xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60">
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
+                Агенты игры
+              </h3>
+
+              <div className="grid gap-3 mt-3 sm:grid-cols-2">
+                <NeonCheckbox
+                  id="agent-notify-previous-task"
+                  checked={Boolean(
+                    selectedGame.agentNotifications?.onPreviousTask ?? true,
+                  )}
+                  onChange={(eventOrChecked) =>
+                    updateSelectedGame({
+                      agentNotifications: {
+                        ...(selectedGame.agentNotifications || {}),
+                        onPreviousTask: getCheckboxChecked(eventOrChecked),
+                      },
+                    })
+                  }
+                  label="Уведомлять на предыдущем задании"
+                  labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                />
+                <NeonCheckbox
+                  id="agent-notify-current-task"
+                  checked={Boolean(
+                    selectedGame.agentNotifications?.onCurrentTask ?? true,
+                  )}
+                  onChange={(eventOrChecked) =>
+                    updateSelectedGame({
+                      agentNotifications: {
+                        ...(selectedGame.agentNotifications || {}),
+                        onCurrentTask: getCheckboxChecked(eventOrChecked),
+                      },
+                    })
+                  }
+                  label="Уведомлять на задании агента"
+                  labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                />
+                <NeonCheckbox
+                  id="agent-notify-task-completed"
+                  checked={Boolean(
+                    selectedGame.agentNotifications?.onTaskCompleted ?? false,
+                  )}
+                  onChange={(eventOrChecked) =>
+                    updateSelectedGame({
+                      agentNotifications: {
+                        ...(selectedGame.agentNotifications || {}),
+                        onTaskCompleted: getCheckboxChecked(eventOrChecked),
+                      },
+                    })
+                  }
+                  label="Уведомлять о прохождении задания"
+                  labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                />
+                <NeonCheckbox
+                  id="agent-notify-all-passed"
+                  checked={Boolean(
+                    selectedGame.agentNotifications?.onAllTeamsPassed ?? true,
+                  )}
+                  onChange={(eventOrChecked) =>
+                    updateSelectedGame({
+                      agentNotifications: {
+                        ...(selectedGame.agentNotifications || {}),
+                        onAllTeamsPassed: getCheckboxChecked(eventOrChecked),
+                      },
+                    })
+                  }
+                  label="Уведомлять, когда все команды прошли"
+                  labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                />
+              </div>
+
+              {selectedGameAgents.length > 0 ? (
+                <ul className="mt-4 space-y-2">
+                  {selectedGameAgents.map((agent) => (
+                    <li
+                      key={agent.userId}
+                      className="flex items-center justify-between gap-3 px-3 py-2 bg-white border rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/80"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                          {agent.name || 'Без имени'}
+                        </p>
+                        {agent.username ? (
+                          <p className="text-xs text-slate-500">
+                            @{agent.username}
+                          </p>
+                        ) : null}
+                        {agent.telegramId ? (
+                          <p className="text-xs text-slate-500">
+                            ID: {agent.telegramId}
+                          </p>
+                        ) : null}
+                      </div>
+                      {canEditSelectedGame ? (
+                        <CabinetButton
+                          onClick={() => handleRemoveAgent(agent.userId)}
+                          variant="secondary"
+                          tone="danger"
+                          size="sm"
+                          className="inline-flex items-center justify-center py-1"
+                        >
+                          Удалить
+                        </CabinetButton>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-300">
+                  Агенты пока не назначены.
+                </p>
+              )}
+
+              {canEditSelectedGame ? (
+                <div className="flex flex-col gap-3 pt-4 mt-4 border-t border-slate-200 dark:border-slate-700">
+                  <p className={fieldLabelClassName}>Добавить агента</p>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <CabinetSelectField
+                      id="edit-game-agent"
+                      label={null}
+                      value={selectedAgentToAdd}
+                      onChange={(event) =>
+                        setSelectedAgentToAdd(event.target.value)
+                      }
+                      containerClassName="w-full space-y-0"
+                      selectClassName="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
+                    >
+                      <option value="">Выберите агента</option>
+                      {availableAgentsForSelect.map((agent) => {
+                        const labelParts = [agent.name || 'Без имени']
+                        if (agent.username) {
+                          labelParts.push(`@${agent.username}`)
+                        }
+                        if (agent.telegramId) {
+                          labelParts.push(`ID: ${agent.telegramId}`)
+                        }
+
+                        return (
+                          <option key={agent.id} value={agent.id}>
+                            {labelParts.join(' · ')}
+                          </option>
+                        )
+                      })}
+                    </CabinetSelectField>
+                    <CabinetButton
+                      onClick={handleAddAgent}
+                      disabled={!selectedAgentToAdd}
+                      variant="primary"
+                      size="md"
+                    >
+                      Добавить
+                    </CabinetButton>
+                  </div>
+                  {availableAgentsForSelect.length === 0 ? (
+                    <p className="text-xs text-slate-500 dark:text-slate-300">
+                      Нет доступных пользователей с ролью агента или все агенты
+                      уже назначены.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </ModalSection>
         )}
 
@@ -1767,6 +1937,75 @@ const GameEditModal = ({
                               labelClassName={fieldLabelClassName}
                               inputClassName={fieldInputClassName}
                             />
+                            <div className="space-y-2">
+                              <p className={fieldLabelClassName}>
+                                Агенты задания
+                              </p>
+                              {selectedGameAgents.length > 0 ? (
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  {selectedGameAgents.map((agent) => {
+                                    const checked = (
+                                      Array.isArray(task.agentUserIds)
+                                        ? task.agentUserIds
+                                        : []
+                                    ).includes(agent.userId)
+                                    return (
+                                      <label
+                                        key={`${task.id}-${agent.userId}`}
+                                        className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          disabled={
+                                            !canEditSelectedGame || isSaving
+                                          }
+                                          onChange={(event) => {
+                                            const current = Array.isArray(
+                                              task.agentUserIds,
+                                            )
+                                              ? task.agentUserIds
+                                              : []
+                                            const next = event.target.checked
+                                              ? Array.from(
+                                                  new Set([
+                                                    ...current,
+                                                    agent.userId,
+                                                  ]),
+                                                )
+                                              : current.filter(
+                                                  (id) =>
+                                                    String(id) !==
+                                                    String(agent.userId),
+                                                )
+                                            handleTaskFieldChange(
+                                              task.id,
+                                              'agentUserIds',
+                                              next,
+                                            )
+                                          }}
+                                          className="mt-0.5 rounded border-slate-400 text-cyan-600 focus:ring-cyan-500/40"
+                                        />
+                                        <span>
+                                          <span className="font-semibold">
+                                            {agent.name || 'Без имени'}
+                                          </span>
+                                          {agent.username ? (
+                                            <span className="block text-xs text-slate-500">
+                                              @{agent.username}
+                                            </span>
+                                          ) : null}
+                                        </span>
+                                      </label>
+                                    )
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-slate-500 dark:text-slate-300">
+                                  Сначала добавьте агентов в настройках игры.
+                                </p>
+                              )}
+                            </div>
                           </div>
 
                           <div className="space-y-2">
@@ -3733,6 +3972,12 @@ GameEditModal.propTypes = {
   setSelectedModeratorToAdd: PropTypes.func.isRequired,
   handleAddModerator: PropTypes.func.isRequired,
   handleRemoveModerator: PropTypes.func.isRequired,
+  selectedGameAgents: PropTypes.array.isRequired,
+  availableAgentsForSelect: PropTypes.array.isRequired,
+  selectedAgentToAdd: PropTypes.string.isRequired,
+  setSelectedAgentToAdd: PropTypes.func.isRequired,
+  handleAddAgent: PropTypes.func.isRequired,
+  handleRemoveAgent: PropTypes.func.isRequired,
   editGameLocationOptions: PropTypes.arrayOf(
     PropTypes.shape({
       key: PropTypes.string.isRequired,

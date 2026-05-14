@@ -5,6 +5,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import taskText from 'telegram/func/taskText'
 import sanitize from '@helpers/sanitize'
 import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
+import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
 
 const ensureDateValue = (value) => {
   if (!value) return null
@@ -641,6 +642,7 @@ const getTeamGameTaskState = async ({
         game,
         gameTeam,
         gameTeamId: gameTeam._id,
+        location,
         message,
       })
       if (processResult) {
@@ -669,6 +671,7 @@ const getTeamGameTaskState = async ({
       taskState,
       processResult: finalResult,
       postCompletionMessage,
+      effectiveGameTeam,
     } = await computeTaskHtml({
       game,
       gameTeam,
@@ -676,6 +679,13 @@ const getTeamGameTaskState = async ({
       isGameStarted,
       isGameFinished,
       gamesTeamsModel,
+    })
+
+    await notifyAgentsForGameTeamProgress({
+      db,
+      game,
+      gameTeam: effectiveGameTeam || gameTeam,
+      team,
     })
 
     return {

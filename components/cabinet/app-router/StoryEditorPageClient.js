@@ -29,6 +29,7 @@ const emptyGame = {
   storyNodes: [],
   storyEdges: [],
   storyEndings: [],
+  agents: [],
 }
 
 const buildNode = (index) => ({
@@ -48,6 +49,7 @@ const buildNode = (index) => ({
   clues: [],
   codes: [],
   actions: [],
+  agentUserIds: [],
 })
 
 const buildItem = (index) => ({
@@ -172,6 +174,23 @@ const StoryEditorPageClient = ({ session: _session }) => {
   const selectedItem = items.find((item) => item.id === selectedItemId) || null
   const selectedEnding =
     endings.find((ending) => ending.id === selectedEndingId) || null
+  const agents = useMemo(
+    () =>
+      normalizeArray(game?.agents)
+        .filter((agent) => agent?.active !== false)
+        .map((agent) => ({
+          userId: normalizeText(agent?.userId ?? agent?.id ?? agent),
+          name:
+            normalizeText(agent?.name) ||
+            normalizeText(agent?.username) ||
+            normalizeText(agent?.userName) ||
+            normalizeText(agent?.email) ||
+            normalizeText(agent?.phone) ||
+            normalizeText(agent?.userId ?? agent?.id ?? agent),
+        }))
+        .filter((agent) => agent.userId),
+    [game?.agents],
+  )
 
   const nodesById = useMemo(
     () => new Map(nodes.map((node) => [node.id, node])),
@@ -745,6 +764,52 @@ const StoryEditorPageClient = ({ session: _session }) => {
                       className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                     />
                   </label>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      Агенты локации
+                    </p>
+                    {agents.length > 0 ? (
+                      <div className="mt-2 grid gap-2">
+                        {agents.map((agent) => {
+                          const checked = normalizeArray(
+                            selectedNode.agentUserIds,
+                          ).includes(agent.userId)
+                          return (
+                            <label
+                              key={agent.userId}
+                              className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(event) =>
+                                  updateNode(selectedNode.id, (node) => {
+                                    const current = new Set(
+                                      normalizeArray(node.agentUserIds),
+                                    )
+                                    if (event.target.checked) {
+                                      current.add(agent.userId)
+                                    } else {
+                                      current.delete(agent.userId)
+                                    }
+                                    return {
+                                      ...node,
+                                      agentUserIds: Array.from(current),
+                                    }
+                                  })
+                                }
+                              />
+                              {agent.name}
+                            </label>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                        Сначала добавьте агентов в настройках игры.
+                      </p>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"

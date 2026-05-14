@@ -90,7 +90,7 @@ const normalizeActions = (actions) =>
     resultMessageRich: normalizeText(action?.resultMessageRich, 50000),
   }))
 
-const normalizeStoryNodes = (nodes) =>
+const normalizeStoryNodes = (nodes, allowedAgentIds = null) =>
   (Array.isArray(nodes) ? nodes : [])
     .map((node, index) => ({
       id: normalizeText(node?.id, 100) || `node-${index + 1}`,
@@ -124,6 +124,10 @@ const normalizeStoryNodes = (nodes) =>
       scoring: {
         scoreForComplete: normalizeNumber(node?.scoring?.scoreForComplete, 0),
       },
+      agentUserIds: normalizeStringArray(node?.agentUserIds).filter(
+        (agentUserId) =>
+          !allowedAgentIds || allowedAgentIds.has(agentUserId),
+      ),
       clues: normalizeClues(node?.clues),
       codes: normalizeCodes(node?.codes),
       actions: normalizeActions(node?.actions),
@@ -179,6 +183,43 @@ const normalizeStoryEndings = (endings) =>
     }))
     .filter((ending) => ending.id)
 
+const enrichGameAgents = async (db, game) => {
+  const baseGame = game?.toObject?.() || game || {}
+  const agentUserIds = Array.from(
+    new Set(
+      (Array.isArray(baseGame?.agents) ? baseGame.agents : [])
+        .map((agent) => normalizeStringId(agent?.userId ?? agent?.id ?? agent))
+        .filter(Boolean),
+    ),
+  )
+  if (agentUserIds.length === 0) {
+    return { ...baseGame, agents: [] }
+  }
+
+  const Users = db.model('Users')
+  const users = await Users.find({ _id: { $in: agentUserIds } })
+    .select({ _id: 1, name: 1, username: 1, telegramId: 1 })
+    .lean()
+  const usersById = new Map(users.map((user) => [normalizeStringId(user?._id), user]))
+
+  return {
+    ...baseGame,
+    agents: (Array.isArray(baseGame?.agents) ? baseGame.agents : []).map(
+      (agent) => {
+        const userId = normalizeStringId(agent?.userId ?? agent?.id ?? agent)
+        const user = usersById.get(userId)
+        return {
+          userId,
+          active: agent?.active !== false,
+          name: user?.name || '',
+          username: user?.username || '',
+          telegramId: user?.telegramId || '',
+        }
+      },
+    ),
+  }
+}
+
 const buildEditorPayload = (game) => ({
   game: {
     id: normalizeStringId(game?._id ?? game?.id),
@@ -199,6 +240,7 @@ const buildEditorPayload = (game) => ({
     storyNodes: Array.isArray(game?.storyNodes) ? game.storyNodes : [],
     storyEdges: Array.isArray(game?.storyEdges) ? game.storyEdges : [],
     storyEndings: Array.isArray(game?.storyEndings) ? game.storyEndings : [],
+    agents: Array.isArray(game?.agents) ? game.agents : [],
   },
 })
 
@@ -209,9 +251,11 @@ export async function GET(request) {
       return context.response
     }
 
+    const enrichedGame = await enrichGameAgents(context.db, context.game)
+
     return NextResponse.json({
       success: true,
-      data: buildEditorPayload(context.game),
+      data: buildEditorPayload(enrichedGame),
     })
   } catch (error) {
     console.error('Failed to fetch story editor data', error)
@@ -234,7 +278,12 @@ export async function PATCH(request) {
     }
 
     const storyConfig = payload?.storyConfig || {}
-    const storyNodes = normalizeStoryNodes(payload?.storyNodes)
+    const allowedAgentIds = new Set(
+      (Array.isArray(context.game?.agents) ? context.game.agents : [])
+        .map((agent) => normalizeStringId(agent?.userId ?? agent?.id ?? agent))
+        .filter(Boolean),
+    )
+    const storyNodes = normalizeStoryNodes(payload?.storyNodes, allowedAgentIds)
     const nodeIds = new Set(storyNodes.map((node) => node.id))
     const update = {
       type: 'story',
@@ -261,9 +310,11 @@ export async function PATCH(request) {
       { new: true },
     )
 
+    const enrichedGame = await enrichGameAgents(context.db, updatedGame)
+
     return NextResponse.json({
       success: true,
-      data: buildEditorPayload(updatedGame),
+      data: buildEditorPayload(enrichedGame),
     })
   } catch (error) {
     console.error('Failed to save story editor data', error)

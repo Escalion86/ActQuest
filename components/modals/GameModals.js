@@ -155,6 +155,13 @@ const GameModals = ({
   setSelectedModeratorToAdd,
   handleAddModerator,
   handleRemoveModerator,
+  selectedGameAgents,
+  availableAgentsForSelect,
+  availableAgentsMap,
+  selectedAgentToAdd,
+  setSelectedAgentToAdd,
+  handleAddAgent,
+  handleRemoveAgent,
   editGameLocationOptions,
   editGameSeasons,
   isEditGameSeasonsLoading,
@@ -245,6 +252,13 @@ const GameModals = ({
           setSelectedModeratorToAdd={setSelectedModeratorToAdd}
           handleAddModerator={handleAddModerator}
           handleRemoveModerator={handleRemoveModerator}
+          selectedGameAgents={selectedGameAgents}
+          availableAgentsForSelect={availableAgentsForSelect}
+          availableAgentsMap={availableAgentsMap}
+          selectedAgentToAdd={selectedAgentToAdd}
+          setSelectedAgentToAdd={setSelectedAgentToAdd}
+          handleAddAgent={handleAddAgent}
+          handleRemoveAgent={handleRemoveAgent}
           editGameLocationOptions={editGameLocationOptions}
           editGameSeasons={editGameSeasons}
           isEditGameSeasonsLoading={isEditGameSeasonsLoading}
@@ -323,6 +337,13 @@ const GameModals = ({
           setSelectedModeratorToAdd={setSelectedModeratorToAdd}
           handleAddModerator={handleAddModerator}
           handleRemoveModerator={handleRemoveModerator}
+          selectedGameAgents={selectedGameAgents}
+          availableAgentsForSelect={availableAgentsForSelect}
+          availableAgentsMap={availableAgentsMap}
+          selectedAgentToAdd={selectedAgentToAdd}
+          setSelectedAgentToAdd={setSelectedAgentToAdd}
+          handleAddAgent={handleAddAgent}
+          handleRemoveAgent={handleRemoveAgent}
           editGameLocationOptions={editGameLocationOptions}
           editGameSeasons={editGameSeasons}
           isEditGameSeasonsLoading={isEditGameSeasonsLoading}
@@ -483,6 +504,14 @@ const moderatorShape = PropTypes.oneOfType([
 
 const moderatorOptionShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
+  name: PropTypes.string,
+  username: PropTypes.string,
+  telegramId: PropTypes.string,
+})
+
+const agentShape = PropTypes.shape({
+  id: PropTypes.string,
+  userId: PropTypes.string,
   name: PropTypes.string,
   username: PropTypes.string,
   telegramId: PropTypes.string,
@@ -681,6 +710,13 @@ GameModals.propTypes = {
   setSelectedModeratorToAdd: PropTypes.func.isRequired,
   handleAddModerator: PropTypes.func.isRequired,
   handleRemoveModerator: PropTypes.func.isRequired,
+  selectedGameAgents: PropTypes.arrayOf(agentShape).isRequired,
+  availableAgentsForSelect: PropTypes.arrayOf(agentShape).isRequired,
+  availableAgentsMap: PropTypes.instanceOf(Map).isRequired,
+  selectedAgentToAdd: PropTypes.string.isRequired,
+  setSelectedAgentToAdd: PropTypes.func.isRequired,
+  handleAddAgent: PropTypes.func.isRequired,
+  handleRemoveAgent: PropTypes.func.isRequired,
   editGameLocationOptions: PropTypes.arrayOf(
     PropTypes.shape({
       key: PropTypes.string.isRequired,

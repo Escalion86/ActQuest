@@ -15,6 +15,7 @@ import {
   normalizeStringId,
   readJsonPayload,
 } from '@app/api/cabinet/_lib/storyApi'
+import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
 
 export const runAdminStoryMutation = async ({ request, action }) => {
   const payload = await readJsonPayload(request)
@@ -43,6 +44,15 @@ export const runAdminStoryMutation = async ({ request, action }) => {
     { _id: context.gameTeam._id },
     { $set: { storyProgress: nextProgress } },
   )
+  await notifyAgentsForGameTeamProgress({
+    db: context.db,
+    game: context.game,
+    gameTeam: {
+      ...(context.gameTeam.toObject?.() || context.gameTeam),
+      storyProgress: nextProgress,
+    },
+    team: context.team,
+  })
 
   return NextResponse.json({
     success: true,

@@ -166,6 +166,8 @@ export async function GET(request) {
         creatorUserId: 1,
         creatorTelegramId: 1,
         moderators: 1,
+        agents: 1,
+        agentNotifications: 1,
         location: 1,
         seasonId: 1,
         seasonName: 1,
@@ -259,12 +261,43 @@ export async function GET(request) {
             .lean()
         : null
 
+    const agentUserIds = Array.from(
+      new Set(
+        (Array.isArray(gameDoc?.agents) ? gameDoc.agents : [])
+          .map((agent) => toStringId(agent?.userId))
+          .filter(Boolean),
+      ),
+    )
+    const agentUsers = agentUserIds.length
+      ? await UsersModel.find({ _id: { $in: agentUserIds } })
+          .select({ _id: 1, name: 1, username: 1, telegramId: 1 })
+          .lean()
+      : []
+    const agentUsersById = new Map(
+      agentUsers.map((user) => [toStringId(user?._id), user]),
+    )
+    const enrichedAgents = (Array.isArray(gameDoc?.agents)
+      ? gameDoc.agents
+      : []
+    ).map((agent) => {
+      const userId = toStringId(agent?.userId)
+      const user = agentUsersById.get(userId)
+      return {
+        userId,
+        active: agent?.active !== false,
+        name: user?.name || '',
+        username: user?.username || '',
+        telegramId: user?.telegramId || '',
+      }
+    })
+
     const normalizedGame = normalizeGameForCabinet({
       ...gameDoc,
       status: normalizedStatus,
       teamsCount,
       userTeamPlace,
       creator: creatorDoc,
+      agents: enrichedAgents,
     })
 
     return NextResponse.json(

@@ -264,6 +264,7 @@ const normalizeStoryNodes = (nodes = []) => {
     scoring: {
       scoreForComplete: ensureNumber(node?.scoring?.scoreForComplete, 0),
     },
+    agentUserIds: normalizeStringArray(node?.agentUserIds),
     clues: Array.isArray(node?.clues) ? node.clues : [],
     codes: Array.isArray(node?.codes) ? node.codes : [],
     actions: Array.isArray(node?.actions) ? node.actions : [],
@@ -337,6 +338,46 @@ const normalizeModerators = (moderators = []) => {
     })
     .filter(Boolean)
 }
+
+const normalizeAgents = (agents = []) => {
+  if (!Array.isArray(agents) || agents.length === 0) {
+    return []
+  }
+
+  const seen = new Set()
+  return agents
+    .map((agent) => {
+      const userSource =
+        agent?.user && typeof agent.user === 'object' ? agent.user : agent
+      const id = ensureString(
+        agent?.userId ?? userSource?._id ?? userSource?.id,
+        '',
+      )
+
+      if (!id || seen.has(id)) {
+        return null
+      }
+
+      seen.add(id)
+
+      return {
+        userId: id,
+        id,
+        active: ensureBoolean(agent?.active, true),
+        name: ensureString(userSource?.name, ''),
+        username: ensureString(userSource?.username, ''),
+        telegramId: ensureString(userSource?.telegramId, ''),
+      }
+    })
+    .filter(Boolean)
+}
+
+const normalizeAgentNotifications = (value = {}) => ({
+  onPreviousTask: ensureBoolean(value?.onPreviousTask, true),
+  onCurrentTask: ensureBoolean(value?.onCurrentTask, true),
+  onTaskCompleted: ensureBoolean(value?.onTaskCompleted, false),
+  onAllTeamsPassed: ensureBoolean(value?.onAllTeamsPassed, true),
+})
 
 const normalizeCreator = (creator) => {
   if (!creator || typeof creator !== 'object') {
@@ -430,6 +471,7 @@ const normalizeTasks = (tasks = []) => {
     postMessageMedia: normalizeTaskMedia(task?.postMessageMedia),
     canceled: ensureBoolean(task?.canceled, false),
     isBonusTask: ensureBoolean(task?.isBonusTask, false),
+    agentUserIds: normalizeStringArray(task?.agentUserIds),
     }
   })
 }
@@ -546,6 +588,8 @@ const normalizeGameForCabinet = (game) => {
     creatorTelegramId: ensureString(game.creatorTelegramId, ''),
     creator: normalizeCreator(game.creator),
     moderators: normalizeModerators(game.moderators),
+    agents: normalizeAgents(game.agents),
+    agentNotifications: normalizeAgentNotifications(game.agentNotifications),
   }
 }
 

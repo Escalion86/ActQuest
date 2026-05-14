@@ -200,6 +200,7 @@ const webGameProcess = async ({
   game,
   gameTeam,
   gameTeamId,
+  location,
   message,
 }) => {
   if (!db) {
@@ -483,7 +484,7 @@ const webGameProcess = async ({
 
   const isDynamicTimeCode =
     normalizedCodes[0] === '[time]' &&
-    timeToCodeStr(resolvedGame.location) === normalizedCode
+    timeToCodeStr(resolvedGame.location || location) === normalizedCode
 
   const isCorrectCode =
     normalizedCodes.includes(normalizedCode) || isDynamicTimeCode

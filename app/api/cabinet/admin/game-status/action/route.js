@@ -255,6 +255,7 @@ export async function POST(request) {
         game,
         gameTeam,
         gameTeamId: gameTeam._id,
+        location: game.location,
         message: code,
       })
 

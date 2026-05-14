@@ -4,6 +4,7 @@ import {
   buildTeamStoryStatePayload,
   loadPlayerStoryContext,
 } from '@app/api/cabinet/_lib/storyApi'
+import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
 
 export async function GET(request, { params }) {
   try {
@@ -11,6 +12,16 @@ export async function GET(request, { params }) {
     if (context.response) {
       return context.response
     }
+
+    await notifyAgentsForGameTeamProgress({
+      db: context.db,
+      game: context.game,
+      gameTeam: {
+        ...(context.gameTeam.toObject?.() || context.gameTeam),
+        storyProgress: context.progress,
+      },
+      team: context.team,
+    })
 
     const payload = buildTeamStoryStatePayload(context)
     return NextResponse.json({ success: true, data: payload })

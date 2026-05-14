@@ -144,6 +144,95 @@ const sanitizeGameDescriptionContent = (gameData = {}) => {
   }
 }
 
+const normalizeStringId = (value) => {
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  if (typeof value === 'string') {
+    return value.trim()
+  }
+
+  if (typeof value?.toString === 'function') {
+    const nextValue = value.toString()
+    return nextValue === '[object Object]' ? '' : nextValue.trim()
+  }
+
+  return ''
+}
+
+const normalizeAgentsForWrite = (agents = []) => {
+  const seen = new Set()
+  return (Array.isArray(agents) ? agents : [])
+    .map((agent) =>
+      normalizeStringId(
+        typeof agent === 'string'
+          ? agent
+          : agent?.userId ?? agent?.id ?? agent?._id,
+      ),
+    )
+    .filter((userId) => {
+      if (!userId || seen.has(userId)) {
+        return false
+      }
+      seen.add(userId)
+      return true
+    })
+    .map((userId) => ({ userId, active: true }))
+}
+
+const normalizeAgentNotificationsForWrite = (value = {}) => ({
+  onPreviousTask: value?.onPreviousTask !== false,
+  onCurrentTask: value?.onCurrentTask !== false,
+  onTaskCompleted: value?.onTaskCompleted === true,
+  onAllTeamsPassed: value?.onAllTeamsPassed !== false,
+})
+
+const normalizeTaskAgentsForWrite = (tasks = [], allowedAgentIds = new Set()) =>
+  (Array.isArray(tasks) ? tasks : []).map((task) => {
+    const baseTask =
+      task && typeof task.toObject === 'function' ? task.toObject() : task
+
+    return {
+      ...baseTask,
+      agentUserIds: (Array.isArray(baseTask?.agentUserIds)
+        ? baseTask.agentUserIds
+        : []
+      )
+        .map((userId) => normalizeStringId(userId))
+        .filter((userId, index, list) => {
+          if (!userId || !allowedAgentIds.has(userId)) {
+            return false
+          }
+          return list.indexOf(userId) === index
+        }),
+    }
+  })
+
+const normalizeStoryNodeAgentsForWrite = (
+  storyNodes = [],
+  allowedAgentIds = new Set(),
+) =>
+  (Array.isArray(storyNodes) ? storyNodes : []).map((node) => {
+    const baseNode =
+      node && typeof node.toObject === 'function' ? node.toObject() : node
+
+    return {
+      ...baseNode,
+      agentUserIds: (Array.isArray(baseNode?.agentUserIds)
+        ? baseNode.agentUserIds
+        : []
+      )
+        .map((userId) => normalizeStringId(userId))
+        .filter((userId, index, list) => {
+          if (!userId || !allowedAgentIds.has(userId)) {
+            return false
+          }
+          return list.indexOf(userId) === index
+        }),
+    }
+  })
+
 const execute = (request, params) =>
   runLocationLegacyHandler({
     request,
@@ -276,8 +365,59 @@ const execute = (request, params) =>
 
         const updateData = { ...updatePayload, status: resolvedStatus }
 
+        const hasAgentsUpdate = Object.prototype.hasOwnProperty.call(
+          updateData,
+          'agents',
+        )
+
+        if (hasAgentsUpdate) {
+          updateData.agents = normalizeAgentsForWrite(updateData.agents)
+        }
+
+        const allowedAgentIds = new Set(
+          (Array.isArray(updateData.agents)
+            ? updateData.agents
+            : Array.isArray(existingGame?.agents)
+              ? existingGame.agents
+              : []
+          )
+            .map((agent) => normalizeStringId(agent?.userId ?? agent?.id))
+            .filter(Boolean),
+        )
+
+        if (
+          Object.prototype.hasOwnProperty.call(
+            updateData,
+            'agentNotifications',
+          )
+        ) {
+          updateData.agentNotifications = normalizeAgentNotificationsForWrite(
+            updateData.agentNotifications,
+          )
+        }
+
         if (Array.isArray(updateData.tasks)) {
-          updateData.tasks = sanitizeTasksRichContent(updateData.tasks)
+          updateData.tasks = normalizeTaskAgentsForWrite(
+            sanitizeTasksRichContent(updateData.tasks),
+            allowedAgentIds,
+          )
+        } else if (hasAgentsUpdate) {
+          updateData.tasks = normalizeTaskAgentsForWrite(
+            existingGame?.tasks,
+            allowedAgentIds,
+          )
+        }
+
+        if (Array.isArray(updateData.storyNodes)) {
+          updateData.storyNodes = normalizeStoryNodeAgentsForWrite(
+            updateData.storyNodes,
+            allowedAgentIds,
+          )
+        } else if (hasAgentsUpdate) {
+          updateData.storyNodes = normalizeStoryNodeAgentsForWrite(
+            existingGame?.storyNodes,
+            allowedAgentIds,
+          )
         }
 
         const hasDescriptionContentKeys =

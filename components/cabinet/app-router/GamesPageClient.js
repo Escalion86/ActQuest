@@ -444,6 +444,7 @@ const createTask = () => ({
   postMessageMedia: [],
   canceled: false,
   isBonusTask: false,
+  agentUserIds: [],
 })
 
 const toNullableNumber = (value) => {
@@ -710,6 +711,7 @@ const buildUpdatePayload = (game) => {
         .filter((media) => media.url !== ''),
       canceled: Boolean(task.canceled),
       isBonusTask: Boolean(task.isBonusTask),
+      agentUserIds: sanitizeStringArray(task.agentUserIds),
     }
 
     if (task.mongoId) {
@@ -745,6 +747,29 @@ const buildUpdatePayload = (game) => {
       moderatorsSet.add(moderator.id)
     }
   })
+
+  const agentsSet = new Set()
+  ;(Array.isArray(game.agents) ? game.agents : []).forEach((agent) => {
+    const userId =
+      typeof agent === 'string'
+        ? agent.trim()
+        : typeof agent?.userId === 'string'
+          ? agent.userId.trim()
+          : typeof agent?.id === 'string'
+            ? agent.id.trim()
+            : ''
+    if (userId) {
+      agentsSet.add(userId)
+    }
+  })
+  const agentIds = Array.from(agentsSet)
+  const agentIdsSet = new Set(agentIds)
+  const tasksWithAllowedAgents = tasks.map((task) => ({
+    ...task,
+    agentUserIds: sanitizeStringArray(task.agentUserIds).filter((userId) =>
+      agentIdsSet.has(userId),
+    ),
+  }))
 
   const normalizedIsRated = Boolean(game.isRated ?? true)
 
@@ -818,8 +843,19 @@ const buildUpdatePayload = (game) => {
     maxTeamPlayers: toNullableNumber(game.maxTeamPlayers),
     prices,
     finances,
-    tasks,
+    tasks: tasksWithAllowedAgents,
     moderators: Array.from(moderatorsSet),
+    agents: agentIds.map((userId) => ({ userId, active: true })),
+    agentNotifications: {
+      onPreviousTask: Boolean(game.agentNotifications?.onPreviousTask ?? true),
+      onCurrentTask: Boolean(game.agentNotifications?.onCurrentTask ?? true),
+      onTaskCompleted: Boolean(
+        game.agentNotifications?.onTaskCompleted ?? false,
+      ),
+      onAllTeamsPassed: Boolean(
+        game.agentNotifications?.onAllTeamsPassed ?? true,
+      ),
+    },
     ...(typeof game.creatorUserId === 'string' && game.creatorUserId.trim()
       ? { creatorUserId: game.creatorUserId.trim() }
       : {}),
@@ -1079,6 +1115,7 @@ const GamesPage = ({
   const [updatingOutOfCompetitionTeamIds, setUpdatingOutOfCompetitionTeamIds] =
     useState([])
   const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
+  const [selectedAgentToAdd, setSelectedAgentToAdd] = useState('')
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
   const [isResultsModalOpen, setIsResultsModalOpen] = useState(false)
   const [resultsModalGame, setResultsModalGame] = useState(null)
@@ -2646,6 +2683,13 @@ const GamesPage = ({
         finances: [],
         tasks: [],
         moderators: [],
+        agents: [],
+        agentNotifications: {
+          onPreviousTask: true,
+          onCurrentTask: true,
+          onTaskCompleted: false,
+          onAllTeamsPassed: true,
+        },
       }
 
       if (isCloneMode) {
@@ -2961,6 +3005,37 @@ const GamesPage = ({
         availableModerators.map((moderator) => [moderator.id, moderator]),
       ),
     [availableModerators],
+  )
+
+  const agentsQuery = useQuery({
+    queryKey: ['cabinet-agent-users'],
+    enabled: canEditAllGames && (isEditModalOpen || isTasksModalOpen),
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { json } = await requestApiJson(
+        '/api/cabinet/admin/users-list?role=agent&limit=200&sortBy=registration_desc',
+        { fallbackMessage: 'Не удалось загрузить список агентов' },
+      )
+      return Array.isArray(json?.data) ? json.data : []
+    },
+  })
+
+  const availableAgents = useMemo(() => {
+    const users = Array.isArray(agentsQuery.data) ? agentsQuery.data : []
+    return users
+      .map((user) => ({
+        id: String(user?.id || user?._id || '').trim(),
+        userId: String(user?.id || user?._id || '').trim(),
+        telegramId: String(user?.telegramId || '').trim(),
+        name: typeof user?.name === 'string' ? user.name : '',
+        username: typeof user?.username === 'string' ? user.username : '',
+      }))
+      .filter((user) => user.id)
+  }, [agentsQuery.data])
+
+  const availableAgentsMap = useMemo(
+    () => new Map(availableAgents.map((agent) => [agent.id, agent])),
+    [availableAgents],
   )
 
   const currencyFormatter = useMemo(
@@ -5437,6 +5512,118 @@ const GamesPage = ({
     [canEditSelectedGame, updateSelectedGame],
   )
 
+  const handleAddAgent = useCallback(() => {
+    if (!selectedGame || !canEditSelectedGame) {
+      return
+    }
+
+    const candidateId = String(selectedAgentToAdd || '').trim()
+    if (!candidateId) {
+      return
+    }
+
+    const candidate = availableAgentsMap.get(candidateId)
+    if (!candidate) {
+      return
+    }
+
+    updateSelectedGame((game) => {
+      const currentAgents = Array.isArray(game.agents)
+        ? game.agents.filter(Boolean)
+        : []
+      const alreadyExists = currentAgents.some(
+        (agent) => String(agent?.userId || agent?.id || agent || '') === candidate.id,
+      )
+
+      if (alreadyExists) {
+        return { agents: currentAgents }
+      }
+
+      return {
+        agents: [
+          ...currentAgents,
+          {
+            userId: candidate.id,
+            id: candidate.id,
+            active: true,
+            name: candidate.name || '',
+            username: candidate.username || '',
+            telegramId: candidate.telegramId || '',
+          },
+        ],
+      }
+    })
+
+    setSelectedAgentToAdd('')
+  }, [
+    availableAgentsMap,
+    canEditSelectedGame,
+    selectedAgentToAdd,
+    selectedGame,
+    updateSelectedGame,
+  ])
+
+  const handleRemoveAgent = useCallback(
+    (agentId) => {
+      const normalizedAgentId = String(agentId || '').trim()
+      if (!canEditSelectedGame || !normalizedAgentId) {
+        return
+      }
+
+      const gameForPrompt = editingGame ?? selectedGame
+      const affectedTasks = (Array.isArray(gameForPrompt?.tasks)
+        ? gameForPrompt.tasks
+        : []
+      )
+        .map((task, index) => {
+          const ids = Array.isArray(task?.agentUserIds)
+            ? task.agentUserIds.map((id) => String(id))
+            : []
+          if (!ids.includes(normalizedAgentId)) {
+            return null
+          }
+          return `Задание ${index + 1} - ${task?.title || 'Без названия'}`
+        })
+        .filter(Boolean)
+
+      const agentLabel =
+        selectedGameAgents.find((agent) => agent.userId === normalizedAgentId)
+          ?.name || 'агента'
+      const message =
+        affectedTasks.length > 0
+          ? `Удалить ${agentLabel} из игры? Агент также будет удален из заданий:\n\n${affectedTasks
+              .map((label) => `- ${label}`)
+              .join('\n')}`
+          : `Удалить ${agentLabel} из игры?`
+
+      if (typeof window !== 'undefined' && !window.confirm(message)) {
+        return
+      }
+
+      updateSelectedGame((game) => ({
+        agents: (Array.isArray(game.agents) ? game.agents : []).filter(
+          (agent) =>
+            String(agent?.userId || agent?.id || agent || '') !==
+            normalizedAgentId,
+        ),
+        tasks: (Array.isArray(game.tasks) ? game.tasks : []).map((task) => ({
+          ...task,
+          agentUserIds: (Array.isArray(task?.agentUserIds)
+            ? task.agentUserIds
+            : []
+          ).filter((id) => String(id) !== normalizedAgentId),
+        })),
+      }))
+    },
+    [
+      canEditSelectedGame,
+      editingGame,
+      selectedGame,
+      selectedGameAgents,
+      updateSelectedGame,
+    ],
+  )
+
   const renderGameListItem = useCallback(
     (game) => {
       const cardStartDateRaw =
@@ -6279,6 +6466,30 @@ const GamesPage = ({
     return (modalGame.moderators ?? []).filter(Boolean)
   }, [modalGame])
 
+  const selectedGameAgents = useMemo(() => {
+    if (!modalGame) {
+      return []
+    }
+
+    return (Array.isArray(modalGame.agents) ? modalGame.agents : [])
+      .map((agent) => {
+        const userId = String(agent?.userId || agent?.id || agent || '').trim()
+        if (!userId) {
+          return null
+        }
+        const fallback = availableAgentsMap.get(userId)
+        return {
+          id: userId,
+          userId,
+          active: agent?.active !== false,
+          name: agent?.name || fallback?.name || '',
+          username: agent?.username || fallback?.username || '',
+          telegramId: agent?.telegramId || fallback?.telegramId || '',
+        }
+      })
+      .filter(Boolean)
+  }, [availableAgentsMap, modalGame])
+
   const availableModeratorsForSelect = useMemo(() => {
     if (!modalGame) {
       return []
@@ -6304,6 +6515,18 @@ const GamesPage = ({
       (moderator) => !existingIds.has(moderator.id),
     )
   }, [availableModerators, modalGame, selectedGameModerators])
+
+  const availableAgentsForSelect = useMemo(() => {
+    if (!modalGame) {
+      return []
+    }
+
+    const existingIds = new Set(
+      selectedGameAgents.map((agent) => agent.userId).filter(Boolean),
+    )
+
+    return availableAgents.filter((agent) => !existingIds.has(agent.id))
+  }, [availableAgents, modalGame, selectedGameAgents])
 
   const availableOrganizersForSelect = useMemo(() => {
     const organizersMap = new Map()
@@ -7033,6 +7256,13 @@ const GamesPage = ({
                 setSelectedModeratorToAdd={setSelectedModeratorToAdd}
                 handleAddModerator={handleAddModerator}
                 handleRemoveModerator={handleRemoveModerator}
+                selectedGameAgents={selectedGameAgents}
+                availableAgentsForSelect={availableAgentsForSelect}
+                availableAgentsMap={availableAgentsMap}
+                selectedAgentToAdd={selectedAgentToAdd}
+                setSelectedAgentToAdd={setSelectedAgentToAdd}
+                handleAddAgent={handleAddAgent}
+                handleRemoveAgent={handleRemoveAgent}
                 editGameLocationOptions={gameLocationOptions}
                 editGameSeasons={editGameSeasons}
                 isEditGameSeasonsLoading={isEditGameSeasonsLoading}
