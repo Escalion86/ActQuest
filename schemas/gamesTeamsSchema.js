@@ -25,6 +25,15 @@ const gamesTeamsSchema = {
       taskId: String,
       taskIndex: Number,
       source: String,
+      scope: {
+        type: String,
+        enum: ['total_adjustment', 'task_elapsed'],
+        default: 'total_adjustment',
+      },
+      showInAdjustments: {
+        type: Boolean,
+        default: true,
+      },
       createdAt: Date,
     },
   ],
@@ -55,6 +64,19 @@ const gamesTeamsSchema = {
   startTime: [Date],
   endTime: [Date],
   forcedClues: [Number],
+  taskFailures: [
+    {
+      taskIndex: Number,
+      taskId: String,
+      failedAt: Date,
+      source: {
+        type: String,
+        enum: ['captain', 'admin', 'system', 'timeout'],
+        default: 'captain',
+      },
+      reason: String,
+    },
+  ],
   photos: [{ photos: [String], checks: Map }],
   storyProgress: {
     type: {

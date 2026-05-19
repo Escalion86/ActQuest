@@ -175,7 +175,12 @@ const GameControlTeamStatsModal = ({ isOpen, onClose, teamName, stats }) => {
                   <p>Завершение: {formatDateTime(task.endedAt)}</p>
                   {task.isFailedTask && (
                     <p className="sm:col-span-2 text-red-300">
-                      Провалено (штраф: +{formatSeconds(task.penaltyByTaskFailureSeconds)})
+                      {task.failedByCaptain
+                        ? 'Слито капитаном досрочно'
+                        : task.failedByTimeout
+                          ? 'Провалено по таймеру'
+                          : 'Провалено'}{' '}
+                      (штраф: +{formatSeconds(task.penaltyByTaskFailureSeconds)})
                     </p>
                   )}
                 </div>
@@ -231,6 +236,9 @@ GameControlTeamStatsModal.propTypes = {
         endedAt: PropTypes.string,
         completedSeconds: PropTypes.number,
         isFailedTask: PropTypes.bool,
+        failedByCaptain: PropTypes.bool,
+        failedByTimeout: PropTypes.bool,
+        failedAt: PropTypes.string,
         penaltyByTaskFailureSeconds: PropTypes.number,
         hasConfiguredBonusCodes: PropTypes.bool,
         hasConfiguredPenaltyCodes: PropTypes.bool,

@@ -12,7 +12,6 @@ import taskText from 'telegram/func/taskText'
 import sendMessage from 'telegram/sendMessage'
 import secondsToTime from 'telegram/func/secondsToTime'
 import secondsToTimeStr from '@helpers/secondsToTimeStr'
-import removeCluePenalties from '@helpers/removeCluePenalties'
 import { isCaptainRole } from '@helpers/teamRoles'
 import getLocationTimeZone from '@helpers/locationTimeZone'
 
@@ -62,7 +61,7 @@ const buildCodeAttemptEntry = ({ taskIndex, code, category, status, source }) =>
 })
 
 const teamGameStart = async (gameTeam, game, GamesTeams) => {
-  const { _id: gameTeamId, timeAddings } = gameTeam
+  const { _id: gameTeamId } = gameTeam
   const gameTasksCount = game.tasks.length
   const startTime = new Array(gameTasksCount).fill(null)
   startTime[0] = new Date()
@@ -74,8 +73,6 @@ const teamGameStart = async (gameTeam, game, GamesTeams) => {
     findedBonusCodes,
     photos,
   } = createTaskProgressArrays(gameTasksCount)
-  const filteredAddings = removeCluePenalties(timeAddings)
-
   await GamesTeams.findByIdAndUpdate(gameTeamId, {
     startTime,
     endTime,
@@ -86,8 +83,10 @@ const teamGameStart = async (gameTeam, game, GamesTeams) => {
     findedBonusCodes,
     codeAttempts: [],
     photos,
-    timeAddings: filteredAddings,
+    timeAddings: [],
     forcedClues: new Array(gameTasksCount).fill(0),
+    taskFailures: [],
+    storyProgress: null,
   })
 }
 
@@ -708,6 +707,9 @@ async function gameProcess({ telegramId, userId, jsonCommand, location, db }) {
         name: clueAddingName,
         time: penaltyToApply,
         taskIndex: taskNum,
+        source: 'captain_force_clue',
+        scope: 'task_elapsed',
+        showInAdjustments: false,
       }
       if (currentTaskId) newAdding.taskId = currentTaskId
 

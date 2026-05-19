@@ -2,6 +2,7 @@ import { getSession } from 'next-auth/react'
 import { getServerSession } from 'next-auth/next'
 import { getToken } from 'next-auth/jwt'
 import { authOptions } from '@server/auth/authOptions'
+import { getAuthSecret } from '@server/auth/authSecret'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import resolveUserCityKey from '@helpers/resolveUserCityKey'
 
@@ -243,7 +244,7 @@ const getSessionSafe = async (context) => {
     if (req) {
       token = await getToken({
         req,
-        secret: process.env.SECRET,
+        secret: getAuthSecret(),
       })
       sessionDebugLog('getSessionSafe:getToken:done', {
         hasToken: Boolean(token),

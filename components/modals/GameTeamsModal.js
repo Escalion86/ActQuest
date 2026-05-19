@@ -7,6 +7,7 @@ import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetDurationField from '@components/cabinet/CabinetDurationField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
+import ImagesInput from '@components/cabinet/ImagesInput'
 import NoticeBanner from '@components/NoticeBanner'
 import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import requestApiJson from '@helpers/requestApiJson'
@@ -128,6 +129,9 @@ const GameTeamsModal = ({
     type: 'penalty',
     seconds: 60,
     name: '',
+    scope: 'total_adjustment',
+    showInAdjustments: true,
+    taskIndex: '',
   })
   const [selectedTeamStatsName, setSelectedTeamStatsName] = useState('')
   const [selectedTeamStats, setSelectedTeamStats] = useState(null)
@@ -142,6 +146,44 @@ const GameTeamsModal = ({
   const resolvedSelectedTeamDetails =
     teamDetailsQuery.data || selectedTeamDetails
   const teamDetailsError = teamDetailsQuery.error?.message || ''
+  const adjustmentTaskOptions = useMemo(
+    () =>
+      (Array.isArray(selectedGame?.tasks) ? selectedGame.tasks : []).map(
+        (task, index) => ({
+          value: String(index),
+          label:
+            String(task?.title || '').trim() || `Задание ${index + 1}`,
+        }),
+      ),
+    [selectedGame?.tasks],
+  )
+
+  const isManualAdjustmentItem = useCallback((item) => {
+    if (!item || typeof item !== 'object') {
+      return false
+    }
+
+    const source = String(item.source || '').trim().toLowerCase()
+    if (source === 'manual_team_adjustment') {
+      return true
+    }
+
+    const name = String(item.name || '').trim()
+    if (name.startsWith('Досрочная подсказка')) {
+      return false
+    }
+
+    // Legacy fallback: старые ручные корректировки могли быть без source.
+    // Считаем ручными записи без source и без task binding.
+    const hasTaskId =
+      typeof item.taskId === 'string' && item.taskId.trim() !== ''
+    const hasTaskIndex =
+      item?.taskIndex !== null &&
+      item?.taskIndex !== undefined &&
+      item?.taskIndex !== '' &&
+      Number.isFinite(Number(item.taskIndex))
+    return !source && !hasTaskId && !hasTaskIndex
+  }, [])
 
   const closeTeamDetailsModal = useCallback(() => {
     setIsTeamDetailsModalOpen(false)
@@ -253,27 +295,7 @@ const GameTeamsModal = ({
   const getManualAdjustmentRowsFromTeam = useCallback((team) => {
     const timeAddings = Array.isArray(team?.timeAddings) ? team.timeAddings : []
     return timeAddings
-      .filter((item) => {
-        if (!item || typeof item !== 'object') {
-          return false
-        }
-
-        const source = String(item.source || '').trim().toLowerCase()
-        if (source === 'manual_team_adjustment') {
-          return true
-        }
-
-        // Legacy fallback: старые ручные корректировки могли быть без source.
-        // Считаем ручными записи без source и без task binding.
-        const hasTaskId =
-          typeof item.taskId === 'string' && item.taskId.trim() !== ''
-        const hasTaskIndex =
-          item?.taskIndex !== null &&
-          item?.taskIndex !== undefined &&
-          item?.taskIndex !== '' &&
-          Number.isFinite(Number(item.taskIndex))
-        return !source && !hasTaskId && !hasTaskIndex
-      })
+      .filter(isManualAdjustmentItem)
       .map((item, index) => {
         const rawSeconds = Number(item.time)
         const seconds = Number.isFinite(rawSeconds)
@@ -285,9 +307,64 @@ const GameTeamsModal = ({
           type: rawSeconds < 0 ? 'bonus' : 'penalty',
           seconds,
           name: name || `Ручная корректировка #${index + 1}`,
+          scope:
+            String(item.scope || '').trim() === 'task_elapsed'
+              ? 'task_elapsed'
+              : 'total_adjustment',
+          showInAdjustments:
+            String(item.scope || '').trim() === 'task_elapsed'
+              ? item.showInAdjustments !== false
+              : true,
+          taskIndex: Number.isInteger(Number(item.taskIndex))
+            ? String(Number(item.taskIndex))
+            : '',
         }
       })
-  }, [])
+  }, [isManualAdjustmentItem])
+
+  const getSystemAdjustmentRowsFromTeam = useCallback(
+    (team) => {
+      const timeAddings = Array.isArray(team?.timeAddings) ? team.timeAddings : []
+      return timeAddings
+        .filter((item) => {
+          const seconds = Number(item?.time)
+          return (
+            item &&
+            typeof item === 'object' &&
+            Number.isFinite(seconds) &&
+            Math.round(seconds) !== 0 &&
+            !isManualAdjustmentItem(item)
+          )
+        })
+        .map((item, index) => {
+          const rawSeconds = Number(item.time)
+          const taskIndex = Number.isInteger(Number(item.taskIndex))
+            ? Number(item.taskIndex)
+            : null
+          const taskLabel =
+            taskIndex !== null
+              ? adjustmentTaskOptions.find(
+                  (option) => option.value === String(taskIndex),
+                )?.label || `Задание ${taskIndex + 1}`
+              : ''
+          const source = String(item.source || '').trim()
+          return {
+            id: `system-adjustment-${index}-${source || 'legacy'}-${String(item.name || '').slice(0, 16)}`,
+            type: rawSeconds < 0 ? 'bonus' : 'penalty',
+            seconds: Math.max(1, Math.abs(Math.round(rawSeconds))),
+            name: String(item.name || '').trim() || `Системная корректировка #${index + 1}`,
+            source,
+            scope:
+              String(item.scope || '').trim() === 'task_elapsed'
+                ? 'task_elapsed'
+                : 'total_adjustment',
+            showInAdjustments: item.showInAdjustments !== false,
+            taskLabel,
+          }
+        })
+    },
+    [adjustmentTaskOptions, isManualAdjustmentItem],
+  )
 
   const createEmptyManualAdjustmentRow = useCallback(() => {
     const now = Date.now()
@@ -296,6 +373,9 @@ const GameTeamsModal = ({
       type: 'penalty',
       seconds: 60,
       name: '',
+      scope: 'total_adjustment',
+      showInAdjustments: true,
+      taskIndex: '',
     }
   }, [])
 
@@ -318,12 +398,18 @@ const GameTeamsModal = ({
       setTeamAdjustmentsTarget({
         gameTeamId: String(team.id),
         teamName: String(team.teamName || 'Без названия'),
+        systemAdjustments: getSystemAdjustmentRowsFromTeam(team),
       })
       setTeamAdjustmentRows(initialRows)
       setTeamAdjustmentsError('')
       setIsTeamAdjustmentsModalOpen(true)
     },
-    [getManualAdjustmentRowsFromTeam, selectedGame?.id, selectedGame?.name],
+    [
+      getManualAdjustmentRowsFromTeam,
+      getSystemAdjustmentRowsFromTeam,
+      selectedGame?.id,
+      selectedGame?.name,
+    ],
   )
 
   const handleCloseTeamAdjustmentsModal = useCallback(() => {
@@ -345,6 +431,9 @@ const GameTeamsModal = ({
       type: row.type,
       seconds: row.seconds,
       name: '',
+      scope: row.scope,
+      showInAdjustments: row.showInAdjustments,
+      taskIndex: row.taskIndex,
     })
     setIsAdjustmentEditorOpen(true)
   }, [createEmptyManualAdjustmentRow])
@@ -382,6 +471,16 @@ const GameTeamsModal = ({
       type: row.type === 'bonus' ? 'bonus' : 'penalty',
       seconds: Math.max(1, Number(row.seconds) || 0),
       name: String(row.name || ''),
+      scope: row.scope === 'task_elapsed' ? 'task_elapsed' : 'total_adjustment',
+      showInAdjustments:
+        row.scope === 'task_elapsed' ? row.showInAdjustments !== false : true,
+      taskIndex:
+        row.taskIndex !== null &&
+        row.taskIndex !== undefined &&
+        row.taskIndex !== '' &&
+        Number.isInteger(Number(row.taskIndex))
+          ? String(Number(row.taskIndex))
+          : '',
     })
     setIsAdjustmentEditorOpen(true)
   }, [])
@@ -405,6 +504,19 @@ const GameTeamsModal = ({
         ? 'bonus'
         : 'penalty'
     const normalizedName = String(adjustmentDraft?.name || '').trim()
+    const normalizedScope =
+      String(adjustmentDraft?.scope || '').trim() === 'task_elapsed'
+        ? 'task_elapsed'
+        : 'total_adjustment'
+    const normalizedTaskIndex =
+      normalizedScope === 'task_elapsed' &&
+      Number.isInteger(Number(adjustmentDraft?.taskIndex))
+        ? String(Number(adjustmentDraft.taskIndex))
+        : ''
+    const normalizedShowInAdjustments =
+      normalizedScope === 'total_adjustment'
+        ? true
+        : Boolean(adjustmentDraft?.showInAdjustments)
     const rowId =
       typeof adjustmentDraft?.id === 'string' && adjustmentDraft.id.trim()
         ? adjustmentDraft.id
@@ -415,6 +527,9 @@ const GameTeamsModal = ({
         type: normalizedType,
         seconds: normalizedSeconds,
         name: normalizedName,
+        scope: normalizedScope,
+        showInAdjustments: normalizedShowInAdjustments,
+        taskIndex: normalizedTaskIndex,
       })
     } else {
       setTeamAdjustmentRows((prev) => [
@@ -424,6 +539,9 @@ const GameTeamsModal = ({
           type: normalizedType,
           seconds: normalizedSeconds,
           name: normalizedName,
+          scope: normalizedScope,
+          showInAdjustments: normalizedShowInAdjustments,
+          taskIndex: normalizedTaskIndex,
         },
       ])
     }
@@ -433,6 +551,9 @@ const GameTeamsModal = ({
     adjustmentDraft?.id,
     adjustmentDraft?.name,
     adjustmentDraft?.seconds,
+    adjustmentDraft?.showInAdjustments,
+    adjustmentDraft?.scope,
+    adjustmentDraft?.taskIndex,
     adjustmentDraft?.type,
     adjustmentEditorMode,
     createEmptyManualAdjustmentRow,
@@ -462,6 +583,18 @@ const GameTeamsModal = ({
         return {
           name: rawName || `Ручная корректировка #${index + 1}`,
           time: normalizedType === 'bonus' ? -seconds : seconds,
+          scope:
+            row?.scope === 'task_elapsed' && row?.taskIndex !== ''
+              ? 'task_elapsed'
+              : 'total_adjustment',
+          showInAdjustments:
+            row?.scope === 'task_elapsed' && row?.taskIndex !== ''
+              ? Boolean(row?.showInAdjustments)
+              : true,
+          taskIndex:
+            row?.scope === 'task_elapsed' && Number.isInteger(Number(row.taskIndex))
+              ? Number(row.taskIndex)
+              : null,
         }
       })
       .filter(Boolean)
@@ -1133,21 +1266,22 @@ const GameTeamsModal = ({
             />
           </div>
           <div>
-            <label
-              htmlFor="game-team-edit-image"
-              className="text-sm font-semibold text-slate-700 dark:text-slate-100"
-            >
-              URL аватарки
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-100">
+              Логотип команды
             </label>
-            <input
-              id="game-team-edit-image"
-              type="text"
-              value={teamToEdit?.image || ''}
-              onChange={(event) =>
-                handleTeamEditFieldChange('image', event.target.value)
-              }
-              className="w-full px-4 py-2 mt-2 text-sm bg-white border rounded-xl border-slate-200 text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
-            />
+            <div className="mt-2">
+              <ImagesInput
+                images={teamToEdit?.image ? [teamToEdit.image] : []}
+                onChange={(nextImages) =>
+                  handleTeamEditFieldChange('image', nextImages?.[0] ?? '')
+                }
+                directory="teams"
+                imageName={teamToEdit?.id || 'team'}
+                maxImages={1}
+                previewShape="circle"
+                disabled={isSavingTeamEdit}
+              />
+            </div>
           </div>
           <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
             <input
@@ -1197,6 +1331,54 @@ const GameTeamsModal = ({
             Здесь можно задать только ручные корректировки за игру. Бонус
             уменьшает итоговое время, штраф увеличивает.
           </p>
+          {Array.isArray(teamAdjustmentsTarget?.systemAdjustments) &&
+          teamAdjustmentsTarget.systemAdjustments.length > 0 ? (
+            <div className="rounded-2xl border border-cyan-200 bg-cyan-50/70 p-3 dark:border-cyan-500/35 dark:bg-cyan-500/10">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-semibold text-cyan-900 dark:text-cyan-100">
+                  Системные корректировки
+                </h4>
+                <span className="text-xs text-cyan-700 dark:text-cyan-200/80">
+                  Только просмотр
+                </span>
+              </div>
+              <div className="space-y-2">
+                {teamAdjustmentsTarget.systemAdjustments.map((row) => (
+                  <div
+                    key={row.id}
+                    className={`rounded-xl border px-3 py-2 text-sm ${
+                      row.type === 'bonus'
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100'
+                        : 'border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-100'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium">
+                        {row.name || 'Системная корректировка'}
+                      </span>
+                      <span className="font-mono font-semibold">
+                        {row.type === 'bonus' ? '−' : '+'}
+                        {formatAdjustmentDuration(row.seconds)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-2 text-xs opacity-80">
+                      {row.taskLabel ? <span>{row.taskLabel}</span> : null}
+                      <span>
+                        {row.scope === 'task_elapsed'
+                          ? 'Учитывается во времени задания'
+                          : 'Общая корректировка'}
+                      </span>
+                      {row.showInAdjustments ? (
+                        <span>Видна в результатах</span>
+                      ) : (
+                        <span>Скрыта из результатов</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="space-y-3">
             {teamAdjustmentRows.length === 0 ? (
               <p className="text-sm text-slate-500 dark:text-slate-300">
@@ -1217,6 +1399,11 @@ const GameTeamsModal = ({
                   >
                     {row.type === 'bonus' ? 'Бонус' : 'Штраф'}
                   </span>
+                  {row.scope === 'task_elapsed' ? (
+                    <span className="absolute left-20 top-0 inline-flex items-center rounded-b-lg border-b border-x border-cyan-300 bg-cyan-100/80 px-2 py-0.5 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/45 dark:bg-cyan-500/15 dark:text-cyan-200">
+                      Время задания
+                    </span>
+                  ) : null}
 
                   <button
                     type="button"
@@ -1308,6 +1495,16 @@ const GameTeamsModal = ({
                         {row.type === 'bonus' ? '−' : '+'}
                         {formatAdjustmentDuration(row.seconds)}
                       </p>
+                      {row.scope === 'task_elapsed' ? (
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          {adjustmentTaskOptions.find(
+                            (option) => option.value === String(row.taskIndex),
+                          )?.label || 'Задание не выбрано'}
+                          {row.showInAdjustments
+                            ? ' · видно в корректировках'
+                            : ' · скрыто из корректировок'}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -1348,7 +1545,11 @@ const GameTeamsModal = ({
               type="button"
               className="aq-modal-btn aq-modal-btn-primary"
               onClick={handleSaveAdjustmentDraft}
-              disabled={isSavingTeamAdjustments}
+              disabled={
+                isSavingTeamAdjustments ||
+                (adjustmentDraft.scope === 'task_elapsed' &&
+                  adjustmentDraft.taskIndex === '')
+              }
             >
               Готово
             </button>
@@ -1374,6 +1575,78 @@ const GameTeamsModal = ({
               <option value="bonus">Бонус</option>
             </select>
           </div>
+          <div>
+            <label className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
+              Применение
+            </label>
+            <select
+              value={adjustmentDraft.scope}
+              onChange={(event) => {
+                const nextScope =
+                  event.target.value === 'task_elapsed'
+                    ? 'task_elapsed'
+                    : 'total_adjustment'
+                setAdjustmentDraft((prev) => ({
+                  ...prev,
+                  scope: nextScope,
+                  showInAdjustments:
+                    nextScope === 'total_adjustment'
+                      ? true
+                      : Boolean(prev.showInAdjustments),
+                  taskIndex: nextScope === 'task_elapsed' ? prev.taskIndex : '',
+                }))
+              }}
+              className="w-full px-3 py-2 mt-1 text-sm bg-white border rounded-xl border-slate-200 text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+            >
+              <option value="total_adjustment">Итог игры</option>
+              <option value="task_elapsed">Время задания</option>
+            </select>
+          </div>
+          {adjustmentDraft.scope === 'task_elapsed' ? (
+            <>
+              <div>
+                <label className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
+                  Задание
+                </label>
+                <select
+                  value={adjustmentDraft.taskIndex}
+                  onChange={(event) =>
+                    setAdjustmentDraft((prev) => ({
+                      ...prev,
+                      taskIndex: event.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 mt-1 text-sm bg-white border rounded-xl border-slate-200 text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+                >
+                  <option value="">Выберите задание</option>
+                  {adjustmentTaskOptions.map((option, index) => (
+                    <option key={`adjustment-task-${index}`} value={option.value}>
+                      {index + 1}. {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={Boolean(adjustmentDraft.showInAdjustments)}
+                  onChange={(event) =>
+                    setAdjustmentDraft((prev) => ({
+                      ...prev,
+                      showInAdjustments: event.target.checked,
+                    }))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                />
+                <span>Показать в блоке дополнительных корректировок</span>
+              </label>
+            </>
+          ) : (
+            <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">
+              Корректировка итога игры всегда показывается в дополнительных
+              корректировках.
+            </p>
+          )}
           <div>
             <label className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-300">
               Комментарий
@@ -1443,6 +1716,10 @@ const teamShape = PropTypes.shape({
       name: PropTypes.string,
       time: PropTypes.number,
       source: PropTypes.string,
+      scope: PropTypes.string,
+      showInAdjustments: PropTypes.bool,
+      taskIndex: PropTypes.number,
+      taskId: PropTypes.string,
     }),
   ),
 })
@@ -1459,6 +1736,7 @@ GameTeamsModal.propTypes = {
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     name: PropTypes.string,
     status: PropTypes.string,
+    tasks: PropTypes.array,
   }),
   isTeamsModalOpen: PropTypes.bool.isRequired,
   handleCloseTeamsModal: PropTypes.func.isRequired,

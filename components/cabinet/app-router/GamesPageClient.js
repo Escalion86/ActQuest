@@ -4962,6 +4962,7 @@ const GamesPage = ({
           successMessage = 'Игра удалена'
         } else {
           let nextStatus = null
+          let clearTimeAddingsOnReset = true
 
           if (actionId === 'restart_game' || actionId === 'activate_game') {
             nextStatus = 'active'
@@ -4990,6 +4991,62 @@ const GamesPage = ({
             return
           }
 
+          if (
+            typeof window !== 'undefined' &&
+            actionId === 'restart_game'
+          ) {
+            try {
+              const { json } = await requestApiJson(
+                `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
+                  statusModalGame.id,
+                )}/teams`,
+                {
+                  fallbackMessage:
+                    'Не удалось проверить ручные корректировки команд',
+                },
+              )
+              const gameTeams = Array.isArray(json?.data?.gameTeams)
+                ? json.data.gameTeams
+                : []
+              const hasManualAdjustments = gameTeams.some((gameTeam) =>
+                (Array.isArray(gameTeam?.timeAddings)
+                  ? gameTeam.timeAddings
+                  : []
+                ).some((adding) => {
+                  const source = String(adding?.source || '')
+                    .trim()
+                    .toLowerCase()
+                  return (
+                    source === 'manual_team_adjustment' ||
+                    (!source &&
+                      !adding?.taskId &&
+                      (adding?.taskIndex === null ||
+                        adding?.taskIndex === undefined ||
+                        adding?.taskIndex === ''))
+                  )
+                }),
+              )
+
+              if (hasManualAdjustments) {
+                clearTimeAddingsOnReset = window.confirm(
+                  'В игре есть ручные корректировки (Бонусы/Штрафы). Очистить их при перезапуске?',
+                )
+              }
+            } catch (adjustmentsCheckError) {
+              console.error(
+                'Failed to check manual adjustments before restart',
+                adjustmentsCheckError,
+              )
+              const shouldContinue = window.confirm(
+                'Не удалось проверить ручные корректировки команд. Продолжить перезапуск с очисткой корректировок?',
+              )
+              if (!shouldContinue) {
+                return
+              }
+              clearTimeAddingsOnReset = true
+            }
+          }
+
           await requestApiJson(
             `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
               statusModalGame.id,
@@ -4997,13 +5054,21 @@ const GamesPage = ({
             {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ data: { status: nextStatus } }),
+              body: JSON.stringify({
+                data: {
+                  status: nextStatus,
+                  ...(actionId === 'restart_game'
+                    ? { clearTimeAddingsOnReset }
+                    : {}),
+                },
+              }),
               fallbackMessage: 'Не удалось обновить статус игры',
             },
           )
         }
 
         setStatusProgressMessage('Обновляем список игр…')
+        await queryClient.invalidateQueries({ queryKey: ['cabinet-games'] })
         await gamesQuery.refetch()
 
         setStatusProgressMessage('')
@@ -5031,6 +5096,7 @@ const GamesPage = ({
       canEditAllGames,
       canManageGameStatus,
       gamesQuery,
+      queryClient,
       statusModalGame,
     ],
   )

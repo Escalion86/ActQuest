@@ -733,6 +733,11 @@ const GameResultsModal = ({
                                   >
                                     <span className="font-mono font-semibold">{item.display || '—'}</span>
                                     <span>{item.name || 'Корректировка'}</span>
+                                    {item.scope === 'task_elapsed' ? (
+                                      <span className="rounded-full border border-current/25 px-1.5 py-0.5 text-[10px] uppercase tracking-wide opacity-80">
+                                        учтено во времени задания
+                                      </span>
+                                    ) : null}
                                   </li>
                                 ))}
                               </ul>

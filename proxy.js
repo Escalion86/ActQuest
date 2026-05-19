@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { getAuthSecret } from '@server/auth/authSecret'
 
 const PUBLIC_FILE = /\.[^/]+$/
 
@@ -29,7 +30,7 @@ export async function proxy(req) {
 
   const token = await getToken({
     req,
-    secret: process.env.SECRET,
+    secret: getAuthSecret(),
   })
 
   if (token) {

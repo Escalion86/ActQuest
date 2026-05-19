@@ -546,14 +546,7 @@ const applyTheme = useCallback((nextTheme) => {
       callbackTarget,
     })
 
-    try {
-      await signOut({
-        redirect: true,
-        callbackUrl: `/cabinet/login${callbackQuery}`,
-      })
-    } catch {
-      router.replace(`/cabinet/login${callbackQuery}`)
-    }
+    router.replace(`/cabinet/login${callbackQuery}`)
   }, [currentPath, router, status])
 
   useEffect(() => {

@@ -116,6 +116,27 @@ const toHHMMSS = (sec, noHours = false) => {
   )
 }
 
+const isCaptainForceClueAdding = (item) => {
+  const source = typeof item?.source === 'string' ? item.source.trim() : ''
+  const name = typeof item?.name === 'string' ? item.name.trim() : ''
+  return source === 'captain_force_clue' || name.startsWith('Досрочная подсказка')
+}
+
+const hasTimeAddingTaskBinding = (item) => {
+  const hasTaskId = typeof item?.taskId === 'string' && item.taskId.trim()
+  const hasTaskIndex = Number.isInteger(Number(item?.taskIndex))
+  return Boolean(hasTaskId || hasTaskIndex)
+}
+
+const normalizeTimeAddingScope = (item) => {
+  const scope = typeof item?.scope === 'string' ? item.scope.trim() : ''
+  if (scope === 'task_elapsed') return 'task_elapsed'
+  if (scope === 'total_adjustment') return 'total_adjustment'
+  return isCaptainForceClueAdding(item) && hasTimeAddingTaskBinding(item)
+    ? 'task_elapsed'
+    : 'total_adjustment'
+}
+
 const normalizeId = (value) => {
   if (value === null || value === undefined) {
     return ''
@@ -603,16 +624,26 @@ const GameBlock = ({ game, isDarkTheme }) => {
     return false
   }
 
-  const teamsAnimateSteps = gameTeamsWithTeams.map(({ startTime, endTime }) => {
+  const teamsAnimateSteps = gameTeamsWithTeams.map((teamEntry) => {
+    const { computedTeam, startTime, endTime } = teamEntry
     const tempResult = []
     for (let i = 0; i < tasksCount; i++) {
       const prevSum = i === 0 ? 0 : tempResult[i - 1]
       const task = tasks[i]
-      if (task.canceled || task.isBonusTask) tempResult.push(prevSum)
-      else if (!endTime[i] || !startTime[i])
+      if (task.canceled || task.isBonusTask) {
+        tempResult.push(prevSum)
+      } else if (computedTeam && Array.isArray(computedTeam.taskResults)) {
+        const computedTask = computedTeam.taskResults[i]
+        const computedSeconds = Number(computedTask?.normalizedSeconds)
+        tempResult.push(
+          prevSum +
+            (Number.isFinite(computedSeconds) ? computedSeconds : taskDuration),
+        )
+      } else if (!endTime[i] || !startTime[i]) {
         tempResult.push(prevSum + taskDuration)
-      else
+      } else {
         tempResult.push(prevSum + getSecondsBetween(startTime[i], endTime[i]))
+      }
       // if (breakDuration > 0 && i < tasksCount - 1)
       //   tempResult.push(tempResult[i] + breakDuration)
     }
@@ -848,7 +879,13 @@ const GameBlock = ({ game, isDarkTheme }) => {
       if (computedTeam) {
         return Number(computedTeam.addingsSeconds) || 0
       }
-      return timeAddings.reduce((acc, { time }) => acc + time, 0)
+      return timeAddings.reduce(
+        (acc, item) =>
+          normalizeTimeAddingScope(item) === 'total_adjustment'
+            ? acc + (Number(item?.time) || 0)
+            : acc,
+        0,
+      )
     },
   )
 
@@ -945,6 +982,11 @@ const GameBlock = ({ game, isDarkTheme }) => {
       const fromLegacyAddings =
         !computedTeam && Array.isArray(timeAddings)
           ? timeAddings
+              .filter(
+                (item) =>
+                  normalizeTimeAddingScope(item) === 'total_adjustment' ||
+                  item?.showInAdjustments === true,
+              )
               .map((item) => {
                 const rawSeconds = Number(item?.time)
                 const absSeconds = Number.isFinite(rawSeconds)

@@ -187,6 +187,428 @@ const normalizeCodeAttemptEntry = (entry) => {
   }
 }
 
+const normalizeTaskFailureEntry = (entry) => {
+  if (!entry || typeof entry !== 'object') {
+    return null
+  }
+
+  const taskIndex = Number(entry.taskIndex)
+  const failedAt = normalizeIsoDate(entry.failedAt)
+  if (!Number.isInteger(taskIndex) || taskIndex < 0 || !failedAt) {
+    return null
+  }
+
+  const source = normalizeText(entry.source)
+  const normalizedSource =
+    source === 'admin' || source === 'system' || source === 'timeout'
+      ? source
+      : 'captain'
+
+  return {
+    taskIndex,
+    taskId: normalizeText(entry.taskId),
+    failedAt,
+    source: normalizedSource,
+    reason: normalizeText(entry.reason),
+  }
+}
+
+const getTaskIdValue = (task) =>
+  task?._id !== null && task?._id !== undefined ? String(task._id) : ''
+
+const isCaptainForceClueAdding = (adding) => {
+  const source = normalizeText(adding?.source)
+  const name = normalizeText(adding?.name)
+  return source === 'captain_force_clue' || name.startsWith('Досрочная подсказка')
+}
+
+const hasTimeAddingTaskBinding = (adding) => {
+  const hasTaskId =
+    typeof adding?.taskId === 'string' && adding.taskId.trim() !== ''
+  const hasTaskIndex = Number.isInteger(Number(adding?.taskIndex))
+  return hasTaskId || hasTaskIndex
+}
+
+const normalizeTimeAddingScope = (adding) => {
+  const scope = normalizeText(adding?.scope)
+  if (scope === 'task_elapsed') return 'task_elapsed'
+  if (scope === 'total_adjustment') return 'total_adjustment'
+  return isCaptainForceClueAdding(adding) && hasTimeAddingTaskBinding(adding)
+    ? 'task_elapsed'
+    : 'total_adjustment'
+}
+
+const shouldShowTimeAddingInAdjustments = (adding) => {
+  const scope = normalizeTimeAddingScope(adding)
+  if (scope === 'total_adjustment') return true
+  if (typeof adding?.showInAdjustments === 'boolean') {
+    return adding.showInAdjustments
+  }
+  return !isCaptainForceClueAdding(adding)
+}
+
+const isTimeAddingForTask = (adding, taskIndex, task) => {
+  const taskId = getTaskIdValue(task)
+  if (taskId && adding?.taskId) return String(adding.taskId) === taskId
+  return Number.isInteger(Number(adding?.taskIndex)) &&
+    Number(adding.taskIndex) === taskIndex
+}
+
+const getTaskElapsedAdjustmentSeconds = ({ timeAddings, taskIndex, task }) => {
+  const addings = Array.isArray(timeAddings) ? timeAddings : []
+  return addings.reduce((sum, adding) => {
+    if (normalizeTimeAddingScope(adding) !== 'task_elapsed') return sum
+    if (!isTimeAddingForTask(adding, taskIndex, task)) return sum
+    const seconds = Number(adding?.time)
+    return Number.isFinite(seconds) ? sum + Math.round(seconds) : sum
+  }, 0)
+}
+
+const getClueAdvanceSecondsForTask = ({ timeAddings, taskIndex, task }) => {
+  const addings = Array.isArray(timeAddings) ? timeAddings : []
+
+  return addings.reduce((sum, adding) => {
+    if (!isCaptainForceClueAdding(adding)) return sum
+
+    if (!isTimeAddingForTask(adding, taskIndex, task)) return sum
+
+    const seconds = Number(adding?.time)
+    return Number.isFinite(seconds) && seconds > 0 ? sum + seconds : sum
+  }, 0)
+}
+
+const getForcedClueAddingsCountForTask = ({ timeAddings, taskIndex, task }) => {
+  const addings = Array.isArray(timeAddings) ? timeAddings : []
+
+  return addings.filter((adding) => {
+    if (!isCaptainForceClueAdding(adding)) return false
+    return isTimeAddingForTask(adding, taskIndex, task)
+  }).length
+}
+
+const toDateValue = (value) => {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const cloneDateValue = (value) => {
+  const date = toDateValue(value)
+  return date ? new Date(date.getTime()) : null
+}
+
+const ensureArrayLength = (value, length, fallback = null) => {
+  const source = Array.isArray(value) ? value : []
+  return Array.from({ length }, (_, index) =>
+    index < source.length ? source[index] : fallback,
+  )
+}
+
+const normalizeTaskFailuresForUpdate = (value) =>
+  Array.isArray(value)
+    ? value
+        .map((item) => {
+          const taskIndex = Number(item?.taskIndex)
+          const failedAt = toDateValue(item?.failedAt)
+          if (!Number.isInteger(taskIndex) || taskIndex < 0 || !failedAt) {
+            return null
+          }
+
+          const source = normalizeText(item?.source)
+          const normalizedSource =
+            source === 'admin' || source === 'system' || source === 'timeout'
+              ? source
+              : 'captain'
+
+          return {
+            taskIndex,
+            taskId: normalizeText(item?.taskId),
+            failedAt,
+            source: normalizedSource,
+            reason: normalizeText(item?.reason),
+          }
+        })
+        .filter(Boolean)
+    : []
+
+const getTaskFailureForIndex = (gameTeam, taskIndex) =>
+  normalizeTaskFailuresForUpdate(gameTeam?.taskFailures).find(
+    (item) => item.taskIndex === taskIndex,
+  ) || null
+
+const syncGameTeamProgressForStatus = async ({
+  game,
+  gameTeam,
+  gamesTeamsModel,
+  now = new Date(),
+}) => {
+  const tasks = Array.isArray(game?.tasks) ? game.tasks : []
+  const tasksCount = tasks.length
+  if (!gameTeam || tasksCount === 0) return gameTeam
+
+  const taskDuration = Math.max(0, Number(game?.taskDuration) || 3600)
+  const breakDuration = Math.max(0, Number(game?.breakDuration) || 0)
+  const nowDate = toDateValue(now) || new Date()
+  const nowMs = nowDate.getTime()
+
+  const getEffectiveElapsedSeconds = (teamState, taskIndex, startAt) => {
+    const startDate = toDateValue(startAt)
+    if (!startDate) return 0
+
+    const realElapsed = Math.max(
+      Math.floor((nowMs - startDate.getTime()) / 1000),
+      0,
+    )
+
+    return (
+      realElapsed +
+      getClueAdvanceSecondsForTask({
+        timeAddings: teamState?.timeAddings,
+        taskIndex,
+        task: tasks[taskIndex],
+      })
+    )
+  }
+
+  const getTimeoutFailedAt = (teamState, taskIndex, startAt) => {
+    const startDate = toDateValue(startAt)
+    if (!startDate) return null
+
+    const clueAdvance = getClueAdvanceSecondsForTask({
+      timeAddings: teamState?.timeAddings,
+      taskIndex,
+      task: tasks[taskIndex],
+    })
+
+    return new Date(
+      startDate.getTime() + Math.max(taskDuration - clueAdvance, 0) * 1000,
+    )
+  }
+
+  const buildTimeoutFailureUpdates = (teamState, taskIndex, failedAt) => {
+    const existingFailures = normalizeTaskFailuresForUpdate(
+      teamState?.taskFailures,
+    )
+    const hasExistingFailure = existingFailures.some(
+      (item) => item.taskIndex === taskIndex,
+    )
+
+    if (hasExistingFailure || !failedAt) {
+      return {}
+    }
+
+    return {
+      taskFailures: [
+        ...existingFailures,
+        {
+          taskIndex,
+          taskId: getTaskIdValue(tasks[taskIndex]),
+          failedAt,
+          source: 'timeout',
+          reason: 'task_timeout',
+        },
+      ],
+    }
+  }
+
+  const updateTeam = async (teamState, updates) => {
+    if (!updates || Object.keys(updates).length === 0) {
+      return teamState
+    }
+
+    const updatedTeam = await gamesTeamsModel
+      .findByIdAndUpdate(teamState._id, updates, { returnDocument: 'after' })
+      .lean()
+
+    return updatedTeam ?? { ...teamState, ...updates }
+  }
+
+  const advanceToNextTask = async (
+    teamState,
+    nextIndex,
+    startedAt,
+    extraUpdates = {},
+  ) => {
+    const startTimeUpdates = ensureArrayLength(
+      teamState.startTime,
+      tasksCount,
+      null,
+    ).map(cloneDateValue)
+    startTimeUpdates[nextIndex] = toDateValue(startedAt) || nowDate
+
+    const forcedCluesUpdates = ensureArrayLength(
+      teamState.forcedClues,
+      tasksCount,
+      0,
+    ).map((value) => {
+      const numeric = Number(value)
+      return Number.isFinite(numeric) ? numeric : 0
+    })
+    forcedCluesUpdates[nextIndex] = 0
+
+    return updateTeam(teamState, {
+      ...extraUpdates,
+      activeNum: nextIndex,
+      startTime: startTimeUpdates,
+      forcedClues: forcedCluesUpdates,
+    })
+  }
+
+  const progressOnce = async (teamState) => {
+    const activeNum = Number.isInteger(teamState?.activeNum)
+      ? teamState.activeNum
+      : 0
+    if (activeNum >= tasksCount) return teamState
+
+    const taskIndex = Math.max(Math.min(activeNum, tasksCount - 1), 0)
+    const nextIndex = taskIndex + 1
+    const hasNextTask = nextIndex < tasksCount
+    const startTimes = ensureArrayLength(teamState.startTime, tasksCount, null)
+    const endTimes = ensureArrayLength(teamState.endTime, tasksCount, null)
+    const activeStart = toDateValue(startTimes[taskIndex])
+    const activeEnd = toDateValue(endTimes[taskIndex])
+    const activeFailure = getTaskFailureForIndex(teamState, taskIndex)
+
+    if (!hasNextTask) {
+      if (activeEnd) {
+        return updateTeam(teamState, { activeNum: nextIndex })
+      }
+
+      if (activeStart && taskDuration > 0) {
+        const elapsed = getEffectiveElapsedSeconds(
+          teamState,
+          taskIndex,
+          activeStart,
+        )
+        if (elapsed >= taskDuration) {
+          const failedAt = getTimeoutFailedAt(teamState, taskIndex, activeStart)
+          return updateTeam(teamState, {
+            ...buildTimeoutFailureUpdates(teamState, taskIndex, failedAt),
+            activeNum: nextIndex,
+          })
+        }
+      }
+
+      return teamState
+    }
+
+    if (activeFailure?.failedAt) {
+      const failedAt = toDateValue(activeFailure.failedAt)
+      if (!failedAt) return teamState
+      if (breakDuration <= 0) {
+        return advanceToNextTask(teamState, nextIndex, failedAt)
+      }
+
+      const elapsedAfterFailure = Math.max(
+        Math.floor((nowMs - failedAt.getTime()) / 1000),
+        0,
+      )
+      if (elapsedAfterFailure >= breakDuration) {
+        return advanceToNextTask(
+          teamState,
+          nextIndex,
+          new Date(failedAt.getTime() + breakDuration * 1000),
+        )
+      }
+
+      return teamState
+    }
+
+    if (activeEnd) {
+      if (breakDuration <= 0) {
+        return advanceToNextTask(teamState, nextIndex, activeEnd)
+      }
+
+      const elapsedAfterEnd = Math.max(
+        Math.floor((nowMs - activeEnd.getTime()) / 1000),
+        0,
+      )
+      if (elapsedAfterEnd >= breakDuration) {
+        return advanceToNextTask(
+          teamState,
+          nextIndex,
+          new Date(activeEnd.getTime() + breakDuration * 1000),
+        )
+      }
+
+      return teamState
+    }
+
+    if (activeStart && taskDuration > 0) {
+      const elapsed = getEffectiveElapsedSeconds(teamState, taskIndex, activeStart)
+      if (elapsed >= taskDuration) {
+        const failedAt = getTimeoutFailedAt(teamState, taskIndex, activeStart)
+        const timeoutUpdates = buildTimeoutFailureUpdates(
+          teamState,
+          taskIndex,
+          failedAt,
+        )
+
+        if (breakDuration > 0) {
+          if (elapsed >= taskDuration + breakDuration) {
+            return advanceToNextTask(
+              teamState,
+              nextIndex,
+              new Date(failedAt.getTime() + breakDuration * 1000),
+              timeoutUpdates,
+            )
+          }
+
+          return updateTeam(teamState, timeoutUpdates)
+        }
+
+        return advanceToNextTask(teamState, nextIndex, failedAt, timeoutUpdates)
+      }
+    }
+
+    return teamState
+  }
+
+  let effectiveTeam = gameTeam
+  for (let guard = 0; guard < tasksCount + 1; guard += 1) {
+    const beforeSignature = JSON.stringify({
+      activeNum: Number.isInteger(effectiveTeam?.activeNum)
+        ? effectiveTeam.activeNum
+        : 0,
+      startTime: ensureArrayLength(effectiveTeam?.startTime, tasksCount, null).map(
+        (value) => toDateValue(value)?.toISOString() || null,
+      ),
+      taskFailures: normalizeTaskFailuresForUpdate(
+        effectiveTeam?.taskFailures,
+      ).map((item) => ({
+        taskIndex: item.taskIndex,
+        failedAt: item.failedAt.toISOString(),
+        source: item.source,
+      })),
+    })
+
+    const nextTeam = await progressOnce(effectiveTeam)
+    effectiveTeam = nextTeam || effectiveTeam
+
+    const afterSignature = JSON.stringify({
+      activeNum: Number.isInteger(effectiveTeam?.activeNum)
+        ? effectiveTeam.activeNum
+        : 0,
+      startTime: ensureArrayLength(effectiveTeam?.startTime, tasksCount, null).map(
+        (value) => toDateValue(value)?.toISOString() || null,
+      ),
+      taskFailures: normalizeTaskFailuresForUpdate(
+        effectiveTeam?.taskFailures,
+      ).map((item) => ({
+        taskIndex: item.taskIndex,
+        failedAt: item.failedAt.toISOString(),
+        source: item.source,
+      })),
+    })
+
+    if (afterSignature === beforeSignature) {
+      break
+    }
+  }
+
+  return effectiveTeam
+}
+
 const sortAttemptsByTime = (a, b) => {
   const aDate = a?.createdAt ? Date.parse(a.createdAt) : Number.NaN
   const bDate = b?.createdAt ? Date.parse(b.createdAt) : Number.NaN
@@ -378,9 +800,23 @@ export async function GET(request) {
     const breakDuration = game.breakDuration ?? 0
     const tasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
 
-    const gameTeams = await GamesTeamsModel.find({
+    let gameTeams = await GamesTeamsModel.find({
       gameId: gameId.trim(),
     }).lean()
+
+    if (normalizedGameStatus === 'started') {
+      const statusCheckedAt = new Date()
+      gameTeams = await Promise.all(
+        gameTeams.map((gameTeam) =>
+          syncGameTeamProgressForStatus({
+            game,
+            gameTeam,
+            gamesTeamsModel: GamesTeamsModel,
+            now: statusCheckedAt,
+          }),
+        ),
+      )
+    }
     const teamIds = gameTeams
       .map((gt) => toStringId(gt?.teamId))
       .filter(Boolean)
@@ -510,7 +946,11 @@ export async function GET(request) {
       const codeAttempts = Array.isArray(gt.codeAttempts)
         ? gt.codeAttempts.map(normalizeCodeAttemptEntry).filter(Boolean)
         : []
+      const taskFailures = Array.isArray(gt.taskFailures)
+        ? gt.taskFailures.map(normalizeTaskFailureEntry).filter(Boolean)
+        : []
       const photos = Array.isArray(gt.photos) ? gt.photos : []
+      const timeAddings = Array.isArray(gt.timeAddings) ? gt.timeAddings : []
 
       let startedTasks = 0
       startTime.forEach((t) => {
@@ -527,6 +967,9 @@ export async function GET(request) {
       const currentTaskSource = Array.isArray(game.tasks)
         ? game.tasks[activeTaskIndex]
         : null
+      const activeTaskFailure = taskFailures.find(
+        (item) => item.taskIndex === activeTaskIndex,
+      )
       const bonusCodeDescriptionLookup = buildCodeDescriptionLookup(
         currentTaskSource?.bonusCodes,
       )
@@ -541,12 +984,39 @@ export async function GET(request) {
         currentPenaltyCodes,
         penaltyCodeDescriptionLookup,
       )
+      const currentClueAdvanceSeconds = getClueAdvanceSecondsForTask({
+        timeAddings,
+        taskIndex: activeTaskIndex,
+        task: currentTaskSource,
+      })
+      const currentForcedCluesCount = getForcedClueAddingsCountForTask({
+        timeAddings,
+        taskIndex: activeTaskIndex,
+        task: currentTaskSource,
+      })
+      const getEffectiveTaskSeconds = (taskIndex, baseSeconds) => {
+        const taskSource = Array.isArray(game.tasks)
+          ? game.tasks[taskIndex]
+          : null
+        return (
+          Math.max(0, Number(baseSeconds) || 0) +
+          getTaskElapsedAdjustmentSeconds({
+            timeAddings,
+            taskIndex,
+            task: taskSource,
+          })
+        )
+      }
 
       const isActiveTaskFinished =
         activeTaskIndex >= tasksCount ||
         Boolean(endTime[activeTaskIndex]) ||
+        Boolean(activeTaskFailure) ||
         (startTime[activeTaskIndex]
-          ? getSecondsBetween(startTime[activeTaskIndex], now) > taskDuration
+          ? getEffectiveTaskSeconds(
+              activeTaskIndex,
+              getSecondsBetween(startTime[activeTaskIndex], now),
+            ) > taskDuration
           : false)
 
       const isAllTasksStarted =
@@ -559,6 +1029,8 @@ export async function GET(request) {
       const isActiveTaskFailed = isActiveTaskFinished
         ? !endTime[activeTaskIndex]
         : false
+      const isActiveTaskFailedByCaptain =
+        isActiveTaskFailed && activeTaskFailure?.source === 'captain'
 
       // Суммарное время
       let sumTimeSeconds = 0
@@ -572,7 +1044,10 @@ export async function GET(request) {
           } else if (isActiveTaskFinished) {
             sumTimeSeconds += taskDuration
           } else {
-            sumTimeSeconds += getSecondsBetween(startTime[i], now)
+            sumTimeSeconds += getEffectiveTaskSeconds(
+              i,
+              getSecondsBetween(startTime[i], now),
+            )
           }
         } else if (endTime[i]) {
           sumTimeSeconds += getSecondsBetween(startTime[i], endTime[i])
@@ -582,9 +1057,17 @@ export async function GET(request) {
       }
 
       // Время на текущем задании
+      let currentTaskActualSeconds = 0
       let currentTaskSeconds = 0
       if (startTime[activeTaskIndex] && !isActiveTaskFinished) {
-        currentTaskSeconds = getSecondsBetween(startTime[activeTaskIndex], now)
+        currentTaskActualSeconds = Math.max(
+          0,
+          getSecondsBetween(startTime[activeTaskIndex], now),
+        )
+        currentTaskSeconds = getEffectiveTaskSeconds(
+          activeTaskIndex,
+          currentTaskActualSeconds,
+        )
       }
 
       // Перерыв
@@ -592,10 +1075,12 @@ export async function GET(request) {
       if (isTeamOnBreak) {
         const finishTime = endTime[activeTaskIndex]
           ? new Date(endTime[activeTaskIndex])
+          : activeTaskFailure?.failedAt
+            ? new Date(activeTaskFailure.failedAt)
           : startTime[activeTaskIndex]
             ? new Date(
                 new Date(startTime[activeTaskIndex]).getTime() +
-                  taskDuration * 1000,
+                  Math.max(taskDuration - currentClueAdvanceSeconds, 0) * 1000,
               )
             : now
         const afterEnd = getSecondsBetween(finishTime, now)
@@ -698,12 +1183,28 @@ export async function GET(request) {
         const nextStartAt = normalizeIsoDate(startTime[taskIndex + 1])
         const nextStartMs = nextStartAt ? Date.parse(nextStartAt) : Number.NaN
         const activeTaskIndexInt = Number.isInteger(activeNum) ? activeNum : 0
+        const taskFailure = taskFailures.find(
+          (item) => item.taskIndex === taskIndex,
+        )
 
         let completedSeconds = null
         const normalizedTaskDuration = Math.max(0, Math.floor(taskDuration || 0))
 
-        if (Number.isFinite(startMs) && Number.isFinite(endMs)) {
-          completedSeconds = Math.max(0, Math.floor((endMs - startMs) / 1000))
+        if (taskFailure && Number.isFinite(startMs)) {
+          completedSeconds = normalizedTaskDuration
+        } else if (Number.isFinite(startMs) && Number.isFinite(endMs)) {
+          completedSeconds = Math.max(
+            0,
+            Math.floor((endMs - startMs) / 1000) +
+              getTaskElapsedAdjustmentSeconds({
+                timeAddings,
+                taskIndex,
+                task: taskSource,
+              }),
+          )
+          if (normalizedTaskDuration > 0) {
+            completedSeconds = Math.min(completedSeconds, normalizedTaskDuration)
+          }
         } else if (
           Number.isFinite(startMs) &&
           Number.isFinite(nextStartMs) &&
@@ -715,8 +1216,27 @@ export async function GET(request) {
           )
           completedSeconds =
             normalizedTaskDuration > 0
-              ? Math.min(diffByNextStart, normalizedTaskDuration)
-              : diffByNextStart
+              ? Math.min(
+                  Math.max(
+                    0,
+                    diffByNextStart +
+                      getTaskElapsedAdjustmentSeconds({
+                        timeAddings,
+                        taskIndex,
+                        task: taskSource,
+                      }),
+                  ),
+                  normalizedTaskDuration,
+                )
+              : Math.max(
+                  0,
+                  diffByNextStart +
+                    getTaskElapsedAdjustmentSeconds({
+                      timeAddings,
+                      taskIndex,
+                      task: taskSource,
+                    }),
+                )
         } else if (Number.isFinite(startMs) && taskIndex < activeTaskIndexInt) {
           completedSeconds = normalizedTaskDuration
         } else if (Number.isFinite(startMs) && taskIndex === activeTaskIndexInt) {
@@ -726,13 +1246,33 @@ export async function GET(request) {
           )
           completedSeconds =
             normalizedTaskDuration > 0
-              ? Math.min(elapsedForActiveTask, normalizedTaskDuration)
-              : elapsedForActiveTask
+              ? Math.min(
+                  Math.max(
+                    0,
+                    elapsedForActiveTask +
+                      getTaskElapsedAdjustmentSeconds({
+                        timeAddings,
+                        taskIndex,
+                        task: taskSource,
+                      }),
+                  ),
+                  normalizedTaskDuration,
+                )
+              : Math.max(
+                  0,
+                  elapsedForActiveTask +
+                    getTaskElapsedAdjustmentSeconds({
+                      timeAddings,
+                      taskIndex,
+                      task: taskSource,
+                    }),
+                )
         }
         const isFailedTask =
           Number.isFinite(startMs) &&
           !Number.isFinite(endMs) &&
-          (taskIndex < activeTaskIndexInt ||
+          (Boolean(taskFailure) ||
+            taskIndex < activeTaskIndexInt ||
             (Number.isFinite(completedSeconds) &&
               normalizedTaskDuration > 0 &&
               completedSeconds >= normalizedTaskDuration))
@@ -781,6 +1321,9 @@ export async function GET(request) {
           endedAt: endAt,
           completedSeconds,
           isFailedTask,
+          failedByCaptain: taskFailure?.source === 'captain',
+          failedByTimeout: taskFailure?.source === 'timeout',
+          failedAt: taskFailure?.failedAt || null,
           penaltyByTaskFailureSeconds,
           penaltyByCodesSeconds,
           penaltyByManyWrongSeconds,
@@ -815,6 +1358,11 @@ export async function GET(request) {
       )
       const timeAddingsNormalized = Array.isArray(gt.timeAddings)
         ? gt.timeAddings
+            .filter(
+              (item) =>
+                normalizeTimeAddingScope(item) === 'total_adjustment' &&
+                shouldShowTimeAddingInAdjustments(item),
+            )
             .map((item) => {
               const seconds = Number(item?.time)
               if (!Number.isFinite(seconds) || seconds === 0) {
@@ -879,12 +1427,15 @@ export async function GET(request) {
         isTeamOnBreak,
         isActiveTaskFinished,
         isActiveTaskFailed,
+        isActiveTaskFailedByCaptain,
         sumTimeSeconds,
+        currentTaskActualSeconds,
         currentTaskSeconds,
         breakTimeLeftSeconds,
         completedTaskSeconds,
         isBreakFinishedWaitingForNextTask,
         cluesReceived,
+        forcedCluesReceived: currentForcedCluesCount,
         currentPhotosCount,
         teamProgressStats: {
           completedTasksCount,

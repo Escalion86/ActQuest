@@ -3,7 +3,6 @@ import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 import createTaskProgressArrays from '@helpers/createTaskProgressArrays'
-import removeCluePenalties from '@helpers/removeCluePenalties'
 import { getGameValidationErrors } from '@helpers/isGameHaveErrors'
 
 const runInBackground = (label, job) => {
@@ -12,6 +11,45 @@ const runInBackground = (label, job) => {
     .catch((error) => {
       console.error(`[background] ${label} failed`, error)
     })
+}
+
+const buildResetGameTeamProgressUpdate = ({
+  gameTasksCount,
+  startImmediately,
+}) => {
+  const startTime = startImmediately
+    ? new Array(gameTasksCount).fill(null)
+    : []
+  if (startImmediately && gameTasksCount > 0) {
+    startTime[0] = new Date()
+  }
+
+  const endTime = startImmediately
+    ? new Array(gameTasksCount).fill(null)
+    : []
+  const {
+    findedCodes,
+    wrongCodes,
+    findedPenaltyCodes,
+    findedBonusCodes,
+    photos,
+  } = createTaskProgressArrays(gameTasksCount)
+
+  return {
+    startTime,
+    endTime,
+    activeNum: 0,
+    findedCodes,
+    wrongCodes,
+    findedPenaltyCodes,
+    findedBonusCodes,
+    codeAttempts: [],
+    photos,
+    taskFailures: [],
+    timeAddings: [],
+    forcedClues: startImmediately ? new Array(gameTasksCount).fill(0) : [],
+    storyProgress: null,
+  }
 }
 
 const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db }) => {
@@ -53,14 +91,33 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
     dateStartFact: new Date(),
   })
 
+  // Получаем список команд
+  const gameTeams = await db.model('GamesTeams').find({
+    gameId: jsonCommand.gameId,
+  })
+
+  const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
+  const gameTasksCount = game.tasks.length
+
+  const resetResults = await Promise.all(
+    gameTeams.map((team) =>
+      db.model('GamesTeams').findByIdAndUpdate(
+        team._id,
+        buildResetGameTeamProgressUpdate({
+          gameTasksCount,
+          startImmediately: !game.individualStart,
+        }),
+      ),
+    ),
+  )
+  console.info('[game-start] reset team progress', {
+    gameId: String(jsonCommand.gameId),
+    teamsCount: gameTeams.length,
+    resetCount: resetResults.filter(Boolean).length,
+    individualStart: Boolean(game.individualStart),
+  })
+
   if (!game.individualStart) {
-    // Получаем список команд
-    const gameTeams = await db.model('GamesTeams').find({
-      gameId: jsonCommand.gameId,
-    })
-
-    const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
-
     // const teams = await db.model('Teams').find({
     //   _id: { $in: teamsIds },
     // })
@@ -76,37 +133,6 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
 
     // let timerId = setTimeout(() => console.log('!'), 1000)
     // console.log('timerId :>> ', timerId)
-    const gameTasksCount = game.tasks.length
-
-    await Promise.all(
-      gameTeams.map(async (team) => {
-        const startTime = new Array(gameTasksCount).fill(null)
-        startTime[0] = new Date()
-        const endTime = new Array(gameTasksCount).fill(null)
-        const {
-          findedCodes,
-          wrongCodes,
-          findedPenaltyCodes,
-          findedBonusCodes,
-          photos,
-        } = createTaskProgressArrays(gameTasksCount)
-
-        const filteredAddings = removeCluePenalties(team.timeAddings)
-
-        await db.model('GamesTeams').findByIdAndUpdate(team._id, {
-          startTime,
-          endTime,
-          activeNum: 0,
-          findedCodes,
-          wrongCodes,
-          findedPenaltyCodes,
-          findedBonusCodes,
-          photos,
-          timeAddings: filteredAddings,
-          forcedClues: new Array(gameTasksCount).fill(0),
-        })
-      })
-    )
 
     const gameName =
       typeof game?.name === 'string' && game.name.trim()

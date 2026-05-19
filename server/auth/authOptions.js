@@ -7,6 +7,7 @@ import authenticatePasswordUser from '@helpers/authenticatePasswordUser'
 import { getSiteAccessControlsByLocation } from '@helpers/siteAccessControls'
 import { exchangeVkCode, fetchVkUserInfo } from '@helpers/vkIdAuth'
 import resolveUserCityKey from '@helpers/resolveUserCityKey'
+import { getAuthSecret } from '@server/auth/authSecret'
 
 const isVkDebugEnabled =
   process.env.VK_AUTH_DEBUG === 'true' || process.env.VK_DEBUG_LOGS === 'true'
@@ -81,8 +82,13 @@ const normalizeLocation = (value) => {
 export const authOptions = {
   session: {
     strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
   },
-  secret: process.env.NEXTAUTH_SECRET || process.env.SECRET,
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60,
+  },
+  secret: getAuthSecret(),
   providers: [
     CredentialsProvider({
       id: 'telegram',

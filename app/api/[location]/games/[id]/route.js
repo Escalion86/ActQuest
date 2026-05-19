@@ -7,7 +7,7 @@ import updateParticipantsRatings from '@server/updateParticipantsRatings'
 import sanitize from '@helpers/sanitize'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
 
-const buildResetPayload = () => ({
+const buildResetPayload = ({ clearTimeAddings = true } = {}) => ({
   activeNum: 0,
   findedCodes: [],
   wrongCodes: [],
@@ -18,7 +18,9 @@ const buildResetPayload = () => ({
   endTime: [],
   photos: [],
   forcedClues: [],
-  timeAddings: [],
+  taskFailures: [],
+  ...(clearTimeAddings ? { timeAddings: [] } : {}),
+  storyProgress: null,
   timerId: null,
 })
 
@@ -492,7 +494,18 @@ const execute = (request, params) =>
 
         if (shouldReset) {
           const GamesTeams = db.model('GamesTeams')
-          await GamesTeams.updateMany({ gameId: id }, { $set: buildResetPayload() })
+          const clearTimeAddings =
+            updatePayload.clearTimeAddingsOnReset !== false
+          const resetResult = await GamesTeams.updateMany(
+            { gameId: id },
+            { $set: buildResetPayload({ clearTimeAddings }) },
+          )
+          console.info('[game-restart] reset team progress', {
+            gameId: String(id),
+            matchedCount: resetResult?.matchedCount,
+            modifiedCount: resetResult?.modifiedCount,
+            clearTimeAddings,
+          })
         }
 
         if (shouldUpdateParticipantsMetrics) {

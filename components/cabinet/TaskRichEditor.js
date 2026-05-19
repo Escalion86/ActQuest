@@ -1661,7 +1661,17 @@ const TaskRichEditor = ({
   useEffect(() => {
     if (!editor) return
     if (editor.getHTML() === normalizedContentValue) return
-    editor.commands.setContent(normalizedContentValue, false)
+
+    let isCancelled = false
+    queueMicrotask(() => {
+      if (isCancelled || editor.isDestroyed) return
+      if (editor.getHTML() === normalizedContentValue) return
+      editor.commands.setContent(normalizedContentValue, false)
+    })
+
+    return () => {
+      isCancelled = true
+    }
   }, [editor, normalizedContentValue])
 
   useEffect(() => {

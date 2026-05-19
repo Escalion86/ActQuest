@@ -5,7 +5,6 @@ import createTaskProgressArrays, {
 } from '@helpers/createTaskProgressArrays'
 import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
 import getLocationTimeZone from '@helpers/locationTimeZone'
-import removeCluePenalties from '@helpers/removeCluePenalties'
 import sanitize from '@helpers/sanitize'
 import taskText from 'telegram/func/taskText'
 
@@ -60,7 +59,7 @@ const resetForcedClueForTask = (forcedClues, taskIndex, tasksLength) => {
 }
 
 const initializeTeamProgress = async (gameTeam, game, GamesTeams) => {
-  const { _id: gameTeamId, timeAddings } = gameTeam
+  const { _id: gameTeamId } = gameTeam
   const tasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
   const startTime = new Array(tasksCount).fill(null)
   if (tasksCount > 0) {
@@ -75,8 +74,6 @@ const initializeTeamProgress = async (gameTeam, game, GamesTeams) => {
     photos,
   } = createTaskProgressArrays(tasksCount)
 
-  const filteredAddings = removeCluePenalties(timeAddings)
-
   await GamesTeams.findByIdAndUpdate(gameTeamId, {
     startTime,
     endTime,
@@ -87,8 +84,10 @@ const initializeTeamProgress = async (gameTeam, game, GamesTeams) => {
     findedBonusCodes,
     codeAttempts: [],
     photos,
-    timeAddings: filteredAddings,
+    timeAddings: [],
     forcedClues: new Array(tasksCount).fill(0),
+    taskFailures: [],
+    storyProgress: null,
   })
 }
 
@@ -156,14 +155,41 @@ const collectVisibleCluesCount = ({
   cluesDuration,
   startTime,
   forcedClues,
+  timeAddings,
+  taskIndex,
 }) => {
   const totalClues = Array.isArray(task?.clues) ? task.clues.length : 0
   if (totalClues === 0) return 0
 
   const startDate = ensureDate(startTime)
   const elapsedSeconds = startDate ? Math.max(getSecondsBetween(startDate), 0) : 0
+  const taskId = task?._id !== null && task?._id !== undefined ? String(task._id) : ''
+  const clueAdvanceSeconds = Array.isArray(timeAddings)
+    ? timeAddings.reduce((sum, adding) => {
+        const source = typeof adding?.source === 'string' ? adding.source : ''
+        const name = typeof adding?.name === 'string' ? adding.name : ''
+        const isCaptainForceClue =
+          source === 'captain_force_clue' ||
+          name.startsWith('Досрочная подсказка')
+        if (!isCaptainForceClue) return sum
 
-  const timedClues = cluesDuration > 0 ? Math.floor(elapsedSeconds / cluesDuration) : 0
+        if (taskId && adding?.taskId) {
+          if (String(adding.taskId) !== taskId) return sum
+        } else if (typeof adding?.taskIndex === 'number') {
+          if (adding.taskIndex !== taskIndex) return sum
+        } else {
+          return sum
+        }
+
+        const seconds = Number(adding?.time)
+        return Number.isFinite(seconds) && seconds > 0 ? sum + seconds : sum
+      }, 0)
+    : 0
+
+  const timedClues =
+    cluesDuration > 0
+      ? Math.floor((elapsedSeconds + clueAdvanceSeconds) / cluesDuration)
+      : 0
   const forcedCluesCount = Math.max(forcedClues || 0, 0)
 
   return Math.min(totalClues, Math.max(timedClues, forcedCluesCount))
@@ -318,6 +344,8 @@ const webGameProcess = async ({
         cluesDuration,
         startTime: startTime[activeTaskIndex],
         forcedClues: forcedClues[activeTaskIndex],
+        timeAddings,
+        taskIndex: activeTaskIndex,
       }),
       includeActionPrompt: false,
       format: 'web',
@@ -409,6 +437,8 @@ const webGameProcess = async ({
         cluesDuration,
         startTime: startTime[activeTaskIndex],
         forcedClues: forcedClues[activeTaskIndex],
+        timeAddings,
+        taskIndex: activeTaskIndex,
       }),
       includeActionPrompt: false,
       format: 'web',
@@ -463,6 +493,8 @@ const webGameProcess = async ({
         cluesDuration,
         startTime: startTime[activeTaskIndex],
         forcedClues: forcedClues[activeTaskIndex],
+        timeAddings,
+        taskIndex: activeTaskIndex,
       }),
       includeActionPrompt: false,
       format: 'web',
@@ -524,6 +556,8 @@ const webGameProcess = async ({
         cluesDuration,
         startTime: startTime[activeTaskIndex],
         forcedClues: forcedClues[activeTaskIndex],
+        timeAddings,
+        taskIndex: activeTaskIndex,
       }),
       includeActionPrompt: false,
       format: 'web',
@@ -666,6 +700,8 @@ const webGameProcess = async ({
         cluesDuration,
         startTime: startTimeTemp[nextTaskIndex],
         forcedClues: nextForcedClues,
+        timeAddings,
+        taskIndex: nextTaskIndex,
       }),
       includeActionPrompt: false,
       format: 'web',
@@ -712,6 +748,8 @@ const webGameProcess = async ({
       cluesDuration,
       startTime: startTime[activeTaskIndex],
       forcedClues: forcedClues[activeTaskIndex],
+      timeAddings,
+      taskIndex: activeTaskIndex,
     }),
     includeActionPrompt: false,
     format: 'web',

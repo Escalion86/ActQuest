@@ -14,6 +14,9 @@ import { getCaptainRoleQuery } from '@helpers/teamRoles'
 
 const MANUAL_TEAM_ADJUSTMENT_SOURCE = 'manual_team_adjustment'
 
+const normalizeAdjustmentScope = (value) =>
+  value === 'task_elapsed' ? 'task_elapsed' : 'total_adjustment'
+
 const normalizeManualAdjustment = (item, index) => {
   if (!item || typeof item !== 'object') {
     return null
@@ -24,11 +27,29 @@ const normalizeManualAdjustment = (item, index) => {
   if (!Number.isFinite(seconds) || Math.round(seconds) === 0) {
     return null
   }
+  const scope = normalizeAdjustmentScope(item.scope)
+  const taskIndex = Number(item.taskIndex)
+  const normalizedTaskIndex =
+    scope === 'task_elapsed' && Number.isInteger(taskIndex) && taskIndex >= 0
+      ? taskIndex
+      : null
+  if (scope === 'task_elapsed' && normalizedTaskIndex === null) {
+    return null
+  }
+  const showInAdjustments =
+    scope === 'total_adjustment'
+      ? true
+      : typeof item.showInAdjustments === 'boolean'
+        ? item.showInAdjustments
+        : true
 
   return {
     name: rawName || `Ручная корректировка #${index + 1}`,
     time: Math.round(seconds),
     source: MANUAL_TEAM_ADJUSTMENT_SOURCE,
+    scope,
+    showInAdjustments,
+    ...(normalizedTaskIndex !== null ? { taskIndex: normalizedTaskIndex } : {}),
     createdAt: new Date(),
   }
 }
@@ -74,6 +95,11 @@ const normalizeTimeAddingsForResponse = (value) =>
         source,
         taskId,
         taskIndex,
+        scope: normalizeAdjustmentScope(item.scope),
+        showInAdjustments:
+          normalizeAdjustmentScope(item.scope) === 'total_adjustment'
+            ? true
+            : item.showInAdjustments !== false,
       }
     })
     .filter(Boolean)

@@ -32,6 +32,13 @@ const formatTime = (totalSeconds) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+const formatForcedCluesCount = (count) => `${Math.max(0, Number(count) || 0)} досрочно`
+
+const normalizeSeconds = (value, fallback = 0) => {
+  const seconds = Number(value)
+  return Number.isFinite(seconds) ? seconds : fallback
+}
+
 const AUTO_REFRESH_OPTIONS = [
   { value: 5000, label: '5 сек' },
   { value: 10000, label: '10 сек' },
@@ -1817,12 +1824,42 @@ export default function GameControlPageClient({ session: _session }) {
                       team.isTeamOnBreak &&
                       team.isBreakFinishedWaitingForNextTask
                     ) && (
-                      <div>
-                        <span className="text-slate-600 dark:text-slate-500">На задании: </span>
-                        <span className="font-mono font-medium text-cyan-700 dark:text-cyan-300">
-                          {formatTime(team.currentTaskSeconds)}
-                        </span>
-                      </div>
+                      (() => {
+                        const effectiveTaskSeconds = normalizeSeconds(
+                          team.currentTaskSeconds,
+                        )
+                        const actualTaskSeconds = normalizeSeconds(
+                          team.currentTaskActualSeconds,
+                          effectiveTaskSeconds,
+                        )
+                        const hasEarlyClueTimeShift =
+                          actualTaskSeconds !== effectiveTaskSeconds
+
+                        return (
+                          <>
+                            {hasEarlyClueTimeShift ? (
+                              <div>
+                                <span className="text-slate-600 dark:text-slate-500">
+                                  Фактически на задании:{' '}
+                                </span>
+                                <span className="font-mono font-medium text-cyan-700 dark:text-cyan-300">
+                                  {formatTime(actualTaskSeconds)}
+                                </span>
+                              </div>
+                            ) : null}
+                            <div>
+                              <span className="text-slate-600 dark:text-slate-500">
+                                {hasEarlyClueTimeShift
+                                  ? 'С учетом досрочных подсказок: '
+                                  : 'На задании: '}
+                              </span>
+                              <span className="font-mono font-medium text-cyan-700 dark:text-cyan-300">
+                                {formatTime(effectiveTaskSeconds)}
+                              </span>
+                            </div>
+                          </>
+                        )
+                      })()
                     )}
                   {!team.isTeamFinished &&
                     !team.isTeamOnBreak &&
@@ -1877,7 +1914,9 @@ export default function GameControlPageClient({ session: _session }) {
                     })()}
                   {team.isTeamOnBreak && team.isActiveTaskFailed ? (
                     <div className="rounded-lg border border-rose-400 bg-rose-100 px-2.5 py-1.5 text-xs font-medium text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
-                      Команда провалила предыдущее задание.
+                      {team.isActiveTaskFailedByCaptain
+                        ? 'Команда слила предыдущее задание досрочно.'
+                        : 'Команда провалила предыдущее задание.'}
                     </div>
                   ) : null}
                   {team.isTeamOnBreak &&
@@ -1929,6 +1968,9 @@ export default function GameControlPageClient({ session: _session }) {
                 {team.cluesReceived > 0 && (
                   <div className="mt-1 text-xs text-slate-600 dark:text-slate-500">
                     Подсказок получено: {team.cluesReceived}
+                    {Number(team.forcedCluesReceived) > 0
+                      ? ` (${formatForcedCluesCount(team.forcedCluesReceived)})`
+                      : ''}
                   </div>
                 )}
 

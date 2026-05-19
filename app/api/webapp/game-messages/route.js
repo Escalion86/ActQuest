@@ -74,9 +74,10 @@ export async function GET(request) {
       )
     }
 
+    const messages = await fetchGameTeamMessages({ db, gameId, teamId })
+
     await markAdminMessagesReadByTeam({ db, gameId, teamId })
 
-    const messages = await fetchGameTeamMessages({ db, gameId, teamId })
     return NextResponse.json({
       success: true,
       data: {

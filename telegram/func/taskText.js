@@ -17,6 +17,29 @@ const getTaskBodyHtml = ({ taskTextValue, taskRichValue, format }) => {
   return `<blockquote>${linkifyText(taskTextValue)}</blockquote>`
 }
 
+const getClueAdvanceSeconds = ({ timeAddings, taskNum, currentTaskId }) => {
+  if (!Array.isArray(timeAddings)) return 0
+
+  return timeAddings.reduce((sum, adding) => {
+    const source = typeof adding?.source === 'string' ? adding.source : ''
+    const name = typeof adding?.name === 'string' ? adding.name : ''
+    const isCaptainForceClue =
+      source === 'captain_force_clue' || name.startsWith('Досрочная подсказка')
+    if (!isCaptainForceClue) return sum
+
+    if (currentTaskId && adding?.taskId) {
+      if (String(adding.taskId) !== currentTaskId) return sum
+    } else if (typeof adding?.taskIndex === 'number') {
+      if (adding.taskIndex !== taskNum) return sum
+    } else {
+      return sum
+    }
+
+    const seconds = Number(adding?.time)
+    return Number.isFinite(seconds) && seconds > 0 ? sum + seconds : sum
+  }, 0)
+}
+
 const taskText = ({
   game,
   taskNum,
@@ -51,9 +74,15 @@ const taskText = ({
       ? startTaskTime
       : null
 
-  const taskSecondsLeft = startTaskDate
+  const realTaskSecondsLeft = startTaskDate
     ? Math.floor(getSecondsBetween(startTaskDate))
     : 0
+  const clueAdvanceSeconds = getClueAdvanceSeconds({
+    timeAddings,
+    taskNum,
+    currentTaskId,
+  })
+  const taskSecondsLeft = realTaskSecondsLeft + clueAdvanceSeconds
 
   const haveBonusCodes = bonusCodes?.length > 0
   const havePenaltyCodes = penaltyCodes?.length > 0

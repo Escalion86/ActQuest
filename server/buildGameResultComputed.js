@@ -46,26 +46,105 @@ const sortByOptionalNumber = (first, second, key) => {
   return 0
 }
 
+const getTaskIdValue = (task) =>
+  task?._id !== null && task?._id !== undefined ? String(task._id) : ''
+
+const isCaptainForceClueAdding = (item) => {
+  const source = typeof item?.source === 'string' ? item.source.trim() : ''
+  const name = typeof item?.name === 'string' ? item.name.trim() : ''
+  return source === 'captain_force_clue' || name.startsWith('Досрочная подсказка')
+}
+
+const hasTimeAddingTaskBinding = (item) => {
+  const hasTaskId = typeof item?.taskId === 'string' && item.taskId.trim()
+  const hasTaskIndex = Number.isInteger(Number(item?.taskIndex))
+  return Boolean(hasTaskId || hasTaskIndex)
+}
+
+const normalizeTimeAddingScope = (item) => {
+  const rawScope = typeof item?.scope === 'string' ? item.scope.trim() : ''
+  if (rawScope === 'task_elapsed') return 'task_elapsed'
+  if (rawScope === 'total_adjustment') return 'total_adjustment'
+  return isCaptainForceClueAdding(item) && hasTimeAddingTaskBinding(item)
+    ? 'task_elapsed'
+    : 'total_adjustment'
+}
+
+const shouldShowTimeAddingInAdjustments = (item) => {
+  const scope = normalizeTimeAddingScope(item)
+  if (scope === 'total_adjustment') return true
+  if (typeof item?.showInAdjustments === 'boolean') {
+    return item.showInAdjustments
+  }
+  return !isCaptainForceClueAdding(item)
+}
+
+const normalizeTimeAddingTaskIndex = (item) =>
+  Number.isInteger(Number(item?.taskIndex)) ? Number(item.taskIndex) : null
+
+const isTimeAddingForTask = (item, taskIndex, task) => {
+  const itemTaskId = typeof item?.taskId === 'string' ? item.taskId.trim() : ''
+  const taskId = getTaskIdValue(task)
+  if (taskId && itemTaskId) return itemTaskId === taskId
+  return normalizeTimeAddingTaskIndex(item) === taskIndex
+}
+
+const getTaskElapsedAdjustmentSeconds = (gameTeam, taskIndex, task) => {
+  const addings = Array.isArray(gameTeam?.timeAddings)
+    ? gameTeam.timeAddings
+    : []
+
+  return addings.reduce((sum, item) => {
+    if (normalizeTimeAddingScope(item) !== 'task_elapsed') return sum
+    if (!isTimeAddingForTask(item, taskIndex, task)) return sum
+    const seconds = Number(item?.time)
+    return Number.isFinite(seconds) ? sum + Math.round(seconds) : sum
+  }, 0)
+}
+
 const buildTaskDurations = (gameTeam, game) => {
   const tasksCount = Array.isArray(game?.tasks) ? game.tasks.length : 0
   const taskDuration = Number(game?.taskDuration) || 3600
   const startTime = Array.isArray(gameTeam?.startTime) ? gameTeam.startTime : []
   const endTime = Array.isArray(gameTeam?.endTime) ? gameTeam.endTime : []
+  const taskFailures = Array.isArray(gameTeam?.taskFailures)
+    ? gameTeam.taskFailures
+    : []
   const activeNum = Number(gameTeam?.activeNum) || 0
 
   const result = []
 
   for (let index = 0; index < tasksCount; index += 1) {
+    const isFailedByDecision = taskFailures.some(
+      (item) => Number(item?.taskIndex) === index && item?.failedAt,
+    )
+
+    const taskElapsedAdjustmentSeconds = getTaskElapsedAdjustmentSeconds(
+      gameTeam,
+      index,
+      Array.isArray(game?.tasks) ? game.tasks[index] : null,
+    )
+    const applyTaskElapsedAdjustment = (seconds) =>
+      Math.max(0, Math.min(taskDuration, seconds + taskElapsedAdjustmentSeconds))
+
     if (activeNum > index) {
       if (!endTime[index]) {
         result.push(taskDuration)
       } else {
-        result.push(getSecondsBetween(startTime[index], endTime[index]))
+        result.push(
+          applyTaskElapsedAdjustment(
+            getSecondsBetween(startTime[index], endTime[index]),
+          ),
+        )
       }
       continue
     }
 
     if (activeNum === index) {
+      if (isFailedByDecision) {
+        result.push(taskDuration)
+        continue
+      }
       result.push('[не завершено]')
       continue
     }
@@ -353,6 +432,7 @@ const buildTeamResult = (team, gameTeam, game) => {
 
   const addings = Array.isArray(gameTeam?.timeAddings)
     ? gameTeam.timeAddings
+        .filter((item) => shouldShowTimeAddingInAdjustments(item))
         .map((item) => {
           const seconds = Number(item?.time)
           if (!Number.isFinite(seconds) || seconds === 0) {
@@ -368,12 +448,18 @@ const buildTeamResult = (team, gameTeam, game) => {
             taskIndex: Number.isFinite(Number(item?.taskIndex))
               ? Number(item.taskIndex)
               : null,
+            scope: normalizeTimeAddingScope(item),
+            showInAdjustments: shouldShowTimeAddingInAdjustments(item),
           }
         })
         .filter(Boolean)
     : []
 
-  const addingsSeconds = addings.reduce((acc, item) => acc + item.seconds, 0)
+  const addingsSeconds = addings.reduce(
+    (acc, item) =>
+      item.scope === 'total_adjustment' ? acc + item.seconds : acc,
+    0,
+  )
   const finalSeconds =
     baseSeconds +
     failurePenaltySeconds +
@@ -414,6 +500,7 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
   const taskFailurePenalty = Number(game?.taskFailurePenalty) || 0
   const addings = Array.isArray(gameTeam?.timeAddings)
     ? gameTeam.timeAddings
+        .filter((item) => shouldShowTimeAddingInAdjustments(item))
         .map((item) => {
           const value = Number(item?.time)
           if (!Number.isFinite(value) || value === 0) {
@@ -431,6 +518,8 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
             taskIndex: Number.isFinite(Number(item?.taskIndex))
               ? Number(item.taskIndex)
               : null,
+            scope: normalizeTimeAddingScope(item),
+            showInAdjustments: shouldShowTimeAddingInAdjustments(item),
           }
         })
         .filter(Boolean)
@@ -498,7 +587,10 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
   })
 
   const addingsPoints = addings.reduce(
-    (acc, item) => acc + (Number(item.points) || 0),
+    (acc, item) =>
+      item.scope === 'total_adjustment'
+        ? acc + (Number(item.points) || 0)
+        : acc,
     0,
   )
   const finalPoints =

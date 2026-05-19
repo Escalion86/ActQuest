@@ -828,6 +828,10 @@ function GameTeamPage({
   const [isFinishingBreak, setIsFinishingBreak] = useState(false)
   const [isFinishBreakConfirmOpen, setIsFinishBreakConfirmOpen] =
     useState(false)
+  const [isForcingClue, setIsForcingClue] = useState(false)
+  const [isForceClueConfirmOpen, setIsForceClueConfirmOpen] = useState(false)
+  const [isFailingTask, setIsFailingTask] = useState(false)
+  const [isFailTaskConfirmOpen, setIsFailTaskConfirmOpen] = useState(false)
   const [isPhotoUploading, setIsPhotoUploading] = useState(false)
   const [photoUploadError, setPhotoUploadError] = useState('')
   const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
@@ -1322,6 +1326,118 @@ function GameTeamPage({
     setIsFinishBreakConfirmOpen(false)
   }, [isFinishingBreak])
 
+  const handleForceClue = useCallback(async () => {
+    if (isForcingClue || isTaskRefreshing) return
+
+    setIsForcingClue(true)
+    setStickyMessages([])
+    setTaskRefreshError(null)
+
+    try {
+      const response = await fetch('/api/webapp/game-task', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          location,
+          gameId,
+          teamId,
+          action: 'forceClue',
+        }),
+      })
+
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Не удалось получить подсказку')
+      }
+
+      updateTaskData(data.data || {})
+    } catch (forceError) {
+      setTaskRefreshError(forceError?.message || 'Не удалось получить подсказку')
+    } finally {
+      setIsForcingClue(false)
+    }
+  }, [
+    gameId,
+    isForcingClue,
+    isTaskRefreshing,
+    location,
+    teamId,
+    updateTaskData,
+  ])
+
+  const handleForceClueRequest = useCallback(() => {
+    if (isForcingClue || isTaskRefreshing) return
+    setIsForceClueConfirmOpen(true)
+  }, [isForcingClue, isTaskRefreshing])
+
+  const handleForceClueConfirm = useCallback(() => {
+    setIsForceClueConfirmOpen(false)
+    void handleForceClue()
+  }, [handleForceClue])
+
+  const handleForceClueCancel = useCallback(() => {
+    if (isForcingClue) return
+    setIsForceClueConfirmOpen(false)
+  }, [isForcingClue])
+
+  const handleFailTask = useCallback(async () => {
+    if (isFailingTask || isTaskRefreshing) return
+
+    setIsFailingTask(true)
+    setStickyMessages([])
+    setTaskRefreshError(null)
+
+    try {
+      const response = await fetch('/api/webapp/game-task', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          location,
+          gameId,
+          teamId,
+          action: 'failTask',
+        }),
+      })
+
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Не удалось слить задание')
+      }
+
+      updateTaskData(data.data || {})
+    } catch (failError) {
+      setTaskRefreshError(failError?.message || 'Не удалось слить задание')
+    } finally {
+      setIsFailingTask(false)
+    }
+  }, [
+    gameId,
+    isFailingTask,
+    isTaskRefreshing,
+    location,
+    teamId,
+    updateTaskData,
+  ])
+
+  const handleFailTaskRequest = useCallback(() => {
+    if (isFailingTask || isTaskRefreshing) return
+    setIsFailTaskConfirmOpen(true)
+  }, [isFailingTask, isTaskRefreshing])
+
+  const handleFailTaskConfirm = useCallback(() => {
+    setIsFailTaskConfirmOpen(false)
+    void handleFailTask()
+  }, [handleFailTask])
+
+  const handleFailTaskCancel = useCallback(() => {
+    if (isFailingTask) return
+    setIsFailTaskConfirmOpen(false)
+  }, [isFailingTask])
+
   const submitPhotoAnswerUrl = async (photoUrl) => {
     const response = await fetch('/api/webapp/game-task', {
       method: 'POST',
@@ -1594,6 +1710,14 @@ function GameTeamPage({
   const isBreakState = currentTaskState === 'break'
   const canCaptainFinishBreak =
     isBreakState && Boolean(currentCaptainActions?.canFinishBreak)
+  const canCaptainForceClue =
+    !isBreakState &&
+    !isGameFinished &&
+    Boolean(currentCaptainActions?.canForceClue)
+  const canCaptainFailTask =
+    !isBreakState &&
+    !isGameFinished &&
+    Boolean(currentCaptainActions?.canFailTask)
   const isCompletedState = currentTaskState === 'completed'
   const isGameCompletion = isGameFinished || isCompletedState
   const fallbackTaskHtml = useMemo(
@@ -1769,6 +1893,18 @@ function GameTeamPage({
     return adminMessages.length > 0 ? adminMessages[adminMessages.length - 1] : null
   }, [gameMessages])
 
+  const latestUnreadAdminMessage = useMemo(() => {
+    const unreadAdminMessages = gameMessages.filter(
+      (message) =>
+        message?.direction === 'admin_to_team' &&
+        !message?.teamReadAt &&
+        message?.id !== dismissedLatestAdminMessageId,
+    )
+    return unreadAdminMessages.length > 0
+      ? unreadAdminMessages[unreadAdminMessages.length - 1]
+      : null
+  }, [dismissedLatestAdminMessageId, gameMessages])
+
   const hasUnreadAdminMessages = gameMessages.some(
     (message) =>
       message?.direction === 'admin_to_team' &&
@@ -1776,9 +1912,8 @@ function GameTeamPage({
       message?.id !== dismissedLatestAdminMessageId,
   )
   const shouldShowLatestAdminMessage =
-    Boolean(latestAdminMessage) &&
-    (latestAdminMessage.id !== dismissedLatestAdminMessageId ||
-      hasUnreadAdminMessages)
+    Boolean(latestUnreadAdminMessage) && hasUnreadAdminMessages
+  const displayedAdminMessage = latestUnreadAdminMessage
   const shouldShowGameMessagesBlock =
     shouldShowLatestAdminMessage || (!latestAdminMessage && canSendGameMessage)
   const shouldShowLastMessage = displayedResultMessages.length > 0 && !isStoryGame
@@ -2214,9 +2349,9 @@ function GameTeamPage({
                     <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
                       Сообщения организатора
                     </h2>
-                    {latestAdminMessage ? (
+                    {displayedAdminMessage ? (
                       <p className="mt-1 text-xs text-amber-700 dark:text-amber-200/80">
-                        {formatMessageDateTime(latestAdminMessage.createdAt)}
+                        {formatMessageDateTime(displayedAdminMessage.createdAt)}
                       </p>
                     ) : null}
                   </div>
@@ -2234,7 +2369,7 @@ function GameTeamPage({
                       type="button"
                       onClick={() =>
                         setDismissedLatestAdminMessageId(
-                          latestAdminMessage?.id || '__empty__',
+                          displayedAdminMessage?.id || '__empty__',
                         )
                       }
                       className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-700 transition hover:border-amber-400 hover:bg-amber-100 hover:text-amber-900 dark:border-amber-500/40 dark:bg-slate-900/60 dark:text-amber-100 dark:hover:bg-amber-500/15"
@@ -2245,9 +2380,9 @@ function GameTeamPage({
                     </button>
                   </div>
                 </div>
-                {latestAdminMessage ? (
+                {displayedAdminMessage ? (
                   <p className="mt-4 whitespace-pre-wrap break-words text-base leading-relaxed text-amber-950 dark:text-amber-50">
-                    {latestAdminMessage.body}
+                    {displayedAdminMessage.body}
                   </p>
                 ) : (
                   <p className="mt-4 text-sm text-amber-800 dark:text-amber-100">
@@ -2268,8 +2403,12 @@ function GameTeamPage({
             {shouldShowCurrentTaskBlock ? (
               <section className="p-6 bg-white shadow-lg rounded-3xl dark:bg-slate-900 dark:border dark:border-slate-800 dark:shadow-slate-950/40">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-primary dark:text-white">
-                    {`Задание ${currentTaskNumber}`}
+                  <h2
+                    className={`font-semibold text-primary dark:text-white ${
+                      isBreakState ? 'text-2xl uppercase' : 'text-lg'
+                    }`}
+                  >
+                    {isBreakState ? 'ПЕРЕРЫВ' : `Задание ${currentTaskNumber}`}
                   </h2>
                   <button
                     type="button"
@@ -2326,6 +2465,38 @@ function GameTeamPage({
                     </button>
                     <span className="text-sm font-medium text-emerald-800 dark:text-emerald-100">
                       Доступно капитану команды
+                    </span>
+                  </div>
+                ) : null}
+                {canCaptainForceClue ? (
+                  <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-cyan-300 bg-cyan-50 px-4 py-3 dark:border-cyan-500/40 dark:bg-cyan-500/10">
+                    <button
+                      type="button"
+                      onClick={handleForceClueRequest}
+                      disabled={isForcingClue || isTaskRefreshing}
+                      className="inline-flex items-center justify-center rounded-full bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-cyan-500 dark:hover:bg-cyan-400"
+                    >
+                      {isForcingClue
+                        ? 'Получаем подсказку...'
+                        : 'Получить подсказку досрочно'}
+                    </button>
+                    <span className="text-sm font-medium text-cyan-800 dark:text-cyan-100">
+                      Доступно капитану команды
+                    </span>
+                  </div>
+                ) : null}
+                {canCaptainFailTask ? (
+                  <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 dark:border-rose-500/40 dark:bg-rose-500/10">
+                    <button
+                      type="button"
+                      onClick={handleFailTaskRequest}
+                      disabled={isFailingTask || isTaskRefreshing}
+                      className="inline-flex items-center justify-center rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-rose-500 dark:hover:bg-rose-400"
+                    >
+                      {isFailingTask ? 'Сливаем задание...' : 'Слить задание'}
+                    </button>
+                    <span className="text-sm font-medium text-rose-800 dark:text-rose-100">
+                      Доступно капитану после всех подсказок
                     </span>
                   </div>
                 ) : null}
@@ -2650,6 +2821,75 @@ function GameTeamPage({
           следующее задание?
         </p>
       </Modal>
+      <Modal
+        isOpen={isForceClueConfirmOpen}
+        onClose={handleForceClueCancel}
+        title="Получить подсказку?"
+        compactMobile
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={handleForceClueCancel}
+              disabled={isForcingClue}
+              className="aq-modal-btn aq-modal-btn-secondary"
+            >
+              Нет, продолжить задание
+            </button>
+            <button
+              type="button"
+              onClick={handleForceClueConfirm}
+              disabled={isForcingClue || isTaskRefreshing}
+              className="aq-modal-btn aq-modal-btn-primary"
+            >
+              {isForcingClue ? 'Получаем...' : 'Да, получить'}
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+          Вы уверены, что хотите получить подсказку досрочно? Команде будет
+          добавлено игровое время:{' '}
+          <span className="font-semibold text-slate-900 dark:text-slate-100">
+            {formatCountdownSeconds(
+              Number(currentCaptainActions?.forceClueAdvanceSeconds) || 0,
+            )}
+          </span>
+          .
+        </p>
+      </Modal>
+      <Modal
+        isOpen={isFailTaskConfirmOpen}
+        onClose={handleFailTaskCancel}
+        title="Слить задание?"
+        compactMobile
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={handleFailTaskCancel}
+              disabled={isFailingTask}
+              className="aq-modal-btn aq-modal-btn-secondary"
+            >
+              Нет, продолжить задание
+            </button>
+            <button
+              type="button"
+              onClick={handleFailTaskConfirm}
+              disabled={isFailingTask || isTaskRefreshing}
+              className="aq-modal-btn aq-modal-btn-primary"
+            >
+              {isFailingTask ? 'Сливаем...' : 'Да, слить'}
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+          Вы уверены, что хотите слить задание? Оно будет считаться
+          невыполненным, а в статистике время на него будет засчитано как
+          максимальное.
+        </p>
+      </Modal>
       <style jsx global>{`
         .aq-task-content a {
           color: #2563eb;
@@ -2740,6 +2980,10 @@ GameTeamPage.propTypes = {
   taskState: PropTypes.oneOf(['idle', 'active', 'break', 'completed']),
   captainActions: PropTypes.shape({
     canFinishBreak: PropTypes.bool,
+    canForceClue: PropTypes.bool,
+    forceClueAdvanceSeconds: PropTypes.number,
+    nextClueNumber: PropTypes.number,
+    canFailTask: PropTypes.bool,
   }),
   postCompletionMessage: PropTypes.string,
   error: PropTypes.string,
