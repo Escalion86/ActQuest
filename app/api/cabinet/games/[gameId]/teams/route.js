@@ -17,6 +17,11 @@ const MANUAL_TEAM_ADJUSTMENT_SOURCE = 'manual_team_adjustment'
 const normalizeAdjustmentScope = (value) =>
   value === 'task_elapsed' ? 'task_elapsed' : 'total_adjustment'
 
+const isCaptainForceClueAdding = (item) => {
+  const source = typeof item?.source === 'string' ? item.source.trim() : ''
+  return source === 'captain_force_clue'
+}
+
 const normalizeManualAdjustment = (item, index) => {
   if (!item || typeof item !== 'object') {
     return null
@@ -97,7 +102,9 @@ const normalizeTimeAddingsForResponse = (value) =>
         taskIndex,
         scope: normalizeAdjustmentScope(item.scope),
         showInAdjustments:
-          normalizeAdjustmentScope(item.scope) === 'total_adjustment'
+          isCaptainForceClueAdding(item)
+            ? false
+            : normalizeAdjustmentScope(item.scope) === 'total_adjustment'
             ? true
             : item.showInAdjustments !== false,
       }

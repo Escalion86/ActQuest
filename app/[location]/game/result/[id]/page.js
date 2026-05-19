@@ -984,8 +984,9 @@ const GameBlock = ({ game, isDarkTheme }) => {
           ? timeAddings
               .filter(
                 (item) =>
-                  normalizeTimeAddingScope(item) === 'total_adjustment' ||
-                  item?.showInAdjustments === true,
+                  !isCaptainForceClueAdding(item) &&
+                  (normalizeTimeAddingScope(item) === 'total_adjustment' ||
+                    item?.showInAdjustments === true),
               )
               .map((item) => {
                 const rawSeconds = Number(item?.time)

@@ -240,6 +240,7 @@ const normalizeTimeAddingScope = (adding) => {
 
 const shouldShowTimeAddingInAdjustments = (adding) => {
   const scope = normalizeTimeAddingScope(adding)
+  if (isCaptainForceClueAdding(adding)) return false
   if (scope === 'total_adjustment') return true
   if (typeof adding?.showInAdjustments === 'boolean') {
     return adding.showInAdjustments
