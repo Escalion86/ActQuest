@@ -33,12 +33,13 @@ export async function POST(request) {
   }
 
   const body = (await request.json().catch(() => ({}))) || {}
-  const { location, gameId, teamId, message } = body
+  const { location, gameId, teamId, message, action } = body
 
   const normalizedLocation = normalizeString(location)
   const normalizedGameId = normalizeString(gameId)
   const normalizedTeamId = normalizeString(teamId)
   const sanitizedMessage = normalizeString(message)
+  const normalizedAction = normalizeString(action)
 
   if (!normalizedLocation || !normalizedGameId || !normalizedTeamId) {
     return NextResponse.json(
@@ -55,6 +56,7 @@ export async function POST(request) {
       telegramId: Number.isFinite(sessionTelegramId) ? sessionTelegramId : null,
       userId: sessionUserId,
       message: sanitizedMessage,
+      action: normalizedAction,
     })
 
     if (!stateResult.success) {

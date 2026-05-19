@@ -262,6 +262,7 @@ const normalizeTaskPayload = ({
   taskDisplayClues = [],
   taskDisplayMeta = null,
   taskState = 'idle',
+  captainActions = null,
   result = null,
   postCompletionMessage = '',
 }) => ({
@@ -276,6 +277,10 @@ const normalizeTaskPayload = ({
       ? taskDisplayMeta
       : null,
   state: taskState || 'idle',
+  captainActions:
+    captainActions && typeof captainActions === 'object'
+      ? captainActions
+      : null,
   result: result || null,
   postCompletionMessage: postCompletionMessage || '',
 })
@@ -289,6 +294,7 @@ const areTaskPayloadsEqual = (prev, next) =>
   prev.displayClues === next.displayClues &&
   prev.displayMeta === next.displayMeta &&
   prev.state === next.state &&
+  prev.captainActions === next.captainActions &&
   prev.result === next.result &&
   prev.postCompletionMessage === next.postCompletionMessage
 
@@ -803,6 +809,7 @@ function GameTeamPage({
   taskDisplayClues,
   taskDisplayMeta,
   taskState,
+  captainActions,
   postCompletionMessage,
   error,
   session: initialSession,
@@ -818,6 +825,9 @@ function GameTeamPage({
   const [theme, setTheme] = useState(null)
   const [answer, setAnswer] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isFinishingBreak, setIsFinishingBreak] = useState(false)
+  const [isFinishBreakConfirmOpen, setIsFinishBreakConfirmOpen] =
+    useState(false)
   const [isPhotoUploading, setIsPhotoUploading] = useState(false)
   const [photoUploadError, setPhotoUploadError] = useState('')
   const [isGameInfoCollapsed, setIsGameInfoCollapsed] = useState(false)
@@ -854,6 +864,7 @@ function GameTeamPage({
       taskDisplayClues,
       taskDisplayMeta,
       taskState,
+      captainActions,
       result,
       postCompletionMessage,
     }),
@@ -968,6 +979,7 @@ function GameTeamPage({
       taskDisplayClues,
       taskDisplayMeta,
       taskState,
+      captainActions,
       result,
       postCompletionMessage,
     })
@@ -988,6 +1000,7 @@ function GameTeamPage({
     taskDisplayClues,
     taskDisplayMeta,
     taskState,
+    captainActions,
     updateTaskData,
   ])
 
@@ -1251,6 +1264,64 @@ function GameTeamPage({
     }
   }
 
+  const handleFinishBreak = useCallback(async () => {
+    if (isFinishingBreak || isTaskRefreshing) return
+
+    setIsFinishingBreak(true)
+    setStickyMessages([])
+    setTaskRefreshError(null)
+
+    try {
+      const response = await fetch('/api/webapp/game-task', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          location,
+          gameId,
+          teamId,
+          action: 'finishBreak',
+        }),
+      })
+
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Не удалось завершить перерыв')
+      }
+
+      updateTaskData(data.data || {})
+    } catch (finishError) {
+      setTaskRefreshError(
+        finishError?.message || 'Не удалось завершить перерыв',
+      )
+    } finally {
+      setIsFinishingBreak(false)
+    }
+  }, [
+    gameId,
+    isFinishingBreak,
+    isTaskRefreshing,
+    location,
+    teamId,
+    updateTaskData,
+  ])
+
+  const handleFinishBreakRequest = useCallback(() => {
+    if (isFinishingBreak || isTaskRefreshing) return
+    setIsFinishBreakConfirmOpen(true)
+  }, [isFinishingBreak, isTaskRefreshing])
+
+  const handleFinishBreakConfirm = useCallback(() => {
+    setIsFinishBreakConfirmOpen(false)
+    void handleFinishBreak()
+  }, [handleFinishBreak])
+
+  const handleFinishBreakCancel = useCallback(() => {
+    if (isFinishingBreak) return
+    setIsFinishBreakConfirmOpen(false)
+  }, [isFinishingBreak])
+
   const submitPhotoAnswerUrl = async (photoUrl) => {
     const response = await fetch('/api/webapp/game-task', {
       method: 'POST',
@@ -1338,6 +1409,7 @@ function GameTeamPage({
     displayClues: currentTaskDisplayClues,
     displayMeta: currentTaskDisplayMeta,
     state: currentTaskState,
+    captainActions: currentCaptainActions,
     result: currentResult,
     postCompletionMessage: currentPostCompletionMessage,
   } = taskData
@@ -1520,6 +1592,8 @@ function GameTeamPage({
   ])
 
   const isBreakState = currentTaskState === 'break'
+  const canCaptainFinishBreak =
+    isBreakState && Boolean(currentCaptainActions?.canFinishBreak)
   const isCompletedState = currentTaskState === 'completed'
   const isGameCompletion = isGameFinished || isCompletedState
   const fallbackTaskHtml = useMemo(
@@ -2238,6 +2312,23 @@ function GameTeamPage({
                   metaWrapperClassName="mt-4 space-y-1"
                   metaTextClassName="text-base font-semibold leading-relaxed text-gray-700 dark:text-slate-200"
                 />
+                {canCaptainFinishBreak ? (
+                  <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 dark:border-emerald-500/40 dark:bg-emerald-500/10">
+                    <button
+                      type="button"
+                      onClick={handleFinishBreakRequest}
+                      disabled={isFinishingBreak || isTaskRefreshing}
+                      className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                    >
+                      {isFinishingBreak
+                        ? 'Завершаем перерыв...'
+                        : 'Завершить перерыв досрочно'}
+                    </button>
+                    <span className="text-sm font-medium text-emerald-800 dark:text-emerald-100">
+                      Доступно капитану команды
+                    </span>
+                  </div>
+                ) : null}
                 {!isBreakState && acceptedTaskCodes.length > 0 ? (
                   <div className="mt-4">
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
@@ -2528,6 +2619,37 @@ function GameTeamPage({
           ) : null}
         </div>
       </Modal>
+      <Modal
+        isOpen={isFinishBreakConfirmOpen}
+        onClose={handleFinishBreakCancel}
+        title="Завершить перерыв?"
+        compactMobile
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={handleFinishBreakCancel}
+              disabled={isFinishingBreak}
+              className="aq-modal-btn aq-modal-btn-secondary"
+            >
+              Нет, продолжить перерыв
+            </button>
+            <button
+              type="button"
+              onClick={handleFinishBreakConfirm}
+              disabled={isFinishingBreak || isTaskRefreshing}
+              className="aq-modal-btn aq-modal-btn-primary"
+            >
+              {isFinishingBreak ? 'Завершаем...' : 'Да, завершить'}
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+          Вы уверены, что хотите завершить перерыв досрочно и получить
+          следующее задание?
+        </p>
+      </Modal>
       <style jsx global>{`
         .aq-task-content a {
           color: #2563eb;
@@ -2616,6 +2738,9 @@ GameTeamPage.propTypes = {
     penaltyCodesCount: PropTypes.number,
   }),
   taskState: PropTypes.oneOf(['idle', 'active', 'break', 'completed']),
+  captainActions: PropTypes.shape({
+    canFinishBreak: PropTypes.bool,
+  }),
   postCompletionMessage: PropTypes.string,
   error: PropTypes.string,
   session: PropTypes.shape({}),
@@ -2636,6 +2761,7 @@ GameTeamPage.defaultProps = {
   taskDisplayClues: [],
   taskDisplayMeta: null,
   taskState: 'idle',
+  captainActions: null,
   postCompletionMessage: '',
   error: null,
   session: null,

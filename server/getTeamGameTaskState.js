@@ -6,6 +6,7 @@ import taskText from 'telegram/func/taskText'
 import sanitize from '@helpers/sanitize'
 import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
 import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
+import { isCaptainRole } from '@helpers/teamRoles'
 
 const ensureDateValue = (value) => {
   if (!value) return null
@@ -183,6 +184,138 @@ const safeSerializeGameForClient = (game) => {
     finishingPlace: game.finishingPlace || '',
     image: game.image || null,
     tasksCount: Array.isArray(game.tasks) ? game.tasks.length : 0,
+  }
+}
+
+const buildCaptainActions = ({ game, isCaptain }) => ({
+  canFinishBreak:
+    Boolean(isCaptain) &&
+    game?.allowCaptainFinishBreak !== false &&
+    parseDurationSeconds(game?.breakDuration, 0) > 0,
+})
+
+const finishBreakForCaptain = async ({
+  game,
+  gameTeam,
+  gamesTeamsModel,
+  isCaptain,
+}) => {
+  if (game?.allowCaptainFinishBreak === false) {
+    return {
+      gameTeam,
+      result: {
+        message: 'Досрочное завершение перерыва отключено организатором игры.',
+      },
+    }
+  }
+
+  if (!isCaptain) {
+    return {
+      gameTeam,
+      result: {
+        message: 'Завершить перерыв досрочно может только капитан команды.',
+      },
+    }
+  }
+
+  const tasks = Array.isArray(game?.tasks) ? game.tasks : []
+  const tasksCount = tasks.length
+  const breakDurationSeconds = parseDurationSeconds(game?.breakDuration, 0)
+  const taskDurationSeconds = parseDurationSeconds(game?.taskDuration, 3600)
+
+  if (tasksCount === 0 || breakDurationSeconds <= 0) {
+    return {
+      gameTeam,
+      result: { message: 'Перерыв для этой игры не предусмотрен.' },
+    }
+  }
+
+  const activeNumRaw = Number.isInteger(gameTeam?.activeNum)
+    ? gameTeam.activeNum
+    : 0
+  const activeTaskIndex = Math.max(Math.min(activeNumRaw, tasksCount - 1), 0)
+  const nextTaskIndex = activeTaskIndex + 1
+
+  if (nextTaskIndex >= tasksCount) {
+    return {
+      gameTeam,
+      result: { message: 'Игра уже завершена.' },
+    }
+  }
+
+  const startTimes = ensureArrayWithLength(gameTeam.startTime, tasksCount, null)
+  const endTimes = ensureArrayWithLength(gameTeam.endTime, tasksCount, null)
+  const activeTaskStartTime = ensureDateValue(startTimes[activeTaskIndex])
+  const activeTaskEndTime = ensureDateValue(endTimes[activeTaskIndex])
+  const nowMs = Date.now()
+
+  const isBreakAfterSuccessActive =
+    activeTaskEndTime &&
+    Math.max(Math.floor((nowMs - activeTaskEndTime.getTime()) / 1000), 0) <
+      breakDurationSeconds
+  const isBreakAfterTimeoutActive =
+    !activeTaskEndTime &&
+    activeTaskStartTime &&
+    taskDurationSeconds > 0 &&
+    (() => {
+      const elapsedSinceStart = Math.max(
+        Math.floor((nowMs - activeTaskStartTime.getTime()) / 1000),
+        0,
+      )
+      return (
+        elapsedSinceStart >= taskDurationSeconds &&
+        elapsedSinceStart < taskDurationSeconds + breakDurationSeconds
+      )
+    })()
+
+  if (!isBreakAfterSuccessActive && !isBreakAfterTimeoutActive) {
+    return {
+      gameTeam,
+      result: { message: 'Перерыв еще не начался или уже завершен.' },
+    }
+  }
+
+  const nextStartTimes = ensureArrayWithLength(
+    gameTeam.startTime,
+    tasksCount,
+    null,
+  ).map(cloneDateValue)
+  nextStartTimes[nextTaskIndex] = new Date()
+
+  const nextForcedClues = ensureArrayWithLength(
+    gameTeam.forcedClues,
+    tasksCount,
+    0,
+  ).map((value) => {
+    const numeric = Number(value)
+    return Number.isFinite(numeric) ? numeric : 0
+  })
+  nextForcedClues[nextTaskIndex] = 0
+
+  const updatedGameTeam = await gamesTeamsModel
+    .findByIdAndUpdate(
+      gameTeam._id,
+      {
+        activeNum: nextTaskIndex,
+        startTime: nextStartTimes,
+        forcedClues: nextForcedClues,
+      },
+      { returnDocument: 'after' },
+    )
+    .lean()
+
+  return {
+    gameTeam: updatedGameTeam ?? {
+      ...gameTeam,
+      activeNum: nextTaskIndex,
+      startTime: nextStartTimes,
+      forcedClues: nextForcedClues,
+    },
+    result: {
+      message: '<b>Перерыв завершен.</b>',
+      messages: ['Перерыв завершен.'],
+      shouldResetMessages: true,
+    },
   }
 }
 
@@ -551,6 +684,7 @@ const getTeamGameTaskState = async ({
   telegramId,
   userId,
   message,
+  action,
 }) => {
   if (!location || !gameId || !teamId) {
     return buildError(GAME_TASK_ERRORS.INVALID_PARAMS)
@@ -599,21 +733,26 @@ const getTeamGameTaskState = async ({
     const teamUsers = await teamsUsersModel.find({ teamId }).lean()
 
     let isTeamMember = false
+    let isCaptain = false
 
     // Каноничная проверка членства: по userId.
     // По telegramId проверяем только когда userId в запросе отсутствует
     // (legacy сценарии telegram/webapp).
     if (userId) {
       const userIdStr = String(userId)
-      isTeamMember = teamUsers.some(
+      const currentTeamUser = teamUsers.find(
         (teamUser) => teamUser && String(teamUser.userId ?? '') === userIdStr,
       )
+      isTeamMember = Boolean(currentTeamUser)
+      isCaptain = isCaptainRole(currentTeamUser?.role)
     } else if (telegramId) {
       const telegramIdStr = String(telegramId)
-      isTeamMember = teamUsers.some(
+      const currentTeamUser = teamUsers.find(
         (teamUser) =>
           teamUser && String(teamUser.userTelegramId ?? '') === telegramIdStr,
       )
+      isTeamMember = Boolean(currentTeamUser)
+      isCaptain = isCaptainRole(currentTeamUser?.role)
     }
 
     if (!isTeamMember) {
@@ -637,20 +776,31 @@ const getTeamGameTaskState = async ({
     let processResult = null
 
     try {
-      processResult = await webGameProcess({
-        db,
-        game,
-        gameTeam,
-        gameTeamId: gameTeam._id,
-        location,
-        message,
-      })
-      if (processResult) {
-        const updatedGameTeam = await gamesTeamsModel
-          .findById(gameTeam._id)
-          .lean()
-        if (updatedGameTeam) {
-          gameTeam = updatedGameTeam
+      if (action === 'finishBreak') {
+        const finishBreakResult = await finishBreakForCaptain({
+          game,
+          gameTeam,
+          gamesTeamsModel,
+          isCaptain,
+        })
+        gameTeam = finishBreakResult.gameTeam || gameTeam
+        processResult = finishBreakResult.result
+      } else {
+        processResult = await webGameProcess({
+          db,
+          game,
+          gameTeam,
+          gameTeamId: gameTeam._id,
+          location,
+          message,
+        })
+        if (processResult) {
+          const updatedGameTeam = await gamesTeamsModel
+            .findById(gameTeam._id)
+            .lean()
+          if (updatedGameTeam) {
+            gameTeam = updatedGameTeam
+          }
         }
       }
     } catch (processError) {
@@ -715,6 +865,7 @@ const getTeamGameTaskState = async ({
             : null,
         taskState,
         gameTeamId: String(gameTeam._id),
+        captainActions: buildCaptainActions({ game, isCaptain }),
         postCompletionMessage:
           typeof postCompletionMessage === 'string'
             ? postCompletionMessage
