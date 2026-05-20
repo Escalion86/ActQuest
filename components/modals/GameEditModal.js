@@ -51,9 +51,19 @@ const normalizeComparablePlainText = (value) =>
     .trim()
 
 const normalizeCodeDuplicateKey = (value) =>
-  String(value || '').trim().toLowerCase()
+  String(value || '')
+    .trim()
+    .toLowerCase()
 
 const formatCodeItemsCount = (count) => `${Math.max(0, Number(count) || 0)} шт.`
+
+const hasCoordinateValue = (value) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value)
+  }
+
+  return typeof value === 'string' && value.trim() !== ''
+}
 
 const hasMeaningfulRichMarkup = (value) =>
   /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(String(value || ''))
@@ -126,6 +136,20 @@ const CodePhotoBadgeIcon = () => (
     <path d="M9 7l1.5-2h3L15 7" />
     <circle cx="12" cy="14" r="3.2" />
   </svg>
+)
+
+const TaskWarningIcon = ({ title }) => (
+  <span
+    className="inline-flex h-5 w-5 items-center justify-center"
+    title={title}
+    aria-label={title}
+  >
+    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+      <path d="M12 3L2 21h20L12 3z" fill="#ef4444" />
+      <rect x="11" y="8" width="2" height="7" rx="1" fill="#ffffff" />
+      <circle cx="12" cy="18" r="1.3" fill="#ffffff" />
+    </svg>
+  </span>
 )
 
 const AccordionChevronIcon = ({ isOpen }) => (
@@ -436,12 +460,21 @@ const GameEditModal = ({
       const targetIndex = (selectedGame?.tasks || []).findIndex(
         (item) => String(item?.id) === targetTaskId,
       )
-      if (sourceIndex < 0 || targetIndex < 0 || isTaskReorderLocked(targetIndex)) {
+      if (
+        sourceIndex < 0 ||
+        targetIndex < 0 ||
+        isTaskReorderLocked(targetIndex)
+      ) {
         return
       }
       handleReorderTask(sourceIndex, targetIndex)
     },
-    [handleReorderTask, isTaskReorderLocked, resetTouchTaskDragState, selectedGame?.tasks],
+    [
+      handleReorderTask,
+      isTaskReorderLocked,
+      resetTouchTaskDragState,
+      selectedGame?.tasks,
+    ],
   )
 
   const draggedTaskGhost = (selectedGame?.tasks || []).find(
@@ -953,11 +986,8 @@ const GameEditModal = ({
                         '',
                     )}
                     onChange={(event) => {
-                      const nextUserId = String(
-                        event.target.value || '',
-                      ).trim()
-                      const nextOrganizer =
-                        organizersByUserId.get(nextUserId)
+                      const nextUserId = String(event.target.value || '').trim()
+                      const nextOrganizer = organizersByUserId.get(nextUserId)
                       updateSelectedGame({
                         creatorUserId: nextUserId,
                         creatorTelegramId: nextOrganizer?.telegramId || '',
@@ -985,10 +1015,7 @@ const GameEditModal = ({
                       }
 
                       return (
-                        <option
-                          key={organizer.id}
-                          value={organizer.id}
-                        >
+                        <option key={organizer.id} value={organizer.id}>
                           {labelParts.join(' · ')}
                         </option>
                       )
@@ -1574,6 +1601,16 @@ const GameEditModal = ({
                     requiredCodesCount !== null &&
                     Number.isFinite(requiredCodesCount) &&
                     requiredCodesCount > normalizedCodes.length
+                  const hasPostTaskMessage =
+                    (typeof task?.postMessage === 'string' &&
+                      task.postMessage.trim() !== '') ||
+                    stripHtmlToPlainText(task?.postMessageRich).trim() !== '' ||
+                    hasMeaningfulRichMarkup(task?.postMessageRich) ||
+                    (Array.isArray(task?.postMessageMedia) &&
+                      task.postMessageMedia.length > 0)
+                  const hasTaskCoordinates =
+                    hasCoordinateValue(task?.coordinates?.latitude) &&
+                    hasCoordinateValue(task?.coordinates?.longitude)
                   const hasTaskValidationErrors =
                     !taskTitle ||
                     !hasTaskDescription ||
@@ -1770,9 +1807,7 @@ const GameEditModal = ({
                             <p>{task.title || 'Без названия'}</p>
                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
                               <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                                {task.canceled ? (
-                                  <span>Отменено</span>
-                                ) : null}
+                                {task.canceled ? <span>Отменено</span> : null}
                                 <span>Коды:</span>
                                 {normalizedCodes.length > 0 ? (
                                   <span className="inline-flex items-center gap-1">
@@ -1787,6 +1822,8 @@ const GameEditModal = ({
                                       {normalizedCodes.length}
                                     </span>
                                   </span>
+                                ) : !isPhotoGame ? (
+                                  <TaskWarningIcon title="Основные коды не заполнены" />
                                 ) : null}
                                 {(Array.isArray(task.bonusCodes)
                                   ? task.bonusCodes.length
@@ -1809,40 +1846,48 @@ const GameEditModal = ({
                                     ? task.clues.length
                                     : 0}
                                 </span>
+                                {hasPostTaskMessage ? (
+                                  <>
+                                    <span>·</span>
+                                    <span>Сообщение после</span>
+                                  </>
+                                ) : null}
                               </span>
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            {hasTaskValidationErrors ? (
+                            {hasTaskCoordinates ? (
                               <span
-                                className="inline-flex items-center justify-center w-5 h-5"
-                                title="В задании есть незаполненные обязательные поля"
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-cyan-300 bg-cyan-100 text-cyan-700 dark:border-cyan-500/45 dark:bg-cyan-500/15 dark:text-cyan-200"
+                                title="У задания указаны координаты"
+                                aria-label="У задания указаны координаты"
                               >
                                 <svg
                                   viewBox="0 0 24 24"
-                                  className="w-5 h-5"
+                                  className="h-4 w-4"
                                   aria-hidden="true"
                                 >
                                   <path
-                                    d="M12 3L2 21h20L12 3z"
-                                    fill="#ef4444"
-                                  />
-                                  <rect
-                                    x="11"
-                                    y="8"
-                                    width="2"
-                                    height="7"
-                                    rx="1"
-                                    fill="#ffffff"
+                                    d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11z"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
                                   />
                                   <circle
                                     cx="12"
-                                    cy="18"
-                                    r="1.3"
-                                    fill="#ffffff"
+                                    cy="10"
+                                    r="2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
                                   />
                                 </svg>
                               </span>
+                            ) : null}
+                            {hasTaskValidationErrors ? (
+                              <TaskWarningIcon title="В задании есть незаполненные обязательные поля" />
                             ) : null}
                             <span
                               className={`inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition-transform duration-200 dark:border-slate-600 dark:bg-slate-900/80 dark:text-slate-200 ${
@@ -2148,10 +2193,10 @@ const GameEditModal = ({
                                         String(clue.id)
                                         ? 'border-cyan-500 ring-1 ring-cyan-500/40 dark:border-cyan-400 dark:ring-cyan-400/40'
                                         : draggedClueMeta &&
-                                          String(draggedClueMeta.taskId) ===
-                                            String(task.id) &&
-                                          String(draggedClueMeta.clueId) ===
-                                            String(clue.id)
+                                            String(draggedClueMeta.taskId) ===
+                                              String(task.id) &&
+                                            String(draggedClueMeta.clueId) ===
+                                              String(clue.id)
                                           ? 'border-cyan-500/80 opacity-85 ring-2 ring-cyan-400/30 dark:border-cyan-400 dark:ring-cyan-300/30'
                                           : 'border-slate-200 dark:border-slate-700'
                                     }`}
@@ -2187,16 +2232,21 @@ const GameEditModal = ({
                                     onDrop={(event) => {
                                       event.preventDefault()
                                       const transfer = String(
-                                        event.dataTransfer.getData('text/plain') ||
-                                          '',
+                                        event.dataTransfer.getData(
+                                          'text/plain',
+                                        ) || '',
                                       )
                                       const [taskIdRaw, clueIdRaw] =
                                         transfer.split(':')
                                       const sourceTaskId = String(
-                                        draggedClueMeta?.taskId || taskIdRaw || '',
+                                        draggedClueMeta?.taskId ||
+                                          taskIdRaw ||
+                                          '',
                                       )
                                       const sourceClueId = String(
-                                        draggedClueMeta?.clueId || clueIdRaw || '',
+                                        draggedClueMeta?.clueId ||
+                                          clueIdRaw ||
+                                          '',
                                       )
                                       setDragOverClueMeta(null)
                                       setDraggedClueMeta(null)
@@ -2261,9 +2311,13 @@ const GameEditModal = ({
                                             event,
                                           )
                                         }}
-                                        onPointerMove={handleClueHandlePointerMove}
+                                        onPointerMove={
+                                          handleClueHandlePointerMove
+                                        }
                                         onPointerUp={handleClueHandlePointerUp}
-                                        onPointerCancel={resetTouchClueDragState}
+                                        onPointerCancel={
+                                          resetTouchClueDragState
+                                        }
                                         onLostPointerCapture={
                                           resetTouchClueDragState
                                         }
@@ -2308,7 +2362,10 @@ const GameEditModal = ({
                                         }
                                         aria-label="Перетащить подсказку"
                                       >
-                                        <svg viewBox="0 0 20 20" className="h-4 w-4">
+                                        <svg
+                                          viewBox="0 0 20 20"
+                                          className="h-4 w-4"
+                                        >
                                           <circle
                                             cx="7"
                                             cy="6"
@@ -2541,8 +2598,7 @@ const GameEditModal = ({
                               placeholder="Введите сообщение, которое команда увидит после выполнения задания."
                               onChange={({ html, plainText, media }) => {
                                 const nextPostMessage =
-                                  plainText ||
-                                  stripHtmlToPlainText(html || '')
+                                  plainText || stripHtmlToPlainText(html || '')
                                 const nextPostMessageRich =
                                   typeof html === 'string' ? html : ''
                                 const currentPostMessage =
@@ -2558,7 +2614,9 @@ const GameEditModal = ({
                                 )
                                   ? task.postMessageMedia
                                   : []
-                                const nextPostMessageMedia = Array.isArray(media)
+                                const nextPostMessageMedia = Array.isArray(
+                                  media,
+                                )
                                   ? media
                                   : []
 
@@ -2731,8 +2789,9 @@ const GameEditModal = ({
                                             <div className="flex items-center w-full max-w-full min-w-0 gap-2 mt-2 overflow-hidden">
                                               <span className="flex-1 block min-w-0 overflow-hidden">
                                                 <span className="block w-full font-semibold truncate">
-                                                  {compactSingleLine(codeValue) ||
-                                                    '-'}
+                                                  {compactSingleLine(
+                                                    codeValue,
+                                                  ) || '-'}
                                                 </span>
                                               </span>
                                             </div>
@@ -3090,7 +3149,9 @@ const GameEditModal = ({
                                             <CabinetDurationField
                                               id={`task-penalty-value-${penalty.id}`}
                                               label="Штраф"
-                                              valueSeconds={penalty.penalty ?? 0}
+                                              valueSeconds={
+                                                penalty.penalty ?? 0
+                                              }
                                               onChangeSeconds={(nextSeconds) =>
                                                 handlePenaltyCodeChange(
                                                   task.id,
@@ -4072,6 +4133,10 @@ AccordionChevronIcon.propTypes = {
 
 AccordionChevronIcon.defaultProps = {
   isOpen: false,
+}
+
+TaskWarningIcon.propTypes = {
+  title: PropTypes.string.isRequired,
 }
 
 export default memo(GameEditModal)
