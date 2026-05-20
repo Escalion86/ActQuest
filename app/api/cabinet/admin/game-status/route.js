@@ -231,11 +231,12 @@ const hasTimeAddingTaskBinding = (adding) => {
 
 const normalizeTimeAddingScope = (adding) => {
   const scope = normalizeText(adding?.scope)
+  if (isCaptainForceClueAdding(adding) && hasTimeAddingTaskBinding(adding)) {
+    return 'task_elapsed'
+  }
   if (scope === 'task_elapsed') return 'task_elapsed'
   if (scope === 'total_adjustment') return 'total_adjustment'
-  return isCaptainForceClueAdding(adding) && hasTimeAddingTaskBinding(adding)
-    ? 'task_elapsed'
-    : 'total_adjustment'
+  return 'total_adjustment'
 }
 
 const shouldShowTimeAddingInAdjustments = (adding) => {

@@ -68,6 +68,7 @@ const GameModals = ({
   canGenerateResults,
   isGeneratingResults,
   handleGenerateResults,
+  generateResultsButtonLabel,
   currencyFormatter,
   financesSummary,
   balanceClass,
@@ -239,6 +240,7 @@ const GameModals = ({
           canGenerateResults={canGenerateResults}
           isGeneratingResults={isGeneratingResults}
           handleGenerateResults={handleGenerateResults}
+          generateResultsButtonLabel={generateResultsButtonLabel}
           currencyFormatter={currencyFormatter}
           financesSummary={financesSummary}
           balanceClass={balanceClass}
@@ -324,6 +326,7 @@ const GameModals = ({
           canGenerateResults={canGenerateResults}
           isGeneratingResults={isGeneratingResults}
           handleGenerateResults={handleGenerateResults}
+          generateResultsButtonLabel={generateResultsButtonLabel}
           currencyFormatter={currencyFormatter}
           financesSummary={financesSummary}
           balanceClass={balanceClass}
@@ -578,6 +581,7 @@ GameModals.propTypes = {
   canGenerateResults: PropTypes.bool.isRequired,
   isGeneratingResults: PropTypes.bool.isRequired,
   handleGenerateResults: PropTypes.func.isRequired,
+  generateResultsButtonLabel: PropTypes.string.isRequired,
   currencyFormatter: PropTypes.instanceOf(Intl.NumberFormat).isRequired,
   financesSummary: PropTypes.shape({
     income: PropTypes.number.isRequired,

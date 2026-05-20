@@ -63,11 +63,12 @@ const hasTimeAddingTaskBinding = (item) => {
 
 const normalizeTimeAddingScope = (item) => {
   const rawScope = typeof item?.scope === 'string' ? item.scope.trim() : ''
+  if (isCaptainForceClueAdding(item) && hasTimeAddingTaskBinding(item)) {
+    return 'task_elapsed'
+  }
   if (rawScope === 'task_elapsed') return 'task_elapsed'
   if (rawScope === 'total_adjustment') return 'total_adjustment'
-  return isCaptainForceClueAdding(item) && hasTimeAddingTaskBinding(item)
-    ? 'task_elapsed'
-    : 'total_adjustment'
+  return 'total_adjustment'
 }
 
 const shouldShowTimeAddingInAdjustments = (item) => {

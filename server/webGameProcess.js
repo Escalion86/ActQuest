@@ -20,6 +20,13 @@ const createPromptMessage = (gameType) => {
 
 const sanitizeFragment = (value) => sanitize(String(value || ''))
 
+const getTaskPostCompletionMessage = (task) => {
+  const rich =
+    typeof task?.postMessageRich === 'string' ? task.postMessageRich.trim() : ''
+  const plain = typeof task?.postMessage === 'string' ? task.postMessage.trim() : ''
+  return rich || plain
+}
+
 const ensureDate = (value) => {
   if (!value) return null
   const date = value instanceof Date ? value : new Date(value)
@@ -594,6 +601,7 @@ const webGameProcess = async ({
 
     // Если следующее задание отсутствует — игра завершена.
     if (nextTaskIndex >= tasksCount) {
+      const lastTaskPostMessage = getTaskPostCompletionMessage(currentTask)
       const forcedCluesTemp = resetForcedClueForTask(
         forcedClues,
         nextTaskIndex,
@@ -623,7 +631,10 @@ const webGameProcess = async ({
 
       return {
         message: buildGameFinishedMessage(resolvedGame),
-        messages: ['Поздравляем! Вы завершили игру.'],
+        messages: [
+          'Поздравляем! Вы завершили игру.',
+          lastTaskPostMessage,
+        ].filter(Boolean),
       }
     }
 

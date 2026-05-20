@@ -197,6 +197,7 @@ const GameEditModal = ({
   canGenerateResults,
   isGeneratingResults,
   handleGenerateResults,
+  generateResultsButtonLabel,
   currencyFormatter,
   financesSummary,
   balanceClass,
@@ -3624,7 +3625,7 @@ const GameEditModal = ({
                 tone="cyan"
                 size="md"
               >
-                {isGeneratingResults ? 'Формируем…' : 'Сформировать результаты'}
+                {generateResultsButtonLabel}
               </CabinetButton>
               {!canGenerateResults && (
                 <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">
@@ -3948,6 +3949,7 @@ GameEditModal.propTypes = {
   canGenerateResults: PropTypes.bool.isRequired,
   isGeneratingResults: PropTypes.bool.isRequired,
   handleGenerateResults: PropTypes.func.isRequired,
+  generateResultsButtonLabel: PropTypes.string.isRequired,
   currencyFormatter: PropTypes.instanceOf(Intl.NumberFormat).isRequired,
   financesSummary: PropTypes.shape({
     income: PropTypes.number.isRequired,

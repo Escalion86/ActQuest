@@ -810,17 +810,17 @@ const GameTeamsModal = ({
                       ? team.membersCount
                       : 0
                     const ratingBadge = resolveRatingBadge(team?.rating)
-                    const timeAddings = Array.isArray(team?.timeAddings)
-                      ? team.timeAddings
+                    const manualTimeAddings = Array.isArray(team?.timeAddings)
+                      ? team.timeAddings.filter(isManualAdjustmentItem)
                       : []
-                    const penaltySeconds = timeAddings.reduce((sum, item) => {
+                    const penaltySeconds = manualTimeAddings.reduce((sum, item) => {
                       const value = Number(item?.time)
                       if (!Number.isFinite(value) || value <= 0) {
                         return sum
                       }
                       return sum + Math.round(value)
                     }, 0)
-                    const bonusSeconds = timeAddings.reduce((sum, item) => {
+                    const bonusSeconds = manualTimeAddings.reduce((sum, item) => {
                       const value = Number(item?.time)
                       if (!Number.isFinite(value) || value >= 0) {
                         return sum

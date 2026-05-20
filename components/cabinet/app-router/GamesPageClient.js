@@ -90,6 +90,19 @@ const CABINET_GAMES_API_BASE = '/api/cabinet/games'
 const PAST_GAMES_SEASON_FILTER_ALL = 'all'
 const PAST_GAMES_SEASON_FILTER_OFFSEASON = 'offseason'
 const PAST_GAMES_SEASON_FILTER_NONRATED = 'nonrated'
+const GAMES_TYPE_FILTER_ALL = 'all'
+const GAME_TYPE_FILTER_OPTIONS = [
+  { value: GAMES_TYPE_FILTER_ALL, label: 'Все типы' },
+  { value: 'classic', label: 'Автоквест' },
+  { value: 'photo', label: 'Фотоквест' },
+  { value: 'story', label: 'Сюжет' },
+]
+const getGenerateResultsButtonLabel = (game, isGenerating = false) => {
+  if (isGenerating) return 'Формируем…'
+  return Boolean(game?.isResultGenerated)
+    ? 'Сформировать результаты заново'
+    : 'Сформировать результаты'
+}
 const CREATE_GAME_MODE_EMPTY = 'empty'
 const CREATE_GAME_MODE_CLONE = 'clone'
 const DEFAULT_CREATE_GAME_CLONE_OPTIONS = {
@@ -1189,6 +1202,7 @@ const GamesPage = ({
   const [pastGamesSeasonFilter, setPastGamesSeasonFilter] = useState(
     PAST_GAMES_SEASON_FILTER_ALL,
   )
+  const [gamesTypeFilter, setGamesTypeFilter] = useState(GAMES_TYPE_FILTER_ALL)
   const [openedGamesFilterPanel, setOpenedGamesFilterPanel] = useState(null)
   const rawViewQueryFromRouter = searchParams?.get('view') ?? ''
   const rawViewQuery =
@@ -3104,6 +3118,59 @@ const GamesPage = ({
     [games],
   )
 
+  const filterGamesBySeason = useCallback(
+    (sourceGames) =>
+      sourceGames.filter((game) => {
+        if (pastGamesSeasonFilter === PAST_GAMES_SEASON_FILTER_ALL) {
+          return true
+        }
+
+        if (pastGamesSeasonFilter === PAST_GAMES_SEASON_FILTER_NONRATED) {
+          return !Boolean(game?.isRated)
+        }
+
+        if (pastGamesSeasonFilter === PAST_GAMES_SEASON_FILTER_OFFSEASON) {
+          return (
+            Boolean(game?.isRated) &&
+            !(typeof game?.seasonId === 'string' && game.seasonId.trim())
+          )
+        }
+
+        if (pastGamesSeasonFilter.startsWith('season:')) {
+          const seasonId = pastGamesSeasonFilter.slice('season:'.length)
+          return (
+            Boolean(game?.isRated) &&
+            typeof game?.seasonId === 'string' &&
+            game.seasonId === seasonId
+          )
+        }
+
+        return true
+      }),
+    [pastGamesSeasonFilter],
+  )
+
+  const filterGamesByType = useCallback(
+    (sourceGames) =>
+      sourceGames.filter((game) => {
+        if (gamesTypeFilter === GAMES_TYPE_FILTER_ALL) {
+          return true
+        }
+        return String(game?.type || 'classic').trim().toLowerCase() === gamesTypeFilter
+      }),
+    [gamesTypeFilter],
+  )
+
+  const applyGamesFilters = useCallback(
+    (sourceGames) => filterGamesByType(filterGamesBySeason(sourceGames)),
+    [filterGamesBySeason, filterGamesByType],
+  )
+
+  const filteredUpcomingGames = useMemo(
+    () => applyGamesFilters(upcomingGames),
+    [applyGamesFilters, upcomingGames],
+  )
+
   const pastGamesBase = useMemo(
     () =>
       games.filter((game) => {
@@ -3132,41 +3199,16 @@ const GamesPage = ({
   )
 
   const pastGames = useMemo(
-    () =>
-      pastGamesBase.filter((game) => {
-        if (pastGamesSeasonFilter === PAST_GAMES_SEASON_FILTER_ALL) {
-          return true
-        }
-
-        if (pastGamesSeasonFilter === PAST_GAMES_SEASON_FILTER_NONRATED) {
-          return !Boolean(game?.isRated)
-        }
-
-        if (pastGamesSeasonFilter === PAST_GAMES_SEASON_FILTER_OFFSEASON) {
-          return (
-            Boolean(game?.isRated) &&
-            !(typeof game?.seasonId === 'string' && game.seasonId.trim())
-          )
-        }
-
-        if (pastGamesSeasonFilter.startsWith('season:')) {
-          const seasonId = pastGamesSeasonFilter.slice('season:'.length)
-          return (
-            Boolean(game?.isRated) &&
-            typeof game?.seasonId === 'string' &&
-            game.seasonId === seasonId
-          )
-        }
-
-        return true
-      }),
-    [pastGamesBase, pastGamesSeasonFilter],
+    () => applyGamesFilters(pastGamesBase),
+    [applyGamesFilters, pastGamesBase],
   )
 
   const pastGamesSeasonOptions = useMemo(() => {
     const seasonsMap = new Map()
 
-    pastGamesBase.forEach((game) => {
+    const seasonSourceGames = isUpcomingView ? upcomingGames : pastGamesBase
+
+    seasonSourceGames.forEach((game) => {
       if (!Boolean(game?.isRated)) {
         return
       }
@@ -3193,7 +3235,7 @@ const GamesPage = ({
       { value: PAST_GAMES_SEASON_FILTER_OFFSEASON, label: 'Вне сезона' },
       { value: PAST_GAMES_SEASON_FILTER_NONRATED, label: 'Не рейтинговые' },
     ]
-  }, [pastGamesBase])
+  }, [isUpcomingView, pastGamesBase, upcomingGames])
   const selectedGamesLocationOption = useMemo(
     () =>
       gameLocationOptions.find((item) => item.key === gamesFilterLocation) ??
@@ -3207,12 +3249,22 @@ const GamesPage = ({
       ) ?? null,
     [pastGamesSeasonFilter, pastGamesSeasonOptions],
   )
+  const selectedGamesTypeOption = useMemo(
+    () =>
+      GAME_TYPE_FILTER_OPTIONS.find(
+        (option) => option.value === gamesTypeFilter,
+      ) ?? GAME_TYPE_FILTER_OPTIONS[0],
+    [gamesTypeFilter],
+  )
   const gamesCityFilterLabel =
     selectedGamesLocationOption?.label?.trim() || 'Город'
   const gamesSeasonFilterLabel =
     selectedPastGamesSeasonOption?.label?.trim() || 'Сезон'
+  const gamesTypeFilterLabel =
+    selectedGamesTypeOption?.label?.trim() || 'Тип игры'
   const isCityFilterPanelOpen = openedGamesFilterPanel === 'city'
   const isSeasonFilterPanelOpen = openedGamesFilterPanel === 'season'
+  const isTypeFilterPanelOpen = openedGamesFilterPanel === 'type'
 
   useEffect(() => {
     if (
@@ -5445,12 +5497,22 @@ const GamesPage = ({
   const isGeneratingResults = generateResultsMutation.isPending
 
   const handleGenerateResultsFromGame = useCallback((game, options = {}) => {
-    const force = Boolean(options?.force)
+    const force = Boolean(options?.force) || Boolean(game?.isResultGenerated)
     const canProceed = force
       ? canRebuildResultsForGame(game)
       : canGenerateResultsForGame(game)
 
     if (!game || !canProceed || isGeneratingResults) {
+      return
+    }
+
+    const confirmationMessage = Boolean(game.isResultGenerated)
+      ? `Сформировать результаты игры «${game.name || 'Без названия'}» заново? Текущие сохранённые результаты будут пересчитаны.`
+      : `Сформировать результаты игры «${game.name || 'Без названия'}»?`
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(confirmationMessage)
+    ) {
       return
     }
 
@@ -5983,9 +6045,10 @@ const GamesPage = ({
                             disabled={isGeneratingResults}
                             className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-amber-300/70 bg-amber-50/80 px-4 py-1.5 text-sm font-semibold text-amber-700 transition hover:border-amber-500 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-200 dark:hover:bg-amber-500/20"
                           >
-                            {isGeneratingResults
-                              ? 'Формируем…'
-                              : 'Сформировать результаты'}
+                            {getGenerateResultsButtonLabel(
+                              game,
+                              isGeneratingResults,
+                            )}
                           </button>
                         )}
                       </div>
@@ -6366,9 +6429,10 @@ const GamesPage = ({
                           disabled={isGeneratingResults}
                           className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-amber-300/70 bg-amber-50/70 px-4 py-1.5 text-sm font-semibold text-amber-700 transition hover:border-amber-500 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-400/50 dark:bg-amber-500/12 dark:text-amber-200 dark:hover:bg-amber-500/20"
                         >
-                          {isGeneratingResults
-                            ? 'Формируем…'
-                            : 'Сформировать результаты'}
+                          {getGenerateResultsButtonLabel(
+                            game,
+                            isGeneratingResults,
+                          )}
                         </button>
                       )}
                     </div>
@@ -6980,21 +7044,36 @@ const GamesPage = ({
                   <button
                     type="button"
                     onClick={() =>
-                      isPastView &&
                       setOpenedGamesFilterPanel((prev) =>
                         prev === 'season' ? null : 'season',
                       )
                     }
-                    disabled={!isPastView}
                     className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${
                       isSeasonFilterPanelOpen
                         ? 'bg-primary text-white'
-                        : 'border border-slate-200 bg-slate-100/90 text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:bg-slate-800'
+                        : 'border border-slate-200 bg-slate-100/90 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:bg-slate-800'
                     }`}
                     aria-expanded={isSeasonFilterPanelOpen}
                     aria-controls="games-season-filter-panel"
                   >
                     {gamesSeasonFilterLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenedGamesFilterPanel((prev) =>
+                        prev === 'type' ? null : 'type',
+                      )
+                    }
+                    className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      isTypeFilterPanelOpen
+                        ? 'bg-primary text-white'
+                        : 'border border-slate-200 bg-slate-100/90 text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:bg-slate-800'
+                    }`}
+                    aria-expanded={isTypeFilterPanelOpen}
+                    aria-controls="games-type-filter-panel"
+                  >
+                    {gamesTypeFilterLabel}
                   </button>
                   {canFilterCanceledGames && (
                     <button
@@ -7061,7 +7140,7 @@ const GamesPage = ({
                   </div>
                 )}
 
-                {isPastView && isSeasonFilterPanelOpen && (
+                {isSeasonFilterPanelOpen && (
                   <div
                     id="games-season-filter-panel"
                     className="p-4 bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/80"
@@ -7113,6 +7192,57 @@ const GamesPage = ({
                   </div>
                 )}
 
+                {isTypeFilterPanelOpen && (
+                  <div
+                    id="games-type-filter-panel"
+                    className="p-4 bg-white border shadow-sm rounded-2xl border-slate-200 dark:border-slate-700 dark:bg-slate-900/80"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-primary dark:text-slate-100">
+                        Тип игры
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGamesTypeFilter(GAMES_TYPE_FILTER_ALL)
+                          setOpenedGamesFilterPanel(null)
+                        }}
+                        className="text-sm font-semibold transition text-rose-500 hover:text-rose-400"
+                      >
+                        Сбросить
+                      </button>
+                    </div>
+                    <div className="pr-1 mt-3 space-y-1 overflow-y-auto max-h-64">
+                      {GAME_TYPE_FILTER_OPTIONS.map((option) => {
+                        const isSelected = gamesTypeFilter === option.value
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => {
+                              setGamesTypeFilter(option.value)
+                              setOpenedGamesFilterPanel(null)
+                            }}
+                            className="flex items-center w-full gap-3 px-2 py-2 text-sm text-left transition rounded-lg text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/70"
+                          >
+                            <span
+                              className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border text-xs font-bold ${
+                                isSelected
+                                  ? 'border-primary bg-primary text-white'
+                                  : 'border-slate-400 bg-transparent text-transparent dark:border-slate-500'
+                              }`}
+                              aria-hidden="true"
+                            >
+                              ✓
+                            </span>
+                            <span>{option.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {locationFilterError && (
                   <p className="mt-2 text-xs text-rose-500">
                     {locationFilterError}
@@ -7133,7 +7263,7 @@ const GamesPage = ({
               </div>
             ) : games.length > 0 ? (
               <div className="space-y-6">
-                {!isPastView && upcomingGames.length > 0 && (
+                {!isPastView && filteredUpcomingGames.length > 0 && (
                   <div>
                     <h3 className="px-1 text-xs font-semibold tracking-wide uppercase text-slate-500">
                       Активные и запланированные
@@ -7145,7 +7275,7 @@ const GamesPage = ({
                           : 'mt-2 space-y-3'
                       }
                     >
-                      {upcomingGames.map((game) =>
+                      {filteredUpcomingGames.map((game) =>
                         isCardsDisplay
                           ? renderGameTileItem(game)
                           : renderGameListItem(game),
@@ -7175,7 +7305,7 @@ const GamesPage = ({
                     </ul>
                   </div>
                 )}
-                {((isUpcomingView && upcomingGames.length === 0) ||
+                {((isUpcomingView && filteredUpcomingGames.length === 0) ||
                   (isPastView && pastGames.length === 0)) && (
                   <div className="p-6 text-sm text-center bg-white border shadow-sm text-slate-500 dark:bg-slate-900/80 border-slate-200 dark:border-slate-700 rounded-2xl">
                     {isUpcomingView
@@ -7265,6 +7395,10 @@ const GamesPage = ({
                 canGenerateResults={canGenerateResults}
                 isGeneratingResults={isGeneratingResults}
                 handleGenerateResults={handleGenerateResults}
+                generateResultsButtonLabel={getGenerateResultsButtonLabel(
+                  selectedGame,
+                  isGeneratingResults,
+                )}
                 currencyFormatter={currencyFormatter}
                 financesSummary={financesSummary}
                 balanceClass={balanceClass}
