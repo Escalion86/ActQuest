@@ -50,6 +50,11 @@ const normalizeComparablePlainText = (value) =>
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 
+const normalizeCodeDuplicateKey = (value) =>
+  String(value || '').trim().toLowerCase()
+
+const formatCodeItemsCount = (count) => `${Math.max(0, Number(count) || 0)} шт.`
+
 const hasMeaningfulRichMarkup = (value) =>
   /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(String(value || ''))
 
@@ -1543,6 +1548,20 @@ const GameEditModal = ({
                       typeof codeValue === 'string' ? codeValue.trim() : '',
                     )
                     .filter(Boolean)
+                  const codeDuplicateCounts = normalizedCodes.reduce(
+                    (acc, codeValue) => {
+                      const key = normalizeCodeDuplicateKey(codeValue)
+                      if (!key) return acc
+                      acc.set(key, (acc.get(key) || 0) + 1)
+                      return acc
+                    },
+                    new Map(),
+                  )
+                  const duplicateCodeKeys = new Set(
+                    Array.from(codeDuplicateCounts.entries())
+                      .filter(([, count]) => count > 1)
+                      .map(([key]) => key),
+                  )
                   const rawRequiredCodes = task?.numCodesToCompliteTask
                   const requiredCodesCount =
                     rawRequiredCodes === null ||
@@ -2650,7 +2669,13 @@ const GameEditModal = ({
                             <div>
                               <div>
                                 <h4 className="text-sm font-semibold text-slate-700 dark:text-white">
-                                  {withRequiredMark('Коды задания')}
+                                  {withRequiredMark(
+                                    `Коды задания (${formatCodeItemsCount(
+                                      Array.isArray(task.codes)
+                                        ? task.codes.length
+                                        : 0,
+                                    )})`,
+                                  )}
                                 </h4>
                               </div>
                               {task.codes?.length > 0 ? (
@@ -2659,6 +2684,14 @@ const GameEditModal = ({
                                     const accordionKey = `${task.id}-main-${codeIndex}`
                                     const isExpanded =
                                       expandedCodeAccordions.has(accordionKey)
+                                    const normalizedCodeKey =
+                                      normalizeCodeDuplicateKey(codeValue)
+                                    const isDuplicateCode =
+                                      normalizedCodeKey &&
+                                      duplicateCodeKeys.has(normalizedCodeKey)
+                                    const codeBadgeLabel = normalizedCodeKey
+                                      ? `Код ${codeIndex + 1}`
+                                      : '-'
 
                                     return (
                                       <details
@@ -2678,19 +2711,28 @@ const GameEditModal = ({
                                             return next
                                           })
                                         }}
-                                        className="relative p-2 overflow-hidden border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+                                        className={`relative overflow-hidden rounded-2xl border p-2 ${
+                                          isDuplicateCode
+                                            ? 'border-rose-400 bg-rose-50/80 ring-1 ring-rose-300/60 dark:border-rose-500/70 dark:bg-rose-500/10 dark:ring-rose-500/25'
+                                            : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60'
+                                        }`}
                                       >
                                         <summary className="w-full max-w-full overflow-hidden text-sm font-medium list-none cursor-pointer rounded-xl text-slate-700 marker:content-none dark:text-slate-100">
-                                          <div className="absolute top-0 left-0 shrink-0 rounded-br-full border-b border-r border-cyan-300/70 bg-cyan-100/70 px-3 py-0 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
-                                            Код
+                                          <div
+                                            className={`absolute left-0 top-0 shrink-0 rounded-br-full border-b border-r px-3 py-0 text-[11px] font-semibold ${
+                                              isDuplicateCode
+                                                ? 'border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-500/45 dark:bg-rose-500/15 dark:text-rose-200'
+                                                : 'border-cyan-300/70 bg-cyan-100/70 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200'
+                                            }`}
+                                          >
+                                            {codeBadgeLabel}
                                           </div>
                                           <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 py-1">
                                             <div className="flex items-center w-full max-w-full min-w-0 gap-2 mt-2 overflow-hidden">
                                               <span className="flex-1 block min-w-0 overflow-hidden">
                                                 <span className="block w-full font-semibold truncate">
-                                                  {compactSingleLine(
-                                                    codeValue,
-                                                  ) || `Код ${codeIndex + 1}`}
+                                                  {compactSingleLine(codeValue) ||
+                                                    '-'}
                                                 </span>
                                               </span>
                                             </div>
@@ -2705,6 +2747,15 @@ const GameEditModal = ({
                                                   title="Фото добавлено"
                                                 >
                                                   <CodePhotoBadgeIcon />
+                                                </span>
+                                              ) : null}
+                                              {isDuplicateCode ? (
+                                                <span
+                                                  className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-300 bg-rose-100 text-xs font-black leading-none text-rose-700 dark:border-rose-500/60 dark:bg-rose-500/20 dark:text-rose-200"
+                                                  title="Код дублируется в этом задании"
+                                                  aria-label="Код дублируется в этом задании"
+                                                >
+                                                  !
                                                 </span>
                                               ) : null}
                                               <AccordionChevronIcon

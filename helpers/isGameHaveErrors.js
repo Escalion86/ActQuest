@@ -73,6 +73,14 @@ const isTaskDescriptionFilled = (task) => {
   return hasMediaItems(task?.taskMedia)
 }
 
+const getEmptyCodePositions = (codes) =>
+  (Array.isArray(codes) ? codes : []).reduce((positions, code, index) => {
+    if (typeof code !== 'string' || code.trim() === '') {
+      positions.push(index + 1)
+    }
+    return positions
+  }, [])
+
 export const getGameValidationErrors = (game) => {
   const errors = []
   const safeGame = game && typeof game === 'object' ? game : {}
@@ -113,14 +121,22 @@ export const getGameValidationErrors = (game) => {
     }
 
     if (safeGame.type !== 'photo') {
-      const taskCodes = Array.isArray(task?.codes)
-        ? task.codes.filter((code) => typeof code === 'string' && code.trim() !== '')
-        : []
+      const rawTaskCodes = Array.isArray(task?.codes) ? task.codes : []
+      const taskCodes = rawTaskCodes.filter(
+        (code) => typeof code === 'string' && code.trim() !== '',
+      )
       const taskCodesLength = taskCodes.length
       const neededCodesLength = Number(task?.numCodesToCompliteTask || 0)
+      const emptyCodePositions = getEmptyCodePositions(rawTaskCodes)
 
       if (!taskCodesLength) {
         errors.push(`${taskLabel}: не добавлен ни один код.`)
+      }
+
+      if (emptyCodePositions.length > 0) {
+        errors.push(
+          `${taskLabel}: заполните пустые основные коды №${emptyCodePositions.join(', ')}.`,
+        )
       }
 
       if (taskCodesLength < neededCodesLength) {

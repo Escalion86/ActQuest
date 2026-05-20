@@ -475,6 +475,14 @@ const sanitizeStringArray = (values = []) =>
     .map((item) => (typeof item === 'string' ? item.trim() : ''))
     .filter((item) => item !== '')
 
+const getEmptyCodePositions = (codes) =>
+  (Array.isArray(codes) ? codes : []).reduce((positions, code, index) => {
+    if (typeof code !== 'string' || code.trim() === '') {
+      positions.push(index + 1)
+    }
+    return positions
+  }, [])
+
 const sanitizeCodePhotosArray = (values = [], codesLength = 0) =>
   sanitizeStringArray(values).slice(0, Math.max(0, Number(codesLength) || 0))
 
@@ -972,10 +980,19 @@ const validateTaskEditorRequirements = (game) => {
     }
 
     const codes = sanitizeStringArray(task?.codes)
+    const emptyCodePositions = getEmptyCodePositions(task?.codes)
     if (codes.length === 0) {
       issues.push({
         taskId,
         message: `${taskLabel}: добавьте хотя бы один основной код.`,
+      })
+    }
+
+    if (emptyCodePositions.length > 0) {
+      issues.push({
+        taskId,
+        isBlocking: true,
+        message: `${taskLabel}: заполните пустые основные коды №${emptyCodePositions.join(', ')}.`,
       })
     }
 
