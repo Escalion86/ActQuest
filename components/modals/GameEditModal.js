@@ -12,6 +12,7 @@ import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import CabinetNumberField from '@components/cabinet/CabinetNumberField'
 import NeonCheckbox from '@components/NeonCheckbox'
+import FullscreenImageViewer from '@components/FullscreenImageViewer'
 import formatDate from '@helpers/formatDate'
 import {
   formatDateTimeLocalInLocation,
@@ -140,11 +141,11 @@ const CodePhotoBadgeIcon = () => (
 
 const TaskWarningIcon = ({ title }) => (
   <span
-    className="inline-flex h-5 w-5 items-center justify-center"
+    className="inline-flex items-center justify-center w-5 h-5"
     title={title}
     aria-label={title}
   >
-    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
       <path d="M12 3L2 21h20L12 3z" fill="#ef4444" />
       <rect x="11" y="8" width="2" height="7" rx="1" fill="#ffffff" />
       <circle cx="12" cy="18" r="1.3" fill="#ffffff" />
@@ -265,6 +266,7 @@ const GameEditModal = ({
   const [expandedClueAccordions, setExpandedClueAccordions] = useState(
     () => new Set(),
   )
+  const [selectedCodePhoto, setSelectedCodePhoto] = useState(null)
   const [draggedTaskId, setDraggedTaskId] = useState(null)
   const [dragOverTaskId, setDragOverTaskId] = useState(null)
   const [dragGhostPosition, setDragGhostPosition] = useState(null)
@@ -1514,9 +1516,6 @@ const GameEditModal = ({
               <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
                 Задания
               </h2>
-              <CabinetButton onClick={handleAddTask} variant="primary">
-                Добавить задание
-              </CabinetButton>
             </div>
             {String(selectedGame?.status || '')
               .trim()
@@ -1858,13 +1857,13 @@ const GameEditModal = ({
                           <div className="flex items-center gap-2">
                             {hasTaskCoordinates ? (
                               <span
-                                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-cyan-300 bg-cyan-100 text-cyan-700 dark:border-cyan-500/45 dark:bg-cyan-500/15 dark:text-cyan-200"
+                                className="inline-flex items-center justify-center w-6 h-6 border rounded-full border-cyan-300 bg-cyan-100 text-cyan-700 dark:border-cyan-500/45 dark:bg-cyan-500/15 dark:text-cyan-200"
                                 title="У задания указаны координаты"
                                 aria-label="У задания указаны координаты"
                               >
                                 <svg
                                   viewBox="0 0 24 24"
-                                  className="h-4 w-4"
+                                  className="w-4 h-4"
                                   aria-hidden="true"
                                 >
                                   <path
@@ -1911,7 +1910,7 @@ const GameEditModal = ({
                       </div>
 
                       {isExpanded && (
-                        <div className="space-y-5 px-3 py-4 sm:px-4 sm:py-5">
+                        <div className="px-3 py-4 space-y-5 sm:px-4 sm:py-5">
                           <div className="space-y-4">
                             <div className="flex justify-end">
                               <CabinetButton
@@ -2017,7 +2016,7 @@ const GameEditModal = ({
                                     return (
                                       <label
                                         key={`${task.id}-${agent.userId}`}
-                                        className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
+                                        className="flex items-start gap-2 px-3 py-2 text-sm bg-white border rounded-xl border-slate-200 text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200"
                                       >
                                         <input
                                           type="checkbox"
@@ -2364,7 +2363,7 @@ const GameEditModal = ({
                                       >
                                         <svg
                                           viewBox="0 0 20 20"
-                                          className="h-4 w-4"
+                                          className="w-4 h-4"
                                         >
                                           <circle
                                             cx="7"
@@ -2408,7 +2407,7 @@ const GameEditModal = ({
                                         {`Подсказка ${clueIndex + 1}`}
                                       </div>
                                       <div className="grid h-full w-full max-w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 pt-3 pb-2 pl-9">
-                                        <div className="mt-3 flex items-center w-full max-w-full min-w-0 gap-2 overflow-hidden">
+                                        <div className="flex items-center w-full max-w-full min-w-0 gap-2 mt-3 overflow-hidden">
                                           <span className="flex-1 block min-w-0 overflow-hidden">
                                             <span className="block w-full font-semibold truncate">
                                               {getClueText(clue) ||
@@ -2416,7 +2415,7 @@ const GameEditModal = ({
                                             </span>
                                           </span>
                                         </div>
-                                        <span className="inline-flex items-center justify-center self-center">
+                                        <span className="inline-flex items-center self-center justify-center">
                                           <AccordionChevronIcon
                                             isOpen={expandedClueAccordions.has(
                                               `${task.id}-clue-${clue.id}`,
@@ -2425,7 +2424,7 @@ const GameEditModal = ({
                                         </span>
                                       </div>
                                     </summary>
-                                    <div className="mt-2 space-y-2 px-2 pb-2">
+                                    <div className="px-2 pb-2 mt-2 space-y-2">
                                       <TaskRichEditor
                                         value={clue.clueRich || clue.clue || ''}
                                         directory={`games/${selectedGame.id || 'draft'}/tasks/${task.id}/clues/${clue.id}/editor`}
@@ -2810,7 +2809,7 @@ const GameEditModal = ({
                                               ) : null}
                                               {isDuplicateCode ? (
                                                 <span
-                                                  className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-300 bg-rose-100 text-xs font-black leading-none text-rose-700 dark:border-rose-500/60 dark:bg-rose-500/20 dark:text-rose-200"
+                                                  className="inline-flex items-center justify-center w-5 h-5 text-xs font-black leading-none border rounded-full border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-500/60 dark:bg-rose-500/20 dark:text-rose-200"
                                                   title="Код дублируется в этом задании"
                                                   aria-label="Код дублируется в этом задании"
                                                 >
@@ -2880,6 +2879,12 @@ const GameEditModal = ({
                                               imageName={`task-code-${codeIndex + 1}`}
                                               maxImages={1}
                                               uploadLabel="Загрузить фото"
+                                              onPreviewClick={(imageUrl) =>
+                                                setSelectedCodePhoto({
+                                                  src: imageUrl,
+                                                  alt: `Фото для кода ${compactSingleLine(codeValue) || codeIndex + 1}`,
+                                                })
+                                              }
                                               disabled={
                                                 !canEditSelectedGame || isSaving
                                               }
@@ -2931,6 +2936,7 @@ const GameEditModal = ({
                                       event.target.value,
                                     )
                                   }
+                                  placeholder="Все"
                                   labelClassName={compactLabelClassName}
                                   inputClassName={compactInputClassName}
                                 />
@@ -3514,6 +3520,11 @@ const GameEditModal = ({
                 Пока нет заданий. Добавьте первое, чтобы начать.
               </p>
             )}
+            <div className="mt-4">
+              <CabinetButton onClick={handleAddTask} variant="primary">
+                Добавить задание
+              </CabinetButton>
+            </div>
           </ModalSection>
         )}
 
@@ -3943,8 +3954,8 @@ const GameEditModal = ({
             aria-hidden="true"
           >
             <div className="flex items-center">
-              <div className="inline-flex h-10 w-8 shrink-0 items-center justify-center border-r border-cyan-400/30 bg-slate-800/70 text-cyan-200">
-                <svg viewBox="0 0 20 20" className="h-4 w-4">
+              <div className="inline-flex items-center justify-center w-8 h-10 border-r shrink-0 border-cyan-400/30 bg-slate-800/70 text-cyan-200">
+                <svg viewBox="0 0 20 20" className="w-4 h-4">
                   <circle cx="7" cy="6" r="1.1" fill="currentColor" />
                   <circle cx="13" cy="6" r="1.1" fill="currentColor" />
                   <circle cx="7" cy="10" r="1.1" fill="currentColor" />
@@ -3957,7 +3968,7 @@ const GameEditModal = ({
                 <div className="truncate text-[10px] font-semibold uppercase tracking-wide text-cyan-200/90">
                   Задание
                 </div>
-                <div className="truncate text-xs font-semibold text-white/95">
+                <div className="text-xs font-semibold truncate text-white/95">
                   {draggedTaskGhost?.title || 'Без названия'}
                 </div>
               </div>
@@ -3975,8 +3986,8 @@ const GameEditModal = ({
             aria-hidden="true"
           >
             <div className="flex items-center">
-              <div className="inline-flex h-10 w-8 shrink-0 items-center justify-center border-r border-cyan-400/30 bg-slate-800/70 text-cyan-200">
-                <svg viewBox="0 0 20 20" className="h-4 w-4">
+              <div className="inline-flex items-center justify-center w-8 h-10 border-r shrink-0 border-cyan-400/30 bg-slate-800/70 text-cyan-200">
+                <svg viewBox="0 0 20 20" className="w-4 h-4">
                   <circle cx="7" cy="6" r="1.1" fill="currentColor" />
                   <circle cx="13" cy="6" r="1.1" fill="currentColor" />
                   <circle cx="7" cy="10" r="1.1" fill="currentColor" />
@@ -3992,13 +4003,19 @@ const GameEditModal = ({
                     ? Number(draggedClueGhost.clueIndex) + 1
                     : ''}
                 </div>
-                <div className="truncate text-xs font-semibold text-white/95">
+                <div className="text-xs font-semibold truncate text-white/95">
                   {draggedClueGhost?.title || 'Без текста'}
                 </div>
               </div>
             </div>
           </div>
         ) : null}
+        <FullscreenImageViewer
+          isOpen={Boolean(selectedCodePhoto?.src)}
+          src={selectedCodePhoto?.src || ''}
+          alt={selectedCodePhoto?.alt || 'Фото кода'}
+          onClose={() => setSelectedCodePhoto(null)}
+        />
       </fieldset>
     </Modal>
   )

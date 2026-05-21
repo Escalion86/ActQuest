@@ -75,6 +75,7 @@ const extractUrlCandidates = (value) => {
 const ImagesInput = ({
   images,
   onChange,
+  onPreviewClick,
   directory,
   imageName,
   project,
@@ -294,17 +295,39 @@ const ImagesInput = ({
               }`}
             >
               <div className="relative">
-                <img
-                  src={imageUrl}
-                  alt={`uploaded-${index + 1}`}
-                  className={`object-cover ${
-                    isCirclePreview
-                      ? 'h-28 w-28 rounded-full'
-                      : isSquarePreview
-                      ? 'h-40 w-40'
-                      : 'h-28 w-full'
-                  }`}
-                />
+                {onPreviewClick ? (
+                  <button
+                    type="button"
+                    onClick={() => onPreviewClick(imageUrl, index)}
+                    className="block w-full cursor-zoom-in p-0 text-left"
+                    title="Открыть изображение"
+                    aria-label="Открыть изображение"
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={`uploaded-${index + 1}`}
+                      className={`object-cover ${
+                        isCirclePreview
+                          ? 'h-28 w-28 rounded-full'
+                          : isSquarePreview
+                          ? 'h-40 w-40'
+                          : 'h-28 w-full'
+                      }`}
+                    />
+                  </button>
+                ) : (
+                  <img
+                    src={imageUrl}
+                    alt={`uploaded-${index + 1}`}
+                    className={`object-cover ${
+                      isCirclePreview
+                        ? 'h-28 w-28 rounded-full'
+                        : isSquarePreview
+                        ? 'h-40 w-40'
+                        : 'h-28 w-full'
+                    }`}
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => handleRemove(index)}
@@ -454,6 +477,7 @@ const ImagesInput = ({
 ImagesInput.propTypes = {
   images: PropTypes.arrayOf(PropTypes.string),
   onChange: PropTypes.func,
+  onPreviewClick: PropTypes.func,
   directory: PropTypes.string,
   imageName: PropTypes.string,
   project: PropTypes.string,
@@ -467,6 +491,7 @@ ImagesInput.propTypes = {
 ImagesInput.defaultProps = {
   images: [],
   onChange: () => {},
+  onPreviewClick: null,
   directory: 'temp',
   imageName: null,
   project: process.env.NEXT_PUBLIC_ESCALIONCLOUD_PROJECT || 'actquest',
