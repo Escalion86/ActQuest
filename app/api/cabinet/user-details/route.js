@@ -17,6 +17,28 @@ const normalizeTelegramId = (value) => {
   return Number.isFinite(numeric) && numeric !== 0 ? numeric : null
 }
 
+const collectUserIdCandidates = (user) =>
+  Array.from(
+    new Set(
+      [
+        toStringId(user?._id),
+        toStringId(user?.id),
+        toStringId(user?.userId),
+        toStringId(user?.globalUserId),
+      ].filter(Boolean),
+    ),
+  )
+
+const resolveMembershipsByUserIds = async ({ TeamsUsersModel, userIds }) => {
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    return []
+  }
+
+  return TeamsUsersModel.find({ userId: { $in: userIds } })
+    .select({ teamId: 1, role: 1 })
+    .lean()
+}
+
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -63,12 +85,11 @@ export async function GET(request) {
     }
 
     const userTelegramId = normalizeTelegramId(userDoc?.telegramId)
-    const membershipUserId = toStringId(userDoc?._id)
-    const memberships = membershipUserId
-      ? await TeamsUsersModel.find({ userId: membershipUserId })
-          .select({ teamId: 1, role: 1 })
-          .lean()
-      : []
+    const targetUserIds = collectUserIdCandidates(userDoc)
+    const memberships = await resolveMembershipsByUserIds({
+      TeamsUsersModel,
+      userIds: targetUserIds,
+    })
 
     const teamIds = Array.from(
       new Set(
@@ -129,6 +150,20 @@ export async function GET(request) {
     const profile = normalizeUserProfile(userDoc)
     const role = ensureRole(userDoc?.role)
     const isAdmin = isUserAdmin({ role: session?.user?.role })
+    const sessionUserIds = collectUserIdCandidates(session?.user)
+    const isOwnProfile = targetUserIds.some((userId) =>
+      sessionUserIds.includes(userId),
+    )
+    const canViewContacts =
+      isAdmin ||
+      isOwnProfile ||
+      (sessionUserIds.length > 0 &&
+        (await resolveMembershipsByUserIds({
+          TeamsUsersModel,
+          userIds: sessionUserIds,
+        })).some((membership) =>
+          teamIds.includes(toStringId(membership?.teamId)),
+        ))
 
     const payload = {
       ...profile,
@@ -149,7 +184,7 @@ export async function GET(request) {
           : null,
     }
 
-    if (!isAdmin) {
+    if (!canViewContacts) {
       payload.phone = ''
     }
 

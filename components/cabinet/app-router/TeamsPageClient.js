@@ -1446,7 +1446,7 @@ const TeamsPage = ({
           userId={selectedMemberUserId}
           isOpen={isMemberViewModalOpen}
           onClose={closeMemberViewModal}
-          canViewContacts={isAdmin}
+          canViewContacts
         />
       </CabinetLayout>
     </>
