@@ -338,7 +338,7 @@ export default function GameTaskPreviewPageClient() {
         <section className="rounded-3xl bg-white p-6 shadow-lg dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-primary dark:text-white">
-              Текущее задание
+              Задание {Number(data?.task?.index) + 1}
             </h2>
             <span className="rounded-full border border-cyan-300 bg-cyan-100 px-2.5 py-1 text-xs font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
               {Number(data?.task?.index) + 1}. {data?.task?.title || 'Без названия'}
