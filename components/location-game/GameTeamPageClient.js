@@ -1860,15 +1860,16 @@ function GameTeamPage({
     }
 
     const normalizedMessage = postCompletionMessageHtml || ''
+    const messageStateKey = `${isBreakState ? 'break' : 'task'}:${normalizedMessage}`
     if (
       normalizedMessage &&
-      previousPostCompletionMessageRef.current !== normalizedMessage
+      previousPostCompletionMessageRef.current !== messageStateKey
     ) {
-      setIsPostCompletionMessageCollapsed(false)
+      setIsPostCompletionMessageCollapsed(!isBreakState)
     }
 
-    previousPostCompletionMessageRef.current = normalizedMessage
-  }, [postCompletionMessageHtml, shouldRenderPostCompletionMessage])
+    previousPostCompletionMessageRef.current = messageStateKey
+  }, [isBreakState, postCompletionMessageHtml, shouldRenderPostCompletionMessage])
 
   const displayedResultMessages = useMemo(() => {
     const unique = new Set()
@@ -1885,13 +1886,6 @@ function GameTeamPage({
 
     return output
   }, [resultMessages, shouldClearMessagesForActiveTask])
-
-  const latestAdminMessage = useMemo(() => {
-    const adminMessages = gameMessages.filter(
-      (message) => message?.direction === 'admin_to_team',
-    )
-    return adminMessages.length > 0 ? adminMessages[adminMessages.length - 1] : null
-  }, [gameMessages])
 
   const latestUnreadAdminMessage = useMemo(() => {
     const unreadAdminMessages = gameMessages.filter(
@@ -1914,8 +1908,7 @@ function GameTeamPage({
   const shouldShowLatestAdminMessage =
     Boolean(latestUnreadAdminMessage) && hasUnreadAdminMessages
   const displayedAdminMessage = latestUnreadAdminMessage
-  const shouldShowGameMessagesBlock =
-    shouldShowLatestAdminMessage || (!latestAdminMessage && canSendGameMessage)
+  const shouldShowGameMessagesBlock = shouldShowLatestAdminMessage
   const shouldShowLastMessage = displayedResultMessages.length > 0 && !isStoryGame
   const shouldShowAnswerForm = !isStoryGame && !isGameCompletion && !isBreakState
   const shouldShowGameCompletedBlock = !isStoryGame && isGameCompletion
