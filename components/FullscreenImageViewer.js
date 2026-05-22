@@ -10,6 +10,28 @@ const SCALE_STEP = 0.25
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const getDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y)
+const getImageFileName = (src) => {
+  const fallback = 'actquest-image'
+
+  try {
+    const url = new URL(src, window.location.href)
+    const lastPathPart = decodeURIComponent(
+      url.pathname.split('/').filter(Boolean).pop() || '',
+    )
+    return lastPathPart || fallback
+  } catch {
+    return fallback
+  }
+}
+const triggerDownload = (href, fileName) => {
+  const link = document.createElement('a')
+  link.href = href
+  link.download = fileName
+  link.rel = 'noopener noreferrer'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
 
 export default function FullscreenImageViewer({ isOpen, src, alt, onClose }) {
   const [scale, setScale] = useState(MIN_SCALE)
@@ -66,6 +88,28 @@ export default function FullscreenImageViewer({ isOpen, src, alt, onClose }) {
     setScale(MIN_SCALE)
     setOffset({ x: 0, y: 0 })
   }, [])
+
+  const downloadImage = useCallback(async () => {
+    if (!src || typeof document === 'undefined') {
+      return
+    }
+
+    const fileName = getImageFileName(src)
+
+    try {
+      const response = await fetch(src)
+      if (!response.ok) {
+        throw new Error('Image download failed')
+      }
+
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      triggerDownload(objectUrl, fileName)
+      URL.revokeObjectURL(objectUrl)
+    } catch {
+      triggerDownload(src, fileName)
+    }
+  }, [src])
 
   const onWheel = useCallback(
     (event) => {
@@ -248,6 +292,28 @@ export default function FullscreenImageViewer({ isOpen, src, alt, onClose }) {
               <path d="M15 9l6-6" />
               <path d="M15 15l6 6" />
               <path d="M9 15l-6 6" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={downloadImage}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white transition hover:bg-white/20"
+            aria-label="Скачать изображение"
+            title="Скачать изображение"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3v12" />
+              <path d="m7 10 5 5 5-5" />
+              <path d="M5 21h14" />
             </svg>
           </button>
           <button

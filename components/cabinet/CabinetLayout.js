@@ -34,6 +34,36 @@ import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 import { useSetAtom } from 'jotai'
 import { effectiveRoleAtom } from '@state/atoms/cabinetSessionAtom'
 
+const AUTH_REDIRECT_GRACE_MS = 8000
+const AUTH_REDIRECT_INITIAL_GRACE_MS = 1200
+const AUTH_RECENT_SESSION_TTL_MS = 30 * 60 * 1000
+const AUTH_LAST_SEEN_STORAGE_KEY = 'aq_cabinet_auth_last_seen_at'
+
+const readLastAuthSeenAt = () => {
+  if (typeof window === 'undefined') {
+    return 0
+  }
+
+  try {
+    const value = Number(window.localStorage.getItem(AUTH_LAST_SEEN_STORAGE_KEY))
+    return Number.isFinite(value) ? value : 0
+  } catch {
+    return 0
+  }
+}
+
+const writeLastAuthSeenAt = (value) => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(AUTH_LAST_SEEN_STORAGE_KEY, String(value))
+  } catch {
+    // ignore storage errors in restricted browsers
+  }
+}
+
 const normalizeLocationName = (locationKey) => {
   const location = locationKey ? LOCATIONS[locationKey] : null
   const rawName = location?.townRu ?? ''
@@ -295,6 +325,8 @@ const CabinetLayout = ({
   const [isRouteLoading, setIsRouteLoading] = useState(false)
   const routeLoadingTimeoutRef = useRef(null)
   const authRedirectInProgressRef = useRef(false)
+  const authRedirectTimeoutRef = useRef(null)
+  const lastAuthenticatedAtRef = useRef(0)
 
   const sessionRole = session?.user?.role ?? 'client'
   const { isDeveloper, effectiveRole, setRolePreview } =
@@ -561,12 +593,87 @@ const applyTheme = useCallback((nextTheme) => {
   }, [currentPath, session, status])
 
   useEffect(() => {
+    if (session?.user) {
+      const now = Date.now()
+      lastAuthenticatedAtRef.current = now
+      writeLastAuthSeenAt(now)
+      authRedirectInProgressRef.current = false
+    }
+  }, [session])
+
+  useEffect(() => {
+    if (authRedirectTimeoutRef.current) {
+      clearTimeout(authRedirectTimeoutRef.current)
+      authRedirectTimeoutRef.current = null
+    }
+
     if (status !== 'unauthenticated') {
       return
     }
 
-    void redirectToLogin()
-  }, [redirectToLogin, status])
+    if (!lastAuthenticatedAtRef.current) {
+      lastAuthenticatedAtRef.current = readLastAuthSeenAt()
+    }
+
+    const delay =
+      Date.now() - lastAuthenticatedAtRef.current < AUTH_RECENT_SESSION_TTL_MS
+        ? AUTH_REDIRECT_GRACE_MS
+        : AUTH_REDIRECT_INITIAL_GRACE_MS
+
+    authRedirectTimeoutRef.current = setTimeout(async () => {
+      authRedirectTimeoutRef.current = null
+
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        clientSessionDebugLog('cabinet-layout:redirect-skipped-offline', {
+          status,
+          path: currentPath || null,
+        })
+        authRedirectInProgressRef.current = false
+        return
+      }
+
+      try {
+        if (typeof update === 'function') {
+          const refreshedSession = await update()
+          if (refreshedSession?.user) {
+            clientSessionDebugLog('cabinet-layout:redirect-skipped-refreshed', {
+              path: currentPath || null,
+              userId:
+                refreshedSession?.user?.globalUserId ??
+                refreshedSession?.user?._id ??
+                null,
+            })
+            authRedirectInProgressRef.current = false
+            return
+          }
+        }
+      } catch (error) {
+        clientSessionDebugLog('cabinet-layout:session-refresh-before-redirect-error', {
+          path: currentPath || null,
+          message: error?.message ?? null,
+        })
+      }
+
+      void redirectToLogin()
+    }, delay)
+
+    return () => {
+      if (authRedirectTimeoutRef.current) {
+        clearTimeout(authRedirectTimeoutRef.current)
+        authRedirectTimeoutRef.current = null
+      }
+    }
+  }, [currentPath, redirectToLogin, session, status, update])
+
+  useEffect(
+    () => () => {
+      if (authRedirectTimeoutRef.current) {
+        clearTimeout(authRedirectTimeoutRef.current)
+        authRedirectTimeoutRef.current = null
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     if (typeof window === 'undefined') {

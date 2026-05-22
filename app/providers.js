@@ -298,7 +298,11 @@ export default function AppProviders({ children }) {
   }
 
   return (
-    <SessionProvider refetchInterval={5 * 60}>
+    <SessionProvider
+      refetchInterval={5 * 60}
+      refetchOnWindowFocus={false}
+      refetchWhenOffline={false}
+    >
       <SnackbarProvider
         maxSnack={4}
         autoHideDuration={4000}
