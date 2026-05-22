@@ -373,16 +373,16 @@ export default function GameTaskPreviewPageClient() {
         </section>
 
         {hasPostMessage ? (
-          <section className="mt-5 rounded-3xl border border-purple-500/30 bg-purple-500/10 p-6">
-            <h3 className="text-lg font-semibold text-purple-100">
+          <section className="mt-5 rounded-3xl border border-purple-200 bg-purple-50 p-6 shadow-lg dark:border-purple-500/30 dark:bg-purple-500/10 dark:shadow-slate-950/40">
+            <h3 className="text-lg font-semibold text-purple-800 dark:text-purple-100">
               Сообщение после задания
             </h3>
             <div className="mt-4">
               <RichTaskContentView
                 html={postMessageHtml}
                 text=""
-                className="text-base leading-relaxed text-purple-100"
-                textClassName="text-base leading-relaxed text-purple-100"
+                className="text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100"
+                textClassName="text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100"
                 directory={`games/preview/post-message/${String(data?.game?.id || 'draft')}/${String(data?.task?.index || 0)}`}
               />
             </div>
