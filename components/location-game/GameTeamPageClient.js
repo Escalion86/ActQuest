@@ -13,6 +13,7 @@ import normalizeAudioMessageHtml from '@helpers/normalizeAudioMessageHtml'
 import { sendImage } from '@helpers/cloudinary'
 import RichTaskContentView from '@components/game/RichTaskContentView'
 import TaskDisplayWithClues from '@components/game/TaskDisplayWithClues'
+import LinkedMessageText from '@components/game/LinkedMessageText'
 import Modal from '@components/Modal'
 
 const PHOTO_ANSWER_ACCEPT_TYPES =
@@ -2375,7 +2376,7 @@ function GameTeamPage({
                 </div>
                 {displayedAdminMessage ? (
                   <p className="mt-4 whitespace-pre-wrap break-words text-base leading-relaxed text-amber-950 dark:text-amber-50">
-                    {displayedAdminMessage.body}
+                    <LinkedMessageText text={displayedAdminMessage.body} />
                   </p>
                 ) : (
                   <p className="mt-4 text-sm text-amber-800 dark:text-amber-100">
@@ -2745,7 +2746,7 @@ function GameTeamPage({
                     <span>{formatMessageDateTime(message.createdAt)}</span>
                   </div>
                   <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">
-                    {message.body}
+                    <LinkedMessageText text={message.body} />
                   </p>
                   <p className="mt-2 text-xs opacity-80">
                     {isAdminMessage

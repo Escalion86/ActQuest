@@ -15,6 +15,7 @@ import requestApiJson from '@helpers/requestApiJson'
 import Modal from '@components/Modal'
 import FullscreenImageViewer from '@components/FullscreenImageViewer'
 import FeedbackToast from '@components/FeedbackToast'
+import LinkedMessageText from '@components/game/LinkedMessageText'
 import CardActionIconButton, {
   EditCardIcon,
   TargetCardIcon,
@@ -2191,7 +2192,7 @@ export default function GameControlPageClient({ session: _session }) {
                     <span>{formatMessageDateTime(message.createdAt)}</span>
                   </div>
                   <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">
-                    {message.body}
+                    <LinkedMessageText text={message.body} />
                   </p>
                   {isAdminMessage && message.pushRequested ? (
                     <p className="mt-2 text-xs opacity-80">
