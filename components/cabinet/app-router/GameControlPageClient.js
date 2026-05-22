@@ -318,8 +318,7 @@ const getMainCodesProgress = (team, tasks) => {
   const remainingCount = Math.max(requiredCount - foundCount, 0)
 
   return {
-    remainingCodes:
-      remainingCount > 0 ? remainingAllCodes.slice(0, remainingCount) : [],
+    remainingCodes: remainingAllCodes,
     remainingCount,
     foundCount,
     requiredCount,
