@@ -32,6 +32,12 @@ const triggerDownload = (href, fileName) => {
   link.click()
   link.remove()
 }
+const buildDownloadUrl = (src, fileName) => {
+  const params = new URLSearchParams()
+  params.set('url', src)
+  params.set('filename', fileName)
+  return `/api/public/image-download?${params.toString()}`
+}
 
 export default function FullscreenImageViewer({ isOpen, src, alt, onClose }) {
   const [scale, setScale] = useState(MIN_SCALE)
@@ -96,19 +102,7 @@ export default function FullscreenImageViewer({ isOpen, src, alt, onClose }) {
 
     const fileName = getImageFileName(src)
 
-    try {
-      const response = await fetch(src)
-      if (!response.ok) {
-        throw new Error('Image download failed')
-      }
-
-      const blob = await response.blob()
-      const objectUrl = URL.createObjectURL(blob)
-      triggerDownload(objectUrl, fileName)
-      URL.revokeObjectURL(objectUrl)
-    } catch {
-      triggerDownload(src, fileName)
-    }
+    triggerDownload(buildDownloadUrl(src, fileName), fileName)
   }, [src])
 
   const onWheel = useCallback(
