@@ -830,6 +830,13 @@ const buildAudioDownloadFilename = ({ title, src }) => {
     : `${safeTitle}${extension}`
 }
 
+const buildMediaDownloadHref = ({ src, fileName }) => {
+  const params = new URLSearchParams()
+  params.set('url', src)
+  params.set('filename', fileName)
+  return `/api/public/media-download?${params.toString()}`
+}
+
 const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
   const audioRef = useRef(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -964,30 +971,31 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
     event.stopPropagation()
     if (!src) return
 
-    const fallbackOpen = () => {
-      if (typeof window !== 'undefined') {
-        window.open(src, '_blank', 'noopener,noreferrer')
-      }
-    }
+    const fileName = buildAudioDownloadFilename({ title, src })
+    const downloadHref = buildMediaDownloadHref({ src, fileName })
 
     try {
-      const response = await fetch(src)
+      const response = await fetch(downloadHref)
       if (!response.ok) {
-        fallbackOpen()
-        return
+        throw new Error('Audio download failed')
       }
 
       const blob = await response.blob()
       const blobUrl = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = blobUrl
-      link.download = buildAudioDownloadFilename({ title, src })
+      link.download = fileName
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(blobUrl)
     } catch {
-      fallbackOpen()
+      const link = document.createElement('a')
+      link.href = downloadHref
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     }
   }
 
@@ -1072,9 +1080,11 @@ const AudioMessageNodeView = ({ node, updateAttributes, editor }) => {
           </div>
           <a
             className="aq-audio-message__download-btn"
-            href={src}
+            href={buildMediaDownloadHref({
+              src,
+              fileName: buildAudioDownloadFilename({ title, src }),
+            })}
             download
-            target="_blank"
             rel="noopener noreferrer"
             title="Скачать аудио"
             aria-label="Скачать аудио"

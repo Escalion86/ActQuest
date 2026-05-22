@@ -35,6 +35,42 @@ const getAttribute = (attrs, name) => {
   return match?.[1] ? decodeHtmlEntities(match[1]) : ''
 }
 
+const getAudioDownloadFileName = ({ src, title }) => {
+  const safeTitle = String(title || 'audio')
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+
+  let extension = '.mp3'
+  try {
+    const url = new URL(src, 'https://actquest.ru')
+    const extensionMatch = url.pathname.match(/\.([a-z0-9]{2,6})$/i)
+    if (extensionMatch?.[1]) {
+      extension = `.${extensionMatch[1].toLowerCase()}`
+    }
+  } catch {
+    const extensionMatch = String(src || '').match(/\.([a-z0-9]{2,6})(?:[?#]|$)/i)
+    if (extensionMatch?.[1]) {
+      extension = `.${extensionMatch[1].toLowerCase()}`
+    }
+  }
+
+  if (!safeTitle) {
+    return `audio${extension}`
+  }
+
+  return safeTitle.toLowerCase().endsWith(extension)
+    ? safeTitle
+    : `${safeTitle}${extension}`
+}
+
+const buildDownloadHref = ({ src, title }) => {
+  const params = new URLSearchParams()
+  params.set('url', src)
+  params.set('filename', getAudioDownloadFileName({ src, title }))
+  return `/api/public/media-download?${params.toString()}`
+}
+
 const normalizeClassValue = (attrs) => {
   const classValue = getAttribute(attrs, 'class')
   const classes = new Set(
@@ -50,6 +86,7 @@ const normalizeClassValue = (attrs) => {
 const buildAudioMessageInnerHtml = ({ src, title }) => {
   const safeSrc = escapeHtmlAttribute(src)
   const safeTitle = escapeHtmlText(title || 'Аудио')
+  const safeDownloadHref = escapeHtmlAttribute(buildDownloadHref({ src, title }))
 
   return `
 <div class="aq-audio-message__meta" aria-hidden="true">
@@ -60,9 +97,8 @@ const buildAudioMessageInnerHtml = ({ src, title }) => {
   <audio controls preload="metadata" src="${safeSrc}"></audio>
   <a
     class="aq-audio-message__download"
-    href="${safeSrc}"
+    href="${safeDownloadHref}"
     download
-    target="_blank"
     rel="noopener noreferrer"
     title="Скачать аудио"
     aria-label="Скачать аудио"
@@ -85,16 +121,22 @@ const normalizeAudioMessageHtml = (value) => {
   return source.replace(
     /<audio-message([^>]*)>([\s\S]*?)<\/audio-message>/gi,
     (match, attrs, inner) => {
-      if (String(inner || '').includes('aq-audio-message__native-wrap')) {
-        return match
-      }
-
       const src = getAttribute(attrs, 'src')
       if (!src) {
         return match
       }
 
       const title = getAttribute(attrs, 'title') || 'Аудио'
+      if (String(inner || '').includes('aq-audio-message__native-wrap')) {
+        const safeDownloadHref = escapeHtmlAttribute(
+          buildDownloadHref({ src, title }),
+        )
+        return match.replace(
+          /(<a\b[^>]*class="[^"]*\baq-audio-message__download\b[^"]*"[^>]*\bhref=")[^"]*(")/i,
+          `$1${safeDownloadHref}$2`,
+        )
+      }
+
       const className = normalizeClassValue(attrs)
       const safeSrc = escapeHtmlAttribute(src)
       const safeTitle = escapeHtmlAttribute(title)
