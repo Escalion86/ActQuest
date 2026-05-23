@@ -24,6 +24,7 @@ import CardActionIconButton, {
 } from '@components/cabinet/CardActionIconButton'
 import GameTasksViewModal from '@components/modals/GameTasksViewModal'
 import GameControlTeamStatsModal from '@components/modals/GameControlTeamStatsModal'
+import GamePushBroadcastModal from '@components/modals/GamePushBroadcastModal'
 
 const formatTime = (totalSeconds) => {
   const sec = Math.max(0, Math.floor(totalSeconds))
@@ -33,11 +34,18 @@ const formatTime = (totalSeconds) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-const formatForcedCluesCount = (count) => `${Math.max(0, Number(count) || 0)} досрочно`
+const formatForcedCluesCount = (count) =>
+  `${Math.max(0, Number(count) || 0)} досрочно`
 
 const normalizeSeconds = (value, fallback = 0) => {
   const seconds = Number(value)
   return Number.isFinite(seconds) ? seconds : fallback
+}
+
+const formatMinutesRounded = (seconds) => {
+  const normalizedSeconds = normalizeSeconds(seconds, 0)
+  if (normalizedSeconds <= 0) return 0
+  return Math.max(1, Math.round(normalizedSeconds / 60))
 }
 
 const AUTO_REFRESH_OPTIONS = [
@@ -95,12 +103,13 @@ const adjustChatTextareaHeight = (textarea) => {
   const maxHeight = lineHeight * 5 + paddingTop + paddingBottom
   const nextHeight = Math.min(textarea.scrollHeight, maxHeight)
   textarea.style.height = `${nextHeight}px`
-  textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden'
+  textarea.style.overflowY =
+    textarea.scrollHeight > maxHeight ? 'auto' : 'hidden'
 }
 
 const ChatCardIcon = () => (
   <svg
-    className="h-5 w-5"
+    className="w-5 h-5"
     viewBox="0 0 20 20"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -176,7 +185,7 @@ const renderCodesBadges = (codes, tone = 'default', options = {}) => {
       ? 'border-emerald-400 bg-emerald-100 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200'
       : tone === 'penalty'
         ? 'border-rose-400 bg-rose-100 text-rose-800 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200'
-      : tone === 'muted'
+        : tone === 'muted'
           ? 'border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/12 dark:text-slate-300'
           : 'border-cyan-400 bg-cyan-100 text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/12 dark:text-cyan-200'
 
@@ -453,12 +462,7 @@ const formatStoryHistoryDate = (value) => {
   }).format(date)
 }
 
-const StoryControlTeamCard = ({
-  game,
-  team,
-  onMutation,
-  isMutating,
-}) => {
+const StoryControlTeamCard = ({ game, team, onMutation, isMutating }) => {
   const [selectedItemId, setSelectedItemId] = useState('')
   const [selectedNodeId, setSelectedNodeId] = useState('')
   const [selectedEndingId, setSelectedEndingId] = useState('')
@@ -470,7 +474,9 @@ const StoryControlTeamCard = ({
   const progress = team?.progress || {}
   const inventory = Array.isArray(progress?.inventory) ? progress.inventory : []
   const activeInventory = inventory.filter((item) => item?.status === 'active')
-  const consumedInventory = inventory.filter((item) => item?.status === 'consumed')
+  const consumedInventory = inventory.filter(
+    (item) => item?.status === 'consumed',
+  )
   const history = Array.isArray(progress?.history) ? progress.history : []
   const recentHistory = history.slice(-8).reverse()
   const availableNodeIds = Array.isArray(team?.availableNodeIds)
@@ -484,7 +490,9 @@ const StoryControlTeamCard = ({
     nodes.map((node) => [String(node?.id || ''), node]).filter(([id]) => id),
   )
   const endingsById = new Map(
-    endings.map((ending) => [String(ending?.id || ''), ending]).filter(([id]) => id),
+    endings
+      .map((ending) => [String(ending?.id || ''), ending])
+      .filter(([id]) => id),
   )
 
   const selectedItem = selectedItemId || items[0]?.id || ''
@@ -499,7 +507,7 @@ const StoryControlTeamCard = ({
     })
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/60">
+    <article className="p-4 bg-white border rounded-xl border-slate-200 dark:border-slate-700/50 dark:bg-slate-800/60">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -517,13 +525,13 @@ const StoryControlTeamCard = ({
               : ''}
           </p>
         </div>
-        <span className="rounded-full border border-cyan-300 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-800 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-100">
+        <span className="px-3 py-1 text-xs font-semibold border rounded-full border-cyan-300 bg-cyan-50 text-cyan-800 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-100">
           Активных локаций: {availableNodeIds.length}
         </span>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+      <div className="grid gap-3 mt-4 sm:grid-cols-2">
+        <div className="p-3 border rounded-lg border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/50">
           <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
             Активные локации
           </p>
@@ -542,7 +550,7 @@ const StoryControlTeamCard = ({
             )}
           </div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+        <div className="p-3 border rounded-lg border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/50">
           <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
             Инвентарь
           </p>
@@ -568,14 +576,16 @@ const StoryControlTeamCard = ({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+      <div className="grid gap-3 p-3 mt-4 border rounded-lg border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/50">
         <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
           <select
             value={selectedItem}
             onChange={(event) => setSelectedItemId(event.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+            className="px-3 py-2 text-sm bg-white border rounded-lg border-slate-300 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
           >
-            {items.length === 0 ? <option value="">Нет предметов</option> : null}
+            {items.length === 0 ? (
+              <option value="">Нет предметов</option>
+            ) : null}
             {items.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.title || item.id}
@@ -586,7 +596,7 @@ const StoryControlTeamCard = ({
             type="button"
             disabled={isMutating || !selectedItem}
             onClick={() => run('grant-item', { itemId: selectedItem })}
-            className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="px-3 py-2 text-sm font-semibold text-white transition rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Выдать
           </button>
@@ -594,7 +604,7 @@ const StoryControlTeamCard = ({
             type="button"
             disabled={isMutating || !selectedItem}
             onClick={() => run('consume-item', { itemId: selectedItem })}
-            className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="px-3 py-2 text-sm font-semibold text-white transition rounded-lg bg-rose-600 hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Изъять
           </button>
@@ -604,7 +614,7 @@ const StoryControlTeamCard = ({
           <select
             value={selectedNode}
             onChange={(event) => setSelectedNodeId(event.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+            className="px-3 py-2 text-sm bg-white border rounded-lg border-slate-300 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
           >
             {nodes.length === 0 ? <option value="">Нет локаций</option> : null}
             {nodes.map((node) => (
@@ -617,7 +627,7 @@ const StoryControlTeamCard = ({
             type="button"
             disabled={isMutating || !selectedNode}
             onClick={() => run('unlock-node', { nodeId: selectedNode })}
-            className="rounded-lg bg-cyan-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="px-3 py-2 text-sm font-semibold text-white transition rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Открыть
           </button>
@@ -625,7 +635,7 @@ const StoryControlTeamCard = ({
             type="button"
             disabled={isMutating || !selectedNode}
             onClick={() => run('complete-node', { nodeId: selectedNode })}
-            className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="px-3 py-2 text-sm font-semibold text-white transition rounded-lg bg-slate-700 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Завершить
           </button>
@@ -637,7 +647,7 @@ const StoryControlTeamCard = ({
             value={scoreDelta}
             onChange={(event) => setScoreDelta(event.target.value)}
             placeholder="Баллы, например 5 или -3"
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+            className="px-3 py-2 text-sm bg-white border rounded-lg border-slate-300 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
           />
           <button
             type="button"
@@ -649,7 +659,7 @@ const StoryControlTeamCard = ({
               })
               setScoreDelta('')
             }}
-            className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="px-3 py-2 text-sm font-semibold text-white transition rounded-lg bg-amber-600 hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Изменить баллы
           </button>
@@ -659,9 +669,11 @@ const StoryControlTeamCard = ({
           <select
             value={selectedEnding}
             onChange={(event) => setSelectedEndingId(event.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+            className="px-3 py-2 text-sm bg-white border rounded-lg border-slate-300 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
           >
-            {endings.length === 0 ? <option value="">Нет концовок</option> : null}
+            {endings.length === 0 ? (
+              <option value="">Нет концовок</option>
+            ) : null}
             {endings.map((ending) => (
               <option key={ending.id} value={ending.id}>
                 {ending.title || ending.id}
@@ -672,12 +684,14 @@ const StoryControlTeamCard = ({
             type="button"
             disabled={isMutating || !selectedEnding}
             onClick={() => {
-              if (!window.confirm('Завершить story-квест выбранной концовкой?')) {
+              if (
+                !window.confirm('Завершить story-квест выбранной концовкой?')
+              ) {
                 return
               }
               void run('finish', { endingId: selectedEnding })
             }}
-            className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="px-3 py-2 text-sm font-semibold text-white transition rounded-lg bg-violet-600 hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Финал
           </button>
@@ -685,7 +699,7 @@ const StoryControlTeamCard = ({
       </div>
 
       {recentHistory.length > 0 ? (
-        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+        <div className="p-3 mt-4 border rounded-lg border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/50">
           <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
             История
           </p>
@@ -693,24 +707,33 @@ const StoryControlTeamCard = ({
             {recentHistory.map((entry) => (
               <div
                 key={entry.id}
-                className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600 dark:text-slate-300"
+                className="flex flex-wrap items-center text-xs gap-x-2 gap-y-1 text-slate-600 dark:text-slate-300"
               >
                 <span className="font-mono text-slate-500">
                   {formatStoryHistoryDate(entry.at)}
                 </span>
                 <span className="font-semibold">{entry.type}</span>
                 {entry.nodeId ? (
-                  <span>{nodesById.get(entry.nodeId)?.title || entry.nodeId}</span>
+                  <span>
+                    {nodesById.get(entry.nodeId)?.title || entry.nodeId}
+                  </span>
                 ) : null}
                 {entry.itemId ? (
-                  <span>{itemsById.get(entry.itemId)?.title || entry.itemId}</span>
+                  <span>
+                    {itemsById.get(entry.itemId)?.title || entry.itemId}
+                  </span>
                 ) : null}
                 {entry.endingId ? (
                   <span>
                     {endingsById.get(entry.endingId)?.title || entry.endingId}
                   </span>
                 ) : null}
-                {entry.points ? <span>{entry.points > 0 ? '+' : ''}{entry.points}</span> : null}
+                {entry.points ? (
+                  <span>
+                    {entry.points > 0 ? '+' : ''}
+                    {entry.points}
+                  </span>
+                ) : null}
               </div>
             ))}
           </div>
@@ -756,7 +779,7 @@ const StoryControlDashboard = ({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-violet-300 bg-violet-50 p-4 dark:border-violet-500/35 dark:bg-violet-500/10">
+      <div className="p-4 border rounded-xl border-violet-300 bg-violet-50 dark:border-violet-500/35 dark:bg-violet-500/10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-violet-950 dark:text-violet-50">
@@ -779,7 +802,7 @@ const StoryControlDashboard = ({
           </button>
         </div>
         {error ? (
-          <p className="mt-3 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+          <p className="px-3 py-2 mt-3 text-sm border rounded-lg border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
             {error}
           </p>
         ) : null}
@@ -803,7 +826,7 @@ const StoryControlDashboard = ({
           ))}
         </div>
       ) : !isLoading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-600 dark:border-slate-700/50 dark:bg-slate-800/40 dark:text-slate-400">
+        <div className="p-8 text-center bg-white border rounded-xl border-slate-200 text-slate-600 dark:border-slate-700/50 dark:bg-slate-800/40 dark:text-slate-400">
           Нет зарегистрированных команд
         </div>
       ) : null}
@@ -845,6 +868,8 @@ export default function GameControlPageClient({ session: _session }) {
   const [selectedTeamForStatsId, setSelectedTeamForStatsId] = useState('')
   const [selectedTeamForContactsId, setSelectedTeamForContactsId] = useState('')
   const [selectedTeamForPushId, setSelectedTeamForPushId] = useState('')
+  const [isGameConversationsModalOpen, setIsGameConversationsModalOpen] =
+    useState(false)
   const [selectedTeamForManualActionsId, setSelectedTeamForManualActionsId] =
     useState('')
   const [toastEvent, setToastEvent] = useState(null)
@@ -882,7 +907,10 @@ export default function GameControlPageClient({ session: _session }) {
   })
   const error = statusError?.message || null
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null
-  const isStoryGame = String(data?.gameType || '').trim().toLowerCase() === 'story'
+  const isStoryGame =
+    String(data?.gameType || '')
+      .trim()
+      .toLowerCase() === 'story'
   const {
     data: storyControlData,
     error: storyControlError,
@@ -995,8 +1023,9 @@ export default function GameControlPageClient({ session: _session }) {
     }
     const teamsList = Array.isArray(data?.teams) ? data.teams : []
     return (
-      teamsList.find((item) => String(item?.teamId) === selectedTeamForPushId) ||
-      null
+      teamsList.find(
+        (item) => String(item?.teamId) === selectedTeamForPushId,
+      ) || null
     )
   }, [data?.teams, selectedTeamForPushId])
   const isGameWideMessageModal = selectedTeamForPushId === '__game__'
@@ -1016,9 +1045,7 @@ export default function GameControlPageClient({ session: _session }) {
     }
     return Math.max(0, Math.floor((nowTs - startMs) / 1000))
   }, [data?.dateStartFact, nowTs])
-  const lightThemeOverrides = isLightTheme
-    ? 'bg-slate-50 text-slate-900'
-    : ''
+  const lightThemeOverrides = isLightTheme ? 'bg-slate-50 text-slate-900' : ''
 
   useEffect(() => {
     if (!selectedTeamForManualActionsId) {
@@ -1133,22 +1160,28 @@ export default function GameControlPageClient({ session: _session }) {
     }
   }, [closeManualActionsModal, runManualAction, showToast])
 
-  const handleOpenTeamPushModal = useCallback((team) => {
-    const teamId = String(team?.teamId || '').trim()
-    if (!teamId) {
-      showToast('error', 'Не удалось определить команду для отправки.')
-      return
-    }
-    setSelectedTeamForPushId(teamId)
-    setTeamPushMessage('')
-    setTeamPushSendPush(false)
-  }, [showToast])
+  const handleOpenTeamPushModal = useCallback(
+    (team) => {
+      const teamId = String(team?.teamId || '').trim()
+      if (!teamId) {
+        showToast('error', 'Не удалось определить команду для отправки.')
+        return
+      }
+      setSelectedTeamForPushId(teamId)
+      setTeamPushMessage('')
+      setTeamPushSendPush(false)
+    },
+    [showToast],
+  )
 
-  const handleOpenGameWideMessageModal = useCallback(() => {
-    setSelectedTeamForPushId('__game__')
-    setTeamPushMessage('')
-    setTeamPushSendPush(false)
+  const handleOpenGameConversationsModal = useCallback(() => {
+    setIsGameConversationsModalOpen(true)
   }, [])
+
+  const handleCloseGameConversationsModal = useCallback(() => {
+    setIsGameConversationsModalOpen(false)
+    void refetchStatus()
+  }, [refetchStatus])
 
   const loadTeamMessageHistory = useCallback(async () => {
     if (!gameId || !selectedTeamForPushId) return
@@ -1256,10 +1289,7 @@ export default function GameControlPageClient({ session: _session }) {
         )
 
         if (!json?.success) {
-          showToast(
-            'error',
-            json?.error || 'Не удалось отправить сообщение.',
-          )
+          showToast('error', json?.error || 'Не удалось отправить сообщение.')
           return
         }
 
@@ -1372,7 +1402,7 @@ export default function GameControlPageClient({ session: _session }) {
         <button
           type="button"
           onClick={() => router.back()}
-          className="mt-4 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+          className="mt-4 text-sm transition text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
         >
           ← Назад
         </button>
@@ -1382,8 +1412,24 @@ export default function GameControlPageClient({ session: _session }) {
 
   if (!data) return null
 
-  const { gameName, gameType, tasksCount, taskDuration, cluesDuration, teams } =
-    data
+  const {
+    gameName,
+    gameStatus,
+    gameType,
+    tasksCount,
+    taskDuration,
+    cluesDuration,
+    breakDuration,
+    teams,
+  } = data
+  const taskDurationMinutes = formatMinutesRounded(taskDuration)
+  const cluesDurationMinutes = formatMinutesRounded(cluesDuration)
+  const breakDurationMinutes = formatMinutesRounded(breakDuration)
+  const totalUnreadTeamMessagesCount = teams.reduce(
+    (sum, team) =>
+      sum + Math.max(0, Number(team?.unreadTeamMessagesCount) || 0),
+    0,
+  )
   const resolvedStoryControlError = storyControlError?.message || ''
   return (
     <div
@@ -1396,14 +1442,30 @@ export default function GameControlPageClient({ session: _session }) {
             <button
               type="button"
               onClick={() => router.back()}
-              className="text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              className="text-sm transition text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             >
               ← Назад
             </button>
             <button
               type="button"
+              onClick={handleOpenGameConversationsModal}
+              className="relative inline-flex items-center justify-center w-8 h-8 transition border rounded-full border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
+              aria-label="Открыть переписку с командами"
+              title="Открыть переписку с командами"
+            >
+              <ChatCardIcon />
+              {totalUnreadTeamMessagesCount > 0 ? (
+                <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow ring-2 ring-slate-950">
+                  {totalUnreadTeamMessagesCount > 99
+                    ? '99+'
+                    : totalUnreadTeamMessagesCount}
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="button"
               onClick={toggleThemeMode}
-              className="inline-flex items-center justify-center w-8 h-8 ml-auto transition border rounded-full border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+              className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
               aria-label={
                 themeMode === 'dark'
                   ? 'Включить светлую тему'
@@ -1436,7 +1498,19 @@ export default function GameControlPageClient({ session: _session }) {
                     ? 'задания'
                     : 'заданий'}
                 {' · '}
-                {Math.floor(taskDuration / 60)} мин на задание
+                {taskDurationMinutes} мин на задание
+                {cluesDurationMinutes > 0 ? (
+                  <>
+                    {' · '}
+                    подсказки каждые {cluesDurationMinutes} мин
+                  </>
+                ) : null}
+                {breakDurationMinutes > 0 ? (
+                  <>
+                    {' · '}
+                    перерыв {breakDurationMinutes} мин
+                  </>
+                ) : null}
               </>
             ) : null}
           </p>
@@ -1478,13 +1552,6 @@ export default function GameControlPageClient({ session: _session }) {
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={handleOpenGameWideMessageModal}
-            className="inline-flex h-8 items-center rounded-full border border-amber-400 bg-amber-100 px-3 text-xs font-semibold text-amber-800 transition hover:bg-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
-          >
-            Сообщение всем
-          </button>
           <button
             type="button"
             onClick={() => refetchStatus()}
@@ -1533,458 +1600,503 @@ export default function GameControlPageClient({ session: _session }) {
         />
       ) : (
         <>
-      {/* Сводка */}
-      <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
-        <div className="p-3 text-center border rounded-xl border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/60">
-          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {teams.length}
+          {/* Сводка */}
+          <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
+            <div className="p-3 text-center bg-white border rounded-xl border-slate-200 dark:border-slate-700/50 dark:bg-slate-800/60">
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {teams.length}
+              </div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                Команд
+              </div>
+            </div>
+            <div className="p-3 text-center border border-green-300 rounded-xl bg-green-50 dark:border-green-500/30 dark:bg-green-900/10">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                {teams.filter((t) => t.isTeamFinished).length}
+              </div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                Финишировали
+              </div>
+            </div>
+            <div className="p-3 text-center border rounded-xl border-cyan-300 bg-cyan-50 dark:border-cyan-500/30 dark:bg-cyan-900/10">
+              <div className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
+                {
+                  teams.filter(
+                    (t) =>
+                      !t.isTeamFinished &&
+                      !t.isTeamOnBreak &&
+                      !t.isActiveTaskFailed,
+                  ).length
+                }
+              </div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                В игре
+              </div>
+            </div>
+            <div className="p-3 text-center border rounded-xl border-amber-300 bg-amber-50 dark:border-yellow-500/30 dark:bg-yellow-900/10">
+              <div className="text-2xl font-bold text-amber-600 dark:text-yellow-400">
+                {teams.filter((t) => t.isTeamOnBreak).length}
+              </div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                На перерыве
+              </div>
+            </div>
           </div>
-          <div className="text-xs text-slate-600 dark:text-slate-400">Команд</div>
-        </div>
-        <div className="p-3 text-center border rounded-xl border-green-300 bg-green-50 dark:border-green-500/30 dark:bg-green-900/10">
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {teams.filter((t) => t.isTeamFinished).length}
-          </div>
-          <div className="text-xs text-slate-600 dark:text-slate-400">Финишировали</div>
-        </div>
-        <div className="p-3 text-center border rounded-xl border-cyan-300 bg-cyan-50 dark:border-cyan-500/30 dark:bg-cyan-900/10">
-          <div className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
-            {
-              teams.filter(
-                (t) =>
-                  !t.isTeamFinished &&
-                  !t.isTeamOnBreak &&
-                  !t.isActiveTaskFailed,
-              ).length
-            }
-          </div>
-          <div className="text-xs text-slate-600 dark:text-slate-400">В игре</div>
-        </div>
-        <div className="p-3 text-center border rounded-xl border-amber-300 bg-amber-50 dark:border-yellow-500/30 dark:bg-yellow-900/10">
-          <div className="text-2xl font-bold text-amber-600 dark:text-yellow-400">
-            {teams.filter((t) => t.isTeamOnBreak).length}
-          </div>
-          <div className="text-xs text-slate-600 dark:text-slate-400">На перерыве</div>
-        </div>
-      </div>
 
-      {/* Команды */}
-      {teams.length === 0 ? (
-        <div className="p-8 text-center border rounded-xl border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/40">
-          <p className="text-slate-600 dark:text-slate-400">Нет зарегистрированных команд</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {teams.map((team, index) => {
-            const activeTask =
-              Array.isArray(data?.tasks) &&
-              Number.isInteger(team?.activeTaskIndex) &&
-              team.activeTaskIndex >= 0
-                ? data.tasks[team.activeTaskIndex]
-                : null
-            const codePhotoLookup = buildCodePhotoLookup(activeTask)
-            const getPhotoByCode = (codeKey) =>
-              (codePhotoLookup instanceof Map
-                ? codePhotoLookup.get(codeKey)
-                : '') || ''
-            const handleCodeBadgeClick = ({ code, photoUrl }) =>
-              setSelectedCodePhoto({
-                code: String(code || ''),
-                photoUrl: String(photoUrl || ''),
-              })
-            const foundBonusEntries = team.bonusCodeItems?.length
-              ? team.bonusCodeItems
-              : team.bonusCodes
-            const foundPenaltyEntries = team.penaltyCodeItems?.length
-              ? team.penaltyCodeItems
-              : team.penaltyCodes
-            const foundMainEntries = normalizeCodeEntries(team.findedCodes)
-            const mainCodesProgress = getMainCodesProgress(team, data?.tasks)
-            const remainingBonusEntries = getRemainingCodeEntries({
-              team,
-              tasks: data?.tasks,
-              taskFieldName: 'bonusCodes',
-              foundEntries: foundBonusEntries,
-            })
-            const remainingPenaltyEntries = getRemainingCodeEntries({
-              team,
-              tasks: data?.tasks,
-              taskFieldName: 'penaltyCodes',
-              foundEntries: foundPenaltyEntries,
-            })
-            const shouldShowBonusCodes =
-              normalizeCodeEntries(foundBonusEntries).length > 0 ||
-              remainingBonusEntries.length > 0
-            const shouldShowPenaltyCodes =
-              normalizeCodeEntries(foundPenaltyEntries).length > 0 ||
-              remainingPenaltyEntries.length > 0
+          {/* Команды */}
+          {teams.length === 0 ? (
+            <div className="p-8 text-center bg-white border rounded-xl border-slate-200 dark:border-slate-700/50 dark:bg-slate-800/40">
+              <p className="text-slate-600 dark:text-slate-400">
+                Нет зарегистрированных команд
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {teams.map((team, index) => {
+                const activeTask =
+                  Array.isArray(data?.tasks) &&
+                  Number.isInteger(team?.activeTaskIndex) &&
+                  team.activeTaskIndex >= 0
+                    ? data.tasks[team.activeTaskIndex]
+                    : null
+                const codePhotoLookup = buildCodePhotoLookup(activeTask)
+                const getPhotoByCode = (codeKey) =>
+                  (codePhotoLookup instanceof Map
+                    ? codePhotoLookup.get(codeKey)
+                    : '') || ''
+                const handleCodeBadgeClick = ({ code, photoUrl }) =>
+                  setSelectedCodePhoto({
+                    code: String(code || ''),
+                    photoUrl: String(photoUrl || ''),
+                  })
+                const foundBonusEntries = team.bonusCodeItems?.length
+                  ? team.bonusCodeItems
+                  : team.bonusCodes
+                const foundPenaltyEntries = team.penaltyCodeItems?.length
+                  ? team.penaltyCodeItems
+                  : team.penaltyCodes
+                const foundMainEntries = normalizeCodeEntries(team.findedCodes)
+                const mainCodesProgress = getMainCodesProgress(
+                  team,
+                  data?.tasks,
+                )
+                const remainingBonusEntries = getRemainingCodeEntries({
+                  team,
+                  tasks: data?.tasks,
+                  taskFieldName: 'bonusCodes',
+                  foundEntries: foundBonusEntries,
+                })
+                const remainingPenaltyEntries = getRemainingCodeEntries({
+                  team,
+                  tasks: data?.tasks,
+                  taskFieldName: 'penaltyCodes',
+                  foundEntries: foundPenaltyEntries,
+                })
+                const shouldShowBonusCodes =
+                  normalizeCodeEntries(foundBonusEntries).length > 0 ||
+                  remainingBonusEntries.length > 0
+                const shouldShowPenaltyCodes =
+                  normalizeCodeEntries(foundPenaltyEntries).length > 0 ||
+                  remainingPenaltyEntries.length > 0
 
-            return (
-              <div
-                key={team.teamId}
-                className={`rounded-xl border p-4 transition ${teamStatusColor(team)}`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-500">
-                      #{index + 1}
-                    </span>
-                    <span
-                      className={`inline-block h-2.5 w-2.5 rounded-full ${statusDotColor(team)}`}
-                    />
-                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                      {team.teamName}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:border-slate-600/50 dark:bg-slate-700/50 dark:text-slate-300">
-                      {teamStatusLabel(team)}
-                    </span>
-                    <CardActionIconButton
-                      onClick={() => {
-                        setSelectedTeamForTaskPreviewId(String(team.teamId || ''))
-                        setIsTasksViewModalOpen(true)
-                      }}
-                      label="Открыть текущее задание команды"
-                      title="Текущее задание команды"
-                      className="w-8 h-8"
-                    >
-                      <TargetCardIcon />
-                    </CardActionIconButton>
-                    <CardActionIconButton
-                      onClick={() =>
-                        setSelectedTeamForStatsId(String(team.teamId || ''))
-                      }
-                      label="Открыть статистику команды"
-                      title="Статистика команды"
-                      className="w-8 h-8"
-                    >
-                      <TeamStatsCardIcon />
-                    </CardActionIconButton>
-                  <CardActionIconButton
-                    onClick={() =>
-                      setSelectedTeamForContactsId(String(team.teamId || ''))
-                      }
-                      label="Просмотр участников команды"
-                      title="Участники и контакты"
-                      className="w-8 h-8"
+                return (
+                  <div
+                    key={team.teamId}
+                    className={`rounded-xl border p-4 transition ${teamStatusColor(team)}`}
                   >
-                    <TeamCardIcon />
-                  </CardActionIconButton>
-                  <CardActionIconButton
-                    onClick={() => handleOpenTeamPushModal(team)}
-                    label="Отправить сообщение команде"
-                    title="Отправить сообщение команде"
-                    className="relative w-8 h-8"
-                    disabled={teamPushLoadingId === String(team.teamId || '')}
-                  >
-                    <ChatCardIcon />
-                    {Number(team.unreadTeamMessagesCount || 0) > 0 ? (
-                      <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow">
-                        {Number(team.unreadTeamMessagesCount || 0) > 99
-                          ? '99+'
-                          : Number(team.unreadTeamMessagesCount || 0)}
-                      </span>
-                    ) : null}
-                  </CardActionIconButton>
-                  {!team.isTeamOnBreak ? (
-                    <CardActionIconButton
-                        onClick={() =>
-                          setSelectedTeamForManualActionsId(
-                            String(team.teamId || ''),
-                          )
-                        }
-                        label="Ручные действия с кодами"
-                        title="Ручные действия"
-                        className="w-8 h-8"
-                      >
-                        <EditCardIcon />
-                      </CardActionIconButton>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="mt-3 space-y-2 text-sm">
-                  <div>
-                    <span className="text-slate-600 dark:text-slate-500">Задание: </span>
-                    <span className="font-medium text-slate-800 dark:text-slate-200">
-                      {team.isTeamFinished
-                        ? 'Завершено'
-                        : `${team.activeTaskIndex + 1}. ${team.currentTaskTitle || 'Без названия'}`}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-600 dark:text-slate-500">Основные коды: </span>
-                    <span className="font-medium text-green-400">
-                      {team.findedCodesCount}
-                    </span>
-                    {team.wrongCodesCount > 0 && (
-                      <button
-                        type="button"
-                        className="ml-1 text-rose-600 underline transition decoration-dotted underline-offset-2 hover:text-rose-500 dark:text-red-400 dark:hover:text-red-300"
-                        onClick={() =>
-                          setWrongCodesModalData({
-                            teamName: String(team.teamName || ''),
-                            taskLabel: team.isTeamFinished
-                              ? 'Завершено'
-                              : `${team.activeTaskIndex + 1}. ${team.currentTaskTitle || 'Без названия'}`,
-                            wrongCodes: normalizeCodeEntries(
-                              team.wrongCodes,
-                            ).map((entry) => entry.code),
-                          })
-                        }
-                      >
-                        ({team.wrongCodesCount} неверн.)
-                      </button>
-                    )}
-                    {isDetailedView && foundMainEntries.length > 0 ? (
-                      <div className="mt-1">
-                        {renderCodesBadges(foundMainEntries, 'default', {
-                          getPhotoByCode,
-                          onCodeClick: handleCodeBadgeClick,
-                        })}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-slate-500">
+                          #{index + 1}
+                        </span>
+                        <span
+                          className={`inline-block h-2.5 w-2.5 rounded-full ${statusDotColor(team)}`}
+                        />
+                        <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                          {team.teamName}
+                        </h3>
                       </div>
-                    ) : null}
-                    {isDetailedView &&
-                      (() => {
-                        const remainingMainCodes =
-                          mainCodesProgress.remainingCodes
-                        if (remainingMainCodes.length === 0) {
-                          return null
-                        }
-                        return (
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:border-slate-600/50 dark:bg-slate-700/50 dark:text-slate-300">
+                          {teamStatusLabel(team)}
+                        </span>
+                        <CardActionIconButton
+                          onClick={() => {
+                            setSelectedTeamForTaskPreviewId(
+                              String(team.teamId || ''),
+                            )
+                            setIsTasksViewModalOpen(true)
+                          }}
+                          label="Открыть текущее задание команды"
+                          title="Текущее задание команды"
+                          className="w-8 h-8"
+                        >
+                          <TargetCardIcon />
+                        </CardActionIconButton>
+                        <CardActionIconButton
+                          onClick={() =>
+                            setSelectedTeamForStatsId(String(team.teamId || ''))
+                          }
+                          label="Открыть статистику команды"
+                          title="Статистика команды"
+                          className="w-8 h-8"
+                        >
+                          <TeamStatsCardIcon />
+                        </CardActionIconButton>
+                        <CardActionIconButton
+                          onClick={() =>
+                            setSelectedTeamForContactsId(
+                              String(team.teamId || ''),
+                            )
+                          }
+                          label="Просмотр участников команды"
+                          title="Участники и контакты"
+                          className="w-8 h-8"
+                        >
+                          <TeamCardIcon />
+                        </CardActionIconButton>
+                        <CardActionIconButton
+                          onClick={() => handleOpenTeamPushModal(team)}
+                          label="Отправить сообщение команде"
+                          title="Отправить сообщение команде"
+                          className="relative w-8 h-8"
+                          disabled={
+                            teamPushLoadingId === String(team.teamId || '')
+                          }
+                        >
+                          <ChatCardIcon />
+                          {Number(team.unreadTeamMessagesCount || 0) > 0 ? (
+                            <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow">
+                              {Number(team.unreadTeamMessagesCount || 0) > 99
+                                ? '99+'
+                                : Number(team.unreadTeamMessagesCount || 0)}
+                            </span>
+                          ) : null}
+                        </CardActionIconButton>
+                        {!team.isTeamOnBreak ? (
+                          <CardActionIconButton
+                            onClick={() =>
+                              setSelectedTeamForManualActionsId(
+                                String(team.teamId || ''),
+                              )
+                            }
+                            label="Ручные действия с кодами"
+                            title="Ручные действия"
+                            className="w-8 h-8"
+                          >
+                            <EditCardIcon />
+                          </CardActionIconButton>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-2 text-sm">
+                      <div>
+                        <span className="text-slate-600 dark:text-slate-500">
+                          Задание:{' '}
+                        </span>
+                        <span className="font-medium text-slate-800 dark:text-slate-200">
+                          {team.isTeamFinished
+                            ? 'Завершено'
+                            : `${team.activeTaskIndex + 1}. ${team.currentTaskTitle || 'Без названия'}`}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-600 dark:text-slate-500">
+                          Основные коды:{' '}
+                        </span>
+                        <span className="font-medium text-green-400">
+                          {team.findedCodesCount}
+                        </span>
+                        {team.wrongCodesCount > 0 && (
+                          <button
+                            type="button"
+                            className="ml-1 underline transition text-rose-600 decoration-dotted underline-offset-2 hover:text-rose-500 dark:text-red-400 dark:hover:text-red-300"
+                            onClick={() =>
+                              setWrongCodesModalData({
+                                teamName: String(team.teamName || ''),
+                                taskLabel: team.isTeamFinished
+                                  ? 'Завершено'
+                                  : `${team.activeTaskIndex + 1}. ${team.currentTaskTitle || 'Без названия'}`,
+                                wrongCodes: normalizeCodeEntries(
+                                  team.wrongCodes,
+                                ).map((entry) => entry.code),
+                              })
+                            }
+                          >
+                            ({team.wrongCodesCount} неверн.)
+                          </button>
+                        )}
+                        {isDetailedView && foundMainEntries.length > 0 ? (
                           <div className="mt-1">
-                            {renderCodesBadges(remainingMainCodes, 'muted', {
+                            {renderCodesBadges(foundMainEntries, 'default', {
                               getPhotoByCode,
                               onCodeClick: handleCodeBadgeClick,
                             })}
                           </div>
-                        )
-                      })()}
-                    {mainCodesProgress.remainingCount > 0 ? (
-                      <div className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-400">
-                        Осталось ввести кодов:{' '}
-                        {mainCodesProgress.remainingCount}
-                      </div>
-                    ) : null}
-                  </div>
-                  {shouldShowBonusCodes && (
-                    <div>
-                      <span className="text-slate-600 dark:text-slate-500">Бонусные коды: </span>
-                      <span className="font-medium text-emerald-400">
-                        {team.bonusCodesCount}
-                      </span>
-                      {isDetailedView &&
-                      normalizeCodeEntries(foundBonusEntries).length > 0 ? (
-                        <div className="mt-1">
-                          {renderCodesBadges(foundBonusEntries, 'bonus', {
-                            getPhotoByCode,
-                            onCodeClick: handleCodeBadgeClick,
-                          })}
-                        </div>
-                      ) : null}
-                      {isDetailedView && remainingBonusEntries.length > 0 && (
-                        <div className="mt-1">
-                          {renderCodesBadges(remainingBonusEntries, 'muted', {
-                            getPhotoByCode,
-                            onCodeClick: handleCodeBadgeClick,
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {shouldShowPenaltyCodes && (
-                    <div>
-                      <span className="text-slate-600 dark:text-slate-500">Штрафные коды: </span>
-                      <span className="font-medium text-rose-600 dark:text-red-400">
-                        {team.penaltyCodesCount}
-                      </span>
-                      {isDetailedView &&
-                      normalizeCodeEntries(foundPenaltyEntries).length > 0 ? (
-                        <div className="mt-1">
-                          {renderCodesBadges(foundPenaltyEntries, 'penalty', {
-                            getPhotoByCode,
-                            onCodeClick: handleCodeBadgeClick,
-                          })}
-                        </div>
-                      ) : null}
-                      {isDetailedView && remainingPenaltyEntries.length > 0 && (
-                        <div className="mt-1">
-                          {renderCodesBadges(remainingPenaltyEntries, 'muted', {
-                            getPhotoByCode,
-                            onCodeClick: handleCodeBadgeClick,
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {!team.isTeamFinished &&
-                    !team.isTeamOnBreak &&
-                    !(
-                      team.isTeamOnBreak &&
-                      team.isBreakFinishedWaitingForNextTask
-                    ) && (
-                      (() => {
-                        const effectiveTaskSeconds = normalizeSeconds(
-                          team.currentTaskSeconds,
-                        )
-                        const actualTaskSeconds = normalizeSeconds(
-                          team.currentTaskActualSeconds,
-                          effectiveTaskSeconds,
-                        )
-                        const hasEarlyClueTimeShift =
-                          actualTaskSeconds !== effectiveTaskSeconds
-
-                        return (
-                          <>
-                            {hasEarlyClueTimeShift ? (
-                              <div>
-                                <span className="text-slate-600 dark:text-slate-500">
-                                  Фактически на задании:{' '}
-                                </span>
-                                <span className="font-mono font-medium text-cyan-700 dark:text-cyan-300">
-                                  {formatTime(actualTaskSeconds)}
-                                </span>
+                        ) : null}
+                        {isDetailedView &&
+                          (() => {
+                            const remainingMainCodes =
+                              mainCodesProgress.remainingCodes
+                            if (remainingMainCodes.length === 0) {
+                              return null
+                            }
+                            return (
+                              <div className="mt-1">
+                                {renderCodesBadges(
+                                  remainingMainCodes,
+                                  'muted',
+                                  {
+                                    getPhotoByCode,
+                                    onCodeClick: handleCodeBadgeClick,
+                                  },
+                                )}
                               </div>
-                            ) : null}
-                            <div>
-                              <span className="text-slate-600 dark:text-slate-500">
-                                {hasEarlyClueTimeShift
-                                  ? 'С учетом досрочных подсказок: '
-                                  : 'На задании: '}
-                              </span>
-                              <span className="font-mono font-medium text-cyan-700 dark:text-cyan-300">
-                                {formatTime(effectiveTaskSeconds)}
-                              </span>
-                            </div>
-                          </>
-                        )
-                      })()
-                    )}
-                  {!team.isTeamFinished &&
-                    !team.isTeamOnBreak &&
-                    !team.isActiveTaskFailed &&
-                    (() => {
-                      const elapsed = Math.max(
-                        0,
-                        Math.floor(team.currentTaskSeconds || 0),
-                      )
-                      const failRemaining = Math.max(
-                        0,
-                        Math.floor(taskDuration || 0) - elapsed,
-                      )
-                      const clueInterval = Math.max(
-                        1,
-                        Math.floor(cluesDuration || 0),
-                      )
-                      const mod = elapsed % clueInterval
-                      const clueRemaining =
-                        clueInterval > 0
-                          ? mod === 0
-                            ? clueInterval
-                            : clueInterval - mod
-                          : Number.POSITIVE_INFINITY
-                      const canShowClueTimer =
-                        Number(cluesDuration) > 0 &&
-                        clueRemaining < failRemaining
-
-                      if (canShowClueTimer) {
-                        return (
-                          <div>
-                            <span className="text-slate-600 dark:text-slate-500">
-                              До подсказки:{' '}
-                            </span>
-                            <span className="font-mono font-medium text-violet-700 dark:text-violet-300">
-                              {formatTime(clueRemaining)}
-                            </span>
+                            )
+                          })()}
+                        {mainCodesProgress.remainingCount > 0 ? (
+                          <div className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-400">
+                            Осталось ввести кодов:{' '}
+                            {mainCodesProgress.remainingCount}
                           </div>
-                        )
-                      }
-
-                      return (
+                        ) : null}
+                      </div>
+                      {shouldShowBonusCodes && (
                         <div>
                           <span className="text-slate-600 dark:text-slate-500">
-                            До провала задания:{' '}
+                            Бонусные коды:{' '}
                           </span>
-                          <span className="font-mono font-medium text-rose-700 dark:text-rose-300">
-                            {formatTime(failRemaining)}
+                          <span className="font-medium text-emerald-400">
+                            {team.bonusCodesCount}
                           </span>
+                          {isDetailedView &&
+                          normalizeCodeEntries(foundBonusEntries).length > 0 ? (
+                            <div className="mt-1">
+                              {renderCodesBadges(foundBonusEntries, 'bonus', {
+                                getPhotoByCode,
+                                onCodeClick: handleCodeBadgeClick,
+                              })}
+                            </div>
+                          ) : null}
+                          {isDetailedView &&
+                            remainingBonusEntries.length > 0 && (
+                              <div className="mt-1">
+                                {renderCodesBadges(
+                                  remainingBonusEntries,
+                                  'muted',
+                                  {
+                                    getPhotoByCode,
+                                    onCodeClick: handleCodeBadgeClick,
+                                  },
+                                )}
+                              </div>
+                            )}
                         </div>
-                      )
-                    })()}
-                  {team.isTeamOnBreak && team.isActiveTaskFailed ? (
-                    <div className="rounded-lg border border-rose-400 bg-rose-100 px-2.5 py-1.5 text-xs font-medium text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
-                      {team.isActiveTaskFailedByCaptain
-                        ? 'Команда слила предыдущее задание досрочно.'
-                        : 'Команда провалила предыдущее задание.'}
-                    </div>
-                  ) : null}
-                  {team.isTeamOnBreak &&
-                    !team.isActiveTaskFailed &&
-                    team.completedTaskSeconds > 0 && (
-                      <div>
-                        <span className="text-slate-600 dark:text-slate-500">
-                          Предыдущее задание завершено за:{' '}
-                        </span>
-                        <span className="font-mono font-medium text-emerald-700 dark:text-emerald-300">
-                          {formatTime(team.completedTaskSeconds)}
-                        </span>
-                      </div>
-                    )}
-                  {!team.isTeamFinished &&
-                    team.isTeamOnBreak &&
-                    !team.isBreakFinishedWaitingForNextTask && (
-                      <div>
-                        <span className="text-slate-600 dark:text-slate-500">
-                          Перерыв завершится через:{' '}
-                        </span>
-                        <span className="font-mono font-medium text-amber-700 dark:text-yellow-300">
-                          {formatTime(team.breakTimeLeftSeconds)}
-                        </span>
-                      </div>
-                    )}
-                  {team.isBreakFinishedWaitingForNextTask && (
-                    <div className="rounded-lg border border-amber-400 bg-amber-100 px-2.5 py-1.5 text-xs font-medium text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-                      Перерыв окончен, но следующее задание еще не начато.
-                    </div>
-                  )}
-                  {team.isTeamOnBreak &&
-                    !team.isTeamFinished &&
-                    Number.isInteger(team.activeTaskIndex) &&
-                    team.activeTaskIndex + 1 <
-                      Number(data?.tasksCount || 0) && (
-                      <div>
-                        <span className="text-slate-600 dark:text-slate-500">
-                          Следующее задание:{' '}
-                        </span>
-                        <span className="font-medium text-cyan-700 dark:text-cyan-200">
-                          {`${team.activeTaskIndex + 2}. ${team.nextTaskTitle || 'Без названия'}`}
-                        </span>
-                      </div>
-                    )}
-                </div>
+                      )}
+                      {shouldShowPenaltyCodes && (
+                        <div>
+                          <span className="text-slate-600 dark:text-slate-500">
+                            Штрафные коды:{' '}
+                          </span>
+                          <span className="font-medium text-rose-600 dark:text-red-400">
+                            {team.penaltyCodesCount}
+                          </span>
+                          {isDetailedView &&
+                          normalizeCodeEntries(foundPenaltyEntries).length >
+                            0 ? (
+                            <div className="mt-1">
+                              {renderCodesBadges(
+                                foundPenaltyEntries,
+                                'penalty',
+                                {
+                                  getPhotoByCode,
+                                  onCodeClick: handleCodeBadgeClick,
+                                },
+                              )}
+                            </div>
+                          ) : null}
+                          {isDetailedView &&
+                            remainingPenaltyEntries.length > 0 && (
+                              <div className="mt-1">
+                                {renderCodesBadges(
+                                  remainingPenaltyEntries,
+                                  'muted',
+                                  {
+                                    getPhotoByCode,
+                                    onCodeClick: handleCodeBadgeClick,
+                                  },
+                                )}
+                              </div>
+                            )}
+                        </div>
+                      )}
+                      {!team.isTeamFinished &&
+                        !team.isTeamOnBreak &&
+                        !(
+                          team.isTeamOnBreak &&
+                          team.isBreakFinishedWaitingForNextTask
+                        ) &&
+                        (() => {
+                          const effectiveTaskSeconds = normalizeSeconds(
+                            team.currentTaskSeconds,
+                          )
+                          const actualTaskSeconds = normalizeSeconds(
+                            team.currentTaskActualSeconds,
+                            effectiveTaskSeconds,
+                          )
+                          const hasEarlyClueTimeShift =
+                            actualTaskSeconds !== effectiveTaskSeconds
 
-                {/* Подсказки */}
-                {team.cluesReceived > 0 && (
-                  <div className="mt-1 text-xs text-slate-600 dark:text-slate-500">
-                    Подсказок получено: {team.cluesReceived}
-                    {Number(team.forcedCluesReceived) > 0
-                      ? ` (${formatForcedCluesCount(team.forcedCluesReceived)})`
-                      : ''}
-                  </div>
-                )}
+                          return (
+                            <>
+                              {hasEarlyClueTimeShift ? (
+                                <div>
+                                  <span className="text-slate-600 dark:text-slate-500">
+                                    Фактически на задании:{' '}
+                                  </span>
+                                  <span className="font-mono font-medium text-cyan-700 dark:text-cyan-300">
+                                    {formatTime(actualTaskSeconds)}
+                                  </span>
+                                </div>
+                              ) : null}
+                              <div>
+                                <span className="text-slate-600 dark:text-slate-500">
+                                  {hasEarlyClueTimeShift
+                                    ? 'С учетом досрочных подсказок: '
+                                    : 'На задании: '}
+                                </span>
+                                <span className="font-mono font-medium text-cyan-700 dark:text-cyan-300">
+                                  {formatTime(effectiveTaskSeconds)}
+                                </span>
+                              </div>
+                            </>
+                          )
+                        })()}
+                      {!team.isTeamFinished &&
+                        !team.isTeamOnBreak &&
+                        !team.isActiveTaskFailed &&
+                        (() => {
+                          const elapsed = Math.max(
+                            0,
+                            Math.floor(team.currentTaskSeconds || 0),
+                          )
+                          const failRemaining = Math.max(
+                            0,
+                            Math.floor(taskDuration || 0) - elapsed,
+                          )
+                          const clueInterval = Math.max(
+                            1,
+                            Math.floor(cluesDuration || 0),
+                          )
+                          const mod = elapsed % clueInterval
+                          const clueRemaining =
+                            clueInterval > 0
+                              ? mod === 0
+                                ? clueInterval
+                                : clueInterval - mod
+                              : Number.POSITIVE_INFINITY
+                          const canShowClueTimer =
+                            Number(cluesDuration) > 0 &&
+                            clueRemaining < failRemaining
 
-                {/* Фото (для photo-квестов) */}
-                {gameType === 'photo' && team.currentPhotosCount > 0 && (
-                  <div className="mt-1 text-xs text-slate-600 dark:text-slate-500">
-                    Фото отправлено: {team.currentPhotosCount}
+                          if (canShowClueTimer) {
+                            return (
+                              <div>
+                                <span className="text-slate-600 dark:text-slate-500">
+                                  До подсказки:{' '}
+                                </span>
+                                <span className="font-mono font-medium text-violet-700 dark:text-violet-300">
+                                  {formatTime(clueRemaining)}
+                                </span>
+                              </div>
+                            )
+                          }
+
+                          return (
+                            <div>
+                              <span className="text-slate-600 dark:text-slate-500">
+                                До провала задания:{' '}
+                              </span>
+                              <span className="font-mono font-medium text-rose-700 dark:text-rose-300">
+                                {formatTime(failRemaining)}
+                              </span>
+                            </div>
+                          )
+                        })()}
+                      {team.isTeamOnBreak && team.isActiveTaskFailed ? (
+                        <div className="rounded-lg border border-rose-400 bg-rose-100 px-2.5 py-1.5 text-xs font-medium text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                          {team.isActiveTaskFailedByCaptain
+                            ? 'Команда слила предыдущее задание досрочно.'
+                            : 'Команда провалила предыдущее задание.'}
+                        </div>
+                      ) : null}
+                      {team.isTeamOnBreak &&
+                        !team.isActiveTaskFailed &&
+                        team.completedTaskSeconds > 0 && (
+                          <div>
+                            <span className="text-slate-600 dark:text-slate-500">
+                              Предыдущее задание завершено за:{' '}
+                            </span>
+                            <span className="font-mono font-medium text-emerald-700 dark:text-emerald-300">
+                              {formatTime(team.completedTaskSeconds)}
+                            </span>
+                          </div>
+                        )}
+                      {!team.isTeamFinished &&
+                        team.isTeamOnBreak &&
+                        !team.isBreakFinishedWaitingForNextTask && (
+                          <div>
+                            <span className="text-slate-600 dark:text-slate-500">
+                              Перерыв завершится через:{' '}
+                            </span>
+                            <span className="font-mono font-medium text-amber-700 dark:text-yellow-300">
+                              {formatTime(team.breakTimeLeftSeconds)}
+                            </span>
+                          </div>
+                        )}
+                      {team.isBreakFinishedWaitingForNextTask && (
+                        <div className="rounded-lg border border-amber-400 bg-amber-100 px-2.5 py-1.5 text-xs font-medium text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                          Перерыв окончен, но следующее задание еще не начато.
+                        </div>
+                      )}
+                      {team.isTeamOnBreak &&
+                        !team.isTeamFinished &&
+                        Number.isInteger(team.activeTaskIndex) &&
+                        team.activeTaskIndex + 1 <
+                          Number(data?.tasksCount || 0) && (
+                          <div>
+                            <span className="text-slate-600 dark:text-slate-500">
+                              Следующее задание:{' '}
+                            </span>
+                            <span className="font-medium text-cyan-700 dark:text-cyan-200">
+                              {`${team.activeTaskIndex + 2}. ${team.nextTaskTitle || 'Без названия'}`}
+                            </span>
+                          </div>
+                        )}
+                    </div>
+
+                    {/* Подсказки */}
+                    {team.cluesReceived > 0 && (
+                      <div className="mt-1 text-xs text-slate-600 dark:text-slate-500">
+                        Подсказок получено: {team.cluesReceived}
+                        {Number(team.forcedCluesReceived) > 0
+                          ? ` (${formatForcedCluesCount(team.forcedCluesReceived)})`
+                          : ''}
+                      </div>
+                    )}
+
+                    {/* Фото (для photo-квестов) */}
+                    {gameType === 'photo' && team.currentPhotosCount > 0 && (
+                      <div className="mt-1 text-xs text-slate-600 dark:text-slate-500">
+                        Фото отправлено: {team.currentPhotosCount}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
+                )
+              })}
+            </div>
+          )}
         </>
       )}
 
@@ -2038,7 +2150,7 @@ export default function GameControlPageClient({ session: _session }) {
               return (
                 <div
                   key={`${member?.id || member?.telegramId || 'member'}-${index}`}
-                  className="p-3 border rounded-xl border-slate-200 bg-white dark:border-slate-700/60 dark:bg-slate-900/60"
+                  className="p-3 bg-white border rounded-xl border-slate-200 dark:border-slate-700/60 dark:bg-slate-900/60"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-medium text-slate-900 dark:text-slate-100">
@@ -2061,7 +2173,9 @@ export default function GameControlPageClient({ session: _session }) {
                           {phoneValue}
                         </a>
                       ) : (
-                        <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">Не указан</p>
+                        <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                          Не указан
+                        </p>
                       )}
                     </div>
                     <div>
@@ -2078,7 +2192,9 @@ export default function GameControlPageClient({ session: _session }) {
                           @{username}
                         </a>
                       ) : (
-                        <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">Не указан</p>
+                        <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                          Не указан
+                        </p>
                       )}
                     </div>
                     <div>
@@ -2091,7 +2207,9 @@ export default function GameControlPageClient({ session: _session }) {
                           {telegramId}
                         </a>
                       ) : (
-                        <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">Не указан</p>
+                        <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                          Не указан
+                        </p>
                       )}
                     </div>
                     <div>
@@ -2108,7 +2226,9 @@ export default function GameControlPageClient({ session: _session }) {
                           t.me/+{phoneValue.replace(/^\+/, '')}
                         </a>
                       ) : (
-                        <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">Не указан</p>
+                        <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                          Не указан
+                        </p>
                       )}
                     </div>
                   </div>
@@ -2127,8 +2247,8 @@ export default function GameControlPageClient({ session: _session }) {
           isGameWideMessageModal
             ? 'Сообщение всем командам'
             : selectedTeamForPush?.teamName
-            ? `Сообщение команде — ${selectedTeamForPush.teamName}`
-            : 'Сообщение команде'
+              ? `Сообщение команде — ${selectedTeamForPush.teamName}`
+              : 'Сообщение команде'
         }
         compactMobile
         footer={
@@ -2158,7 +2278,7 @@ export default function GameControlPageClient({ session: _session }) {
             className="max-h-[55vh] space-y-3 overflow-y-auto pr-1"
           >
             {teamMessageHistoryError ? (
-              <p className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+              <p className="px-3 py-2 text-sm border rounded-xl border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
                 {teamMessageHistoryError}
               </p>
             ) : null}
@@ -2185,12 +2305,16 @@ export default function GameControlPageClient({ session: _session }) {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-80">
                     <span>
-                      {isAdminMessage ? 'Организатор' : 'Капитан команды'}
+                      {isAdminMessage
+                        ? 'Организатор'
+                        : message.createdByRole === 'liaison'
+                          ? 'Связной команды'
+                          : 'Капитан команды'}
                       {message.scope === 'game' ? ' · всем командам' : ''}
                     </span>
                     <span>{formatMessageDateTime(message.createdAt)}</span>
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">
+                  <p className="mt-2 text-sm leading-relaxed break-words whitespace-pre-wrap">
                     <LinkedMessageText text={message.body} />
                   </p>
                   {isAdminMessage && message.pushRequested ? (
@@ -2226,7 +2350,7 @@ export default function GameControlPageClient({ session: _session }) {
               onChange={handleTeamPushMessageChange}
               placeholder="Введите сообщение..."
               rows={1}
-              className="mt-2 w-full resize-none overflow-hidden rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 mt-2 overflow-hidden text-sm transition bg-white border outline-none resize-none rounded-xl border-slate-300 text-slate-900 focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-900 dark:text-slate-100"
               disabled={Boolean(teamPushLoadingId)}
             />
           </div>
@@ -2242,6 +2366,16 @@ export default function GameControlPageClient({ session: _session }) {
           </label>
         </div>
       </Modal>
+      <GamePushBroadcastModal
+        isOpen={isGameConversationsModalOpen}
+        onClose={handleCloseGameConversationsModal}
+        gameId={String(data?.gameId || gameId || '')}
+        gameName={gameName || ''}
+        gameStatus={gameStatus || ''}
+        onFeedback={({ type, message }) => {
+          showToast(type, message)
+        }}
+      />
       <Modal
         isOpen={Boolean(selectedCodePhoto?.photoUrl)}
         onClose={() => {
@@ -2255,7 +2389,7 @@ export default function GameControlPageClient({ session: _session }) {
         }
         compactMobile
       >
-        <div className="p-3 border rounded-xl border-slate-200 bg-white dark:border-slate-700/60 dark:bg-slate-900/60">
+        <div className="p-3 bg-white border rounded-xl border-slate-200 dark:border-slate-700/60 dark:bg-slate-900/60">
           {selectedCodePhoto?.photoUrl ? (
             <img
               src={selectedCodePhoto.photoUrl}
@@ -2342,7 +2476,7 @@ export default function GameControlPageClient({ session: _session }) {
             </div>
           ) : null}
 
-          <div className="p-3 border rounded-xl border-slate-200 bg-white dark:border-slate-700/60 dark:bg-slate-900/60">
+          <div className="p-3 bg-white border rounded-xl border-slate-200 dark:border-slate-700/60 dark:bg-slate-900/60">
             <p className="text-xs font-semibold tracking-wide uppercase text-slate-400">
               Зачесть код команде
             </p>
@@ -2356,7 +2490,7 @@ export default function GameControlPageClient({ session: _session }) {
                   onChange={(event) =>
                     setSelectedManualCode(event.target.value)
                   }
-                  className="w-full px-3 py-2 text-sm transition border rounded-lg outline-none border-slate-300 bg-white text-slate-900 focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-slate-100"
+                  className="w-full px-3 py-2 text-sm transition bg-white border rounded-lg outline-none border-slate-300 text-slate-900 focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-800/80 dark:text-slate-100"
                   disabled={
                     manualActionLoading || manualCodeCandidates.length === 0
                   }

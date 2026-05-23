@@ -14,9 +14,9 @@ import CabinetLayout from '@components/cabinet/CabinetLayout'
 import SelectableCard from '@components/cabinet/SelectableCard'
 import CardActionIconButton, {
   AgentCardIcon,
+  ChatCardIcon,
   EditCardIcon,
   GameControlCardIcon,
-  MegaphoneCardIcon,
   StatusCardIcon,
   TargetCardIcon,
   TeamCardIcon,
@@ -231,31 +231,6 @@ const fetchGameResultsData = async ({
         : null,
     userParticipationTeamIds,
     viewerCanManageResults,
-  }
-}
-
-const sendGamePushBroadcast = async ({ gameId, mode, message }) => {
-  const { json } = await requestApiJson(
-    `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameId)}/push-broadcast`,
-    {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        mode,
-        message: typeof message === 'string' ? message.trim() : '',
-      }),
-      fallbackMessage: 'Не удалось отправить уведомления',
-    },
-  )
-
-  return {
-    mode,
-    usersMatched: Number(json?.data?.usersMatched) || 0,
-    notificationsCreated: Number(json?.data?.notificationsCreated) || 0,
-    pushDelivered: Number(json?.data?.pushDelivered) || 0,
   }
 }
 
@@ -1191,10 +1166,6 @@ const GamesPage = ({
   const [isPushBroadcastModalOpen, setIsPushBroadcastModalOpen] =
     useState(false)
   const [pushBroadcastGameId, setPushBroadcastGameId] = useState('')
-  const [pushBroadcastMode, setPushBroadcastMode] =
-    useState('announce_all_users')
-  const [pushBroadcastMessage, setPushBroadcastMessage] = useState('')
-  const [pushBroadcastFeedback, setPushBroadcastFeedback] = useState(null)
   const [isCreateGameModalOpen, setIsCreateGameModalOpen] = useState(false)
   const [newGameName, setNewGameName] = useState('')
   const [newGameIsRated, setNewGameIsRated] = useState(true)
@@ -1733,41 +1704,6 @@ const GamesPage = ({
   })
 
   const isSaving = saveGameMutation.isPending
-
-  const pushBroadcastMutation = useMutation({
-    mutationFn: sendGamePushBroadcast,
-    onMutate: () => {
-      setPushBroadcastFeedback(null)
-    },
-    onSuccess: ({ mode, usersMatched, notificationsCreated, pushDelivered }) => {
-      const successMessage =
-        mode === 'announce_all_users'
-          ? `Анонс отправлен: получателей ${usersMatched}, уведомлений ${notificationsCreated}, push доставлено ${pushDelivered}`
-          : `Сообщение отправлено зарегистрированным командам: получателей ${usersMatched}, уведомлений ${notificationsCreated}, push доставлено ${pushDelivered}`
-
-      setPushBroadcastFeedback({
-        type: 'success',
-        message: successMessage,
-      })
-      setFeedback({ type: 'success', message: successMessage })
-      setIsPushBroadcastModalOpen(false)
-      setPushBroadcastMessage('')
-      setPushBroadcastMode('announce_all_users')
-      setPushBroadcastGameId('')
-    },
-    onError: (error) => {
-      const message =
-        extractErrorMessage(error) || 'Не удалось отправить уведомления'
-
-      setPushBroadcastFeedback({
-        type: 'error',
-        message,
-      })
-      setFeedback({ type: 'error', message })
-    },
-  })
-
-  const isPushBroadcastSubmitting = pushBroadcastMutation.isPending
 
   const resetRegisterForm = useCallback((nextGameId = '') => {
     setRegisterGameId(nextGameId)
@@ -2373,55 +2309,14 @@ const GamesPage = ({
     }
 
     setPushBroadcastGameId(game.id)
-    setPushBroadcastMode('announce_all_users')
-    setPushBroadcastMessage('')
-    setPushBroadcastFeedback(null)
     setIsPushBroadcastModalOpen(true)
   }, [])
 
   const handleClosePushBroadcastModal = useCallback(() => {
-    if (isPushBroadcastSubmitting) {
-      return
-    }
-
     setIsPushBroadcastModalOpen(false)
-    setPushBroadcastFeedback(null)
-    setPushBroadcastMessage('')
-    setPushBroadcastMode('announce_all_users')
     setPushBroadcastGameId('')
-  }, [isPushBroadcastSubmitting])
-
-  const handleSubmitPushBroadcast = useCallback(() => {
-    if (!pushBroadcastModalGame?.id) {
-      setPushBroadcastFeedback({
-        type: 'error',
-        message: 'Игра для рассылки не найдена',
-      })
-      return
-    }
-
-    if (
-      pushBroadcastMode === 'custom_for_registered' &&
-      !pushBroadcastMessage.trim()
-    ) {
-      setPushBroadcastFeedback({
-        type: 'error',
-        message: 'Введите сообщение для зарегистрированных участников',
-      })
-      return
-    }
-
-    pushBroadcastMutation.mutate({
-      gameId: pushBroadcastModalGame.id,
-      mode: pushBroadcastMode,
-      message: pushBroadcastMessage,
-    })
-  }, [
-    pushBroadcastMutation,
-    pushBroadcastMessage,
-    pushBroadcastModalGame?.id,
-    pushBroadcastMode,
-  ])
+    void queryClient.invalidateQueries({ queryKey: ['cabinet-games'] })
+  }, [queryClient])
 
   const isRegistrationCancellationInProgress = useCallback(
     (gameId) =>
@@ -5835,7 +5730,17 @@ const GamesPage = ({
         canEditAllGames && canManageGameStatus(game)
       const canBroadcastThisGame =
         canManageThisGame && canBroadcastByGameStatus(game.status)
+      const adminUnreadMessagesCount = Number(game.adminUnreadMessagesCount || 0)
+      const adminUnreadMessagesBadge =
+        adminUnreadMessagesCount > 99 ? '99+' : adminUnreadMessagesCount || null
       const canViewThisGameResults = canViewResultsForGame(game)
+      const isResultsAdminOnly =
+        canViewThisGameResults &&
+        Boolean(game.isResultGenerated) &&
+        Boolean(game.hideResult)
+      const resultsButtonClassName = isResultsAdminOnly
+        ? 'inline-flex cursor-pointer items-center justify-center rounded-xl border border-amber-300/80 bg-amber-100/90 px-4 py-1.5 text-sm font-semibold text-amber-800 transition hover:border-amber-500 hover:bg-amber-200 dark:border-amber-400/55 dark:bg-amber-500/18 dark:text-amber-100 dark:hover:bg-amber-500/28'
+        : 'inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24'
       const canGenerateThisGameResults = canGenerateResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
       const canViewGameTeams =
@@ -6047,7 +5952,12 @@ const GamesPage = ({
                               event.stopPropagation()
                               handleOpenResultsFromGame(game)
                             }}
-                            className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/80 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/24"
+                            className={resultsButtonClassName}
+                            title={
+                              isResultsAdminOnly
+                                ? 'Результаты скрыты для игроков'
+                                : undefined
+                            }
                           >
                             Результаты
                           </button>
@@ -6134,10 +6044,11 @@ const GamesPage = ({
                               event.stopPropagation()
                               handleOpenPushBroadcastModal(game)
                             }}
-                            label="Рассылка уведомлений"
-                            title="Открыть рассылку уведомлений"
+                            label="Переписка с командами"
+                            title="Открыть переписку с командами"
+                            badge={adminUnreadMessagesBadge}
                           >
-                            <MegaphoneCardIcon />
+                            <ChatCardIcon />
                           </CardActionIconButton>
                         )}
                         {isGameInProgressStatus(game.status) &&
@@ -6256,6 +6167,13 @@ const GamesPage = ({
       const canBroadcastThisGame =
         canManageThisGame && canBroadcastByGameStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
+      const isResultsAdminOnly =
+        canViewThisGameResults &&
+        Boolean(game.isResultGenerated) &&
+        Boolean(game.hideResult)
+      const resultsButtonClassName = isResultsAdminOnly
+        ? 'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-amber-300/80 bg-amber-100/90 px-4 py-1.5 text-sm font-semibold text-amber-800 transition hover:border-amber-500 hover:bg-amber-200 dark:border-amber-400/55 dark:bg-amber-500/18 dark:text-amber-100 dark:hover:bg-amber-500/28'
+        : 'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22'
       const canGenerateThisGameResults = canGenerateResultsForGame(game)
       const canViewThisGameTasks = canViewTasksForGame(game)
       const canViewGameTeams =
@@ -6431,7 +6349,12 @@ const GamesPage = ({
                             event.stopPropagation()
                             handleOpenResultsFromGame(game)
                           }}
-                          className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-50/70 px-4 py-1.5 text-sm font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/12 dark:text-[#bdf4ff] dark:hover:bg-[#00D1FF]/22"
+                          className={resultsButtonClassName}
+                          title={
+                            isResultsAdminOnly
+                              ? 'Результаты скрыты для игроков'
+                              : undefined
+                          }
                         >
                           Результаты
                         </button>
@@ -6544,11 +6467,16 @@ const GamesPage = ({
                             event.stopPropagation()
                             handleOpenPushBroadcastModal(game)
                           }}
-                          label="Рассылка уведомлений"
-                          title="Открыть рассылку уведомлений"
+                          label="Переписка с командами"
+                          title="Открыть переписку с командами"
+                          badge={
+                            Number(game.adminUnreadMessagesCount || 0) > 99
+                              ? '99+'
+                              : Number(game.adminUnreadMessagesCount || 0) || null
+                          }
                           className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
-                          <MegaphoneCardIcon />
+                          <ChatCardIcon />
                         </CardActionIconButton>
                       )}
                       {isGameInProgressStatus(game.status) &&
@@ -7577,14 +7505,10 @@ const GamesPage = ({
               <GamePushBroadcastModal
                 isOpen={isPushBroadcastModalOpen}
                 onClose={handleClosePushBroadcastModal}
+                gameId={pushBroadcastModalGame?.id || ''}
                 gameName={pushBroadcastModalGame?.name || ''}
-                mode={pushBroadcastMode}
-                onChangeMode={setPushBroadcastMode}
-                customMessage={pushBroadcastMessage}
-                onChangeCustomMessage={setPushBroadcastMessage}
-                isSubmitting={isPushBroadcastSubmitting}
-                onSubmit={handleSubmitPushBroadcast}
-                feedback={pushBroadcastFeedback}
+                gameStatus={pushBroadcastModalGame?.status || ''}
+                onFeedback={setFeedback}
               />
             </div>
           </div>

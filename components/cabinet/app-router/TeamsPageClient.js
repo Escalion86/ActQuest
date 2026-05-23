@@ -529,6 +529,10 @@ const TeamsPage = ({
           members: updatedMembers,
           membersCount: updatedMembers.length,
           captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+          liaison:
+            updatedMembers.find((item) => item.isLiaison) ??
+            updatedMembers.find((item) => item.isCaptain) ??
+            null,
         },
         member: (team.members ?? []).find((item) => item.id === memberId),
       }
@@ -577,7 +581,7 @@ const TeamsPage = ({
 
       const updatedMembers = (team.members ?? []).map((item) => {
         if (item.id === memberId) {
-          return { ...item, role: 'captain', isCaptain: true }
+          return { ...item, role: 'captain', isCaptain: true, isLiaison: false }
         }
 
         if (item.id === currentCaptain?.id) {
@@ -592,6 +596,10 @@ const TeamsPage = ({
           ...team,
           members: updatedMembers,
           captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+          liaison:
+            updatedMembers.find((item) => item.isLiaison) ??
+            updatedMembers.find((item) => item.isCaptain) ??
+            null,
         },
         member: (team.members ?? []).find((item) => item.id === memberId),
       }
@@ -608,6 +616,64 @@ const TeamsPage = ({
     onError: (error) => {
       console.error('Failed to promote team member', error)
       snackbar.error(error?.message || 'Не удалось изменить роль участника')
+    },
+    onSettled: () => {
+      setMemberActionId(null)
+    },
+  })
+
+  const setLiaisonMutation = useMutation({
+    mutationFn: async ({ team, memberId, role }) => {
+      await requestApiJson(`${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: { role } }),
+        fallbackMessage: 'Не удалось обновить роль участника',
+      })
+
+      const updatedMembers = (team.members ?? []).map((item) => {
+        if (role === 'liaison' && item.id === memberId) {
+          return { ...item, role: 'liaison', isLiaison: true }
+        }
+
+        if (role === 'liaison' && item.isLiaison) {
+          return { ...item, role: 'participant', isLiaison: false }
+        }
+
+        if (role === 'participant' && item.id === memberId) {
+          return { ...item, role: 'participant', isLiaison: false }
+        }
+
+        return item
+      })
+
+      return {
+        team: {
+          ...team,
+          members: updatedMembers,
+          liaison:
+            updatedMembers.find((item) => item.isLiaison) ??
+            updatedMembers.find((item) => item.isCaptain) ??
+            null,
+        },
+        member: (team.members ?? []).find((item) => item.id === memberId),
+        role,
+      }
+    },
+    onMutate: ({ memberId }) => {
+      setMemberActionId(memberId)
+    },
+    onSuccess: ({ team, member, role }) => {
+      updatePersistedTeam(team.id, team)
+      snackbar.success(
+        role === 'liaison'
+          ? `«${member?.name || 'Участник'}» назначен связным команды`
+          : `«${member?.name || 'Участник'}» теперь обычный участник команды`,
+      )
+    },
+    onError: (error) => {
+      console.error('Failed to update team liaison role', error)
+      snackbar.error(error?.message || 'Не удалось изменить роль связного')
     },
     onSettled: () => {
       setMemberActionId(null)
@@ -640,6 +706,7 @@ const TeamsPage = ({
             userRole: null,
             role: 'participant',
             isCaptain: false,
+            isLiaison: false,
             hasLinkedUser: true,
           }
         : null
@@ -654,6 +721,10 @@ const TeamsPage = ({
           members: updatedMembers,
           membersCount: updatedMembers.length,
           captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+          liaison:
+            updatedMembers.find((item) => item.isLiaison) ??
+            updatedMembers.find((item) => item.isCaptain) ??
+            null,
         },
         userTitle: userOption?.title || 'Участник',
       }
@@ -1023,6 +1094,34 @@ const TeamsPage = ({
       setCaptainMutation.mutate({ team: selectedTeam, memberId })
     },
     [canManageSelectedTeam, selectedTeam, setCaptainMutation],
+  )
+
+  const handleSetLiaison = useCallback(
+    (memberId) => {
+      if (!canManageSelectedTeam || !selectedTeam) {
+        snackbar.error('Недостаточно прав для изменения роли связного')
+        return
+      }
+
+      setLiaisonMutation.mutate({ team: selectedTeam, memberId, role: 'liaison' })
+    },
+    [canManageSelectedTeam, selectedTeam, setLiaisonMutation, snackbar],
+  )
+
+  const handleUnsetLiaison = useCallback(
+    (memberId) => {
+      if (!canManageSelectedTeam || !selectedTeam) {
+        snackbar.error('Недостаточно прав для изменения роли связного')
+        return
+      }
+
+      setLiaisonMutation.mutate({
+        team: selectedTeam,
+        memberId,
+        role: 'participant',
+      })
+    },
+    [canManageSelectedTeam, selectedTeam, setLiaisonMutation, snackbar],
   )
 
   const handleAddMember = useCallback(
@@ -1400,6 +1499,8 @@ const TeamsPage = ({
           onResetTeam={handleResetTeam}
           memberActionId={memberActionId}
           onSetCaptain={handleSetCaptain}
+          onSetLiaison={handleSetLiaison}
+          onUnsetLiaison={handleUnsetLiaison}
           onRemoveMember={handleRemoveMember}
           onAddMember={handleAddMember}
           isAddingMember={isAddingMember}
@@ -1462,6 +1563,7 @@ const teamMemberShape = PropTypes.shape({
   phone: PropTypes.string,
   role: PropTypes.string,
   isCaptain: PropTypes.bool,
+  isLiaison: PropTypes.bool,
   userRole: PropTypes.string,
   hasLinkedUser: PropTypes.bool,
 })
@@ -1486,6 +1588,7 @@ TeamsPage.propTypes = {
       members: PropTypes.arrayOf(teamMemberShape),
       membersCount: PropTypes.number,
       captain: teamMemberShape,
+      liaison: teamMemberShape,
       games: PropTypes.arrayOf(teamGameShape),
       gamesCount: PropTypes.number,
       rating: PropTypes.shape({

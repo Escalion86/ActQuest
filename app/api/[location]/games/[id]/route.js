@@ -4,6 +4,7 @@ import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
 import buildGameResultComputed from '@server/buildGameResultComputed'
 import updateParticipantsClosedStats from '@server/updateParticipantsClosedStats'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
+import { deleteGameTeamMessagesForGame } from '@server/gameTeamMessages'
 import sanitize from '@helpers/sanitize'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
 
@@ -505,6 +506,14 @@ const execute = (request, params) =>
             matchedCount: resetResult?.matchedCount,
             modifiedCount: resetResult?.modifiedCount,
             clearTimeAddings,
+          })
+          const deletedMessagesCount = await deleteGameTeamMessagesForGame({
+            db,
+            gameId: id,
+          })
+          console.info('[game-restart] deleted team messages', {
+            gameId: String(id),
+            deletedCount: deletedMessagesCount,
           })
         }
 

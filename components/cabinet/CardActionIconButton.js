@@ -329,6 +329,29 @@ export const MegaphoneCardIcon = () => (
   </svg>
 )
 
+export const ChatCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M4.5 5.8C4.5 4.81 5.31 4 6.3 4H13.7C14.69 4 15.5 4.81 15.5 5.8V10.4C15.5 11.39 14.69 12.2 13.7 12.2H9.1L5.7 15V12.2C5.03 12.2 4.5 11.67 4.5 11V5.8Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M7.2 7.4H12.8M7.2 9.6H10.8"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
 const CardActionIconButton = ({
   as: Component,
   onClick,
@@ -336,10 +359,11 @@ const CardActionIconButton = ({
   title,
   className,
   disabled,
+  badge,
   children,
 }) => {
   const baseClassName =
-    'inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-cyan-300/90 bg-cyan-50/80 text-cyan-700 shadow-sm transition-all duration-150 hover:scale-105 hover:border-cyan-600 hover:bg-cyan-200 hover:text-cyan-950 hover:shadow-md active:scale-100 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/10 dark:text-[#bdf4ff] dark:shadow-[0_0_0_1px_rgba(0,209,255,0.18)] dark:hover:border-[#00D1FF]/85 dark:hover:bg-[#00D1FF]/28 dark:hover:text-white dark:hover:shadow-[0_0_0_1px_rgba(0,209,255,0.28),0_0_18px_rgba(0,209,255,0.28)] dark:focus:ring-[#00D1FF]/45'
+    'relative inline-flex cursor-pointer items-center justify-center rounded-full border-2 border-cyan-300/90 bg-cyan-50/80 text-cyan-700 shadow-sm transition-all duration-150 hover:scale-105 hover:border-cyan-600 hover:bg-cyan-200 hover:text-cyan-950 hover:shadow-md active:scale-100 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/10 dark:text-[#bdf4ff] dark:shadow-[0_0_0_1px_rgba(0,209,255,0.18)] dark:hover:border-[#00D1FF]/85 dark:hover:bg-[#00D1FF]/28 dark:hover:text-white dark:hover:shadow-[0_0_0_1px_rgba(0,209,255,0.28),0_0_18px_rgba(0,209,255,0.28)] dark:focus:ring-[#00D1FF]/45'
   const disabledClassName =
     'cursor-not-allowed opacity-50 hover:scale-100 hover:border-cyan-300/90 hover:bg-cyan-50/80 hover:text-cyan-700 hover:shadow-sm dark:hover:border-[#00D1FF]/45 dark:hover:bg-[#00D1FF]/10 dark:hover:text-[#bdf4ff] dark:hover:shadow-[0_0_0_1px_rgba(0,209,255,0.18)]'
 
@@ -370,6 +394,11 @@ const CardActionIconButton = ({
         aria-disabled={disabled ? 'true' : undefined}
       >
         {children}
+        {badge ? (
+          <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-white dark:ring-slate-950">
+            {badge}
+          </span>
+        ) : null}
       </Component>
     )
   }
@@ -389,6 +418,11 @@ const CardActionIconButton = ({
       disabled={disabled}
     >
       {children}
+      {badge ? (
+        <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-white dark:ring-slate-950">
+          {badge}
+        </span>
+      ) : null}
     </button>
   )
 }
@@ -400,6 +434,7 @@ CardActionIconButton.propTypes = {
   title: PropTypes.string,
   className: PropTypes.string,
   disabled: PropTypes.bool,
+  badge: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   children: PropTypes.node.isRequired,
 }
 
@@ -408,6 +443,7 @@ CardActionIconButton.defaultProps = {
   title: null,
   className: '',
   disabled: false,
+  badge: null,
 }
 
 StatusCardIcon.propTypes = {

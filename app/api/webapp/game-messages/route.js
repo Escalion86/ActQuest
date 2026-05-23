@@ -6,11 +6,14 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
 import {
   fetchGameTeamMessages,
+  fetchUnreadAdminMessageCountForTeam,
   getSessionUserId,
+  getTeamMessageReadUserKey,
   getTeamMembershipForUser,
   markAdminMessagesReadByTeam,
   normalizeMessageBody,
 } from '@server/gameTeamMessages'
+import { isCaptainRole, isLiaisonRole } from '@helpers/teamRoles'
 
 const getSessionTelegramId = (session) => {
   const telegramId = Number(session?.user?.telegramId)
@@ -20,10 +23,30 @@ const getSessionTelegramId = (session) => {
 const normalizeRole = (value) =>
   typeof value === 'string' ? value.trim().toLowerCase() : ''
 
+const canMembershipSendToAdmin = async ({ db, teamId, membership }) => {
+  const role = normalizeRole(membership?.role)
+  if (isLiaisonRole(role)) {
+    return true
+  }
+
+  if (!isCaptainRole(role)) {
+    return false
+  }
+
+  const explicitLiaison = await db
+    .model('TeamsUsers')
+    .findOne({ teamId, role: 'liaison' })
+    .select({ _id: 1 })
+    .lean()
+
+  return !explicitLiaison?._id
+}
+
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   const userId = getSessionUserId(session?.user)
   const telegramId = getSessionTelegramId(session)
+  const userReadKey = getTeamMessageReadUserKey({ userId, telegramId })
   if (!userId && telegramId === null) {
     return NextResponse.json(
       { success: false, error: 'Требуется авторизация' },
@@ -33,6 +56,7 @@ export async function GET(request) {
 
   const gameId = toStringId(request.nextUrl.searchParams.get('gameId'))
   const teamId = toStringId(request.nextUrl.searchParams.get('teamId'))
+  const shouldMarkRead = request.nextUrl.searchParams.get('markRead') !== 'false'
   if (!gameId || !teamId) {
     return NextResponse.json(
       { success: false, error: 'Не переданы игра или команда' },
@@ -74,15 +98,41 @@ export async function GET(request) {
       )
     }
 
-    const messages = await fetchGameTeamMessages({ db, gameId, teamId })
+    if (shouldMarkRead) {
+      await markAdminMessagesReadByTeam({
+        db,
+        gameId,
+        teamId,
+        userKey: userReadKey,
+      })
+    }
+    const messages = await fetchGameTeamMessages({
+      db,
+      gameId,
+      teamId,
+      userKey: userReadKey,
+    })
+    const unreadAdminMessagesCount = shouldMarkRead
+      ? 0
+      : await fetchUnreadAdminMessageCountForTeam({
+          db,
+          gameId,
+          teamId,
+          userKey: userReadKey,
+        })
 
-    await markAdminMessagesReadByTeam({ db, gameId, teamId })
+    const canSendToAdmin = await canMembershipSendToAdmin({
+      db,
+      teamId,
+      membership,
+    })
 
     return NextResponse.json({
       success: true,
       data: {
         messages,
-        canSendToAdmin: normalizeRole(membership.role) === 'captain',
+        unreadAdminMessagesCount,
+        canSendToAdmin,
       },
     })
   } catch (error) {
@@ -158,12 +208,22 @@ export async function POST(request) {
       )
     }
 
-    if (normalizeRole(membership.role) !== 'captain') {
+    const canSendToAdmin = await canMembershipSendToAdmin({
+      db,
+      teamId,
+      membership,
+    })
+    if (!canSendToAdmin) {
       return NextResponse.json(
-        { success: false, error: 'Писать администратору может только капитан' },
+        {
+          success: false,
+          error:
+            'Писать администратору может связной команды. Если связной не назначен, это может делать капитан.',
+        },
         { status: 403 },
       )
     }
+    const membershipRole = normalizeRole(membership.role)
 
     const created = await db.model('GameTeamMessages').create({
       gameId,
@@ -172,9 +232,9 @@ export async function POST(request) {
       direction: 'team_to_admin',
       body: messageBody,
       createdByUserId: userId,
-      createdByRole: 'captain',
+      createdByRole: isLiaisonRole(membershipRole) ? 'liaison' : 'captain',
       createdByName:
-        session?.user?.name || session?.user?.username || 'Капитан команды',
+        session?.user?.name || session?.user?.username || 'Связной команды',
     })
 
     return NextResponse.json({

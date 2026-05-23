@@ -7,6 +7,7 @@ import { toStringId } from '@helpers/idAndDate'
 import {
   TEAM_ROLE_CAPTAIN,
   isCaptainRole,
+  isLiaisonRole,
   normalizeTeamRoleForWrite,
 } from '@helpers/teamRoles'
 
@@ -168,6 +169,16 @@ export async function POST(request) {
         userId: targetGlobalUserId,
         role,
       })
+      if (isLiaisonRole(role)) {
+        await TeamsUsersModel.updateMany(
+          {
+            teamId,
+            role,
+            _id: { $ne: createdMembership._id },
+          },
+          { $set: { role: 'participant' } },
+        )
+      }
       console.log('[team-members][add][server] membership_created', {
         teamId,
         targetGlobalUserId,
@@ -196,14 +207,15 @@ export async function POST(request) {
       )
     }
 
-    if (!isElevatedRole(actorRole) && isCaptainRole(role)) {
+    if (!isElevatedRole(actorRole) && (isCaptainRole(role) || isLiaisonRole(role))) {
       console.warn('[team-members][add][server] forbidden_set_captain', {
         actorRole,
       })
       return NextResponse.json(
         {
           success: false,
-          error: 'Назначать капитана может только капитан команды',
+          error:
+            'Назначать капитана или связного может только капитан команды',
         },
         { status: 403 },
       )

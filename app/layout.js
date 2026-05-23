@@ -1,4 +1,5 @@
 import './globals.css'
+import { cookies } from 'next/headers'
 import { Roboto } from 'next/font/google'
 import AppProviders from './providers'
 import ThemeInitializerClient from './ThemeInitializerClient'
@@ -13,6 +14,40 @@ const roboto = Roboto({
 })
 
 const siteUrl = getSiteUrl()
+const THEME_COOKIE_NAME = 'cabinet-theme'
+
+const normalizeTheme = (value) =>
+  value === 'dark' || value === 'light' ? value : 'light'
+
+const THEME_BOOTSTRAP_SCRIPT = `
+(function () {
+  try {
+    var saved = window.localStorage && window.localStorage.getItem("cabinet-theme");
+    var cookieMatch = document.cookie.match(/(?:^|; )cabinet-theme=(dark|light)(?:;|$)/);
+    var cookieTheme = cookieMatch ? cookieMatch[1] : "";
+    var systemDark =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches === true;
+    var theme =
+      saved === "dark" || saved === "light"
+        ? saved
+        : cookieTheme === "dark" || cookieTheme === "light"
+          ? cookieTheme
+          : systemDark
+            ? "dark"
+            : "light";
+    var root = document.documentElement;
+    root.setAttribute("data-theme", theme);
+    root.classList.toggle("dark", theme === "dark");
+    root.style.colorScheme = theme === "dark" ? "dark" : "light";
+    root.setAttribute("data-theme-ready", "1");
+    document.cookie =
+      "cabinet-theme=" +
+      theme +
+      "; Path=/; Max-Age=31536000; SameSite=Lax";
+  } catch (error) {}
+})();
+`
 
 const CLIENT_DIAGNOSTICS_SCRIPT = `
 (function () {
@@ -197,7 +232,9 @@ export const viewport = {
   themeColor: '#111827',
 }
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const cookieStore = await cookies()
+  const initialTheme = normalizeTheme(cookieStore.get(THEME_COOKIE_NAME)?.value)
   const yandexMetrikaId = Number(process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID)
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''
   const hasYandexMetrika = Number.isFinite(yandexMetrikaId) && yandexMetrikaId > 0
@@ -206,11 +243,18 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="ru"
-      className={`${roboto.className} scroll-smooth`}
+      className={`${roboto.className} scroll-smooth ${
+        initialTheme === 'dark' ? 'dark' : ''
+      }`}
+      data-theme={initialTheme}
       data-scroll-behavior="smooth"
+      style={{ colorScheme: initialTheme }}
       suppressHydrationWarning
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }}
+        />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -234,7 +278,7 @@ export default function RootLayout({ children }) {
         />
         <ThemeInitializerClient />
         <PwaStandalonePullToRefresh />
-        <AppProviders>{children}</AppProviders>
+        <AppProviders initialTheme={initialTheme}>{children}</AppProviders>
       </body>
     </html>
   )

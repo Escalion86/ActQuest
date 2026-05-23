@@ -1515,6 +1515,7 @@ export async function GET(request) {
         data: {
           gameId: toStringId(game._id),
           gameName: game.name ?? '',
+          gameStatus: game.status ?? '',
           gameType: game.type ?? 'classic',
           dateStartFact: game.dateStartFact ?? null,
           taskDuration,

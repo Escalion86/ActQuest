@@ -577,6 +577,7 @@ const normalizeGameForCabinet = (game) => {
     finances: normalizeFinances(game.finances),
     tasks: normalizeTasks(game.tasks),
     teamsCount: ensureNumber(game.teamsCount, 0),
+    adminUnreadMessagesCount: ensureNumber(game.adminUnreadMessagesCount, 0),
     userTeamPlace: ensureNullableNumber(game.userTeamPlace),
     userParticipationTeams: normalizedUserParticipationTeams,
     teams: normalizedUserParticipationTeams.map((t) => t.teamName),

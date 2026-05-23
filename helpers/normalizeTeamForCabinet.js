@@ -3,6 +3,7 @@ import { ensureDateISOString } from '@helpers/idAndDate'
 import resolveEntityRating from '@helpers/resolveEntityRating'
 import {
   isCaptainRole,
+  isLiaisonRole,
   normalizeTeamRoleForWrite,
 } from '@helpers/teamRoles'
 
@@ -83,6 +84,7 @@ const normalizeMembers = (members = []) => {
       telegramId: ensureString(rawTelegramId, ''),
       role,
       isCaptain: isCaptainRole(role),
+      isLiaison: isLiaisonRole(role),
       name: ensureString(user?.name, fallbackName),
       username: ensureString(user?.username, ''),
       phone: ensurePhone(user?.phone),
@@ -146,6 +148,7 @@ const normalizeTeamForCabinet = ({ team, members, games, location = null }) => {
   const normalizedGames = normalizeGames(games)
 
   const captain = normalizedMembers.find((member) => member.isCaptain) ?? null
+  const liaison = normalizedMembers.find((member) => member.isLiaison) ?? captain
 
   return {
     id,
@@ -158,6 +161,7 @@ const normalizeTeamForCabinet = ({ team, members, games, location = null }) => {
     members: normalizedMembers,
     membersCount: normalizedMembers.length,
     captain,
+    liaison,
     games: normalizedGames,
     gamesCount: resolvePlayedGamesCount({ team, normalizedGames }),
     rating: resolveEntityRating({ entity: team, location }),

@@ -847,6 +847,7 @@ function GameTeamPage({
   const [gameMessagesError, setGameMessagesError] = useState('')
   const [gameMessageDraft, setGameMessageDraft] = useState('')
   const [isSendingGameMessage, setIsSendingGameMessage] = useState(false)
+  const [unreadAdminMessagesCount, setUnreadAdminMessagesCount] = useState(0)
   const [dismissedLatestAdminMessageId, setDismissedLatestAdminMessageId] =
     useState('')
   const taskContentRef = useRef(null)
@@ -1120,7 +1121,7 @@ function GameTeamPage({
     [gameId, isTaskRefreshing, location, teamId, updateTaskData],
   )
 
-  const loadGameMessages = useCallback(async () => {
+  const loadGameMessages = useCallback(async ({ markRead = false } = {}) => {
     if (!gameId || !teamId) return false
 
     setGameMessagesLoading(true)
@@ -1129,6 +1130,9 @@ function GameTeamPage({
         gameId,
         teamId,
       })
+      if (!markRead) {
+        params.set('markRead', 'false')
+      }
       const response = await fetch(`/api/webapp/game-messages?${params.toString()}`)
       const data = await response.json().catch(() => null)
 
@@ -1139,6 +1143,9 @@ function GameTeamPage({
       const payload = data.data || {}
       setGameMessages(
         Array.isArray(payload.messages) ? payload.messages : [],
+      )
+      setUnreadAdminMessagesCount(
+        Math.max(0, Number(payload.unreadAdminMessagesCount || 0)),
       )
       setCanSendGameMessage(Boolean(payload.canSendToAdmin))
       setGameMessagesError('')
@@ -1171,7 +1178,7 @@ function GameTeamPage({
       }
 
       setGameMessageDraft('')
-      await loadGameMessages()
+      await loadGameMessages({ markRead: true })
     } catch (sendError) {
       setGameMessagesError(sendError?.message || 'Не удалось отправить сообщение')
     } finally {
@@ -1185,8 +1192,23 @@ function GameTeamPage({
   }, [])
 
   useEffect(() => {
-    void loadGameMessages()
+    void loadGameMessages({ markRead: false })
   }, [loadGameMessages])
+
+  useEffect(() => {
+    if (!isGameMessagesModalOpen) return
+    void loadGameMessages({ markRead: true })
+  }, [isGameMessagesModalOpen, loadGameMessages])
+
+  useEffect(() => {
+    if (!gameId || !teamId) return undefined
+
+    const intervalId = window.setInterval(() => {
+      void loadGameMessages({ markRead: isGameMessagesModalOpen })
+    }, 15000)
+
+    return () => window.clearInterval(intervalId)
+  }, [gameId, isGameMessagesModalOpen, loadGameMessages, teamId])
 
   useEffect(() => {
     if (!isGameMessagesModalOpen) return
@@ -1892,22 +1914,22 @@ function GameTeamPage({
     const unreadAdminMessages = gameMessages.filter(
       (message) =>
         message?.direction === 'admin_to_team' &&
-        !message?.teamReadAt &&
-        message?.id !== dismissedLatestAdminMessageId,
+        !message?.userReadAt,
     )
     return unreadAdminMessages.length > 0
       ? unreadAdminMessages[unreadAdminMessages.length - 1]
       : null
-  }, [dismissedLatestAdminMessageId, gameMessages])
+  }, [gameMessages])
 
   const hasUnreadAdminMessages = gameMessages.some(
     (message) =>
       message?.direction === 'admin_to_team' &&
-      !message?.teamReadAt &&
-      message?.id !== dismissedLatestAdminMessageId,
+      !message?.userReadAt,
   )
   const shouldShowLatestAdminMessage =
-    Boolean(latestUnreadAdminMessage) && hasUnreadAdminMessages
+    Boolean(latestUnreadAdminMessage) &&
+    hasUnreadAdminMessages &&
+    latestUnreadAdminMessage.id !== dismissedLatestAdminMessageId
   const displayedAdminMessage = latestUnreadAdminMessage
   const shouldShowGameMessagesBlock = shouldShowLatestAdminMessage
   const shouldShowLastMessage = displayedResultMessages.length > 0 && !isStoryGame
@@ -2094,11 +2116,18 @@ function GameTeamPage({
               <button
                 type="button"
                 onClick={() => setIsGameMessagesModalOpen(true)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                 aria-label="Открыть переписку с организатором"
                 title="Переписка с организатором"
               >
                 <ChatHeaderIcon />
+                {unreadAdminMessagesCount > 0 ? (
+                  <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow">
+                    {unreadAdminMessagesCount > 99
+                      ? '99+'
+                      : unreadAdminMessagesCount}
+                  </span>
+                ) : null}
               </button>
               <button
                 type="button"
@@ -2350,15 +2379,13 @@ function GameTeamPage({
                     ) : null}
                   </div>
                   <div className="flex items-center gap-2">
-                    {gameMessages.length > 1 || canSendGameMessage ? (
-                      <button
-                        type="button"
-                        onClick={() => setIsGameMessagesModalOpen(true)}
-                        className="inline-flex items-center rounded-full border border-amber-300 bg-white px-3 py-1.5 text-sm font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-slate-900/60 dark:text-amber-100 dark:hover:bg-amber-500/15"
-                      >
-                        Открыть переписку
-                      </button>
-                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setIsGameMessagesModalOpen(true)}
+                      className="inline-flex items-center rounded-full border border-amber-300 bg-white px-3 py-1.5 text-sm font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-slate-900/60 dark:text-amber-100 dark:hover:bg-amber-500/15"
+                    >
+                      Открыть переписку
+                    </button>
                     <button
                       type="button"
                       onClick={() =>
@@ -2380,7 +2407,8 @@ function GameTeamPage({
                   </p>
                 ) : (
                   <p className="mt-4 text-sm text-amber-800 dark:text-amber-100">
-                    Переписка с организатором доступна капитану команды.
+                    Переписка с организатором доступна связному команды. Если
+                    связной не назначен, писать может капитан.
                   </p>
                 )}
               </section>
@@ -2740,7 +2768,11 @@ function GameTeamPage({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-80">
                     <span>
-                      {isAdminMessage ? 'Организатор' : 'Капитан команды'}
+                      {isAdminMessage
+                        ? 'Организатор'
+                        : message.createdByRole === 'liaison'
+                          ? 'Связной команды'
+                          : 'Капитан команды'}
                       {message.scope === 'game' ? ' · всем командам' : ''}
                     </span>
                     <span>{formatMessageDateTime(message.createdAt)}</span>
@@ -2750,9 +2782,9 @@ function GameTeamPage({
                   </p>
                   <p className="mt-2 text-xs opacity-80">
                     {isAdminMessage
-                      ? message.teamReadAt
-                        ? `Прочитано командой: ${formatMessageDateTime(message.teamReadAt)}`
-                        : 'Не отмечено как прочитанное'
+                      ? message.userReadAt
+                        ? `Просмотрено вами: ${formatMessageDateTime(message.userReadAt)}`
+                        : 'Вы еще не просмотрели'
                       : message.readByAdminAt
                         ? `Прочитано администратором: ${formatMessageDateTime(message.readByAdminAt)}`
                         : 'Администратор еще не прочитал'}

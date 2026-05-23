@@ -37,7 +37,7 @@ const gameTeamMessagesSchema = {
   createdByRole: {
     type: String,
     required: true,
-    enum: ['admin', 'moder', 'dev', 'captain'],
+    enum: ['admin', 'moder', 'dev', 'captain', 'liaison'],
   },
   createdByName: {
     type: String,
@@ -76,6 +76,28 @@ const gameTeamMessagesSchema = {
           type: String,
           required: true,
           trim: true,
+        },
+        readAt: {
+          type: Date,
+          required: true,
+        },
+      },
+    ],
+    default: [],
+  },
+  userReads: {
+    type: [
+      {
+        teamId: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        userKey: {
+          type: String,
+          required: true,
+          trim: true,
+          index: true,
         },
         readAt: {
           type: Date,

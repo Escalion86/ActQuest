@@ -200,6 +200,10 @@ const removeAdminTeamMember = async ({ team, memberId }) => {
       members: updatedMembers,
       membersCount: updatedMembers.length,
       captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+      liaison:
+        updatedMembers.find((item) => item.isLiaison) ??
+        updatedMembers.find((item) => item.isCaptain) ??
+        null,
     },
     member: (team.members ?? []).find((item) => item.id === memberId) ?? null,
   }
@@ -227,7 +231,7 @@ const setAdminTeamCaptain = async ({ team, memberId }) => {
 
   const updatedMembers = (team.members ?? []).map((item) => {
     if (item.id === memberId) {
-      return { ...item, role: 'captain', isCaptain: true }
+      return { ...item, role: 'captain', isCaptain: true, isLiaison: false }
     }
 
     if (item.id === currentCaptain?.id) {
@@ -242,8 +246,50 @@ const setAdminTeamCaptain = async ({ team, memberId }) => {
       ...team,
       members: updatedMembers,
       captain: updatedMembers.find((item) => item.isCaptain) ?? null,
+      liaison:
+        updatedMembers.find((item) => item.isLiaison) ??
+        updatedMembers.find((item) => item.isCaptain) ??
+        null,
     },
     member: (team.members ?? []).find((item) => item.id === memberId) ?? null,
+  }
+}
+
+const setAdminTeamLiaison = async ({ team, memberId, role }) => {
+  await requestApiJson(`/api/cabinet/teams/members/${memberId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: { role } }),
+    fallbackMessage: 'Не удалось обновить роль участника',
+  })
+
+  const updatedMembers = (team.members ?? []).map((item) => {
+    if (role === 'liaison' && item.id === memberId) {
+      return { ...item, role: 'liaison', isLiaison: true }
+    }
+
+    if (role === 'liaison' && item.isLiaison) {
+      return { ...item, role: 'participant', isLiaison: false }
+    }
+
+    if (role === 'participant' && item.id === memberId) {
+      return { ...item, role: 'participant', isLiaison: false }
+    }
+
+    return item
+  })
+
+  return {
+    team: {
+      ...team,
+      members: updatedMembers,
+      liaison:
+        updatedMembers.find((item) => item.isLiaison) ??
+        updatedMembers.find((item) => item.isCaptain) ??
+        null,
+    },
+    member: (team.members ?? []).find((item) => item.id === memberId) ?? null,
+    role,
   }
 }
 
@@ -270,6 +316,7 @@ const addAdminTeamMember = async ({ team, userId, userOption }) => {
         userRole: null,
         hasLinkedUser: true,
         isCaptain: false,
+        isLiaison: false,
       }
     : null
 
@@ -282,6 +329,11 @@ const addAdminTeamMember = async ({ team, userId, userOption }) => {
       ...team,
       members: updatedMembers,
       membersCount: (updatedMembers ?? team.members ?? []).length,
+      captain: team.captain ?? null,
+      liaison:
+        updatedMembers?.find((item) => item.isLiaison) ??
+        updatedMembers?.find((item) => item.isCaptain) ??
+        null,
     },
     userTitle: userOption?.title || 'Участник',
   }
@@ -496,6 +548,34 @@ const AdminTeamsPage = ({
       setFeedback({
         type: 'error',
         message: error?.message || 'Не удалось изменить роль участника',
+      })
+    },
+    onSettled: () => {
+      setMemberActionId(null)
+    },
+  })
+
+  const setLiaisonMutation = useMutation({
+    mutationFn: setAdminTeamLiaison,
+    onMutate: ({ memberId }) => {
+      setMemberActionId(memberId)
+      setFeedback(null)
+    },
+    onSuccess: ({ team, member, role }) => {
+      applyPersistedTeamUpdate(team.id, team)
+      setFeedback({
+        type: 'success',
+        message:
+          role === 'liaison'
+            ? `«${member?.name || 'Участник'}» назначен связным команды`
+            : `«${member?.name || 'Участник'}» теперь обычный участник команды`,
+      })
+    },
+    onError: (error) => {
+      console.error('Failed to update team liaison role', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось изменить роль связного',
       })
     },
     onSettled: () => {
@@ -797,6 +877,42 @@ const AdminTeamsPage = ({
     [canManageSelectedTeam, selectedTeam, setCaptainMutation],
   )
 
+  const handleSetLiaison = useCallback(
+    async (memberId) => {
+      if (!selectedTeam || !canManageSelectedTeam) {
+        return
+      }
+
+      const member = selectedTeam.members.find((item) => item.id === memberId)
+      if (!member || member.isLiaison) {
+        return
+      }
+
+      setLiaisonMutation.mutate({ team: selectedTeam, memberId, role: 'liaison' })
+    },
+    [canManageSelectedTeam, selectedTeam, setLiaisonMutation],
+  )
+
+  const handleUnsetLiaison = useCallback(
+    async (memberId) => {
+      if (!selectedTeam || !canManageSelectedTeam) {
+        return
+      }
+
+      const member = selectedTeam.members.find((item) => item.id === memberId)
+      if (!member || !member.isLiaison) {
+        return
+      }
+
+      setLiaisonMutation.mutate({
+        team: selectedTeam,
+        memberId,
+        role: 'participant',
+      })
+    },
+    [canManageSelectedTeam, selectedTeam, setLiaisonMutation],
+  )
+
   const handleAddMember = useCallback(
     async (userId, userOption) => {
       if (!selectedTeam || !canManageSelectedTeam || !userId) {
@@ -1029,6 +1145,8 @@ const AdminTeamsPage = ({
           onResetTeam={handleResetTeam}
           memberActionId={memberActionId}
           onSetCaptain={handleSetCaptain}
+          onSetLiaison={handleSetLiaison}
+          onUnsetLiaison={handleUnsetLiaison}
           onRemoveMember={handleRemoveMember}
           canEditCarSkin={isAdmin}
           canDeleteTeam={isAdmin}
@@ -1056,6 +1174,7 @@ const teamMemberShape = PropTypes.shape({
   phone: PropTypes.string,
   role: PropTypes.string,
   isCaptain: PropTypes.bool,
+  isLiaison: PropTypes.bool,
   userRole: PropTypes.string,
   hasLinkedUser: PropTypes.bool,
 })
@@ -1081,6 +1200,7 @@ AdminTeamsPage.propTypes = {
       members: PropTypes.arrayOf(teamMemberShape),
       membersCount: PropTypes.number,
       captain: teamMemberShape,
+      liaison: teamMemberShape,
       games: PropTypes.arrayOf(teamGameShape),
       gamesCount: PropTypes.number,
       rating: PropTypes.shape({

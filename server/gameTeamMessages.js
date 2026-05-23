@@ -13,6 +13,16 @@ export const getSessionUserId = (sessionUser) => {
   return rawId ? String(rawId) : ''
 }
 
+export const getTeamMessageReadUserKey = ({ userId, telegramId }) => {
+  const normalizedUserId = toStringId(userId)
+  if (normalizedUserId) return `user:${normalizedUserId}`
+
+  const normalizedTelegramId = toStringId(telegramId)
+  if (normalizedTelegramId) return `tg:${normalizedTelegramId}`
+
+  return ''
+}
+
 export const normalizeMessageBody = (value) =>
   typeof value === 'string' ? value.trim().slice(0, 2000) : ''
 
@@ -73,6 +83,20 @@ const resolveTeamReadAt = (message, teamId) => {
   return toIsoString(read?.readAt)
 }
 
+const resolveUserReadAt = (message, teamId, userKey) => {
+  const normalizedTeamId = toStringId(teamId)
+  const normalizedUserKey = typeof userKey === 'string' ? userKey.trim() : ''
+  if (!normalizedTeamId || !normalizedUserKey) return null
+
+  const read = (Array.isArray(message?.userReads) ? message.userReads : []).find(
+    (item) =>
+      toStringId(item?.teamId) === normalizedTeamId &&
+      String(item?.userKey || '') === normalizedUserKey,
+  )
+
+  return toIsoString(read?.readAt)
+}
+
 export const mapGameTeamMessage = (message, options = {}) => ({
   id: String(message?._id || ''),
   gameId: String(message?.gameId || ''),
@@ -90,11 +114,12 @@ export const mapGameTeamMessage = (message, options = {}) => ({
   pushError: message?.pushError ? String(message.pushError) : null,
   readByAdminAt: toIsoString(message?.readByAdminAt),
   teamReadAt: resolveTeamReadAt(message, options.teamId),
+  userReadAt: resolveUserReadAt(message, options.teamId, options.userKey),
   createdAt: toIsoString(message?.createdAt),
   updatedAt: toIsoString(message?.updatedAt),
 })
 
-export const fetchGameTeamMessages = async ({ db, gameId, teamId, limit }) => {
+export const fetchGameTeamMessages = async ({ db, gameId, teamId, limit, userKey }) => {
   const GameTeamMessages = db.model('GameTeamMessages')
   const normalizedGameId = toStringId(gameId)
   const normalizedTeamId = teamId ? toStringId(teamId) : ''
@@ -122,7 +147,20 @@ export const fetchGameTeamMessages = async ({ db, gameId, teamId, limit }) => {
 
   return messages
     .reverse()
-    .map((message) => mapGameTeamMessage(message, { teamId: normalizedTeamId }))
+    .map((message) =>
+      mapGameTeamMessage(message, { teamId: normalizedTeamId, userKey }),
+    )
+}
+
+export const deleteGameTeamMessagesForGame = async ({ db, gameId }) => {
+  const normalizedGameId = toStringId(gameId)
+  if (!normalizedGameId) return 0
+
+  const result = await db.model('GameTeamMessages').deleteMany({
+    gameId: normalizedGameId,
+  })
+
+  return Number(result?.deletedCount || 0)
 }
 
 export const markTeamMessagesReadByAdmin = async ({ db, gameId, teamId }) => {
@@ -143,12 +181,14 @@ export const markTeamMessagesReadByAdmin = async ({ db, gameId, teamId }) => {
   return Number(result?.modifiedCount || 0)
 }
 
-export const markAdminMessagesReadByTeam = async ({ db, gameId, teamId }) => {
+export const markAdminMessagesReadByTeam = async ({ db, gameId, teamId, userKey }) => {
   const normalizedGameId = toStringId(gameId)
   const normalizedTeamId = toStringId(teamId)
   if (!normalizedGameId || !normalizedTeamId) return 0
+  const normalizedUserKey = typeof userKey === 'string' ? userKey.trim() : ''
 
-  const result = await db.model('GameTeamMessages').updateMany(
+  const model = db.model('GameTeamMessages')
+  const teamReadResult = await model.updateMany(
     {
       gameId: normalizedGameId,
       direction: 'admin_to_team',
@@ -169,7 +209,40 @@ export const markAdminMessagesReadByTeam = async ({ db, gameId, teamId }) => {
     },
   )
 
-  return Number(result?.modifiedCount || 0)
+  let userReadModifiedCount = 0
+  if (normalizedUserKey) {
+    const userReadResult = await model.updateMany(
+      {
+        gameId: normalizedGameId,
+        direction: 'admin_to_team',
+        userReads: {
+          $not: {
+            $elemMatch: {
+              teamId: normalizedTeamId,
+              userKey: normalizedUserKey,
+            },
+          },
+        },
+        $or: [
+          { scope: 'game', teamId: null },
+          { scope: 'game', teamId: { $exists: false } },
+          { scope: 'team', teamId: normalizedTeamId },
+        ],
+      },
+      {
+        $push: {
+          userReads: {
+            teamId: normalizedTeamId,
+            userKey: normalizedUserKey,
+            readAt: new Date(),
+          },
+        },
+      },
+    )
+    userReadModifiedCount = Number(userReadResult?.modifiedCount || 0)
+  }
+
+  return Math.max(Number(teamReadResult?.modifiedCount || 0), userReadModifiedCount)
 }
 
 export const fetchUnreadTeamMessageCounts = async ({ db, gameId }) => {
@@ -200,6 +273,133 @@ export const fetchUnreadTeamMessageCounts = async ({ db, gameId }) => {
     if (teamId) acc[teamId] = Number(row?.count || 0)
     return acc
   }, {})
+}
+
+export const fetchUnreadAdminMessageCountForTeam = async ({
+  db,
+  gameId,
+  teamId,
+  userKey,
+}) => {
+  const normalizedGameId = toStringId(gameId)
+  const normalizedTeamId = toStringId(teamId)
+  const normalizedUserKey = typeof userKey === 'string' ? userKey.trim() : ''
+  if (!normalizedGameId || !normalizedTeamId || !normalizedUserKey) return 0
+
+  const count = await db.model('GameTeamMessages').countDocuments({
+    gameId: normalizedGameId,
+    direction: 'admin_to_team',
+    userReads: {
+      $not: {
+        $elemMatch: {
+          teamId: normalizedTeamId,
+          userKey: normalizedUserKey,
+        },
+      },
+    },
+    $or: [
+      { scope: 'game', teamId: null },
+      { scope: 'game', teamId: { $exists: false } },
+      { scope: 'team', teamId: normalizedTeamId },
+    ],
+  })
+
+  return Number(count || 0)
+}
+
+export const fetchGameTeamDialogSummaries = async ({ db, gameId }) => {
+  const normalizedGameId = toStringId(gameId)
+  if (!normalizedGameId) return []
+
+  const gameTeamDocs = await db
+    .model('GamesTeams')
+    .find({ gameId: normalizedGameId })
+    .select({ teamId: 1, createdAt: 1 })
+    .lean()
+
+  const teamIds = Array.from(
+    new Set(gameTeamDocs.map((item) => toStringId(item?.teamId)).filter(Boolean)),
+  )
+  if (teamIds.length === 0) return []
+
+  const [teams, unreadCounts, lastMessages] = await Promise.all([
+    db
+      .model('Teams')
+      .find({ _id: { $in: teamIds } })
+      .select({ _id: 1, name: 1, image: 1, members: 1 })
+      .lean(),
+    fetchUnreadTeamMessageCounts({ db, gameId: normalizedGameId }),
+    db
+      .model('GameTeamMessages')
+      .aggregate([
+        {
+          $match: {
+            gameId: normalizedGameId,
+            scope: 'team',
+            teamId: { $in: teamIds },
+          },
+        },
+        { $sort: { createdAt: -1, _id: -1 } },
+        {
+          $group: {
+            _id: '$teamId',
+            message: { $first: '$$ROOT' },
+          },
+        },
+      ]),
+  ])
+
+  const teamById = teams.reduce((acc, team) => {
+    const teamId = toStringId(team?._id)
+    if (teamId) acc[teamId] = team
+    return acc
+  }, {})
+  const registrationByTeamId = gameTeamDocs.reduce((acc, item) => {
+    const teamId = toStringId(item?.teamId)
+    if (teamId && !acc[teamId]) acc[teamId] = item
+    return acc
+  }, {})
+  const lastMessageByTeamId = lastMessages.reduce((acc, row) => {
+    const teamId = toStringId(row?._id)
+    if (teamId) acc[teamId] = row?.message || null
+    return acc
+  }, {})
+
+  return teamIds
+    .map((teamId) => {
+      const team = teamById[teamId] || {}
+      const lastMessage = lastMessageByTeamId[teamId]
+      return {
+        teamId,
+        teamName:
+          typeof team?.name === 'string' && team.name.trim()
+            ? team.name.trim()
+            : 'Без названия',
+        teamImage: typeof team?.image === 'string' ? team.image : '',
+        membersCount: Array.isArray(team?.members) ? team.members.length : 0,
+        unreadCount: Number(unreadCounts[teamId] || 0),
+        lastMessage: lastMessage
+          ? mapGameTeamMessage(lastMessage, { teamId })
+          : null,
+        lastMessageAt: toIsoString(lastMessage?.createdAt),
+        registeredAt: toIsoString(registrationByTeamId[teamId]?.createdAt),
+      }
+    })
+    .sort((first, second) => {
+      const firstTime = first.lastMessageAt
+        ? new Date(first.lastMessageAt).getTime()
+        : 0
+      const secondTime = second.lastMessageAt
+        ? new Date(second.lastMessageAt).getTime()
+        : 0
+      if (firstTime !== secondTime) return secondTime - firstTime
+      if (first.unreadCount !== second.unreadCount) {
+        return second.unreadCount - first.unreadCount
+      }
+      return first.teamName.localeCompare(second.teamName, 'ru', {
+        sensitivity: 'base',
+      })
+    })
 }
 
 export const getRegisteredTeamIds = async ({ db, gameId }) => {

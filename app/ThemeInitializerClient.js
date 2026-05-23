@@ -22,12 +22,15 @@ export default function ThemeInitializerClient() {
       root.classList.toggle('dark', theme === 'dark')
       root.style.colorScheme = theme === 'dark' ? 'dark' : 'light'
       root.setAttribute('data-theme-ready', '1')
+      document.cookie = `cabinet-theme=${theme}; Path=/; Max-Age=31536000; SameSite=Lax`
     } catch {
       const root = document.documentElement
       root.setAttribute('data-theme', 'light')
       root.classList.remove('dark')
       root.style.colorScheme = 'light'
       root.setAttribute('data-theme-ready', '1')
+      document.cookie =
+        'cabinet-theme=light; Path=/; Max-Age=31536000; SameSite=Lax'
     }
   }, [])
 

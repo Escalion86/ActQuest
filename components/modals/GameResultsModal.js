@@ -72,6 +72,60 @@ const getAdjustmentBadgeClass = (type) =>
     ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
     : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200'
 
+const UNFINISHED_TASK_STATUSES = new Set([
+  'not_started',
+  'in_progress',
+  'stopped',
+])
+
+const getTaskEntrySeconds = (entry) => {
+  const value = entry?.seconds
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const numeric = Number(value)
+    return Number.isFinite(numeric) ? numeric : null
+  }
+  return null
+}
+
+const isUnfinishedTaskEntry = (entry) => {
+  const status = typeof entry?.status === 'string' ? entry.status.trim() : ''
+  if (UNFINISHED_TASK_STATUSES.has(status)) {
+    return true
+  }
+
+  const display = typeof entry?.display === 'string' ? entry.display : ''
+  if (display.includes('[не начато]') || display.includes('[не завершено]')) {
+    return true
+  }
+
+  return getTaskEntrySeconds(entry) === null
+}
+
+const compareTaskEntries = (first, second) => {
+  const firstUnfinished = isUnfinishedTaskEntry(first)
+  const secondUnfinished = isUnfinishedTaskEntry(second)
+
+  if (firstUnfinished !== secondUnfinished) {
+    return firstUnfinished ? 1 : -1
+  }
+
+  if (!firstUnfinished) {
+    const firstSeconds = getTaskEntrySeconds(first)
+    const secondSeconds = getTaskEntrySeconds(second)
+    if (firstSeconds !== null && secondSeconds !== null && firstSeconds !== secondSeconds) {
+      return firstSeconds - secondSeconds
+    }
+  }
+
+  return String(first?.teamName || '').localeCompare(
+    String(second?.teamName || ''),
+    'ru',
+  )
+}
+
 const renderTaskTitle = ({ title, fallback = '—', isBonusTask = false }) => (
   <span className="inline-flex items-center gap-1.5">
     <span aria-hidden="true">🎯</span>
@@ -253,7 +307,7 @@ const GameResultsModal = ({
           teamId: team?.teamId,
           teamName: team?.teamName || 'Без названия',
           status: taskResult?.status || '',
-          seconds: Number(taskResult?.seconds),
+          seconds: taskResult?.seconds ?? null,
           display: taskResult?.display || '—',
           penaltySeconds: Number(taskResult?.penaltySeconds) || 0,
           bonusSeconds: Number(taskResult?.bonusSeconds) || 0,
@@ -282,9 +336,25 @@ const GameResultsModal = ({
     [rankingRows, userParticipationTeamIds],
   )
 
+  const visibleOutOfCompetitionAdjustmentTeams = shouldShowOutOfCompetitionTeams
+    ? viewerCanManageResults
+      ? computedOutOfCompetitionTeams
+      : computedOutOfCompetitionTeams.filter((team) =>
+          userParticipationTeamIds.has(String(team?.teamId || '').trim()),
+        )
+    : []
   const teamsWithAdjustments =
-    computedTeams.length > 0
-      ? computedTeams.filter((team) => Array.isArray(team?.addings) && team.addings.length > 0)
+    computedTeams.length > 0 || visibleOutOfCompetitionAdjustmentTeams.length > 0
+      ? [
+          ...computedTeams.map((team) => ({
+            ...team,
+            outOfCompetition: false,
+          })),
+          ...visibleOutOfCompetitionAdjustmentTeams.map((team) => ({
+            ...team,
+            outOfCompetition: true,
+          })),
+        ].filter((team) => Array.isArray(team?.addings) && team.addings.length > 0)
       : []
   const [expandedTaskBoards, setExpandedTaskBoards] = useState({})
   const [expandedAdjustmentTeams, setExpandedAdjustmentTeams] = useState({})
@@ -578,23 +648,7 @@ const GameResultsModal = ({
                             Number(board.taskIndex),
                           ) || []
                         const mergedEntries = [...regularEntries, ...outOfCompetitionEntries]
-                        const sortedEntries = [...mergedEntries].sort((first, second) => {
-                          const firstSeconds = Number(first?.seconds)
-                          const secondSeconds = Number(second?.seconds)
-                          const firstOrder = Number.isFinite(firstSeconds)
-                            ? firstSeconds
-                            : Number.MAX_SAFE_INTEGER
-                          const secondOrder = Number.isFinite(secondSeconds)
-                            ? secondSeconds
-                            : Number.MAX_SAFE_INTEGER
-                          if (firstOrder !== secondOrder) {
-                            return firstOrder - secondOrder
-                          }
-                          return String(first?.teamName || '').localeCompare(
-                            String(second?.teamName || ''),
-                            'ru',
-                          )
-                        })
+                        const sortedEntries = [...mergedEntries].sort(compareTaskEntries)
 
                         return (
                           <>
@@ -719,7 +773,14 @@ const GameResultsModal = ({
                               {isExpanded ? '▴' : '▾'}
                             </button>
                             <div className="flex items-center justify-between gap-3 pr-10">
-                              <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{team.teamName}</h5>
+                              <h5 className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                                <span className="truncate">{team.teamName}</span>
+                                {team.outOfCompetition ? (
+                                  <span className="inline-flex shrink-0 rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                                    ВЗ
+                                  </span>
+                                ) : null}
+                              </h5>
                               <span className={`font-mono text-xs font-semibold ${totalAdjustmentsClassName}`}>
                                 {totalAdjustmentsDisplay}
                               </span>

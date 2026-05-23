@@ -46,6 +46,42 @@ const sortByOptionalNumber = (first, second, key) => {
   return 0
 }
 
+const UNFINISHED_TASK_STATUSES = new Set([
+  'not_started',
+  'in_progress',
+  'stopped',
+])
+
+const isUnfinishedTaskEntry = (entry) => {
+  const status = typeof entry?.status === 'string' ? entry.status.trim() : ''
+  if (UNFINISHED_TASK_STATUSES.has(status)) {
+    return true
+  }
+
+  return !isNumeric(entry?.seconds)
+}
+
+const compareTaskBoardEntries = (first, second) => {
+  const firstUnfinished = isUnfinishedTaskEntry(first)
+  const secondUnfinished = isUnfinishedTaskEntry(second)
+
+  if (firstUnfinished !== secondUnfinished) {
+    return firstUnfinished ? 1 : -1
+  }
+
+  if (!firstUnfinished) {
+    const compare = sortByOptionalNumber(first, second, 'seconds')
+    if (compare !== 0) {
+      return compare
+    }
+  }
+
+  return String(first?.teamName || '').localeCompare(
+    String(second?.teamName || ''),
+    'ru',
+  )
+}
+
 const getTaskIdValue = (task) =>
   task?._id !== null && task?._id !== undefined ? String(task._id) : ''
 
@@ -653,13 +689,7 @@ const buildTaskBoards = (teamsResults, game) => {
         }
       })
       .filter(Boolean)
-      .sort((first, second) => {
-        const compare = sortByOptionalNumber(first, second, 'seconds')
-        if (compare !== 0) {
-          return compare
-        }
-        return first.teamName.localeCompare(second.teamName, 'ru')
-      })
+      .sort(compareTaskBoardEntries)
 
     const numericSeconds = entries
       .map((entry) => entry.seconds)

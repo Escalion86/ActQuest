@@ -6,7 +6,9 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
 import {
   getCaptainRoleQuery,
+  getLiaisonRoleQuery,
   isCaptainRole,
+  isLiaisonRole,
   normalizeTeamRoleForWrite,
 } from '@helpers/teamRoles'
 
@@ -52,6 +54,26 @@ const ensureCanManageMembership = async ({
   const TeamsUsersModel = db.model('TeamsUsers')
   const captainMembership = await TeamsUsersModel.findOne({
     teamId: membership.teamId,
+    role: getCaptainRoleQuery(),
+    userId: actorUserId,
+  })
+    .select({ _id: 1 })
+    .lean()
+
+  return Boolean(captainMembership?._id)
+}
+
+const ensureCanChangeRole = async ({ db, actorRole, actorUserId, teamId }) => {
+  if (isElevatedRole(actorRole)) {
+    return true
+  }
+
+  if (!actorUserId || !teamId) {
+    return false
+  }
+
+  const captainMembership = await db.model('TeamsUsers').findOne({
+    teamId,
     role: getCaptainRoleQuery(),
     userId: actorUserId,
   })
@@ -168,6 +190,7 @@ export async function PUT(request, { params }) {
   if (
     rawNextRole !== 'captain' &&
     rawNextRole !== 'capitan' &&
+    rawNextRole !== 'liaison' &&
     rawNextRole !== 'participant'
   ) {
     return NextResponse.json(
@@ -210,6 +233,44 @@ export async function PUT(request, { params }) {
           error: 'Недостаточно прав для изменения роли участника',
         },
         { status: 403 },
+      )
+    }
+
+    const canChangeRole = await ensureCanChangeRole({
+      db,
+      actorRole,
+      actorUserId,
+      teamId: membership.teamId,
+    })
+    if (!canChangeRole) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Изменять роли участников может только капитан команды',
+        },
+        { status: 403 },
+      )
+    }
+
+    if (isCaptainRole(membership.role) && isLiaisonRole(nextRole)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Капитана нельзя назначить связным отдельной ролью. Если связной не назначен, капитан является связным по умолчанию.',
+        },
+        { status: 409 },
+      )
+    }
+
+    if (isLiaisonRole(nextRole)) {
+      await TeamsUsersModel.updateMany(
+        {
+          teamId: membership.teamId,
+          role: getLiaisonRoleQuery(),
+          _id: { $ne: membershipId },
+        },
+        { $set: { role: 'participant' } },
       )
     }
 

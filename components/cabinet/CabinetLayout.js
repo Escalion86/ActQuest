@@ -27,6 +27,7 @@ import {
   faXmark,
 } from '@fortawesome/free-solid-svg-icons'
 import { LOCATIONS } from '@server/serverConstants'
+import { useBootstrapTheme } from '@app/providers'
 import isUserAdmin from '@helpers/isUserAdmin'
 import canManageTransactions from '@helpers/canManageTransactions'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
@@ -250,6 +251,7 @@ const isForceLocationDebugEnabled =
   process.env.NEXT_PUBLIC_FORCE_LOCATION_DEBUG === '1' ||
   isClientSessionDebugEnabled
 const CABINET_USERS_API_BASE = '/api/cabinet/users'
+const THEME_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
 const clientSessionDebugLog = (stage, payload = null) => {
   if (!isClientSessionDebugEnabled || typeof window === 'undefined') {
     return
@@ -298,6 +300,24 @@ const normalizePath = (value) => {
   }
 }
 
+const persistThemePreference = (nextTheme) => {
+  if (nextTheme !== 'dark' && nextTheme !== 'light') {
+    return
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem('cabinet-theme', nextTheme)
+    } catch {
+      // ignore localStorage write errors on restricted browsers
+    }
+  }
+
+  if (typeof document !== 'undefined') {
+    document.cookie = `cabinet-theme=${nextTheme}; Path=/; Max-Age=${THEME_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`
+  }
+}
+
 const CabinetLayout = ({
   children,
   title,
@@ -309,6 +329,7 @@ const CabinetLayout = ({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const bootstrapTheme = useBootstrapTheme()
   const { data: session, status, update } = useSession()
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(() =>
@@ -317,7 +338,11 @@ const CabinetLayout = ({
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(() =>
     pathname?.startsWith('/cabinet/admin'),
   )
-  const [theme, setTheme] = useState(null)
+  const [theme, setTheme] = useState(() =>
+    bootstrapTheme === 'dark' || bootstrapTheme === 'light'
+      ? bootstrapTheme
+      : 'light',
+  )
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [locationPromptValue, setLocationPromptValue] = useState('')
   const [locationPromptError, setLocationPromptError] = useState('')
@@ -448,11 +473,7 @@ const CabinetLayout = ({
       return
     }
 
-    try {
-      window.localStorage.setItem('cabinet-theme', theme)
-    } catch {
-      // ignore localStorage write errors on restricted browsers
-    }
+    persistThemePreference(theme)
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-theme', theme)
       document.documentElement.classList.toggle('dark', isDarkTheme)
@@ -504,15 +525,9 @@ const CabinetLayout = ({
     shouldForceLocationSelection,
   ])
 
-const applyTheme = useCallback((nextTheme) => {
+  const applyTheme = useCallback((nextTheme) => {
     const isDark = nextTheme === 'dark'
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem('cabinet-theme', nextTheme)
-      } catch {
-        // ignore localStorage write errors on restricted browsers
-      }
-    }
+    persistThemePreference(nextTheme)
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-theme', nextTheme)
       document.documentElement.classList.toggle('dark', isDark)
@@ -909,15 +924,6 @@ const applyTheme = useCallback((nextTheme) => {
   const forceLocationSelectClass = isDarkTheme
     ? 'border-slate-700 bg-slate-950 text-slate-100'
     : 'border-slate-300 bg-white text-slate-700'
-
-  if (!theme) {
-    return (
-      <div
-        className="cabinet-neon min-h-screen bg-transparent"
-        aria-hidden="true"
-      />
-    )
-  }
 
   return (
     <div className="cabinet-neon">

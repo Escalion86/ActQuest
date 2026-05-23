@@ -101,6 +101,8 @@ const TeamEditModal = ({
   onResetTeam,
   memberActionId,
   onSetCaptain,
+  onSetLiaison,
+  onUnsetLiaison,
   onRemoveMember,
   canEditCarSkin,
   canDeleteTeam,
@@ -355,6 +357,7 @@ const TeamEditModal = ({
                         <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                           {member.name || 'Без имени'}
                           {member.isCaptain ? ' · Капитан' : ''}
+                          {member.isLiaison ? ' · Связной' : ''}
                         </p>
                         {member.username && (
                           <p className="mt-1 text-xs text-slate-500">
@@ -398,6 +401,30 @@ const TeamEditModal = ({
                             Назначить капитаном
                           </CabinetButton>
                         )}
+                        {!member.isCaptain && !member.isLiaison ? (
+                          <CabinetButton
+                            onClick={() => onSetLiaison(member.id)}
+                            disabled={isProcessing}
+                            variant="secondary"
+                            tone={isProcessing ? 'neutral' : 'brand'}
+                            size="sm"
+                            className="inline-flex justify-center"
+                          >
+                            Назначить связным
+                          </CabinetButton>
+                        ) : null}
+                        {!member.isCaptain && member.isLiaison ? (
+                          <CabinetButton
+                            onClick={() => onUnsetLiaison(member.id)}
+                            disabled={isProcessing}
+                            variant="secondary"
+                            tone={isProcessing ? 'neutral' : 'brand'}
+                            size="sm"
+                            className="inline-flex justify-center"
+                          >
+                            Сделать участником
+                          </CabinetButton>
+                        ) : null}
                         {!member.isCaptain && (
                           <CabinetButton
                             onClick={() => onRemoveMember(member.id)}
@@ -451,6 +478,7 @@ TeamEditModal.propTypes = {
         userRole: PropTypes.string,
         hasLinkedUser: PropTypes.bool,
         isCaptain: PropTypes.bool,
+        isLiaison: PropTypes.bool,
       }),
     ),
   }),
@@ -466,6 +494,8 @@ TeamEditModal.propTypes = {
   onResetTeam: PropTypes.func.isRequired,
   memberActionId: PropTypes.string,
   onSetCaptain: PropTypes.func.isRequired,
+  onSetLiaison: PropTypes.func.isRequired,
+  onUnsetLiaison: PropTypes.func.isRequired,
   onRemoveMember: PropTypes.func.isRequired,
   canEditCarSkin: PropTypes.bool,
   canDeleteTeam: PropTypes.bool,

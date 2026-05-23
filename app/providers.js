@@ -1,7 +1,7 @@
 'use client'
 
 import PropTypes from 'prop-types'
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { SessionProvider } from 'next-auth/react'
 import { Provider as JotaiProvider } from 'jotai'
@@ -9,6 +9,9 @@ import { SnackbarProvider } from 'lib/notistack'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const SITE_AUDIO_SRC = '/sounds/Cibircatacombs.mp3'
+const ThemeBootstrapContext = createContext('light')
+
+export const useBootstrapTheme = () => useContext(ThemeBootstrapContext)
 
 const safeLocalStorageGet = (key, fallback = null) => {
   if (typeof window === 'undefined') return fallback
@@ -39,7 +42,7 @@ const queryClient = new QueryClient({
   },
 })
 
-export default function AppProviders({ children }) {
+export default function AppProviders({ children, initialTheme }) {
   const pathname = usePathname()
   const isProductionRuntime = process.env.NODE_ENV === 'production'
   const audioRef = useRef(null)
@@ -310,17 +313,19 @@ export default function AppProviders({ children }) {
       >
         <QueryClientProvider client={queryClient}>
           <JotaiProvider>
-            <audio
-              ref={audioRef}
-              src={SITE_AUDIO_SRC}
-              loop
-              preload="metadata"
-              playsInline
-              onCanPlay={() => setIsAudioReady(true)}
-              onCanPlayThrough={() => setIsAudioReady(true)}
-              onLoadedMetadata={() => setIsAudioReady(true)}
-            />
-            {children}
+            <ThemeBootstrapContext.Provider value={initialTheme}>
+              <audio
+                ref={audioRef}
+                src={SITE_AUDIO_SRC}
+                loop
+                preload="metadata"
+                playsInline
+                onCanPlay={() => setIsAudioReady(true)}
+                onCanPlayThrough={() => setIsAudioReady(true)}
+                onLoadedMetadata={() => setIsAudioReady(true)}
+              />
+              {children}
+            </ThemeBootstrapContext.Provider>
             {showAudioUnlockHint ? (
               <div className="fixed bottom-20 right-5 z-[9999] w-[min(92vw,320px)] rounded-2xl border border-[#00D1FF]/40 bg-[#0B001A]/88 p-3 text-[#d7f7ff] shadow-[0_0_24px_rgba(0,209,255,0.2)] backdrop-blur-sm">
                 <p className="text-sm leading-snug">
@@ -411,8 +416,10 @@ export default function AppProviders({ children }) {
 
 AppProviders.propTypes = {
   children: PropTypes.node,
+  initialTheme: PropTypes.oneOf(['dark', 'light']),
 }
 
 AppProviders.defaultProps = {
   children: null,
+  initialTheme: 'light',
 }

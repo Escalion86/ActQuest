@@ -92,26 +92,6 @@ const sortGamesByView = (games, view) => {
   return items
 }
 
-const resolveTeamsPlace = (teamsPlaces, teamId) => {
-  if (!teamsPlaces || !teamId) {
-    return null
-  }
-
-  if (typeof teamsPlaces.get === 'function') {
-    const mapValue = teamsPlaces.get(teamId)
-    const numeric = Number(mapValue)
-    return Number.isFinite(numeric) ? numeric : null
-  }
-
-  if (typeof teamsPlaces === 'object') {
-    const objectValue = teamsPlaces[teamId]
-    const numeric = Number(objectValue)
-    return Number.isFinite(numeric) ? numeric : null
-  }
-
-  return null
-}
-
 const fetchGamesForCabinet = async ({
   db,
   location,
@@ -300,6 +280,8 @@ const fetchGamesForCabinet = async ({
     return { games: [], hasMore }
   }
 
+  const loadedGameIds = gamesDocs.map((g) => toStringId(g?._id)).filter(Boolean)
+
   // Загрузить количество команд для предстоящих игр из GamesTeams
   const GamesTeamsModel = db.model('GamesTeams')
   const upcomingGameIds = gamesDocs
@@ -311,6 +293,34 @@ const fetchGamesForCabinet = async ({
     .filter(Boolean)
 
   const teamsCountByGameId = {}
+  const adminUnreadMessagesCountByGameId = {}
+
+  if (loadedGameIds.length > 0) {
+    const unreadMessageRows = await db
+      .model('GameTeamMessages')
+      .aggregate([
+        {
+          $match: {
+            gameId: { $in: loadedGameIds },
+            direction: 'team_to_admin',
+            readByAdminAt: null,
+          },
+        },
+        {
+          $group: {
+            _id: '$gameId',
+            count: { $sum: 1 },
+          },
+        },
+      ])
+
+    for (const row of unreadMessageRows) {
+      const gameId = toStringId(row?._id)
+      if (gameId) {
+        adminUnreadMessagesCountByGameId[gameId] = Number(row?.count || 0)
+      }
+    }
+  }
 
   if (upcomingGameIds.length > 0) {
     const gamesTeamsDocs = await GamesTeamsModel.find({
@@ -519,6 +529,9 @@ const fetchGamesForCabinet = async ({
       ...game,
       status: normalizedStatus,
       teamsCount,
+      adminUnreadMessagesCount: gameId
+        ? adminUnreadMessagesCountByGameId[gameId] || 0
+        : 0,
       userTeamPlace: null,
       userParticipationTeams: gameId ? participationByGameId[gameId] || [] : [],
       agents: (Array.isArray(game?.agents) ? game.agents : []).map((agent) => {
