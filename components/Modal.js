@@ -5,7 +5,16 @@ import { createPortal } from 'react-dom'
 let activeModalLocks = 0
 let previousBodyOverflow = ''
 
-const Modal = ({ isOpen, title, children, onClose, footer, compactMobile }) => {
+const Modal = ({
+  isOpen,
+  title,
+  children,
+  onClose,
+  footer,
+  compactMobile,
+  dialogClassName,
+  bodyClassName,
+}) => {
   useEffect(() => {
     if (!isOpen) {
       return undefined
@@ -76,7 +85,7 @@ const Modal = ({ isOpen, title, children, onClose, footer, compactMobile }) => {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative z-10 flex h-full w-full flex-col overflow-hidden border border-slate-200/90 bg-white/95 shadow-[0_18px_46px_rgba(2,8,23,0.26)] dark:border-[#7A00FF]/35 dark:bg-[#090018]/96 dark:shadow-[0_0_0_1px_rgba(122,0,255,0.18),0_28px_64px_rgba(0,0,0,0.55)] md:h-auto md:max-h-[90vh] md:max-w-5xl md:rounded-2xl"
+        className={`relative z-10 flex h-full w-full flex-col overflow-hidden border border-slate-200/90 bg-white/95 shadow-[0_18px_46px_rgba(2,8,23,0.26)] dark:border-[#7A00FF]/35 dark:bg-[#090018]/96 dark:shadow-[0_0_0_1px_rgba(122,0,255,0.18),0_28px_64px_rgba(0,0,0,0.55)] md:h-auto md:max-h-[90vh] md:max-w-5xl md:rounded-2xl ${dialogClassName}`}
       >
         <div
           className={`flex shrink-0 items-start justify-between gap-4 border-b border-slate-200/85 bg-white/95 py-4 dark:border-[#00D1FF]/25 dark:bg-[#090018]/95 ${horizontalPaddingClass}`}
@@ -94,7 +103,7 @@ const Modal = ({ isOpen, title, children, onClose, footer, compactMobile }) => {
           </button>
         </div>
         <div
-          className={`min-h-0 flex-1 overflow-y-auto py-5 ${horizontalPaddingClass}`}
+          className={`min-h-0 flex-1 overflow-y-auto py-5 ${horizontalPaddingClass} ${bodyClassName}`}
         >
           {children}
         </div>
@@ -116,12 +125,16 @@ Modal.propTypes = {
   onClose: PropTypes.func,
   footer: PropTypes.node,
   compactMobile: PropTypes.bool,
+  dialogClassName: PropTypes.string,
+  bodyClassName: PropTypes.string,
 }
 
 Modal.defaultProps = {
   onClose: undefined,
   footer: null,
   compactMobile: false,
+  dialogClassName: '',
+  bodyClassName: '',
 }
 
 export default Modal

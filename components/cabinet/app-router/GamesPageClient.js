@@ -822,6 +822,7 @@ const buildUpdatePayload = (game) => {
     image: game.image ? game.image : null,
     startingPlace: game.startingPlace ?? '',
     finishingPlace: game.finishingPlace ?? '',
+    showFinishingPlace: Boolean(game.showFinishingPlace),
     taskDuration: Number(game.taskDuration) || 0,
     cluesDuration: Number(game.cluesDuration) || 0,
     clueEarlyAccessMode: game.clueEarlyAccessMode,
@@ -2601,6 +2602,7 @@ const GamesPage = ({
         image: null,
         startingPlace: '',
         finishingPlace: '',
+        showFinishingPlace: false,
         taskDuration: 3600,
         cluesDuration: 1200,
         clueEarlyAccessMode: 'time',
@@ -2708,6 +2710,9 @@ const GamesPage = ({
         if (createGameCloneOptions.locations) {
           baseDraft.startingPlace = normalizedSource.startingPlace || ''
           baseDraft.finishingPlace = normalizedSource.finishingPlace || ''
+          baseDraft.showFinishingPlace = Boolean(
+            normalizedSource.showFinishingPlace,
+          )
         }
 
         if (createGameCloneOptions.moderators) {
@@ -3401,6 +3406,7 @@ const GamesPage = ({
         const isClosedEditing = isClosedStatus(prevGame.status)
         const allowedClosedKeys = [
           'showCreator',
+          'showFinishingPlace',
           'showTasks',
           'hideResult',
           'registrationOpen',
@@ -7613,6 +7619,7 @@ GamesPage.propTypes = {
       image: PropTypes.string,
       startingPlace: PropTypes.string,
       finishingPlace: PropTypes.string,
+      showFinishingPlace: PropTypes.bool,
       taskDuration: PropTypes.number,
       cluesDuration: PropTypes.number,
       clueEarlyAccessMode: PropTypes.string,

@@ -901,6 +901,20 @@ const GameEditModal = ({
               />
             </div>
 
+            <NeonCheckbox
+              id="game-show-finishing-place"
+              checked={Boolean(selectedGame.showFinishingPlace)}
+              onChange={(eventOrChecked) =>
+                debugCheckboxUpdate(
+                  'showFinishingPlace',
+                  getCheckboxChecked(eventOrChecked),
+                  (checked) => ({ showFinishingPlace: checked }),
+                )
+              }
+              label="Показывать место окончания"
+              labelClassName="text-sm text-slate-600 dark:text-slate-200"
+            />
+
             <div className="space-y-2">
               <p className={fieldLabelClassName}>Описание</p>
               <TaskRichEditor

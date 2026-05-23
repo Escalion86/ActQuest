@@ -107,13 +107,23 @@ const GameDescriptionModal = ({
                 {selectedGame.startingPlace || 'Не указано'}
               </dd>
             </div>
-            {canViewRestrictedGameInfo && (
+            {(canViewRestrictedGameInfo || selectedGame.showFinishingPlace) && (
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Финиш
                 </dt>
                 <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
                   {selectedGame.finishingPlace || 'Не указан'}
+                </dd>
+              </div>
+            )}
+            {canViewRestrictedGameInfo && (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Показывать место окончания
+                </dt>
+                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                  {selectedGame.showFinishingPlace ? 'Да' : 'Нет'}
                 </dd>
               </div>
             )}
@@ -513,7 +523,11 @@ const GameDescriptionModal = ({
 )
 
 GameDescriptionModal.propTypes = {
-  selectedGame: PropTypes.shape({ name: PropTypes.string }),
+  selectedGame: PropTypes.shape({
+    name: PropTypes.string,
+    finishingPlace: PropTypes.string,
+    showFinishingPlace: PropTypes.bool,
+  }),
   isDescriptionModalOpen: PropTypes.bool.isRequired,
   handleCloseDescriptionModal: PropTypes.func.isRequired,
   gameTypeLabel: PropTypes.string.isRequired,

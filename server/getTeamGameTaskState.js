@@ -298,7 +298,8 @@ const safeSerializeGameForClient = (game) => {
     dateStartFact: game.dateStartFact || null,
     dateEndFact: game.dateEndFact || null,
     status: game.status || 'active',
-    finishingPlace: game.finishingPlace || '',
+    finishingPlace: game.showFinishingPlace ? game.finishingPlace || '' : '',
+    showFinishingPlace: Boolean(game.showFinishingPlace),
     image: game.image || null,
     tasksCount: Array.isArray(game.tasks) ? game.tasks.length : 0,
   }
@@ -1110,7 +1111,7 @@ const computeTaskHtml = async ({
   if (isGameStarted && !isGameFinished && tasksCount > 0) {
     if (hasCompletedAllTasks) {
       const lastTask = tasks[tasksCount - 1] ?? null
-      const finishingPlace = game.finishingPlace
+      const finishingPlace = game.showFinishingPlace ? game.finishingPlace : ''
       const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
       if (finishingPlace) {
         completionParts.push(
@@ -1283,7 +1284,7 @@ const computeTaskHtml = async ({
 
   if (!taskHtml && (hasCompletedAllTasks || isGameFinished) && tasksCount > 0) {
     const lastTask = tasks[tasksCount - 1] ?? null
-    const finishingPlace = game.finishingPlace
+    const finishingPlace = game.showFinishingPlace ? game.finishingPlace : ''
     const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
     if (finishingPlace) {
       completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)

@@ -5,12 +5,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowsRotate, faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
+import {
+  faArrowsRotate,
+  faMoon,
+  faSun,
+} from '@fortawesome/free-solid-svg-icons'
 import { useSession } from 'next-auth/react'
 
 import { LOCATIONS } from '@server/serverConstants'
 import normalizeAudioMessageHtml from '@helpers/normalizeAudioMessageHtml'
 import { sendImage } from '@helpers/cloudinary'
+import { GameMessageHistory } from '@components/game/GameMessageThread'
 import RichTaskContentView from '@components/game/RichTaskContentView'
 import TaskDisplayWithClues from '@components/game/TaskDisplayWithClues'
 import LinkedMessageText from '@components/game/LinkedMessageText'
@@ -126,10 +131,7 @@ const collectResultMessages = ({
       if (/(^|\s)введите\s+код/i.test(normalized)) {
         return false
       }
-      if (
-        isGameCompletion &&
-        /код\s+не\s+верен/i.test(normalized)
-      ) {
+      if (isGameCompletion && /код\s+не\s+верен/i.test(normalized)) {
         return false
       }
       if (seen.has(normalized)) return false
@@ -186,12 +188,13 @@ const adjustChatTextareaHeight = (textarea) => {
   const maxHeight = lineHeight * 5 + paddingTop + paddingBottom
   const nextHeight = Math.min(textarea.scrollHeight, maxHeight)
   textarea.style.height = `${nextHeight}px`
-  textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden'
+  textarea.style.overflowY =
+    textarea.scrollHeight > maxHeight ? 'auto' : 'hidden'
 }
 
 const ChatHeaderIcon = () => (
   <svg
-    className="h-5 w-5"
+    className="w-5 h-5"
     viewBox="0 0 20 20"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -214,7 +217,7 @@ const ChatHeaderIcon = () => (
 
 const CloseIcon = () => (
   <svg
-    className="h-4 w-4"
+    className="w-4 h-4"
     viewBox="0 0 20 20"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -328,7 +331,7 @@ const StoryMediaList = ({ media, directory }) => {
   }
 
   return (
-    <div className="mt-4 grid gap-3">
+    <div className="grid gap-3 mt-4">
       {items.map((item, index) => {
         const url = typeof item?.url === 'string' ? item.url.trim() : ''
         if (!url) {
@@ -343,7 +346,7 @@ const StoryMediaList = ({ media, directory }) => {
           return (
             <div
               key={key}
-              className="rounded-2xl border border-cyan-300/40 bg-cyan-50/70 p-3 dark:border-cyan-500/30 dark:bg-cyan-500/10"
+              className="p-3 border rounded-2xl border-cyan-300/40 bg-cyan-50/70 dark:border-cyan-500/30 dark:bg-cyan-500/10"
             >
               {title ? (
                 <p className="mb-2 text-sm font-semibold text-cyan-900 dark:text-cyan-100">
@@ -359,14 +362,18 @@ const StoryMediaList = ({ media, directory }) => {
           return (
             <div
               key={key}
-              className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/70"
+              className="p-3 border rounded-2xl border-slate-200 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-800/70"
             >
               {title ? (
                 <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-100">
                   {title}
                 </p>
               ) : null}
-              <video controls src={url} className="max-h-[420px] w-full rounded-xl" />
+              <video
+                controls
+                src={url}
+                className="max-h-[420px] w-full rounded-xl"
+              />
             </div>
           )
         }
@@ -374,7 +381,7 @@ const StoryMediaList = ({ media, directory }) => {
         return (
           <figure
             key={key}
-            className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/70"
+            className="p-3 border rounded-2xl border-slate-200 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-800/70"
           >
             <img
               src={url}
@@ -521,7 +528,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
 
   return (
     <section className="space-y-6">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40">
+      <div className="p-6 bg-white border shadow-lg rounded-3xl border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-primary dark:text-white">
@@ -535,7 +542,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
           <div className="flex flex-wrap items-center gap-2">
             {state?.progress?.score !== null &&
             state?.progress?.score !== undefined ? (
-              <span className="rounded-full border border-cyan-300 bg-cyan-50 px-3 py-1 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-100">
+              <span className="px-3 py-1 text-sm font-semibold border rounded-full border-cyan-300 bg-cyan-50 text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-100">
                 Баллы: {state.progress.score}
               </span>
             ) : null}
@@ -556,13 +563,13 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
           </p>
         ) : null}
         {error ? (
-          <p className="mt-4 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+          <p className="px-3 py-2 mt-4 text-sm border rounded-xl border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
             {error}
           </p>
         ) : null}
 
         {state?.currentEnding ? (
-          <div className="mt-5 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-500/35 dark:bg-emerald-500/10">
+          <div className="p-4 mt-5 border rounded-2xl border-emerald-300 bg-emerald-50 dark:border-emerald-500/35 dark:bg-emerald-500/10">
             <p className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-200">
               {status === 'failed' ? 'Финал: не пройдено' : 'Финал'}
             </p>
@@ -585,25 +592,25 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
       </div>
 
       {inventory.length > 0 ? (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40">
+        <section className="p-6 bg-white border shadow-lg rounded-3xl border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40">
           <h2 className="text-lg font-semibold text-primary dark:text-white">
             Инвентарь
           </h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 mt-4 sm:grid-cols-2">
             {inventory.map((item) => (
               <article
                 key={item.itemId}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70"
+                className="p-4 border rounded-2xl border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/70"
               >
                 <div className="flex gap-3">
                   {item.image ? (
                     <img
                       src={item.image}
                       alt={item.title || 'Предмет'}
-                      className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                      className="object-cover w-16 h-16 shrink-0 rounded-xl"
                     />
                   ) : null}
-                  <div className="min-w-0 flex-1">
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-slate-900 dark:text-slate-50">
                       {item.title || 'Предмет'}
                     </h3>
@@ -638,9 +645,9 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
             return (
               <article
                 key={nodeId}
-                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40"
+                className="p-6 bg-white border shadow-lg rounded-3xl border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40"
               >
-                <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">
+                <p className="text-xs font-semibold tracking-wide uppercase text-cyan-700 dark:text-cyan-300">
                   {nodeLabel}
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">
@@ -669,7 +676,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
                       return (
                         <div
                           key={clue.id}
-                          className="rounded-2xl border border-cyan-300/50 bg-cyan-50/70 p-4 dark:border-cyan-500/30 dark:bg-cyan-500/10"
+                          className="p-4 border rounded-2xl border-cyan-300/50 bg-cyan-50/70 dark:border-cyan-500/30 dark:bg-cyan-500/10"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
@@ -728,7 +735,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
                             handleActionClick({ nodeId, actionId: action.id })
                           }
                           disabled={isMutating || isFinished}
-                          className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="px-4 py-2 text-sm font-semibold text-white transition rounded-full bg-primary hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                           title={
                             Array.isArray(action.requiredItemIds) &&
                             action.requiredItemIds.length > 0
@@ -745,7 +752,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
 
                 {!isFinished ? (
                   <form
-                    className="mt-5 flex flex-col gap-3 sm:flex-row"
+                    className="flex flex-col gap-3 mt-5 sm:flex-row"
                     onSubmit={(event) => handleCodeSubmit(event, nodeId)}
                   >
                     <input
@@ -758,12 +765,14 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
                         }))
                       }
                       placeholder="Введите код"
-                      className="min-w-0 flex-1 rounded-2xl border border-gray-300 px-4 py-3 text-base transition focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400"
+                      className="flex-1 min-w-0 px-4 py-3 text-base transition border border-gray-300 rounded-2xl focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-blue-400"
                     />
                     <button
                       type="submit"
-                      disabled={isMutating || !String(codeDrafts[nodeId] || '').trim()}
-                      className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={
+                        isMutating || !String(codeDrafts[nodeId] || '').trim()
+                      }
+                      className="px-6 py-3 text-sm font-semibold text-white transition rounded-full bg-primary hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Отправить
                     </button>
@@ -774,7 +783,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
           })}
         </div>
       ) : !isLoading && state ? (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:shadow-slate-950/40">
+        <section className="p-6 text-sm bg-white border shadow-lg rounded-3xl border-slate-200 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:shadow-slate-950/40">
           {isFinished
             ? 'Квест завершен.'
             : 'Сейчас нет активных локаций. Дождитесь действия организатора или проверьте введенные коды.'}
@@ -1121,44 +1130,47 @@ function GameTeamPage({
     [gameId, isTaskRefreshing, location, teamId, updateTaskData],
   )
 
-  const loadGameMessages = useCallback(async ({ markRead = false } = {}) => {
-    if (!gameId || !teamId) return false
+  const loadGameMessages = useCallback(
+    async ({ markRead = false } = {}) => {
+      if (!gameId || !teamId) return false
 
-    setGameMessagesLoading(true)
-    try {
-      const params = new URLSearchParams({
-        gameId,
-        teamId,
-      })
-      if (!markRead) {
-        params.set('markRead', 'false')
+      setGameMessagesLoading(true)
+      try {
+        const params = new URLSearchParams({
+          gameId,
+          teamId,
+        })
+        if (!markRead) {
+          params.set('markRead', 'false')
+        }
+        const response = await fetch(
+          `/api/webapp/game-messages?${params.toString()}`,
+        )
+        const data = await response.json().catch(() => null)
+
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.error || 'Не удалось загрузить сообщения')
+        }
+
+        const payload = data.data || {}
+        setGameMessages(Array.isArray(payload.messages) ? payload.messages : [])
+        setUnreadAdminMessagesCount(
+          Math.max(0, Number(payload.unreadAdminMessagesCount || 0)),
+        )
+        setCanSendGameMessage(Boolean(payload.canSendToAdmin))
+        setGameMessagesError('')
+        return true
+      } catch (messagesError) {
+        setGameMessagesError(
+          messagesError?.message || 'Не удалось загрузить сообщения',
+        )
+        return false
+      } finally {
+        setGameMessagesLoading(false)
       }
-      const response = await fetch(`/api/webapp/game-messages?${params.toString()}`)
-      const data = await response.json().catch(() => null)
-
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.error || 'Не удалось загрузить сообщения')
-      }
-
-      const payload = data.data || {}
-      setGameMessages(
-        Array.isArray(payload.messages) ? payload.messages : [],
-      )
-      setUnreadAdminMessagesCount(
-        Math.max(0, Number(payload.unreadAdminMessagesCount || 0)),
-      )
-      setCanSendGameMessage(Boolean(payload.canSendToAdmin))
-      setGameMessagesError('')
-      return true
-    } catch (messagesError) {
-      setGameMessagesError(
-        messagesError?.message || 'Не удалось загрузить сообщения',
-      )
-      return false
-    } finally {
-      setGameMessagesLoading(false)
-    }
-  }, [gameId, teamId])
+    },
+    [gameId, teamId],
+  )
 
   const handleSendGameMessage = useCallback(async () => {
     const body = gameMessageDraft.trim()
@@ -1180,7 +1192,9 @@ function GameTeamPage({
       setGameMessageDraft('')
       await loadGameMessages({ markRead: true })
     } catch (sendError) {
-      setGameMessagesError(sendError?.message || 'Не удалось отправить сообщение')
+      setGameMessagesError(
+        sendError?.message || 'Не удалось отправить сообщение',
+      )
     } finally {
       setIsSendingGameMessage(false)
     }
@@ -1283,9 +1297,7 @@ function GameTeamPage({
       setAnswer('')
       setTaskRefreshError(null)
     } catch (submitError) {
-      setTaskRefreshError(
-        submitError?.message || 'Не удалось отправить код',
-      )
+      setTaskRefreshError(submitError?.message || 'Не удалось отправить код')
     } finally {
       setIsSubmitting(false)
     }
@@ -1377,7 +1389,9 @@ function GameTeamPage({
 
       updateTaskData(data.data || {})
     } catch (forceError) {
-      setTaskRefreshError(forceError?.message || 'Не удалось получить подсказку')
+      setTaskRefreshError(
+        forceError?.message || 'Не удалось получить подсказку',
+      )
     } finally {
       setIsForcingClue(false)
     }
@@ -1581,8 +1595,14 @@ function GameTeamPage({
     }
     return typeValue === 'photo' ? 'Фотоквест' : 'Автоквест'
   }, [game?.type])
-  const isPhotoGame = String(game?.type || '').trim().toLowerCase() === 'photo'
-  const isStoryGame = String(game?.type || '').trim().toLowerCase() === 'story'
+  const isPhotoGame =
+    String(game?.type || '')
+      .trim()
+      .toLowerCase() === 'photo'
+  const isStoryGame =
+    String(game?.type || '')
+      .trim()
+      .toLowerCase() === 'story'
 
   const formattedTaskMessage = useMemo(
     () => transformHtml(currentTaskHtml ?? ''),
@@ -1605,7 +1625,8 @@ function GameTeamPage({
     [currentTaskDisplayTaskText],
   )
   const visibleTaskClues = useMemo(
-    () => Array.isArray(currentTaskDisplayClues) ? currentTaskDisplayClues : [],
+    () =>
+      Array.isArray(currentTaskDisplayClues) ? currentTaskDisplayClues : [],
     [currentTaskDisplayClues],
   )
   const acceptedTaskCodes = useMemo(() => {
@@ -1722,7 +1743,10 @@ function GameTeamPage({
         ? Math.min(requiredCodesCount, mainCodesCount)
         : requiredCodesCount
 
-    const remaining = Math.max(cappedRequiredCodes - acceptedTaskCodes.length, 0)
+    const remaining = Math.max(
+      cappedRequiredCodes - acceptedTaskCodes.length,
+      0,
+    )
     return remaining > 0 ? remaining : null
   }, [
     acceptedTaskCodes.length,
@@ -1883,16 +1907,21 @@ function GameTeamPage({
     }
 
     const normalizedMessage = postCompletionMessageHtml || ''
-    const messageStateKey = `${isBreakState ? 'break' : 'task'}:${normalizedMessage}`
+    const messageStateKey = `${isGameCompletion ? 'completed' : isBreakState ? 'break' : 'task'}:${normalizedMessage}`
     if (
       normalizedMessage &&
       previousPostCompletionMessageRef.current !== messageStateKey
     ) {
-      setIsPostCompletionMessageCollapsed(!isBreakState)
+      setIsPostCompletionMessageCollapsed(!(isBreakState || isGameCompletion))
     }
 
     previousPostCompletionMessageRef.current = messageStateKey
-  }, [isBreakState, postCompletionMessageHtml, shouldRenderPostCompletionMessage])
+  }, [
+    isBreakState,
+    isGameCompletion,
+    postCompletionMessageHtml,
+    shouldRenderPostCompletionMessage,
+  ])
 
   const displayedResultMessages = useMemo(() => {
     const unique = new Set()
@@ -1913,8 +1942,7 @@ function GameTeamPage({
   const latestUnreadAdminMessage = useMemo(() => {
     const unreadAdminMessages = gameMessages.filter(
       (message) =>
-        message?.direction === 'admin_to_team' &&
-        !message?.userReadAt,
+        message?.direction === 'admin_to_team' && !message?.userReadAt,
     )
     return unreadAdminMessages.length > 0
       ? unreadAdminMessages[unreadAdminMessages.length - 1]
@@ -1922,9 +1950,7 @@ function GameTeamPage({
   }, [gameMessages])
 
   const hasUnreadAdminMessages = gameMessages.some(
-    (message) =>
-      message?.direction === 'admin_to_team' &&
-      !message?.userReadAt,
+    (message) => message?.direction === 'admin_to_team' && !message?.userReadAt,
   )
   const shouldShowLatestAdminMessage =
     Boolean(latestUnreadAdminMessage) &&
@@ -1932,11 +1958,15 @@ function GameTeamPage({
     latestUnreadAdminMessage.id !== dismissedLatestAdminMessageId
   const displayedAdminMessage = latestUnreadAdminMessage
   const shouldShowGameMessagesBlock = shouldShowLatestAdminMessage
-  const shouldShowLastMessage = displayedResultMessages.length > 0 && !isStoryGame
-  const shouldShowAnswerForm = !isStoryGame && !isGameCompletion && !isBreakState
+  const shouldShowLastMessage =
+    displayedResultMessages.length > 0 && !isStoryGame
+  const shouldShowAnswerForm =
+    !isStoryGame && !isGameCompletion && !isBreakState
   const shouldShowGameCompletedBlock = !isStoryGame && isGameCompletion
   const shouldShowCurrentTaskBlock =
-    Boolean(resolvedTaskHtml || resolvedTaskText || visibleTaskClues.length > 0) &&
+    Boolean(
+      resolvedTaskHtml || resolvedTaskText || visibleTaskClues.length > 0,
+    ) &&
     !shouldShowGameCompletedBlock &&
     !isStoryGame
   const statusNotice = useMemo(() => {
@@ -2116,7 +2146,7 @@ function GameTeamPage({
               <button
                 type="button"
                 onClick={() => setIsGameMessagesModalOpen(true)}
-                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                className="relative inline-flex items-center justify-center w-10 h-10 text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                 aria-label="Открыть переписку с организатором"
                 title="Переписка с организатором"
               >
@@ -2132,17 +2162,19 @@ function GameTeamPage({
               <button
                 type="button"
                 onClick={handleThemeToggle}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
+                className="inline-flex items-center justify-center w-10 h-10 text-gray-600 transition border border-gray-300 rounded-full hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-400 dark:hover:text-blue-300"
                 aria-label={
                   effectiveTheme === 'dark'
                     ? 'Включить светлую тему'
                     : 'Включить тёмную тему'
                 }
-                title={effectiveTheme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+                title={
+                  effectiveTheme === 'dark' ? 'Светлая тема' : 'Тёмная тема'
+                }
               >
                 <FontAwesomeIcon
                   icon={effectiveTheme === 'dark' ? faSun : faMoon}
-                  className="h-4 w-4"
+                  className="w-4 h-4"
                 />
               </button>
               {resolvedSession ? (
@@ -2276,6 +2308,66 @@ function GameTeamPage({
               </section>
             ) : null}
 
+            {shouldRenderPostCompletionMessage && isGameCompletion ? (
+              <section className="p-6 border border-purple-200 shadow-lg bg-purple-50 rounded-3xl dark:bg-purple-500/10 dark:border-purple-500/30 dark:shadow-slate-950/40">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-purple-800 dark:text-purple-100">
+                    Сообщение после предыдущего задания
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={handlePostCompletionMessageToggle}
+                    className="inline-flex items-center justify-center p-2 text-purple-700 transition border border-purple-200 rounded-full hover:text-purple-900 hover:border-purple-300 dark:border-purple-500/40 dark:text-purple-100 dark:hover:border-purple-300 dark:hover:text-purple-50"
+                    aria-label={
+                      isPostCompletionMessageCollapsed
+                        ? 'Развернуть сообщение после задания'
+                        : 'Свернуть сообщение после задания'
+                    }
+                    title={
+                      isPostCompletionMessageCollapsed
+                        ? 'Развернуть сообщение после задания'
+                        : 'Свернуть сообщение после задания'
+                    }
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d={
+                          isPostCompletionMessageCollapsed
+                            ? 'M6 9l6 6 6-6'
+                            : 'M6 15l6-6 6 6'
+                        }
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span className="sr-only">
+                      {isPostCompletionMessageCollapsed
+                        ? 'Развернуть сообщение после задания'
+                        : 'Свернуть сообщение после задания'}
+                    </span>
+                  </button>
+                </div>
+                {!isPostCompletionMessageCollapsed ? (
+                  <div className="mt-4">
+                    <RichTaskContentView
+                      html={postCompletionMessageHtml}
+                      text=""
+                      className="text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100"
+                      textClassName="text-base leading-relaxed text-purple-900 break-words whitespace-pre-wrap dark:text-purple-100"
+                      directory={`games/process/post-message/${String(gameId || 'game')}/${String(teamId || 'team')}/${String(currentTaskState || 'state')}`}
+                    />
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+
             {error ? (
               <section className="p-6 text-sm text-red-700 border border-red-200 bg-red-50 rounded-3xl dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-100">
                 Произошла ошибка при загрузке данных. Попробуйте обновить
@@ -2289,7 +2381,7 @@ function GameTeamPage({
               </section>
             ) : null}
 
-            {shouldRenderPostCompletionMessage ? (
+            {shouldRenderPostCompletionMessage && !isGameCompletion ? (
               <section className="p-6 border border-purple-200 shadow-lg bg-purple-50 rounded-3xl dark:bg-purple-500/10 dark:border-purple-500/30 dark:shadow-slate-950/40">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-purple-800 dark:text-purple-100">
@@ -2350,14 +2442,14 @@ function GameTeamPage({
             ) : null}
 
             {shouldShowGameCompletedBlock ? (
-              <section className="p-6 border border-emerald-200 shadow-lg bg-emerald-50 rounded-3xl dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:shadow-slate-950/40">
+              <section className="p-6 border shadow-lg border-emerald-200 bg-emerald-50 rounded-3xl dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:shadow-slate-950/40">
                 <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-100">
                   Игра окончена
                 </h2>
                 <p className="mt-4 text-base leading-relaxed text-emerald-900 dark:text-emerald-100">
                   Поздравляем! Вы завершили игру.
                 </p>
-                {game?.finishingPlace ? (
+                {game?.showFinishingPlace && game?.finishingPlace ? (
                   <p className="mt-3 text-base leading-relaxed text-emerald-900 dark:text-emerald-100">
                     Точка сбора после игры: {game.finishingPlace}
                   </p>
@@ -2366,7 +2458,7 @@ function GameTeamPage({
             ) : null}
 
             {shouldShowGameMessagesBlock ? (
-              <section className="p-6 border border-amber-200 shadow-lg bg-amber-50 rounded-3xl dark:bg-amber-500/10 dark:border-amber-500/30 dark:shadow-slate-950/40">
+              <section className="p-6 border shadow-lg border-amber-200 bg-amber-50 rounded-3xl dark:bg-amber-500/10 dark:border-amber-500/30 dark:shadow-slate-950/40">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
@@ -2393,7 +2485,7 @@ function GameTeamPage({
                           displayedAdminMessage?.id || '__empty__',
                         )
                       }
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-700 transition hover:border-amber-400 hover:bg-amber-100 hover:text-amber-900 dark:border-amber-500/40 dark:bg-slate-900/60 dark:text-amber-100 dark:hover:bg-amber-500/15"
+                      className="inline-flex items-center justify-center w-8 h-8 transition bg-white border rounded-full border-amber-300 text-amber-700 hover:border-amber-400 hover:bg-amber-100 hover:text-amber-900 dark:border-amber-500/40 dark:bg-slate-900/60 dark:text-amber-100 dark:hover:bg-amber-500/15"
                       aria-label="Закрыть сообщение организатора"
                       title="Закрыть"
                     >
@@ -2402,7 +2494,7 @@ function GameTeamPage({
                   </div>
                 </div>
                 {displayedAdminMessage ? (
-                  <p className="mt-4 whitespace-pre-wrap break-words text-base leading-relaxed text-amber-950 dark:text-amber-50">
+                  <p className="mt-4 text-base leading-relaxed break-words whitespace-pre-wrap text-amber-950 dark:text-amber-50">
                     <LinkedMessageText text={displayedAdminMessage.body} />
                   </p>
                 ) : (
@@ -2474,7 +2566,7 @@ function GameTeamPage({
                   metaTextClassName="text-base font-semibold leading-relaxed text-gray-700 dark:text-slate-200"
                 />
                 {canCaptainFinishBreak ? (
-                  <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 dark:border-emerald-500/40 dark:bg-emerald-500/10">
+                  <div className="flex flex-wrap items-center gap-3 px-4 py-3 mt-5 border rounded-2xl border-emerald-300 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-500/10">
                     <button
                       type="button"
                       onClick={handleFinishBreakRequest}
@@ -2491,7 +2583,7 @@ function GameTeamPage({
                   </div>
                 ) : null}
                 {canCaptainForceClue ? (
-                  <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-cyan-300 bg-cyan-50 px-4 py-3 dark:border-cyan-500/40 dark:bg-cyan-500/10">
+                  <div className="flex flex-wrap items-center gap-3 px-4 py-3 mt-5 border rounded-2xl border-cyan-300 bg-cyan-50 dark:border-cyan-500/40 dark:bg-cyan-500/10">
                     <button
                       type="button"
                       onClick={handleForceClueRequest}
@@ -2508,7 +2600,7 @@ function GameTeamPage({
                   </div>
                 ) : null}
                 {canCaptainFailTask ? (
-                  <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 dark:border-rose-500/40 dark:bg-rose-500/10">
+                  <div className="flex flex-wrap items-center gap-3 px-4 py-3 mt-5 border rounded-2xl border-rose-300 bg-rose-50 dark:border-rose-500/40 dark:bg-rose-500/10">
                     <button
                       type="button"
                       onClick={handleFailTaskRequest}
@@ -2527,11 +2619,11 @@ function GameTeamPage({
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                       Принятые основные коды:
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 mt-2">
                       {acceptedTaskCodes.map((code, index) => (
                         <span
                           key={`accepted-code-${index}-${code}`}
-                          className="inline-flex items-center rounded-full border border-emerald-300/70 bg-emerald-50/90 px-3 py-1 text-xs font-semibold tracking-wide text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-100"
+                          className="inline-flex items-center px-3 py-1 text-xs font-semibold tracking-wide border rounded-full border-emerald-300/70 bg-emerald-50/90 text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-100"
                         >
                           {code}
                         </span>
@@ -2549,11 +2641,11 @@ function GameTeamPage({
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                       Принятые бонусные коды:
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 mt-2">
                       {acceptedBonusCodeItems.map((item, index) => (
                         <span
                           key={`accepted-bonus-code-${index}-${item.code}`}
-                          className="inline-flex items-center rounded-full border border-cyan-300/70 bg-cyan-50/90 px-3 py-1 text-xs font-semibold tracking-wide text-cyan-800 dark:border-cyan-500/50 dark:bg-cyan-500/15 dark:text-cyan-100"
+                          className="inline-flex items-center px-3 py-1 text-xs font-semibold tracking-wide border rounded-full border-cyan-300/70 bg-cyan-50/90 text-cyan-800 dark:border-cyan-500/50 dark:bg-cyan-500/15 dark:text-cyan-100"
                           title={item.description || undefined}
                         >
                           {item.code}
@@ -2568,11 +2660,11 @@ function GameTeamPage({
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                       Принятые штрафные коды:
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 mt-2">
                       {acceptedPenaltyCodeItems.map((item, index) => (
                         <span
                           key={`accepted-penalty-code-${index}-${item.code}`}
-                          className="inline-flex items-center rounded-full border border-rose-300/70 bg-rose-50/90 px-3 py-1 text-xs font-semibold tracking-wide text-rose-800 dark:border-rose-500/50 dark:bg-rose-500/15 dark:text-rose-100"
+                          className="inline-flex items-center px-3 py-1 text-xs font-semibold tracking-wide border rounded-full border-rose-300/70 bg-rose-50/90 text-rose-800 dark:border-rose-500/50 dark:bg-rose-500/15 dark:text-rose-100"
                           title={item.description || undefined}
                         >
                           {item.code}
@@ -2610,7 +2702,7 @@ function GameTeamPage({
                   {displayedResultMessages.map((html, index) => (
                     <div
                       key={`result-message-${index}`}
-                      className="rounded-2xl border border-violet-300/60 bg-violet-50/75 px-4 py-3 dark:border-violet-500/35 dark:bg-violet-500/12"
+                      className="px-4 py-3 border rounded-2xl border-violet-300/60 bg-violet-50/75 dark:border-violet-500/35 dark:bg-violet-500/12"
                     >
                       <RichTaskContentView
                         html={html}
@@ -2633,10 +2725,11 @@ function GameTeamPage({
                 {isPhotoGame ? (
                   <div className="flex flex-col gap-4 mt-4">
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Можно отправить несколько фотографий на одно задание. Статус
-                      проверки будет доступен только после публикации результатов.
+                      Можно отправить несколько фотографий на одно задание.
+                      Статус проверки будет доступен только после публикации
+                      результатов.
                     </p>
-                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-cyan-300 bg-cyan-50 px-4 py-8 text-center transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/15">
+                    <label className="flex flex-col items-center justify-center px-4 py-8 text-center transition border-2 border-dashed cursor-pointer rounded-2xl border-cyan-300 bg-cyan-50 hover:border-cyan-500 hover:bg-cyan-100 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/15">
                       <input
                         type="file"
                         accept={PHOTO_ANSWER_ACCEPT_TYPES}
@@ -2646,14 +2739,16 @@ function GameTeamPage({
                         className="sr-only"
                       />
                       <span className="text-base font-semibold text-cyan-900 dark:text-cyan-100">
-                        {isPhotoUploading ? 'Загружаем фото...' : 'Выбрать фото'}
+                        {isPhotoUploading
+                          ? 'Загружаем фото...'
+                          : 'Выбрать фото'}
                       </span>
                       <span className="mt-1 text-sm text-cyan-700 dark:text-cyan-200/80">
                         JPG, PNG, WEBP или фото с камеры
                       </span>
                     </label>
                     {photoUploadError ? (
-                      <p className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                      <p className="px-3 py-2 text-sm border rounded-xl border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
                         {photoUploadError}
                       </p>
                     ) : null}
@@ -2713,6 +2808,8 @@ function GameTeamPage({
         onClose={() => setIsGameMessagesModalOpen(false)}
         title="Переписка с организатором"
         compactMobile
+        dialogClassName="md:h-[90vh]"
+        bodyClassName="flex flex-col pb-0"
         footer={
           <>
             <button
@@ -2735,80 +2832,23 @@ function GameTeamPage({
           </>
         }
       >
-        <div className="space-y-4">
-          {gameMessagesError ? (
-            <p className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
-              {gameMessagesError}
-            </p>
-          ) : null}
-          <div
-            ref={gameMessagesListRef}
-            className="max-h-[55vh] space-y-3 overflow-y-auto pr-1"
-          >
-            {gameMessagesLoading && gameMessages.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Загружаем сообщения...
-              </p>
-            ) : null}
-            {!gameMessagesLoading && gameMessages.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Сообщений пока нет.
-              </p>
-            ) : null}
-            {gameMessages.map((message) => {
-              const isAdminMessage = message.direction === 'admin_to_team'
-              return (
-                <div
-                  key={message.id}
-                  className={`rounded-2xl border px-4 py-3 ${
-                    isAdminMessage
-                      ? 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-50'
-                      : 'border-cyan-300 bg-cyan-50 text-cyan-950 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-50'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-80">
-                    <span>
-                      {isAdminMessage
-                        ? 'Организатор'
-                        : message.createdByRole === 'liaison'
-                          ? 'Связной команды'
-                          : 'Капитан команды'}
-                      {message.scope === 'game' ? ' · всем командам' : ''}
-                    </span>
-                    <span>{formatMessageDateTime(message.createdAt)}</span>
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">
-                    <LinkedMessageText text={message.body} />
-                  </p>
-                  <p className="mt-2 text-xs opacity-80">
-                    {isAdminMessage
-                      ? message.userReadAt
-                        ? `Просмотрено вами: ${formatMessageDateTime(message.userReadAt)}`
-                        : 'Вы еще не просмотрели'
-                      : message.readByAdminAt
-                        ? `Прочитано администратором: ${formatMessageDateTime(message.readByAdminAt)}`
-                        : 'Администратор еще не прочитал'}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <GameMessageHistory
+            messages={gameMessages}
+            isLoading={gameMessagesLoading}
+            error={gameMessagesError}
+            listRef={gameMessagesListRef}
+            viewer="team"
+          />
           {canSendGameMessage ? (
-            <div className="border-t border-slate-200 pt-4 dark:border-slate-700">
-              <label
-                htmlFor="game-message-reply"
-                className="block text-xs font-semibold text-slate-500 dark:text-slate-400"
-              >
-                Сообщение администратору
-              </label>
+            <div className="shrink-0 pt-4 border-t border-slate-200 dark:border-slate-700">
               <textarea
-                id="game-message-reply"
                 ref={gameMessageTextareaRef}
                 value={gameMessageDraft}
                 onChange={handleGameMessageDraftChange}
                 rows={1}
                 maxLength={2000}
-                className="mt-2 w-full resize-none overflow-hidden rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 mt-2 overflow-hidden text-sm transition bg-white border outline-none resize-none rounded-xl border-slate-300 text-slate-900 focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-900 dark:text-slate-100"
                 placeholder="Напишите сообщение организатору..."
                 disabled={isSendingGameMessage}
               />
@@ -2843,8 +2883,8 @@ function GameTeamPage({
         }
       >
         <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-          Вы уверены, что хотите завершить перерыв досрочно и получить
-          следующее задание?
+          Вы уверены, что хотите завершить перерыв досрочно и получить следующее
+          задание?
         </p>
       </Modal>
       <Modal
@@ -2946,7 +2986,6 @@ function GameTeamPage({
           margin: 12px 0;
           border-radius: 14px;
         }
-
       `}</style>
     </>
   )

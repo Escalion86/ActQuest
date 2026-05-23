@@ -123,7 +123,7 @@ const buildGameFinishedMessage = (game) => {
 
   const parts = ['Поздравляем Вы завершили все задания! Игра окончена.']
 
-  if (finishingPlace) {
+  if (game?.showFinishingPlace && finishingPlace) {
     parts.push(`Вы можете выдвигаться на точку сбора: ${finishingPlace}`)
   }
 

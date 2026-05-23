@@ -15,7 +15,10 @@ import requestApiJson from '@helpers/requestApiJson'
 import Modal from '@components/Modal'
 import FullscreenImageViewer from '@components/FullscreenImageViewer'
 import FeedbackToast from '@components/FeedbackToast'
-import LinkedMessageText from '@components/game/LinkedMessageText'
+import {
+  GameMessageComposer,
+  GameMessageHistory,
+} from '@components/game/GameMessageThread'
 import CardActionIconButton, {
   EditCardIcon,
   TargetCardIcon,
@@ -48,12 +51,12 @@ const formatMinutesRounded = (seconds) => {
   return Math.max(1, Math.round(normalizedSeconds / 60))
 }
 
-const AUTO_REFRESH_OPTIONS = [
-  { value: 5000, label: '5 сек' },
-  { value: 10000, label: '10 сек' },
-  { value: 15000, label: '15 сек' },
-  { value: 30000, label: '30 сек' },
-]
+// const AUTO_REFRESH_OPTIONS = [
+//   { value: 5000, label: '5 сек' },
+//   { value: 10000, label: '10 сек' },
+//   { value: 15000, label: '15 сек' },
+//   { value: 30000, label: '30 сек' },
+// ]
 
 const normalizePhoneDigits = (value) =>
   String(value || '')
@@ -78,18 +81,6 @@ const teamStatusColor = (team) => {
     return 'border-red-300 bg-red-50 dark:border-red-400/40 dark:bg-red-900/30'
   }
   return 'border-cyan-200 bg-white dark:border-cyan-400/25 dark:bg-slate-800/50'
-}
-
-const formatMessageDateTime = (value) => {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
 }
 
 const adjustChatTextareaHeight = (textarea) => {
@@ -860,7 +851,7 @@ export default function GameControlPageClient({ session: _session }) {
 
   const [isDetailedView, setIsDetailedView] = useState(true)
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [autoRefreshIntervalMs, setAutoRefreshIntervalMs] = useState(15000)
+  const [autoRefreshIntervalMs, setAutoRefreshIntervalMs] = useState(5000)
   const [nowTs, setNowTs] = useState(() => Date.now())
   const [isTasksViewModalOpen, setIsTasksViewModalOpen] = useState(false)
   const [selectedTeamForTaskPreviewId, setSelectedTeamForTaskPreviewId] =
@@ -1436,8 +1427,8 @@ export default function GameControlPageClient({ session: _session }) {
       className={`max-w-4xl px-4 py-6 mx-auto transition-colors ${lightThemeOverrides}`}
     >
       {/* Шапка */}
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
-        <div className="flex-1">
+      <div className="flex flex-col items-start justify-between gap-3 mb-6">
+        <div className="w-full">
           <div className="flex items-center w-full gap-3 mb-2">
             <button
               type="button"
@@ -1446,38 +1437,40 @@ export default function GameControlPageClient({ session: _session }) {
             >
               ← Назад
             </button>
-            <button
-              type="button"
-              onClick={handleOpenGameConversationsModal}
-              className="relative inline-flex items-center justify-center w-8 h-8 transition border rounded-full border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
-              aria-label="Открыть переписку с командами"
-              title="Открыть переписку с командами"
-            >
-              <ChatCardIcon />
-              {totalUnreadTeamMessagesCount > 0 ? (
-                <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow ring-2 ring-slate-950">
-                  {totalUnreadTeamMessagesCount > 99
-                    ? '99+'
-                    : totalUnreadTeamMessagesCount}
-                </span>
-              ) : null}
-            </button>
-            <button
-              type="button"
-              onClick={toggleThemeMode}
-              className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
-              aria-label={
-                themeMode === 'dark'
-                  ? 'Включить светлую тему'
-                  : 'Включить тёмную тему'
-              }
-              title={themeMode === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-            >
-              <FontAwesomeIcon
-                icon={themeMode === 'dark' ? faSun : faMoon}
-                className="w-4 h-4"
-              />
-            </button>
+            <div className="flex items-center justify-end flex-1 gap-3">
+              <button
+                type="button"
+                onClick={handleOpenGameConversationsModal}
+                className="relative inline-flex items-center justify-center w-8 h-8 transition border rounded-full border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20"
+                aria-label="Открыть переписку с командами"
+                title="Открыть переписку с командами"
+              >
+                <ChatCardIcon />
+                {totalUnreadTeamMessagesCount > 0 ? (
+                  <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow ring-2 ring-slate-950">
+                    {totalUnreadTeamMessagesCount > 99
+                      ? '99+'
+                      : totalUnreadTeamMessagesCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={toggleThemeMode}
+                className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+                aria-label={
+                  themeMode === 'dark'
+                    ? 'Включить светлую тему'
+                    : 'Включить тёмную тему'
+                }
+                title={themeMode === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+              >
+                <FontAwesomeIcon
+                  icon={themeMode === 'dark' ? faSun : faMoon}
+                  className="w-4 h-4"
+                />
+              </button>
+            </div>
           </div>
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100 sm:text-2xl">
             {gameName}
@@ -1515,7 +1508,7 @@ export default function GameControlPageClient({ session: _session }) {
             ) : null}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-end w-full gap-3">
           <label className="flex items-center gap-2 text-sm cursor-pointer text-slate-600 dark:text-slate-400">
             <input
               type="checkbox"
@@ -1534,7 +1527,7 @@ export default function GameControlPageClient({ session: _session }) {
             />
             Авто
           </label>
-          <select
+          {/* <select
             value={String(autoRefreshIntervalMs)}
             onChange={(event) => {
               const parsed = Number(event.target.value)
@@ -1551,7 +1544,7 @@ export default function GameControlPageClient({ session: _session }) {
                 {option.label}
               </option>
             ))}
-          </select>
+          </select> */}
           <button
             type="button"
             onClick={() => refetchStatus()}
@@ -1808,6 +1801,12 @@ export default function GameControlPageClient({ session: _session }) {
                         <span className="font-medium text-green-400">
                           {team.findedCodesCount}
                         </span>
+                        {mainCodesProgress.remainingCount > 0 ? (
+                          <span className="font-medium text-slate-600 dark:text-slate-400">
+                            {' / '}
+                            {mainCodesProgress.remainingCount}
+                          </span>
+                        ) : null}
                         {team.wrongCodesCount > 0 && (
                           <button
                             type="button"
@@ -1855,12 +1854,6 @@ export default function GameControlPageClient({ session: _session }) {
                               </div>
                             )
                           })()}
-                        {mainCodesProgress.remainingCount > 0 ? (
-                          <div className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-400">
-                            Осталось ввести кодов:{' '}
-                            {mainCodesProgress.remainingCount}
-                          </div>
-                        ) : null}
                       </div>
                       {shouldShowBonusCodes && (
                         <div>
@@ -2009,6 +2002,16 @@ export default function GameControlPageClient({ session: _session }) {
                                 <span className="font-mono font-medium text-violet-700 dark:text-violet-300">
                                   {formatTime(clueRemaining)}
                                 </span>
+                                {team.cluesReceived > 0 && (
+                                  <span className="text-slate-600 dark:text-slate-500">
+                                    {' (получено: '}
+                                    {team.cluesReceived}
+                                    {Number(team.forcedCluesReceived) > 0
+                                      ? ` из них ${formatForcedCluesCount(team.forcedCluesReceived)}`
+                                      : ''}
+                                    {')'}
+                                  </span>
+                                )}
                               </div>
                             )
                           }
@@ -2075,16 +2078,6 @@ export default function GameControlPageClient({ session: _session }) {
                           </div>
                         )}
                     </div>
-
-                    {/* Подсказки */}
-                    {team.cluesReceived > 0 && (
-                      <div className="mt-1 text-xs text-slate-600 dark:text-slate-500">
-                        Подсказок получено: {team.cluesReceived}
-                        {Number(team.forcedCluesReceived) > 0
-                          ? ` (${formatForcedCluesCount(team.forcedCluesReceived)})`
-                          : ''}
-                      </div>
-                    )}
 
                     {/* Фото (для photo-квестов) */}
                     {gameType === 'photo' && team.currentPhotosCount > 0 && (
@@ -2251,6 +2244,8 @@ export default function GameControlPageClient({ session: _session }) {
               : 'Сообщение команде'
         }
         compactMobile
+        dialogClassName="md:h-[90vh]"
+        bodyClassName="flex flex-col pb-0"
         footer={
           <>
             <button
@@ -2272,98 +2267,24 @@ export default function GameControlPageClient({ session: _session }) {
           </>
         }
       >
-        <div className="space-y-4">
-          <div
-            ref={teamMessageHistoryListRef}
-            className="max-h-[55vh] space-y-3 overflow-y-auto pr-1"
-          >
-            {teamMessageHistoryError ? (
-              <p className="px-3 py-2 text-sm border rounded-xl border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
-                {teamMessageHistoryError}
-              </p>
-            ) : null}
-            {teamMessageHistoryLoading && teamMessageHistory.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Загружаем сообщения...
-              </p>
-            ) : null}
-            {!teamMessageHistoryLoading && teamMessageHistory.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Сообщений пока нет.
-              </p>
-            ) : null}
-            {teamMessageHistory.map((message) => {
-              const isAdminMessage = message.direction === 'admin_to_team'
-              return (
-                <div
-                  key={message.id}
-                  className={`rounded-2xl border px-4 py-3 ${
-                    isAdminMessage
-                      ? 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-50'
-                      : 'border-cyan-300 bg-cyan-50 text-cyan-950 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-50'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-80">
-                    <span>
-                      {isAdminMessage
-                        ? 'Организатор'
-                        : message.createdByRole === 'liaison'
-                          ? 'Связной команды'
-                          : 'Капитан команды'}
-                      {message.scope === 'game' ? ' · всем командам' : ''}
-                    </span>
-                    <span>{formatMessageDateTime(message.createdAt)}</span>
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed break-words whitespace-pre-wrap">
-                    <LinkedMessageText text={message.body} />
-                  </p>
-                  {isAdminMessage && message.pushRequested ? (
-                    <p className="mt-2 text-xs opacity-80">
-                      Push: доставлено {message.pushDelivered || 0} из{' '}
-                      {message.pushUsersMatched || 0}
-                    </p>
-                  ) : null}
-                  <p className="mt-2 text-xs opacity-80">
-                    {isAdminMessage
-                      ? message.teamReadAt
-                        ? `Прочитано командой: ${formatMessageDateTime(message.teamReadAt)}`
-                        : 'Команда еще не прочитала'
-                      : message.readByAdminAt
-                        ? `Прочитано администратором: ${formatMessageDateTime(message.readByAdminAt)}`
-                        : 'Не прочитано администратором'}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-          <div>
-            <label
-              htmlFor="team-push-message"
-              className="block text-xs font-semibold text-slate-500 dark:text-slate-400"
-            >
-              Текст сообщения
-            </label>
-            <textarea
-              id="team-push-message"
-              ref={teamPushTextareaRef}
-              value={teamPushMessage}
-              onChange={handleTeamPushMessageChange}
-              placeholder="Введите сообщение..."
-              rows={1}
-              className="w-full px-3 py-2 mt-2 overflow-hidden text-sm transition bg-white border outline-none resize-none rounded-xl border-slate-300 text-slate-900 focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-900 dark:text-slate-100"
-              disabled={Boolean(teamPushLoadingId)}
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <input
-              type="checkbox"
-              checked={teamPushSendPush}
-              onChange={(event) => setTeamPushSendPush(event.target.checked)}
-              disabled={Boolean(teamPushLoadingId)}
-              className="rounded border-slate-400 text-cyan-600 focus:ring-cyan-500/40"
-            />
-            Дополнительно отправить push-уведомление
-          </label>
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <GameMessageHistory
+            messages={teamMessageHistory}
+            isLoading={teamMessageHistoryLoading}
+            error={teamMessageHistoryError}
+            listRef={teamMessageHistoryListRef}
+            showPushDelivery
+          />
+          <GameMessageComposer
+            textareaId="team-push-message"
+            textareaRef={teamPushTextareaRef}
+            value={teamPushMessage}
+            onChange={handleTeamPushMessageChange}
+            disabled={Boolean(teamPushLoadingId)}
+            sendPush={teamPushSendPush}
+            onSendPushChange={setTeamPushSendPush}
+            pushDisabled={Boolean(teamPushLoadingId)}
+          />
         </div>
       </Modal>
       <GamePushBroadcastModal

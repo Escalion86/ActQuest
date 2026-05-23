@@ -296,16 +296,16 @@ function GameEntryPage({
                       </span>
                     </div>
                   ) : null}
-                  {/* {game?.finishingPlace ? (
+                  {game?.showFinishingPlace && game?.finishingPlace ? (
                     <div className="flex flex-col">
                       <span className="text-xs text-gray-400 uppercase dark:text-slate-500">
-                        Место финиша
+                        Финиш
                       </span>
                       <span className="font-medium text-gray-800 dark:text-slate-100">
                         {game.finishingPlace}
                       </span>
                     </div>
-                  ) : null} */}
+                  ) : null}
                 </div>
               </div>
 

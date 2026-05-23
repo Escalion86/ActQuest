@@ -553,6 +553,7 @@ const normalizeGameForCabinet = (game) => {
     image: normalizeMediaUrl(game.image),
     startingPlace: ensureString(game.startingPlace, ''),
     finishingPlace: ensureString(game.finishingPlace, ''),
+    showFinishingPlace: ensureBoolean(game.showFinishingPlace, false),
     taskDuration: ensureNumber(game.taskDuration, 3600),
     cluesDuration: ensureNumber(game.cluesDuration, 1200),
     clueEarlyAccessMode:

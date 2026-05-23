@@ -142,6 +142,7 @@ export async function GET(request) {
         image: 1,
         startingPlace: 1,
         finishingPlace: 1,
+        showFinishingPlace: 1,
         taskDuration: 1,
         cluesDuration: 1,
         clueEarlyAccessMode: 1,

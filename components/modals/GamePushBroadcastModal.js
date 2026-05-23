@@ -6,24 +6,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
-import LinkedMessageText from '@components/game/LinkedMessageText'
+import {
+  formatGameMessageDateTime,
+  GameMessageComposer,
+  GameMessageHistory,
+} from '@components/game/GameMessageThread'
 import NoticeBanner from '@components/NoticeBanner'
 import requestApiJson from '@helpers/requestApiJson'
 import extractErrorMessage from '@helpers/extractErrorMessage'
 
 const GAME_WIDE_DIALOG_ID = '__game__'
-
-const formatMessageDateTime = (value) => {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
-}
 
 const adjustChatTextareaHeight = (textarea) => {
   if (!textarea || typeof window === 'undefined') return
@@ -308,107 +300,41 @@ const GamePushBroadcastModal = ({
       }
       title={modalTitle}
       compactMobile
+      dialogClassName={isChatOpen ? 'md:h-[90vh]' : ''}
+      bodyClassName={isChatOpen ? 'flex flex-col pb-0' : ''}
       footer={footer}
     >
       {isChatOpen ? (
-        <div className="space-y-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           {localError ? (
             <NoticeBanner tone="error" variant="neon">
               {localError}
             </NoticeBanner>
           ) : null}
-          <div
-            ref={historyListRef}
-            className="max-h-[55vh] space-y-3 overflow-y-auto pr-1"
-          >
-            {messagesQuery.isError ? (
-              <NoticeBanner tone="error" variant="neon">
-                {extractErrorMessage(messagesQuery.error) ||
-                  'Не удалось загрузить переписку.'}
-              </NoticeBanner>
-            ) : null}
-            {messagesQuery.isLoading && messages.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Загружаем сообщения...
-              </p>
-            ) : null}
-            {!messagesQuery.isLoading && messages.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Сообщений пока нет.
-              </p>
-            ) : null}
-            {messages.map((message) => {
-              const isAdminMessage = message.direction === 'admin_to_team'
-              return (
-                <div
-                  key={message.id}
-                  className={`rounded-2xl border px-4 py-3 ${
-                    isAdminMessage
-                      ? 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-50'
-                      : 'border-cyan-300 bg-cyan-50 text-cyan-950 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-50'
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-80">
-                    <span>
-                      {isAdminMessage
-                        ? 'Организатор'
-                        : message.createdByRole === 'liaison'
-                          ? 'Связной команды'
-                          : 'Капитан команды'}
-                      {message.scope === 'game' ? ' · всем командам' : ''}
-                    </span>
-                    <span>{formatMessageDateTime(message.createdAt)}</span>
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">
-                    <LinkedMessageText text={message.body} />
-                  </p>
-                  {isAdminMessage && message.pushRequested ? (
-                    <p className="mt-2 text-xs opacity-80">
-                      Push: доставлено {message.pushDelivered || 0} из{' '}
-                      {message.pushUsersMatched || 0}
-                    </p>
-                  ) : null}
-                  <p className="mt-2 text-xs opacity-80">
-                    {isAdminMessage
-                      ? message.teamReadAt
-                        ? `Прочитано командой: ${formatMessageDateTime(message.teamReadAt)}`
-                        : 'Команда еще не прочитала'
-                      : message.readByAdminAt
-                        ? `Прочитано администратором: ${formatMessageDateTime(message.readByAdminAt)}`
-                        : 'Не прочитано администратором'}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-          <div>
-            <label
-              htmlFor="game-team-message-body"
-              className="block text-xs font-semibold text-slate-500 dark:text-slate-400"
-            >
-              Текст сообщения
-            </label>
-            <textarea
-              id="game-team-message-body"
-              ref={textareaRef}
-              value={messageBody}
-              onChange={handleMessageChange}
-              placeholder="Введите сообщение..."
-              rows={1}
-              className="mt-2 w-full resize-none overflow-hidden rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-500 dark:border-slate-600/80 dark:bg-slate-900 dark:text-slate-100"
-              disabled={sendMutation.isPending}
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <input
-              type="checkbox"
-              checked={sendPush}
-              onChange={(event) => setSendPush(event.target.checked)}
-              disabled={sendMutation.isPending}
-              className="rounded border-slate-400 text-cyan-600 focus:ring-cyan-500/40"
-            />
-            Дополнительно отправить push-уведомление
-          </label>
+          <GameMessageHistory
+            messages={messages}
+            isLoading={messagesQuery.isLoading}
+            errorContent={
+              messagesQuery.isError ? (
+                <NoticeBanner tone="error" variant="neon">
+                  {extractErrorMessage(messagesQuery.error) ||
+                    'Не удалось загрузить переписку.'}
+                </NoticeBanner>
+              ) : null
+            }
+            listRef={historyListRef}
+            showPushDelivery
+          />
+          <GameMessageComposer
+            textareaId="game-team-message-body"
+            textareaRef={textareaRef}
+            value={messageBody}
+            onChange={handleMessageChange}
+            disabled={sendMutation.isPending}
+            sendPush={sendPush}
+            onSendPushChange={setSendPush}
+            pushDisabled={sendMutation.isPending}
+          />
         </div>
       ) : (
         <div className="space-y-4">
@@ -495,7 +421,7 @@ const GamePushBroadcastModal = ({
                     </span>
                     <span className="flex shrink-0 flex-col items-end gap-2">
                       <span className="text-xs text-slate-400">
-                        {formatMessageDateTime(dialog.lastMessageAt)}
+                        {formatGameMessageDateTime(dialog.lastMessageAt)}
                       </span>
                       {unreadCount > 0 ? (
                         <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-rose-500 px-2 py-1 text-xs font-bold leading-none text-white">

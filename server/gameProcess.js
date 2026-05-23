@@ -178,7 +178,7 @@ async function gameProcess({ telegramId, userId, jsonCommand, location, db }) {
   const gameType = game?.type || 'classic'
   const buildGameFinishedMessage = () =>
     `Поздравляем Вы завершили все задания! Игра окончена. ${
-      game.finishingPlace
+      game.showFinishingPlace && game.finishingPlace
         ? `Вы можете выдвигаться на точку сбора: ${game.finishingPlace}`
         : ''
     }${

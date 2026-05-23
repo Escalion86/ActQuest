@@ -98,7 +98,13 @@ export async function GET(request, { params }) {
             const game = await db
               .model('Games')
               .findById(id)
-              .select({ _id: 1, name: 1, location: 1, finishingPlace: 1 })
+              .select({
+                _id: 1,
+                name: 1,
+                location: 1,
+                finishingPlace: 1,
+                showFinishingPlace: 1,
+              })
               .lean()
 
             const gameName =
@@ -106,7 +112,9 @@ export async function GET(request, { params }) {
                 ? game.name.trim()
                 : 'Без названия'
             const finishingPlace =
-              typeof game?.finishingPlace === 'string' && game.finishingPlace.trim()
+              game?.showFinishingPlace &&
+              typeof game?.finishingPlace === 'string' &&
+              game.finishingPlace.trim()
                 ? game.finishingPlace.trim()
                 : ''
             const users = await getRegisteredUsersByGame({ db, gameId: id })
@@ -139,6 +147,7 @@ export async function GET(request, { params }) {
           return res.status(200).json({ success: true, message })
         }
       } catch (error) {
+        console.error('Failed to stop game', { error, gameId: id, location })
         return res
           .status(500)
           .json({ success: false, error: 'Не удалось остановить игру' })

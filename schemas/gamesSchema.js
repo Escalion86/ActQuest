@@ -549,6 +549,10 @@ const gamesSchema = {
     default: '',
     trim: true,
   },
+  showFinishingPlace: {
+    type: Boolean,
+    default: false,
+  },
   result: {
     type: {
       text: String,
