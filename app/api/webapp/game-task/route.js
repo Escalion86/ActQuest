@@ -6,6 +6,23 @@ import getTeamGameTaskState, {
 } from '@server/getTeamGameTaskState'
 import { authOptions } from '@server/auth/authOptions'
 
+const isGameTaskDebugEnabled =
+  process.env.GAME_TASK_DEBUG === '1' || process.env.SESSION_DEBUG === '1'
+
+const gameTaskDebugLog = (stage, payload = null) => {
+  if (!isGameTaskDebugEnabled) {
+    return
+  }
+
+  const time = new Date().toISOString()
+  if (payload === null || payload === undefined) {
+    console.info(`[game-task-debug] ${time} ${stage}`)
+    return
+  }
+
+  console.info(`[game-task-debug] ${time} ${stage}`, payload)
+}
+
 const normalizeString = (value) => {
   if (typeof value !== 'string') return null
   const trimmed = value.trim()
@@ -40,6 +57,16 @@ export async function POST(request) {
   const normalizedTeamId = normalizeString(teamId)
   const sanitizedMessage = normalizeString(message)
   const normalizedAction = normalizeString(action)
+
+  gameTaskDebugLog('request_received', {
+    sessionUserId: sessionUserId ? String(sessionUserId) : null,
+    sessionTelegramId:
+      Number.isFinite(sessionTelegramId) ? String(sessionTelegramId) : null,
+    location: normalizedLocation,
+    gameId: normalizedGameId,
+    teamId: normalizedTeamId,
+    action: normalizedAction,
+  })
 
   if (!normalizedLocation || !normalizedGameId || !normalizedTeamId) {
     return NextResponse.json(
@@ -91,6 +118,19 @@ export async function POST(request) {
         { status: 500 },
       )
     }
+
+    gameTaskDebugLog('response_ready', {
+      sessionUserId: sessionUserId ? String(sessionUserId) : null,
+      sessionTelegramId:
+        Number.isFinite(sessionTelegramId) ? String(sessionTelegramId) : null,
+      gameId: normalizedGameId,
+      teamId: normalizedTeamId,
+      taskState: stateResult?.data?.taskState ?? null,
+      canFinishBreak:
+        stateResult?.data?.captainActions?.canFinishBreak ?? null,
+      canForceClue: stateResult?.data?.captainActions?.canForceClue ?? null,
+      canFailTask: stateResult?.data?.captainActions?.canFailTask ?? null,
+    })
 
     return NextResponse.json(
       { success: true, data: stateResult.data },

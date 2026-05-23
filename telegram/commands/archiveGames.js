@@ -63,7 +63,7 @@ const archiveGames = async ({ telegramId, jsonCommand, user, db }) => {
     // const team = isTeamRegistred
     //   ? teams.find((team) => String(team._id) === gameTeam.teamId)
     //   : null
-    // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
+    // const role = teamUser.role === 'captain' ? 'Капитан' : 'Участник'
     return {
       text: `${number}. ${formatGameName(game)}${
         isTeamRegistred ? ` (записан)` : ''

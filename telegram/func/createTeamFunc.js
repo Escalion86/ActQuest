@@ -1,6 +1,6 @@
 const createTeamFunc = async (userTelegramId, jsonCommand, db) => {
   const team = await db.model('Teams').create({
-    // capitanId: userTelegramId,
+    // captainId: userTelegramId,
     name: jsonCommand.name,
     name_lowered: jsonCommand.name.toLowerCase(),
     description: jsonCommand.description ?? '',
@@ -8,7 +8,7 @@ const createTeamFunc = async (userTelegramId, jsonCommand, db) => {
   await db.model('TeamsUsers').create({
     teamId: String(team._id),
     userTelegramId,
-    role: 'capitan',
+    role: 'captain',
   })
   return team
 }

@@ -7,6 +7,7 @@ import GameTeamsModal from './GameTeamsModal'
 import GameRegisterModal from './GameRegisterModal'
 import GameCreateModal from './GameCreateModal'
 import GameDescriptionModal from './GameDescriptionModal'
+import GameFinancesModal from './GameFinancesModal'
 import GameResultsModal from './GameResultsModal'
 import GameTasksViewModal from './GameTasksViewModal'
 
@@ -65,6 +66,9 @@ const GameModals = ({
   handleAddFinance,
   handleFinanceChange,
   handleRemoveFinance,
+  isFinancesModalOpen,
+  handleCloseFinancesModal,
+  handleFinancesModalPrimaryAction,
   canGenerateResults,
   isGeneratingResults,
   handleGenerateResults,
@@ -426,6 +430,26 @@ const GameModals = ({
         createGameFeedback={createGameFeedback}
       />
 
+      {gameForEdit ? (
+        <GameFinancesModal
+          selectedGame={gameForEdit}
+          isOpen={isFinancesModalOpen}
+          onClose={handleCloseFinancesModal}
+          canEditSelectedGame={canEditSelectedGame}
+          isSaving={isSaving}
+          isDirty={isDirty}
+          location={location}
+          handlePrimaryAction={handleFinancesModalPrimaryAction}
+          handleResetChanges={handleResetChanges}
+          handleAddFinance={handleAddFinance}
+          handleFinanceChange={handleFinanceChange}
+          handleRemoveFinance={handleRemoveFinance}
+          currencyFormatter={currencyFormatter}
+          financesSummary={financesSummary}
+          balanceClass={balanceClass}
+        />
+      ) : null}
+
       {hasSelectedGame ? (
         <GameDescriptionModal
           selectedGame={selectedGame}
@@ -452,8 +476,6 @@ const GameModals = ({
           manyCodesLimitLabel={manyCodesLimitLabel}
           manyCodesPenaltyLabel={manyCodesPenaltyLabel}
           currencyFormatter={currencyFormatter}
-          financesSummary={financesSummary}
-          balanceClass={balanceClass}
         />
       ) : null}
 
@@ -578,6 +600,9 @@ GameModals.propTypes = {
   handleAddFinance: PropTypes.func.isRequired,
   handleFinanceChange: PropTypes.func.isRequired,
   handleRemoveFinance: PropTypes.func.isRequired,
+  isFinancesModalOpen: PropTypes.bool.isRequired,
+  handleCloseFinancesModal: PropTypes.func.isRequired,
+  handleFinancesModalPrimaryAction: PropTypes.func.isRequired,
   canGenerateResults: PropTypes.bool.isRequired,
   isGeneratingResults: PropTypes.bool.isRequired,
   handleGenerateResults: PropTypes.func.isRequired,

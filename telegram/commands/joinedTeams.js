@@ -28,10 +28,10 @@ const joinedTeams = async ({ telegramId, jsonCommand, location, db }) => {
         const teamUser = teamsUser.find((teamUser) => {
           return teamUser.teamId === String(team._id)
         })
-        // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
+        // const role = teamUser.role === 'captain' ? 'Капитан' : 'Участник'
         return {
           text: `"${team.name}"${
-            teamUser.role === 'capitan' ? ' (вы капитан)' : ''
+            teamUser.role === 'captain' ? ' (вы капитан)' : ''
           }`,
           c: { c: 'editTeam', teamId: team._id },
           //`editTeam/teamId=${team._id}`,

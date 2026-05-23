@@ -74,13 +74,13 @@ const game = async ({ telegramId, user, jsonCommand, db }) => {
           const teamUserOfUser = teamsUserOfUser.find(
             (teamUser) => teamUser.teamId === String(team._id)
           )
-          if (teamUserOfUser && teamUserOfUser?.role === 'capitan') {
+          if (teamUserOfUser && teamUserOfUser?.role === 'captain') {
             const gameTeam = gameTeams.find(
               (gameTeam) => gameTeam.teamId === String(team._id)
             )
             return {
               // text: `"${team.name}" (вы ${
-              //   teamUserOfUser.role === 'capitan' ? 'капитан' : 'участник'
+              //   teamUserOfUser.role === 'captain' ? 'капитан' : 'участник'
               // } команды)`,
               text: `Отменить регистрацию команды "${team.name}"`,
               c: { c: 'delGameTeam', gameTeamId: String(gameTeam._id) },

@@ -14,8 +14,6 @@ import { formatPhoneInput, normalizePhoneForSubmit } from '@helpers/phoneInputMa
 import { mapVkSignInError } from '@helpers/vkAuthErrors'
 import {
   loadVkSdk,
-  normalizeEnvUrl,
-  parseVkAppId,
   resolveVkIdCallbackUrl,
 } from '@helpers/vkIdClient'
 import { LOCATIONS } from '@server/serverConstants'
@@ -26,14 +24,6 @@ const PHONE_VERIFY_API_BASE = '/api/phone/verify'
 const availableLocations = Object.entries(LOCATIONS)
   .filter(([, value]) => !value.hidden)
   .map(([key, value]) => ({ key, ...value }))
-
-const mapPhoneVerifyStatusLabel = (status) => {
-  const normalized = String(status || '').trim().toLowerCase()
-  if (normalized === 'ok') return 'Номер подтвержден'
-  if (normalized === 'expired') return 'Время подтверждения истекло'
-  return 'Ожидаем звонок'
-}
-
 
 const CabinetRegisterPage = ({
   authCallbackUrl,
@@ -616,72 +606,80 @@ const CabinetRegisterPage = ({
           source: VKID.ConfigSource.LOWCODE,
           scope: vkidScope,
         })
-      } catch (error) {
+      } catch {
         // возможно уже инициализирован
       }
 
-      const oneTap = new VKID.OneTap()
-      vkWidgetInstanceRef.current = oneTap
-      oneTap
-        .render({
-          container,
-          showAlternativeLogin: true,
-        })
-        .on(VKID.WidgetEvents.ERROR, (error) => {
-          if (!isMounted) return
-          const vkWidgetErrorCode = error?.code ?? error?.type ?? null
-          const vkWidgetErrorText =
-            error?.text ||
-            error?.message ||
-            error?.details?.error_description ||
-            error?.details?.error ||
-            null
+      try {
+        const oneTap = new VKID.OneTap()
+        vkWidgetInstanceRef.current = oneTap
+        oneTap
+          .render({
+            container,
+            showAlternativeLogin: true,
+          })
+          .on(VKID.WidgetEvents.ERROR, (error) => {
+            if (!isMounted) return
+            const vkWidgetErrorCode = error?.code ?? error?.type ?? null
+            const vkWidgetErrorText =
+              error?.text ||
+              error?.message ||
+              error?.details?.error_description ||
+              error?.details?.error ||
+              null
 
-          setVkError(
-            vkWidgetErrorText && vkWidgetErrorCode !== null
-              ? `Ошибка виджета VK ID (${vkWidgetErrorCode}): ${vkWidgetErrorText}.`
-              : vkWidgetErrorText
-                ? `Ошибка виджета VK ID: ${vkWidgetErrorText}.`
-                : vkWidgetErrorCode !== null
-                  ? `Ошибка виджета VK ID (${vkWidgetErrorCode}).`
-                  : 'Ошибка виджета VK ID.',
-          )
-        })
-        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload) => {
-          if (!isMounted) return
+            setVkError(
+              vkWidgetErrorText && vkWidgetErrorCode !== null
+                ? `Ошибка виджета VK ID (${vkWidgetErrorCode}): ${vkWidgetErrorText}.`
+                : vkWidgetErrorText
+                  ? `Ошибка виджета VK ID: ${vkWidgetErrorText}.`
+                  : vkWidgetErrorCode !== null
+                    ? `Ошибка виджета VK ID (${vkWidgetErrorCode}).`
+                    : 'Ошибка виджета VK ID.',
+            )
+          })
+          .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload) => {
+            if (!isMounted) return
 
-          const code = payload?.code
-          const deviceId = payload?.device_id
-          const codeVerifier =
-            payload?.code_verifier || payload?.codeVerifier || payload?.verifier
-          const state = payload?.state || null
+            const code = payload?.code
+            const deviceId = payload?.device_id
+            const codeVerifier =
+              payload?.code_verifier || payload?.codeVerifier || payload?.verifier
+            const state = payload?.state || null
 
-          if (!code || !deviceId) {
-            setVkError('VK ID не вернул код авторизации.')
-            return
-          }
-
-          try {
-            let accessToken = null
-            if (!codeVerifier && VKID?.Auth?.exchangeCode) {
-              const exchangeResult = await VKID.Auth.exchangeCode(code, deviceId)
-              accessToken = exchangeResult?.access_token || null
+            if (!code || !deviceId) {
+              setVkError('VK ID не вернул код авторизации.')
+              return
             }
 
-            await handleVkAuth({
-              code,
-              deviceId,
-              accessToken,
-              codeVerifier: codeVerifier || null,
-              state: state || null,
-            })
-          } catch (error) {
-            console.error('VK OneTap register auth error', error)
-            setVkError(
-              'VK ID временно недоступен. Попробуйте позже или зарегистрируйтесь по номеру телефона.',
-            )
-          }
-        })
+            try {
+              let accessToken = null
+              if (!codeVerifier && VKID?.Auth?.exchangeCode) {
+                const exchangeResult = await VKID.Auth.exchangeCode(code, deviceId)
+                accessToken = exchangeResult?.access_token || null
+              }
+
+              await handleVkAuth({
+                code,
+                deviceId,
+                accessToken,
+                codeVerifier: codeVerifier || null,
+                state: state || null,
+              })
+            } catch (error) {
+              console.error('VK OneTap register auth error', error)
+              setVkError(
+                'VK ID временно недоступен. Попробуйте позже или зарегистрируйтесь по номеру телефона.',
+              )
+            }
+          })
+      } catch (widgetInitError) {
+        console.error('VK register widget init error', widgetInitError)
+        setVkError(
+          'Не удалось инициализировать VK ID. Попробуйте позже или зарегистрируйтесь по номеру телефона.',
+        )
+        return
+      }
 
       setIsVkIdReady(true)
     }

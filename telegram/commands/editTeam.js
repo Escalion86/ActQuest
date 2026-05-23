@@ -5,7 +5,7 @@ const editTeam = async ({ telegramId, jsonCommand, location, db }) => {
   if (!jsonCommand?.teamId) {
     const teamsUser = await db.model('TeamsUsers').find({
       userTelegramId: telegramId,
-      // role: 'capitan',
+      // role: 'captain',
     })
     if (!teamsUser || teamsUser.length === 0) {
       return {
@@ -49,7 +49,7 @@ const editTeam = async ({ telegramId, jsonCommand, location, db }) => {
     }
   }
 
-  const isCapitan = teamsUser.role === 'capitan'
+  const isCaptain = teamsUser.role === 'captain'
 
   const team = await getTeam(jsonCommand.teamId, db)
   if (team.success === false) return team
@@ -58,7 +58,7 @@ const editTeam = async ({ telegramId, jsonCommand, location, db }) => {
     {
       c: { c: 'setTeamName', teamId: jsonCommand.teamId },
       //`setTeamName/teamId=${jsonCommand.teamId}`,
-      hide: !isCapitan,
+      hide: !isCaptain,
       text: '\u{270F} Изменить название',
     },
     // {
@@ -66,13 +66,13 @@ const editTeam = async ({ telegramId, jsonCommand, location, db }) => {
     //     c: 'setTeamDesc',
     //     teamId: jsonCommand.teamId,
     //   },
-    //   hide: !isCapitan,
+    //   hide: !isCaptain,
     //   text: '\u{270F} Изменить описание',
     // },
     {
       c: { c: 'transferCaptainRights', teamId: jsonCommand.teamId },
       text: '\u{1F91D} Передать права капитана',
-      hide: !isCapitan,
+      hide: !isCaptain,
     },
     {
       c: { c: 'teamUsers', teamId: jsonCommand.teamId },
@@ -81,23 +81,23 @@ const editTeam = async ({ telegramId, jsonCommand, location, db }) => {
     {
       c: { c: 'unjoinTeam', teamId: jsonCommand.teamId },
       text: '\u{1F4A3} Покинуть команду',
-      hide: isCapitan,
+      hide: isCaptain,
     },
     {
       c: { c: 'linkToJoinTeam', teamId: jsonCommand.teamId },
-      hide: !isCapitan,
+      hide: !isCaptain,
       text: '\u{1F517} Пригласить в команду',
     },
     {
       c: { c: 'delTeam', teamId: jsonCommand.teamId },
-      hide: !isCapitan,
+      hide: !isCaptain,
       text: '\u{1F4A3} Удалить команду',
     },
     { c: b ?? 'joinedTeams', text: '\u{2B05} Назад' },
   ]
 
   return {
-    message: `<b>${isCapitan ? 'Редактирование команды' : 'Команда'} "${
+    message: `<b>${isCaptain ? 'Редактирование команды' : 'Команда'} "${
       team?.name
     }"</b>.${
       team?.description ? `\n\n<b>Описание</b>: "${team?.description}"` : ''

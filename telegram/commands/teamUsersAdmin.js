@@ -39,14 +39,14 @@ const teamUsersAdmin = async ({ telegramId, jsonCommand, location, db }) => {
     })
     return { name: user.name, role: teamUser?.role, teamUserId: teamUser._id }
   })
-  usersWithRoleInTeam.sort((user) => (user?.role === 'capitan' ? -1 : 1))
+  usersWithRoleInTeam.sort((user) => (user?.role === 'captain' ? -1 : 1))
 
   const page2 = jsonCommand?.page2 ?? 1
   const buttons = buttonListConstructor(
     usersWithRoleInTeam,
     page2,
     ({ name, role, teamUserId }, number) => ({
-      text: `${number}. ${name}${role === 'capitan' ? ' (капитан)' : ''}`,
+      text: `${number}. ${name}${role === 'captain' ? ' (капитан)' : ''}`,
       c: { c: 'teamUserAdmin', teamUserId: teamUserId, page: jsonCommand.page },
     })
   )

@@ -51,7 +51,7 @@ const userAdmin = async ({ telegramId, jsonCommand, location, db }) => {
                 ({ teamId }) => teamId === String(_id)
               )
               return ` - ${name}${
-                teamUser?.role === 'capitan' ? ' (капитан)' : ''
+                teamUser?.role === 'captain' ? ' (капитан)' : ''
               }`
             })
             .join('\n')}`

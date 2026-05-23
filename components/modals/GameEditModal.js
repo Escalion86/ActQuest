@@ -3,7 +3,9 @@ import PropTypes from 'prop-types'
 import dynamic from 'next/dynamic'
 
 import Modal from '@components/Modal'
-import AmountStepperInput from '@components/cabinet/AmountStepperInput'
+import AmountStepperInput, {
+  DEFAULT_MONEY_INPUT_CLASS_NAME,
+} from '@components/cabinet/AmountStepperInput'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetDurationField from '@components/cabinet/CabinetDurationField'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
@@ -13,7 +15,6 @@ import ImagesInput from '@components/cabinet/ImagesInput'
 import CabinetNumberField from '@components/cabinet/CabinetNumberField'
 import NeonCheckbox from '@components/NeonCheckbox'
 import FullscreenImageViewer from '@components/FullscreenImageViewer'
-import formatDate from '@helpers/formatDate'
 import {
   formatDateTimeLocalInLocation,
   parseDateTimeLocalInLocation,
@@ -186,8 +187,6 @@ const GameEditModal = ({
   updateSelectedGame,
   GAME_TYPE_OPTIONS,
   CLUE_EARLY_MODE_OPTIONS,
-  toMinutes,
-  toSeconds,
   handleAddTask,
   handleReorderTask,
   isTaskReorderLocked,
@@ -202,9 +201,6 @@ const GameEditModal = ({
   handleTaskCodeChange,
   handleTaskCodePhotoChange,
   handleRemoveTaskCode,
-  handleAddTaskImage,
-  handleTaskImageChange,
-  handleRemoveTaskImage,
   handleAddClue,
   handleReorderClue,
   handleTaskClueChange,
@@ -221,16 +217,10 @@ const GameEditModal = ({
   handleAddPrice,
   handlePriceChange,
   handleRemovePrice,
-  handleAddFinance,
-  handleFinanceChange,
-  handleRemoveFinance,
   canGenerateResults,
   isGeneratingResults,
   handleGenerateResults,
   generateResultsButtonLabel,
-  currencyFormatter,
-  financesSummary,
-  balanceClass,
   expandedTaskIds,
   toggleTaskExpansion,
   selectedGameModerators,
@@ -288,8 +278,7 @@ const GameEditModal = ({
     overClueId: null,
   })
   const isPhotoGame = selectedGame?.type === 'photo'
-  const amountInputClassName =
-    'aq-amount-step-input h-10 w-full rounded-xl border border-slate-200 bg-white px-12 py-2 text-center text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
+  const amountInputClassName = DEFAULT_MONEY_INPUT_CLASS_NAME
   const fieldLabelClassName =
     'text-sm font-semibold text-slate-700 dark:text-white'
   const fieldInputClassName =
@@ -3837,126 +3826,6 @@ const GameEditModal = ({
           </ModalSection>
         )}
 
-        {!isTasksOnly && (
-          <ModalSection>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
-                Финансы игры
-              </h2>
-              <CabinetButton
-                onClick={handleAddFinance}
-                variant="primary"
-                size="sm"
-              >
-                Добавить запись
-              </CabinetButton>
-            </div>
-
-            {(selectedGame.finances ?? []).length > 0 ? (
-              <div className="space-y-3">
-                {selectedGame.finances.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto] items-center p-4 border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/50 rounded-2xl"
-                  >
-                    <CabinetSelectField
-                      id={`game-finance-type-${entry.id}`}
-                      label={null}
-                      value={entry.type}
-                      onChange={(event) =>
-                        handleFinanceChange(
-                          entry.id,
-                          'type',
-                          event.target.value,
-                        )
-                      }
-                      containerClassName="space-y-0 w-full"
-                      selectClassName="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
-                    >
-                      <option value="income">Доход</option>
-                      <option value="expense">Расход</option>
-                    </CabinetSelectField>
-                    <AmountStepperInput
-                      value={entry.sum}
-                      min={0}
-                      step={100}
-                      placeholder="Сумма"
-                      className="max-w-none"
-                      inputClassName={amountInputClassName}
-                      onChange={(nextValue) =>
-                        handleFinanceChange(entry.id, 'sum', nextValue)
-                      }
-                    />
-                    <CabinetInputField
-                      id={`game-finance-date-${entry.id}`}
-                      label={null}
-                      type="date"
-                      value={entry.date ? formatDate(entry.date, true) : ''}
-                      onChange={(event) =>
-                        handleFinanceChange(
-                          entry.id,
-                          'date',
-                          event.target.value,
-                        )
-                      }
-                      containerClassName="space-y-0 w-full"
-                      inputClassName="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
-                    />
-                    <CabinetButton
-                      onClick={() => handleRemoveFinance(entry.id)}
-                      variant="secondary"
-                      tone="danger"
-                      size="sm"
-                    >
-                      Удалить
-                    </CabinetButton>
-                    <div className="md:col-span-3">
-                      <CabinetInputField
-                        id={`game-finance-description-${entry.id}`}
-                        label={null}
-                        type="text"
-                        value={entry.description}
-                        onChange={(event) =>
-                          handleFinanceChange(
-                            entry.id,
-                            'description',
-                            event.target.value,
-                          )
-                        }
-                        placeholder="Комментарий"
-                        containerClassName="space-y-0 w-full"
-                        inputClassName="w-full px-3 py-2 text-sm border border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white rounded-xl focus:border-primary focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-200">
-                Пока нет финансовых записей по этой игре. Добавьте доходы и
-                расходы, чтобы контролировать бюджет.
-              </p>
-            )}
-
-            <div className="p-4 border bg-slate-50 border-slate-200 dark:border-slate-700 dark:bg-slate-800/60 rounded-2xl">
-              <p className="text-sm text-slate-600 dark:text-slate-200">
-                Доходы:{' '}
-                <span className="font-semibold">
-                  {currencyFormatter.format(financesSummary.income)}
-                </span>
-              </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-200">
-                Расходы:{' '}
-                <span className="font-semibold">
-                  {currencyFormatter.format(financesSummary.expense)}
-                </span>
-              </p>
-              <p className={`mt-1 text-sm font-semibold ${balanceClass}`}>
-                Баланс: {currencyFormatter.format(financesSummary.balance)}
-              </p>
-            </div>
-          </ModalSection>
-        )}
         {draggedTaskGhost && dragGhostPosition ? (
           <div
             className="pointer-events-none fixed z-[140] w-[190px] overflow-hidden rounded-lg border border-cyan-400/50 bg-slate-900/80 px-0 py-0 shadow-xl ring-1 ring-cyan-400/20 backdrop-blur-[1px]"
@@ -4051,8 +3920,6 @@ GameEditModal.propTypes = {
   updateSelectedGame: PropTypes.func.isRequired,
   GAME_TYPE_OPTIONS: PropTypes.array.isRequired,
   CLUE_EARLY_MODE_OPTIONS: PropTypes.array.isRequired,
-  toMinutes: PropTypes.func.isRequired,
-  toSeconds: PropTypes.func.isRequired,
   handleAddTask: PropTypes.func.isRequired,
   handleReorderTask: PropTypes.func.isRequired,
   isTaskReorderLocked: PropTypes.func.isRequired,
@@ -4067,9 +3934,6 @@ GameEditModal.propTypes = {
   handleTaskCodeChange: PropTypes.func.isRequired,
   handleTaskCodePhotoChange: PropTypes.func.isRequired,
   handleRemoveTaskCode: PropTypes.func.isRequired,
-  handleAddTaskImage: PropTypes.func.isRequired,
-  handleTaskImageChange: PropTypes.func.isRequired,
-  handleRemoveTaskImage: PropTypes.func.isRequired,
   handleAddClue: PropTypes.func.isRequired,
   handleReorderClue: PropTypes.func.isRequired,
   handleTaskClueChange: PropTypes.func.isRequired,
@@ -4086,20 +3950,10 @@ GameEditModal.propTypes = {
   handleAddPrice: PropTypes.func.isRequired,
   handlePriceChange: PropTypes.func.isRequired,
   handleRemovePrice: PropTypes.func.isRequired,
-  handleAddFinance: PropTypes.func.isRequired,
-  handleFinanceChange: PropTypes.func.isRequired,
-  handleRemoveFinance: PropTypes.func.isRequired,
   canGenerateResults: PropTypes.bool.isRequired,
   isGeneratingResults: PropTypes.bool.isRequired,
   handleGenerateResults: PropTypes.func.isRequired,
   generateResultsButtonLabel: PropTypes.string.isRequired,
-  currencyFormatter: PropTypes.instanceOf(Intl.NumberFormat).isRequired,
-  financesSummary: PropTypes.shape({
-    income: PropTypes.number.isRequired,
-    expense: PropTypes.number.isRequired,
-    balance: PropTypes.number.isRequired,
-  }).isRequired,
-  balanceClass: PropTypes.string.isRequired,
   expandedTaskIds: PropTypes.instanceOf(Set).isRequired,
   toggleTaskExpansion: PropTypes.func.isRequired,
   selectedGameModerators: PropTypes.array.isRequired,

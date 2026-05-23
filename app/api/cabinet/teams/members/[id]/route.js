@@ -4,9 +4,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
+import planTeamMembershipRoleUpdate from '@helpers/planTeamMembershipRoleUpdate'
 import {
   getCaptainRoleQuery,
-  getLiaisonRoleQuery,
   isCaptainRole,
   isLiaisonRole,
   normalizeTeamRoleForWrite,
@@ -136,6 +136,30 @@ export async function DELETE(request, { params }) {
 
     const role = normalizeTeamRoleForWrite(membership.role)
     const isCaptain = isCaptainRole(role)
+    if (isCaptain) {
+      const teamMemberships = await TeamsUsersModel.find({
+        teamId: membership.teamId,
+      })
+        .select({ _id: 1, role: 1 })
+        .lean()
+      const roleUpdatePlan = planTeamMembershipRoleUpdate({
+        membershipId,
+        memberships: teamMemberships,
+        nextRole: 'participant',
+      })
+
+      if (!roleUpdatePlan.ok) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Нельзя удалить последнего капитана команды. Назначьте нового капитана.',
+          },
+          { status: 409 },
+        )
+      }
+    }
+
     if (isCaptain && !isElevatedRole(actorRole)) {
       return NextResponse.json(
         {
@@ -189,7 +213,6 @@ export async function PUT(request, { params }) {
     .toLowerCase()
   if (
     rawNextRole !== 'captain' &&
-    rawNextRole !== 'capitan' &&
     rawNextRole !== 'liaison' &&
     rawNextRole !== 'participant'
   ) {
@@ -263,12 +286,53 @@ export async function PUT(request, { params }) {
       )
     }
 
-    if (isLiaisonRole(nextRole)) {
+    const teamMemberships = await TeamsUsersModel.find({
+      teamId: membership.teamId,
+    })
+      .select({ _id: 1, role: 1 })
+      .lean()
+    const roleUpdatePlan = planTeamMembershipRoleUpdate({
+      membershipId,
+      memberships: teamMemberships,
+      nextRole,
+    })
+
+    if (!roleUpdatePlan.ok && roleUpdatePlan.code === 'captain_required') {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'В команде должен оставаться хотя бы один капитан. Сначала назначьте нового капитана.',
+        },
+        { status: 409 },
+      )
+    }
+
+    if (!roleUpdatePlan.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Не удалось построить изменение роли участника',
+        },
+        { status: 409 },
+      )
+    }
+
+    if (roleUpdatePlan.demoteCaptainIds.length > 0) {
       await TeamsUsersModel.updateMany(
         {
           teamId: membership.teamId,
-          role: getLiaisonRoleQuery(),
-          _id: { $ne: membershipId },
+          _id: { $in: roleUpdatePlan.demoteCaptainIds },
+        },
+        { $set: { role: 'participant' } },
+      )
+    }
+
+    if (roleUpdatePlan.demoteLiaisonIds.length > 0) {
+      await TeamsUsersModel.updateMany(
+        {
+          teamId: membership.teamId,
+          _id: { $in: roleUpdatePlan.demoteLiaisonIds },
         },
         { $set: { role: 'participant' } },
       )
@@ -276,7 +340,7 @@ export async function PUT(request, { params }) {
 
     const updated = await TeamsUsersModel.findByIdAndUpdate(
       membershipId,
-      { $set: { role: nextRole } },
+      { $set: { role: roleUpdatePlan.nextRole } },
       { returnDocument: 'after' },
     )
       .select({ _id: 1, teamId: 1, role: 1, userId: 1, userTelegramId: 1 })

@@ -36,9 +36,9 @@ const teamUsers = async ({ telegramId, jsonCommand, location, db }) => {
     const teamUser = teamsUsers.find((teamUser) => {
       return teamUser.userTelegramId === user.telegramId
     })
-    // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
+    // const role = teamUser.role === 'captain' ? 'Капитан' : 'Участник'
     return {
-      text: `${user.name}${teamUser?.role === 'capitan' ? ' (капитан)' : ''}`,
+      text: `${user.name}${teamUser?.role === 'captain' ? ' (капитан)' : ''}`,
       c: { c: 'teamUser', teamUserId: teamUser._id },
       // `teamUser/teamUserId=${teamUser._id}`,
     }

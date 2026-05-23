@@ -11,6 +11,7 @@ import UserViewModal from '@components/cabinet/modals/UserViewModal'
 import Modal from '@components/Modal'
 import formatDate from '@helpers/formatDate'
 import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
+import { canOpenRestrictedTeamGamePreview } from '@helpers/cabinetGameVisibility'
 import { LOCATIONS } from '@server/serverConstants'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
@@ -39,8 +40,13 @@ const TeamDescriptionModal = ({
   onLeaveTeam,
   onOpenMember,
   onOpenGame,
+  canViewRestrictedGameInfo,
 }) => {
   const canViewIds = useAtomValue(isAdminAtom)
+  const canViewRestrictedPreview = canOpenRestrictedTeamGamePreview({
+    isAdminViewer: canViewIds,
+    allowRestrictedPreview: canViewRestrictedGameInfo,
+  })
   const [isGamePreviewModalOpen, setIsGamePreviewModalOpen] = useState(false)
   const [selectedGamePreviewSource, setSelectedGamePreviewSource] =
     useState(null)
@@ -373,7 +379,7 @@ const TeamDescriptionModal = ({
           setIsGamePreviewModalOpen(false)
           setSelectedGamePreviewSource(null)
         }}
-        canViewRestrictedGameInfo
+        canViewRestrictedGameInfo={canViewRestrictedPreview}
         canViewGameResults={Boolean(
           selectedGamePreview?.status === 'closed' ||
           selectedGamePreview?.status === 'finished',
@@ -400,6 +406,7 @@ TeamDescriptionModal.propTypes = {
   onLeaveTeam: PropTypes.func,
   onOpenMember: PropTypes.func,
   onOpenGame: PropTypes.func,
+  canViewRestrictedGameInfo: PropTypes.bool,
   selectedTeam: PropTypes.shape({
     id: PropTypes.string,
     name: PropTypes.string,
@@ -453,6 +460,7 @@ TeamDescriptionModal.defaultProps = {
   onLeaveTeam: undefined,
   onOpenMember: undefined,
   onOpenGame: undefined,
+  canViewRestrictedGameInfo: false,
   selectedTeam: null,
 }
 

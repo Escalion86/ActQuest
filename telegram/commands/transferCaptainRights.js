@@ -41,8 +41,8 @@ const transferCaptainRights = async ({
     const teamUser = teamsUsers.find(
       (teamUser) => String(teamUser._id) === jsonCommand.teamUserId
     )
-    const teamUserCapitan = teamsUsers.find(
-      (teamUser) => teamUser.role === 'capitan'
+    const teamUserCaptain = teamsUsers.find(
+      (teamUser) => teamUser.role === 'captain'
     )
     const user = users.find(
       (user) => teamUser.userTelegramId === user.telegramId
@@ -50,9 +50,9 @@ const transferCaptainRights = async ({
 
     if (jsonCommand.confirm) {
       await db.model('TeamsUsers').findByIdAndUpdate(teamUser._id, {
-        role: 'capitan',
+        role: 'captain',
       })
-      await db.model('TeamsUsers').findByIdAndUpdate(teamUserCapitan._id, {
+      await db.model('TeamsUsers').findByIdAndUpdate(teamUserCaptain._id, {
         role: 'participant',
       })
       return {
@@ -85,13 +85,13 @@ const transferCaptainRights = async ({
       const teamUser = teamsUsers.find(
         (teamUser) => teamUser.userTelegramId === user.telegramId
       )
-      return teamUser?.role !== 'capitan'
+      return teamUser?.role !== 'captain'
     })
     .map((user) => {
       const teamUser = teamsUsers.find(
         (teamUser) => teamUser.userTelegramId === user.telegramId
       )
-      // const role = teamUser.role === 'capitan' ? 'Капитан' : 'Участник'
+      // const role = teamUser.role === 'captain' ? 'Капитан' : 'Участник'
       return {
         text: `${user.name}`,
         c: { teamUserId: teamUser._id },

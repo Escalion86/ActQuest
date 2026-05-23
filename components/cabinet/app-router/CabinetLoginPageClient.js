@@ -15,8 +15,6 @@ import { formatPhoneInput, normalizePhoneForSubmit } from '@helpers/phoneInputMa
 import { mapVkSignInError } from '@helpers/vkAuthErrors'
 import {
   loadVkSdk,
-  normalizeEnvUrl,
-  parseVkAppId,
   resolveVkIdCallbackUrl,
 } from '@helpers/vkIdClient'
 import { LOCATIONS } from '@server/serverConstants'
@@ -67,7 +65,6 @@ const summarizeVkMessageData = (data) => {
 
 const CabinetLoginPage = ({
   authCallbackUrl,
-  authCallbackSource,
   isVkAuthVisible,
   vkidAppId,
   vkidCallbackUrl,
@@ -575,129 +572,141 @@ const CabinetLoginPage = ({
         })
       }
 
-      const oneTap = new VKID.OneTap()
-      vkWidgetInstanceRef.current = oneTap
-      oneTap
-        .render({
-          container,
-          showAlternativeLogin: true,
-        })
-        .on(VKID.WidgetEvents.ERROR, (error) => {
-          if (!isMounted) return
-          const vkWidgetErrorCode = error?.code ?? error?.type ?? null
-          const vkWidgetErrorText =
-            error?.text ||
-            error?.message ||
-            error?.details?.error_description ||
-            error?.details?.error ||
-            null
-          console.error('VK widget error', error)
-          appendAuthDebug('vk_widget_error', {
-            code: vkWidgetErrorCode,
-            text: vkWidgetErrorText,
-            raw: summarizeVkMessageData(error),
+      try {
+        const oneTap = new VKID.OneTap()
+        vkWidgetInstanceRef.current = oneTap
+        oneTap
+          .render({
+            container,
+            showAlternativeLogin: true,
           })
-          setVkError(
-            vkWidgetErrorText && vkWidgetErrorCode !== null
-              ? `Ошибка виджета VK ID (${vkWidgetErrorCode}): ${vkWidgetErrorText}. Попробуйте вход по паролю.`
-              : vkWidgetErrorText
-                ? `Ошибка виджета VK ID: ${vkWidgetErrorText}. Попробуйте вход по паролю.`
-                : vkWidgetErrorCode !== null
-                  ? `Ошибка виджета VK ID (${vkWidgetErrorCode}). Попробуйте вход по паролю.`
-                  : 'Ошибка виджета VK ID. Попробуйте вход по паролю.',
-          )
-        })
-        .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload) => {
-          if (!isMounted) return
+          .on(VKID.WidgetEvents.ERROR, (error) => {
+            if (!isMounted) return
+            const vkWidgetErrorCode = error?.code ?? error?.type ?? null
+            const vkWidgetErrorText =
+              error?.text ||
+              error?.message ||
+              error?.details?.error_description ||
+              error?.details?.error ||
+              null
+            console.error('VK widget error', error)
+            appendAuthDebug('vk_widget_error', {
+              code: vkWidgetErrorCode,
+              text: vkWidgetErrorText,
+              raw: summarizeVkMessageData(error),
+            })
+            setVkError(
+              vkWidgetErrorText && vkWidgetErrorCode !== null
+                ? `Ошибка виджета VK ID (${vkWidgetErrorCode}): ${vkWidgetErrorText}. Попробуйте вход по паролю.`
+                : vkWidgetErrorText
+                  ? `Ошибка виджета VK ID: ${vkWidgetErrorText}. Попробуйте вход по паролю.`
+                  : vkWidgetErrorCode !== null
+                    ? `Ошибка виджета VK ID (${vkWidgetErrorCode}). Попробуйте вход по паролю.`
+                    : 'Ошибка виджета VK ID. Попробуйте вход по паролю.',
+            )
+          })
+          .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, async (payload) => {
+            if (!isMounted) return
 
-          if (isVkDebugEnabled) {
-            console.info('[VK_DEBUG][client] one_tap_login_success', {
+            if (isVkDebugEnabled) {
+              console.info('[VK_DEBUG][client] one_tap_login_success', {
+                payloadKeys:
+                  payload && typeof payload === 'object'
+                    ? Object.keys(payload).sort()
+                    : [],
+                hasCode: Boolean(payload?.code),
+                hasDeviceId: Boolean(payload?.device_id),
+                hasCodeVerifier: Boolean(
+                  payload?.code_verifier || payload?.codeVerifier || payload?.verifier,
+                ),
+              })
+            }
+
+            const code = payload?.code
+            const deviceId = payload?.device_id
+            const codeVerifier =
+              payload?.code_verifier || payload?.codeVerifier || payload?.verifier
+            const state = payload?.state || null
+            appendAuthDebug('vk_login_success_payload', {
+              hasCode: Boolean(code),
+              hasDeviceId: Boolean(deviceId),
+              hasCodeVerifier: Boolean(codeVerifier),
+              hasState: Boolean(state),
               payloadKeys:
                 payload && typeof payload === 'object'
                   ? Object.keys(payload).sort()
                   : [],
-              hasCode: Boolean(payload?.code),
-              hasDeviceId: Boolean(payload?.device_id),
-              hasCodeVerifier: Boolean(
-                payload?.code_verifier || payload?.codeVerifier || payload?.verifier,
-              ),
             })
-          }
 
-          const code = payload?.code
-          const deviceId = payload?.device_id
-          const codeVerifier =
-            payload?.code_verifier || payload?.codeVerifier || payload?.verifier
-          const state = payload?.state || null
-          appendAuthDebug('vk_login_success_payload', {
-            hasCode: Boolean(code),
-            hasDeviceId: Boolean(deviceId),
-            hasCodeVerifier: Boolean(codeVerifier),
-            hasState: Boolean(state),
-            payloadKeys:
-              payload && typeof payload === 'object'
-                ? Object.keys(payload).sort()
-                : [],
-          })
+            if (!code || !deviceId) {
+              setVkError('VK ID не вернул код авторизации.')
+              return
+            }
 
-          if (!code || !deviceId) {
-            setVkError('VK ID не вернул код авторизации.')
-            return
-          }
+            try {
+              let accessToken = null
+              if (!codeVerifier && VKID?.Auth?.exchangeCode) {
+                try {
+                  appendAuthDebug('vk_client_exchange_start')
+                  const exchangeResult = await VKID.Auth.exchangeCode(code, deviceId)
+                  accessToken = exchangeResult?.access_token || null
+                  appendAuthDebug('vk_client_exchange_result', {
+                    hasAccessToken: Boolean(accessToken),
+                  })
+                } catch (clientExchangeError) {
+                  appendAuthDebug('vk_client_exchange_error', {
+                    message: clientExchangeError?.message ?? null,
+                    name: clientExchangeError?.name ?? null,
+                  })
+                  setVkError(
+                    'VK ID временно недоступен. Попробуйте позже или войдите по паролю.',
+                  )
+                  return
+                }
+              }
 
-          try {
-            let accessToken = null
-            if (!codeVerifier && VKID?.Auth?.exchangeCode) {
-              try {
-                appendAuthDebug('vk_client_exchange_start')
-                const exchangeResult = await VKID.Auth.exchangeCode(code, deviceId)
-                accessToken = exchangeResult?.access_token || null
-                appendAuthDebug('vk_client_exchange_result', {
+              if (isVkDebugEnabled) {
+                console.info('[VK_DEBUG][client] server_exchange_auth_params', {
+                  hasCode: Boolean(code),
+                  hasDeviceId: Boolean(deviceId),
+                  hasCodeVerifier: Boolean(codeVerifier),
+                  hasState: Boolean(state),
                   hasAccessToken: Boolean(accessToken),
                 })
-              } catch (clientExchangeError) {
-                appendAuthDebug('vk_client_exchange_error', {
-                  message: clientExchangeError?.message ?? null,
-                  name: clientExchangeError?.name ?? null,
-                })
-                setVkError(
-                  'VK ID временно недоступен. Попробуйте позже или войдите по паролю.',
-                )
-                return
               }
-            }
 
-            if (isVkDebugEnabled) {
-              console.info('[VK_DEBUG][client] server_exchange_auth_params', {
-                hasCode: Boolean(code),
-                hasDeviceId: Boolean(deviceId),
-                hasCodeVerifier: Boolean(codeVerifier),
-                hasState: Boolean(state),
-                hasAccessToken: Boolean(accessToken),
+              await handleVkAuthRef.current?.({
+                code,
+                deviceId,
+                accessToken,
+                codeVerifier: codeVerifier || null,
+                state: state || null,
               })
+            } catch (error) {
+              console.error('VK OneTap auth error', error)
+              if (isVkDebugEnabled) {
+                console.info('[VK_DEBUG][client] server_exchange_auth_error', {
+                  message: error?.message ?? null,
+                  name: error?.name ?? null,
+                  stack: error?.stack ?? null,
+                })
+              }
+              setVkError(
+                'VK ID временно недоступен. Попробуйте позже или войдите по паролю.',
+              )
             }
-
-            await handleVkAuthRef.current?.({
-              code,
-              deviceId,
-              accessToken,
-              codeVerifier: codeVerifier || null,
-              state: state || null,
-            })
-          } catch (error) {
-            console.error('VK OneTap auth error', error)
-            if (isVkDebugEnabled) {
-              console.info('[VK_DEBUG][client] server_exchange_auth_error', {
-                message: error?.message ?? null,
-                name: error?.name ?? null,
-                stack: error?.stack ?? null,
-              })
-            }
-            setVkError(
-              'VK ID временно недоступен. Попробуйте позже или войдите по паролю.',
-            )
-          }
+          })
+      } catch (widgetInitError) {
+        console.error('VK widget init error', widgetInitError)
+        appendAuthDebug('vk_widget_init_failed', {
+          message: widgetInitError?.message ?? null,
+          name: widgetInitError?.name ?? null,
         })
+        setVkError(
+          'Не удалось инициализировать VK ID. Попробуйте позже или войдите по паролю.',
+        )
+        return
+      }
 
       setIsVkIdReady(true)
       appendAuthDebug('vk_widget_ready')

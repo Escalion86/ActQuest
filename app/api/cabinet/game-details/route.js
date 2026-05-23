@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
+import {
+  canViewCabinetGameRestrictedInfo,
+  sanitizeCabinetGameForViewer,
+} from '@helpers/cabinetGameVisibility'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import { toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -109,6 +113,7 @@ export async function GET(request) {
       if (canLoadOwnGames) {
         query.$or = [
           ...(currentUserIdString ? [{ creatorUserId: currentUserIdString }] : []),
+          ...(currentUserIdString ? [{ moderators: currentUserIdString }] : []),
           ...(creatorTelegramId !== null
             ? [{ creatorTelegramId }]
             : []),
@@ -293,7 +298,19 @@ export async function GET(request) {
     })
 
     const normalizedGame = normalizeGameForCabinet({
-      ...gameDoc,
+      ...sanitizeCabinetGameForViewer(gameDoc, {
+        canViewRestrictedGameInfo: canViewCabinetGameRestrictedInfo({
+          userRole,
+          currentUserId: currentUserIdString,
+          gameCreatorUserId: creatorUserId,
+          isGameModerator: (Array.isArray(gameDoc?.moderators)
+            ? gameDoc.moderators
+            : []
+          ).some((moderator) => toStringId(moderator?._id ?? moderator?.id ?? moderator) === currentUserIdString),
+          allowCreatorFallback:
+            canLoadOwnGames && !currentUserIdString && creatorTelegramId !== null,
+        }),
+      }),
       status: normalizedStatus,
       teamsCount,
       userTeamPlace,

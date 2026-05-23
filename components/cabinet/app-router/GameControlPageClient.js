@@ -2138,7 +2138,6 @@ export default function GameControlPageClient({ session: _session }) {
                 .toLowerCase()
               const isCaptain =
                 roleNormalized === 'captain' ||
-                roleNormalized === 'capitan' ||
                 roleNormalized === 'капитан'
               return (
                 <div

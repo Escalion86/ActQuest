@@ -5,7 +5,6 @@ import Modal from '@components/Modal'
 import CopyableId from '@components/cabinet/CopyableId'
 import TiptapContentView from '@components/cabinet/TiptapContentView'
 import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
-import formatDate from '@helpers/formatDate'
 import { LOCATIONS } from '@server/serverConstants'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
@@ -49,8 +48,6 @@ const GameDescriptionModal = ({
   manyCodesLimitLabel,
   manyCodesPenaltyLabel,
   currencyFormatter,
-  financesSummary,
-  balanceClass,
 }) => (
   <Modal
     isOpen={isDescriptionModalOpen}
@@ -453,66 +450,6 @@ const GameDescriptionModal = ({
             </p>
           )}
         </ModalSection>
-
-        {canViewRestrictedGameInfo && (
-          <ModalSection className="p-4 sm:p-5">
-            <ModalSectionTitle>Финансы</ModalSectionTitle>
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
-              <p>
-                Доходы:{' '}
-                <span className="font-semibold">
-                  {currencyFormatter.format(financesSummary.income)}
-                </span>
-              </p>
-              <p className="mt-1">
-                Расходы:{' '}
-                <span className="font-semibold">
-                  {currencyFormatter.format(financesSummary.expense)}
-                </span>
-              </p>
-              <p className={`mt-1 font-semibold ${balanceClass}`}>
-                Баланс: {currencyFormatter.format(financesSummary.balance)}
-              </p>
-            </div>
-            {selectedGame.finances?.length > 0 ? (
-              <ul className="mt-4 space-y-3">
-                {selectedGame.finances.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/80"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span
-                        className={`text-xs font-semibold ${
-                          entry.type === 'expense'
-                            ? 'text-rose-600'
-                            : 'text-emerald-600'
-                        }`}
-                      >
-                        {entry.type === 'expense' ? 'Расход' : 'Доход'}
-                      </span>
-                      <span className="aq-modal-item-title text-sm font-semibold">
-                        {currencyFormatter.format(Number(entry.sum) || 0)}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs text-slate-500">
-                      {entry.date ? formatDate(entry.date) : 'Дата не указана'}
-                    </p>
-                    {entry.description ? (
-                      <p className="mt-2 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">
-                        {entry.description}
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-4 text-sm text-slate-500">
-                Финансовые записи отсутствуют.
-              </p>
-            )}
-          </ModalSection>
-        )}
       </div>
     ) : (
       <p className="text-sm text-slate-500">
@@ -555,12 +492,6 @@ GameDescriptionModal.propTypes = {
   manyCodesLimitLabel: PropTypes.string,
   manyCodesPenaltyLabel: PropTypes.string,
   currencyFormatter: PropTypes.instanceOf(Intl.NumberFormat).isRequired,
-  financesSummary: PropTypes.shape({
-    income: PropTypes.number.isRequired,
-    expense: PropTypes.number.isRequired,
-    balance: PropTypes.number.isRequired,
-  }).isRequired,
-  balanceClass: PropTypes.string.isRequired,
 }
 
 GameDescriptionModal.defaultProps = {

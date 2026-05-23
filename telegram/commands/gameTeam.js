@@ -34,8 +34,8 @@ const gameTeam = async ({ telegramId, jsonCommand, location, db }) => {
     })
     .lean()
 
-  const capitanTelegramId = teamUsers.find(
-    (teamUser) => teamUser.role === 'capitan'
+  const captainTelegramId = teamUsers.find(
+    (teamUser) => teamUser.role === 'captain'
   )?.userTelegramId
 
   return {
@@ -45,7 +45,7 @@ const gameTeam = async ({ telegramId, jsonCommand, location, db }) => {
       .map(
         (user) =>
           ` - ${user.name}${
-            capitanTelegramId === user.telegramId ? ' (капитан)' : ''
+            captainTelegramId === user.telegramId ? ' (капитан)' : ''
           }`
       )
       .join('\n')}`,
@@ -58,7 +58,7 @@ const gameTeam = async ({ telegramId, jsonCommand, location, db }) => {
       //   text: '\u{1F4A3} Удалить команду из игры',
       //   hide: !(
       //     game.status === 'active' &&
-      //     (isAdmin || capitanTelegramId === telegramId)
+      //     (isAdmin || captainTelegramId === telegramId)
       //   ),
       // },
       {

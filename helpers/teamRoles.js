@@ -1,5 +1,4 @@
 export const TEAM_ROLE_CAPTAIN = 'captain'
-export const TEAM_ROLE_CAPITAN_LEGACY = 'capitan'
 export const TEAM_ROLE_LIAISON = 'liaison'
 export const TEAM_ROLE_PARTICIPANT = 'participant'
 
@@ -9,10 +8,7 @@ export const isCaptainRole = (value) => {
   }
 
   const normalized = value.trim().toLowerCase()
-  return (
-    normalized === TEAM_ROLE_CAPTAIN ||
-    normalized === TEAM_ROLE_CAPITAN_LEGACY
-  )
+  return normalized === TEAM_ROLE_CAPTAIN
 }
 
 export const isLiaisonRole = (value) => {
@@ -31,7 +27,7 @@ export const normalizeTeamRoleForWrite = (value) =>
       : TEAM_ROLE_PARTICIPANT
 
 export const getCaptainRoleQuery = () => ({
-  $in: [TEAM_ROLE_CAPTAIN, TEAM_ROLE_CAPITAN_LEGACY],
+  $in: [TEAM_ROLE_CAPTAIN],
 })
 
 export const getLiaisonRoleQuery = () => TEAM_ROLE_LIAISON

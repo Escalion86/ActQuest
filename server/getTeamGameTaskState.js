@@ -6,7 +6,24 @@ import taskText from 'telegram/func/taskText'
 import sanitize from '@helpers/sanitize'
 import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
 import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
-import { isCaptainRole } from '@helpers/teamRoles'
+import resolveTeamMembershipForIdentity from '@helpers/resolveTeamMembershipForIdentity'
+
+const isGameTaskDebugEnabled =
+  process.env.GAME_TASK_DEBUG === '1' || process.env.SESSION_DEBUG === '1'
+
+const gameTaskDebugLog = (stage, payload = null) => {
+  if (!isGameTaskDebugEnabled) {
+    return
+  }
+
+  const time = new Date().toISOString()
+  if (payload === null || payload === undefined) {
+    console.info(`[game-task-debug] ${time} ${stage}`)
+    return
+  }
+
+  console.info(`[game-task-debug] ${time} ${stage}`, payload)
+}
 
 const ensureDateValue = (value) => {
   if (!value) return null
@@ -1367,28 +1384,35 @@ const getTeamGameTaskState = async ({
     // Проверка принадлежности пользователя к команде
     const teamUsers = await teamsUsersModel.find({ teamId }).lean()
 
-    let isTeamMember = false
-    let isCaptain = false
+    const membershipResolution = resolveTeamMembershipForIdentity({
+      teamUsers,
+      userId,
+      telegramId,
+    })
+    const isTeamMember = membershipResolution.isTeamMember
+    const isCaptain = membershipResolution.isCaptain
 
-    // Каноничная проверка членства: по userId.
-    // По telegramId проверяем только когда userId в запросе отсутствует
-    // (legacy сценарии telegram/webapp).
-    if (userId) {
-      const userIdStr = String(userId)
-      const currentTeamUser = teamUsers.find(
-        (teamUser) => teamUser && String(teamUser.userId ?? '') === userIdStr,
-      )
-      isTeamMember = Boolean(currentTeamUser)
-      isCaptain = isCaptainRole(currentTeamUser?.role)
-    } else if (telegramId) {
-      const telegramIdStr = String(telegramId)
-      const currentTeamUser = teamUsers.find(
-        (teamUser) =>
-          teamUser && String(teamUser.userTelegramId ?? '') === telegramIdStr,
-      )
-      isTeamMember = Boolean(currentTeamUser)
-      isCaptain = isCaptainRole(currentTeamUser?.role)
-    }
+    gameTaskDebugLog('membership_resolved', {
+      gameId: String(gameId || ''),
+      teamId: String(teamId || ''),
+      userId: userId ? String(userId) : null,
+      telegramId: telegramId ? String(telegramId) : null,
+      matchedBy: membershipResolution.matchedBy,
+      matchedMemberships: Array.isArray(membershipResolution.matchedMemberships)
+        ? membershipResolution.matchedMemberships.map((item) => ({
+            id: item?._id ? String(item._id) : '',
+            userId: item?.userId ? String(item.userId) : null,
+            userTelegramId:
+              item?.userTelegramId !== null &&
+              item?.userTelegramId !== undefined
+                ? String(item.userTelegramId)
+                : null,
+            role: typeof item?.role === 'string' ? item.role : null,
+          }))
+        : [],
+      isTeamMember,
+      isCaptain,
+    })
 
     if (!isTeamMember) {
       console.error('[game-task-access] TEAM_ACCESS_DENIED', {
@@ -1397,6 +1421,7 @@ const getTeamGameTaskState = async ({
         userId: userId ? String(userId) : null,
         telegramId: telegramId ? String(telegramId) : null,
         teamUsersCount: Array.isArray(teamUsers) ? teamUsers.length : 0,
+        matchedBy: membershipResolution.matchedBy,
       })
       return buildError(GAME_TASK_ERRORS.TEAM_ACCESS_DENIED, {
         statusCode: 403,

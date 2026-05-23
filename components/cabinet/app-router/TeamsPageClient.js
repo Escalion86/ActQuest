@@ -559,25 +559,12 @@ const TeamsPage = ({
     mutationFn: async ({ team, memberId }) => {
       const currentCaptain = (team.members ?? []).find((item) => item.isCaptain)
 
-      await Promise.all([
-        requestApiJson(`${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: { role: 'captain' } }),
-          fallbackMessage: 'Не удалось обновить роль участника',
-        }),
-        currentCaptain
-          ? requestApiJson(
-              `${CABINET_TEAM_MEMBERS_API_BASE}/${currentCaptain.id}`,
-              {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data: { role: 'participant' } }),
-                fallbackMessage: 'Не удалось обновить роль участника',
-              },
-            )
-          : Promise.resolve(null),
-      ])
+      await requestApiJson(`${CABINET_TEAM_MEMBERS_API_BASE}/${memberId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: { role: 'captain' } }),
+        fallbackMessage: 'Не удалось обновить роль участника',
+      })
 
       const updatedMembers = (team.members ?? []).map((item) => {
         if (item.id === memberId) {

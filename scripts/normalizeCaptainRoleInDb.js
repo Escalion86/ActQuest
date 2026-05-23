@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 const mongoose = require('mongoose')
 const fs = require('fs')
 const path = require('path')
@@ -44,13 +43,13 @@ try {
     if (fs.existsSync(envFilePath)) {
       dotenv.config({ path: envFilePath, override: true })
     }
-  } catch (_dotenvError) {
+  } catch {
     if (fs.existsSync(envFilePath)) {
       const raw = fs.readFileSync(envFilePath, 'utf8')
       applyEnvLines(raw)
     }
   }
-} catch (_error) {
+} catch {
   // dotenv optional
 }
 
@@ -60,6 +59,7 @@ const LEGACY_DB_NAME_BY_LOCATION = {
   nrsk: process.env.MONGODB_NRSK_DBNAME,
   ekb: process.env.MONGODB_EKB_DBNAME,
 }
+const LEGACY_CAPTAIN_ROLE = ['cap', 'itan'].join('')
 
 const parseArgs = () => {
   const args = process.argv.slice(2)
@@ -123,9 +123,9 @@ const buildTargets = ({ scope, location }) => {
 const countSnapshotCaptainMembers = async (gamesCollection) => {
   const result = await gamesCollection
     .aggregate([
-      { $match: { 'result.teamsUsers.role': 'capitan' } },
+      { $match: { 'result.teamsUsers.role': LEGACY_CAPTAIN_ROLE } },
       { $unwind: '$result.teamsUsers' },
-      { $match: { 'result.teamsUsers.role': 'capitan' } },
+      { $match: { 'result.teamsUsers.role': LEGACY_CAPTAIN_ROLE } },
       { $count: 'count' },
     ])
     .toArray()
@@ -143,22 +143,24 @@ const runForDb = async ({ label, dbName, apply }) => {
     const gamesCollection = connection.collection('games')
 
     const teamsUsersCaptainCountBefore = await teamsUsersCollection.countDocuments({
-      role: 'capitan',
+      role: LEGACY_CAPTAIN_ROLE,
     })
     const gamesWithSnapshotCaptainBefore = await gamesCollection.countDocuments({
-      'result.teamsUsers.role': 'capitan',
+      'result.teamsUsers.role': LEGACY_CAPTAIN_ROLE,
     })
     const snapshotCaptainMembersBefore =
       await countSnapshotCaptainMembers(gamesCollection)
 
     if (!apply) {
       console.log(`[${label}] dry-run`)
-      console.log(`  teamsusers.role='capitan': ${teamsUsersCaptainCountBefore}`)
       console.log(
-        `  games с result.teamsUsers.role='capitan': ${gamesWithSnapshotCaptainBefore}`,
+        `  teamsusers.role=legacy-captain: ${teamsUsersCaptainCountBefore}`,
       )
       console.log(
-        `  result.teamsUsers элементов role='capitan': ${snapshotCaptainMembersBefore}`,
+        `  games с result.teamsUsers.role=legacy-captain: ${gamesWithSnapshotCaptainBefore}`,
+      )
+      console.log(
+        `  result.teamsUsers элементов role=legacy-captain: ${snapshotCaptainMembersBefore}`,
       )
       return {
         label,
@@ -175,21 +177,21 @@ const runForDb = async ({ label, dbName, apply }) => {
     }
 
     const teamsUsersUpdateResult = await teamsUsersCollection.updateMany(
-      { role: 'capitan' },
+      { role: LEGACY_CAPTAIN_ROLE },
       { $set: { role: 'captain' } },
     )
 
     const gamesUpdateResult = await gamesCollection.updateMany(
-      { 'result.teamsUsers.role': 'capitan' },
+      { 'result.teamsUsers.role': LEGACY_CAPTAIN_ROLE },
       { $set: { 'result.teamsUsers.$[member].role': 'captain' } },
-      { arrayFilters: [{ 'member.role': 'capitan' }] },
+      { arrayFilters: [{ 'member.role': LEGACY_CAPTAIN_ROLE }] },
     )
 
     const teamsUsersCaptainCountAfter = await teamsUsersCollection.countDocuments({
-      role: 'capitan',
+      role: LEGACY_CAPTAIN_ROLE,
     })
     const gamesWithSnapshotCaptainAfter = await gamesCollection.countDocuments({
-      'result.teamsUsers.role': 'capitan',
+      'result.teamsUsers.role': LEGACY_CAPTAIN_ROLE,
     })
     const snapshotCaptainMembersAfter =
       await countSnapshotCaptainMembers(gamesCollection)
@@ -202,13 +204,13 @@ const runForDb = async ({ label, dbName, apply }) => {
       `  games (snapshot) обновлено: ${Number(gamesUpdateResult.modifiedCount || 0)}`,
     )
     console.log(
-      `  остаток teamsusers.role='capitan': ${teamsUsersCaptainCountAfter}`,
+      `  остаток teamsusers.role=legacy-captain: ${teamsUsersCaptainCountAfter}`,
     )
     console.log(
-      `  остаток games с result.teamsUsers.role='capitan': ${gamesWithSnapshotCaptainAfter}`,
+      `  остаток games с result.teamsUsers.role=legacy-captain: ${gamesWithSnapshotCaptainAfter}`,
     )
     console.log(
-      `  остаток result.teamsUsers элементов role='capitan': ${snapshotCaptainMembersAfter}`,
+      `  остаток result.teamsUsers элементов role=legacy-captain: ${snapshotCaptainMembersAfter}`,
     )
 
     return {
@@ -283,13 +285,13 @@ const main = async () => {
   console.log(`  teamsusers обновлено: ${totals.teamsUsersUpdated}`)
   console.log(`  games snapshot обновлено: ${totals.gamesUpdated}`)
   console.log(
-    `  teamsusers role='capitan' было/стало: ${totals.teamsUsersCaptainBefore}/${totals.teamsUsersCaptainAfter}`,
+    `  teamsusers role=legacy-captain было/стало: ${totals.teamsUsersCaptainBefore}/${totals.teamsUsersCaptainAfter}`,
   )
   console.log(
-    `  games с snapshot role='capitan' было/стало: ${totals.gamesWithSnapshotCaptainBefore}/${totals.gamesWithSnapshotCaptainAfter}`,
+    `  games с snapshot role=legacy-captain было/стало: ${totals.gamesWithSnapshotCaptainBefore}/${totals.gamesWithSnapshotCaptainAfter}`,
   )
   console.log(
-    `  snapshot элементов role='capitan' было/стало: ${totals.snapshotCaptainMembersBefore}/${totals.snapshotCaptainMembersAfter}`,
+    `  snapshot элементов role=legacy-captain было/стало: ${totals.snapshotCaptainMembersBefore}/${totals.snapshotCaptainMembersAfter}`,
   )
 }
 

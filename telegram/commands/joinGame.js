@@ -28,7 +28,7 @@ const joinGame = async ({ telegramId, jsonCommand, location, db }) => {
 
   const teamsUser = await db.model('TeamsUsers').find({
     userTelegramId: telegramId,
-    role: 'capitan',
+    role: 'captain',
   })
 
   if (!teamsUser || teamsUser.length === 0) {

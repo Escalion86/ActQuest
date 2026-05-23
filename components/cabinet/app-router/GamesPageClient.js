@@ -16,6 +16,7 @@ import CardActionIconButton, {
   AgentCardIcon,
   ChatCardIcon,
   EditCardIcon,
+  FinanceCardIcon,
   GameControlCardIcon,
   StatusCardIcon,
   TargetCardIcon,
@@ -37,6 +38,8 @@ import {
   getDuplicateCodeKindsLabel,
   getTaskDuplicateCodeConflicts,
 } from '@helpers/getTaskDuplicateCodeConflicts'
+import { canManageCabinetGameFinances } from '@helpers/cabinetGameVisibility'
+import buildGameFinancesSummary from '@helpers/gameFinancesSummary'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { getNounTeams } from '@helpers/getNoun'
@@ -54,6 +57,15 @@ const GAME_STATUS_BADGE_STYLES = {
   canceled:
     'border border-rose-300 bg-rose-100 text-rose-700 dark:border-[#ff4d6d]/35 dark:bg-[#ff4d6d]/12 dark:text-[#ffd1da]',
 }
+
+const STARTED_GAME_CARD_CLASS_NAME =
+  'aq-started-game-card border-emerald-400/80 bg-gradient-to-br from-emerald-100 via-lime-50 to-emerald-100 shadow-[0_14px_34px_rgba(22,163,74,0.16),inset_0_1px_0_rgba(255,255,255,0.68)] hover:border-emerald-500 hover:bg-gradient-to-br hover:from-emerald-100 hover:via-lime-50 hover:to-emerald-100 dark:border-[#17e6ae]/45 dark:bg-[linear-gradient(135deg,rgba(14,92,49,0.44),rgba(4,24,16,0.985))] dark:shadow-[0_18px_42px_rgba(23,230,174,0.18),inset_0_1px_0_rgba(255,255,255,0.04)] dark:hover:bg-[linear-gradient(135deg,rgba(16,106,56,0.48),rgba(5,30,19,0.99))]'
+
+const STARTED_GAME_IMAGE_FRAME_CLASS_NAME =
+  'border-emerald-300/70 bg-gradient-to-br from-emerald-100 via-lime-50 to-emerald-100 dark:border-[#17e6ae]/30 dark:from-emerald-950/80 dark:via-emerald-950/55 dark:to-slate-950'
+
+const STARTED_GAME_HERO_CLASS_NAME =
+  'bg-gradient-to-br from-emerald-100 via-lime-50 to-emerald-100 dark:from-emerald-950/85 dark:via-emerald-950/55 dark:to-slate-950'
 
 const getStatusBadgeClassName = (status) => {
   if (!status) {
@@ -1139,6 +1151,7 @@ const GamesPage = ({
   const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
   const [selectedAgentToAdd, setSelectedAgentToAdd] = useState('')
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
+  const [isFinancesModalOpen, setIsFinancesModalOpen] = useState(false)
   const [isResultsModalOpen, setIsResultsModalOpen] = useState(false)
   const [resultsModalGame, setResultsModalGame] = useState(null)
   const [isTasksViewModalOpen, setIsTasksViewModalOpen] = useState(false)
@@ -3663,6 +3676,7 @@ const GamesPage = ({
       setEditingBaselineGame(null)
       setIsEditModalOpen(false)
       setIsTasksModalOpen(false)
+      setIsFinancesModalOpen(false)
     } catch (error) {
       console.error('Failed to update game', error)
       setFeedback({
@@ -4701,6 +4715,17 @@ const GamesPage = ({
     }
   }, [isTeamsModalOpen, loadTeamsModalData])
 
+  const prepareGameDraftForModal = useCallback((game) => {
+    if (!game) {
+      return
+    }
+
+    const draft = cloneGameDraft(game)
+    setEditingGame(draft)
+    setEditingBaselineGame(cloneGameDraft(draft))
+    setHasUnsavedChanges(false)
+  }, [])
+
   const handleSelectGameCard = useCallback((game) => {
     if (!game) {
       return
@@ -4709,6 +4734,7 @@ const GamesPage = ({
     setSelectedGameId(game.id)
     setIsTeamsModalOpen(false)
     setIsEditModalOpen(false)
+    setIsFinancesModalOpen(false)
     setIsTasksModalOpen(false)
     setIsResultsModalOpen(false)
     setIsTasksViewModalOpen(false)
@@ -4722,18 +4748,16 @@ const GamesPage = ({
       }
 
       setSelectedGameId(game.id)
-      const draft = cloneGameDraft(game)
-      setEditingGame(draft)
-      setEditingBaselineGame(cloneGameDraft(draft))
-      setHasUnsavedChanges(false)
+      prepareGameDraftForModal(game)
       setIsTeamsModalOpen(false)
       setIsResultsModalOpen(false)
       setIsTasksViewModalOpen(false)
       setIsDescriptionModalOpen(false)
+      setIsFinancesModalOpen(false)
       setIsTasksModalOpen(false)
       setIsEditModalOpen(true)
     },
-    [canOpenGameEditModal],
+    [canOpenGameEditModal, prepareGameDraftForModal],
   )
 
   const handleEditTasksFromList = useCallback(
@@ -4743,18 +4767,40 @@ const GamesPage = ({
       }
 
       setSelectedGameId(game.id)
-      const draft = cloneGameDraft(game)
-      setEditingGame(draft)
-      setEditingBaselineGame(cloneGameDraft(draft))
-      setHasUnsavedChanges(false)
+      prepareGameDraftForModal(game)
+      setIsTeamsModalOpen(false)
+      setIsResultsModalOpen(false)
+      setIsTasksViewModalOpen(false)
+      setIsDescriptionModalOpen(false)
+      setIsFinancesModalOpen(false)
+      setIsEditModalOpen(false)
+      setIsTasksModalOpen(true)
+    },
+    [canManageGame, prepareGameDraftForModal],
+  )
+
+  const handleOpenFinancesModal = useCallback(
+    (game) => {
+      if (
+        !game ||
+        !canManageCabinetGameFinances({
+          canManageGameStatus: canManageGameStatus(game),
+        })
+      ) {
+        return
+      }
+
+      setSelectedGameId(game.id)
+      prepareGameDraftForModal(game)
       setIsTeamsModalOpen(false)
       setIsResultsModalOpen(false)
       setIsTasksViewModalOpen(false)
       setIsDescriptionModalOpen(false)
       setIsEditModalOpen(false)
-      setIsTasksModalOpen(true)
+      setIsTasksModalOpen(false)
+      setIsFinancesModalOpen(true)
     },
-    [canManageGame],
+    [canManageGameStatus, prepareGameDraftForModal],
   )
 
   const handleOpenStatusModal = useCallback(
@@ -5487,6 +5533,19 @@ const GamesPage = ({
     }
   }, [isEditModalOpen, isSaving])
 
+  const handleCloseFinancesModal = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+
+    setIsFinancesModalOpen(false)
+    if (!isEditModalOpen && !isTasksModalOpen) {
+      setEditingGame(null)
+      setEditingBaselineGame(null)
+      setHasUnsavedChanges(false)
+    }
+  }, [isEditModalOpen, isSaving, isTasksModalOpen])
+
   const handleCloseDescriptionModal = useCallback(() => {
     setIsDescriptionModalOpen(false)
   }, [])
@@ -5522,6 +5581,24 @@ const GamesPage = ({
   }, [
     canEditSelectedGame,
     handleCloseTasksModal,
+    handleSaveChanges,
+    isDirty,
+    isSaving,
+  ])
+
+  const handleFinancesModalPrimaryAction = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+
+    if (isDirty && canEditSelectedGame) {
+      handleSaveChanges()
+    } else {
+      handleCloseFinancesModal()
+    }
+  }, [
+    canEditSelectedGame,
+    handleCloseFinancesModal,
     handleSaveChanges,
     isDirty,
     isSaving,
@@ -5734,6 +5811,9 @@ const GamesPage = ({
       const canEditThisGame = canOpenGameEditModal(game)
       const canManageStatusThisGame =
         canEditAllGames && canManageGameStatus(game)
+      const canManageFinancesThisGame = canManageCabinetGameFinances({
+        canManageGameStatus: canManageGameStatus(game),
+      })
       const canBroadcastThisGame =
         canManageThisGame && canBroadcastByGameStatus(game.status)
       const adminUnreadMessagesCount = Number(game.adminUnreadMessagesCount || 0)
@@ -5797,6 +5877,7 @@ const GamesPage = ({
       const seasonBadgeLabel =
         hasSeason && seasonLabel ? seasonLabel : 'Вне сезона'
       const isHiddenGame = Boolean(game?.hidden)
+      const isStartedGame = isGameInProgressStatus(game.status)
 
       return (
         <li key={game.id}>
@@ -5811,13 +5892,21 @@ const GamesPage = ({
               }
             }}
             isActive={false}
-            className="relative min-h-[150px] overflow-hidden p-0 cursor-pointer sm:min-h-[168px]"
+            className={`relative min-h-[150px] overflow-hidden p-0 cursor-pointer sm:min-h-[168px] ${
+              isStartedGame ? STARTED_GAME_CARD_CLASS_NAME : ''
+            }`}
             aria-pressed={false}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
             <div className="flex items-start min-w-0">
-              <div className="relative hidden min-h-[156px] w-[156px] shrink-0 overflow-hidden rounded-lg border border-slate-300 shadow-inner sm:block dark:border-slate-700 dark:from-slate-900 dark:to-slate-900">
+              <div
+                className={`relative hidden min-h-[156px] w-[156px] shrink-0 overflow-hidden rounded-lg border shadow-inner sm:block ${
+                  isStartedGame
+                    ? STARTED_GAME_IMAGE_FRAME_CLASS_NAME
+                    : 'border-slate-300 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900'
+                }`}
+              >
                 <GameCardImage
                   src={game.image}
                   alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
@@ -5827,7 +5916,13 @@ const GamesPage = ({
               </div>
               <div className="min-w-0 flex-1 p-0 sm:absolute sm:inset-y-0 sm:left-[168px] sm:right-0 sm:overflow-hidden sm:p-4">
                 <div className="flex items-start flex-1 w-full min-w-0 gap-3">
-                  <div className="relative min-h-[96px] w-24 shrink-0 overflow-hidden rounded-xl border border-slate-300 bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 shadow-inner sm:hidden dark:border-slate-700 dark:from-slate-900 dark:to-slate-900">
+                  <div
+                    className={`relative min-h-[96px] w-24 shrink-0 overflow-hidden rounded-xl border shadow-inner sm:hidden ${
+                      isStartedGame
+                        ? STARTED_GAME_IMAGE_FRAME_CLASS_NAME
+                        : 'border-slate-300 bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900'
+                    }`}
+                  >
                     <GameCardImage
                       src={game.image}
                       alt={
@@ -5989,6 +6084,7 @@ const GamesPage = ({
                     {(canEditThisGame ||
                       canManageThisGame ||
                       canManageStatusThisGame ||
+                      canManageFinancesThisGame ||
                       canBroadcastThisGame ||
                       canOpenAgentPanel ||
                       canViewGameTeams) && (
@@ -6042,6 +6138,18 @@ const GamesPage = ({
                             title={getStatusActionLabel(game.status)}
                           >
                             <StatusCardIcon status={game.status} />
+                          </CardActionIconButton>
+                        )}
+                        {canManageFinancesThisGame && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleOpenFinancesModal(game)
+                            }}
+                            label="Финансы игры"
+                            title="Открыть финансы игры"
+                          >
+                            <FinanceCardIcon />
                           </CardActionIconButton>
                         )}
                         {canBroadcastThisGame && (
@@ -6134,6 +6242,7 @@ const GamesPage = ({
       handleCancelRegistrationFromGame,
       handleEditGameFromList,
       handleEditTasksFromList,
+      handleOpenFinancesModal,
       handleManageTeamsFromList,
       handleViewGameTeamsFromList,
       handleOpenPushBroadcastModal,
@@ -6170,6 +6279,9 @@ const GamesPage = ({
       const canEditThisGame = canOpenGameEditModal(game)
       const canManageStatusThisGame =
         canEditAllGames && canManageGameStatus(game)
+      const canManageFinancesThisGame = canManageCabinetGameFinances({
+        canManageGameStatus: canManageGameStatus(game),
+      })
       const canBroadcastThisGame =
         canManageThisGame && canBroadcastByGameStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
@@ -6230,6 +6342,7 @@ const GamesPage = ({
       const seasonBadgeLabel =
         hasSeason && seasonLabel ? seasonLabel : 'Вне сезона'
       const isHiddenGame = Boolean(game?.hidden)
+      const isStartedGame = isGameInProgressStatus(game.status)
 
       return (
         <li key={game.id}>
@@ -6244,12 +6357,20 @@ const GamesPage = ({
               }
             }}
             isActive={false}
-            className="relative p-0 overflow-hidden cursor-pointer"
+            className={`relative overflow-hidden p-0 cursor-pointer ${
+              isStartedGame ? STARTED_GAME_CARD_CLASS_NAME : ''
+            }`}
             aria-pressed={false}
             aria-label={`Открыть описание игры «${game.name || 'Без названия'}»`}
             title={game.name || 'Без названия'}
           >
-            <div className="relative w-full overflow-hidden shadow-inner bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-900">
+            <div
+              className={`relative w-full overflow-hidden shadow-inner ${
+                isStartedGame
+                  ? STARTED_GAME_HERO_CLASS_NAME
+                  : 'bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-900'
+              }`}
+            >
               <GameCardImage
                 src={game.image}
                 alt={game.name ? `Обложка игры ${game.name}` : 'Обложка игры'}
@@ -6408,6 +6529,7 @@ const GamesPage = ({
                   {(canEditThisGame ||
                     canManageThisGame ||
                     canManageStatusThisGame ||
+                    canManageFinancesThisGame ||
                     canBroadcastThisGame ||
                     canOpenAgentPanel ||
                     canViewGameTeams) && (
@@ -6465,6 +6587,19 @@ const GamesPage = ({
                           className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <StatusCardIcon status={game.status} />
+                        </CardActionIconButton>
+                      )}
+                      {canManageFinancesThisGame && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleOpenFinancesModal(game)
+                          }}
+                          label="Финансы игры"
+                          title="Открыть финансы игры"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <FinanceCardIcon />
                         </CardActionIconButton>
                       )}
                       {canBroadcastThisGame && (
@@ -6561,6 +6696,7 @@ const GamesPage = ({
       handleCancelRegistrationFromGame,
       handleEditGameFromList,
       handleEditTasksFromList,
+      handleOpenFinancesModal,
       handleManageTeamsFromList,
       handleViewGameTeamsFromList,
       handleOpenPushBroadcastModal,
@@ -6887,25 +7023,10 @@ const GamesPage = ({
     return minutes > 0 ? `${minutes} мин` : 'Без штрафа'
   }, [modalGame])
 
-  const financesSummary = useMemo(() => {
-    if (!modalGame?.finances) {
-      return { income: 0, expense: 0, balance: 0 }
-    }
-
-    const { income, expense } = modalGame.finances.reduce(
-      (acc, entry) => {
-        if (entry.type === 'expense') {
-          acc.expense += Number(entry.sum) || 0
-        } else {
-          acc.income += Number(entry.sum) || 0
-        }
-        return acc
-      },
-      { income: 0, expense: 0 },
-    )
-
-    return { income, expense, balance: income - expense }
-  }, [modalGame])
+  const financesSummary = useMemo(
+    () => buildGameFinancesSummary(modalGame?.finances),
+    [modalGame?.finances],
+  )
 
   const balanceClass =
     financesSummary.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'
@@ -7343,6 +7464,11 @@ const GamesPage = ({
                 handleAddFinance={handleAddFinance}
                 handleFinanceChange={handleFinanceChange}
                 handleRemoveFinance={handleRemoveFinance}
+                isFinancesModalOpen={isFinancesModalOpen}
+                handleCloseFinancesModal={handleCloseFinancesModal}
+                handleFinancesModalPrimaryAction={
+                  handleFinancesModalPrimaryAction
+                }
                 canGenerateResults={canGenerateResults}
                 isGeneratingResults={isGeneratingResults}
                 handleGenerateResults={handleGenerateResults}
@@ -7515,7 +7641,61 @@ const GamesPage = ({
                 gameName={pushBroadcastModalGame?.name || ''}
                 gameStatus={pushBroadcastModalGame?.status || ''}
                 onFeedback={setFeedback}
-              />
+                />
+                <style jsx global>{`
+                  @keyframes aqStartedGameCardEnter {
+                    0% {
+                      opacity: 0.92;
+                      transform: translateY(-4px) scale(0.988);
+                    }
+                    100% {
+                      opacity: 1;
+                      transform: translateY(0) scale(1);
+                    }
+                  }
+
+                  .aq-started-game-card {
+                    animation: aqStartedGameCardEnter 200ms ease-in-out;
+                  }
+
+                  .aq-started-game-card > * {
+                    position: relative;
+                    z-index: 1;
+                  }
+
+                  .aq-started-game-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    bottom: 0;
+                    left: -42%;
+                    width: 38%;
+                    z-index: 2;
+                    pointer-events: none;
+                    background: linear-gradient(
+                      120deg,
+                      rgba(255, 255, 255, 0) 0%,
+                      rgba(255, 255, 255, 0.32) 28%,
+                      rgba(236, 253, 245, 0.82) 50%,
+                      rgba(255, 255, 255, 0.24) 72%,
+                      rgba(255, 255, 255, 0) 100%
+                    );
+                    transform: skewX(-20deg);
+                    filter: blur(0.5px);
+                    animation: aq-toast-sheen 3.2s ease-in-out 180ms infinite;
+                  }
+
+                  .dark .aq-started-game-card::before {
+                    background: linear-gradient(
+                      120deg,
+                      rgba(255, 255, 255, 0) 0%,
+                      rgba(170, 240, 255, 0.18) 28%,
+                      rgba(170, 240, 255, 0.34) 50%,
+                      rgba(170, 240, 255, 0.16) 72%,
+                      rgba(255, 255, 255, 0) 100%
+                    );
+                  }
+                `}</style>
             </div>
           </div>
         </section>

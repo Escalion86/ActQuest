@@ -381,6 +381,9 @@ export const authOptions = {
       sessionDebugLog('nextauth:session:start', {
         tokenUserId: token?.globalUserId ?? token?.userId ?? null,
         tokenRole: token?.role ?? null,
+        tokenTelegramId: token?.telegramId ?? null,
+        tokenPhone: token?.phone ?? null,
+        tokenAuthMethod: token?.authMethod ?? null,
       })
       if (!session?.user) session.user = {}
 
@@ -613,6 +616,9 @@ export const authOptions = {
           session?.user?.globalUserId ?? session?.user?._id ?? null,
         role: session?.user?.role ?? null,
         location: session?.user?.location ?? null,
+        telegramId: session?.user?.telegramId ?? null,
+        phone: session?.user?.phone ?? null,
+        authMethod: session?.user?.authMethod ?? null,
         isDeveloperImpersonating:
           session?.user?.isDeveloperImpersonating ?? false,
         developerUserId: session?.user?.developerUserId ?? null,

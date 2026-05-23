@@ -1,3 +1,7 @@
+import {
+  canViewCabinetGameRestrictedInfo,
+  sanitizeCabinetGameForViewer,
+} from '@helpers/cabinetGameVisibility'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import { toStringId } from '@helpers/idAndDate'
 import { isCaptainRole } from '@helpers/teamRoles'
@@ -527,7 +531,19 @@ const fetchGamesForCabinet = async ({
           : 0
 
     return normalizeGameForCabinet({
-      ...game,
+      ...sanitizeCabinetGameForViewer(game, {
+        canViewRestrictedGameInfo: canViewCabinetGameRestrictedInfo({
+          userRole,
+          currentUserId: currentUserIdString,
+          gameCreatorUserId: creatorUserId,
+          isGameModerator: (Array.isArray(game?.moderators) ? game.moderators : [])
+            .some(
+              (moderator) =>
+                toStringId(moderator?._id ?? moderator?.id ?? moderator) ===
+                currentUserIdString,
+            ),
+        }),
+      }),
       status: normalizedStatus,
       teamsCount,
       adminUnreadMessagesCount: gameId

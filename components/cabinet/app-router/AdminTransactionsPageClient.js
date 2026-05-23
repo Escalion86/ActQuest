@@ -9,7 +9,9 @@ import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import SelectableCard from '@components/cabinet/SelectableCard'
-import AmountStepperInput from '@components/cabinet/AmountStepperInput'
+import AmountStepperInput, {
+  DEFAULT_MONEY_INPUT_CLASS_NAME,
+} from '@components/cabinet/AmountStepperInput'
 import UserSelectField from '@components/cabinet/UserSelectField'
 import GameSelectField from '@components/cabinet/GameSelectField'
 import NoticeBanner from '@components/NoticeBanner'
@@ -401,7 +403,7 @@ const AdminTransactionsPage = ({
                 min={0}
                 step={100}
                 placeholder="Сумма"
-                inputClassName={`aq-amount-step-input ${INPUT_CLASS}`}
+                inputClassName={DEFAULT_MONEY_INPUT_CLASS_NAME}
                 onChange={(nextValue) =>
                   setForm((prev) => ({ ...prev, amount: nextValue }))
                 }

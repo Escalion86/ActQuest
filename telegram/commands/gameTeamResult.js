@@ -243,7 +243,7 @@ const gameTeamResult = async ({ telegramId, jsonCommand, location, db }) => {
       //   text: '\u{1F4A3} Удалить команду из игры',
       //   hide: !(
       //     game.status === 'active' &&
-      //     (isAdmin || capitanTelegramId === telegramId)
+      //     (isAdmin || captainTelegramId === telegramId)
       //   ),
       // },
       {

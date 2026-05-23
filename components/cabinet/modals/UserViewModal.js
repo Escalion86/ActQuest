@@ -84,7 +84,6 @@ const UserViewModal = ({
     staleTime: 1000 * 60 * 5, // 5 минут
   })
 
-  const [userTeamModalOpen, setUserTeamModalOpen] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState(null)
   const [userGamesState, setUserGamesState] = useState({
     isLoading: false,
@@ -139,18 +138,12 @@ const UserViewModal = ({
   const handleOpenTeam = useCallback(
     (team) => {
       setSelectedTeam(team)
-      setUserTeamModalOpen(true)
       if (onOpenTeam) {
         onOpenTeam(team)
       }
     },
     [onOpenTeam],
   )
-
-  const handleCloseTeamModal = useCallback(() => {
-    setUserTeamModalOpen(false)
-    setSelectedTeam(null)
-  }, [])
 
   const handleCloseModal = useCallback(() => {
     setShowAllGames(false)
@@ -500,7 +493,7 @@ const UserViewModal = ({
           selectedGame={isGameLoading ? null : gameDetails}
           isOpen={isGameDetailsModalOpen}
           onClose={handleCloseGameDetailsModal}
-          canViewRestrictedGameInfo={true}
+          canViewRestrictedGameInfo={canViewIds}
           canViewGameResults={true}
           onOpenTeam={onOpenTeam}
         />

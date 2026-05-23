@@ -212,22 +212,12 @@ const removeAdminTeamMember = async ({ team, memberId }) => {
 const setAdminTeamCaptain = async ({ team, memberId }) => {
   const currentCaptain = (team.members ?? []).find((item) => item.isCaptain)
 
-  await Promise.all([
-    requestApiJson(`/api/cabinet/teams/members/${memberId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: { role: 'captain' } }),
-      fallbackMessage: 'Не удалось обновить роль участника',
-    }),
-    currentCaptain
-      ? requestApiJson(`/api/cabinet/teams/members/${currentCaptain.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: { role: 'participant' } }),
-          fallbackMessage: 'Не удалось обновить роль участника',
-        })
-      : Promise.resolve(null),
-  ])
+  await requestApiJson(`/api/cabinet/teams/members/${memberId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: { role: 'captain' } }),
+    fallbackMessage: 'Не удалось обновить роль участника',
+  })
 
   const updatedMembers = (team.members ?? []).map((item) => {
     if (item.id === memberId) {

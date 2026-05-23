@@ -33,8 +33,8 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user, db }) => {
     telegramId: { $in: usersTelegramIds },
   })
 
-  const capitanTelegramId = teamUsers.find(
-    (teamUser) => teamUser.role === 'capitan'
+  const captainTelegramId = teamUsers.find(
+    (teamUser) => teamUser.role === 'captain'
   )?.userTelegramId
 
   const paymentsOfUsers = await db
@@ -48,7 +48,7 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user, db }) => {
   const page = jsonCommand?.page ?? 1
   const buttons = buttonListConstructor(users, page, (user, number) => ({
     text: `${number}. ${user.name}${
-      capitanTelegramId === user.telegramId ? ' (капитан)' : ''
+      captainTelegramId === user.telegramId ? ' (капитан)' : ''
     }`,
     url: `t.me/+${user.phone}`,
   }))
@@ -72,7 +72,7 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user, db }) => {
       .map(
         (user) =>
           ` - ${user.name}${
-            capitanTelegramId === user.telegramId ? ' (капитан)' : ''
+            captainTelegramId === user.telegramId ? ' (капитан)' : ''
           }`
       )
       .join('\n')}\n\n<b>Текущие бонусы/штрафы:</b>${
@@ -108,7 +108,7 @@ const gameTeamAdmin = async ({ telegramId, jsonCommand, user, db }) => {
         text: '\u{1F4A3} Удалить команду из игры',
         hide: !(
           game.status === 'active' &&
-          (isAdmin || capitanTelegramId === telegramId)
+          (isAdmin || captainTelegramId === telegramId)
         ),
       },
       {

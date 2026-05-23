@@ -93,6 +93,13 @@ const DeveloperPage = ({ session: initialSession }) => {
   const [teamsUsersIntegrityResult, setTeamsUsersIntegrityResult] =
     useState(null)
   const [teamsUsersIntegrityError, setTeamsUsersIntegrityError] = useState('')
+  const [teamCaptainTeamIdFilter, setTeamCaptainTeamIdFilter] = useState('')
+  const [isCheckingTeamCaptains, setIsCheckingTeamCaptains] = useState(false)
+  const [isApplyingTeamCaptainRepair, setIsApplyingTeamCaptainRepair] =
+    useState(false)
+  const [teamCaptainsResult, setTeamCaptainsResult] = useState(null)
+  const [teamCaptainsError, setTeamCaptainsError] = useState('')
+  const [teamCaptainsFeedback, setTeamCaptainsFeedback] = useState('')
   const [exportGameTasksError, setExportGameTasksError] = useState('')
   const [requestingPhoneByUserId, setRequestingPhoneByUserId] = useState({})
   const [requestPhoneFeedbackByUserId, setRequestPhoneFeedbackByUserId] =
@@ -582,6 +589,107 @@ const DeveloperPage = ({ session: initialSession }) => {
       )
     } finally {
       setIsCheckingTeamsUsersIntegrity(false)
+    }
+  }
+
+  const handleCheckTeamCaptains = async () => {
+    if (isCheckingTeamCaptains) {
+      return
+    }
+
+    setIsCheckingTeamCaptains(true)
+    setTeamCaptainsError('')
+    setTeamCaptainsFeedback('')
+    setTeamCaptainsResult(null)
+
+    try {
+      const params = new URLSearchParams()
+      const teamId = teamCaptainTeamIdFilter.trim()
+      if (teamId) {
+        params.set('teamId', teamId)
+      }
+      params.set('limit', '200')
+
+      const response = await fetch(
+        `${CABINET_DEV_API_BASE}/team-captains?${params.toString()}`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+        },
+      )
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(
+          json?.error || 'Не удалось проверить корректность капитанства',
+        )
+      }
+
+      setTeamCaptainsResult(json?.data ?? null)
+    } catch (requestError) {
+      setTeamCaptainsError(
+        requestError?.message || 'Не удалось проверить корректность капитанства',
+      )
+    } finally {
+      setIsCheckingTeamCaptains(false)
+    }
+  }
+
+  const handleApplyTeamCaptainRepair = async () => {
+    if (isApplyingTeamCaptainRepair) {
+      return
+    }
+
+    if (!teamCaptainsResult) {
+      setTeamCaptainsFeedback('Сначала выполните проверку капитанства.')
+      return
+    }
+
+    const isConfirmed = window.confirm(
+      'Применить исправление капитанства для найденных команд? Операция обновит роли участников в TeamsUsers.',
+    )
+    if (!isConfirmed) {
+      return
+    }
+
+    setIsApplyingTeamCaptainRepair(true)
+    setTeamCaptainsError('')
+    setTeamCaptainsFeedback('')
+
+    try {
+      const response = await fetch(`${CABINET_DEV_API_BASE}/team-captains`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          teamId: teamCaptainTeamIdFilter.trim() || undefined,
+          limit: 200,
+          apply: true,
+          confirmApply: true,
+        }),
+      })
+
+      const json = await response.json()
+      if (!response.ok || json?.success === false) {
+        throw new Error(
+          json?.error || 'Не удалось применить исправление капитанства',
+        )
+      }
+
+      setTeamCaptainsResult(json?.data ?? null)
+      setTeamCaptainsFeedback(
+        `Готово: обновлено memberships ${json?.data?.summary?.membershipsUpdatedCount ?? 0}.`,
+      )
+    } catch (requestError) {
+      setTeamCaptainsError(
+        requestError?.message || 'Не удалось применить исправление капитанства',
+      )
+    } finally {
+      setIsApplyingTeamCaptainRepair(false)
     }
   }
 
@@ -1152,6 +1260,161 @@ const DeveloperPage = ({ session: initialSession }) => {
                 </div>
               ) : (
                 <p className="mt-2 text-xs">Дубликаты телефонов не найдены.</p>
+              )}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Проверка и repair капитанов команд
+          </h3>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Находит команды без капитана или с несколькими капитанами и
+            подготавливает план исправления. Repair назначает самым ранним
+            участника капитаном или оставляет самого раннего капитана.
+          </p>
+          <div className="mt-4 space-y-3">
+            <div>
+              <label
+                htmlFor="team-captain-team-id-filter"
+                className="text-sm font-semibold text-slate-700 dark:text-slate-100"
+              >
+                Фильтр по teamId
+              </label>
+              <input
+                id="team-captain-team-id-filter"
+                type="text"
+                placeholder="Необязательно: проверить только одну команду"
+                value={teamCaptainTeamIdFilter}
+                onChange={(event) => setTeamCaptainTeamIdFilter(event.target.value)}
+                disabled={isCheckingTeamCaptains || isApplyingTeamCaptainRepair}
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <CabinetButton
+                onClick={handleCheckTeamCaptains}
+                variant="primary"
+                tone="brand"
+                disabled={isCheckingTeamCaptains}
+              >
+                {isCheckingTeamCaptains
+                  ? 'Проверяем...'
+                  : 'Проверить капитанство'}
+              </CabinetButton>
+              <CabinetButton
+                onClick={handleApplyTeamCaptainRepair}
+                variant="secondary"
+                tone="danger"
+                disabled={isApplyingTeamCaptainRepair || !teamCaptainsResult}
+              >
+                {isApplyingTeamCaptainRepair
+                  ? 'Применяем...'
+                  : 'Применить repair'}
+              </CabinetButton>
+            </div>
+          </div>
+
+          {teamCaptainsError ? (
+            <p className="mt-4 rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
+              {teamCaptainsError}
+            </p>
+          ) : null}
+
+          {teamCaptainsFeedback ? (
+            <p className="mt-4 rounded-xl border border-cyan-300/70 bg-cyan-50 px-4 py-3 text-sm text-cyan-800 dark:border-cyan-500/50 dark:bg-cyan-500/10 dark:text-cyan-200">
+              {teamCaptainsFeedback}
+            </p>
+          ) : null}
+
+          {teamCaptainsResult ? (
+            <div className="mt-4 rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <p>
+                Проверено команд: {teamCaptainsResult.summary?.teamsCheckedCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Команд к исправлению: {teamCaptainsResult.summary?.teamsToRepairCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Без капитана: {teamCaptainsResult.summary?.noCaptainTeamsCount ?? 0}
+              </p>
+              <p className="mt-1">
+                С несколькими капитанами:{' '}
+                {teamCaptainsResult.summary?.multipleCaptainsTeamsCount ?? 0}
+              </p>
+              <p className="mt-1">
+                Нормализация legacy-роли:{' '}
+                {teamCaptainsResult.summary?.legacyCaptainRoleTeamsCount ?? 0}
+              </p>
+              {typeof teamCaptainsResult.summary?.membershipsUpdatedCount === 'number' ? (
+                <p className="mt-1">
+                  Обновлено memberships:{' '}
+                  {teamCaptainsResult.summary.membershipsUpdatedCount}
+                </p>
+              ) : null}
+              {teamCaptainsResult.summary?.truncated ? (
+                <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  Показаны не все планы исправления: выведено{' '}
+                  {teamCaptainsResult.summary?.plansReturnedCount ?? 0} из{' '}
+                  {teamCaptainsResult.summary?.teamsToRepairCount ?? 0}.
+                </p>
+              ) : null}
+
+              {Array.isArray(teamCaptainsResult.plans) &&
+              teamCaptainsResult.plans.length > 0 ? (
+                <div className="mt-3 max-h-96 space-y-3 overflow-y-auto pr-1">
+                  {teamCaptainsResult.plans.map((plan) => (
+                    <div
+                      key={plan.teamId}
+                      className="rounded-lg border border-emerald-300/70 bg-white/80 px-3 py-2 text-xs text-slate-700 dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-slate-200"
+                    >
+                      <p className="font-semibold">
+                        {plan.teamName || 'Без названия'} ({plan.teamId}) ·{' '}
+                        {plan.issueCode}
+                      </p>
+                      <p className="mt-1">
+                        Локация: {plan.location || '—'} · Участников:{' '}
+                        {plan.membershipsCount ?? 0} · Капитанов:{' '}
+                        {plan.captainCount ?? 0}
+                      </p>
+                      {plan.promoteMember ? (
+                        <p className="mt-1">
+                          Назначить капитаном: {plan.promoteMember.userName || 'Без имени'}{' '}
+                          {plan.promoteMember.username
+                            ? `(@${plan.promoteMember.username})`
+                            : ''}{' '}
+                          · membership {plan.promoteMember.membershipId}
+                        </p>
+                      ) : null}
+                      {plan.keepCaptainMember ? (
+                        <p className="mt-1">
+                          Оставить капитаном: {plan.keepCaptainMember.userName || 'Без имени'}{' '}
+                          {plan.keepCaptainMember.username
+                            ? `(@${plan.keepCaptainMember.username})`
+                            : ''}{' '}
+                          · membership {plan.keepCaptainMember.membershipId}
+                        </p>
+                      ) : null}
+                      {Array.isArray(plan.demoteMembers) && plan.demoteMembers.length > 0 ? (
+                        <div className="mt-1">
+                          <p>Понизить до participant:</p>
+                          {plan.demoteMembers.map((member) => (
+                            <p key={member.membershipId}>
+                              {member.userName || 'Без имени'}{' '}
+                              {member.username ? `(@${member.username})` : ''} · membership{' '}
+                              {member.membershipId}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs">
+                  Проблем с капитанством не найдено.
+                </p>
               )}
             </div>
           ) : null}

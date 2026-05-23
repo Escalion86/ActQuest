@@ -15,8 +15,8 @@ const getUsersOfTeamWithRole = async (id, db) => {
     })
     .lean()
 
-  // const capitanTelegramId = teamUsers.find(
-  //   (teamUser) => teamUser.role === 'capitan'
+  // const captainTelegramId = teamUsers.find(
+  //   (teamUser) => teamUser.role === 'captain'
   // )?.userTelegramId
 
   const usersWithRole = users.map((user) => {

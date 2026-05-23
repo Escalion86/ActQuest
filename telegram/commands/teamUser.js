@@ -9,7 +9,7 @@ const teamUser = async ({ telegramId, jsonCommand, location, db }) => {
   const teamUser = await getTeamUser(jsonCommand.teamUserId, db)
   if (teamUser.success === false) return teamUser
 
-  const isCapitan = teamUser.role === 'capitan'
+  const isCaptain = teamUser.role === 'captain'
 
   const team = await getTeam(teamUser.teamId, db)
   if (team.success === false) return team
@@ -34,7 +34,7 @@ const teamUser = async ({ telegramId, jsonCommand, location, db }) => {
         c: 'delTeamUser',
         teamUserId: jsonCommand.teamUserId,
       },
-      hide: isCapitan,
+      hide: isCaptain,
       text: '\u{1F4A3} Удалить из команды',
     },
     {
@@ -45,7 +45,7 @@ const teamUser = async ({ telegramId, jsonCommand, location, db }) => {
 
   return {
     message: `<b>"${user.name}" ${
-      isCapitan ? 'капитан' : 'участник'
+      isCaptain ? 'капитан' : 'участник'
     } команды "${team.name}"</b>\n\nТелефон: <code>+${user.phone}</code>`,
     buttons,
     // parse_mode: 'Markdown',

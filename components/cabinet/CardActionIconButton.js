@@ -352,6 +352,41 @@ export const ChatCardIcon = () => (
   </svg>
 )
 
+export const FinanceCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M7 3.5V16.5"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+    <path
+      d="M7 3.75H10.9C12.95 3.75 14.5 5.17 14.5 7.1C14.5 9.03 12.95 10.45 10.9 10.45H7"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M5.5 11.25H11.75"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+    <path
+      d="M5.5 13.9H10.7"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
 const CardActionIconButton = ({
   as: Component,
   onClick,

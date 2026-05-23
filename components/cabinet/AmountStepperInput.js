@@ -1,5 +1,8 @@
 import PropTypes from 'prop-types'
 
+export const DEFAULT_MONEY_INPUT_CLASS_NAME =
+  'aq-amount-step-input h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
+
 const normalizeNumber = (value, fallback = 0) => {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : fallback
@@ -48,17 +51,23 @@ const AmountStepperInput = ({
           }}
           placeholder={placeholder}
           className={inputClassName}
-          style={{ paddingLeft: '3rem', paddingRight: '3rem' }}
+          style={{ paddingLeft: '3rem', paddingRight: '4.5rem' }}
         />
         <button
           type="button"
           onClick={() => applyDelta(step)}
-          className="absolute right-2 top-1/2 z-10 inline-flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md bg-white text-[10px] leading-none text-slate-700 transition hover:bg-slate-100 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900"
+          className="absolute right-8 top-1/2 z-10 inline-flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md bg-white text-[10px] leading-none text-slate-700 transition hover:bg-slate-100 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900"
           aria-label="Увеличить сумму"
           title="Увеличить"
         >
           ▲
         </button>
+        <span
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold leading-none text-slate-500 dark:text-slate-300"
+          aria-hidden="true"
+        >
+          ₽
+        </span>
       </div>
     </div>
   )
@@ -79,8 +88,7 @@ AmountStepperInput.defaultProps = {
   step: 100,
   placeholder: 'Сумма',
   className: '',
-  inputClassName:
-    'aq-amount-step-input h-10 w-full rounded-xl border border-slate-300 bg-white px-12 py-2 text-center text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100',
+  inputClassName: DEFAULT_MONEY_INPUT_CLASS_NAME,
 }
 
 export default AmountStepperInput

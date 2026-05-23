@@ -44,13 +44,29 @@
   - в production обязательно собирать и хранить stdout/stderr (PM2/systemd/docker logging driver),
   - при расследовании инцидента включать debug-флаги только на время диагностики.
 
-## 4) Практика включения debug
+## 4) Debug игрового экрана команды
+
+- Префикс логов: `[game-task-debug]`
+- Где используется:
+  - `app/api/webapp/game-task/route.js`
+  - `server/getTeamGameTaskState.js`
+- Флаги включения:
+  - сервер: `GAME_TASK_DEBUG=1`
+  - также включается через `SESSION_DEBUG=1`
+- Что пишет:
+  - идентификаторы пользователя из сессии (`globalUserId`, `telegramId`)
+  - параметры запроса `game-task`
+  - как разрешилось membership-сопоставление (`matchedBy`, совпавшие записи)
+  - итоговый `taskState` и captain actions
+
+## 5) Практика включения debug
 
 Минимальный набор для проблем авторизации/локации:
 
 ```bash
 SESSION_DEBUG=1
 FORCE_LOCATION_DEBUG=1
+GAME_TASK_DEBUG=1
 NEXT_PUBLIC_SESSION_DEBUG=1
 NEXT_PUBLIC_FORCE_LOCATION_DEBUG=1
 ```

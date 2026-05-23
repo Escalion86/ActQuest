@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 
 import GameDescriptionModal from '@components/modals/GameDescriptionModal'
 import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
-import getGameStatusLabel from '@helpers/getGameStatusLabel'
 
 const GAME_TYPE_OPTIONS = [
   { value: 'classic', label: 'Классика' },
@@ -32,16 +31,6 @@ const UnifiedGameDescriptionModal = ({
   onOpenResults,
   onOpenTeam,
 }) => {
-  const currencyFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        maximumFractionDigits: 0,
-      }),
-    [],
-  )
-
   const gameTypeLabel = useMemo(() => {
     const option = GAME_TYPE_OPTIONS.find(
       (item) => item.value === selectedGame?.type,
@@ -152,29 +141,6 @@ const UnifiedGameDescriptionModal = ({
     return minutes > 0 ? `${minutes} мин` : 'Без штрафа'
   }, [selectedGame])
 
-  const financesSummary = useMemo(() => {
-    if (!selectedGame?.finances) {
-      return { income: 0, expense: 0, balance: 0 }
-    }
-
-    const { income, expense } = selectedGame.finances.reduce(
-      (acc, entry) => {
-        if (entry.type === 'expense') {
-          acc.expense += Number(entry.sum) || 0
-        } else {
-          acc.income += Number(entry.sum) || 0
-        }
-        return acc
-      },
-      { income: 0, expense: 0 },
-    )
-
-    return { income, expense, balance: income - expense }
-  }, [selectedGame?.finances])
-
-  const balanceClass =
-    financesSummary.balance >= 0 ? 'text-emerald-600' : 'text-rose-600'
-
   return (
     <GameDescriptionModal
       selectedGame={selectedGame}
@@ -195,9 +161,6 @@ const UnifiedGameDescriptionModal = ({
       taskFailurePenaltyLabel={taskFailurePenaltyLabel}
       manyCodesLimitLabel={manyCodesLimitLabel}
       manyCodesPenaltyLabel={manyCodesPenaltyLabel}
-      currencyFormatter={currencyFormatter}
-      financesSummary={financesSummary}
-      balanceClass={balanceClass}
     />
   )
 }
