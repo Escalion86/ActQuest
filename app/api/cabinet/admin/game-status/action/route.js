@@ -5,6 +5,9 @@ import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
 import webGameProcess from '@server/webGameProcess'
+import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
+import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
+import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) {
@@ -25,6 +28,21 @@ const isModeratorRole = (role) => role === 'moder'
 
 const normalizeAction = (value) =>
   typeof value === 'string' ? value.trim().toLowerCase() : ''
+
+const buildHistoryActorFromSession = (session) => ({
+  userId:
+    session?.user?.globalUserId ??
+    session?.user?.userId ??
+    session?.user?._id ??
+    session?.user?.id ??
+    null,
+  telegramId:
+    session?.user?.telegramId !== null && session?.user?.telegramId !== undefined
+      ? String(session.user.telegramId).trim()
+      : null,
+  role: typeof session?.user?.role === 'string' ? session.user.role : '',
+  name: typeof session?.user?.name === 'string' ? session.user.name : '',
+})
 
 const forceCompleteActiveTask = async ({ GamesTeams, game, gameTeam }) => {
   const tasksCount = Array.isArray(game?.tasks) ? game.tasks.length : 0
@@ -249,6 +267,12 @@ export async function POST(request) {
       )
     }
 
+    const beforeHistoryState = await fetchGameHistoryState({
+      db,
+      gameId: normalizeStringId(game?._id ?? gameId),
+      game,
+    })
+
     if (action === 'apply_code') {
       const processResult = await webGameProcess({
         db,
@@ -276,6 +300,25 @@ export async function POST(request) {
         )
       }
 
+      const afterHistoryState = await fetchGameHistoryState({
+        db,
+        gameId: normalizeStringId(game?._id ?? gameId),
+      })
+      await recordGameHistoryEntry({
+        db,
+        gameId: normalizeStringId(game?._id ?? gameId),
+        location: game.location,
+        actionType: 'game_updated',
+        entityScope: 'game_teams',
+        actor: buildHistoryActorFromSession(session),
+        beforeState: beforeHistoryState,
+        afterState: afterHistoryState,
+        snapshot: buildGameHistorySnapshot(afterHistoryState),
+        context: {
+          summary: `Администратор зачёл код для команды: ${code}`,
+        },
+      })
+
       return NextResponse.json({
         success: true,
         message: summaryMessage || 'Код зачтён',
@@ -290,6 +333,25 @@ export async function POST(request) {
           { status: 400 },
         )
       }
+
+      const afterHistoryState = await fetchGameHistoryState({
+        db,
+        gameId: normalizeStringId(game?._id ?? gameId),
+      })
+      await recordGameHistoryEntry({
+        db,
+        gameId: normalizeStringId(game?._id ?? gameId),
+        location: game.location,
+        actionType: 'game_updated',
+        entityScope: 'game_teams',
+        actor: buildHistoryActorFromSession(session),
+        beforeState: beforeHistoryState,
+        afterState: afterHistoryState,
+        snapshot: buildGameHistorySnapshot(afterHistoryState),
+        context: {
+          summary: 'Администратор принудительно завершил текущее задание команды',
+        },
+      })
       return NextResponse.json({
         success: true,
         message: result.message || 'Задание принудительно завершено',
@@ -304,6 +366,25 @@ export async function POST(request) {
           { status: 400 },
         )
       }
+
+      const afterHistoryState = await fetchGameHistoryState({
+        db,
+        gameId: normalizeStringId(game?._id ?? gameId),
+      })
+      await recordGameHistoryEntry({
+        db,
+        gameId: normalizeStringId(game?._id ?? gameId),
+        location: game.location,
+        actionType: 'game_updated',
+        entityScope: 'game_teams',
+        actor: buildHistoryActorFromSession(session),
+        beforeState: beforeHistoryState,
+        afterState: afterHistoryState,
+        snapshot: buildGameHistorySnapshot(afterHistoryState),
+        context: {
+          summary: 'Администратор принудительно провалил текущее задание команды',
+        },
+      })
       return NextResponse.json({
         success: true,
         message: result.message || 'Задание принудительно провалено',

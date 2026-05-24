@@ -18,6 +18,7 @@ import CardActionIconButton, {
   EditCardIcon,
   FinanceCardIcon,
   GameControlCardIcon,
+  HistoryCardIcon,
   StatusCardIcon,
   TargetCardIcon,
   TeamCardIcon,
@@ -934,7 +935,8 @@ const validateTaskEditorRequirements = (game) => {
     const clues = Array.isArray(task?.clues) ? task.clues : []
     const hasFilledClue = clues.some(
       (clue) =>
-        getClueText(clue).trim() !== '' || hasMeaningfulRichMarkup(clue?.clueRich),
+        getClueText(clue).trim() !== '' ||
+        hasMeaningfulRichMarkup(clue?.clueRich),
     )
 
     if (!title) {
@@ -1152,6 +1154,7 @@ const GamesPage = ({
   const [selectedAgentToAdd, setSelectedAgentToAdd] = useState('')
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
   const [isFinancesModalOpen, setIsFinancesModalOpen] = useState(false)
+  const [isGameHistoryModalOpen, setIsGameHistoryModalOpen] = useState(false)
   const [isResultsModalOpen, setIsResultsModalOpen] = useState(false)
   const [resultsModalGame, setResultsModalGame] = useState(null)
   const [isTasksViewModalOpen, setIsTasksViewModalOpen] = useState(false)
@@ -1300,8 +1303,7 @@ const GamesPage = ({
       GAMES_FILTER_LOCATION_STORAGE_KEY,
     )
     const legacyStorageKey = `cabinet_games_location_filter_${gamesView}`
-    const savedLocationFromLegacyKey =
-      safeLocalStorageGet(legacyStorageKey)
+    const savedLocationFromLegacyKey = safeLocalStorageGet(legacyStorageKey)
     const savedLocation =
       savedLocationFromUnifiedKey || savedLocationFromLegacyKey
     const isSavedLocationValid =
@@ -1342,10 +1344,7 @@ const GamesPage = ({
       return
     }
 
-    safeLocalStorageSet(
-      GAMES_FILTER_LOCATION_STORAGE_KEY,
-      gamesFilterLocation,
-    )
+    safeLocalStorageSet(GAMES_FILTER_LOCATION_STORAGE_KEY, gamesFilterLocation)
   }, [
     gameLocationOptions,
     gamesFilterLocation,
@@ -1379,10 +1378,7 @@ const GamesPage = ({
       return
     }
 
-    safeLocalStorageSet(
-      GAMES_DISPLAY_MODE_STORAGE_KEY,
-      gamesDisplayMode,
-    )
+    safeLocalStorageSet(GAMES_DISPLAY_MODE_STORAGE_KEY, gamesDisplayMode)
   }, [gamesDisplayMode])
 
   const selectedGame = useMemo(
@@ -1440,8 +1436,7 @@ const GamesPage = ({
         {
           id: 'delete_game',
           label: 'Удалить игру',
-          description:
-            'Полностью удалит игру. Действие необратимо.',
+          description: 'Полностью удалит игру. Действие необратимо.',
           variant: 'secondary',
           tone: 'danger',
         },
@@ -1490,8 +1485,7 @@ const GamesPage = ({
         {
           id: 'delete_game',
           label: 'Удалить игру',
-          description:
-            'Полностью удалит игру. Действие необратимо.',
+          description: 'Полностью удалит игру. Действие необратимо.',
           variant: 'secondary',
           tone: 'danger',
         },
@@ -1510,8 +1504,7 @@ const GamesPage = ({
         {
           id: 'delete_game',
           label: 'Удалить игру',
-          description:
-            'Полностью удалит игру. Действие необратимо.',
+          description: 'Полностью удалит игру. Действие необратимо.',
           variant: 'secondary',
           tone: 'danger',
         },
@@ -1545,6 +1538,7 @@ const GamesPage = ({
       setHasUnsavedChanges(false)
     }
     setIsStatusModalOpen(false)
+    setIsGameHistoryModalOpen(false)
     setStatusModalGameId('')
     setStatusValidationResult(null)
     setTeamsModalState({
@@ -1690,9 +1684,8 @@ const GamesPage = ({
 
       setGames((prev) => prev.map(applyUpdate))
       setPersistedGames((prev) => prev.map(applyUpdate))
-      queryClient.setQueriesData(
-        { queryKey: ['cabinet-games'] },
-        (queryData) => mapCabinetGamesQueryData(queryData, applyUpdate),
+      queryClient.setQueriesData({ queryKey: ['cabinet-games'] }, (queryData) =>
+        mapCabinetGamesQueryData(queryData, applyUpdate),
       )
     },
     [queryClient],
@@ -2110,11 +2103,7 @@ const GamesPage = ({
     } finally {
       setIsLoadingMoreGames(false)
     }
-  }, [
-    gamesQuery,
-    hasMoreGames,
-    isLoadingMoreGames,
-  ])
+  }, [gamesQuery, hasMoreGames, isLoadingMoreGames])
 
   const handleCloseRegisterModal = useCallback(() => {
     if (isRegisterSubmitting) {
@@ -3086,7 +3075,11 @@ const GamesPage = ({
         if (gamesTypeFilter === GAMES_TYPE_FILTER_ALL) {
           return true
         }
-        return String(game?.type || 'classic').trim().toLowerCase() === gamesTypeFilter
+        return (
+          String(game?.type || 'classic')
+            .trim()
+            .toLowerCase() === gamesTypeFilter
+        )
       }),
     [gamesTypeFilter],
   )
@@ -3464,7 +3457,11 @@ const GamesPage = ({
     if (!activeEditGame) {
       return ''
     }
-    if (String(activeEditGame.status || '').trim().toLowerCase() !== 'started') {
+    if (
+      String(activeEditGame.status || '')
+        .trim()
+        .toLowerCase() !== 'started'
+    ) {
       return ''
     }
 
@@ -3474,7 +3471,8 @@ const GamesPage = ({
       return mongoId
     }
 
-    const gameId = typeof activeEditGame.id === 'string' ? activeEditGame.id : ''
+    const gameId =
+      typeof activeEditGame.id === 'string' ? activeEditGame.id : ''
     if (isObjectIdLike(gameId)) {
       return gameId
     }
@@ -3604,7 +3602,9 @@ const GamesPage = ({
     if (!gameToSave || !canEditSelectedGame) return
 
     const isGameStarted =
-      String(gameToSave?.status || '').trim().toLowerCase() === 'started'
+      String(gameToSave?.status || '')
+        .trim()
+        .toLowerCase() === 'started'
     if (isGameStarted) {
       const isConfirmed = window.confirm(
         'Игра уже запущена. Сохранение изменений может повлиять на прохождение. Продолжить?',
@@ -3717,7 +3717,10 @@ const GamesPage = ({
           if (issueTaskIds.length > 0) {
             setExpandedTaskIds((prev) =>
               Array.from(
-                new Set([...(Array.isArray(prev) ? prev : []), ...issueTaskIds]),
+                new Set([
+                  ...(Array.isArray(prev) ? prev : []),
+                  ...issueTaskIds,
+                ]),
               ),
             )
           }
@@ -3735,8 +3738,9 @@ const GamesPage = ({
         }
 
         const isStartedGame =
-          String(gameToPreview?.status || '').trim().toLowerCase() ===
-          'started'
+          String(gameToPreview?.status || '')
+            .trim()
+            .toLowerCase() === 'started'
         if (isStartedGame) {
           const isConfirmed = window.confirm(
             'Игра уже запущена. Сохранение изменений может повлиять на прохождение. Продолжить?',
@@ -3798,8 +3802,7 @@ const GamesPage = ({
         .slice(2, 8)}`
       const draftPayload = {
         game: {
-          id:
-            typeof gameForPreview?.id === 'string' ? gameForPreview.id : '',
+          id: typeof gameForPreview?.id === 'string' ? gameForPreview.id : '',
           name:
             typeof gameForPreview?.name === 'string' ? gameForPreview.name : '',
           type: gameForPreview?.type === 'photo' ? 'photo' : 'classic',
@@ -3988,7 +3991,9 @@ const GamesPage = ({
       }
 
       const isStartedGame =
-        String(gameForUpdate?.status || '').trim().toLowerCase() === 'started'
+        String(gameForUpdate?.status || '')
+          .trim()
+          .toLowerCase() === 'started'
       if (isStartedGame) {
         const lockedCount = Math.max(0, Number(startedGameLockedTaskCount) || 0)
         if (from < lockedCount || to < lockedCount) {
@@ -4036,7 +4041,9 @@ const GamesPage = ({
     (taskIndex) => {
       const gameForEdit = editingGame ?? selectedGame
       const isStartedGame =
-        String(gameForEdit?.status || '').trim().toLowerCase() === 'started'
+        String(gameForEdit?.status || '')
+          .trim()
+          .toLowerCase() === 'started'
       if (!isStartedGame) {
         return false
       }
@@ -4640,8 +4647,7 @@ const GamesPage = ({
       setTeamsModalState((prev) => ({
         ...prev,
         error:
-          extractErrorMessage(error) ||
-          'Не удалось обновить флаг «Вне зачёта»',
+          extractErrorMessage(error) || 'Не удалось обновить флаг «Вне зачёта»',
       }))
     },
     onSettled: (_data, _error, variables) => {
@@ -4735,6 +4741,7 @@ const GamesPage = ({
     setIsTeamsModalOpen(false)
     setIsEditModalOpen(false)
     setIsFinancesModalOpen(false)
+    setIsGameHistoryModalOpen(false)
     setIsTasksModalOpen(false)
     setIsResultsModalOpen(false)
     setIsTasksViewModalOpen(false)
@@ -4754,6 +4761,7 @@ const GamesPage = ({
       setIsTasksViewModalOpen(false)
       setIsDescriptionModalOpen(false)
       setIsFinancesModalOpen(false)
+      setIsGameHistoryModalOpen(false)
       setIsTasksModalOpen(false)
       setIsEditModalOpen(true)
     },
@@ -4773,6 +4781,7 @@ const GamesPage = ({
       setIsTasksViewModalOpen(false)
       setIsDescriptionModalOpen(false)
       setIsFinancesModalOpen(false)
+      setIsGameHistoryModalOpen(false)
       setIsEditModalOpen(false)
       setIsTasksModalOpen(true)
     },
@@ -4798,9 +4807,29 @@ const GamesPage = ({
       setIsDescriptionModalOpen(false)
       setIsEditModalOpen(false)
       setIsTasksModalOpen(false)
+      setIsGameHistoryModalOpen(false)
       setIsFinancesModalOpen(true)
     },
     [canManageGameStatus, prepareGameDraftForModal],
+  )
+
+  const handleOpenGameHistoryModal = useCallback(
+    (game) => {
+      if (!game || !canManageGameStatus(game)) {
+        return
+      }
+
+      setSelectedGameId(game.id)
+      setIsTeamsModalOpen(false)
+      setIsResultsModalOpen(false)
+      setIsTasksViewModalOpen(false)
+      setIsDescriptionModalOpen(false)
+      setIsEditModalOpen(false)
+      setIsTasksModalOpen(false)
+      setIsFinancesModalOpen(false)
+      setIsGameHistoryModalOpen(true)
+    },
+    [canManageGameStatus],
   )
 
   const handleOpenStatusModal = useCallback(
@@ -5007,10 +5036,7 @@ const GamesPage = ({
             return
           }
 
-          if (
-            typeof window !== 'undefined' &&
-            actionId === 'restart_game'
-          ) {
+          if (typeof window !== 'undefined' && actionId === 'restart_game') {
             try {
               const { json } = await requestApiJson(
                 `${CABINET_GAMES_API_BASE}/${encodeURIComponent(
@@ -5142,29 +5168,32 @@ const GamesPage = ({
     setIsTeamsModalOpen(true)
   }, [])
 
-  const canViewResultsForGame = useCallback((game) => {
-    if (!game) {
-      return false
-    }
+  const canViewResultsForGame = useCallback(
+    (game) => {
+      if (!game) {
+        return false
+      }
 
-    if (!Boolean(game.isResultGenerated)) {
-      return false
-    }
+      if (!Boolean(game.isResultGenerated)) {
+        return false
+      }
 
-    const status =
-      typeof game.status === 'string' ? game.status.toLowerCase() : ''
-    const isCompleted = status === 'finished' || status === 'closed'
-    if (!isCompleted) {
-      return false
-    }
+      const status =
+        typeof game.status === 'string' ? game.status.toLowerCase() : ''
+      const isCompleted = status === 'finished' || status === 'closed'
+      if (!isCompleted) {
+        return false
+      }
 
-    const canManageThisGameStatus = canManageGameStatus(game)
-    if (canManageThisGameStatus) {
-      return true
-    }
+      const canManageThisGameStatus = canManageGameStatus(game)
+      if (canManageThisGameStatus) {
+        return true
+      }
 
-    return !Boolean(game.hideResult)
-  }, [canManageGameStatus])
+      return !Boolean(game.hideResult)
+    },
+    [canManageGameStatus],
+  )
 
   const canGenerateResultsForGame = useCallback(
     (game) => {
@@ -5460,52 +5489,51 @@ const GamesPage = ({
 
   const isGeneratingResults = generateResultsMutation.isPending
 
-  const handleGenerateResultsFromGame = useCallback((game, options = {}) => {
-    const force = Boolean(options?.force) || Boolean(game?.isResultGenerated)
-    const canProceed = force
-      ? canRebuildResultsForGame(game)
-      : canGenerateResultsForGame(game)
+  const handleGenerateResultsFromGame = useCallback(
+    (game, options = {}) => {
+      const force = Boolean(options?.force) || Boolean(game?.isResultGenerated)
+      const canProceed = force
+        ? canRebuildResultsForGame(game)
+        : canGenerateResultsForGame(game)
 
-    if (!game || !canProceed || isGeneratingResults) {
-      return
-    }
+      if (!game || !canProceed || isGeneratingResults) {
+        return
+      }
 
-    const confirmationMessage = Boolean(game.isResultGenerated)
-      ? `Сформировать результаты игры «${game.name || 'Без названия'}» заново? Текущие сохранённые результаты будут пересчитаны.`
-      : `Сформировать результаты игры «${game.name || 'Без названия'}»?`
-    if (
-      typeof window !== 'undefined' &&
-      !window.confirm(confirmationMessage)
-    ) {
-      return
-    }
+      const confirmationMessage = Boolean(game.isResultGenerated)
+        ? `Сформировать результаты игры «${game.name || 'Без названия'}» заново? Текущие сохранённые результаты будут пересчитаны.`
+        : `Сформировать результаты игры «${game.name || 'Без названия'}»?`
+      if (
+        typeof window !== 'undefined' &&
+        !window.confirm(confirmationMessage)
+      ) {
+        return
+      }
 
-    const locationForApi =
-      game.location ||
-      (shouldShowLocationFilter ? gamesFilterLocation : location) ||
-      ''
+      const locationForApi =
+        game.location ||
+        (shouldShowLocationFilter ? gamesFilterLocation : location) ||
+        ''
 
-    generateResultsMutation.mutate({ game, locationForApi })
-  }, [
-    generateResultsMutation,
-    canRebuildResultsForGame,
-    canGenerateResultsForGame,
-    gamesFilterLocation,
-    isGeneratingResults,
-    location,
-    shouldShowLocationFilter,
-  ])
+      generateResultsMutation.mutate({ game, locationForApi })
+    },
+    [
+      generateResultsMutation,
+      canRebuildResultsForGame,
+      canGenerateResultsForGame,
+      gamesFilterLocation,
+      isGeneratingResults,
+      location,
+      shouldShowLocationFilter,
+    ],
+  )
 
   const handleGenerateResults = useCallback(() => {
     if (!selectedGame || !canGenerateResults) {
       return
     }
     handleGenerateResultsFromGame(selectedGame, { force: true })
-  }, [
-    canGenerateResults,
-    handleGenerateResultsFromGame,
-    selectedGame,
-  ])
+  }, [canGenerateResults, handleGenerateResultsFromGame, selectedGame])
 
   const handleCloseEditModal = useCallback(() => {
     if (isSaving) {
@@ -5545,6 +5573,27 @@ const GamesPage = ({
       setHasUnsavedChanges(false)
     }
   }, [isEditModalOpen, isSaving, isTasksModalOpen])
+
+  const handleCloseGameHistoryModal = useCallback(() => {
+    setIsGameHistoryModalOpen(false)
+  }, [])
+
+  const handleGameHistoryRollbackSuccess = useCallback(
+    async (payload) => {
+      queryClient.invalidateQueries({ queryKey: ['cabinet-games'] })
+      queryClient.invalidateQueries({ queryKey: ['game-results'] })
+      await gamesQuery.refetch()
+      setFeedback({
+        type: 'success',
+        message:
+          Number(payload?.rolledBackEntriesCount) > 0
+            ? `Откат выполнен. Отменено действий: ${payload.rolledBackEntriesCount}.`
+            : 'Откат выполнен.',
+      })
+      setIsGameHistoryModalOpen(false)
+    },
+    [gamesQuery, queryClient],
+  )
 
   const handleCloseDescriptionModal = useCallback(() => {
     setIsDescriptionModalOpen(false)
@@ -5700,7 +5749,8 @@ const GamesPage = ({
         ? game.agents.filter(Boolean)
         : []
       const alreadyExists = currentAgents.some(
-        (agent) => String(agent?.userId || agent?.id || agent || '') === candidate.id,
+        (agent) =>
+          String(agent?.userId || agent?.id || agent || '') === candidate.id,
       )
 
       if (alreadyExists) {
@@ -5739,9 +5789,8 @@ const GamesPage = ({
       }
 
       const gameForPrompt = editingGame ?? selectedGame
-      const affectedTasks = (Array.isArray(gameForPrompt?.tasks)
-        ? gameForPrompt.tasks
-        : []
+      const affectedTasks = (
+        Array.isArray(gameForPrompt?.tasks) ? gameForPrompt.tasks : []
       )
         .map((task, index) => {
           const ids = Array.isArray(task?.agentUserIds)
@@ -5814,9 +5863,12 @@ const GamesPage = ({
       const canManageFinancesThisGame = canManageCabinetGameFinances({
         canManageGameStatus: canManageGameStatus(game),
       })
+      const canManageHistoryThisGame = canManageGameStatus(game)
       const canBroadcastThisGame =
         canManageThisGame && canBroadcastByGameStatus(game.status)
-      const adminUnreadMessagesCount = Number(game.adminUnreadMessagesCount || 0)
+      const adminUnreadMessagesCount = Number(
+        game.adminUnreadMessagesCount || 0,
+      )
       const adminUnreadMessagesBadge =
         adminUnreadMessagesCount > 99 ? '99+' : adminUnreadMessagesCount || null
       const canViewThisGameResults = canViewResultsForGame(game)
@@ -5831,7 +5883,10 @@ const GamesPage = ({
       const canViewThisGameTasks = canViewTasksForGame(game)
       const canViewGameTeams =
         typeof game?.status === 'string' && game.status !== 'canceled'
-      const canOpenAgentPanel = isCurrentUserGameAgent(game, currentUserIdString)
+      const canOpenAgentPanel = isCurrentUserGameAgent(
+        game,
+        currentUserIdString,
+      )
       const visibleStatus = normalizeVisibleStatus(
         game.status,
         canSeeClosedStatus,
@@ -5940,7 +5995,7 @@ const GamesPage = ({
                         {getGameStatusLabel(visibleStatus)}
                       </span>
                       {game?.isRated === true && (
-                        <span className="inline-flex items-center rounded-full border border-amber-400/75 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-300/60 dark:bg-amber-500/10 dark:text-amber-200">
+                        <span className="inline-grid max-w-[9.5rem] shrink-0 place-items-center self-start rounded-full border border-amber-400/75 bg-amber-100 px-2.5 py-1 text-center text-xs font-semibold leading-tight text-amber-700 dark:border-amber-300/60 dark:bg-amber-500/10 dark:text-amber-200">
                           {seasonBadgeLabel}
                         </span>
                       )}
@@ -6084,11 +6139,12 @@ const GamesPage = ({
                     {(canEditThisGame ||
                       canManageThisGame ||
                       canManageStatusThisGame ||
+                      canManageHistoryThisGame ||
                       canManageFinancesThisGame ||
                       canBroadcastThisGame ||
                       canOpenAgentPanel ||
                       canViewGameTeams) && (
-                      <div className="flex items-center self-start order-3 gap-2 phoneH:order-1 phoneH:self-auto">
+                      <div className="flex flex-wrap items-center self-start order-3 gap-2 phoneH:order-1 phoneH:self-auto">
                         {canOpenAgentPanel && (
                           <CardActionIconButton
                             onClick={(event) => {
@@ -6150,6 +6206,18 @@ const GamesPage = ({
                             title="Открыть финансы игры"
                           >
                             <FinanceCardIcon />
+                          </CardActionIconButton>
+                        )}
+                        {canManageHistoryThisGame && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleOpenGameHistoryModal(game)
+                            }}
+                            label="История игры"
+                            title="Открыть историю изменений игры"
+                          >
+                            <HistoryCardIcon />
                           </CardActionIconButton>
                         )}
                         {canBroadcastThisGame && (
@@ -6243,6 +6311,7 @@ const GamesPage = ({
       handleEditGameFromList,
       handleEditTasksFromList,
       handleOpenFinancesModal,
+      handleOpenGameHistoryModal,
       handleManageTeamsFromList,
       handleViewGameTeamsFromList,
       handleOpenPushBroadcastModal,
@@ -6282,6 +6351,7 @@ const GamesPage = ({
       const canManageFinancesThisGame = canManageCabinetGameFinances({
         canManageGameStatus: canManageGameStatus(game),
       })
+      const canManageHistoryThisGame = canManageGameStatus(game)
       const canBroadcastThisGame =
         canManageThisGame && canBroadcastByGameStatus(game.status)
       const canViewThisGameResults = canViewResultsForGame(game)
@@ -6296,7 +6366,10 @@ const GamesPage = ({
       const canViewThisGameTasks = canViewTasksForGame(game)
       const canViewGameTeams =
         typeof game?.status === 'string' && game.status !== 'canceled'
-      const canOpenAgentPanel = isCurrentUserGameAgent(game, currentUserIdString)
+      const canOpenAgentPanel = isCurrentUserGameAgent(
+        game,
+        currentUserIdString,
+      )
       const visibleStatus = normalizeVisibleStatus(
         game.status,
         canSeeClosedStatus,
@@ -6386,7 +6459,7 @@ const GamesPage = ({
                   {getGameStatusLabel(visibleStatus)}
                 </span>
                 {game?.isRated === true && (
-                  <span className="inline-flex items-center rounded-full border border-amber-400/75 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-300/60 dark:bg-amber-500/10 dark:text-amber-200">
+                  <span className="inline-grid max-w-[9.5rem] shrink-0 place-items-center self-start rounded-full border border-amber-400/75 bg-amber-100 px-2.5 py-1 text-center text-xs font-semibold leading-tight text-amber-700 dark:border-amber-300/60 dark:bg-amber-500/10 dark:text-amber-200">
                     {seasonBadgeLabel}
                   </span>
                 )}
@@ -6432,7 +6505,7 @@ const GamesPage = ({
                     canViewThisGameTasks ||
                     canViewThisGameResults ||
                     canGenerateThisGameResults) && (
-                    <div className="flex items-center gap-2 pb-1 overflow-x-auto">
+                    <div className="flex flex-wrap items-center gap-2">
                       {canEnterGame && (
                         <button
                           type="button"
@@ -6529,11 +6602,12 @@ const GamesPage = ({
                   {(canEditThisGame ||
                     canManageThisGame ||
                     canManageStatusThisGame ||
+                    canManageHistoryThisGame ||
                     canManageFinancesThisGame ||
                     canBroadcastThisGame ||
                     canOpenAgentPanel ||
                     canViewGameTeams) && (
-                    <div className="flex items-center self-start gap-2 pointer-events-auto">
+                    <div className="flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
                       {canOpenAgentPanel && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -6602,6 +6676,19 @@ const GamesPage = ({
                           <FinanceCardIcon />
                         </CardActionIconButton>
                       )}
+                      {canManageHistoryThisGame && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleOpenGameHistoryModal(game)
+                          }}
+                          label="История игры"
+                          title="Открыть историю изменений игры"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <HistoryCardIcon />
+                        </CardActionIconButton>
+                      )}
                       {canBroadcastThisGame && (
                         <CardActionIconButton
                           onClick={(event) => {
@@ -6613,7 +6700,8 @@ const GamesPage = ({
                           badge={
                             Number(game.adminUnreadMessagesCount || 0) > 99
                               ? '99+'
-                              : Number(game.adminUnreadMessagesCount || 0) || null
+                              : Number(game.adminUnreadMessagesCount || 0) ||
+                                null
                           }
                           className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
@@ -6697,6 +6785,7 @@ const GamesPage = ({
       handleEditGameFromList,
       handleEditTasksFromList,
       handleOpenFinancesModal,
+      handleOpenGameHistoryModal,
       handleManageTeamsFromList,
       handleViewGameTeamsFromList,
       handleOpenPushBroadcastModal,
@@ -6731,10 +6820,14 @@ const GamesPage = ({
     }
 
     try {
-      return formatDateInLocationTimeZone(modalGame.dateStart, modalGame.location, {
-        dateStyle: 'long',
-        timeStyle: 'short',
-      })
+      return formatDateInLocationTimeZone(
+        modalGame.dateStart,
+        modalGame.location,
+        {
+          dateStyle: 'long',
+          timeStyle: 'short',
+        },
+      )
     } catch {
       return 'Дата не назначена'
     }
@@ -6839,10 +6932,7 @@ const GamesPage = ({
     ).trim()
     const currentOrganizer = modalGame?.creator
 
-    if (
-      currentOrganizerUserId &&
-      !organizersMap.has(currentOrganizerUserId)
-    ) {
+    if (currentOrganizerUserId && !organizersMap.has(currentOrganizerUserId)) {
       organizersMap.set(currentOrganizerUserId, {
         id: currentOrganizerUserId,
         telegramId: String(
@@ -7469,6 +7559,11 @@ const GamesPage = ({
                 handleFinancesModalPrimaryAction={
                   handleFinancesModalPrimaryAction
                 }
+                isGameHistoryModalOpen={isGameHistoryModalOpen}
+                handleCloseGameHistoryModal={handleCloseGameHistoryModal}
+                handleGameHistoryRollbackSuccess={
+                  handleGameHistoryRollbackSuccess
+                }
                 canGenerateResults={canGenerateResults}
                 isGeneratingResults={isGeneratingResults}
                 handleGenerateResults={handleGenerateResults}
@@ -7641,61 +7736,61 @@ const GamesPage = ({
                 gameName={pushBroadcastModalGame?.name || ''}
                 gameStatus={pushBroadcastModalGame?.status || ''}
                 onFeedback={setFeedback}
-                />
-                <style jsx global>{`
-                  @keyframes aqStartedGameCardEnter {
-                    0% {
-                      opacity: 0.92;
-                      transform: translateY(-4px) scale(0.988);
-                    }
-                    100% {
-                      opacity: 1;
-                      transform: translateY(0) scale(1);
-                    }
+              />
+              <style jsx global>{`
+                @keyframes aqStartedGameCardEnter {
+                  0% {
+                    opacity: 0.92;
+                    transform: translateY(-4px) scale(0.988);
                   }
+                  100% {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                  }
+                }
 
-                  .aq-started-game-card {
-                    animation: aqStartedGameCardEnter 200ms ease-in-out;
-                  }
+                .aq-started-game-card {
+                  animation: aqStartedGameCardEnter 200ms ease-in-out;
+                }
 
-                  .aq-started-game-card > * {
-                    position: relative;
-                    z-index: 1;
-                  }
+                .aq-started-game-card > * {
+                  position: relative;
+                  z-index: 1;
+                }
 
-                  .aq-started-game-card::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    bottom: 0;
-                    left: -42%;
-                    width: 38%;
-                    z-index: 2;
-                    pointer-events: none;
-                    background: linear-gradient(
-                      120deg,
-                      rgba(255, 255, 255, 0) 0%,
-                      rgba(255, 255, 255, 0.32) 28%,
-                      rgba(236, 253, 245, 0.82) 50%,
-                      rgba(255, 255, 255, 0.24) 72%,
-                      rgba(255, 255, 255, 0) 100%
-                    );
-                    transform: skewX(-20deg);
-                    filter: blur(0.5px);
-                    animation: aq-toast-sheen 3.2s ease-in-out 180ms infinite;
-                  }
+                .aq-started-game-card::before {
+                  content: '';
+                  position: absolute;
+                  top: 0;
+                  bottom: 0;
+                  left: -42%;
+                  width: 38%;
+                  z-index: 2;
+                  pointer-events: none;
+                  background: linear-gradient(
+                    120deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.32) 28%,
+                    rgba(236, 253, 245, 0.82) 50%,
+                    rgba(255, 255, 255, 0.24) 72%,
+                    rgba(255, 255, 255, 0) 100%
+                  );
+                  transform: skewX(-20deg);
+                  filter: blur(0.5px);
+                  animation: aq-toast-sheen 3.2s ease-in-out 180ms infinite;
+                }
 
-                  .dark .aq-started-game-card::before {
-                    background: linear-gradient(
-                      120deg,
-                      rgba(255, 255, 255, 0) 0%,
-                      rgba(170, 240, 255, 0.18) 28%,
-                      rgba(170, 240, 255, 0.34) 50%,
-                      rgba(170, 240, 255, 0.16) 72%,
-                      rgba(255, 255, 255, 0) 100%
-                    );
-                  }
-                `}</style>
+                .dark .aq-started-game-card::before {
+                  background: linear-gradient(
+                    120deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(170, 240, 255, 0.18) 28%,
+                    rgba(170, 240, 255, 0.34) 50%,
+                    rgba(170, 240, 255, 0.16) 72%,
+                    rgba(255, 255, 255, 0) 100%
+                  );
+                }
+              `}</style>
             </div>
           </div>
         </section>

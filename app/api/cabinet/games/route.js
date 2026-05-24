@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
+import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
+import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -124,6 +127,34 @@ export async function POST(request) {
 
     const createdGame = await GamesModel.create(createData)
     const createdJson = createdGame?.toObject ? createdGame.toObject() : createdGame
+    const historyState = await fetchGameHistoryState({
+      db,
+      gameId: createdGame?._id,
+      game: createdJson,
+    })
+
+    await recordGameHistoryEntry({
+      db,
+      gameId: createdGame?._id,
+      location: createdJson?.location ?? location.toLowerCase(),
+      actionType: 'game_created',
+      entityScope: 'game',
+      actor: {
+        userId: creatorUserId,
+        telegramId:
+          normalizeTelegramId(session.user.telegramId) !== null
+            ? String(normalizeTelegramId(session.user.telegramId))
+            : null,
+        role: typeof session?.user?.role === 'string' ? session.user.role : '',
+        name: typeof session?.user?.name === 'string' ? session.user.name : '',
+      },
+      beforeState: null,
+      afterState: historyState,
+      snapshot: buildGameHistorySnapshot(historyState),
+      context: {
+        summary: 'Игра создана',
+      },
+    })
 
     return NextResponse.json(
       { success: true, data: createdJson },

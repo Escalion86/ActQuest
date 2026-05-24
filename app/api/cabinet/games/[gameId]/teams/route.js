@@ -11,6 +11,9 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import logSiteEvent from '@helpers/logSiteEvent'
 import { toStringId } from '@helpers/idAndDate'
 import { getCaptainRoleQuery } from '@helpers/teamRoles'
+import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
+import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
+import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 
 const MANUAL_TEAM_ADJUSTMENT_SOURCE = 'manual_team_adjustment'
 
@@ -196,6 +199,21 @@ const resolveSessionIdentity = (session) => {
     role: normalizeRole(sessionUser.role),
   }
 }
+
+const buildHistoryActorFromSession = (session) => ({
+  userId:
+    session?.user?.globalUserId ??
+    session?.user?.userId ??
+    session?.user?._id ??
+    session?.user?.id ??
+    null,
+  telegramId:
+    session?.user?.telegramId !== null && session?.user?.telegramId !== undefined
+      ? String(session.user.telegramId).trim()
+      : null,
+  role: typeof session?.user?.role === 'string' ? session.user.role : '',
+  name: typeof session?.user?.name === 'string' ? session.user.name : '',
+})
 
 const hasGameManageAccess = ({ identity, game }) => {
   if (!identity || !game) {
@@ -498,6 +516,12 @@ export async function POST(request, { params }) {
       )
     }
 
+    const beforeHistoryState = await fetchGameHistoryState({
+      db,
+      gameId: normalizedResolvedGameId,
+      game,
+    })
+
     const created = await GamesTeamsModel.create({
       gameId: normalizedResolvedGameId,
       teamId,
@@ -514,6 +538,26 @@ export async function POST(request, { params }) {
       teamName: typeof team?.name === 'string' ? team.name : '',
       gameId: normalizedResolvedGameId,
       gameName: typeof game?.name === 'string' ? game.name : '',
+    })
+
+    const afterHistoryState = await fetchGameHistoryState({
+      db,
+      gameId: normalizedResolvedGameId,
+      game,
+    })
+    await recordGameHistoryEntry({
+      db,
+      gameId: normalizedResolvedGameId,
+      location: normalizeLocation(game?.location),
+      actionType: 'team_registered',
+      entityScope: 'game_teams',
+      actor: buildHistoryActorFromSession(session),
+      beforeState: beforeHistoryState,
+      afterState: afterHistoryState,
+      snapshot: buildGameHistorySnapshot(afterHistoryState),
+      context: {
+        summary: `Команда «${typeof team?.name === 'string' ? team.name : ''}» зарегистрирована на игру`,
+      },
     })
 
     return NextResponse.json(
@@ -641,6 +685,12 @@ export async function DELETE(request, { params }) {
       return acc
     }, {})
 
+    const beforeHistoryState = await fetchGameHistoryState({
+      db,
+      gameId: normalizedResolvedGameId,
+      game,
+    })
+
     const deleteResult = await GamesTeamsModel.deleteMany({
       gameId: normalizedResolvedGameId,
       teamId: { $in: deletedTeamIds },
@@ -663,6 +713,35 @@ export async function DELETE(request, { params }) {
           }),
         ),
       )
+    }
+
+    if (Number(deleteResult?.deletedCount || 0) > 0) {
+      const afterHistoryState = await fetchGameHistoryState({
+        db,
+        gameId: normalizedResolvedGameId,
+        game,
+      })
+      const deletedNames = deletedTeamIds
+        .map((currentTeamId) => teamNameById[currentTeamId] || '')
+        .filter(Boolean)
+
+      await recordGameHistoryEntry({
+        db,
+        gameId: normalizedResolvedGameId,
+        location: normalizeLocation(game?.location),
+        actionType: 'team_unregistered',
+        entityScope: 'game_teams',
+        actor: buildHistoryActorFromSession(session),
+        beforeState: beforeHistoryState,
+        afterState: afterHistoryState,
+        snapshot: buildGameHistorySnapshot(afterHistoryState),
+        context: {
+          summary:
+            deletedNames.length > 1
+              ? `Сняты с игры команды: ${deletedNames.join(', ')}`
+              : `Команда «${deletedNames[0] || ''}» снята с игры`,
+        },
+      })
     }
 
     return NextResponse.json(
@@ -877,6 +956,12 @@ export async function PATCH(request, { params }) {
         )
       }
 
+      const beforeHistoryState = await fetchGameHistoryState({
+        db,
+        gameId: normalizedResolvedGameId,
+        game,
+      })
+
       const manualAdjustments = manualAdjustmentsRaw
         .map((item, index) => normalizeManualAdjustment(item, index))
         .filter(Boolean)
@@ -996,6 +1081,29 @@ export async function PATCH(request, { params }) {
         )
       }
 
+      const updatedGameForHistory = await GamesModel.findById(
+        normalizedResolvedGameId,
+      ).lean()
+      const afterHistoryState = await fetchGameHistoryState({
+        db,
+        gameId: normalizedResolvedGameId,
+        game: updatedGameForHistory,
+      })
+      await recordGameHistoryEntry({
+        db,
+        gameId: normalizedResolvedGameId,
+        location: normalizeLocation(game?.location),
+        actionType: 'team_adjustments_updated',
+        entityScope: 'game_teams',
+        actor: buildHistoryActorFromSession(session),
+        beforeState: beforeHistoryState,
+        afterState: afterHistoryState,
+        snapshot: buildGameHistorySnapshot(afterHistoryState),
+        context: {
+          summary: 'Обновлены ручные корректировки команды в игре',
+        },
+      })
+
       return NextResponse.json(
         {
           success: true,
@@ -1038,6 +1146,12 @@ export async function PATCH(request, { params }) {
         { status: 404 },
       )
     }
+
+    const beforeHistoryState = await fetchGameHistoryState({
+      db,
+      gameId: normalizedResolvedGameId,
+      game,
+    })
 
     await GamesTeamsModel.updateOne(
       { _id: gameTeamId, gameId: normalizedResolvedGameId },
@@ -1126,6 +1240,31 @@ export async function PATCH(request, { params }) {
       })
       resultUpdated = true
     }
+
+    const updatedGameForHistory = await GamesModel.findById(
+      normalizedResolvedGameId,
+    ).lean()
+    const afterHistoryState = await fetchGameHistoryState({
+      db,
+      gameId: normalizedResolvedGameId,
+      game: updatedGameForHistory,
+    })
+    await recordGameHistoryEntry({
+      db,
+      gameId: normalizedResolvedGameId,
+      location: normalizeLocation(game?.location),
+      actionType: 'team_out_of_competition_changed',
+      entityScope: 'game_teams',
+      actor: buildHistoryActorFromSession(session),
+      beforeState: beforeHistoryState,
+      afterState: afterHistoryState,
+      snapshot: buildGameHistorySnapshot(afterHistoryState),
+      context: {
+        summary: outOfCompetition
+          ? 'Команда переведена во вне зачёта'
+          : 'Команда возвращена в зачёт',
+      },
+    })
 
     return NextResponse.json(
       {

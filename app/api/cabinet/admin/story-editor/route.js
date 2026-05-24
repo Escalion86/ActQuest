@@ -5,6 +5,9 @@ import {
   normalizeStringId,
   readJsonPayload,
 } from '@app/api/cabinet/_lib/storyApi'
+import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
+import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
+import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 
 const normalizeText = (value, maxLength = 4000) =>
   typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
@@ -183,6 +186,21 @@ const normalizeStoryEndings = (endings) =>
     }))
     .filter((ending) => ending.id)
 
+const buildHistoryActorFromSession = (session) => ({
+  userId:
+    session?.user?.globalUserId ??
+    session?.user?.userId ??
+    session?.user?._id ??
+    session?.user?.id ??
+    null,
+  telegramId:
+    session?.user?.telegramId !== null && session?.user?.telegramId !== undefined
+      ? String(session.user.telegramId).trim()
+      : null,
+  role: typeof session?.user?.role === 'string' ? session.user.role : '',
+  name: typeof session?.user?.name === 'string' ? session.user.name : '',
+})
+
 const enrichGameAgents = async (db, game) => {
   const baseGame = game?.toObject?.() || game || {}
   const agentUserIds = Array.from(
@@ -278,6 +296,11 @@ export async function PATCH(request) {
     }
 
     const storyConfig = payload?.storyConfig || {}
+    const beforeHistoryState = await fetchGameHistoryState({
+      db: context.db,
+      gameId: normalizeStringId(context.game?._id),
+      game: context.game?.toObject?.() || context.game,
+    })
     const allowedAgentIds = new Set(
       (Array.isArray(context.game?.agents) ? context.game.agents : [])
         .map((agent) => normalizeStringId(agent?.userId ?? agent?.id ?? agent))
@@ -309,6 +332,29 @@ export async function PATCH(request) {
       { $set: update },
       { new: true },
     )
+
+    const afterHistoryState = await fetchGameHistoryState({
+      db: context.db,
+      gameId: normalizeStringId(context.game?._id),
+      game: updatedGame?.toObject?.() || updatedGame,
+    })
+    await recordGameHistoryEntry({
+      db: context.db,
+      gameId: normalizeStringId(context.game?._id),
+      location:
+        typeof context.game?.location === 'string'
+          ? context.game.location.trim().toLowerCase()
+          : null,
+      actionType: 'game_updated',
+      entityScope: 'game',
+      actor: buildHistoryActorFromSession(context.session),
+      beforeState: beforeHistoryState,
+      afterState: afterHistoryState,
+      snapshot: buildGameHistorySnapshot(afterHistoryState),
+      context: {
+        summary: 'Story-конфигурация игры обновлена',
+      },
+    })
 
     const enrichedGame = await enrichGameAgents(context.db, updatedGame)
 

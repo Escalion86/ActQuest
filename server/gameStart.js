@@ -2,8 +2,8 @@ import check from 'telegram/func/check'
 import formatGameName from 'telegram/func/formatGameName'
 import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
-import createTaskProgressArrays from '@helpers/createTaskProgressArrays'
 import { getGameValidationErrors } from '@helpers/isGameHaveErrors'
+import buildGameStartProgressUpdate from '@server/buildGameStartProgressUpdate'
 
 const runInBackground = (label, job) => {
   Promise.resolve()
@@ -11,45 +11,6 @@ const runInBackground = (label, job) => {
     .catch((error) => {
       console.error(`[background] ${label} failed`, error)
     })
-}
-
-const buildResetGameTeamProgressUpdate = ({
-  gameTasksCount,
-  startImmediately,
-}) => {
-  const startTime = startImmediately
-    ? new Array(gameTasksCount).fill(null)
-    : []
-  if (startImmediately && gameTasksCount > 0) {
-    startTime[0] = new Date()
-  }
-
-  const endTime = startImmediately
-    ? new Array(gameTasksCount).fill(null)
-    : []
-  const {
-    findedCodes,
-    wrongCodes,
-    findedPenaltyCodes,
-    findedBonusCodes,
-    photos,
-  } = createTaskProgressArrays(gameTasksCount)
-
-  return {
-    startTime,
-    endTime,
-    activeNum: 0,
-    findedCodes,
-    wrongCodes,
-    findedPenaltyCodes,
-    findedBonusCodes,
-    codeAttempts: [],
-    photos,
-    taskFailures: [],
-    timeAddings: [],
-    forcedClues: startImmediately ? new Array(gameTasksCount).fill(0) : [],
-    storyProgress: null,
-  }
 }
 
 const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db }) => {
@@ -103,9 +64,10 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
     gameTeams.map((team) =>
       db.model('GamesTeams').findByIdAndUpdate(
         team._id,
-        buildResetGameTeamProgressUpdate({
+        buildGameStartProgressUpdate({
           gameTasksCount,
           startImmediately: !game.individualStart,
+          timeAddings: team.timeAddings,
         }),
       ),
     ),

@@ -387,6 +387,37 @@ export const FinanceCardIcon = () => (
   </svg>
 )
 
+export const HistoryCardIcon = () => (
+  <svg
+    className="h-5 w-5"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M4 5.5V9H7.5"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M5.1 8.1C5.88 5.85 7.96 4.25 10.4 4.25C13.51 4.25 16.03 6.79 16.03 9.92C16.03 13.06 13.51 15.6 10.4 15.6C7.99 15.6 5.93 14.04 5.13 11.83"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M10.4 7.2V10.1L12.45 11.35"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
 const CardActionIconButton = ({
   as: Component,
   onClick,

@@ -5,6 +5,9 @@ import buildGameResultComputed from '@server/buildGameResultComputed'
 import updateParticipantsClosedStats from '@server/updateParticipantsClosedStats'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
 import { deleteGameTeamMessagesForGame } from '@server/gameTeamMessages'
+import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
+import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
+import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 import sanitize from '@helpers/sanitize'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
 
@@ -191,6 +194,21 @@ const normalizeAgentNotificationsForWrite = (value = {}) => ({
   onAllTeamsPassed: value?.onAllTeamsPassed !== false,
 })
 
+const buildHistoryActorFromSession = (session) => ({
+  userId:
+    session?.user?.globalUserId ??
+    session?.user?.userId ??
+    session?.user?._id ??
+    session?.user?.id ??
+    null,
+  telegramId:
+    session?.user?.telegramId !== null && session?.user?.telegramId !== undefined
+      ? String(session.user.telegramId).trim()
+      : null,
+  role: typeof session?.user?.role === 'string' ? session.user.role : '',
+  name: typeof session?.user?.name === 'string' ? session.user.name : '',
+})
+
 const normalizeTaskAgentsForWrite = (tasks = [], allowedAgentIds = new Set()) =>
   (Array.isArray(tasks) ? tasks : []).map((task) => {
     const baseTask =
@@ -347,6 +365,11 @@ const execute = (request, params) =>
         }
 
         const previousStatus = String(existingGame.status || '').toLowerCase()
+        const beforeHistoryState = await fetchGameHistoryState({
+          db,
+          gameId: String(id),
+          game: existingGame?.toObject ? existingGame.toObject() : existingGame,
+        })
         const requestedStatus = updatePayload.status ?? existingGame.status
         const requestedStatusNormalized = String(requestedStatus || '').toLowerCase()
         const resolvedStatus =
@@ -550,6 +573,38 @@ const execute = (request, params) =>
             console.error('Failed to update participants metrics on game close', metricsError)
           }
         }
+
+        const finalUpdatedGame =
+          updatedGame?.toObject ? updatedGame.toObject() : updatedGame
+        const afterHistoryState = await fetchGameHistoryState({
+          db,
+          gameId: String(id),
+          game: finalUpdatedGame,
+        })
+        const historyActionType =
+          previousStatus !== nextStatusNormalized
+            ? 'game_status_changed'
+            : 'game_updated'
+
+        await recordGameHistoryEntry({
+          db,
+          gameId: String(id),
+          location,
+          actionType: historyActionType,
+          entityScope: 'game',
+          actor: buildHistoryActorFromSession(req.session),
+          beforeState: beforeHistoryState,
+          afterState: afterHistoryState,
+          snapshot: buildGameHistorySnapshot(afterHistoryState),
+          context:
+            previousStatus !== nextStatusNormalized
+              ? {
+                  summary: `Статус игры изменён: ${previousStatus || 'unknown'} -> ${nextStatusNormalized || 'unknown'}`,
+                }
+              : {
+                  summary: 'Параметры игры обновлены',
+                },
+        })
 
         return res.status(200).json({ success: true, data: updatedGame })
       } catch (error) {

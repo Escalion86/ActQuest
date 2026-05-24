@@ -10,6 +10,7 @@ import GameDescriptionModal from './GameDescriptionModal'
 import GameFinancesModal from './GameFinancesModal'
 import GameResultsModal from './GameResultsModal'
 import GameTasksViewModal from './GameTasksViewModal'
+import GameHistoryModal from './GameHistoryModal'
 
 const GameModals = ({
   selectedGame,
@@ -69,6 +70,9 @@ const GameModals = ({
   isFinancesModalOpen,
   handleCloseFinancesModal,
   handleFinancesModalPrimaryAction,
+  isGameHistoryModalOpen,
+  handleCloseGameHistoryModal,
+  handleGameHistoryRollbackSuccess,
   canGenerateResults,
   isGeneratingResults,
   handleGenerateResults,
@@ -451,6 +455,16 @@ const GameModals = ({
       ) : null}
 
       {hasSelectedGame ? (
+        <GameHistoryModal
+          selectedGame={selectedGame}
+          isOpen={isGameHistoryModalOpen}
+          onClose={handleCloseGameHistoryModal}
+          onRollbackSuccess={handleGameHistoryRollbackSuccess}
+          currentUserRole={currentUserRole}
+        />
+      ) : null}
+
+      {hasSelectedGame ? (
         <GameDescriptionModal
           selectedGame={selectedGame}
           isDescriptionModalOpen={isDescriptionModalOpen}
@@ -603,6 +617,9 @@ GameModals.propTypes = {
   isFinancesModalOpen: PropTypes.bool.isRequired,
   handleCloseFinancesModal: PropTypes.func.isRequired,
   handleFinancesModalPrimaryAction: PropTypes.func.isRequired,
+  isGameHistoryModalOpen: PropTypes.bool.isRequired,
+  handleCloseGameHistoryModal: PropTypes.func.isRequired,
+  handleGameHistoryRollbackSuccess: PropTypes.func.isRequired,
   canGenerateResults: PropTypes.bool.isRequired,
   isGeneratingResults: PropTypes.bool.isRequired,
   handleGenerateResults: PropTypes.func.isRequired,

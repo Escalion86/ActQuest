@@ -1,10 +1,6 @@
-const isCluePenalty = ({ name, taskId, taskIndex }) => {
-  if (typeof name !== 'string') return false
-  const matchesClueName = name.startsWith('Досрочная подсказка')
-  if (!matchesClueName) return false
-
-  if (taskId) return true
-  return typeof taskIndex === 'number'
+const isCluePenalty = ({ source }) => {
+  const normalizedSource = typeof source === 'string' ? source.trim() : ''
+  return normalizedSource === 'captain_force_clue'
 }
 
 const removeCluePenalties = (timeAddings) => {

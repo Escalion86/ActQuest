@@ -4,6 +4,9 @@ import { getServerSession } from 'next-auth'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import buildGameResultComputed from '@server/buildGameResultComputed'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
+import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
+import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
+import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 import { authOptions } from '@server/auth/authOptions'
 import { toStringId } from '@helpers/idAndDate'
 
@@ -69,6 +72,21 @@ const normalizeSessionIdentity = (session) => {
 }
 
 const isElevatedRole = (role) => role === 'admin' || role === 'dev'
+
+const buildHistoryActorFromSession = (session) => ({
+  userId:
+    session?.user?.globalUserId ??
+    session?.user?.userId ??
+    session?.user?._id ??
+    session?.user?.id ??
+    null,
+  telegramId:
+    session?.user?.telegramId !== null && session?.user?.telegramId !== undefined
+      ? String(session.user.telegramId).trim()
+      : null,
+  role: typeof session?.user?.role === 'string' ? session.user.role : '',
+  name: typeof session?.user?.name === 'string' ? session.user.name : '',
+})
 
 const hasGameManageAccess = ({ identity, game }) => {
   if (!identity || !game) {
@@ -356,6 +374,11 @@ const handleRequest = async ({ request, params, method }) => {
       }
 
       let built = null
+      const beforeHistoryState = await fetchGameHistoryState({
+        db,
+        gameId: normalizedGameId,
+        game,
+      })
       try {
         built = await buildGameResultComputed({ game })
       } catch (buildError) {
@@ -402,6 +425,26 @@ const handleRequest = async ({ request, params, method }) => {
         updatedGame?.result && typeof updatedGame.result === 'object'
           ? updatedGame.result
           : nextResult
+      const finalGameForHistory = updatedGame || { ...game, result: updatedResult }
+      const afterHistoryState = await fetchGameHistoryState({
+        db,
+        gameId: normalizedGameId,
+        game: finalGameForHistory,
+      })
+      await recordGameHistoryEntry({
+        db,
+        gameId: normalizedGameId,
+        location: gameLocation,
+        actionType: 'results_rebuilt',
+        entityScope: 'result',
+        actor: buildHistoryActorFromSession(session),
+        beforeState: beforeHistoryState,
+        afterState: afterHistoryState,
+        snapshot: buildGameHistorySnapshot(afterHistoryState),
+        context: {
+          summary: 'Результаты игры пересчитаны',
+        },
+      })
       const userParticipationTeamIds = resolveUserParticipationTeamIds({
         result: updatedResult,
         session,
