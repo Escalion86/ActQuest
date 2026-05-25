@@ -70,6 +70,7 @@ const cloneProgress = (progress = {}) => ({
   usedClueIds: uniqueStrings(progress?.usedClueIds),
   usedCodeIds: uniqueStrings(progress?.usedCodeIds),
   usedBonusCodeIds: uniqueStrings(progress?.usedBonusCodeIds),
+  prequelFlags: uniqueStrings(progress?.prequelFlags),
   history: toArray(progress?.history).map((entry) => ({
     id: normalizeId(entry?.id) || createEventId(),
     type: normalizeId(entry?.type),

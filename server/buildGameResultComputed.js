@@ -1,5 +1,6 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import { toStringId } from '@helpers/idAndDate'
+import { normalizePrequelConfig, normalizePrequelProgress } from '@helpers/normalizePrequel'
 
 const secondsToTime = (sec) => {
   const numeric = Number(sec)
@@ -301,6 +302,70 @@ const getWrongCodePenalty = (game, gameTeam, taskIndex) => {
   return Math.floor(wrongCodesOnTask.length / maxCodes) * penaltyForMaxCodes
 }
 
+const getPrequelResult = (game, gameTeam) => {
+  const prequel = normalizePrequelConfig(game?.prequel)
+  const progress = normalizePrequelProgress(gameTeam?.prequelProgress)
+
+  if (!prequel.enabled) {
+    return {
+      enabled: false,
+      bonusItems: [],
+      penaltyItems: [],
+      wrongLimitPenaltyItems: [],
+      storyEffects: [],
+      bonusValue: 0,
+      penaltyValue: 0,
+      wrongPenaltyValue: 0,
+    }
+  }
+
+  const bonusItems = progress.appliedAdjustments
+    .filter((item) => item?.type === 'bonus')
+    .map((item) => ({
+      ...item,
+      value: Number(item?.value) || 0,
+    }))
+
+  const penaltyItems = progress.appliedAdjustments
+    .filter(
+      (item) => item?.type === 'penalty' && item?.source !== 'wrong_attempts_limit',
+    )
+    .map((item) => ({
+      ...item,
+      value: Number(item?.value) || 0,
+    }))
+
+  const wrongLimitPenaltyItems = progress.appliedAdjustments
+    .filter(
+      (item) => item?.type === 'penalty' && item?.source === 'wrong_attempts_limit',
+    )
+    .map((item) => ({
+      ...item,
+      value: Number(item?.value) || 0,
+    }))
+
+  const storyEffects = Array.isArray(progress?.appliedStoryEffects)
+    ? progress.appliedStoryEffects
+    : []
+
+  return {
+    enabled: true,
+    bonusItems,
+    penaltyItems,
+    wrongLimitPenaltyItems,
+    storyEffects,
+    bonusValue: bonusItems.reduce((acc, item) => acc + (Number(item.value) || 0), 0),
+    penaltyValue: penaltyItems.reduce(
+      (acc, item) => acc + (Number(item.value) || 0),
+      0,
+    ),
+    wrongPenaltyValue: wrongLimitPenaltyItems.reduce(
+      (acc, item) => acc + (Number(item.value) || 0),
+      0,
+    ),
+  }
+}
+
 const buildEmptyTeamResult = (team, game) => {
   const taskDuration = Number(game?.taskDuration) || 3600
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
@@ -328,6 +393,7 @@ const buildEmptyTeamResult = (team, game) => {
     }
     return acc + taskResult.normalizedSeconds
   }, 0)
+  const prequelResult = getPrequelResult(game, null)
 
   return {
     teamId,
@@ -342,11 +408,25 @@ const buildEmptyTeamResult = (team, game) => {
     codePenaltySeconds: 0,
     codeBonusSeconds: 0,
     manyWrongCodePenaltySeconds: 0,
+    prequelBonusSeconds: prequelResult.bonusValue,
+    prequelPenaltySeconds: prequelResult.penaltyValue,
+    prequelWrongPenaltySeconds: prequelResult.wrongPenaltyValue,
     addingsSeconds: 0,
     addings: [],
-    finalSeconds: baseSeconds,
-    finalDisplay: secondsToTime(baseSeconds) || '00:00:00',
+    finalSeconds:
+      baseSeconds +
+      prequelResult.penaltyValue +
+      prequelResult.wrongPenaltyValue -
+      prequelResult.bonusValue,
+    finalDisplay:
+      secondsToTime(
+        baseSeconds +
+          prequelResult.penaltyValue +
+          prequelResult.wrongPenaltyValue -
+          prequelResult.bonusValue,
+      ) || '00:00:00',
     taskResults,
+    prequel: prequelResult,
     place: null,
   }
 }
@@ -367,6 +447,7 @@ const buildTeamResult = (team, gameTeam, game) => {
   let codeBonusSeconds = 0
   let manyWrongCodePenaltySeconds = 0
   let hasStopGame = false
+  const prequelResult = getPrequelResult(game, gameTeam)
 
   const taskResults = tasks.map((task, taskIndex) => {
     const raw = durations[taskIndex] ?? '[не начато]'
@@ -504,6 +585,9 @@ const buildTeamResult = (team, gameTeam, game) => {
     codePenaltySeconds +
     manyWrongCodePenaltySeconds -
     codeBonusSeconds +
+    prequelResult.penaltyValue +
+    prequelResult.wrongPenaltyValue -
+    prequelResult.bonusValue +
     addingsSeconds
 
   const teamId =
@@ -524,11 +608,15 @@ const buildTeamResult = (team, gameTeam, game) => {
     codePenaltySeconds,
     codeBonusSeconds,
     manyWrongCodePenaltySeconds,
+    prequelBonusSeconds: prequelResult.bonusValue,
+    prequelPenaltySeconds: prequelResult.penaltyValue,
+    prequelWrongPenaltySeconds: prequelResult.wrongPenaltyValue,
     addingsSeconds,
     addings,
     finalSeconds,
     finalDisplay: secondsToTime(finalSeconds) || '00:00:00',
     taskResults,
+    prequel: prequelResult,
     place: null,
   }
 }
@@ -569,6 +657,7 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
   let codePenaltyPoints = 0
   let codeBonusPoints = 0
   let manyWrongCodePenaltyPoints = 0
+  const prequelResult = getPrequelResult(game, gameTeam)
 
   const taskResults = tasks.map((task, taskIndex) => {
     const isCanceled = Boolean(task?.canceled)
@@ -638,6 +727,9 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
     codePenaltyPoints -
     manyWrongCodePenaltyPoints -
     failurePenaltyPoints +
+    prequelResult.bonusValue -
+    prequelResult.penaltyValue -
+    prequelResult.wrongPenaltyValue +
     addingsPoints
 
   const teamId =
@@ -656,11 +748,15 @@ const buildPhotoTeamResult = (team, gameTeam, game) => {
     codePenaltyPoints,
     codeBonusPoints,
     manyWrongCodePenaltyPoints,
+    prequelBonusPoints: prequelResult.bonusValue,
+    prequelPenaltyPoints: prequelResult.penaltyValue,
+    prequelWrongPenaltyPoints: prequelResult.wrongPenaltyValue,
     addingsPoints,
     addings,
     finalPoints,
     finalDisplay: `${finalPoints} б.`,
     taskResults,
+    prequel: prequelResult,
     place: null,
   }
 }

@@ -44,6 +44,11 @@ import buildGameFinancesSummary from '@helpers/gameFinancesSummary'
 import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { getNounTeams } from '@helpers/getNoun'
+import {
+  buildDefaultPrequel,
+  normalizePrequelConfig,
+  normalizePrequelStoryEffect,
+} from '@helpers/normalizePrequel'
 import { LOCATIONS } from '@server/serverConstants'
 
 const GAME_STATUS_BADGE_STYLES = {
@@ -537,9 +542,17 @@ const getUserParticipationTeams = (game) =>
 
       return {
         teamId,
+        gameTeamId:
+          entry?.gameTeamId === null || entry?.gameTeamId === undefined
+            ? ''
+            : String(entry.gameTeamId).trim(),
         teamName:
           typeof entry?.teamName === 'string' ? entry.teamName.trim() : '',
         isCaptain: Boolean(entry?.isCaptain),
+        prequelProgress:
+          entry?.prequelProgress && typeof entry.prequelProgress === 'object'
+            ? entry.prequelProgress
+            : null,
       }
     })
     .filter(Boolean)
@@ -797,6 +810,7 @@ const buildUpdatePayload = (game) => {
   }))
 
   const normalizedIsRated = Boolean(game.isRated ?? true)
+  const normalizedPrequel = normalizePrequelConfig(game?.prequel)
 
   return {
     name: game.name,
@@ -832,6 +846,77 @@ const buildUpdatePayload = (game) => {
         title: typeof media?.title === 'string' ? media.title.trim() : '',
       }))
       .filter((media) => media.url !== ''),
+    prequel: {
+      ...buildDefaultPrequel(),
+      enabled: Boolean(normalizedPrequel.enabled),
+      description:
+        typeof normalizedPrequel.description === 'string'
+          ? normalizedPrequel.description
+          : '',
+      descriptionRich:
+        typeof normalizedPrequel.descriptionRich === 'string'
+          ? normalizedPrequel.descriptionRich
+          : '',
+      descriptionMedia: (Array.isArray(normalizedPrequel.descriptionMedia)
+        ? normalizedPrequel.descriptionMedia
+        : []
+      )
+        .map((media, index) => ({
+          id:
+            typeof media?.id === 'string' && media.id.trim() !== ''
+              ? media.id.trim()
+              : `prequel-description-media-${index}`,
+          type:
+            media?.type === 'audio'
+              ? 'audio'
+              : media?.type === 'video'
+                ? 'video'
+                : 'image',
+          url: typeof media?.url === 'string' ? media.url.trim() : '',
+          mime: typeof media?.mime === 'string' ? media.mime.trim() : '',
+          size: Number(media?.size) || 0,
+          duration: Number(media?.duration) || 0,
+          path: typeof media?.path === 'string' ? media.path.trim() : '',
+          title: typeof media?.title === 'string' ? media.title.trim() : '',
+        }))
+        .filter((media) => media.url !== ''),
+      mode: normalizedPrequel.mode,
+      bonusCodes: (Array.isArray(normalizedPrequel.bonusCodes)
+        ? normalizedPrequel.bonusCodes
+        : []
+      ).map((item) => ({
+        ...(item?.mongoId ? { _id: item.mongoId } : {}),
+        ...(item?.id ? { id: item.id } : {}),
+        code: typeof item?.code === 'string' ? item.code : '',
+        value: Number(item?.value) || 0,
+        description: typeof item?.description === 'string' ? item.description : '',
+        image: normalizeMediaFieldString(item?.image),
+        storyEffects: (
+          Array.isArray(item?.storyEffects) ? item.storyEffects : []
+        ).map(normalizePrequelStoryEffect),
+      })),
+      penaltyCodes: (Array.isArray(normalizedPrequel.penaltyCodes)
+        ? normalizedPrequel.penaltyCodes
+        : []
+      ).map((item) => ({
+        ...(item?.mongoId ? { _id: item.mongoId } : {}),
+        ...(item?.id ? { id: item.id } : {}),
+        code: typeof item?.code === 'string' ? item.code : '',
+        value: Number(item?.value) || 0,
+        description: typeof item?.description === 'string' ? item.description : '',
+        image: normalizeMediaFieldString(item?.image),
+        storyEffects: (
+          Array.isArray(item?.storyEffects) ? item.storyEffects : []
+        ).map(normalizePrequelStoryEffect),
+      })),
+      wrongAttemptsLimit: toNullableNumber(normalizedPrequel.wrongAttemptsLimit),
+      wrongAttemptsPenalty: Number(normalizedPrequel.wrongAttemptsPenalty) || 0,
+      wrongAttemptsStoryEffects: (
+        Array.isArray(normalizedPrequel.wrongAttemptsStoryEffects)
+          ? normalizedPrequel.wrongAttemptsStoryEffects
+          : []
+      ).map(normalizePrequelStoryEffect),
+    },
     image: game.image ? game.image : null,
     startingPlace: game.startingPlace ?? '',
     finishingPlace: game.finishingPlace ?? '',
@@ -2601,6 +2686,7 @@ const GamesPage = ({
         description: '',
         descriptionRich: '',
         descriptionMedia: [],
+        prequel: buildDefaultPrequel(),
         image: null,
         startingPlace: '',
         finishingPlace: '',
@@ -2664,6 +2750,7 @@ const GamesPage = ({
           )
             ? normalizedSource.descriptionMedia
             : []
+          baseDraft.prequel = normalizePrequelConfig(normalizedSource.prequel)
           baseDraft.image = normalizedSource.image || null
         }
 
@@ -5008,6 +5095,7 @@ const GamesPage = ({
         } else {
           let nextStatus = null
           let clearTimeAddingsOnReset = true
+          let prequelResetMode = 'clear'
 
           if (actionId === 'restart_game' || actionId === 'activate_game') {
             nextStatus = 'active'
@@ -5047,8 +5135,8 @@ const GamesPage = ({
                     'Не удалось проверить ручные корректировки команд',
                 },
               )
-              const gameTeams = Array.isArray(json?.data?.gameTeams)
-                ? json.data.gameTeams
+              const gameTeams = Array.isArray(json?.data?.entries)
+                ? json.data.entries
                 : []
               const hasManualAdjustments = gameTeams.some((gameTeam) =>
                 (Array.isArray(gameTeam?.timeAddings)
@@ -5068,11 +5156,21 @@ const GamesPage = ({
                   )
                 }),
               )
+              const hasResolvedPrequel = gameTeams.some((gameTeam) =>
+                Boolean(gameTeam?.hasPrequelAdjustments),
+              )
 
               if (hasManualAdjustments) {
                 clearTimeAddingsOnReset = window.confirm(
                   'В игре есть ручные корректировки (Бонусы/Штрафы). Очистить их при перезапуске?',
                 )
+              }
+
+              if (hasResolvedPrequel) {
+                const shouldKeepPrequel = window.confirm(
+                  'Хотя бы одна команда уже решила приквел. Нажмите "ОК", чтобы сохранить корректировочные данные приквела при перезапуске, или "Отмена", чтобы удалить их.',
+                )
+                prequelResetMode = shouldKeepPrequel ? 'keep' : 'clear'
               }
             } catch (adjustmentsCheckError) {
               console.error(
@@ -5086,6 +5184,7 @@ const GamesPage = ({
                 return
               }
               clearTimeAddingsOnReset = true
+              prequelResetMode = 'clear'
             }
           }
 
@@ -5100,7 +5199,7 @@ const GamesPage = ({
                 data: {
                   status: nextStatus,
                   ...(actionId === 'restart_game'
-                    ? { clearTimeAddingsOnReset }
+                    ? { clearTimeAddingsOnReset, prequelResetMode }
                     : {}),
                 },
               }),
@@ -7873,8 +7972,10 @@ const moderatorShape = PropTypes.shape({
 
 const userParticipationTeamShape = PropTypes.shape({
   teamId: PropTypes.string.isRequired,
+  gameTeamId: PropTypes.string,
   teamName: PropTypes.string,
   isCaptain: PropTypes.bool,
+  prequelProgress: PropTypes.object,
 })
 
 GamesPage.propTypes = {

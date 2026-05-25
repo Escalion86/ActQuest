@@ -2107,6 +2107,7 @@ export default function GameControlPageClient({ session: _session }) {
         isOpen={Boolean(selectedTeamForStatsId)}
         onClose={() => setSelectedTeamForStatsId('')}
         teamName={selectedTeamForStats?.teamName || ''}
+        gameType={gameType}
         stats={selectedTeamForStats?.teamProgressStats || null}
       />
       <Modal

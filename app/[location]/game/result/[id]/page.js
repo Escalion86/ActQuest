@@ -161,6 +161,43 @@ const normalizeId = (value) => {
 
 const normalizeRole = (value) => String(value || '').trim().toLowerCase()
 
+const formatPrequelValue = (value, gameType) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return '—'
+  if (gameType === 'photo') {
+    return `${numeric} б.`
+  }
+  return toHHMMSS(Math.abs(numeric), true)
+}
+
+const getPrequelStoryEffectLabel = (effect) => {
+  if (!effect || typeof effect !== 'object') {
+    return 'Story-эффект'
+  }
+
+  if (typeof effect.label === 'string' && effect.label.trim()) {
+    return effect.label.trim()
+  }
+
+  if (effect.type === 'grant_item') {
+    return effect.itemId
+      ? `Предмет: ${effect.itemId}`
+      : 'Выдан предмет'
+  }
+  if (effect.type === 'unlock_node') {
+    return effect.nodeId ? `Нода: ${effect.nodeId}` : 'Открыта нода'
+  }
+  if (effect.type === 'set_flag') {
+    return effect.flagKey ? `Флаг: ${effect.flagKey}` : 'Установлен флаг'
+  }
+  if (effect.type === 'score_modifier') {
+    const delta = Number(effect.value) || 0
+    return `Story score ${delta >= 0 ? '+' : ''}${delta}`
+  }
+
+  return effect.type || 'Story-эффект'
+}
+
 const Time = ({ start, seconds, duration, forceFinish = false }) => {
   const [time, setTime] = useState(0)
   const [interval, setIntervalState] = useState(null)
@@ -864,14 +901,19 @@ const GameBlock = ({ game, isDarkTheme }) => {
       return (
         (Number(computedTeam.failurePenaltySeconds) || 0) +
         (Number(computedTeam.codePenaltySeconds) || 0) +
-        (Number(computedTeam.manyWrongCodePenaltySeconds) || 0)
+        (Number(computedTeam.manyWrongCodePenaltySeconds) || 0) +
+        (Number(computedTeam.prequelPenaltySeconds) || 0) +
+        (Number(computedTeam.prequelWrongPenaltySeconds) || 0)
       )
     }
     return teamsTaskPenalty[index].reduce((sum, penalty) => sum + penalty, 0)
   })
   const totalBonus = gameTeamsWithTeams.map(({ computedTeam }, index) => {
     if (computedTeam) {
-      return Number(computedTeam.codeBonusSeconds) || 0
+      return (
+        (Number(computedTeam.codeBonusSeconds) || 0) +
+        (Number(computedTeam.prequelBonusSeconds) || 0)
+      )
     }
     return teamsTaskBonus[index].reduce((sum, bonus) => sum + bonus, 0)
   })
@@ -980,6 +1022,49 @@ const GameBlock = ({ game, isDarkTheme }) => {
               .filter(Boolean)
           : []
 
+      const fromComputedPrequel =
+        computedTeam?.prequel && computedTeam.prequel.enabled
+          ? [
+              ...(Array.isArray(computedTeam.prequel.bonusItems)
+                ? computedTeam.prequel.bonusItems.map((item) => ({
+                    type: 'bonus',
+                    seconds: Math.abs(Number(item?.value) || 0),
+                    display: formatPrequelValue(item?.value, game?.type),
+                    description:
+                      typeof item?.description === 'string' && item.description.trim()
+                        ? `Приквел: ${item.description.trim()}`
+                        : item?.code
+                          ? `Приквел: бонусный код ${item.code}`
+                          : 'Приквел: бонус',
+                  }))
+                : []),
+              ...(Array.isArray(computedTeam.prequel.penaltyItems)
+                ? computedTeam.prequel.penaltyItems.map((item) => ({
+                    type: 'penalty',
+                    seconds: Math.abs(Number(item?.value) || 0),
+                    display: formatPrequelValue(item?.value, game?.type),
+                    description:
+                      typeof item?.description === 'string' && item.description.trim()
+                        ? `Приквел: ${item.description.trim()}`
+                        : item?.code
+                          ? `Приквел: штрафной код ${item.code}`
+                          : 'Приквел: штраф',
+                  }))
+                : []),
+              ...(Array.isArray(computedTeam.prequel.wrongLimitPenaltyItems)
+                ? computedTeam.prequel.wrongLimitPenaltyItems.map((item) => ({
+                    type: 'penalty',
+                    seconds: Math.abs(Number(item?.value) || 0),
+                    display: formatPrequelValue(item?.value, game?.type),
+                    description:
+                      typeof item?.description === 'string' && item.description.trim()
+                        ? `Приквел: ${item.description.trim()}`
+                        : 'Приквел: штраф за лимит неверных кодов',
+                  }))
+                : []),
+            ].filter((item) => item.seconds > 0)
+          : []
+
       const fromLegacyAddings =
         !computedTeam && Array.isArray(timeAddings)
           ? timeAddings
@@ -1038,11 +1123,29 @@ const GameBlock = ({ game, isDarkTheme }) => {
       return [
         ...fromComputedTasks,
         ...fromTaskAdjustments,
+        ...fromComputedPrequel,
         ...fromComputedAddings,
         ...fromLegacyAddings,
       ]
     },
   )
+
+  const prequelSummaryTeams = gameTeamsWithTeams
+    .map(({ team, teamId, outOfCompetition, computedTeam }) => ({
+      teamId,
+      teamName: team?.name || 'Без названия',
+      outOfCompetition: Boolean(outOfCompetition),
+      prequel: computedTeam?.prequel || null,
+    }))
+    .filter(
+      ({ prequel }) =>
+        prequel?.enabled &&
+        ((Array.isArray(prequel?.bonusItems) && prequel.bonusItems.length > 0) ||
+          (Array.isArray(prequel?.penaltyItems) && prequel.penaltyItems.length > 0) ||
+          (Array.isArray(prequel?.wrongLimitPenaltyItems) &&
+            prequel.wrongLimitPenaltyItems.length > 0) ||
+          (Array.isArray(prequel?.storyEffects) && prequel.storyEffects.length > 0)),
+    )
 
   const fallbackPlaces = totalTeamsTimeWithBonusAndPenalty.map(
     (time) =>
@@ -1763,6 +1866,138 @@ const GameBlock = ({ game, isDarkTheme }) => {
           </div>
         </div>
       </div>
+      {prequelSummaryTeams.length > 0 ? (
+        <div className="relative z-50 mx-auto mt-6 max-w-6xl px-4 pb-10">
+          <div className="rounded-3xl border border-slate-300/70 bg-white/85 p-5 shadow-[0_10px_26px_rgba(2,8,23,0.14)] dark:border-[#00D1FF]/32 dark:bg-[#060d20]/92 dark:shadow-[0_0_0_1px_rgba(0,209,255,0.14),0_0_26px_rgba(0,209,255,0.12),0_22px_42px_rgba(0,0,0,0.55)]">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                Приквел
+              </h2>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                Отдельные корректировки и story-эффекты, полученные командами до старта игры.
+              </p>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              {prequelSummaryTeams.map(
+                ({ teamId, teamName, outOfCompetition, prequel }) => (
+                <section
+                  key={`prequel-${teamId || teamName}`}
+                  className="rounded-2xl border border-slate-300/70 bg-slate-50/85 p-4 dark:border-cyan-500/20 dark:bg-slate-900/45"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      {teamName}
+                    </h3>
+                    {outOfCompetition ? (
+                      <span className="inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                        Вне зачёта
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    {Number(prequel?.bonusValue) > 0 ? (
+                      <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-200">
+                        Бонус: {formatPrequelValue(prequel?.bonusValue, game.type)}
+                      </span>
+                    ) : null}
+                    {Number(prequel?.penaltyValue) > 0 ? (
+                      <span className="inline-flex items-center rounded-full border border-rose-300 bg-rose-50 px-2.5 py-1 font-medium text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-200">
+                        Штрафные коды: {formatPrequelValue(prequel?.penaltyValue, game.type)}
+                      </span>
+                    ) : null}
+                    {Number(prequel?.wrongPenaltyValue) > 0 ? (
+                      <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-200">
+                        Лимит ошибок: {formatPrequelValue(prequel?.wrongPenaltyValue, game.type)}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 space-y-3 text-sm">
+                    {Array.isArray(prequel?.bonusItems) && prequel.bonusItems.length > 0 ? (
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Бонусные коды
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {prequel.bonusItems.map((item, index) => (
+                            <span
+                              key={`bonus-${item.code || index}`}
+                              className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2 py-1 text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-200"
+                              title={item.description || undefined}
+                            >
+                              {item.code || 'Бонус'}: -{formatPrequelValue(item.value, game.type)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {Array.isArray(prequel?.penaltyItems) && prequel.penaltyItems.length > 0 ? (
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Штрафные коды
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {prequel.penaltyItems.map((item, index) => (
+                            <span
+                              key={`penalty-${item.code || index}`}
+                              className="inline-flex items-center rounded-full border border-rose-300 bg-rose-50 px-2 py-1 text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-200"
+                              title={item.description || undefined}
+                            >
+                              {item.code || 'Штраф'}: +{formatPrequelValue(item.value, game.type)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {Array.isArray(prequel?.wrongLimitPenaltyItems) &&
+                    prequel.wrongLimitPenaltyItems.length > 0 ? (
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Штрафы за лимит неверных кодов
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {prequel.wrongLimitPenaltyItems.map((item, index) => (
+                            <span
+                              key={`wrong-limit-${index}`}
+                              className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-1 text-amber-700 dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-200"
+                              title={item.description || undefined}
+                            >
+                              +{formatPrequelValue(item.value, game.type)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {Array.isArray(prequel?.storyEffects) && prequel.storyEffects.length > 0 ? (
+                      <div>
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Story-эффекты
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {prequel.storyEffects.map((effect, index) => (
+                            <span
+                              key={`effect-${effect.type || 'story'}-${index}`}
+                              className="inline-flex items-center rounded-full border border-violet-300 bg-violet-50 px-2 py-1 text-violet-700 dark:border-violet-500/35 dark:bg-violet-500/10 dark:text-violet-200"
+                            >
+                              {getPrequelStoryEffectLabel(effect)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
+                ),
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div
         className="absolute top-0 bottom-0 w-full bg-repeat opacity-20 dark:opacity-18"
         style={{

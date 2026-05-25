@@ -1,3 +1,8 @@
+import {
+  buildDefaultPrequel,
+  normalizePrequelConfig,
+} from '@helpers/normalizePrequel'
+
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
     return 'client'
@@ -64,6 +69,10 @@ const sanitizeCabinetGameForViewer = (game, { canViewRestrictedGameInfo }) => {
     hideResult: Boolean(game?.hideResult),
     finances: [],
     tasks: [],
+    prequel: {
+      ...buildDefaultPrequel(),
+      ...normalizePrequelConfig(game?.prequel, { includeCodes: false }),
+    },
     moderators: [],
     agents: [],
     agentNotifications: undefined,

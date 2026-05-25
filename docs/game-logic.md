@@ -57,6 +57,7 @@
 - Коды: `findedCodes[]`, `wrongCodes[]`, `findedBonusCodes[]`, `findedPenaltyCodes[]`
 - Photo: `photos[taskIndex].photos`, `photos[taskIndex].checks`
 - Story: `storyProgress` (status, inventory, history)
+- Приквел: `prequelProgress` (найденные коды, неверные попытки, корректировки, story-эффекты)
 
 ### Связи в БД
 
@@ -101,6 +102,23 @@ TeamsUsers (члены команды - текущие)
   - для `admin/dev` и модераторов игры (проверка `canManageGameStatus`) — кнопка доступна всегда, если игра `finished|closed` и есть `result.computed`,
   - для обычного пользователя — только если игра `finished|closed`, есть `result.computed` и `hideResult !== true`.
 - Если snapshot'ов нет, результат пересобрать нельзя (игра пропускается в таких операциях).
+
+### Приквел
+
+- Приквел хранится отдельно от `tasks` в `Games.prequel`.
+- Доступен только до фактического старта игры.
+- Форму ввода видит только капитан зарегистрированной команды.
+- Прогресс команды хранится в `GamesTeams.prequelProgress`.
+- Режимы:
+  - `single_hit` — закрыть приквел после первого найденного бонусного или штрафного кода;
+  - `multi_hit` — можно собрать несколько кодов.
+- Повторный найденный код не засчитывается повторно.
+- Лимит неверных кодов работает пакетно:
+  - каждые `N` неверных кодов дают ещё один штраф.
+- Влияние на результат:
+  - `classic` — секунды;
+  - `photo` — баллы;
+  - `story` — отдельные `storyEffects`, применяемые при инициализации `storyProgress`.
 
 ### Когда формировать snapshots
 

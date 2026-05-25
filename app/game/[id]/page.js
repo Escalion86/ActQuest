@@ -2,12 +2,16 @@ import { redirect, notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import fetchGame from '@server/fetchGame'
+import { normalizePrequelConfig } from '@helpers/normalizePrequel'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { authOptions } from '@server/auth/authOptions'
 import GameEntryPageClient from '@components/location-game/GameEntryPageClient'
 import { resolveGameLocationById } from '@app/api/cabinet/_lib/resolveGameLocation'
 
 export const dynamic = 'force-dynamic'
+
+const normalizeStringId = (value) =>
+  value === null || value === undefined ? '' : String(value).trim()
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params
@@ -91,6 +95,9 @@ export default async function GameEntryPage({ params }) {
     }
 
     const serializedGame = JSON.parse(JSON.stringify(game))
+    serializedGame.prequel = normalizePrequelConfig(serializedGame.prequel, {
+      includeCodes: false,
+    })
     const status = serializedGame.status || 'active'
     const isGameStarted = status === 'started'
     const isGameFinished = status === 'finished'
@@ -125,18 +132,24 @@ export default async function GameEntryPage({ params }) {
         session?.user?._id ||
         session?.user?.id ||
         null
+      const currentTelegramId = session?.user?.id || session?.user?.telegramId || null
       const normalizedCurrentUserId =
-        currentUserId === null || currentUserId === undefined
-          ? null
-          : String(currentUserId)
+        normalizeStringId(currentUserId) || null
+      const normalizedCurrentTelegramId =
+        normalizeStringId(currentTelegramId) || null
 
-      if (teamIds.length > 0 && normalizedCurrentUserId) {
+      if (
+        teamIds.length > 0 &&
+        (normalizedCurrentUserId || normalizedCurrentTelegramId)
+      ) {
         const teamsUsers = await db
           .model('TeamsUsers')
           .find({ teamId: { $in: teamIds } })
           .lean()
         const memberships = teamsUsers.filter(
-          (item) => String(item.userId || '') === normalizedCurrentUserId,
+          (item) =>
+            normalizeStringId(item.userId) === normalizedCurrentUserId ||
+            normalizeStringId(item.userTelegramId) === normalizedCurrentTelegramId,
         )
 
         if (memberships.length > 0) {
@@ -160,10 +173,21 @@ export default async function GameEntryPage({ params }) {
               const mappedTeam = gamesTeams.find(
                 (gameTeam) => String(gameTeam.teamId) === id,
               )
+              const teamMemberships = memberships.filter(
+                (membership) => String(membership.teamId || '') === id,
+              )
               if (!mappedTeam) return null
               return {
                 id,
+                gameTeamId: String(mappedTeam._id),
                 name: team.name || 'Команда без названия',
+                isCaptain:
+                  teamMemberships.some(
+                    (membership) =>
+                      String(membership?.role || '').trim().toLowerCase() ===
+                      'captain',
+                  ),
+                prequelProgress: mappedTeam.prequelProgress || null,
               }
             })
             .filter(Boolean)

@@ -181,6 +181,57 @@ const StoryEdgeSchema = new Schema(
   { _id: false },
 )
 
+const PrequelMediaSchema = new Schema(
+  {
+    id: { type: String, trim: true },
+    type: {
+      type: String,
+      enum: ['image', 'audio', 'video'],
+      default: 'image',
+    },
+    url: { type: String, trim: true, default: '' },
+    mime: { type: String, trim: true, default: '' },
+    size: { type: Number, default: 0 },
+    duration: { type: Number, default: 0 },
+    path: { type: String, trim: true, default: '' },
+    title: { type: String, trim: true, default: '' },
+  },
+  { _id: false },
+)
+
+const PrequelStoryEffectSchema = new Schema(
+  {
+    id: { type: String, trim: true, required: true },
+    type: {
+      type: String,
+      enum: ['grant_item', 'unlock_node', 'set_flag', 'score_modifier'],
+      default: 'grant_item',
+    },
+    itemId: { type: String, trim: true, default: '' },
+    nodeId: { type: String, trim: true, default: '' },
+    flagKey: { type: String, trim: true, default: '' },
+    flagValue: { type: Boolean, default: true },
+    value: { type: Number, default: 0 },
+    label: { type: String, trim: true, default: '' },
+  },
+  { _id: false },
+)
+
+const PrequelCodeSchema = new Schema(
+  {
+    id: { type: String, trim: true },
+    code: { type: String, trim: true, default: '' },
+    value: { type: Number, default: 0 },
+    description: { type: String, trim: true, default: '' },
+    image: { type: String, trim: true, default: '' },
+    storyEffects: {
+      type: [PrequelStoryEffectSchema],
+      default: [],
+    },
+  },
+  { _id: false },
+)
+
 const gamesSchema = {
   name: {
     type: String,
@@ -215,6 +266,43 @@ const gamesSchema = {
       },
     ],
     default: [],
+  },
+  prequel: {
+    type: {
+      enabled: { type: Boolean, default: false },
+      description: { type: String, default: '', trim: true },
+      descriptionRich: { type: String, default: '' },
+      descriptionMedia: {
+        type: [PrequelMediaSchema],
+        default: [],
+      },
+      mode: {
+        type: String,
+        enum: ['single_hit', 'multi_hit'],
+        default: 'multi_hit',
+      },
+      bonusCodes: {
+        type: [PrequelCodeSchema],
+        default: [],
+      },
+      penaltyCodes: {
+        type: [PrequelCodeSchema],
+        default: [],
+      },
+      wrongAttemptsLimit: {
+        type: Number,
+        default: null,
+      },
+      wrongAttemptsPenalty: {
+        type: Number,
+        default: 0,
+      },
+      wrongAttemptsStoryEffects: {
+        type: [PrequelStoryEffectSchema],
+        default: [],
+      },
+    },
+    default: () => ({}),
   },
   dateStart: {
     type: Date,

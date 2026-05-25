@@ -7,6 +7,7 @@ import {
   getActiveStoryInventory,
   getAvailableStoryNodes,
 } from '@server/storyEngine'
+import applyPrequelStoryEffects from '@server/applyPrequelStoryEffects'
 import { toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
@@ -154,7 +155,18 @@ export const ensureStoryProgress = async ({
     return gameTeam.storyProgress
   }
 
-  const progress = buildInitialStoryProgress(game, { actor })
+  const baseProgress = buildInitialStoryProgress(game, { actor })
+  const appliedPrequelEffects = Array.isArray(
+    gameTeam?.prequelProgress?.appliedStoryEffects,
+  )
+    ? gameTeam.prequelProgress.appliedStoryEffects
+    : []
+  const { progress } = applyPrequelStoryEffects({
+    game,
+    progress: baseProgress,
+    effects: appliedPrequelEffects,
+    actor,
+  })
   if (save) {
     await GamesTeams.updateOne(
       { _id: gameTeam._id },

@@ -86,6 +86,26 @@
 - Проверить, что город в профиле/сессии — строковый city key (`krsk`, `nsk`, ...), а не geo-объект.
 - Проверить, что резолв города в auth/session идёт через `helpers/resolveUserCityKey.js`.
 
+### 9. Симптом: капитан не видит приквел
+
+- Проверить, что `game.prequel.enabled === true`.
+- Проверить, что команда зарегистрирована на игру и пользователь имеет роль `captain` в `TeamsUsers`.
+- Проверить, что у игры ещё нет `dateStartFact`.
+- Проверить payload страницы `/game/[id]`: в нём должен быть `participantTeams[].gameTeamId`.
+
+### 10. Симптом: штрафы за неверные коды приквела считаются неверно
+
+- Проверить `Games.prequel.wrongAttemptsLimit` и `wrongAttemptsPenalty`.
+- Проверить `GamesTeams.prequelProgress.wrongCodes`.
+- Проверить `GamesTeams.prequelProgress.wrongPenaltyAppliedCount`.
+- Проверить, что штраф начисляется пакетно, а не один раз навсегда.
+
+### 11. Симптом: результат игры не учитывает приквел
+
+- Проверить `GamesTeams.prequelProgress.appliedAdjustments`.
+- Проверить `server/buildGameResultComputed.js` и наличие блока `team.prequel` в `result.computed`.
+- Для `story` проверить `prequelProgress.appliedStoryEffects` и инициализацию `storyProgress` в `app/api/cabinet/_lib/storyApi.js`.
+
 ## Практические задачи и решения
 
 ### Задача: Показать кнопку просмотра команд обычным пользователям

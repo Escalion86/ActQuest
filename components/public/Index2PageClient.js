@@ -137,6 +137,11 @@ const scenarioLocationTitleByKey = scenarioLocations.reduce((acc, item) => {
   acc[item.key] = item.title
   return acc
 }, {})
+const homepageChatCities = [
+  { key: 'krsk', label: 'Чат проекта в Красноярске' },
+  { key: 'ekb', label: 'Чат проекта в Екатеринбурге' },
+  { key: 'nrsk', label: 'Чат проекта в Норильске' },
+]
 
 const FlowRow = ({
   text,
@@ -640,7 +645,7 @@ const Index2Page = ({ seoFooter }) => {
   const [archiveDragActive, setArchiveDragActive] = useState(false)
   const [archiveStatus, setArchiveStatus] = useState('')
   const [sledDragGhost, setSledDragGhost] = useState(null)
-  const [projectChatUrl, setProjectChatUrl] = useState('')
+  const [projectChatLinks, setProjectChatLinks] = useState({})
   const [visibleFlowCount, setVisibleFlowCount] = useState(0)
   const transitionTimeoutRef = useRef(null)
   const inputGlitchTimeoutRef = useRef(null)
@@ -744,12 +749,12 @@ const Index2Page = ({ seoFooter }) => {
 
     let cancelled = false
 
-    const fetchProjectChatUrl = async () => {
+    const fetchProjectChatLinks = async () => {
       try {
         const params = new URLSearchParams({
           type: 'settings',
           location: selectedScenarioLocation,
-          select: 'chatUrl',
+          select: 'chatUrl,chatUrlsByLocation',
         })
         const response = await fetch(
           `/api/public/discovery?${params.toString()}`,
@@ -757,31 +762,53 @@ const Index2Page = ({ seoFooter }) => {
         const json = await response.json()
 
         if (!response.ok || cancelled) {
-          if (!cancelled) setProjectChatUrl('')
+          if (!cancelled) setProjectChatLinks({})
           return
         }
 
         const settingsDoc = Array.isArray(json?.data)
           ? json.data[0]
           : json?.data
-        const nextUrl = normalizeExternalUrl(settingsDoc?.chatUrl)
+        const fallbackUrl = normalizeExternalUrl(settingsDoc?.chatUrl)
+        const rawChatUrlsByLocation =
+          settingsDoc?.chatUrlsByLocation &&
+          typeof settingsDoc.chatUrlsByLocation === 'object'
+            ? settingsDoc.chatUrlsByLocation
+            : {}
+        const nextLinks = homepageChatCities.reduce((acc, city) => {
+          const locationUrl = normalizeExternalUrl(
+            rawChatUrlsByLocation?.[city.key],
+          )
+          acc[city.key] = locationUrl || fallbackUrl
+          return acc
+        }, {})
         if (!cancelled) {
-          setProjectChatUrl(nextUrl)
+          setProjectChatLinks(nextLinks)
         }
       } catch {
         if (!cancelled) {
-          setProjectChatUrl('')
+          setProjectChatLinks({})
         }
       }
     }
 
-    fetchProjectChatUrl()
+    fetchProjectChatLinks()
 
     return () => {
       cancelled = true
     }
   }, [selectedScenarioLocation, stage])
-
+  const homepageChatButtons = useMemo(
+    () =>
+      homepageChatCities.map((city) => ({
+        ...city,
+        href:
+          typeof projectChatLinks?.[city.key] === 'string'
+            ? projectChatLinks[city.key].trim()
+            : '',
+      })),
+    [projectChatLinks],
+  )
 
   useEffect(() => {
     const isOpen =
@@ -1126,13 +1153,17 @@ const Index2Page = ({ seoFooter }) => {
         setNearestScenarioGame({
           ...nearest,
           dateLabel: nearest.dateStart
-            ? formatDateInLocationTimeZone(nearest.dateStart, nearest.location, {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })
+            ? formatDateInLocationTimeZone(
+                nearest.dateStart,
+                nearest.location,
+                {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                },
+              )
             : 'Дата уточняется',
         })
         setScenarioAccessState('checking')
@@ -1386,10 +1417,7 @@ const Index2Page = ({ seoFooter }) => {
 
   const openRiddleReveal = (finalAnswer) => {
     if (answerStartedAt && typeof window !== 'undefined') {
-      safeLocalStorageSet(
-        REACTION_MS_KEY,
-        String(Date.now() - answerStartedAt),
-      )
+      safeLocalStorageSet(REACTION_MS_KEY, String(Date.now() - answerStartedAt))
     }
 
     setRiddleError('')
@@ -1616,10 +1644,7 @@ const Index2Page = ({ seoFooter }) => {
       if (typeof window !== 'undefined') {
         safeLocalStorageSet(MAP_GAME_COMPLETE_KEY, '1')
         safeLocalStorageSet(MAP_GAME_PATH_KEY, JSON.stringify(nextPath))
-        safeLocalStorageSet(
-          MAP_GAME_SEGMENTS_KEY,
-          JSON.stringify(nextSegments),
-        )
+        safeLocalStorageSet(MAP_GAME_SEGMENTS_KEY, JSON.stringify(nextSegments))
       }
     }
   }
@@ -2172,7 +2197,7 @@ const Index2Page = ({ seoFooter }) => {
         </div>
 
         {stage === 'prelude' && (
-          <section className="relative z-10 flex flex-col justify-center w-full max-w-5xl min-h-dvh px-6 mx-auto">
+          <section className="relative z-10 flex flex-col justify-center w-full max-w-5xl px-6 mx-auto min-h-dvh">
             <div className="space-y-3 font-mono text-sm uppercase tracking-[0.16em] text-[#b9a8da] md:text-base">
               {preludeLines.slice(0, visiblePrelude).map((line) => (
                 <p key={line} className="animate-fade-in">
@@ -2213,7 +2238,7 @@ const Index2Page = ({ seoFooter }) => {
         )}
 
         {stage === 'riddle' && (
-          <section className="relative z-10 flex items-center w-full max-w-3xl min-h-dvh px-6 mx-auto">
+          <section className="relative z-10 flex items-center w-full max-w-3xl px-6 mx-auto min-h-dvh">
             {riddlePhase === 'question' && (
               <div
                 className={`w-full rounded-3xl border border-white/15 bg-[#120726]/85 p-8 backdrop-blur-xl transition-all duration-300 ${
@@ -2249,15 +2274,13 @@ const Index2Page = ({ seoFooter }) => {
                     >
                       Ответить
                     </button>
-                    {wrongAttempts >= 2 && (
-                      <button
-                        type="button"
-                        onClick={handleGiveUp}
-                        className="cursor-pointer rounded-xl border border-[#7A00FF]/50 bg-[#7A00FF]/10 px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.12em] text-[#e9d6ff] transition hover:bg-[#7A00FF]/20"
-                      >
-                        Я сдаюсь
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={handleGiveUp}
+                      className="cursor-pointer rounded-xl border border-[#7A00FF]/50 bg-[#7A00FF]/10 px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.12em] text-[#e9d6ff] transition hover:bg-[#7A00FF]/20"
+                    >
+                      Я сдаюсь
+                    </button>
                   </div>
                 </form>
 
@@ -2324,12 +2347,6 @@ const Index2Page = ({ seoFooter }) => {
                   ActQuest
                 </p>
                 <div className="flex items-center gap-3">
-                  <Link
-                    href="/cabinet/login"
-                    className="px-4 py-2 text-sm font-semibold transition border cursor-pointer rounded-xl border-white/20 text-slate-100 hover:bg-white/10"
-                  >
-                    Войти
-                  </Link>
                   <button
                     type="button"
                     onClick={handleResetProgress}
@@ -2337,6 +2354,12 @@ const Index2Page = ({ seoFooter }) => {
                   >
                     Сбросить прогресс
                   </button>
+                  <Link
+                    href="/cabinet/login"
+                    className="px-4 py-2 text-sm font-semibold transition border cursor-pointer rounded-xl border-white/20 text-slate-100 hover:bg-white/10"
+                  >
+                    Войти
+                  </Link>
                 </div>
               </div>
             </header>
@@ -2377,7 +2400,7 @@ const Index2Page = ({ seoFooter }) => {
                 </p>
                 <Link
                   href="/cabinet/login?mode=register"
-                  className="mt-8 inline-flex cursor-pointer rounded-2xl border border-[#00D1FF]/50 bg-[#00D1FF]/10 px-6 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-[#bbf5ff] transition hover:bg-[#00D1FF]/20"
+                  className="mt-8 inline-flex cursor-pointer rounded-2xl border border-[#00D1FF]/50 bg-[#00D1FF]/10 px-6 py-3 text font-semibold uppercase tracking-[0.12em] text-[#bbf5ff] transition hover:bg-[#00D1FF]/20"
                 >
                   Начать игру
                 </Link>
@@ -2844,28 +2867,41 @@ const Index2Page = ({ seoFooter }) => {
                       placement: 'home_init_register_btn',
                     })
                   }
-                  className="cta-pulse mt-8 inline-flex cursor-pointer rounded-2xl border border-[#00D1FF]/40 bg-[#00D1FF]/10 px-7 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#baf3ff] transition hover:bg-[#00D1FF]/20"
+                  className="cta-pulse mt-8 inline-flex cursor-pointer rounded-2xl border border-[#00D1FF]/40 bg-[#00D1FF]/10 px-7 py-3 text-base font-semibold uppercase tracking-[0.14em] text-[#baf3ff] transition hover:bg-[#00D1FF]/20"
                 >
                   Начать игру
                 </Link>
-                {projectChatUrl ? (
-                  <div className="mt-4">
-                    <a
-                      href={projectChatUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() =>
-                        reachAnalyticsGoal('aq_click_chat', {
-                          city: selectedScenarioLocation || 'all',
-                          page_type: 'home_page',
-                          chat_target: selectedScenarioLocation || 'all',
-                          placement: 'home_init_chat_btn',
-                        })
-                      }
-                      className="inline-flex cursor-pointer rounded-xl border border-[#7A00FF]/45 bg-[#7A00FF]/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#d9c7ff] transition hover:bg-[#7A00FF]/20"
-                    >
-                      Чат проекта
-                    </a>
+                {homepageChatButtons.length ? (
+                  <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                    {homepageChatButtons.map((chatButton) =>
+                      chatButton.href ? (
+                        <a
+                          key={chatButton.key}
+                          href={chatButton.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() =>
+                            reachAnalyticsGoal('aq_click_chat', {
+                              city: selectedScenarioLocation || 'all',
+                              page_type: 'home_page',
+                              chat_target: chatButton.key,
+                              placement: 'home_init_chat_btn',
+                            })
+                          }
+                          className="inline-flex cursor-pointer rounded-xl border border-[#7A00FF]/45 bg-[#7A00FF]/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#d9c7ff] transition hover:bg-[#7A00FF]/20"
+                        >
+                          {chatButton.label}
+                        </a>
+                      ) : (
+                        <span
+                          key={chatButton.key}
+                          aria-disabled="true"
+                          className="inline-flex cursor-not-allowed rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/35"
+                        >
+                          {chatButton.label}
+                        </span>
+                      ),
+                    )}
                   </div>
                 ) : null}
               </div>
@@ -3373,4 +3409,3 @@ Index2Page.defaultProps = {
 }
 
 export default Index2Page
-

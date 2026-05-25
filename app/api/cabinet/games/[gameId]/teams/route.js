@@ -11,6 +11,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import logSiteEvent from '@helpers/logSiteEvent'
 import { toStringId } from '@helpers/idAndDate'
 import { getCaptainRoleQuery } from '@helpers/teamRoles'
+import { hasPrequelAdjustments } from '@helpers/normalizePrequel'
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
@@ -127,6 +128,7 @@ const normalizeGameTeamEntry = (doc) => {
     teamId,
     outOfCompetition: Boolean(doc?.outOfCompetition),
     timeAddings: normalizeTimeAddingsForResponse(doc?.timeAddings),
+    hasPrequelAdjustments: hasPrequelAdjustments(doc?.prequelProgress),
   }
 }
 
@@ -322,7 +324,13 @@ export async function GET(request, { params }) {
     const gameTeamsDocs = await GamesTeamsModel.find({
       gameId: normalizedResolvedGameId,
     })
-      .select({ _id: 1, teamId: 1, outOfCompetition: 1, timeAddings: 1 })
+      .select({
+        _id: 1,
+        teamId: 1,
+        outOfCompetition: 1,
+        timeAddings: 1,
+        prequelProgress: 1,
+      })
       .lean()
 
     const entries = Array.isArray(gameTeamsDocs)

@@ -4,6 +4,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import { toStringId } from '@helpers/idAndDate'
 import getSecondsBetween from '@helpers/getSecondsBetween'
+import {
+  normalizePrequelConfig,
+  normalizePrequelProgress,
+} from '@helpers/normalizePrequel'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { fetchUnreadTeamMessageCounts } from '@server/gameTeamMessages'
 import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
@@ -677,6 +681,100 @@ const buildCodeDescriptionLookup = (definitions) => {
   return lookup
 }
 
+const buildPrequelStatusStats = (game, gameTeam) => {
+  const prequel = normalizePrequelConfig(game?.prequel)
+  const progress = normalizePrequelProgress(gameTeam?.prequelProgress)
+
+  if (!prequel.enabled) {
+    return {
+      enabled: false,
+      mode: prequel.mode,
+      isClosed: false,
+      closedReason: null,
+      attemptsCount: 0,
+      wrongCodesCount: 0,
+      wrongPenaltyAppliedCount: 0,
+      bonusItems: [],
+      penaltyItems: [],
+      wrongLimitPenaltyItems: [],
+      storyEffects: [],
+      bonusValue: 0,
+      penaltyValue: 0,
+      wrongPenaltyValue: 0,
+    }
+  }
+
+  const bonusItems = progress.appliedAdjustments
+    .filter((item) => item?.type === 'bonus')
+    .map((item) => ({
+      code: normalizeText(item?.code),
+      description: normalizeText(item?.description),
+      value: Number(item?.value) || 0,
+      createdAt: normalizeIsoDate(item?.createdAt),
+      source: normalizeText(item?.source),
+    }))
+
+  const penaltyItems = progress.appliedAdjustments
+    .filter(
+      (item) => item?.type === 'penalty' && item?.source !== 'wrong_attempts_limit',
+    )
+    .map((item) => ({
+      code: normalizeText(item?.code),
+      description: normalizeText(item?.description),
+      value: Number(item?.value) || 0,
+      createdAt: normalizeIsoDate(item?.createdAt),
+      source: normalizeText(item?.source),
+    }))
+
+  const wrongLimitPenaltyItems = progress.appliedAdjustments
+    .filter(
+      (item) => item?.type === 'penalty' && item?.source === 'wrong_attempts_limit',
+    )
+    .map((item) => ({
+      code: normalizeText(item?.code),
+      description: normalizeText(item?.description),
+      value: Number(item?.value) || 0,
+      createdAt: normalizeIsoDate(item?.createdAt),
+      source: normalizeText(item?.source),
+    }))
+
+  const storyEffects = progress.appliedStoryEffects.map((item) => ({
+    type: normalizeText(item?.type),
+    label: normalizeText(item?.label),
+    code: normalizeText(item?.code),
+    source: normalizeText(item?.source),
+    itemId: normalizeText(item?.itemId),
+    nodeId: normalizeText(item?.nodeId),
+    flagKey: normalizeText(item?.flagKey),
+    flagValue: item?.flagValue !== false,
+    value: Number(item?.value) || 0,
+    appliedAt: normalizeIsoDate(item?.appliedAt),
+  }))
+
+  return {
+    enabled: true,
+    mode: prequel.mode,
+    isClosed: Boolean(progress.isClosed),
+    closedReason: progress.closedReason || null,
+    attemptsCount: progress.attempts.length,
+    wrongCodesCount: progress.wrongCodes.length,
+    wrongPenaltyAppliedCount: Number(progress.wrongPenaltyAppliedCount) || 0,
+    bonusItems,
+    penaltyItems,
+    wrongLimitPenaltyItems,
+    storyEffects,
+    bonusValue: bonusItems.reduce((acc, item) => acc + (Number(item.value) || 0), 0),
+    penaltyValue: penaltyItems.reduce(
+      (acc, item) => acc + (Number(item.value) || 0),
+      0,
+    ),
+    wrongPenaltyValue: wrongLimitPenaltyItems.reduce(
+      (acc, item) => acc + (Number(item.value) || 0),
+      0,
+    ),
+  }
+}
+
 const normalizeFoundCodeItems = (values, descriptionLookup) => {
   const unique = new Set()
   const lookup =
@@ -750,6 +848,7 @@ export async function GET(request) {
         taskFailurePenalty: 1,
         manyCodesPenalty: 1,
         tasks: 1,
+        prequel: 1,
         moderators: 1,
       })
       .lean()
@@ -1386,9 +1485,19 @@ export async function GET(request) {
         (acc, item) => (item.seconds < 0 ? acc + Math.abs(item.seconds) : acc),
         0,
       )
+      const prequelStats = buildPrequelStatusStats(game, gt)
+      const totalPrequelPenaltySeconds =
+        (Number(prequelStats.penaltyValue) || 0) +
+        (Number(prequelStats.wrongPenaltyValue) || 0)
+      const totalPrequelBonusSeconds = Number(prequelStats.bonusValue) || 0
       const totalPenaltySeconds =
-        totalCodesPenaltySeconds + totalAddingsPenaltySeconds
-      const totalBonusSeconds = totalCodesBonusSeconds + totalAddingsBonusSeconds
+        totalCodesPenaltySeconds +
+        totalAddingsPenaltySeconds +
+        totalPrequelPenaltySeconds
+      const totalBonusSeconds =
+        totalCodesBonusSeconds +
+        totalAddingsBonusSeconds +
+        totalPrequelBonusSeconds
       const totalFinalSeconds = Math.max(
         0,
         totalTasksTimeSeconds + totalPenaltySeconds - totalBonusSeconds,
@@ -1450,8 +1559,11 @@ export async function GET(request) {
           totalCodesBonusSeconds,
           totalAddingsPenaltySeconds,
           totalAddingsBonusSeconds,
+          totalPrequelPenaltySeconds,
+          totalPrequelBonusSeconds,
           totalAcceptedCodesCount,
           totalWrongCodesCount,
+          prequel: prequelStats,
           tasks: taskStats,
         },
       }

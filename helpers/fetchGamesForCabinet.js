@@ -232,6 +232,7 @@ const fetchGamesForCabinet = async ({
       description: 1,
       descriptionRich: 1,
       descriptionMedia: 1,
+      prequel: 1,
       image: 1,
       startingPlace: 1,
       finishingPlace: 1,
@@ -460,7 +461,7 @@ const fetchGamesForCabinet = async ({
         gameId: { $in: allGameIds },
         teamId: { $in: userTeamIds },
       })
-        .select({ gameId: 1, teamId: 1 })
+        .select({ _id: 1, gameId: 1, teamId: 1, prequelProgress: 1 })
         .lean()
 
       // Собрать уникальные teamId для загрузки имён
@@ -499,8 +500,10 @@ const fetchGamesForCabinet = async ({
         const role = userTeamRoles[tId] || 'participant'
         participationByGameId[gId].push({
           teamId: tId,
+          gameTeamId: toStringId(gt?._id),
           teamName: teamsNamesById[tId] || '',
           isCaptain: isCaptainRole(role),
+          prequelProgress: gt?.prequelProgress || null,
         })
       }
     }

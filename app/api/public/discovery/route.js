@@ -15,7 +15,7 @@ const ALLOWED_GAME_FIELDS = [
   'hidden',
 ]
 
-const ALLOWED_SETTINGS_FIELDS = ['chatUrl']
+const ALLOWED_SETTINGS_FIELDS = ['chatUrl', 'chatUrlsByLocation']
 
 const MAX_LIMIT = 120
 

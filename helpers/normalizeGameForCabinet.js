@@ -1,4 +1,8 @@
 import { ensureDateISOString } from '@helpers/idAndDate'
+import {
+  buildDefaultPrequel,
+  normalizePrequelConfig,
+} from '@helpers/normalizePrequel'
 
 const ensureString = (value, fallback = '') => {
   if (typeof value === 'string') {
@@ -417,8 +421,13 @@ const normalizeUserParticipationTeams = (teams = []) => {
 
       return {
         teamId,
+        gameTeamId: ensureString(team?.gameTeamId, ''),
         teamName: ensureString(team?.teamName ?? team?.name, ''),
         isCaptain: ensureBoolean(team?.isCaptain, false),
+        prequelProgress:
+          team?.prequelProgress && typeof team.prequelProgress === 'object'
+            ? team.prequelProgress
+            : null,
       }
     })
     .filter(Boolean)
@@ -475,6 +484,11 @@ const normalizeTasks = (tasks = []) => {
     }
   })
 }
+
+const normalizePrequelForCabinet = (prequel) => ({
+  ...buildDefaultPrequel(),
+  ...normalizePrequelConfig(prequel),
+})
 
 const computeTasksStats = (tasks = []) => {
   if (!Array.isArray(tasks) || tasks.length === 0) {
@@ -550,6 +564,7 @@ const normalizeGameForCabinet = (game) => {
     description: ensureString(game.description, ''),
     descriptionRich: ensureString(game.descriptionRich, ''),
     descriptionMedia: normalizeTaskMedia(game.descriptionMedia),
+    prequel: normalizePrequelForCabinet(game.prequel),
     image: normalizeMediaUrl(game.image),
     startingPlace: ensureString(game.startingPlace, ''),
     finishingPlace: ensureString(game.finishingPlace, ''),

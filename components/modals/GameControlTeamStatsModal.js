@@ -28,6 +28,47 @@ const formatSeconds = (value) => {
   )}:${String(seconds).padStart(2, '0')}`
 }
 
+const formatAdjustmentValue = (value, gameType) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return '—'
+  if (gameType === 'photo') {
+    return `${numeric} б.`
+  }
+  return formatSeconds(Math.abs(numeric))
+}
+
+const getStoryEffectLabel = (effect) => {
+  if (!effect || typeof effect !== 'object') {
+    return 'Story-эффект'
+  }
+
+  if (effect.label) {
+    return effect.label
+  }
+
+  if (effect.type === 'grant_item') {
+    return effect.itemId
+      ? `Выдан предмет: ${effect.itemId}`
+      : 'Выдан стартовый предмет'
+  }
+  if (effect.type === 'unlock_node') {
+    return effect.nodeId
+      ? `Открыта нода: ${effect.nodeId}`
+      : 'Открыта стартовая нода'
+  }
+  if (effect.type === 'set_flag') {
+    return effect.flagKey
+      ? `Установлен флаг: ${effect.flagKey}`
+      : 'Установлен story-флаг'
+  }
+  if (effect.type === 'score_modifier') {
+    const delta = Number(effect.value) || 0
+    return `Изменение story score: ${delta >= 0 ? '+' : ''}${delta}`
+  }
+
+  return effect.type || 'Story-эффект'
+}
+
 const CodeList = ({ title, items, tone }) => {
   const palette =
     tone === 'bonus'
@@ -81,7 +122,77 @@ CodeList.defaultProps = {
   items: [],
 }
 
-const GameControlTeamStatsModal = ({ isOpen, onClose, teamName, stats }) => {
+const PrequelAdjustmentList = ({ title, items, tone, gameType }) => {
+  const palette =
+    tone === 'bonus'
+      ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-200'
+      : 'border-red-500/35 bg-red-500/10 text-red-200'
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        {title}
+      </p>
+      {Array.isArray(items) && items.length > 0 ? (
+        <div className="space-y-1.5">
+          {items.map((item, index) => (
+            <div
+              key={`${title}-${item.code || item.description || 'item'}-${index}`}
+              className="rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-2 text-xs"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex rounded-full border px-2 py-0.5 font-mono ${palette}`}
+                >
+                  {tone === 'bonus' ? '-' : '+'}
+                  {formatAdjustmentValue(item.value, gameType)}
+                </span>
+                {item.code ? (
+                  <span className="font-mono text-slate-300">{item.code}</span>
+                ) : null}
+                <span className="text-slate-500">
+                  {formatDateTime(item.createdAt)}
+                </span>
+              </div>
+              {item.description ? (
+                <p className="mt-1 text-slate-400">{item.description}</p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-slate-500">Нет данных</p>
+      )}
+    </div>
+  )
+}
+
+PrequelAdjustmentList.propTypes = {
+  title: PropTypes.string.isRequired,
+  tone: PropTypes.oneOf(['bonus', 'penalty']).isRequired,
+  gameType: PropTypes.oneOf(['classic', 'photo', 'story']),
+  items: PropTypes.arrayOf(
+    PropTypes.shape({
+      code: PropTypes.string,
+      description: PropTypes.string,
+      value: PropTypes.number,
+      createdAt: PropTypes.string,
+    }),
+  ),
+}
+
+PrequelAdjustmentList.defaultProps = {
+  gameType: 'classic',
+  items: [],
+}
+
+const GameControlTeamStatsModal = ({
+  isOpen,
+  onClose,
+  teamName,
+  stats,
+  gameType,
+}) => {
   const tasks = useMemo(
     () => (Array.isArray(stats?.tasks) ? stats.tasks : []),
     [stats?.tasks],
@@ -90,6 +201,15 @@ const GameControlTeamStatsModal = ({ isOpen, onClose, teamName, stats }) => {
     () => tasks.filter((task) => task?.isFailedTask).length,
     [tasks],
   )
+  const prequel = stats?.prequel && typeof stats.prequel === 'object' ? stats.prequel : null
+  const hasPrequelData =
+    Boolean(prequel?.enabled) &&
+    ((Array.isArray(prequel?.bonusItems) && prequel.bonusItems.length > 0) ||
+      (Array.isArray(prequel?.penaltyItems) && prequel.penaltyItems.length > 0) ||
+      (Array.isArray(prequel?.wrongLimitPenaltyItems) &&
+        prequel.wrongLimitPenaltyItems.length > 0) ||
+      (Array.isArray(prequel?.storyEffects) && prequel.storyEffects.length > 0) ||
+      Number(prequel?.attemptsCount) > 0)
 
   return (
     <Modal
@@ -148,6 +268,85 @@ const GameControlTeamStatsModal = ({ isOpen, onClose, teamName, stats }) => {
             </div>
           </div>
         </div>
+
+        {hasPrequelData ? (
+          <section className="rounded-xl border border-violet-500/35 bg-violet-500/10 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-violet-100">
+                  Приквел
+                </h3>
+                <p className="mt-1 text-xs text-violet-100/75">
+                  Попыток: {Number(prequel?.attemptsCount) || 0}
+                  {' · '}
+                  Неверных кодов: {Number(prequel?.wrongCodesCount) || 0}
+                  {' · '}
+                  Пакетных штрафов: {Number(prequel?.wrongPenaltyAppliedCount) || 0}
+                </p>
+              </div>
+              <div className="text-right text-xs text-violet-100/80">
+                <div>
+                  Бонусы: {formatAdjustmentValue(prequel?.bonusValue, gameType)}
+                </div>
+                <div>
+                  Штрафы:{' '}
+                  {formatAdjustmentValue(
+                    (Number(prequel?.penaltyValue) || 0) +
+                      (Number(prequel?.wrongPenaltyValue) || 0),
+                    gameType,
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <PrequelAdjustmentList
+                title="Бонусы приквела"
+                tone="bonus"
+                items={prequel?.bonusItems}
+                gameType={gameType}
+              />
+              <PrequelAdjustmentList
+                title="Штрафные коды приквела"
+                tone="penalty"
+                items={prequel?.penaltyItems}
+                gameType={gameType}
+              />
+              <PrequelAdjustmentList
+                title="Штрафы за лимит ошибок"
+                tone="penalty"
+                items={prequel?.wrongLimitPenaltyItems}
+                gameType={gameType}
+              />
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Story-эффекты
+                </p>
+                {Array.isArray(prequel?.storyEffects) &&
+                prequel.storyEffects.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {prequel.storyEffects.map((effect, index) => (
+                      <div
+                        key={`${effect.type}-${effect.code || 'story'}-${index}`}
+                        className="rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-2 text-xs"
+                      >
+                        <p className="text-slate-200">
+                          {getStoryEffectLabel(effect)}
+                        </p>
+                        <p className="mt-1 text-slate-500">
+                          {effect.code ? `Код: ${effect.code} · ` : ''}
+                          {formatDateTime(effect.appliedAt)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">Нет данных</p>
+                )}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {tasks.length === 0 ? (
           <p className="text-sm text-slate-500">Нет данных по заданиям.</p>
@@ -215,6 +414,7 @@ GameControlTeamStatsModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   teamName: PropTypes.string,
+  gameType: PropTypes.oneOf(['classic', 'photo', 'story']),
   stats: PropTypes.shape({
     completedTasksCount: PropTypes.number,
     totalTasksCount: PropTypes.number,
@@ -226,8 +426,26 @@ GameControlTeamStatsModal.propTypes = {
     totalCodesBonusSeconds: PropTypes.number,
     totalAddingsPenaltySeconds: PropTypes.number,
     totalAddingsBonusSeconds: PropTypes.number,
+    totalPrequelPenaltySeconds: PropTypes.number,
+    totalPrequelBonusSeconds: PropTypes.number,
     totalAcceptedCodesCount: PropTypes.number,
     totalWrongCodesCount: PropTypes.number,
+    prequel: PropTypes.shape({
+      enabled: PropTypes.bool,
+      mode: PropTypes.string,
+      isClosed: PropTypes.bool,
+      closedReason: PropTypes.string,
+      attemptsCount: PropTypes.number,
+      wrongCodesCount: PropTypes.number,
+      wrongPenaltyAppliedCount: PropTypes.number,
+      bonusValue: PropTypes.number,
+      penaltyValue: PropTypes.number,
+      wrongPenaltyValue: PropTypes.number,
+      bonusItems: PropTypes.array,
+      penaltyItems: PropTypes.array,
+      wrongLimitPenaltyItems: PropTypes.array,
+      storyEffects: PropTypes.array,
+    }),
     tasks: PropTypes.arrayOf(
       PropTypes.shape({
         taskIndex: PropTypes.number,
@@ -253,6 +471,7 @@ GameControlTeamStatsModal.propTypes = {
 
 GameControlTeamStatsModal.defaultProps = {
   teamName: '',
+  gameType: 'classic',
   stats: null,
 }
 
