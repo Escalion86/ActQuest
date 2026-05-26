@@ -10,6 +10,7 @@ import {
 import applyPrequelStoryEffects from '@server/applyPrequelStoryEffects'
 import { toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 
 export const normalizeStringId = (value) => {
   const id = toStringId(value)
@@ -25,7 +26,7 @@ const normalizeText = (value) =>
 
 const normalizeRole = (value) => {
   const normalized = normalizeText(value).toLowerCase()
-  return ['client', 'moder', 'admin', 'dev'].includes(normalized)
+  return ['client', 'admin', 'dev', 'ban'].includes(normalized)
     ? normalized
     : 'client'
 }
@@ -98,21 +99,10 @@ export const hasGameManageAccess = ({ identity, game }) => {
     return true
   }
 
-  if (identity.role !== 'moder' || !identity.userId) {
-    return false
-  }
-
-  const moderators = Array.isArray(game?.moderators) ? game.moderators : []
-  return moderators.some((moderator) => {
-    if (!moderator) {
-      return false
-    }
-
-    if (typeof moderator === 'string') {
-      return normalizeStringId(moderator) === identity.userId
-    }
-
-    return normalizeStringId(moderator?._id ?? moderator?.id) === identity.userId
+  return canAccessGameAsModerator({
+    userRole: identity.role,
+    currentUserId: identity.userId,
+    game,
   })
 }
 

@@ -1,5 +1,13 @@
 import getSecondsBetween from '@helpers/getSecondsBetween'
 import { toStringId } from '@helpers/idAndDate'
+import {
+  canAccessGameAsAgent,
+  canBypassGameAssignments,
+} from '@helpers/gameAssignmentAccess'
+import {
+  resolveTeamAgentStatus,
+  resolveTeamBreakState,
+} from '@helpers/agentGameStatus'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) return ''
@@ -10,12 +18,6 @@ const normalizeStringId = (value) => {
   }
   return ''
 }
-
-const normalizeRole = (value) =>
-  typeof value === 'string' ? value.trim().toLowerCase() : ''
-
-const canBypassAgentAssignment = (role) =>
-  ['admin', 'dev', 'moder'].includes(normalizeRole(role))
 
 export const resolveGameAgents = (game) =>
   (Array.isArray(game?.agents) ? game.agents : [])
@@ -40,7 +42,7 @@ const isStoryGame = (game) =>
 
 const getAssignedTaskIndexes = ({ game, userId, role }) => {
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
-  const shouldBypass = canBypassAgentAssignment(role)
+  const shouldBypass = canBypassGameAssignments(role)
   const normalizedUserId = normalizeStringId(userId)
 
   return tasks
@@ -55,7 +57,7 @@ const getAssignedTaskIndexes = ({ game, userId, role }) => {
 
 const getAssignedStoryNodes = ({ game, userId, role }) => {
   const nodes = Array.isArray(game?.storyNodes) ? game.storyNodes : []
-  const shouldBypass = canBypassAgentAssignment(role)
+  const shouldBypass = canBypassGameAssignments(role)
   const normalizedUserId = normalizeStringId(userId)
 
   return nodes
@@ -136,71 +138,6 @@ const resolveTeamStoryAgentStatus = ({ gameTeam, assignedStoryNodes }) => {
   }
 }
 
-const resolveTeamAgentStatus = ({ gameTeam, assignedTaskIndexes, tasksCount }) => {
-  const activeTaskIndex = Number.isInteger(gameTeam?.activeNum)
-    ? gameTeam.activeNum
-    : Number(gameTeam?.activeNum) || 0
-  const startTime = ensureArray(gameTeam?.startTime)
-  const endTime = ensureArray(gameTeam?.endTime)
-  const now = new Date()
-  const isFinished = tasksCount > 0 && activeTaskIndex >= tasksCount
-
-  const activeAssignedTaskIndex = assignedTaskIndexes.find(
-    (taskIndex) =>
-      activeTaskIndex === taskIndex &&
-      Boolean(startTime[taskIndex]) &&
-      !Boolean(endTime[taskIndex]),
-  )
-  if (Number.isInteger(activeAssignedTaskIndex)) {
-    return {
-      status: 'active',
-      taskIndex: activeAssignedTaskIndex,
-      currentTaskSeconds: getSecondsBetween(
-        startTime[activeAssignedTaskIndex],
-        now,
-      ),
-    }
-  }
-
-  const approachingTaskIndex = assignedTaskIndexes.find(
-    (taskIndex) =>
-      activeTaskIndex + 1 === taskIndex &&
-      Boolean(startTime[activeTaskIndex]) &&
-      !isFinished,
-  )
-  if (Number.isInteger(approachingTaskIndex)) {
-    return {
-      status: 'approaching',
-      taskIndex: approachingTaskIndex,
-      currentTaskSeconds: startTime[activeTaskIndex]
-        ? getSecondsBetween(startTime[activeTaskIndex], now)
-        : 0,
-    }
-  }
-
-  const hasUnpassedAssignedTask = assignedTaskIndexes.some(
-    (taskIndex) => !hasTeamPassedTask(gameTeam, taskIndex, tasksCount),
-  )
-
-  if (!hasUnpassedAssignedTask || isFinished) {
-    return {
-      status: isFinished ? 'finished' : 'passed',
-      taskIndex: assignedTaskIndexes[assignedTaskIndexes.length - 1] ?? null,
-      currentTaskSeconds: 0,
-    }
-  }
-
-  return {
-    status: 'waiting',
-    taskIndex: assignedTaskIndexes.find(
-      (taskIndex) => !hasTeamPassedTask(gameTeam, taskIndex, tasksCount),
-    ) ?? null,
-    currentTaskSeconds: startTime[activeTaskIndex]
-      ? getSecondsBetween(startTime[activeTaskIndex], now)
-      : 0,
-  }
-}
-
 export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
   const normalizedGameId = normalizeStringId(gameId)
   const normalizedUserId = normalizeStringId(userId)
@@ -218,11 +155,15 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
       name: 1,
       status: 1,
       location: 1,
+      dateStart: 1,
+      dateStartFact: 1,
       tasks: 1,
       type: 1,
       storyNodes: 1,
       agents: 1,
       agentNotifications: 1,
+      breakDuration: 1,
+      taskDuration: 1,
     })
     .lean()
 
@@ -230,18 +171,21 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
     return { success: false, statusCode: 404, error: 'GAME_NOT_FOUND' }
   }
 
-  const gameAgents = resolveGameAgents(game)
-  const canBypass = canBypassAgentAssignment(role)
-  const isAssignedAgent = gameAgents.some(
-    (agent) => agent.userId === normalizedUserId,
-  )
-  if (!canBypass && !isAssignedAgent) {
+  if (
+    !canAccessGameAsAgent({
+      userRole: role,
+      currentUserId: normalizedUserId,
+      game,
+    })
+  ) {
     return { success: false, statusCode: 403, error: 'ACCESS_DENIED' }
   }
 
   const storyGame = isStoryGame(game)
   const tasks = Array.isArray(game.tasks) ? game.tasks : []
   const storyNodes = Array.isArray(game.storyNodes) ? game.storyNodes : []
+  const breakDurationSeconds = Number(game?.breakDuration) || 0
+  const taskDurationSeconds = Number(game?.taskDuration) || 3600
   const assignedTaskIndexes = getAssignedTaskIndexes({
     game,
     userId: normalizedUserId,
@@ -267,12 +211,22 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
 
   const teamStatuses = gameTeams.map((gameTeam) => {
     const teamId = toStringId(gameTeam?.teamId)
+    const breakState = storyGame
+      ? { isTeamOnBreak: false, breakTimeLeftSeconds: 0 }
+      : resolveTeamBreakState({
+          gameTeam,
+          tasksCount: tasks.length,
+          breakDurationSeconds,
+          taskDurationSeconds,
+        })
     const status = storyGame
       ? resolveTeamStoryAgentStatus({ gameTeam, assignedStoryNodes })
       : resolveTeamAgentStatus({
           gameTeam,
           assignedTaskIndexes,
           tasksCount: tasks.length,
+          breakDurationSeconds,
+          taskDurationSeconds,
         })
     const activeTaskIndex = Number.isInteger(gameTeam?.activeNum)
       ? gameTeam.activeNum
@@ -306,6 +260,8 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
           : Number.isInteger(status.taskIndex) && tasks[status.taskIndex]
           ? tasks[status.taskIndex]?.title || ''
           : '',
+      isTeamOnBreak: breakState.isTeamOnBreak,
+      breakTimeLeftSeconds: breakState.breakTimeLeftSeconds,
       status: status.status,
       currentTaskSeconds: status.currentTaskSeconds,
     }
@@ -336,6 +292,8 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
       gameName: game.name || '',
       location: game.location || '',
       status: game.status || 'active',
+      dateStart: game.dateStart || null,
+      dateStartFact: game.dateStartFact || null,
       type: storyGame ? 'story' : game.type || '',
       assignedTasks: storyGame
         ? assignedStoryNodes.map((node) => ({
@@ -345,6 +303,10 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
         : assignedTaskIndexes.map((taskIndex) => ({
             taskIndex,
             title: tasks[taskIndex]?.title || '',
+            coordinates: {
+              latitude: tasks[taskIndex]?.coordinates?.latitude ?? null,
+              longitude: tasks[taskIndex]?.coordinates?.longitude ?? null,
+            },
           })),
       remainingTeamsCount,
       teams: teamStatuses,

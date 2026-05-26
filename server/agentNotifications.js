@@ -1,10 +1,14 @@
 import { broadcastNotificationToUsers } from '@server/pwaNotifications'
 import {
   getStoryNodeAgentIds,
-  getTaskAgentIds,
-  hasTeamPassedTask,
   resolveGameAgents,
 } from '@server/agentGameStatus'
+import {
+  getAgentNotificationSettings,
+  getTaskAgentIds,
+  resolveTaskEventsForTeam,
+} from '@helpers/agentNotifications'
+import { hasTeamFinishedAgentWorkForTask } from '@helpers/agentGameStatus'
 import { toStringId } from '@helpers/idAndDate'
 
 const normalizeStringId = (value) => {
@@ -39,56 +43,6 @@ const buildEventKey = ({
         : 'no-task',
     eventType,
   ].join(':')
-
-const getAgentNotificationSettings = (game) => ({
-  onPreviousTask: game?.agentNotifications?.onPreviousTask !== false,
-  onCurrentTask: game?.agentNotifications?.onCurrentTask !== false,
-  onTaskCompleted: game?.agentNotifications?.onTaskCompleted === true,
-  onAllTeamsPassed: game?.agentNotifications?.onAllTeamsPassed !== false,
-})
-
-const resolveTaskEventsForTeam = ({ game, gameTeam }) => {
-  const settings = getAgentNotificationSettings(game)
-  const tasks = ensureArray(game?.tasks)
-  const tasksCount = tasks.length
-  const activeTaskIndex = Number.isInteger(gameTeam?.activeNum)
-    ? gameTeam.activeNum
-    : Number(gameTeam?.activeNum) || 0
-  const startTime = ensureArray(gameTeam?.startTime)
-  const endTime = ensureArray(gameTeam?.endTime)
-  const events = []
-
-  tasks.forEach((task, taskIndex) => {
-    const agentUserIds = getTaskAgentIds(task)
-    if (agentUserIds.length === 0) return
-
-    if (
-      settings.onPreviousTask &&
-      activeTaskIndex + 1 === taskIndex &&
-      Boolean(startTime[activeTaskIndex])
-    ) {
-      events.push({ eventType: 'previous_task', taskIndex, agentUserIds })
-    }
-
-    if (
-      settings.onCurrentTask &&
-      activeTaskIndex === taskIndex &&
-      Boolean(startTime[taskIndex]) &&
-      !Boolean(endTime[taskIndex])
-    ) {
-      events.push({ eventType: 'current_task', taskIndex, agentUserIds })
-    }
-
-    if (
-      settings.onTaskCompleted &&
-      hasTeamPassedTask(gameTeam, taskIndex, tasksCount)
-    ) {
-      events.push({ eventType: 'task_completed', taskIndex, agentUserIds })
-    }
-  })
-
-  return events
-}
 
 const hasStoryTeamPassedNode = (gameTeam, storyNodeId) =>
   ensureArray(gameTeam?.storyProgress?.completedNodeIds)
@@ -214,7 +168,7 @@ const sendAgentEvent = async ({
       body,
       location: game?.location || 'global',
       tag: eventKey,
-      url: `/cabinet/agent/game-control?gameId=${encodeURIComponent(gameId)}`,
+      url: `/cabinet/agent?gameId=${encodeURIComponent(gameId)}`,
       data: {
         type: 'agent_task',
         gameId,
@@ -280,9 +234,17 @@ const notifyAllTeamsPassedEvents = async ({ db, game }) => {
       )
       if (agentUserIds.length === 0) return
 
-      const allPassed = gameTeams.every((gameTeam) =>
-        hasTeamPassedTask(gameTeam, taskIndex, tasks.length),
-      )
+      const allPassed = gameTeams.every((gameTeam) => {
+        const breakDurationSeconds = Number(game?.breakDuration) || 0
+        const taskDurationSeconds = Number(game?.taskDuration) || 3600
+        return hasTeamFinishedAgentWorkForTask({
+          gameTeam,
+          taskIndex,
+          tasksCount: tasks.length,
+          breakDurationSeconds,
+          taskDurationSeconds,
+        })
+      })
       if (!allPassed) return
 
       await Promise.all(

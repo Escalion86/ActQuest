@@ -2,31 +2,25 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
-import AgentGameControlPageClient from '@components/cabinet/app-router/AgentGameControlPageClient'
 
 export const metadata = { title: 'ActQuest — Контроль агента' }
 
 export const dynamic = 'force-dynamic'
 
-const canViewAgentCabinet = (role) =>
-  ['agent', 'moder', 'admin', 'dev'].includes(
-    typeof role === 'string' ? role.trim().toLowerCase() : '',
-  )
-
-export default async function AgentGameControlPage() {
+export default async function AgentGameControlPage({ searchParams }) {
   const session = await getServerSession(authOptions)
+  const resolvedSearchParams = await searchParams
+  const gameId =
+    typeof resolvedSearchParams?.gameId === 'string'
+      ? resolvedSearchParams.gameId.trim()
+      : ''
+  const targetPath = gameId
+    ? `/cabinet/agent?gameId=${encodeURIComponent(gameId)}`
+    : '/cabinet/agent'
 
   if (!session?.user) {
-    redirect(
-      `/cabinet/login?callbackUrl=${encodeURIComponent(
-        '/cabinet/agent/game-control',
-      )}`,
-    )
+    redirect(`/cabinet/login?callbackUrl=${encodeURIComponent(targetPath)}`)
   }
 
-  if (!canViewAgentCabinet(session.user.role)) {
-    redirect('/cabinet')
-  }
-
-  return <AgentGameControlPageClient />
+  redirect(targetPath)
 }

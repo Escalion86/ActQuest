@@ -171,6 +171,8 @@ export async function GET(request) {
       globalUserId: userDoc?.globalUserId ? String(userDoc.globalUserId) : null,
       telegramId: userTelegramId !== null ? String(userTelegramId) : '',
       role,
+      canBeGameModerator: Boolean(userDoc?.canBeGameModerator),
+      canBeGameAgent: Boolean(userDoc?.canBeGameAgent),
       createdAt: ensureDateISOString(userDoc?.createdAt),
       updatedAt: ensureDateISOString(userDoc?.updatedAt),
       teams,

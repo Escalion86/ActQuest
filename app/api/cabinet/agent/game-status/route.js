@@ -38,13 +38,6 @@ export async function GET(request) {
     )
   }
 
-  if (!['agent', 'moder', 'admin', 'dev'].includes(role)) {
-    return NextResponse.json(
-      { success: false, error: 'Недостаточно прав' },
-      { status: 403 },
-    )
-  }
-
   const requestUrl = new URL(request.url)
   const gameId = requestUrl.searchParams.get('gameId')
   if (!gameId) {

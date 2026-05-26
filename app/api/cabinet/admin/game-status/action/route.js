@@ -8,6 +8,7 @@ import webGameProcess from '@server/webGameProcess'
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
+import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) {
@@ -22,9 +23,6 @@ const normalizeStringId = (value) => {
   }
   return ''
 }
-
-const isElevatedRole = (role) => role === 'admin' || role === 'dev'
-const isModeratorRole = (role) => role === 'moder'
 
 const normalizeAction = (value) =>
   typeof value === 'string' ? value.trim().toLowerCase() : ''
@@ -224,28 +222,20 @@ export async function POST(request) {
       )
     }
 
-    if (!isElevatedRole(userRole)) {
-      if (isModeratorRole(userRole)) {
-        const currentUserId = normalizeStringId(
-          session.user.globalUserId ?? session.user.userId ?? session.user._id,
-        )
-        const moderatorIds = Array.isArray(game.moderators)
-          ? game.moderators.map((moderator) =>
-              normalizeStringId(moderator?._id ?? moderator),
-            )
-          : []
-        if (!moderatorIds.includes(currentUserId)) {
-          return NextResponse.json(
-            { success: false, error: 'Нет доступа к этой игре' },
-            { status: 403 },
-          )
-        }
-      } else {
-        return NextResponse.json(
-          { success: false, error: 'Недостаточно прав' },
-          { status: 403 },
-        )
-      }
+    const currentUserId = normalizeStringId(
+      session.user.globalUserId ?? session.user.userId ?? session.user._id,
+    )
+    if (
+      !canAccessGameAsModerator({
+        userRole,
+        currentUserId,
+        game,
+      })
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'Нет доступа к этой игре' },
+        { status: 403 },
+      )
     }
 
     if (game.status !== 'started') {

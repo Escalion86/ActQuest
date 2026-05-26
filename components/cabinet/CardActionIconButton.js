@@ -70,31 +70,27 @@ export const AgentCardIcon = () => (
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <circle
-      cx="10"
-      cy="6.5"
-      r="3"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    />
     <path
-      d="M4.5 16.5C5.35 13.7 7.35 12.25 10 12.25C12.65 12.25 14.65 13.7 15.5 16.5"
+      d="M10 9.5C11.933 9.5 13.5 7.933 13.5 6C13.5 4.067 11.933 2.5 10 2.5C8.067 2.5 6.5 4.067 6.5 6C6.5 7.933 8.067 9.5 10 9.5Z"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
     <path
-      d="M6.75 5.25L4.75 4M13.25 5.25L15.25 4"
+      d="M4 16.75C4.95 13.9 7.1 12.25 10 12.25C12.9 12.25 15.05 13.9 16 16.75"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
+      strokeLinejoin="round"
     />
+    <circle cx="15.25" cy="5.25" r="2.25" stroke="currentColor" strokeWidth="1.5" />
     <path
-      d="M7.75 7H12.25"
+      d="M14.35 5.25L15 5.9L16.2 4.7"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
+      strokeLinejoin="round"
     />
   </svg>
 )

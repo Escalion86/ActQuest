@@ -78,9 +78,7 @@ const AgentGamesPageClient = () => {
         {games.map((game) => (
           <Link
             key={game.id}
-            href={`/cabinet/agent/game-control?gameId=${encodeURIComponent(
-              game.id,
-            )}`}
+            href={`/cabinet/agent?gameId=${encodeURIComponent(game.id)}`}
             className="block rounded-xl border border-slate-200 bg-white p-4 transition hover:border-cyan-400 hover:bg-cyan-50/60 dark:border-slate-700 dark:bg-slate-900/70 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">

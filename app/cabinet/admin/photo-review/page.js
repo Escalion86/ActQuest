@@ -8,9 +8,6 @@ export const metadata = { title: 'ActQuest - Проверка фотоквест
 
 export const dynamic = 'force-dynamic'
 
-const canOpenPhotoReview = (role) =>
-  role === 'admin' || role === 'dev' || role === 'moder'
-
 export default async function PhotoReviewPage() {
   const session = await getServerSession(authOptions)
 
@@ -18,10 +15,6 @@ export default async function PhotoReviewPage() {
     redirect(
       `/cabinet/login?callbackUrl=${encodeURIComponent('/cabinet/admin/photo-review')}`,
     )
-  }
-
-  if (!canOpenPhotoReview(session.user.role)) {
-    redirect('/cabinet')
   }
 
   return <PhotoReviewPageClient session={session} />

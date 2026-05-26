@@ -87,6 +87,14 @@ const usersSchema = {
     type: String,
     default: 'client',
   },
+  canBeGameModerator: {
+    type: Boolean,
+    default: false,
+  },
+  canBeGameAgent: {
+    type: Boolean,
+    default: false,
+  },
   rating: {
     type: Object,
     default: null,

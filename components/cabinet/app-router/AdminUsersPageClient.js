@@ -169,6 +169,8 @@ const saveAdminUser = async (user) => {
 
   const payload = {
     role: user.role,
+    canBeGameModerator: Boolean(user.canBeGameModerator),
+    canBeGameAgent: Boolean(user.canBeGameAgent),
     name: normalizeText(user.name),
     username: normalizeNullable(user.username),
     photoUrl: normalizeNullable(user.photoUrl),
@@ -1129,6 +1131,8 @@ const ManageUsersPage = ({
     return (
       JSON.stringify({
         role: selectedUser.role,
+        canBeGameModerator: Boolean(selectedUser.canBeGameModerator),
+        canBeGameAgent: Boolean(selectedUser.canBeGameAgent),
         name: sanitizeText(selectedUser.name),
         username: sanitizeNullable(selectedUser.username),
         photoUrl: sanitizeNullable(selectedUser.photoUrl),
@@ -1138,6 +1142,8 @@ const ManageUsersPage = ({
       }) !==
       JSON.stringify({
         role: persistedSelectedUser.role,
+        canBeGameModerator: Boolean(persistedSelectedUser.canBeGameModerator),
+        canBeGameAgent: Boolean(persistedSelectedUser.canBeGameAgent),
         name: sanitizeText(persistedSelectedUser.name),
         username: sanitizeNullable(persistedSelectedUser.username),
         photoUrl: sanitizeNullable(persistedSelectedUser.photoUrl),

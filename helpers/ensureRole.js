@@ -1,13 +1,14 @@
+import { USER_ROLE_VALUES } from './userRoles'
+
 const ensureRole = (value, fallback = 'client') => {
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value.trim()
+  const normalized =
+    typeof value === 'string' ? value.trim().toLowerCase() : ''
+
+  if (USER_ROLE_VALUES.includes(normalized)) {
+    return normalized
   }
 
-  if (value) {
-    return String(value)
-  }
-
-  return fallback
+  return USER_ROLE_VALUES.includes(fallback) ? fallback : 'client'
 }
 
 export default ensureRole

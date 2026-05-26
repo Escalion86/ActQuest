@@ -81,6 +81,8 @@ const normalizeUserProfile = (doc = null) => {
     about: sanitizeString(profile.about),
     preferences: normalizePreferences(profile.preferences),
     role: sanitizeString(profile.role || 'client').trim().toLowerCase() || 'client',
+    canBeGameModerator: Boolean(profile.canBeGameModerator),
+    canBeGameAgent: Boolean(profile.canBeGameAgent),
     authMethod: normalizeAuthMethod(profile.authMethod),
     telegramId: sanitizeNullableString(profile.telegramId),
     vkId: sanitizeNullableString(profile.vkId),

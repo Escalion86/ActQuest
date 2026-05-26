@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
+import { canBypassGameAssignments } from '@helpers/gameAssignmentAccess'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) return ''
@@ -38,13 +39,6 @@ export async function GET() {
     )
   }
 
-  if (!['agent', 'moder', 'admin', 'dev'].includes(role)) {
-    return NextResponse.json(
-      { success: false, error: 'Недостаточно прав' },
-      { status: 403 },
-    )
-  }
-
   try {
     const db = await dbConnectGlobal()
     if (!db) {
@@ -54,7 +48,7 @@ export async function GET() {
     const Games = db.model('Games')
     const GamesTeams = db.model('GamesTeams')
     const query =
-      role === 'admin' || role === 'dev'
+      canBypassGameAssignments(role)
         ? { agents: { $exists: true, $ne: [] } }
         : { 'agents.userId': userId }
 
@@ -103,8 +97,7 @@ export async function GET() {
             ? task.agentUserIds.map(String)
             : []
           if (
-            role !== 'admin' &&
-            role !== 'dev' &&
+            !canBypassGameAssignments(role) &&
             !agentIds.includes(userId)
           ) {
             return null

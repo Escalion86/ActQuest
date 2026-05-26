@@ -10,6 +10,11 @@ import {
   isLiaisonRole,
   normalizeTeamRoleForWrite,
 } from '@helpers/teamRoles'
+import {
+  canAddTargetUserToTeam,
+  canJoinTeamForRole,
+  isBannedSystemRole,
+} from '@helpers/teamBanAccess'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -30,6 +35,16 @@ export async function POST(request) {
     return NextResponse.json(
       { success: false, error: 'Необходима авторизация' },
       { status: 401 },
+    )
+  }
+
+  if (isBannedSystemRole(session.user.role)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Заблокированный пользователь не может вступать в команды',
+      },
+      { status: 403 },
     )
   }
 
@@ -121,7 +136,7 @@ export async function POST(request) {
       const targetUserDoc = await UsersModel.findOne({
         $or: [{ _id: targetUserIdRaw }, { globalUserId: targetUserIdRaw }],
       })
-        .select({ globalUserId: 1, telegramId: 1, name: 1, username: 1 })
+        .select({ globalUserId: 1, telegramId: 1, name: 1, username: 1, role: 1 })
         .lean()
 
       if (!targetUserDoc) {
@@ -131,6 +146,21 @@ export async function POST(request) {
         return NextResponse.json(
           { success: false, error: 'Пользователь не найден' },
           { status: 404 },
+        )
+      }
+
+      if (
+        !canAddTargetUserToTeam({
+          actorRole,
+          targetRole: targetUserDoc?.role,
+        })
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Заблокированного пользователя нельзя добавить в команду',
+          },
+          { status: 403 },
         )
       }
 
@@ -230,6 +260,16 @@ export async function POST(request) {
           success: false,
           error:
             'В этой команде закрыт набор. Попросите капитана добавить вас вручную.',
+        },
+        { status: 403 },
+      )
+    }
+
+    if (!canJoinTeamForRole(session.user.role)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Заблокированный пользователь не может вступать в команды',
         },
         { status: 403 },
       )

@@ -9,6 +9,7 @@ import {
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import { toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -17,7 +18,7 @@ const normalizeRole = (value) => {
 
   const normalizedRaw = value.trim().toLowerCase()
   const normalized = normalizedRaw
-  return ['client', 'moder', 'admin', 'dev'].includes(normalized)
+  return ['client', 'admin', 'dev', 'ban'].includes(normalized)
     ? normalized
     : null
 }
@@ -104,8 +105,7 @@ export async function GET(request) {
 
     const canLoadAllGames = userRole === 'admin' || userRole === 'dev'
     const canLoadOwnGames =
-      userRole === 'moder' &&
-      (Boolean(currentUserIdString) || creatorTelegramId !== null)
+      Boolean(currentUserIdString) || creatorTelegramId !== null
 
     const query = { _id: gameId }
 
@@ -304,10 +304,11 @@ export async function GET(request) {
           userRole,
           currentUserId: currentUserIdString,
           gameCreatorUserId: creatorUserId,
-          isGameModerator: (Array.isArray(gameDoc?.moderators)
-            ? gameDoc.moderators
-            : []
-          ).some((moderator) => toStringId(moderator?._id ?? moderator?.id ?? moderator) === currentUserIdString),
+          isGameModerator: canAccessGameAsModerator({
+            userRole,
+            currentUserId: currentUserIdString,
+            game: gameDoc,
+          }),
           allowCreatorFallback:
             canLoadOwnGames && !currentUserIdString && creatorTelegramId !== null,
         }),

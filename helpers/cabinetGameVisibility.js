@@ -2,6 +2,7 @@ import {
   buildDefaultPrequel,
   normalizePrequelConfig,
 } from '@helpers/normalizePrequel'
+import { canBypassGameAssignments } from '@helpers/gameAssignmentAccess'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -9,7 +10,7 @@ const normalizeRole = (value) => {
   }
 
   const normalized = value.trim().toLowerCase()
-  return ['client', 'moder', 'admin', 'dev'].includes(normalized)
+  return ['client', 'admin', 'dev', 'ban'].includes(normalized)
     ? normalized
     : 'client'
 }
@@ -33,8 +34,7 @@ const canViewCabinetGameRestrictedInfo = ({
   isGameModerator = false,
   allowCreatorFallback = false,
 }) => {
-  const role = normalizeRole(userRole)
-  if (role === 'admin' || role === 'dev') {
+  if (canBypassGameAssignments(userRole)) {
     return true
   }
 
@@ -44,10 +44,6 @@ const canViewCabinetGameRestrictedInfo = ({
 
   if (currentUserId && gameCreatorUserId && currentUserId === gameCreatorUserId) {
     return true
-  }
-
-  if (role !== 'moder') {
-    return false
   }
 
   return Boolean(allowCreatorFallback)

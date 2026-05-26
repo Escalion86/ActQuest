@@ -1,6 +1,7 @@
 import { ensureDateISOString } from '@helpers/idAndDate'
 import {
   buildDefaultPrequel,
+  normalizePrequelProgress,
   normalizePrequelConfig,
 } from '@helpers/normalizePrequel'
 
@@ -426,7 +427,7 @@ const normalizeUserParticipationTeams = (teams = []) => {
         isCaptain: ensureBoolean(team?.isCaptain, false),
         prequelProgress:
           team?.prequelProgress && typeof team.prequelProgress === 'object'
-            ? team.prequelProgress
+            ? normalizePrequelProgress(team.prequelProgress)
             : null,
       }
     })

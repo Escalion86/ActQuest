@@ -4,13 +4,13 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import isUserAdmin from '@helpers/isUserAdmin'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { buildWebUserBanPreview } from '@server/webUserBan'
 import {
   assertUserRoleMutationAllowed,
-  buildUserUpdatePayload,
   normalizeRole,
-} from '../_lib/userAdminMutation'
+} from '../../_lib/userAdminMutation'
 
-export async function PUT(request, { params }) {
+export async function POST(_request, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user || !isUserAdmin({ role: session.user.role })) {
     return NextResponse.json(
@@ -38,8 +38,6 @@ export async function PUT(request, { params }) {
       )
     }
 
-    const actorRole = normalizeRole(session?.user?.role)
-
     const UsersModel = db.model('Users')
     const existingUser = await UsersModel.findById(userId).select({ role: 1 }).lean()
     if (!existingUser) {
@@ -49,21 +47,10 @@ export async function PUT(request, { params }) {
       )
     }
 
-    const body = await request.json().catch(() => ({}))
-    const { nextRole, payload, hasInvalidLocation } = buildUserUpdatePayload(body)
-    if (hasInvalidLocation) {
-      return NextResponse.json(
-        { success: false, error: 'Некорректный город пользователя' },
-        { status: 400 },
-      )
-    }
-    const targetCurrentRole = normalizeRole(existingUser?.role)
-    const targetNextRole = normalizeRole(nextRole)
-
     const roleMutationError = assertUserRoleMutationAllowed({
-      actorRole,
-      targetCurrentRole,
-      targetNextRole,
+      actorRole: normalizeRole(session?.user?.role),
+      targetCurrentRole: normalizeRole(existingUser?.role),
+      targetNextRole: 'ban',
     })
     if (roleMutationError) {
       return NextResponse.json(
@@ -72,32 +59,28 @@ export async function PUT(request, { params }) {
       )
     }
 
-    if (targetCurrentRole !== 'ban' && targetNextRole === 'ban') {
+    const preview = await buildWebUserBanPreview({ db, userId })
+    if (!preview) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            'Для блокировки пользователя используйте отдельное подтверждённое действие бана.',
-        },
-        { status: 409 },
+        { success: false, error: 'Пользователь не найден' },
+        { status: 404 },
       )
     }
-
-    const updatedUser = await UsersModel
-      .findByIdAndUpdate(userId, { $set: payload }, { returnDocument: 'after' })
-      .lean()
 
     return NextResponse.json(
       {
         success: true,
-        data: updatedUser,
+        data: {
+          ...preview,
+          alreadyBanned: normalizeRole(preview?.user?.role) === 'ban',
+        },
       },
       { status: 200 },
     )
   } catch (error) {
-    console.error('Failed to update user from admin modal (app)', error)
+    console.error('Failed to build user ban preview (app)', error)
     return NextResponse.json(
-      { success: false, error: 'Не удалось обновить пользователя' },
+      { success: false, error: 'Не удалось подготовить подтверждение бана' },
       { status: 500 },
     )
   }

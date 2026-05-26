@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import { toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) return ''
@@ -21,9 +22,6 @@ const normalizeText = (value) =>
     : Number.isFinite(value)
       ? String(value).trim()
       : ''
-
-const isElevatedRole = (role) => role === 'admin' || role === 'dev'
-const isModeratorRole = (role) => role === 'moder'
 
 const normalizeChecks = (checksRaw) => {
   if (checksRaw && typeof checksRaw.get === 'function') {
@@ -63,23 +61,16 @@ const buildAccessResult = ({ session, game }) => {
     typeof session?.user?.role === 'string'
       ? session.user.role.trim().toLowerCase()
       : ''
-
-  if (isElevatedRole(role)) {
-    return { allowed: true }
-  }
-
-  if (!isModeratorRole(role)) {
-    return { allowed: false, status: 403, error: 'Недостаточно прав' }
-  }
-
   const currentUserId = normalizeStringId(
     session.user.globalUserId ?? session.user.userId ?? session.user._id,
   )
-  const moderatorIds = Array.isArray(game?.moderators)
-    ? game.moderators.map((item) => normalizeStringId(item?._id ?? item))
-    : []
-
-  if (!currentUserId || !moderatorIds.includes(currentUserId)) {
+  if (
+    !canAccessGameAsModerator({
+      userRole: role,
+      currentUserId,
+      game,
+    })
+  ) {
     return { allowed: false, status: 403, error: 'Нет доступа к этой игре' }
   }
 

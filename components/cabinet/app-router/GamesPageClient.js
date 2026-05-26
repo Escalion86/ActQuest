@@ -1181,7 +1181,7 @@ const GamesPage = ({
       : Number(currentUserTelegramId)
   const canEditAllGames = userRole === 'admin' || userRole === 'dev'
   const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
-  const canEditOwnGames = userRole === 'moder'
+  const canEditOwnGames = Boolean(currentUserIdString || currentUserTelegramIdNumber)
   const safeInitialGames = Array.isArray(initialGames) ? initialGames : []
   const [games, setGames] = useState(safeInitialGames)
   const [, setPersistedGames] = useState(safeInitialGames)
@@ -3027,13 +3027,36 @@ const GamesPage = ({
     newGameName,
   ])
 
-  const availableModerators = useMemo(
-    () =>
-      Array.isArray(initialAvailableModerators)
+  const moderatorsQuery = useQuery({
+    queryKey: ['cabinet-moderator-users'],
+    enabled: canEditAllGames && (isEditModalOpen || isTasksModalOpen),
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { json } = await requestApiJson(
+        '/api/cabinet/admin/users-list?canBeGameModerator=1&limit=200&sortBy=registration_desc',
+        { fallbackMessage: 'Не удалось загрузить список модераторов' },
+      )
+      return Array.isArray(json?.data) ? json.data : []
+    },
+  })
+
+  const availableModerators = useMemo(() => {
+    const users = Array.isArray(moderatorsQuery.data)
+      ? moderatorsQuery.data
+      : Array.isArray(initialAvailableModerators)
         ? initialAvailableModerators
-        : [],
-    [initialAvailableModerators],
-  )
+        : []
+
+    return users
+      .map((user) => ({
+        id: String(user?.id || user?._id || '').trim(),
+        telegramId: String(user?.telegramId || '').trim(),
+        name: typeof user?.name === 'string' ? user.name : '',
+        username: typeof user?.username === 'string' ? user.username : '',
+        role: typeof user?.role === 'string' ? user.role : 'client',
+      }))
+      .filter((user) => user.id)
+  }, [initialAvailableModerators, moderatorsQuery.data])
 
   const availableModeratorsMap = useMemo(
     () =>
@@ -3049,7 +3072,7 @@ const GamesPage = ({
     staleTime: 60_000,
     queryFn: async () => {
       const { json } = await requestApiJson(
-        '/api/cabinet/admin/users-list?role=agent&limit=200&sortBy=registration_desc',
+        '/api/cabinet/admin/users-list?canBeGameAgent=1&limit=200&sortBy=registration_desc',
         { fallbackMessage: 'Не удалось загрузить список агентов' },
       )
       return Array.isArray(json?.data) ? json.data : []
@@ -3073,6 +3096,19 @@ const GamesPage = ({
     () => new Map(availableAgents.map((agent) => [agent.id, agent])),
     [availableAgents],
   )
+
+  const organizersQuery = useQuery({
+    queryKey: ['cabinet-organizer-users'],
+    enabled: canEditAllGames && (isEditModalOpen || isTasksModalOpen),
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { json } = await requestApiJson(
+        '/api/cabinet/admin/users-list?limit=200&sortBy=registration_desc',
+        { fallbackMessage: 'Не удалось загрузить список организаторов' },
+      )
+      return Array.isArray(json?.data) ? json.data : []
+    },
+  })
 
   const modalGame =
     (isEditModalOpen || isTasksModalOpen) && editingGame
@@ -6249,7 +6285,7 @@ const GamesPage = ({
                             onClick={(event) => {
                               event.stopPropagation()
                               router.push(
-                                `/cabinet/agent/game-control?gameId=${encodeURIComponent(
+                                `/cabinet/agent?gameId=${encodeURIComponent(
                                   game.id,
                                 )}`,
                               )
@@ -6712,7 +6748,7 @@ const GamesPage = ({
                           onClick={(event) => {
                             event.stopPropagation()
                             router.push(
-                              `/cabinet/agent/game-control?gameId=${encodeURIComponent(
+                              `/cabinet/agent?gameId=${encodeURIComponent(
                                 game.id,
                               )}`,
                             )
@@ -6998,31 +7034,58 @@ const GamesPage = ({
 
   const availableOrganizersForSelect = useMemo(() => {
     const organizersMap = new Map()
-    const isOrganizerRoleAllowed = (roleValue) => {
-      if (typeof roleValue !== 'string') {
-        return true
-      }
+    const organizerUsers = Array.isArray(organizersQuery.data)
+      ? organizersQuery.data
+      : []
 
-      const normalizedRole = roleValue.trim().toLowerCase()
-      return normalizedRole === 'admin' || normalizedRole === 'moder'
-    }
-
-    availableModerators.forEach((moderator) => {
-      if (!isOrganizerRoleAllowed(moderator?.role)) {
+    organizerUsers.forEach((user) => {
+      const role = String(user?.role || '')
+        .trim()
+        .toLowerCase()
+      if (role !== 'admin' && role !== 'dev') {
         return
       }
 
-      const userId = String(moderator?.id || '').trim()
+      const userId = String(user?.id || user?._id || '').trim()
       if (!userId) {
         return
       }
 
       organizersMap.set(userId, {
         id: userId,
-        telegramId: String(moderator?.telegramId || '').trim(),
-        name: typeof moderator?.name === 'string' ? moderator.name : '',
+        telegramId: String(user?.telegramId || '').trim(),
+        name: typeof user?.name === 'string' ? user.name : '',
+        username: typeof user?.username === 'string' ? user.username : '',
+      })
+    })
+
+    selectedGameModerators.forEach((moderator) => {
+      const userId =
+        typeof moderator === 'string'
+          ? moderator.trim()
+          : String(moderator?.id || '').trim()
+      if (!userId || organizersMap.has(userId)) {
+        return
+      }
+
+      organizersMap.set(userId, {
+        id: userId,
+        telegramId:
+          typeof moderator === 'string'
+            ? ''
+            : String(moderator?.telegramId || '').trim(),
+        name:
+          typeof moderator === 'string'
+            ? ''
+            : typeof moderator?.name === 'string'
+              ? moderator.name
+              : '',
         username:
-          typeof moderator?.username === 'string' ? moderator.username : '',
+          typeof moderator === 'string'
+            ? ''
+            : typeof moderator?.username === 'string'
+              ? moderator.username
+              : '',
       })
     })
 
@@ -7053,7 +7116,7 @@ const GamesPage = ({
         sensitivity: 'base',
       }),
     )
-  }, [availableModerators, modalGame])
+  }, [modalGame, organizersQuery.data, selectedGameModerators])
 
   const clueModeDetails = useMemo(() => {
     if (!modalGame) {

@@ -7,11 +7,6 @@ import StoryEditorPageClient from '@components/cabinet/app-router/StoryEditorPag
 export const metadata = { title: 'ActQuest — Story-редактор' }
 export const dynamic = 'force-dynamic'
 
-const isAllowedRole = (role) => {
-  const normalized = typeof role === 'string' ? role.trim().toLowerCase() : ''
-  return normalized === 'dev' || normalized === 'admin' || normalized === 'moder'
-}
-
 export default async function StoryEditorPage() {
   const session = await getServerSession(authOptions)
 
@@ -19,10 +14,6 @@ export default async function StoryEditorPage() {
     redirect(
       `/cabinet/login?callbackUrl=${encodeURIComponent('/cabinet/admin/story-editor')}`,
     )
-  }
-
-  if (!isAllowedRole(session.user.role)) {
-    redirect('/cabinet')
   }
 
   return <StoryEditorPageClient session={session} />

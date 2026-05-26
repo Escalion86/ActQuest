@@ -53,7 +53,7 @@ test('public cabinet game view strips financial and restricted fields', () => {
 test('moderator can view restricted info only for own game', () => {
   assert.equal(
     canViewCabinetGameRestrictedInfo({
-      userRole: 'moder',
+      userRole: 'client',
       currentUserId: 'creator-1',
       gameCreatorUserId: 'creator-1',
     }),
@@ -62,7 +62,7 @@ test('moderator can view restricted info only for own game', () => {
 
   assert.equal(
     canViewCabinetGameRestrictedInfo({
-      userRole: 'moder',
+      userRole: 'client',
       currentUserId: 'user-2',
       gameCreatorUserId: 'creator-1',
     }),
@@ -73,7 +73,7 @@ test('moderator can view restricted info only for own game', () => {
 test('game moderator can view restricted info even when not creator', () => {
   assert.equal(
     canViewCabinetGameRestrictedInfo({
-      userRole: 'moder',
+      userRole: 'client',
       currentUserId: 'user-2',
       gameCreatorUserId: 'creator-1',
       isGameModerator: true,

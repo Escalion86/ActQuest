@@ -1471,20 +1471,12 @@ const GameEditModal = ({
                     }}
                     containerClassName="w-full space-y-0"
                     selectClassName="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
-                  >
+                    >
                     <option value="">Выберите организатора</option>
                     {availableOrganizersForSelect.map((organizer) => {
-                      const labelParts = [organizer.name || 'Без имени']
-                      if (organizer.username) {
-                        labelParts.push(`@${organizer.username}`)
-                      }
-                      if (organizer.telegramId) {
-                        labelParts.push(`ID: ${organizer.telegramId}`)
-                      }
-
                       return (
                         <option key={organizer.id} value={organizer.id}>
-                          {labelParts.join(' · ')}
+                          {organizer.name || 'Без имени'}
                         </option>
                       )
                     })}
@@ -1516,14 +1508,6 @@ const GameEditModal = ({
                         typeof moderator === 'string'
                           ? (fallback?.name ?? 'Без имени')
                           : moderator.name || 'Без имени'
-                      const username =
-                        typeof moderator === 'string'
-                          ? (fallback?.username ?? '')
-                          : moderator.username || ''
-                      const telegramId =
-                        typeof moderator === 'string'
-                          ? (fallback?.telegramId ?? '')
-                          : moderator.telegramId || ''
 
                       return (
                         <li
@@ -1534,16 +1518,6 @@ const GameEditModal = ({
                             <p className="text-sm font-semibold text-slate-800 dark:text-white">
                               {name}
                             </p>
-                            {username && (
-                              <p className="text-xs text-slate-500">
-                                @{username}
-                              </p>
-                            )}
-                            {telegramId && (
-                              <p className="text-xs text-slate-500">
-                                ID: {telegramId}
-                              </p>
-                            )}
                           </div>
                           {canEditSelectedGame && (
                             <CabinetButton
@@ -1566,7 +1540,8 @@ const GameEditModal = ({
                   </p>
                 )}
 
-                {canEditSelectedGame && (
+                {canEditSelectedGame &&
+                  availableModeratorsForSelect.length > 0 && (
                   <div className="flex flex-col gap-3 pt-4 mt-4 border-t border-slate-200 dark:border-slate-700">
                     <p className={fieldLabelClassName}>Добавить модератора</p>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -1582,17 +1557,9 @@ const GameEditModal = ({
                       >
                         <option value="">Выберите модератора</option>
                         {availableModeratorsForSelect.map((moderator) => {
-                          const labelParts = [moderator.name || 'Без имени']
-                          if (moderator.username) {
-                            labelParts.push(`@${moderator.username}`)
-                          }
-                          if (moderator.telegramId) {
-                            labelParts.push(`ID: ${moderator.telegramId}`)
-                          }
-
                           return (
                             <option key={moderator.id} value={moderator.id}>
-                              {labelParts.join(' · ')}
+                              {moderator.name || 'Без имени'}
                             </option>
                           )
                         })}
@@ -1606,11 +1573,6 @@ const GameEditModal = ({
                         Добавить
                       </CabinetButton>
                     </div>
-                    {availableModeratorsForSelect.length === 0 && (
-                      <p className="text-xs text-slate-500 dark:text-slate-300">
-                        Все доступные модераторы уже назначены на эту игру.
-                      </p>
-                    )}
                   </div>
                 )}
               </div>
@@ -1621,72 +1583,74 @@ const GameEditModal = ({
                 Агенты игры
               </h3>
 
-              <div className="grid gap-3 mt-3 sm:grid-cols-2">
-                <NeonCheckbox
-                  id="agent-notify-previous-task"
-                  checked={Boolean(
-                    selectedGame.agentNotifications?.onPreviousTask ?? true,
-                  )}
-                  onChange={(eventOrChecked) =>
-                    updateSelectedGame({
-                      agentNotifications: {
-                        ...(selectedGame.agentNotifications || {}),
-                        onPreviousTask: getCheckboxChecked(eventOrChecked),
-                      },
-                    })
-                  }
-                  label="Уведомлять на предыдущем задании"
-                  labelClassName="text-sm text-slate-600 dark:text-slate-200"
-                />
-                <NeonCheckbox
-                  id="agent-notify-current-task"
-                  checked={Boolean(
-                    selectedGame.agentNotifications?.onCurrentTask ?? true,
-                  )}
-                  onChange={(eventOrChecked) =>
-                    updateSelectedGame({
-                      agentNotifications: {
-                        ...(selectedGame.agentNotifications || {}),
-                        onCurrentTask: getCheckboxChecked(eventOrChecked),
-                      },
-                    })
-                  }
-                  label="Уведомлять на задании агента"
-                  labelClassName="text-sm text-slate-600 dark:text-slate-200"
-                />
-                <NeonCheckbox
-                  id="agent-notify-task-completed"
-                  checked={Boolean(
-                    selectedGame.agentNotifications?.onTaskCompleted ?? false,
-                  )}
-                  onChange={(eventOrChecked) =>
-                    updateSelectedGame({
-                      agentNotifications: {
-                        ...(selectedGame.agentNotifications || {}),
-                        onTaskCompleted: getCheckboxChecked(eventOrChecked),
-                      },
-                    })
-                  }
-                  label="Уведомлять о прохождении задания"
-                  labelClassName="text-sm text-slate-600 dark:text-slate-200"
-                />
-                <NeonCheckbox
-                  id="agent-notify-all-passed"
-                  checked={Boolean(
-                    selectedGame.agentNotifications?.onAllTeamsPassed ?? true,
-                  )}
-                  onChange={(eventOrChecked) =>
-                    updateSelectedGame({
-                      agentNotifications: {
-                        ...(selectedGame.agentNotifications || {}),
-                        onAllTeamsPassed: getCheckboxChecked(eventOrChecked),
-                      },
-                    })
-                  }
-                  label="Уведомлять, когда все команды прошли"
-                  labelClassName="text-sm text-slate-600 dark:text-slate-200"
-                />
-              </div>
+              {selectedGameAgents.length > 0 ? (
+                <div className="grid gap-3 mt-3 sm:grid-cols-2">
+                  <NeonCheckbox
+                    id="agent-notify-previous-task"
+                    checked={Boolean(
+                      selectedGame.agentNotifications?.onPreviousTask ?? true,
+                    )}
+                    onChange={(eventOrChecked) =>
+                      updateSelectedGame({
+                        agentNotifications: {
+                          ...(selectedGame.agentNotifications || {}),
+                          onPreviousTask: getCheckboxChecked(eventOrChecked),
+                        },
+                      })
+                    }
+                    label="Уведомлять на предыдущем задании"
+                    labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                  />
+                  <NeonCheckbox
+                    id="agent-notify-current-task"
+                    checked={Boolean(
+                      selectedGame.agentNotifications?.onCurrentTask ?? true,
+                    )}
+                    onChange={(eventOrChecked) =>
+                      updateSelectedGame({
+                        agentNotifications: {
+                          ...(selectedGame.agentNotifications || {}),
+                          onCurrentTask: getCheckboxChecked(eventOrChecked),
+                        },
+                      })
+                    }
+                    label="Уведомлять на задании агента"
+                    labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                  />
+                  <NeonCheckbox
+                    id="agent-notify-task-completed"
+                    checked={Boolean(
+                      selectedGame.agentNotifications?.onTaskCompleted ?? false,
+                    )}
+                    onChange={(eventOrChecked) =>
+                      updateSelectedGame({
+                        agentNotifications: {
+                          ...(selectedGame.agentNotifications || {}),
+                          onTaskCompleted: getCheckboxChecked(eventOrChecked),
+                        },
+                      })
+                    }
+                    label="Уведомлять о прохождении задания"
+                    labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                  />
+                  <NeonCheckbox
+                    id="agent-notify-all-passed"
+                    checked={Boolean(
+                      selectedGame.agentNotifications?.onAllTeamsPassed ?? true,
+                    )}
+                    onChange={(eventOrChecked) =>
+                      updateSelectedGame({
+                        agentNotifications: {
+                          ...(selectedGame.agentNotifications || {}),
+                          onAllTeamsPassed: getCheckboxChecked(eventOrChecked),
+                        },
+                      })
+                    }
+                    label="Уведомлять, когда все команды прошли"
+                    labelClassName="text-sm text-slate-600 dark:text-slate-200"
+                  />
+                </div>
+              ) : null}
 
               {selectedGameAgents.length > 0 ? (
                 <ul className="mt-4 space-y-2">
@@ -1699,16 +1663,6 @@ const GameEditModal = ({
                         <p className="text-sm font-semibold text-slate-800 dark:text-white">
                           {agent.name || 'Без имени'}
                         </p>
-                        {agent.username ? (
-                          <p className="text-xs text-slate-500">
-                            @{agent.username}
-                          </p>
-                        ) : null}
-                        {agent.telegramId ? (
-                          <p className="text-xs text-slate-500">
-                            ID: {agent.telegramId}
-                          </p>
-                        ) : null}
                       </div>
                       {canEditSelectedGame ? (
                         <CabinetButton
@@ -1730,7 +1684,7 @@ const GameEditModal = ({
                 </p>
               )}
 
-              {canEditSelectedGame ? (
+              {canEditSelectedGame && availableAgentsForSelect.length > 0 ? (
                 <div className="flex flex-col gap-3 pt-4 mt-4 border-t border-slate-200 dark:border-slate-700">
                   <p className={fieldLabelClassName}>Добавить агента</p>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -1746,17 +1700,9 @@ const GameEditModal = ({
                     >
                       <option value="">Выберите агента</option>
                       {availableAgentsForSelect.map((agent) => {
-                        const labelParts = [agent.name || 'Без имени']
-                        if (agent.username) {
-                          labelParts.push(`@${agent.username}`)
-                        }
-                        if (agent.telegramId) {
-                          labelParts.push(`ID: ${agent.telegramId}`)
-                        }
-
                         return (
                           <option key={agent.id} value={agent.id}>
-                            {labelParts.join(' · ')}
+                            {agent.name || 'Без имени'}
                           </option>
                         )
                       })}
@@ -1770,12 +1716,6 @@ const GameEditModal = ({
                       Добавить
                     </CabinetButton>
                   </div>
-                  {availableAgentsForSelect.length === 0 ? (
-                    <p className="text-xs text-slate-500 dark:text-slate-300">
-                      Нет доступных пользователей с ролью агента или все агенты
-                      уже назначены.
-                    </p>
-                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -2521,11 +2461,6 @@ const GameEditModal = ({
                                           <span className="font-semibold">
                                             {agent.name || 'Без имени'}
                                           </span>
-                                          {agent.username ? (
-                                            <span className="block text-xs text-slate-500">
-                                              @{agent.username}
-                                            </span>
-                                          ) : null}
                                         </span>
                                       </label>
                                     )

@@ -127,6 +127,8 @@ const normalizeUserForAdmin = ({
     globalUserId: userDoc?.globalUserId ? String(userDoc.globalUserId) : null,
     telegramId,
     role: normalizedRole,
+    canBeGameModerator: Boolean(userDoc?.canBeGameModerator),
+    canBeGameAgent: Boolean(userDoc?.canBeGameAgent),
     createdAt: ensureDateISOString(userDoc?.createdAt),
     updatedAt: ensureDateISOString(userDoc?.updatedAt),
     rating: resolveEntityRating({ entity: userDoc, location }),
@@ -263,6 +265,20 @@ const normalizeWithoutPhoneOnly = (value) => {
   return false
 }
 
+const normalizeAssignmentFilter = (value) => {
+  if (typeof value === 'boolean') {
+    return value
+  }
+  if (typeof value === 'number') {
+    return value === 1
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    return ['1', 'true', 'yes', 'on'].includes(normalized)
+  }
+  return false
+}
+
 const fetchAdminUsersForCabinet = async ({
   db,
   offset = 0,
@@ -273,6 +289,8 @@ const fetchAdminUsersForCabinet = async ({
   location = null,
   locationFilter = 'all',
   withoutPhoneOnly = false,
+  canBeGameModeratorOnly = false,
+  canBeGameAgentOnly = false,
 }) => {
   if (!db) {
     return { users: [], hasMore: false }
@@ -321,6 +339,12 @@ const fetchAdminUsersForCabinet = async ({
       })
       usersQuery.$and = [existingQuery, withoutPhoneCondition]
     }
+  }
+  if (normalizeAssignmentFilter(canBeGameModeratorOnly)) {
+    usersQuery.canBeGameModerator = true
+  }
+  if (normalizeAssignmentFilter(canBeGameAgentOnly)) {
+    usersQuery.canBeGameAgent = true
   }
   const resolvedSortBy = normalizeSortBy(sortBy)
 

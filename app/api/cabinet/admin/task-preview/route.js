@@ -5,6 +5,7 @@ import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
 import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
+import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 
 const normalizeString = (value) =>
   typeof value === 'string' ? value.trim() : ''
@@ -17,15 +18,12 @@ const toFiniteNonNegativeInteger = (value, fallback = 0) => {
   return Math.floor(numeric)
 }
 
-const isElevatedRole = (role) => role === 'admin' || role === 'dev'
-const isModeratorRole = (role) => role === 'moder'
-
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
     return 'client'
   }
   const normalized = value.trim().toLowerCase()
-  return ['client', 'moder', 'admin', 'dev'].includes(normalized)
+  return ['client', 'admin', 'dev', 'ban'].includes(normalized)
     ? normalized
     : 'client'
 }
@@ -125,27 +123,20 @@ export async function GET(request) {
     }
 
     const userRole = normalizeRole(session.user.role)
-    if (!isElevatedRole(userRole)) {
-      if (!isModeratorRole(userRole)) {
-        return NextResponse.json(
-          { success: false, error: 'Недостаточно прав' },
-          { status: 403 },
-        )
-      }
-
-      const currentUserId = toStringId(
-        session.user.globalUserId ?? session.user.userId ?? session.user._id,
+    const currentUserId = toStringId(
+      session.user.globalUserId ?? session.user.userId ?? session.user._id,
+    )
+    if (
+      !canAccessGameAsModerator({
+        userRole,
+        currentUserId,
+        game,
+      })
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'Нет доступа к предпросмотру этой игры' },
+        { status: 403 },
       )
-      const moderatorIds = (Array.isArray(game.moderators) ? game.moderators : [])
-        .map((item) => toStringId(item?._id ?? item))
-        .filter(Boolean)
-
-      if (!currentUserId || !moderatorIds.includes(currentUserId)) {
-        return NextResponse.json(
-          { success: false, error: 'Нет доступа к предпросмотру этой игры' },
-          { status: 403 },
-        )
-      }
     }
 
     const tasks = Array.isArray(game.tasks) ? game.tasks : []

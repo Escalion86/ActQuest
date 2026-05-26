@@ -65,6 +65,12 @@ export async function GET(request) {
     const withoutPhoneOnly = parseBoolean(
       requestUrl.searchParams.get('withoutPhoneOnly'),
     )
+    const canBeGameModeratorOnly = parseBoolean(
+      requestUrl.searchParams.get('canBeGameModerator'),
+    )
+    const canBeGameAgentOnly = parseBoolean(
+      requestUrl.searchParams.get('canBeGameAgent'),
+    )
     const location =
       typeof session?.user?.location === 'string' ? session.user.location : null
 
@@ -78,6 +84,8 @@ export async function GET(request) {
       location,
       locationFilter,
       withoutPhoneOnly,
+      canBeGameModeratorOnly,
+      canBeGameAgentOnly,
     })
 
     return NextResponse.json(

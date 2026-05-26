@@ -16,6 +16,7 @@
     "migrate:teamsusers:user-id": "node scripts/migrateTeamsUsersUserId.js",
     "audit:users:global-merge": "node scripts/auditGlobalUsersMerge.js",
     "migrate:db:global": "node scripts/migrateAllToGlobalDb.js",
+    "migrate:game-assignment-roles": "node scripts/migrateGameAssignmentRoles.js",
     "repair:db:global-user-ids": "node scripts/repairGlobalUserIds.js",
     "verify:db:global": "node scripts/verifyGlobalMigration.js",
     "migrate:escalioncloud-urls": "node scripts/migrateEscalionCloudUrls.js",

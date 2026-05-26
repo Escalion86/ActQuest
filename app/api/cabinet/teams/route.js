@@ -8,6 +8,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import logSiteEvent from '@helpers/logSiteEvent'
 import { toStringId } from '@helpers/idAndDate'
 import { TEAM_ROLE_CAPTAIN } from '@helpers/teamRoles'
+import { canCreateTeamForRole } from '@helpers/teamBanAccess'
 
 const collectTeamIds = (searchParams) => {
   const rawIds = []
@@ -98,6 +99,16 @@ export async function POST(request) {
     return NextResponse.json(
       { success: false, error: 'Необходима авторизация' },
       { status: 401 },
+    )
+  }
+
+  if (!canCreateTeamForRole(session.user.role)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Заблокированный пользователь не может создавать команды',
+      },
+      { status: 403 },
     )
   }
 
