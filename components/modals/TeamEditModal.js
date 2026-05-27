@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { useAtomValue } from 'jotai'
+import { useSession } from 'next-auth/react'
 
 import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
@@ -20,7 +20,7 @@ import {
   TEAM_CAR_SKIN_OPTIONS,
   normalizeTeamCarSkin,
 } from '@helpers/teamCarSkins'
-import { isAdminAtom } from '@state/atoms/cabinetSessionAtom'
+import isUserAdmin from '@helpers/isUserAdmin'
 
 const normalizePhoneLink = (phone) => {
   if (!phone) {
@@ -113,7 +113,8 @@ const TeamEditModal = ({
   isAddingMember,
 }) => {
   const [addMemberUser, setAddMemberUser] = useState(null)
-  const isAdmin = useAtomValue(isAdminAtom)
+  const { data: session } = useSession()
+  const isAdmin = isUserAdmin({ role: session?.user?.role ?? 'client' })
 
   useEffect(() => {
     setAddMemberUser(null)

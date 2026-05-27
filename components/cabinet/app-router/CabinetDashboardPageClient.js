@@ -15,7 +15,6 @@ import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
 import requestApiJson from '@helpers/requestApiJson'
 import resolveEntityRating from '@helpers/resolveEntityRating'
 import { resolveGameEntryHref } from '@helpers/resolveGameEntryHref'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { LOCATIONS } from '@server/serverConstants'
 
@@ -237,9 +236,7 @@ const CabinetDashboard = ({
     searchParams?.toString() ? `?${searchParams.toString()}` : ''
   }`
   const { activeSession, status } = useMergedSession(initialSession)
-  const { effectiveRole } = useCabinetRolePreview(
-    activeSession?.user?.role ?? 'client',
-  )
+  const effectiveRole = activeSession?.user?.role ?? 'client'
 
   const dashboardData = useMemo(() => {
     const source =

@@ -41,7 +41,6 @@ import {
 } from '@helpers/getTaskDuplicateCodeConflicts'
 import { canManageCabinetGameFinances } from '@helpers/cabinetGameVisibility'
 import buildGameFinancesSummary from '@helpers/gameFinancesSummary'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { getNounTeams } from '@helpers/getNoun'
 import {
@@ -149,7 +148,6 @@ const buildCabinetGamesQueryKey = ({ gamesView, userRole, locationValue }) => [
 const fetchCabinetGamesPage = async ({
   pageParam = 0,
   gamesView,
-  userRole,
   locationValue,
 }) => {
   const params = new URLSearchParams({
@@ -157,9 +155,6 @@ const fetchCabinetGamesPage = async ({
     limit: String(GAMES_PAGE_SIZE),
     view: normalizeGamesViewValue(gamesView),
   })
-  if (userRole) {
-    params.set('rolePreview', userRole)
-  }
   if (locationValue) {
     params.set('location', locationValue)
   }
@@ -1161,9 +1156,7 @@ const GamesPage = ({
   const searchParams = useSearchParams()
   const { activeSession } = useMergedSession(initialSession)
   const location = activeSession?.user?.location ?? initialLocation ?? null
-  const { effectiveRole: userRole } = useCabinetRolePreview(
-    activeSession?.user?.role ?? 'client',
-  )
+  const userRole = activeSession?.user?.role ?? 'client'
   const currentUserDbId =
     activeSession?.user?.globalUserId ??
     activeSession?.user?.userId ??
@@ -2602,10 +2595,6 @@ const GamesPage = ({
             view: 'all',
             location: 'all',
           })
-          if (userRole) {
-            params.set('rolePreview', userRole)
-          }
-
           const { json } = await requestApiJson(
             `${CABINET_GAMES_LIST_API_BASE}?${params.toString()}`,
             {
@@ -4599,6 +4588,10 @@ const GamesPage = ({
             timeAddings: Array.isArray(entry?.timeAddings)
               ? entry.timeAddings
               : [],
+            hasPrequelAdjustments: Boolean(entry?.hasPrequelAdjustments),
+            prequelAdjustments: Array.isArray(entry?.prequelAdjustments)
+              ? entry.prequelAdjustments
+              : [],
             teamName: teamInfo?.name || 'Неизвестная команда',
             teamDescription: teamInfo?.description || '',
             teamImage: teamInfo?.image || '',
@@ -4627,6 +4620,9 @@ const GamesPage = ({
             name: team.name || 'Без названия',
             description: team.description || '',
             membersCount,
+            members: Array.isArray(detailedTeam?.members)
+              ? detailedTeam.members
+              : [],
           }
         }
 
@@ -4649,7 +4645,7 @@ const GamesPage = ({
         setSelectedTeamToAdd((prev) =>
           prev && availableTeams.some((team) => team.id === prev)
             ? prev
-            : availableTeams[0].id,
+            : '',
         )
       } else {
         setSelectedTeamToAdd('')

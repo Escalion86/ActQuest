@@ -11,7 +11,6 @@ import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import requestApiJson from '@helpers/requestApiJson'
 import isUserAdmin from '@helpers/isUserAdmin'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { LOCATIONS } from '@server/serverConstants'
 
@@ -114,9 +113,7 @@ const AdminGameOrdersPageClient = ({
   initialHasMore,
 }) => {
   const { activeSession } = useMergedSession(initialSession)
-  const { effectiveRole } = useCabinetRolePreview(
-    activeSession?.user?.role ?? 'client',
-  )
+  const effectiveRole = activeSession?.user?.role ?? 'client'
   const isAdmin = isUserAdmin({ role: effectiveRole })
   const [orders, setOrders] = useState(
     Array.isArray(initialOrders)

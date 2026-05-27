@@ -10,7 +10,6 @@ import formatRelativeTimeFromNow from '@helpers/formatRelativeTimeFromNow'
 import CABINET_ROLE_LABELS from '@helpers/cabinetRoleLabels'
 import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import isUserAdmin from '@helpers/isUserAdmin'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 
 const createEmptyReports = () => ({
@@ -48,9 +47,7 @@ const ReportsPage = ({
       : createEmptyReports()
 
   const { activeSession } = useMergedSession(initialSession)
-  const { effectiveRole } = useCabinetRolePreview(
-    activeSession?.user?.role ?? 'client',
-  )
+  const effectiveRole = activeSession?.user?.role ?? 'client'
   const isAdmin = isUserAdmin({ role: effectiveRole })
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat('ru-RU'), [])

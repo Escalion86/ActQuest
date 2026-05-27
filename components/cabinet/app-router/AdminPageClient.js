@@ -5,7 +5,6 @@ import Link from 'next/link'
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import canManageTransactions from '@helpers/canManageTransactions'
 import isUserAdmin from '@helpers/isUserAdmin'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 
 const adminTools = [
@@ -69,7 +68,7 @@ const adminTools = [
 
 const AdminPage = ({ session: initialSession }) => {
   const { activeSession } = useMergedSession(initialSession)
-  const { effectiveRole } = useCabinetRolePreview(activeSession?.user?.role ?? 'client')
+  const effectiveRole = activeSession?.user?.role ?? 'client'
   const isAdmin = isUserAdmin({ role: effectiveRole })
   const tools = canManageTransactions({ role: effectiveRole })
     ? adminTools

@@ -11,7 +11,10 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import logSiteEvent from '@helpers/logSiteEvent'
 import { toStringId } from '@helpers/idAndDate'
 import { getCaptainRoleQuery } from '@helpers/teamRoles'
-import { hasPrequelAdjustments } from '@helpers/normalizePrequel'
+import {
+  hasPrequelAdjustments,
+  normalizePrequelProgress,
+} from '@helpers/normalizePrequel'
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
@@ -123,12 +126,75 @@ const normalizeGameTeamEntry = (doc) => {
     return null
   }
 
+  const prequelProgress = normalizePrequelProgress(doc?.prequelProgress)
+  const prequelAdjustments = (Array.isArray(prequelProgress.appliedAdjustments)
+    ? prequelProgress.appliedAdjustments
+    : []
+  )
+    .map((item, index) => {
+      const rawValue = Number(item?.value)
+      if (!Number.isFinite(rawValue) || rawValue === 0) {
+        return null
+      }
+
+      const adjustmentType = String(item?.type || '')
+        .trim()
+        .toLowerCase()
+      const source = String(item?.source || '').trim()
+      const code = String(item?.code || '').trim()
+      const description = String(item?.description || '').trim()
+      const isBonusAdjustment =
+        adjustmentType === 'bonus' || source === 'bonus_code'
+      const normalizedSeconds = Math.max(1, Math.abs(Math.round(rawValue)))
+      const signedSeconds = isBonusAdjustment
+        ? -normalizedSeconds
+        : normalizedSeconds
+
+      let name = description
+      if (!name && code) {
+        name = `Код приквела: ${code}`
+      }
+      if (!name && source === 'wrong_attempts_limit') {
+        name = 'Штраф за лимит неверных кодов приквела'
+      }
+      if (!name) {
+        name =
+          isBonusAdjustment
+            ? `Бонус приквела #${index + 1}`
+            : `Штраф приквела #${index + 1}`
+      }
+
+      return {
+        id: String(item?.id || `prequel-adjustment-${index}`),
+        name,
+        time: signedSeconds,
+        source:
+          source === 'wrong_attempts_limit'
+            ? 'prequel_wrong_attempts_limit'
+            : source === 'penalty_code'
+              ? 'prequel_penalty_code'
+              : 'prequel_bonus_code',
+        scope: 'total_adjustment',
+        showInAdjustments: true,
+        code,
+        description,
+        createdAt:
+          item?.createdAt instanceof Date
+            ? item.createdAt.toISOString()
+            : item?.createdAt
+              ? String(item.createdAt)
+              : null,
+      }
+    })
+    .filter(Boolean)
+
   return {
     id,
     teamId,
     outOfCompetition: Boolean(doc?.outOfCompetition),
     timeAddings: normalizeTimeAddingsForResponse(doc?.timeAddings),
     hasPrequelAdjustments: hasPrequelAdjustments(doc?.prequelProgress),
+    prequelAdjustments,
   }
 }
 

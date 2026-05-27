@@ -16,7 +16,6 @@ import UserViewModal from '@components/cabinet/modals/UserViewModal'
 import requestApiJson from '@helpers/requestApiJson'
 import { getNounUsers } from '@helpers/getNoun'
 import useSnackbar from '@helpers/useSnackbar'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { LOCATIONS } from '@server/serverConstants'
 
@@ -81,9 +80,7 @@ const TeamsPage = ({
   const searchParams = useSearchParams()
   const safeInitialTeams = Array.isArray(initialTeams) ? initialTeams : []
   const { activeSession } = useMergedSession(initialSession)
-  const { effectiveRole: userRole } = useCabinetRolePreview(
-    activeSession?.user?.role ?? 'client',
-  )
+  const userRole = activeSession?.user?.role ?? 'client'
   const currentUserIdRaw =
     activeSession?.user?.globalUserId ??
     activeSession?.user?.userId ??

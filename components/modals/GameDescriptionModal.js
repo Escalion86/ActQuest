@@ -169,7 +169,12 @@ const GameDescriptionModal = ({
           normalizePrequelProgress(json?.progress || buildDefaultPrequelProgress()),
         )
         setPrequelFeedback({
-          type: json?.matchedCategory === 'wrong' ? 'info' : 'success',
+          type:
+            json?.matchedCategory === 'wrong'
+              ? 'info'
+              : json?.matchedCategory === 'penalty'
+                ? 'error'
+                : 'success',
           message: json?.message || 'Код приквела обработан',
         })
         setPrequelCode('')

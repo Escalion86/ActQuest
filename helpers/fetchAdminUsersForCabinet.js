@@ -187,6 +187,9 @@ const normalizeRuPhone = (digits) => {
   return digits
 }
 
+const isMongoObjectIdLike = (value) =>
+  typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value.trim())
+
 const buildUsersQuery = (search) => {
   const normalizedSearch = typeof search === 'string' ? search.trim() : ''
 
@@ -198,6 +201,20 @@ const buildUsersQuery = (search) => {
   const query = {
     $or: [{ name: regex }, { username: regex }, { globalUserId: regex }],
   }
+
+  if (isMongoObjectIdLike(normalizedSearch)) {
+    query.$or.push({ _id: normalizedSearch })
+  }
+
+  query.$or.push({
+    $expr: {
+      $regexMatch: {
+        input: { $toString: '$_id' },
+        regex: escapeRegExp(normalizedSearch),
+        options: 'i',
+      },
+    },
+  })
 
   const numericSearch = Number(normalizedSearch)
   if (Number.isFinite(numericSearch)) {

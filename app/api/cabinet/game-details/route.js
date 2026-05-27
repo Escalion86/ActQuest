@@ -72,14 +72,7 @@ export async function GET(request) {
       throw new Error('Не удалось подключиться к базе данных')
     }
 
-    const sessionRole = normalizeRole(session?.user?.role) ?? 'client'
-    const previewRole = normalizeRole(
-      requestUrl.searchParams.get('rolePreview'),
-    )
-    const userRole =
-      sessionRole === 'dev' && previewRole && previewRole !== 'dev'
-        ? previewRole
-        : sessionRole
+    const userRole = normalizeRole(session?.user?.role) ?? 'client'
 
     const currentUserId =
       session?.user?.globalUserId ??

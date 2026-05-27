@@ -23,7 +23,6 @@ import TeamDescriptionModal from '@components/modals/TeamDescriptionModal'
 import { getNounUsers } from '@helpers/getNoun'
 import isUserAdmin from '@helpers/isUserAdmin'
 import requestApiJson from '@helpers/requestApiJson'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { normalizeTeamCarSkin } from '@helpers/teamCarSkins'
 import { LOCATIONS } from '@server/serverConstants'
@@ -337,9 +336,7 @@ const AdminTeamsPage = ({
   const safeInitialTeams = Array.isArray(initialTeams) ? initialTeams : []
   const queryClient = useQueryClient()
   const { activeSession } = useMergedSession(initialSession)
-  const { effectiveRole } = useCabinetRolePreview(
-    activeSession?.user?.role ?? 'client',
-  )
+  const effectiveRole = activeSession?.user?.role ?? 'client'
   const isAdmin = isUserAdmin({ role: effectiveRole })
 
   const [teams, setTeams] = useState(safeInitialTeams)

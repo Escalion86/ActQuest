@@ -6,6 +6,7 @@ import Modal from '@components/Modal'
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetDurationField from '@components/cabinet/CabinetDurationField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
+import TeamSelectField from '@components/cabinet/TeamSelectField'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NoticeBanner from '@components/NoticeBanner'
@@ -83,9 +84,24 @@ const TeamStatsIcon = () => (
       stroke="currentColor"
       strokeWidth="1.5"
     />
-    <path d="M6.5 13V10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M10 13V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M13.5 13V6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <path
+      d="M6.5 13V10.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M10 13V8"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M13.5 13V6.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
   </svg>
 )
 
@@ -151,8 +167,7 @@ const GameTeamsModal = ({
       (Array.isArray(selectedGame?.tasks) ? selectedGame.tasks : []).map(
         (task, index) => ({
           value: String(index),
-          label:
-            String(task?.title || '').trim() || `Задание ${index + 1}`,
+          label: String(task?.title || '').trim() || `Задание ${index + 1}`,
         }),
       ),
     [selectedGame?.tasks],
@@ -163,7 +178,9 @@ const GameTeamsModal = ({
       return false
     }
 
-    const source = String(item.source || '').trim().toLowerCase()
+    const source = String(item.source || '')
+      .trim()
+      .toLowerCase()
     if (source === 'manual_team_adjustment') {
       return true
     }
@@ -208,7 +225,8 @@ const GameTeamsModal = ({
       String(currentUserRole || '').toLowerCase(),
     )
   const canViewTeamStats =
-    canEditRegisteredTeams && (gameStatus === 'finished' || gameStatus === 'closed')
+    canEditRegisteredTeams &&
+    (gameStatus === 'finished' || gameStatus === 'closed')
   const locationOptions = useMemo(
     () =>
       Object.entries(LOCATIONS)
@@ -221,6 +239,12 @@ const GameTeamsModal = ({
               : value,
         })),
     [],
+  )
+  const selectedAvailableTeam = useMemo(
+    () =>
+      teamsModalState.availableTeams.find((team) => team?.id === selectedTeamToAdd) ??
+      null,
+    [selectedTeamToAdd, teamsModalState.availableTeams],
   )
 
   useEffect(() => {
@@ -278,8 +302,7 @@ const GameTeamsModal = ({
 
         const teams = Array.isArray(json?.data?.teams) ? json.data.teams : []
         const matchedTeam = teams.find(
-          (item) =>
-            String(item?.teamId || '') === String(team.teamId || ''),
+          (item) => String(item?.teamId || '') === String(team.teamId || ''),
         )
 
         setSelectedTeamStats(matchedTeam?.teamProgressStats || null)
@@ -292,11 +315,12 @@ const GameTeamsModal = ({
     [selectedGame?.id],
   )
 
-  const getManualAdjustmentRowsFromTeam = useCallback((team) => {
-    const timeAddings = Array.isArray(team?.timeAddings) ? team.timeAddings : []
-    return timeAddings
-      .filter(isManualAdjustmentItem)
-      .map((item, index) => {
+  const getManualAdjustmentRowsFromTeam = useCallback(
+    (team) => {
+      const timeAddings = Array.isArray(team?.timeAddings)
+        ? team.timeAddings
+        : []
+      return timeAddings.filter(isManualAdjustmentItem).map((item, index) => {
         const rawSeconds = Number(item.time)
         const seconds = Number.isFinite(rawSeconds)
           ? Math.max(1, Math.abs(Math.round(rawSeconds)))
@@ -320,12 +344,16 @@ const GameTeamsModal = ({
             : '',
         }
       })
-  }, [isManualAdjustmentItem])
+    },
+    [isManualAdjustmentItem],
+  )
 
   const getSystemAdjustmentRowsFromTeam = useCallback(
     (team) => {
-      const timeAddings = Array.isArray(team?.timeAddings) ? team.timeAddings : []
-      return timeAddings
+      const timeAddings = Array.isArray(team?.timeAddings)
+        ? team.timeAddings
+        : []
+      const automaticRows = timeAddings
         .filter((item) => {
           const seconds = Number(item?.time)
           return (
@@ -352,7 +380,9 @@ const GameTeamsModal = ({
             id: `system-adjustment-${index}-${source || 'legacy'}-${String(item.name || '').slice(0, 16)}`,
             type: rawSeconds < 0 ? 'bonus' : 'penalty',
             seconds: Math.max(1, Math.abs(Math.round(rawSeconds))),
-            name: String(item.name || '').trim() || `Системная корректировка #${index + 1}`,
+            name:
+              String(item.name || '').trim() ||
+              `Системная корректировка #${index + 1}`,
             source,
             scope:
               String(item.scope || '').trim() === 'task_elapsed'
@@ -362,6 +392,46 @@ const GameTeamsModal = ({
             taskLabel,
           }
         })
+
+      const prequelRows = (
+        Array.isArray(team?.prequelAdjustments) ? team.prequelAdjustments : []
+      )
+        .map((item, index) => {
+          const rawSeconds = Number(item?.time)
+          if (!Number.isFinite(rawSeconds) || Math.round(rawSeconds) === 0) {
+            return null
+          }
+
+          const source = String(item?.source || '').trim()
+          const code = String(item?.code || '').trim()
+          const description = String(item?.description || '').trim()
+
+          return {
+            id:
+              String(item?.id || '').trim() ||
+              `prequel-adjustment-${index}-${source || 'prequel'}`,
+            type: rawSeconds < 0 ? 'bonus' : 'penalty',
+            seconds: Math.max(1, Math.abs(Math.round(rawSeconds))),
+            name:
+              String(item?.name || '').trim() ||
+              (code ? `Код приквела: ${code}` : 'Корректировка приквела'),
+            source,
+            scope: 'total_adjustment',
+            showInAdjustments: true,
+            taskLabel: '',
+            metaLabel:
+              source === 'prequel_wrong_attempts_limit'
+                ? 'Приквел · лимит неверных кодов'
+                : source === 'prequel_penalty_code'
+                  ? 'Приквел · штрафной код'
+                  : 'Приквел · бонусный код',
+            code,
+            description,
+          }
+        })
+        .filter(Boolean)
+
+      return [...prequelRows, ...automaticRows]
     },
     [adjustmentTaskOptions, isManualAdjustmentItem],
   )
@@ -392,7 +462,9 @@ const GameTeamsModal = ({
         gameTeamId: String(team?.id || ''),
         teamId: String(team?.teamId || ''),
         teamName: String(team?.teamName || ''),
-        teamTimeAddings: Array.isArray(team?.timeAddings) ? team.timeAddings : [],
+        teamTimeAddings: Array.isArray(team?.timeAddings)
+          ? team.timeAddings
+          : [],
         parsedManualAdjustments: initialRows,
       })
       setTeamAdjustmentsTarget({
@@ -592,7 +664,8 @@ const GameTeamsModal = ({
               ? Boolean(row?.showInAdjustments)
               : true,
           taskIndex:
-            row?.scope === 'task_elapsed' && Number.isInteger(Number(row.taskIndex))
+            row?.scope === 'task_elapsed' &&
+            Number.isInteger(Number(row.taskIndex))
               ? Number(row.taskIndex)
               : null,
         }
@@ -813,20 +886,51 @@ const GameTeamsModal = ({
                     const manualTimeAddings = Array.isArray(team?.timeAddings)
                       ? team.timeAddings.filter(isManualAdjustmentItem)
                       : []
-                    const penaltySeconds = manualTimeAddings.reduce((sum, item) => {
-                      const value = Number(item?.time)
-                      if (!Number.isFinite(value) || value <= 0) {
-                        return sum
-                      }
-                      return sum + Math.round(value)
-                    }, 0)
-                    const bonusSeconds = manualTimeAddings.reduce((sum, item) => {
-                      const value = Number(item?.time)
-                      if (!Number.isFinite(value) || value >= 0) {
-                        return sum
-                      }
-                      return sum + Math.abs(Math.round(value))
-                    }, 0)
+                    const prequelAdjustments = Array.isArray(
+                      team?.prequelAdjustments,
+                    )
+                      ? team.prequelAdjustments
+                      : []
+                    const penaltySeconds = manualTimeAddings.reduce(
+                      (sum, item) => {
+                        const value = Number(item?.time)
+                        if (!Number.isFinite(value) || value <= 0) {
+                          return sum
+                        }
+                        return sum + Math.round(value)
+                      },
+                      0,
+                    )
+                    const bonusSeconds = manualTimeAddings.reduce(
+                      (sum, item) => {
+                        const value = Number(item?.time)
+                        if (!Number.isFinite(value) || value >= 0) {
+                          return sum
+                        }
+                        return sum + Math.abs(Math.round(value))
+                      },
+                      0,
+                    )
+                    const prequelPenaltySeconds = prequelAdjustments.reduce(
+                      (sum, item) => {
+                        const value = Number(item?.time)
+                        if (!Number.isFinite(value) || value <= 0) {
+                          return sum
+                        }
+                        return sum + Math.round(value)
+                      },
+                      0,
+                    )
+                    const prequelBonusSeconds = prequelAdjustments.reduce(
+                      (sum, item) => {
+                        const value = Number(item?.time)
+                        if (!Number.isFinite(value) || value >= 0) {
+                          return sum
+                        }
+                        return sum + Math.abs(Math.round(value))
+                      },
+                      0,
+                    )
 
                     return (
                       <li key={team.id}>
@@ -853,7 +957,7 @@ const GameTeamsModal = ({
                                   className="object-cover w-full h-full"
                                 />
                               </div>
-                              <div className="min-w-0 flex-1">
+                              <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
                                   {ratingBadge ? (
                                     <span className="px-2 py-1 text-xs font-medium border rounded-full border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-200">
@@ -887,15 +991,38 @@ const GameTeamsModal = ({
                                   Участников: {membersCount}
                                 </p>
                                 {bonusSeconds > 0 || penaltySeconds > 0 ? (
-                                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-2 mt-2">
                                     {bonusSeconds > 0 ? (
                                       <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/45 dark:bg-emerald-500/15 dark:text-emerald-200">
-                                        Бонус: -{formatDurationBadge(bonusSeconds)}
+                                        Бонус: -
+                                        {formatDurationBadge(bonusSeconds)}
                                       </span>
                                     ) : null}
                                     {penaltySeconds > 0 ? (
                                       <span className="inline-flex items-center rounded-full border border-rose-300 bg-rose-100/80 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:border-rose-500/45 dark:bg-rose-500/15 dark:text-rose-200">
-                                        Штраф: +{formatDurationBadge(penaltySeconds)}
+                                        Штраф: +
+                                        {formatDurationBadge(penaltySeconds)}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                                {prequelBonusSeconds > 0 ||
+                                prequelPenaltySeconds > 0 ? (
+                                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                                    {prequelBonusSeconds > 0 ? (
+                                      <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/45 dark:bg-emerald-500/15 dark:text-emerald-200">
+                                        Приквел: -
+                                        {formatDurationBadge(
+                                          prequelBonusSeconds,
+                                        )}
+                                      </span>
+                                    ) : null}
+                                    {prequelPenaltySeconds > 0 ? (
+                                      <span className="inline-flex items-center rounded-full border border-rose-300 bg-rose-100/80 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:border-rose-500/45 dark:bg-rose-500/15 dark:text-rose-200">
+                                        Приквел: +
+                                        {formatDurationBadge(
+                                          prequelPenaltySeconds,
+                                        )}
                                       </span>
                                     ) : null}
                                   </div>
@@ -938,7 +1065,7 @@ const GameTeamsModal = ({
                                   }}
                                   aria-label={`Редактировать команду ${team.teamName || ''}`}
                                   title="Редактировать команду"
-                                  className="flex items-center justify-center w-9 h-9 transition border rounded-lg border-cyan-200 bg-cyan-50 text-cyan-600 hover:border-cyan-400 hover:bg-cyan-100 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-400/65 dark:hover:bg-cyan-500/20 sm:h-8 sm:w-8"
+                                  className="flex items-center justify-center transition border rounded-lg w-9 h-9 border-cyan-200 bg-cyan-50 text-cyan-600 hover:border-cyan-400 hover:bg-cyan-100 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-400/65 dark:hover:bg-cyan-500/20 sm:h-8 sm:w-8"
                                 >
                                   <svg
                                     className="w-4 h-4"
@@ -971,7 +1098,7 @@ const GameTeamsModal = ({
                                   }}
                                   aria-label={`Редактировать бонусы и штрафы команды ${team.teamName || ''}`}
                                   title="Редактировать бонусы/штрафы за игру"
-                                  className="flex items-center justify-center w-9 h-9 transition border rounded-lg border-violet-200 bg-violet-50 text-violet-600 hover:border-violet-400 hover:bg-violet-100 dark:border-violet-500/35 dark:bg-violet-500/10 dark:text-violet-300 dark:hover:border-violet-400/65 dark:hover:bg-violet-500/20 sm:h-8 sm:w-8"
+                                  className="flex items-center justify-center transition border rounded-lg w-9 h-9 border-violet-200 bg-violet-50 text-violet-600 hover:border-violet-400 hover:bg-violet-100 dark:border-violet-500/35 dark:bg-violet-500/10 dark:text-violet-300 dark:hover:border-violet-400/65 dark:hover:bg-violet-500/20 sm:h-8 sm:w-8"
                                 >
                                   <svg
                                     className="w-4 h-4"
@@ -1005,7 +1132,7 @@ const GameTeamsModal = ({
                                   }}
                                   aria-label={`Статистика команды ${team.teamName || ''}`}
                                   title="Статистика команды"
-                                  className="flex items-center justify-center w-9 h-9 transition border rounded-lg border-indigo-200 bg-indigo-50 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-100 dark:border-indigo-500/35 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:border-indigo-400/65 dark:hover:bg-indigo-500/20 sm:h-8 sm:w-8"
+                                  className="flex items-center justify-center text-indigo-600 transition border border-indigo-200 rounded-lg w-9 h-9 bg-indigo-50 hover:border-indigo-400 hover:bg-indigo-100 dark:border-indigo-500/35 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:border-indigo-400/65 dark:hover:bg-indigo-500/20 sm:h-8 sm:w-8"
                                 >
                                   <TeamStatsIcon />
                                 </button>
@@ -1105,36 +1232,23 @@ const GameTeamsModal = ({
                 </h3>
                 {teamsModalState.availableTeams.length > 0 ? (
                   <div className="flex flex-col gap-3 mt-3 sm:flex-row sm:items-center">
-                    <CabinetSelectField
-                      id="game-team-to-add"
-                      label={null}
-                      value={selectedTeamToAdd}
-                      onChange={(event) =>
-                        setSelectedTeamToAdd(event.target.value)
-                      }
-                      containerClassName="w-full space-y-0"
-                      selectClassName="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-primary focus:outline-none dark:border-slate-700"
-                    >
-                      {teamsModalState.availableTeams.map((team) => {
-                        const availableMembersCount = Number.isFinite(
-                          team?.membersCount,
-                        )
-                          ? team.membersCount
-                          : Array.isArray(team?.members)
-                            ? team.members.length
-                            : 0
-
-                        return (
-                          <option key={team.id} value={team.id}>
-                            {`${team.name} (${availableMembersCount})`}
-                          </option>
-                        )
-                      })}
-                    </CabinetSelectField>
+                    <div className="w-full">
+                      <TeamSelectField
+                        label={null}
+                        teams={teamsModalState.availableTeams}
+                        selectedTeamId={selectedTeamToAdd}
+                        onSelect={setSelectedTeamToAdd}
+                        onClear={() => setSelectedTeamToAdd('')}
+                        disabled={isAddingTeam || teamsModalState.isLoading}
+                        placeholder="Выбрать команду"
+                        modalTitle="Выбор команды для добавления в игру"
+                        searchPlaceholder="Поиск по ID команды, названию, имени участника или телефону"
+                      />
+                    </div>
                     <CabinetButton
                       onClick={handleAddTeamToGame}
                       disabled={
-                        !selectedTeamToAdd ||
+                        !selectedAvailableTeam?.id ||
                         isAddingTeam ||
                         teamsModalState.isLoading
                       }
@@ -1333,8 +1447,8 @@ const GameTeamsModal = ({
           </p>
           {Array.isArray(teamAdjustmentsTarget?.systemAdjustments) &&
           teamAdjustmentsTarget.systemAdjustments.length > 0 ? (
-            <div className="rounded-2xl border border-cyan-200 bg-cyan-50/70 p-3 dark:border-cyan-500/35 dark:bg-cyan-500/10">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="p-3 border rounded-2xl border-cyan-200 bg-cyan-50/70 dark:border-cyan-500/35 dark:bg-cyan-500/10">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <h4 className="text-sm font-semibold text-cyan-900 dark:text-cyan-100">
                   Системные корректировки
                 </h4>
@@ -1361,8 +1475,9 @@ const GameTeamsModal = ({
                         {formatAdjustmentDuration(row.seconds)}
                       </span>
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-2 text-xs opacity-80">
+                    <div className="flex flex-wrap gap-2 mt-1 text-xs opacity-80">
                       {row.taskLabel ? <span>{row.taskLabel}</span> : null}
+                      {row.metaLabel ? <span>{row.metaLabel}</span> : null}
                       <span>
                         {row.scope === 'task_elapsed'
                           ? 'Учитывается во времени задания'
@@ -1620,13 +1735,16 @@ const GameTeamsModal = ({
                 >
                   <option value="">Выберите задание</option>
                   {adjustmentTaskOptions.map((option, index) => (
-                    <option key={`adjustment-task-${index}`} value={option.value}>
+                    <option
+                      key={`adjustment-task-${index}`}
+                      value={option.value}
+                    >
                       {index + 1}. {option.label}
                     </option>
                   ))}
                 </select>
               </div>
-              <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
+              <label className="flex items-start gap-3 px-3 py-2 text-sm border rounded-xl border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
                 <input
                   type="checkbox"
                   checked={Boolean(adjustmentDraft.showInAdjustments)}
@@ -1636,13 +1754,13 @@ const GameTeamsModal = ({
                       showInAdjustments: event.target.checked,
                     }))
                   }
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                  className="w-4 h-4 mt-1 rounded border-slate-300 text-primary focus:ring-primary"
                 />
                 <span>Показать в блоке дополнительных корректировок</span>
               </label>
             </>
           ) : (
-            <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">
+            <p className="px-3 text-xs text-slate-500 dark:text-slate-400">
               Корректировка итога игры всегда показывается в дополнительных
               корректировках.
             </p>
@@ -1722,11 +1840,25 @@ const teamShape = PropTypes.shape({
       taskId: PropTypes.string,
     }),
   ),
+  prequelAdjustments: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      name: PropTypes.string,
+      time: PropTypes.number,
+      source: PropTypes.string,
+      scope: PropTypes.string,
+      showInAdjustments: PropTypes.bool,
+      code: PropTypes.string,
+      description: PropTypes.string,
+      createdAt: PropTypes.string,
+    }),
+  ),
 })
 
 const availableTeamShape = PropTypes.shape({
   id: PropTypes.string.isRequired,
   name: PropTypes.string,
+  description: PropTypes.string,
   members: PropTypes.array,
   membersCount: PropTypes.number,
 })

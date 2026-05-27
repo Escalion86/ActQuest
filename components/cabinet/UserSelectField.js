@@ -41,13 +41,16 @@ const UserSelectField = ({
   onSelect,
   onClear,
   disabled,
+  placeholder,
+  modalTitle,
+  searchPlaceholder,
 }) => {
   return (
     <EntitySelectField
       label={label}
-      placeholder="Выберите пользователя"
-      modalTitle="Выбор пользователя"
-      searchPlaceholder="Поиск по имени, нику, телефону"
+      placeholder={placeholder}
+      modalTitle={modalTitle}
+      searchPlaceholder={searchPlaceholder}
       endpoint={ADMIN_USERS_LIST_ENDPOINT}
       mapOption={mapUserOption}
       selectedOption={selectedOption}
@@ -68,6 +71,9 @@ UserSelectField.propTypes = {
   onSelect: PropTypes.func,
   onClear: PropTypes.func,
   disabled: PropTypes.bool,
+  placeholder: PropTypes.string,
+  modalTitle: PropTypes.string,
+  searchPlaceholder: PropTypes.string,
 }
 
 UserSelectField.defaultProps = {
@@ -76,6 +82,9 @@ UserSelectField.defaultProps = {
   onSelect: undefined,
   onClear: undefined,
   disabled: false,
+  placeholder: 'Выберите пользователя',
+  modalTitle: 'Выбор пользователя',
+  searchPlaceholder: 'Поиск по имени, нику, телефону или ID',
 }
 
 export default UserSelectField

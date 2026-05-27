@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 
 import CabinetLayout from '@components/cabinet/CabinetLayout'
 import CabinetButton from '@components/cabinet/CabinetButton'
+import UserSelectField from '@components/cabinet/UserSelectField'
 import Modal from '@components/Modal'
 import useMergedSession from '@helpers/useMergedSession'
 import { LOCATIONS } from '@server/serverConstants'
@@ -107,7 +108,7 @@ const DeveloperPage = ({ session: initialSession }) => {
   const [error, setError] = useState('')
 
   // Состояния для режима impersonate
-  const [impersonateUserId, setImpersonateUserId] = useState('')
+  const [selectedImpersonateUser, setSelectedImpersonateUser] = useState(null)
   const [impersonateError, setImpersonateError] = useState('')
   const [isImpersonating, setIsImpersonating] = useState(false)
 
@@ -743,9 +744,12 @@ const DeveloperPage = ({ session: initialSession }) => {
 
   // Функция для входа в режим impersonate
   const handleImpersonate = async () => {
-    const userId = impersonateUserId.trim()
+    const userId =
+      typeof selectedImpersonateUser?.id === 'string'
+        ? selectedImpersonateUser.id.trim()
+        : ''
     if (!userId) {
-      setImpersonateError('Введите ID пользователя')
+      setImpersonateError('Выберите пользователя из списка')
       return
     }
 
@@ -896,23 +900,38 @@ const DeveloperPage = ({ session: initialSession }) => {
 
           {!displaySession?.user?.isDeveloperImpersonating ? (
             <div className="mt-4 space-y-3">
-              <div>
-                <label
-                  htmlFor="impersonate-user-id"
-                  className="text-sm font-semibold text-slate-700 dark:text-slate-100"
-                >
-                  ID пользователя
-                </label>
-                <input
-                  id="impersonate-user-id"
-                  type="text"
-                  placeholder="Введите MongoDB ID пользователя..."
-                  value={impersonateUserId}
-                  onChange={(e) => setImpersonateUserId(e.target.value)}
-                  disabled={isImpersonating}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:placeholder:text-slate-400"
-                />
-              </div>
+              <UserSelectField
+                label="Пользователь"
+                selectedOption={selectedImpersonateUser}
+                onSelect={(option) => {
+                  setSelectedImpersonateUser(option)
+                  setImpersonateError('')
+                }}
+                onClear={() => {
+                  setSelectedImpersonateUser(null)
+                  setImpersonateError('')
+                }}
+                disabled={isImpersonating}
+                placeholder="Выбрать из списка"
+                modalTitle="Выбор пользователя для просмотра кабинета"
+                searchPlaceholder="Поиск по имени, нику, телефону или MongoDB ID"
+              />
+
+              {selectedImpersonateUser ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/60">
+                  <p className="font-semibold text-slate-900 dark:text-slate-100">
+                    {selectedImpersonateUser.title || 'Пользователь выбран'}
+                  </p>
+                  {selectedImpersonateUser.subtitle ? (
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+                      {selectedImpersonateUser.subtitle}
+                    </p>
+                  ) : null}
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    User ID: {selectedImpersonateUser.id}
+                  </p>
+                </div>
+              ) : null}
 
               {impersonateError ? (
                 <p className="rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/50 dark:bg-rose-500/10 dark:text-rose-200">
@@ -925,9 +944,11 @@ const DeveloperPage = ({ session: initialSession }) => {
                   onClick={handleImpersonate}
                   variant="primary"
                   tone="cyan"
-                  disabled={isImpersonating || !impersonateUserId.trim()}
+                  disabled={isImpersonating || !selectedImpersonateUser?.id}
                 >
-                  {isImpersonating ? 'Переключаемся...' : 'Посмотреть кабинет'}
+                  {isImpersonating
+                    ? 'Переключаемся...'
+                    : 'Открыть кабинет пользователя'}
                 </CabinetButton>
               </div>
             </div>

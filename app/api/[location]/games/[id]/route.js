@@ -46,6 +46,9 @@ const hasResultSnapshots = (result) =>
   Array.isArray(result?.teamsUsers) &&
   result.teamsUsers.length > 0
 
+const hasComputedResult = (result) =>
+  result?.computed && typeof result.computed === 'object'
+
 const isObjectIdLike = (value) =>
   typeof value === 'string' && /^[a-f\d]{24}$/i.test(value.trim())
 
@@ -396,6 +399,64 @@ const execute = (request, params) =>
     request,
     params,
     handler: async (req, res) => {
+      if (req.method === 'GET') {
+        const {
+          query: { id, location },
+        } = req
+
+        if (location && id) {
+          try {
+            const db = await dbConnectGlobal()
+            if (db) {
+              const Games = db.model('Games')
+              const existingGame = await Games.findById(id)
+
+              if (existingGame) {
+                const existingGameLocation =
+                  typeof existingGame.location === 'string'
+                    ? existingGame.location.trim().toLowerCase()
+                    : null
+                const requestedLocation = String(location).trim().toLowerCase()
+                const normalizedStatus = String(existingGame.status || '').toLowerCase()
+
+                if (
+                  (!existingGameLocation || existingGameLocation === requestedLocation) &&
+                  (normalizedStatus === 'finished' || normalizedStatus === 'closed') &&
+                  hasResultSnapshots(existingGame?.result) &&
+                  !hasComputedResult(existingGame?.result)
+                ) {
+                  const built = await buildGameResultComputed({
+                    game: existingGame?.toObject ? existingGame.toObject() : existingGame,
+                  })
+
+                  await Games.findByIdAndUpdate(
+                    id,
+                    {
+                      result: {
+                        ...(existingGame.result && typeof existingGame.result === 'object'
+                          ? existingGame.result
+                          : {}),
+                        teamsPlaces: built.teamsPlaces,
+                        computed: built.computed,
+                      },
+                    },
+                    { runValidators: true },
+                  )
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Failed to auto-build game result on GET', {
+              error,
+              gameId: id,
+              location,
+            })
+          }
+        }
+
+        return CRUD('Games', req, res)
+      }
+
       if (req.method === 'DELETE') {
         const {
           query: { id, location },
@@ -716,7 +777,7 @@ const execute = (request, params) =>
           })
         }
 
-        if (shouldUpdateParticipantsMetrics) {
+        if (shouldCreateResultSnapshot || shouldUpdateParticipantsMetrics) {
           try {
             const gameForMetrics = updatedGame?.toObject ? updatedGame.toObject() : updatedGame
             const built = await buildGameResultComputed({ game: gameForMetrics })
@@ -734,17 +795,19 @@ const execute = (request, params) =>
               { returnDocument: 'after', runValidators: true },
             )
 
-            const finalGameForMetrics = updatedGame?.toObject ? updatedGame.toObject() : updatedGame
+            if (shouldUpdateParticipantsMetrics) {
+              const finalGameForMetrics = updatedGame?.toObject ? updatedGame.toObject() : updatedGame
 
-            await updateParticipantsClosedStats({
-              db,
-              game: finalGameForMetrics,
-            })
-            await updateParticipantsRatings({
-              db,
-              game: finalGameForMetrics,
-              updateAllEntities: true,
-            })
+              await updateParticipantsClosedStats({
+                db,
+                game: finalGameForMetrics,
+              })
+              await updateParticipantsRatings({
+                db,
+                game: finalGameForMetrics,
+                updateAllEntities: true,
+              })
+            }
           } catch (metricsError) {
             console.error('Failed to update participants metrics on game close', metricsError)
           }

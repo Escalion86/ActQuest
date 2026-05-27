@@ -36,7 +36,6 @@
 
 - Проверить: `components/cabinet/app-router/GamesPageClient.js` -> `canEditSelectedGame`, роль пользователя, `editingGame`.
 - Проверить, что `editingGame` не сбрасывается эффектом на `selectedGameId` при открытой модалке.
-- Проверить role preview: `helpers/useCabinetRolePreview.js` (поддержка `client/moder/admin/dev`).
 
 ### 2. Симптом: в прошедших играх "пусто", но после refresh игры появляются/пропадают
 

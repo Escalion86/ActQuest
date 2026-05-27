@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import PropTypes from 'prop-types'
-import { useAtomValue } from 'jotai'
+import { useSession } from 'next-auth/react'
 import Modal from '@components/Modal'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
@@ -16,8 +16,8 @@ import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
 import requestApiJson from '@helpers/requestApiJson'
 import CopyableId from '@components/cabinet/CopyableId'
 import UnifiedGameDescriptionModal from '@components/modals/UnifiedGameDescriptionModal'
+import isUserAdmin from '@helpers/isUserAdmin'
 import { LOCATIONS } from '@server/serverConstants'
-import { isAdminAtom } from '@state/atoms/cabinetSessionAtom'
 
 const modalSectionTitleClass = 'aq-modal-section-title text-base font-semibold'
 const modalItemTitleClass = 'aq-modal-item-title text-lg font-semibold'
@@ -72,7 +72,8 @@ const UserViewModal = ({
   onOpenTeam,
   canViewContacts,
 }) => {
-  const canViewIds = useAtomValue(isAdminAtom)
+  const { data: session } = useSession()
+  const canViewIds = isUserAdmin({ role: session?.user?.role ?? 'client' })
   const {
     data: user,
     isLoading,

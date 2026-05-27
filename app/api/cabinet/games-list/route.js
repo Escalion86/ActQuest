@@ -87,12 +87,7 @@ export async function GET(request) {
   })
 
   const query = requestUrl.searchParams
-  const sessionRole = normalizeRole(session?.user?.role) ?? 'client'
-  const previewRole = normalizeRole(query.get('rolePreview'))
-  const userRole =
-    sessionRole === 'dev' && previewRole && previewRole !== 'dev'
-      ? previewRole
-      : sessionRole
+  const userRole = normalizeRole(session?.user?.role) ?? 'client'
 
   const currentUserId =
     session?.user?._id === null || session?.user?._id === undefined

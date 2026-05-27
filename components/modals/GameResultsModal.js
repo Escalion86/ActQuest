@@ -22,21 +22,6 @@ const formatIsoDateTime = (value) => {
   })
 }
 
-const formatSecondsWithSign = (value) => {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric)) {
-    return '00:00:00'
-  }
-
-  const sign = numeric > 0 ? '+' : numeric < 0 ? '-' : ''
-  const absolute = Math.abs(Math.round(numeric))
-  const hours = Math.floor(absolute / 3600)
-  const minutes = Math.floor((absolute % 3600) / 60)
-  const seconds = absolute % 60
-
-  return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-}
-
 const formatSecondsShort = (value) => {
   const numeric = Number(value)
   if (!Number.isFinite(numeric) || numeric <= 0) {
@@ -65,6 +50,77 @@ const formatDurationSeconds = (value) => {
   const minutes = Math.floor((absolute % 3600) / 60)
   const seconds = absolute % 60
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+const formatScoringValue = (value, scoringMode, { sign = false } = {}) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) {
+    return scoringMode === 'points' ? '0 б.' : '00:00:00'
+  }
+
+  if (scoringMode === 'points') {
+    if (sign) {
+      return `${numeric > 0 ? '+' : numeric < 0 ? '-' : ''}${Math.abs(numeric)} б.`
+    }
+    return `${Math.abs(numeric)} б.`
+  }
+
+  const duration = formatDurationSeconds(Math.abs(numeric)) || '00:00:00'
+  if (!sign) {
+    return duration
+  }
+
+  return `${numeric > 0 ? '+' : numeric < 0 ? '-' : ''}${duration}`
+}
+
+const buildPrequelAdjustmentItems = (team, scoringMode) => {
+  const prequel =
+    team?.prequel && typeof team.prequel === 'object' ? team.prequel : null
+  if (!prequel) {
+    return []
+  }
+
+  const bonusItems = Array.isArray(prequel?.bonusItems) ? prequel.bonusItems : []
+  const penaltyItems = Array.isArray(prequel?.penaltyItems) ? prequel.penaltyItems : []
+  const wrongLimitPenaltyItems = Array.isArray(prequel?.wrongLimitPenaltyItems)
+    ? prequel.wrongLimitPenaltyItems
+    : []
+
+  return [
+    ...bonusItems.map((item, index) => ({
+      type: 'bonus',
+      display: formatScoringValue(-Math.abs(Number(item?.value) || 0), scoringMode, {
+        sign: true,
+      }),
+      name:
+        typeof item?.description === 'string' && item.description.trim().length > 0
+          ? `Приквел · бонусный код · ${item.description.trim()}`
+          : 'Приквел · бонусный код',
+      key: `prequel-bonus-${index}-${item?.code || ''}`,
+    })),
+    ...penaltyItems.map((item, index) => ({
+      type: 'penalty',
+      display: formatScoringValue(Math.abs(Number(item?.value) || 0), scoringMode, {
+        sign: true,
+      }),
+      name:
+        typeof item?.description === 'string' && item.description.trim().length > 0
+          ? `Приквел · штрафной код · ${item.description.trim()}`
+          : 'Приквел · штрафной код',
+      key: `prequel-penalty-${index}-${item?.code || ''}`,
+    })),
+    ...wrongLimitPenaltyItems.map((item, index) => ({
+      type: 'penalty',
+      display: formatScoringValue(Math.abs(Number(item?.value) || 0), scoringMode, {
+        sign: true,
+      }),
+      name:
+        typeof item?.description === 'string' && item.description.trim().length > 0
+          ? `Приквел · лимит неверных кодов · ${item.description.trim()}`
+          : 'Приквел · лимит неверных кодов',
+      key: `prequel-wrong-${index}`,
+    })),
+  ]
 }
 
 const getAdjustmentBadgeClass = (type) =>
@@ -354,7 +410,26 @@ const GameResultsModal = ({
             ...team,
             outOfCompetition: true,
           })),
-        ].filter((team) => Array.isArray(team?.addings) && team.addings.length > 0)
+        ].map((team) => {
+          const manualAddings = Array.isArray(team?.addings) ? team.addings : []
+          const prequelAddings = buildPrequelAdjustmentItems(team, scoringMode)
+          const mergedAddings = [...manualAddings, ...prequelAddings]
+
+          const prequelBonusValue = Number(team?.prequelBonusSeconds ?? team?.prequelBonusPoints) || 0
+          const prequelPenaltyValue = Number(team?.prequelPenaltySeconds ?? team?.prequelPenaltyPoints) || 0
+          const prequelWrongPenaltyValue =
+            Number(team?.prequelWrongPenaltySeconds ?? team?.prequelWrongPenaltyPoints) || 0
+          const prequelDelta = prequelPenaltyValue + prequelWrongPenaltyValue - prequelBonusValue
+
+          return {
+            ...team,
+            addings: mergedAddings,
+            addingsSeconds:
+              scoringMode === 'points'
+                ? Number(team?.addingsPoints) || 0
+                : (Number(team?.addingsSeconds) || 0) + prequelDelta,
+          }
+        }).filter((team) => Array.isArray(team?.addings) && team.addings.length > 0)
       : []
   const [expandedTaskBoards, setExpandedTaskBoards] = useState({})
   const [expandedAdjustmentTeams, setExpandedAdjustmentTeams] = useState({})
@@ -752,12 +827,16 @@ const GameResultsModal = ({
                       {(() => {
                         const teamKey = String(team.teamId || team.teamName)
                         const isExpanded = Boolean(expandedAdjustmentTeams[teamKey])
-                        const totalAdjustmentsSeconds = Number(team.addingsSeconds) || 0
-                        const totalAdjustmentsDisplay = formatSecondsWithSign(totalAdjustmentsSeconds)
+                        const totalAdjustmentsValue = Number(team.addingsSeconds) || 0
+                        const totalAdjustmentsDisplay = formatScoringValue(
+                          totalAdjustmentsValue,
+                          scoringMode,
+                          { sign: true },
+                        )
                         const totalAdjustmentsClassName =
-                          totalAdjustmentsSeconds > 0
+                          totalAdjustmentsValue > 0
                             ? 'text-rose-700 dark:text-rose-300'
-                            : totalAdjustmentsSeconds < 0
+                            : totalAdjustmentsValue < 0
                               ? 'text-emerald-700 dark:text-emerald-300'
                               : 'text-slate-600 dark:text-slate-300'
 

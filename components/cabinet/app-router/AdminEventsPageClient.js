@@ -15,7 +15,6 @@ import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
 import fetchCabinetUserDetails from '@helpers/fetchCabinetUserDetails'
 import requestApiJson from '@helpers/requestApiJson'
 import isUserAdmin from '@helpers/isUserAdmin'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import { LOCATIONS } from '@server/serverConstants'
 
@@ -94,9 +93,7 @@ const AdminEventsPageClient = ({
   session: initialSession,
 }) => {
   const { activeSession } = useMergedSession(initialSession)
-  const { effectiveRole } = useCabinetRolePreview(
-    activeSession?.user?.role ?? 'client',
-  )
+  const effectiveRole = activeSession?.user?.role ?? 'client'
   const isAdmin = isUserAdmin({ role: effectiveRole })
 
   const [events, setEvents] = useState(

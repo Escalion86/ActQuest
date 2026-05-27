@@ -40,6 +40,17 @@ const normalizeTeamsPlaces = (teamsPlaces) => {
   return {}
 }
 
+const hasResultSnapshots = (result) =>
+  Array.isArray(result?.teams) &&
+  result.teams.length > 0 &&
+  Array.isArray(result?.gameTeams) &&
+  result.gameTeams.length > 0 &&
+  Array.isArray(result?.teamsUsers) &&
+  result.teamsUsers.length > 0
+
+const hasComputedResult = (result) =>
+  result?.computed && typeof result.computed === 'object'
+
 const normalizeSessionIdentity = (session) => {
   const sessionUser = session?.user ?? {}
   const userId = toStringId(
@@ -470,7 +481,32 @@ const handleRequest = async ({ request, params, method }) => {
       )
     }
 
-    const result = game.result && typeof game.result === 'object' ? game.result : {}
+    let result = game.result && typeof game.result === 'object' ? game.result : {}
+
+    if (hasResultSnapshots(result) && !hasComputedResult(result)) {
+      try {
+        const built = await buildGameResultComputed({ game })
+        const nextResult = {
+          ...result,
+          teamsPlaces: built.teamsPlaces,
+          computed: built.computed,
+        }
+
+        const updatedGame = await db.model('Games').findByIdAndUpdate(
+          normalizedGameId,
+          { result: nextResult },
+          { returnDocument: 'after', runValidators: true },
+        ).lean()
+
+        result =
+          updatedGame?.result && typeof updatedGame.result === 'object'
+            ? updatedGame.result
+            : nextResult
+      } catch (rebuildError) {
+        console.error('Failed to auto-build cabinet game result', rebuildError)
+      }
+    }
+
     const userParticipationTeamIds = resolveUserParticipationTeamIds({
       result,
       session,

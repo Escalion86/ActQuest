@@ -32,7 +32,6 @@ import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import isUserAdmin from '@helpers/isUserAdmin'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
 import requestApiJson from '@helpers/requestApiJson'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 import CABINET_ROLE_LABELS from '@helpers/cabinetRoleLabels'
 import ensureRole from '@helpers/ensureRole'
@@ -270,9 +269,7 @@ const ManageUsersPage = ({
   const searchParams = useSearchParams()
   const { activeSession } = useMergedSession(initialSession)
   const location = activeSession?.user?.location ?? initialLocation ?? null
-  const { effectiveRole } = useCabinetRolePreview(
-    activeSession?.user?.role ?? 'client',
-  )
+  const effectiveRole = activeSession?.user?.role ?? 'client'
   const isAdmin = isUserAdmin({ role: effectiveRole })
   const isDeveloper = effectiveRole === 'dev'
 

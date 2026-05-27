@@ -18,7 +18,6 @@ import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import canManageTransactions from '@helpers/canManageTransactions'
 import requestApiJson from '@helpers/requestApiJson'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 
 const PAGE_SIZE = 10
@@ -89,9 +88,7 @@ const AdminTransactionsPage = ({
   initialHasMore,
 }) => {
   const { activeSession } = useMergedSession(initialSession)
-  const { effectiveRole } = useCabinetRolePreview(
-    activeSession?.user?.role ?? 'client',
-  )
+  const effectiveRole = activeSession?.user?.role ?? 'client'
   const isAdmin = canManageTransactions({ role: effectiveRole })
 
   const [transactions, setTransactions] = useState(initialTransactions)

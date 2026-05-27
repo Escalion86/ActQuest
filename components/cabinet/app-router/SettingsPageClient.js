@@ -11,7 +11,6 @@ import NeonCheckbox from '@components/NeonCheckbox'
 import isUserAdmin from '@helpers/isUserAdmin'
 import normalizeSiteSettings from '@helpers/normalizeSiteSettings'
 import requestApiJson from '@helpers/requestApiJson'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import useMergedSession from '@helpers/useMergedSession'
 
 const SETTINGS_CITY_OPTIONS = [
@@ -34,7 +33,7 @@ const ensureSiteSettings = (value) => {
 
 const SettingsPage = ({ initialSiteSettings, session: initialSession }) => {
   const { activeSession } = useMergedSession(initialSession)
-  const { effectiveRole } = useCabinetRolePreview(activeSession?.user?.role ?? 'client')
+  const effectiveRole = activeSession?.user?.role ?? 'client'
   const isAdmin = isUserAdmin({ role: effectiveRole })
   const [siteSettings, setSiteSettings] = useState(() => ensureSiteSettings(initialSiteSettings))
   const [saveState, setSaveState] = useState({ isSaving: false, isSaved: false, error: null })

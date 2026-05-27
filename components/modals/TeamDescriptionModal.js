@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { useAtomValue } from 'jotai'
 import { useQuery } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 
 import CabinetButton from '@components/cabinet/CabinetButton'
 import CopyableId from '@components/cabinet/CopyableId'
@@ -12,11 +12,11 @@ import Modal from '@components/Modal'
 import formatDate from '@helpers/formatDate'
 import fetchCabinetGameDetails from '@helpers/fetchCabinetGameDetails'
 import { canOpenRestrictedTeamGamePreview } from '@helpers/cabinetGameVisibility'
+import isUserAdmin from '@helpers/isUserAdmin'
 import { LOCATIONS } from '@server/serverConstants'
 import ModalSection from './ModalSection'
 import ModalSectionTitle from './ModalSectionTitle'
 import UnifiedGameDescriptionModal from './UnifiedGameDescriptionModal'
-import { isAdminAtom } from '@state/atoms/cabinetSessionAtom'
 
 const resolveLocationLabel = (locationKey) => {
   const key =
@@ -42,7 +42,8 @@ const TeamDescriptionModal = ({
   onOpenGame,
   canViewRestrictedGameInfo,
 }) => {
-  const canViewIds = useAtomValue(isAdminAtom)
+  const { data: session } = useSession()
+  const canViewIds = isUserAdmin({ role: session?.user?.role ?? 'client' })
   const canViewRestrictedPreview = canOpenRestrictedTeamGamePreview({
     isAdminViewer: canViewIds,
     allowRestrictedPreview: canViewRestrictedGameInfo,

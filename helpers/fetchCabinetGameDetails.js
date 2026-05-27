@@ -1,6 +1,6 @@
 import requestApiJson from '@helpers/requestApiJson'
 
-const fetchCabinetGameDetails = async ({ gameId, location = null, rolePreview = null }) => {
+const fetchCabinetGameDetails = async ({ gameId, location = null }) => {
   if (!gameId || typeof gameId !== 'string') {
     throw new Error('Не передан идентификатор игры')
   }
@@ -8,9 +8,6 @@ const fetchCabinetGameDetails = async ({ gameId, location = null, rolePreview = 
   const params = new URLSearchParams({ gameId })
   if (typeof location === 'string' && location.trim()) {
     params.set('location', location.trim())
-  }
-  if (typeof rolePreview === 'string' && rolePreview.trim()) {
-    params.set('rolePreview', rolePreview.trim())
   }
 
   const endpointBase = '/api/cabinet/game-details'

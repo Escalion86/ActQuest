@@ -30,10 +30,7 @@ import { LOCATIONS } from '@server/serverConstants'
 import { useBootstrapTheme } from '@app/providers'
 import isUserAdmin from '@helpers/isUserAdmin'
 import canManageTransactions from '@helpers/canManageTransactions'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import getUserAvatarSrc from '@helpers/getUserAvatarSrc'
-import { useSetAtom } from 'jotai'
-import { effectiveRoleAtom } from '@state/atoms/cabinetSessionAtom'
 
 const AUTH_REDIRECT_GRACE_MS = 8000
 const AUTH_REDIRECT_INITIAL_GRACE_MS = 1200
@@ -203,12 +200,6 @@ const getInitials = (name, fallback) => {
   return 'AQ'
 }
 
-const ROLE_PREVIEW_OPTIONS = [
-  { value: 'client', label: 'Пользователь' },
-  { value: 'admin', label: 'Админ' },
-  { value: 'dev', label: 'Разработчик' },
-]
-
 const resolveInitialTheme = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return null
@@ -353,16 +344,7 @@ const CabinetLayout = ({
   const authRedirectTimeoutRef = useRef(null)
   const lastAuthenticatedAtRef = useRef(0)
 
-  const sessionRole = session?.user?.role ?? 'client'
-  const { isDeveloper, effectiveRole, setRolePreview } =
-    useCabinetRolePreview(sessionRole)
-
-  const setEffectiveRole = useSetAtom(effectiveRoleAtom)
-  useEffect(() => {
-    setEffectiveRole(effectiveRole)
-  }, [effectiveRole, setEffectiveRole])
-
-  const role = effectiveRole
+  const role = session?.user?.role ?? 'client'
   const userName =
     session?.user?.name || session?.user?.username || 'Пользователь'
   const userAvatar = getUserAvatarSrc(session?.user ?? null)
@@ -899,9 +881,6 @@ const CabinetLayout = ({
   const themeBtnClass = isDarkTheme
     ? 'border-[#7A00FF]/40 bg-[#7A00FF]/12 text-[#d8c8ff] hover:bg-[#7A00FF]/20'
     : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
-  const rolePreviewSelectClass = isDarkTheme
-    ? 'border-[#00D1FF]/35 bg-[#090018]/88 text-[#bdf4ff]'
-    : 'border-slate-300 bg-white text-slate-700'
   const userNameClass = isDarkTheme ? 'text-[#e8dcff]' : 'text-slate-800'
   const userRoleClass = isDarkTheme ? 'text-[#9fd9ff]' : 'text-slate-500'
   const mainTextClass = isDarkTheme ? 'text-slate-100' : 'text-slate-900'
@@ -1127,26 +1106,6 @@ const CabinetLayout = ({
             <div
               className={`mt-auto border-t px-4 py-4 backdrop-blur-xl ${sidebarFooterClass}`}
             >
-              {isDeveloper ? (
-                <div className="mb-3">
-                  <label className="sr-only" htmlFor="cabinet-role-preview">
-                    Режим отображения ролей
-                  </label>
-                  <select
-                    id="cabinet-role-preview"
-                    value={role}
-                    onChange={(event) => setRolePreview(event.target.value)}
-                    className={`h-10 w-full cursor-pointer rounded-xl border px-3 text-xs font-semibold transition-colors duration-150 ${rolePreviewSelectClass}`}
-                    title="Режим отображения интерфейса"
-                  >
-                    {ROLE_PREVIEW_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : null}
               {session?.user?.isDeveloperImpersonating ? (
                 <>
                   <div className={`border-t my-3 ${sidebarFooterClass}`} />

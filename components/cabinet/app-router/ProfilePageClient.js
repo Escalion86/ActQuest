@@ -16,7 +16,6 @@ import FeedbackToast from '@components/FeedbackToast'
 import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
 import normalizeUserProfile from '@helpers/normalizeUserProfile'
-import useCabinetRolePreview from '@helpers/useCabinetRolePreview'
 import {
   formatPhoneInput,
   normalizePhoneForSubmit,
@@ -65,9 +64,7 @@ const ProfilePage = ({ initialProfile }) => {
   const [isLocationSaving, setIsLocationSaving] = useState(false)
   const [locationSaveError, setLocationSaveError] = useState(null)
   const phoneCheckInFlightRef = useRef(false)
-  const { effectiveRole } = useCabinetRolePreview(
-    session?.user?.role ?? 'client',
-  )
+  const effectiveRole = session?.user?.role ?? 'client'
   const pushLocation =
     typeof session?.user?.location === 'string' ? session.user.location : null
   const {
