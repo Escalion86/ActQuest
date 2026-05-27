@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import buildGameResultComputed from '@server/buildGameResultComputed'
+import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
@@ -392,8 +393,31 @@ const handleRequest = async ({ request, params, method }) => {
         gameId: normalizedGameId,
         game,
       })
+
+      // Refresh snapshots from live GamesTeams so prequelProgress is up-to-date
+      let gameForComputation = game
       try {
-        built = await buildGameResultComputed({ game })
+        const freshSnapshots = await buildGameResultSnapshots({ db, gameId: normalizedGameId })
+        if (
+          Array.isArray(freshSnapshots?.gameTeams) &&
+          freshSnapshots.gameTeams.length > 0
+        ) {
+          gameForComputation = {
+            ...game,
+            result: {
+              ...(game.result && typeof game.result === 'object' ? game.result : {}),
+              gameTeams: freshSnapshots.gameTeams,
+              teams: freshSnapshots.teams,
+              teamsUsers: freshSnapshots.teamsUsers,
+            },
+          }
+        }
+      } catch (snapshotError) {
+        console.warn('Failed to refresh snapshots for result rebuild, using stored snapshots', snapshotError)
+      }
+
+      try {
+        built = await buildGameResultComputed({ game: gameForComputation })
       } catch (buildError) {
         if (buildError?.code === 'RESULT_SNAPSHOTS_MISSING') {
           return NextResponse.json(
