@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import buildGameResultComputed from '@server/buildGameResultComputed'
-import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
+// import buildGameResultSnapshots from '@server/buildGameResultSnapshots'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
@@ -93,7 +93,8 @@ const buildHistoryActorFromSession = (session) => ({
     session?.user?.id ??
     null,
   telegramId:
-    session?.user?.telegramId !== null && session?.user?.telegramId !== undefined
+    session?.user?.telegramId !== null &&
+    session?.user?.telegramId !== undefined
       ? String(session.user.telegramId).trim()
       : null,
   role: typeof session?.user?.role === 'string' ? session.user.role : '',
@@ -230,12 +231,16 @@ const buildRows = ({ result, includeTeamIds = [] }) => {
       return true
     })
     .sort((a, b) => {
-    const aPlace = Number.isFinite(a.place) ? a.place : Number.MAX_SAFE_INTEGER
-    const bPlace = Number.isFinite(b.place) ? b.place : Number.MAX_SAFE_INTEGER
+      const aPlace = Number.isFinite(a.place)
+        ? a.place
+        : Number.MAX_SAFE_INTEGER
+      const bPlace = Number.isFinite(b.place)
+        ? b.place
+        : Number.MAX_SAFE_INTEGER
 
-    if (aPlace !== bPlace) {
-      return aPlace - bPlace
-    }
+      if (aPlace !== bPlace) {
+        return aPlace - bPlace
+      }
 
       return a.teamName.localeCompare(b.teamName, 'ru')
     })
@@ -257,7 +262,13 @@ const resolveInteractiveResultsUrl = ({ gameId, result }) => {
   return `/game/${encodeURIComponent(gameId)}/result`
 }
 
-const buildResponseData = ({ gameId, game: _game, result, rows, userParticipationTeamIds }) => {
+const buildResponseData = ({
+  gameId,
+  game: _game,
+  result,
+  rows,
+  userParticipationTeamIds,
+}) => {
   const safeGameName =
     typeof _game.name === 'string' && _game.name.trim().length > 0
       ? _game.name.trim()
@@ -272,7 +283,10 @@ const buildResponseData = ({ gameId, game: _game, result, rows, userParticipatio
     rows,
     teamsCount: rows.length,
     participantsCount,
-    computed: result?.computed && typeof result.computed === 'object' ? result.computed : null,
+    computed:
+      result?.computed && typeof result.computed === 'object'
+        ? result.computed
+        : null,
     interactiveResultsUrl: resolveInteractiveResultsUrl({ gameId, result }),
     userParticipationTeamIds,
   }
@@ -341,18 +355,25 @@ const handleRequest = async ({ request, params, method }) => {
     }
 
     const gameLocation =
-      typeof game.location === 'string' ? game.location.trim().toLowerCase() : null
+      typeof game.location === 'string'
+        ? game.location.trim().toLowerCase()
+        : null
     const requestedLocation =
       typeof location === 'string' ? location.trim().toLowerCase() : null
 
-    if (gameLocation && requestedLocation && gameLocation !== requestedLocation) {
+    if (
+      gameLocation &&
+      requestedLocation &&
+      gameLocation !== requestedLocation
+    ) {
       return NextResponse.json(
         { success: false, error: 'Игра недоступна для выбранной площадки' },
         { status: 403 },
       )
     }
 
-    const status = typeof game.status === 'string' ? game.status.toLowerCase() : ''
+    const status =
+      typeof game.status === 'string' ? game.status.toLowerCase() : ''
     if (status !== 'finished' && status !== 'closed') {
       return NextResponse.json(
         {
@@ -395,29 +416,32 @@ const handleRequest = async ({ request, params, method }) => {
       })
 
       // Refresh snapshots from live GamesTeams so prequelProgress is up-to-date
-      let gameForComputation = game
-      try {
-        const freshSnapshots = await buildGameResultSnapshots({ db, gameId: normalizedGameId })
-        if (
-          Array.isArray(freshSnapshots?.gameTeams) &&
-          freshSnapshots.gameTeams.length > 0
-        ) {
-          gameForComputation = {
-            ...game,
-            result: {
-              ...(game.result && typeof game.result === 'object' ? game.result : {}),
-              gameTeams: freshSnapshots.gameTeams,
-              teams: freshSnapshots.teams,
-              teamsUsers: freshSnapshots.teamsUsers,
-            },
-          }
-        }
-      } catch (snapshotError) {
-        console.warn('Failed to refresh snapshots for result rebuild, using stored snapshots', snapshotError)
-      }
+      // let gameForComputation = game
+      // try {
+      //   const freshSnapshots = await buildGameResultSnapshots({ db, gameId: normalizedGameId })
+      //   if (
+      //     Array.isArray(freshSnapshots?.gameTeams) &&
+      //     freshSnapshots.gameTeams.length > 0
+      //   ) {
+      //     gameForComputation = {
+      //       ...game,
+      //       result: {
+      //         ...(game.result && typeof game.result === 'object' ? game.result : {}),
+      //         gameTeams: freshSnapshots.gameTeams,
+      //         teams: freshSnapshots.teams,
+      //         teamsUsers: freshSnapshots.teamsUsers,
+      //       },
+      //     }
+      //   }
+      // } catch (snapshotError) {
+      //   console.warn('Failed to refresh snapshots for result rebuild, using stored snapshots', snapshotError)
+      // }
 
+      // try {
+      //   built = await buildGameResultComputed({ game: gameForComputation })
+      // }
       try {
-        built = await buildGameResultComputed({ game: gameForComputation })
+        built = await buildGameResultComputed({ game })
       } catch (buildError) {
         if (buildError?.code === 'RESULT_SNAPSHOTS_MISSING') {
           return NextResponse.json(
@@ -438,11 +462,14 @@ const handleRequest = async ({ request, params, method }) => {
         computed: built.computed,
       }
 
-      const updatedGame = await db.model('Games').findByIdAndUpdate(
-        normalizedGameId,
-        { result: nextResult },
-        { returnDocument: 'after', runValidators: true },
-      ).lean()
+      const updatedGame = await db
+        .model('Games')
+        .findByIdAndUpdate(
+          normalizedGameId,
+          { result: nextResult },
+          { returnDocument: 'after', runValidators: true },
+        )
+        .lean()
 
       let ratingsUpdateInfo = {
         usersUpdated: 0,
@@ -462,7 +489,10 @@ const handleRequest = async ({ request, params, method }) => {
         updatedGame?.result && typeof updatedGame.result === 'object'
           ? updatedGame.result
           : nextResult
-      const finalGameForHistory = updatedGame || { ...game, result: updatedResult }
+      const finalGameForHistory = updatedGame || {
+        ...game,
+        result: updatedResult,
+      }
       const afterHistoryState = await fetchGameHistoryState({
         db,
         gameId: normalizedGameId,
@@ -507,7 +537,8 @@ const handleRequest = async ({ request, params, method }) => {
       )
     }
 
-    let result = game.result && typeof game.result === 'object' ? game.result : {}
+    let result =
+      game.result && typeof game.result === 'object' ? game.result : {}
 
     if (hasResultSnapshots(result) && !hasComputedResult(result)) {
       try {
@@ -518,11 +549,14 @@ const handleRequest = async ({ request, params, method }) => {
           computed: built.computed,
         }
 
-        const updatedGame = await db.model('Games').findByIdAndUpdate(
-          normalizedGameId,
-          { result: nextResult },
-          { returnDocument: 'after', runValidators: true },
-        ).lean()
+        const updatedGame = await db
+          .model('Games')
+          .findByIdAndUpdate(
+            normalizedGameId,
+            { result: nextResult },
+            { returnDocument: 'after', runValidators: true },
+          )
+          .lean()
 
         result =
           updatedGame?.result && typeof updatedGame.result === 'object'
@@ -568,4 +602,3 @@ export async function GET(request, context) {
 export async function POST(request, context) {
   return handleRequest({ request, params: context.params, method: 'POST' })
 }
-
