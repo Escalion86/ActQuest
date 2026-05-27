@@ -327,6 +327,8 @@ const handleRequest = async ({ request, params, method }) => {
         moderators: 1,
         tasks: 1,
         result: 1,
+        type: 1,
+        prequel: 1,
       })
       .lean()
 
