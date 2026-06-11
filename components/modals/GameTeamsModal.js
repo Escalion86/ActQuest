@@ -112,12 +112,14 @@ const GameTeamsModal = ({
   teamsModalState,
   removingTeamIds,
   updatingOutOfCompetitionTeamIds,
+  updatingPaidGameTeamIds,
   selectedTeamToAdd,
   setSelectedTeamToAdd,
   handleAddTeamToGame,
   isAddingTeam,
   handleRemoveTeamFromGame,
   handleToggleTeamOutOfCompetition,
+  handleToggleTeamPaidGame,
   handleRefreshTeamsModalData,
   currentUserRole,
   isReadOnly = false,
@@ -242,8 +244,9 @@ const GameTeamsModal = ({
   )
   const selectedAvailableTeam = useMemo(
     () =>
-      teamsModalState.availableTeams.find((team) => team?.id === selectedTeamToAdd) ??
-      null,
+      teamsModalState.availableTeams.find(
+        (team) => team?.id === selectedTeamToAdd,
+      ) ?? null,
     [selectedTeamToAdd, teamsModalState.availableTeams],
   )
 
@@ -879,6 +882,9 @@ const GameTeamsModal = ({
                     const isRemoving = removingTeamIds.includes(team.id)
                     const isUpdatingOutOfCompetition =
                       updatingOutOfCompetitionTeamIds.includes(team.id)
+                    const isUpdatingPaidGame = updatingPaidGameTeamIds.includes(
+                      team.id,
+                    )
                     const membersCount = Number.isFinite(team?.membersCount)
                       ? team.membersCount
                       : 0
@@ -978,6 +984,34 @@ const GameTeamsModal = ({
                                       <ClosedDoorIcon />
                                     )}
                                   </span>
+                                  {team.paidGame ? (
+                                    <span
+                                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border rounded-full border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                      title="Команда оплатила игру"
+                                    >
+                                      <svg
+                                        className="w-3.5 h-3.5"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.8"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        aria-hidden="true"
+                                      >
+                                        <rect
+                                          x="2"
+                                          y="6"
+                                          width="20"
+                                          height="12"
+                                          rx="2"
+                                        />
+                                        <circle cx="12" cy="12" r="2.5" />
+                                        <line x1="6" y1="10" x2="6" y2="14" />
+                                        <line x1="18" y1="10" x2="18" y2="14" />
+                                      </svg>
+                                    </span>
+                                  ) : null}
                                   {team.outOfCompetition ? (
                                     <span className="px-2 py-1 text-xs font-medium border rounded-full border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
                                       Вне зачёта
@@ -1028,30 +1062,61 @@ const GameTeamsModal = ({
                                   </div>
                                 ) : null}
                                 {!isReadOnly ? (
-                                  <label
-                                    className="inline-flex items-center gap-2 mt-2 text-xs text-slate-600 dark:text-slate-300"
-                                    onClick={(event) => event.stopPropagation()}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={Boolean(team.outOfCompetition)}
-                                      disabled={
-                                        currentUserRole === 'client' ||
-                                        isUpdatingOutOfCompetition ||
-                                        teamsModalState.isLoading
+                                  <div className="flex flex-wrap items-center gap-3 mt-2">
+                                    <label
+                                      className="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300"
+                                      onClick={(event) =>
+                                        event.stopPropagation()
                                       }
-                                      onChange={(event) => {
-                                        handleToggleTeamOutOfCompetition({
-                                          gameTeamId: team.id,
-                                          outOfCompetition: Boolean(
-                                            event.target.checked,
-                                          ),
-                                        })
-                                      }}
-                                      className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400 dark:border-slate-600"
-                                    />
-                                    Вне зачёта
-                                  </label>
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(team.outOfCompetition)}
+                                        disabled={
+                                          currentUserRole === 'client' ||
+                                          isUpdatingOutOfCompetition ||
+                                          teamsModalState.isLoading
+                                        }
+                                        onChange={(event) => {
+                                          handleToggleTeamOutOfCompetition({
+                                            gameTeamId: team.id,
+                                            outOfCompetition: Boolean(
+                                              event.target.checked,
+                                            ),
+                                          })
+                                        }}
+                                        className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400 dark:border-slate-600"
+                                      />
+                                      Вне зачёта
+                                    </label>
+                                    {canEditRegisteredTeams ? (
+                                      <label
+                                        className="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300"
+                                        onClick={(event) =>
+                                          event.stopPropagation()
+                                        }
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={Boolean(team.paidGame)}
+                                          disabled={
+                                            isUpdatingPaidGame ||
+                                            teamsModalState.isLoading
+                                          }
+                                          onChange={(event) => {
+                                            handleToggleTeamPaidGame({
+                                              gameTeamId: team.id,
+                                              paidGame: Boolean(
+                                                event.target.checked,
+                                              ),
+                                            })
+                                          }}
+                                          className="w-4 h-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-400 dark:border-slate-600"
+                                        />
+                                        Команда оплатила игру
+                                      </label>
+                                    ) : null}
+                                  </div>
                                 ) : null}
                               </div>
                             </div>
@@ -1822,6 +1887,7 @@ const teamShape = PropTypes.shape({
   teamId: PropTypes.string,
   open: PropTypes.bool,
   outOfCompetition: PropTypes.bool,
+  paidGame: PropTypes.bool,
   updatedAt: PropTypes.string,
   membersCount: PropTypes.number,
   rating: PropTypes.shape({
@@ -1881,12 +1947,14 @@ GameTeamsModal.propTypes = {
   removingTeamIds: PropTypes.arrayOf(PropTypes.string).isRequired,
   updatingOutOfCompetitionTeamIds: PropTypes.arrayOf(PropTypes.string)
     .isRequired,
+  updatingPaidGameTeamIds: PropTypes.arrayOf(PropTypes.string),
   selectedTeamToAdd: PropTypes.string,
   setSelectedTeamToAdd: PropTypes.func.isRequired,
   handleAddTeamToGame: PropTypes.func.isRequired,
   isAddingTeam: PropTypes.bool.isRequired,
   handleRemoveTeamFromGame: PropTypes.func.isRequired,
   handleToggleTeamOutOfCompetition: PropTypes.func.isRequired,
+  handleToggleTeamPaidGame: PropTypes.func,
   handleRefreshTeamsModalData: PropTypes.func,
   currentUserRole: PropTypes.string,
   isReadOnly: PropTypes.bool,
@@ -1895,6 +1963,8 @@ GameTeamsModal.propTypes = {
 GameTeamsModal.defaultProps = {
   selectedGame: null,
   selectedTeamToAdd: '',
+  updatingPaidGameTeamIds: [],
+  handleToggleTeamPaidGame: undefined,
   handleRefreshTeamsModalData: undefined,
   currentUserRole: null,
 }

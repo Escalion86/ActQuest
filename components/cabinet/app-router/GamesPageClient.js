@@ -884,10 +884,12 @@ const buildUpdatePayload = (game) => {
         ...(item?.id ? { id: item.id } : {}),
         code: typeof item?.code === 'string' ? item.code : '',
         value: Number(item?.value) || 0,
-        description: typeof item?.description === 'string' ? item.description : '',
+        description:
+          typeof item?.description === 'string' ? item.description : '',
         image: normalizeMediaFieldString(item?.image),
-        storyEffects: (
-          Array.isArray(item?.storyEffects) ? item.storyEffects : []
+        storyEffects: (Array.isArray(item?.storyEffects)
+          ? item.storyEffects
+          : []
         ).map(normalizePrequelStoryEffect),
       })),
       penaltyCodes: (Array.isArray(normalizedPrequel.penaltyCodes)
@@ -898,18 +900,23 @@ const buildUpdatePayload = (game) => {
         ...(item?.id ? { id: item.id } : {}),
         code: typeof item?.code === 'string' ? item.code : '',
         value: Number(item?.value) || 0,
-        description: typeof item?.description === 'string' ? item.description : '',
+        description:
+          typeof item?.description === 'string' ? item.description : '',
         image: normalizeMediaFieldString(item?.image),
-        storyEffects: (
-          Array.isArray(item?.storyEffects) ? item.storyEffects : []
+        storyEffects: (Array.isArray(item?.storyEffects)
+          ? item.storyEffects
+          : []
         ).map(normalizePrequelStoryEffect),
       })),
-      wrongAttemptsLimit: toNullableNumber(normalizedPrequel.wrongAttemptsLimit),
+      wrongAttemptsLimit: toNullableNumber(
+        normalizedPrequel.wrongAttemptsLimit,
+      ),
       wrongAttemptsPenalty: Number(normalizedPrequel.wrongAttemptsPenalty) || 0,
-      wrongAttemptsStoryEffects: (
-        Array.isArray(normalizedPrequel.wrongAttemptsStoryEffects)
-          ? normalizedPrequel.wrongAttemptsStoryEffects
-          : []
+      wrongAttemptsStoryEffects: (Array.isArray(
+        normalizedPrequel.wrongAttemptsStoryEffects,
+      )
+        ? normalizedPrequel.wrongAttemptsStoryEffects
+        : []
       ).map(normalizePrequelStoryEffect),
     },
     image: game.image ? game.image : null,
@@ -1174,7 +1181,9 @@ const GamesPage = ({
       : Number(currentUserTelegramId)
   const canEditAllGames = userRole === 'admin' || userRole === 'dev'
   const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
-  const canEditOwnGames = Boolean(currentUserIdString || currentUserTelegramIdNumber)
+  const canEditOwnGames = Boolean(
+    currentUserIdString || currentUserTelegramIdNumber,
+  )
   const safeInitialGames = Array.isArray(initialGames) ? initialGames : []
   const [games, setGames] = useState(safeInitialGames)
   const [, setPersistedGames] = useState(safeInitialGames)
@@ -1228,6 +1237,7 @@ const GamesPage = ({
   const [removingTeamIds, setRemovingTeamIds] = useState([])
   const [updatingOutOfCompetitionTeamIds, setUpdatingOutOfCompetitionTeamIds] =
     useState([])
+  const [updatingPaidGameTeamIds, setUpdatingPaidGameTeamIds] = useState([])
   const [selectedModeratorToAdd, setSelectedModeratorToAdd] = useState('')
   const [selectedAgentToAdd, setSelectedAgentToAdd] = useState('')
   const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false)
@@ -4585,6 +4595,7 @@ const GamesPage = ({
             id: entryId,
             teamId,
             outOfCompetition: Boolean(entry?.outOfCompetition),
+            paidGame: Boolean(entry?.paidGame),
             timeAddings: Array.isArray(entry?.timeAddings)
               ? entry.timeAddings
               : [],
@@ -4643,9 +4654,7 @@ const GamesPage = ({
 
       if (availableTeams.length > 0) {
         setSelectedTeamToAdd((prev) =>
-          prev && availableTeams.some((team) => team.id === prev)
-            ? prev
-            : '',
+          prev && availableTeams.some((team) => team.id === prev) ? prev : '',
         )
       } else {
         setSelectedTeamToAdd('')
@@ -4780,6 +4789,53 @@ const GamesPage = ({
     },
   })
 
+  const toggleTeamPaidGameMutation = useMutation({
+    mutationFn: async ({ gameId, gameTeamId, paidGame }) => {
+      await requestApiJson(
+        `${CABINET_GAMES_API_BASE}/${encodeURIComponent(gameId)}/teams`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_paid_game',
+            gameTeamId,
+            paidGame: Boolean(paidGame),
+          }),
+          fallbackMessage: 'Не удалось обновить флаг оплаты игры',
+        },
+      )
+
+      return { gameId, gameTeamId }
+    },
+    onMutate: ({ gameTeamId }) => {
+      setUpdatingPaidGameTeamIds((prev) =>
+        prev.includes(gameTeamId) ? prev : [...prev, gameTeamId],
+      )
+      setTeamsModalState((prev) => ({ ...prev, error: null }))
+    },
+    onSuccess: async ({ gameId }) => {
+      removeGameResultsQueries(queryClient, gameId)
+      await loadTeamsModalData()
+    },
+    onError: (error) => {
+      console.error('Failed to toggle paid game state', error)
+      setTeamsModalState((prev) => ({
+        ...prev,
+        error:
+          extractErrorMessage(error) || 'Не удалось обновить флаг оплаты игры',
+      }))
+    },
+    onSettled: (_data, _error, variables) => {
+      const gameTeamId = variables?.gameTeamId
+      if (!gameTeamId) {
+        return
+      }
+      setUpdatingPaidGameTeamIds((prev) =>
+        prev.filter((id) => id !== gameTeamId),
+      )
+    },
+  })
+
   const isAddingTeam = addTeamToGameMutation.isPending
 
   const handleAddTeamToGame = useCallback(() => {
@@ -4832,6 +4888,21 @@ const GamesPage = ({
       })
     },
     [selectedGame, toggleTeamOutOfCompetitionMutation],
+  )
+
+  const handleToggleTeamPaidGame = useCallback(
+    ({ gameTeamId, paidGame }) => {
+      if (!selectedGame || !gameTeamId) {
+        return
+      }
+
+      toggleTeamPaidGameMutation.mutate({
+        gameId: selectedGame.id,
+        gameTeamId,
+        paidGame,
+      })
+    },
+    [selectedGame, toggleTeamPaidGameMutation],
   )
 
   useEffect(() => {
@@ -6119,7 +6190,7 @@ const GamesPage = ({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeClassName(visibleStatus)}`}
                       >
@@ -7741,6 +7812,7 @@ const GamesPage = ({
                 updatingOutOfCompetitionTeamIds={
                   updatingOutOfCompetitionTeamIds
                 }
+                updatingPaidGameTeamIds={updatingPaidGameTeamIds}
                 selectedTeamToAdd={selectedTeamToAdd}
                 setSelectedTeamToAdd={setSelectedTeamToAdd}
                 handleAddTeamToGame={handleAddTeamToGame}
@@ -7749,6 +7821,7 @@ const GamesPage = ({
                 handleToggleTeamOutOfCompetition={
                   handleToggleTeamOutOfCompetition
                 }
+                handleToggleTeamPaidGame={handleToggleTeamPaidGame}
                 handleRefreshTeamsModalData={loadTeamsModalData}
                 isTeamsModalReadOnly={isTeamsModalReadOnly}
                 isRegisterModalOpen={isRegisterModalOpen}

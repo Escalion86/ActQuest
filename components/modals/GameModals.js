@@ -87,12 +87,14 @@ const GameModals = ({
   teamsModalState,
   removingTeamIds,
   updatingOutOfCompetitionTeamIds,
+  updatingPaidGameTeamIds,
   selectedTeamToAdd,
   setSelectedTeamToAdd,
   handleAddTeamToGame,
   isAddingTeam,
   handleRemoveTeamFromGame,
   handleToggleTeamOutOfCompetition,
+  handleToggleTeamPaidGame,
   handleRefreshTeamsModalData,
   isTeamsModalReadOnly,
   isRegisterModalOpen,
@@ -373,12 +375,14 @@ const GameModals = ({
           teamsModalState={teamsModalState}
           removingTeamIds={removingTeamIds}
           updatingOutOfCompetitionTeamIds={updatingOutOfCompetitionTeamIds}
+          updatingPaidGameTeamIds={updatingPaidGameTeamIds}
           selectedTeamToAdd={selectedTeamToAdd}
           setSelectedTeamToAdd={setSelectedTeamToAdd}
           handleAddTeamToGame={handleAddTeamToGame}
           isAddingTeam={isAddingTeam}
           handleRemoveTeamFromGame={handleRemoveTeamFromGame}
           handleToggleTeamOutOfCompetition={handleToggleTeamOutOfCompetition}
+          handleToggleTeamPaidGame={handleToggleTeamPaidGame}
           handleRefreshTeamsModalData={handleRefreshTeamsModalData}
           currentUserRole={currentUserRole}
           isReadOnly={isTeamsModalReadOnly}
@@ -644,12 +648,14 @@ GameModals.propTypes = {
   removingTeamIds: PropTypes.arrayOf(PropTypes.string).isRequired,
   updatingOutOfCompetitionTeamIds: PropTypes.arrayOf(PropTypes.string)
     .isRequired,
+  updatingPaidGameTeamIds: PropTypes.arrayOf(PropTypes.string),
   selectedTeamToAdd: PropTypes.string,
   setSelectedTeamToAdd: PropTypes.func.isRequired,
   handleAddTeamToGame: PropTypes.func.isRequired,
   isAddingTeam: PropTypes.bool.isRequired,
   handleRemoveTeamFromGame: PropTypes.func.isRequired,
   handleToggleTeamOutOfCompetition: PropTypes.func.isRequired,
+  handleToggleTeamPaidGame: PropTypes.func,
   handleRefreshTeamsModalData: PropTypes.func,
   isTeamsModalReadOnly: PropTypes.bool,
   isRegisterModalOpen: PropTypes.bool.isRequired,
@@ -820,6 +826,8 @@ GameModals.defaultProps = {
   startedGameLockedTaskCount: 0,
   isCloneSourceGamesLoading: false,
   selectedTeamToAdd: '',
+  updatingPaidGameTeamIds: [],
+  handleToggleTeamPaidGame: undefined,
   handleRefreshTeamsModalData: undefined,
   createGameSeasons: [],
   isCreateGameSeasonsLoading: false,

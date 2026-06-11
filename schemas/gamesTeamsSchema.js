@@ -11,6 +11,10 @@ const gamesTeamsSchema = {
     type: Boolean,
     default: false,
   },
+  paidGame: {
+    type: Boolean,
+    default: false,
+  },
   activeNum: {
     type: Number,
     default: 0,

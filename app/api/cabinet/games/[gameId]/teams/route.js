@@ -70,14 +70,17 @@ const isManualTeamAdjustment = (item) =>
   item &&
   typeof item === 'object' &&
   (() => {
-    const source = String(item.source || '').trim().toLowerCase()
+    const source = String(item.source || '')
+      .trim()
+      .toLowerCase()
     if (source === MANUAL_TEAM_ADJUSTMENT_SOURCE) {
       return true
     }
 
     // Backward-compatibility: старые ручные корректировки могли быть без source.
     // Считаем ручными записи без source и без task binding.
-    const hasTaskId = typeof item.taskId === 'string' && item.taskId.trim() !== ''
+    const hasTaskId =
+      typeof item.taskId === 'string' && item.taskId.trim() !== ''
     const hasTaskIndex =
       item?.taskIndex !== null &&
       item?.taskIndex !== undefined &&
@@ -108,10 +111,9 @@ const normalizeTimeAddingsForResponse = (value) =>
         taskId,
         taskIndex,
         scope: normalizeAdjustmentScope(item.scope),
-        showInAdjustments:
-          isCaptainForceClueAdding(item)
-            ? false
-            : normalizeAdjustmentScope(item.scope) === 'total_adjustment'
+        showInAdjustments: isCaptainForceClueAdding(item)
+          ? false
+          : normalizeAdjustmentScope(item.scope) === 'total_adjustment'
             ? true
             : item.showInAdjustments !== false,
       }
@@ -127,9 +129,10 @@ const normalizeGameTeamEntry = (doc) => {
   }
 
   const prequelProgress = normalizePrequelProgress(doc?.prequelProgress)
-  const prequelAdjustments = (Array.isArray(prequelProgress.appliedAdjustments)
-    ? prequelProgress.appliedAdjustments
-    : []
+  const prequelAdjustments = (
+    Array.isArray(prequelProgress.appliedAdjustments)
+      ? prequelProgress.appliedAdjustments
+      : []
   )
     .map((item, index) => {
       const rawValue = Number(item?.value)
@@ -158,10 +161,9 @@ const normalizeGameTeamEntry = (doc) => {
         name = 'Штраф за лимит неверных кодов приквела'
       }
       if (!name) {
-        name =
-          isBonusAdjustment
-            ? `Бонус приквела #${index + 1}`
-            : `Штраф приквела #${index + 1}`
+        name = isBonusAdjustment
+          ? `Бонус приквела #${index + 1}`
+          : `Штраф приквела #${index + 1}`
       }
 
       return {
@@ -192,6 +194,7 @@ const normalizeGameTeamEntry = (doc) => {
     id,
     teamId,
     outOfCompetition: Boolean(doc?.outOfCompetition),
+    paidGame: Boolean(doc?.paidGame),
     timeAddings: normalizeTimeAddingsForResponse(doc?.timeAddings),
     hasPrequelAdjustments: hasPrequelAdjustments(doc?.prequelProgress),
     prequelAdjustments,
@@ -208,7 +211,9 @@ const findGameByAnyId = async (GamesModel, rawGameId, select) => {
   }
 
   if (isObjectIdLike(normalized)) {
-    const byObjectId = await GamesModel.findById(normalized).select(select).lean()
+    const byObjectId = await GamesModel.findById(normalized)
+      .select(select)
+      .lean()
     if (byObjectId?._id) {
       return byObjectId
     }
@@ -276,7 +281,8 @@ const buildHistoryActorFromSession = (session) => ({
     session?.user?.id ??
     null,
   telegramId:
-    session?.user?.telegramId !== null && session?.user?.telegramId !== undefined
+    session?.user?.telegramId !== null &&
+    session?.user?.telegramId !== undefined
       ? String(session.user.telegramId).trim()
       : null,
   role: typeof session?.user?.role === 'string' ? session.user.role : '',
@@ -366,11 +372,10 @@ export async function GET(request, { params }) {
     }
 
     const GamesModel = db.model('Games')
-    const game = await findGameByAnyId(
-      GamesModel,
-      normalizedGameId,
-      { _id: 1, location: 1 },
-    )
+    const game = await findGameByAnyId(GamesModel, normalizedGameId, {
+      _id: 1,
+      location: 1,
+    })
 
     if (!game) {
       return NextResponse.json(
@@ -394,6 +399,7 @@ export async function GET(request, { params }) {
         _id: 1,
         teamId: 1,
         outOfCompetition: 1,
+        paidGame: 1,
         timeAddings: 1,
         prequelProgress: 1,
       })
@@ -403,7 +409,9 @@ export async function GET(request, { params }) {
       ? gameTeamsDocs.map((doc) => normalizeGameTeamEntry(doc)).filter(Boolean)
       : []
 
-    const uniqueTeamIds = Array.from(new Set(entries.map((entry) => entry.teamId)))
+    const uniqueTeamIds = Array.from(
+      new Set(entries.map((entry) => entry.teamId)),
+    )
 
     const teams = uniqueTeamIds.length
       ? await fetchTeamsForCabinet({
@@ -472,11 +480,13 @@ export async function POST(request, { params }) {
     const TeamsUsersModel = db.model('TeamsUsers')
     const GamesTeamsModel = db.model('GamesTeams')
 
-    const game = await findGameByAnyId(
-      GamesModel,
-      gameId,
-      { _id: 1, name: 1, status: 1, registrationOpen: 1, location: 1 },
-    )
+    const game = await findGameByAnyId(GamesModel, gameId, {
+      _id: 1,
+      name: 1,
+      status: 1,
+      registrationOpen: 1,
+      location: 1,
+    })
     if (!game?._id) {
       return NextResponse.json(
         { success: false, error: 'Игра не найдена' },
@@ -508,7 +518,10 @@ export async function POST(request, { params }) {
     if (!isElevatedRole(identity.role)) {
       if (membershipOr.length === 0) {
         return NextResponse.json(
-          { success: false, error: 'Недостаточно прав для регистрации команды' },
+          {
+            success: false,
+            error: 'Недостаточно прав для регистрации команды',
+          },
           { status: 403 },
         )
       }
@@ -523,7 +536,10 @@ export async function POST(request, { params }) {
 
       if (!captainMembership?._id) {
         return NextResponse.json(
-          { success: false, error: 'Регистрация доступна только капитану команды' },
+          {
+            success: false,
+            error: 'Регистрация доступна только капитану команды',
+          },
           { status: 403 },
         )
       }
@@ -725,10 +741,15 @@ export async function DELETE(request, { params }) {
           .map((item) => toStringId(item?.teamId))
           .filter(Boolean),
       )
-      const hasForbiddenTeam = teamIds.some((teamIdValue) => !allowedTeamIds.has(teamIdValue))
+      const hasForbiddenTeam = teamIds.some(
+        (teamIdValue) => !allowedTeamIds.has(teamIdValue),
+      )
       if (hasForbiddenTeam) {
         return NextResponse.json(
-          { success: false, error: 'Отмена регистрации доступна только капитану команды' },
+          {
+            success: false,
+            error: 'Отмена регистрации доступна только капитану команды',
+          },
           { status: 403 },
         )
       }
@@ -892,7 +913,10 @@ export async function PATCH(request, { params }) {
 
     if (!hasGameManageAccess({ identity, game })) {
       return NextResponse.json(
-        { success: false, error: 'Недостаточно прав для управления командами игры' },
+        {
+          success: false,
+          error: 'Недостаточно прав для управления командами игры',
+        },
         { status: 403 },
       )
     }
@@ -908,7 +932,10 @@ export async function PATCH(request, { params }) {
 
       if (!gameId || !teamId) {
         return NextResponse.json(
-          { success: false, error: 'Не передан идентификатор игры или команды' },
+          {
+            success: false,
+            error: 'Не передан идентификатор игры или команды',
+          },
           { status: 400 },
         )
       }
@@ -937,8 +964,7 @@ export async function PATCH(request, { params }) {
           ? update.description.trim().slice(0, 2000)
           : ''
       const image = typeof update?.image === 'string' ? update.image : null
-      const open =
-        typeof update?.open === 'boolean' ? update.open : undefined
+      const open = typeof update?.open === 'boolean' ? update.open : undefined
       const rawLocation =
         typeof update?.location === 'string' ? update.location : ''
       const normalizedLocation = normalizeLocation(rawLocation)
@@ -951,7 +977,10 @@ export async function PATCH(request, { params }) {
           { status: 400 },
         )
       }
-      if (shouldUpdateLocation && !allowedLocations.includes(normalizedLocation)) {
+      if (
+        shouldUpdateLocation &&
+        !allowedLocations.includes(normalizedLocation)
+      ) {
         return NextResponse.json(
           { success: false, error: 'Некорректный город команды' },
           { status: 400 },
@@ -1011,7 +1040,10 @@ export async function PATCH(request, { params }) {
 
       if (!gameId || !gameTeamId) {
         return NextResponse.json(
-          { success: false, error: 'Не передан идентификатор игры или регистрации' },
+          {
+            success: false,
+            error: 'Не передан идентификатор игры или регистрации',
+          },
           { status: 400 },
         )
       }
@@ -1040,12 +1072,16 @@ export async function PATCH(request, { params }) {
         .map((item, index) => normalizeManualAdjustment(item, index))
         .filter(Boolean)
 
-      const preservedAutomaticAddings = (Array.isArray(currentGameTeam.timeAddings)
-        ? currentGameTeam.timeAddings
-        : []
+      const preservedAutomaticAddings = (
+        Array.isArray(currentGameTeam.timeAddings)
+          ? currentGameTeam.timeAddings
+          : []
       ).filter((item) => !isManualTeamAdjustment(item))
 
-      const nextTimeAddings = [...preservedAutomaticAddings, ...manualAdjustments]
+      const nextTimeAddings = [
+        ...preservedAutomaticAddings,
+        ...manualAdjustments,
+      ]
 
       await GamesTeamsModel.updateOne(
         { _id: gameTeamId, gameId: normalizedResolvedGameId },
@@ -1100,7 +1136,8 @@ export async function PATCH(request, { params }) {
 
           const built = await buildGameResultComputed({ game: gameForRebuild })
           const nextResult = {
-            ...(gameForRebuild?.result && typeof gameForRebuild.result === 'object'
+            ...(gameForRebuild?.result &&
+            typeof gameForRebuild.result === 'object'
               ? gameForRebuild.result
               : currentResult),
             ...(Array.isArray(snapshotGameTeams) && snapshotGameTeams.length > 0
@@ -1141,14 +1178,20 @@ export async function PATCH(request, { params }) {
             throw rebuildError
           }
 
-          if (Array.isArray(snapshotGameTeams) && snapshotGameTeams.length > 0) {
+          if (
+            Array.isArray(snapshotGameTeams) &&
+            snapshotGameTeams.length > 0
+          ) {
             await GamesModel.updateOne(
               { _id: normalizedResolvedGameId },
               { $set: { 'result.gameTeams': snapshotGameTeams } },
             )
           }
         }
-      } else if (Array.isArray(snapshotGameTeams) && snapshotGameTeams.length > 0) {
+      } else if (
+        Array.isArray(snapshotGameTeams) &&
+        snapshotGameTeams.length > 0
+      ) {
         await GamesModel.updateOne(
           { _id: normalizedResolvedGameId },
           { $set: { 'result.gameTeams': snapshotGameTeams } },
@@ -1198,11 +1241,61 @@ export async function PATCH(request, { params }) {
       )
     }
 
+    if (action === 'update_paid_game') {
+      const gameTeamId = toStringId(payload?.gameTeamId)
+      const paidGame = Boolean(payload?.paidGame)
+
+      if (!gameId || !gameTeamId) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Не передан идентификатор игры или регистрации',
+          },
+          { status: 400 },
+        )
+      }
+
+      const currentGameTeam = await GamesTeamsModel.findOne({
+        _id: gameTeamId,
+        gameId: normalizedResolvedGameId,
+      })
+        .select({ _id: 1, teamId: 1 })
+        .lean()
+
+      if (!currentGameTeam?._id) {
+        return NextResponse.json(
+          { success: false, error: 'Регистрация команды на игру не найдена' },
+          { status: 404 },
+        )
+      }
+
+      await GamesTeamsModel.updateOne(
+        { _id: gameTeamId, gameId: normalizedResolvedGameId },
+        { $set: { paidGame } },
+      )
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            gameId: normalizedResolvedGameId,
+            gameTeamId,
+            teamId: toStringId(currentGameTeam?.teamId) || '',
+            paidGame,
+          },
+        },
+        { status: 200 },
+      )
+    }
+
     const gameTeamId = toStringId(payload?.gameTeamId)
     const outOfCompetition = Boolean(payload?.outOfCompetition)
     if (!gameId || !gameTeamId) {
       return NextResponse.json(
-        { success: false, error: 'Не передан идентификатор игры или регистрации' },
+        {
+          success: false,
+          error: 'Не передан идентификатор игры или регистрации',
+        },
         { status: 400 },
       )
     }
@@ -1356,7 +1449,10 @@ export async function PATCH(request, { params }) {
       { status: 200 },
     )
   } catch (error) {
-    console.error('Failed to update out-of-competition flag for game team', error)
+    console.error(
+      'Failed to update out-of-competition flag for game team',
+      error,
+    )
     return NextResponse.json(
       { success: false, error: 'Не удалось обновить флаг «Вне зачёта»' },
       { status: 500 },
