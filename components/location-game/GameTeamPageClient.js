@@ -153,6 +153,21 @@ const formatCountdownSeconds = (totalSeconds) => {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
 }
 
+const formatCodeTimeSeconds = (totalSeconds) => {
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return ''
+
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  const parts = []
+
+  if (h > 0) parts.push(`${h} ч`)
+  if (m > 0) parts.push(`${m} мин`)
+  if (s > 0) parts.push(`${s} сек`)
+
+  return parts.join(' ')
+}
+
 const formatCityName = (locationKey) => {
   if (!locationKey) return ''
 
@@ -1684,8 +1699,9 @@ function GameTeamPage({
         const code = typeof item?.code === 'string' ? item.code.trim() : ''
         const description =
           typeof item?.description === 'string' ? item.description.trim() : ''
+        const value = Number(item?.value)
         if (!code) return null
-        return { code, description }
+        return { code, description, value: Number.isFinite(value) ? value : 0 }
       })
       .filter(Boolean)
   }, [currentTaskDisplayMeta])
@@ -1701,8 +1717,9 @@ function GameTeamPage({
         const code = typeof item?.code === 'string' ? item.code.trim() : ''
         const description =
           typeof item?.description === 'string' ? item.description.trim() : ''
+        const value = Number(item?.value)
         if (!code) return null
-        return { code, description }
+        return { code, description, value: Number.isFinite(value) ? value : 0 }
       })
       .filter(Boolean)
   }, [currentTaskDisplayMeta])
@@ -1890,8 +1907,13 @@ function GameTeamPage({
   const postCompletionMessageHtml = useMemo(() => {
     if (!currentPostCompletionMessage) return ''
 
-    const normalized = normalizeForComparison(currentPostCompletionMessage)
-    if (!normalized) return ''
+    // Проверяем, есть ли в строке хоть какой-то контент (текст или HTML-теги).
+    // normalizeForComparison удаляет ВСЕ html-теги, поэтому для сообщения,
+    // содержащего только <img> (без текста), вернёт пустую строку,
+    // и картинка не покажется. Используем проверку на наличие любых
+    // непробельных символов в исходной строке.
+    const hasAnyContent = /[^\s]/.test(currentPostCompletionMessage)
+    if (!hasAnyContent) return ''
 
     return transformHtml(currentPostCompletionMessage)
   }, [currentPostCompletionMessage])
@@ -2642,16 +2664,20 @@ function GameTeamPage({
                       Принятые бонусные коды:
                     </p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {acceptedBonusCodeItems.map((item, index) => (
-                        <span
-                          key={`accepted-bonus-code-${index}-${item.code}`}
-                          className="inline-flex items-center px-3 py-1 text-xs font-semibold tracking-wide border rounded-full border-cyan-300/70 bg-cyan-50/90 text-cyan-800 dark:border-cyan-500/50 dark:bg-cyan-500/15 dark:text-cyan-100"
-                          title={item.description || undefined}
-                        >
-                          {item.code}
-                          {item.description ? ` — ${item.description}` : ''}
-                        </span>
-                      ))}
+                      {acceptedBonusCodeItems.map((item, index) => {
+                        const timeLabel = formatCodeTimeSeconds(item.value)
+                        return (
+                          <span
+                            key={`accepted-bonus-code-${index}-${item.code}`}
+                            className="inline-flex items-center px-3 py-1 text-xs font-semibold tracking-wide border rounded-full border-cyan-300/70 bg-cyan-50/90 text-cyan-800 dark:border-cyan-500/50 dark:bg-cyan-500/15 dark:text-cyan-100"
+                            title={item.description || undefined}
+                          >
+                            {item.code}
+                            {item.description ? ` — ${item.description}` : ''}
+                            {timeLabel ? ` (бонус ${timeLabel})` : ''}
+                          </span>
+                        )
+                      })}
                     </div>
                   </div>
                 ) : null}
@@ -2661,16 +2687,20 @@ function GameTeamPage({
                       Принятые штрафные коды:
                     </p>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {acceptedPenaltyCodeItems.map((item, index) => (
-                        <span
-                          key={`accepted-penalty-code-${index}-${item.code}`}
-                          className="inline-flex items-center px-3 py-1 text-xs font-semibold tracking-wide border rounded-full border-rose-300/70 bg-rose-50/90 text-rose-800 dark:border-rose-500/50 dark:bg-rose-500/15 dark:text-rose-100"
-                          title={item.description || undefined}
-                        >
-                          {item.code}
-                          {item.description ? ` — ${item.description}` : ''}
-                        </span>
-                      ))}
+                      {acceptedPenaltyCodeItems.map((item, index) => {
+                        const timeLabel = formatCodeTimeSeconds(item.value)
+                        return (
+                          <span
+                            key={`accepted-penalty-code-${index}-${item.code}`}
+                            className="inline-flex items-center px-3 py-1 text-xs font-semibold tracking-wide border rounded-full border-rose-300/70 bg-rose-50/90 text-rose-800 dark:border-rose-500/50 dark:bg-rose-500/15 dark:text-rose-100"
+                            title={item.description || undefined}
+                          >
+                            {item.code}
+                            {item.description ? ` — ${item.description}` : ''}
+                            {timeLabel ? ` (штраф ${timeLabel})` : ''}
+                          </span>
+                        )
+                      })}
                     </div>
                   </div>
                 ) : null}
@@ -2832,7 +2862,7 @@ function GameTeamPage({
           </>
         }
       >
-        <div className="flex min-h-0 flex-1 flex-col gap-4">
+        <div className="flex flex-col flex-1 min-h-0 gap-4">
           <GameMessageHistory
             messages={gameMessages}
             isLoading={gameMessagesLoading}
@@ -2841,7 +2871,7 @@ function GameTeamPage({
             viewer="team"
           />
           {canSendGameMessage ? (
-            <div className="shrink-0 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <div className="pt-4 border-t shrink-0 border-slate-200 dark:border-slate-700">
               <textarea
                 ref={gameMessageTextareaRef}
                 value={gameMessageDraft}

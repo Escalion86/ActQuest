@@ -119,7 +119,9 @@ const toHHMMSS = (sec, noHours = false) => {
 const isCaptainForceClueAdding = (item) => {
   const source = typeof item?.source === 'string' ? item.source.trim() : ''
   const name = typeof item?.name === 'string' ? item.name.trim() : ''
-  return source === 'captain_force_clue' || name.startsWith('Досрочная подсказка')
+  return (
+    source === 'captain_force_clue' || name.startsWith('Досрочная подсказка')
+  )
 }
 
 const hasTimeAddingTaskBinding = (item) => {
@@ -159,7 +161,10 @@ const normalizeId = (value) => {
   return ''
 }
 
-const normalizeRole = (value) => String(value || '').trim().toLowerCase()
+const normalizeRole = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
 
 const formatPrequelValue = (value, gameType) => {
   const numeric = Number(value)
@@ -180,9 +185,7 @@ const getPrequelStoryEffectLabel = (effect) => {
   }
 
   if (effect.type === 'grant_item') {
-    return effect.itemId
-      ? `Предмет: ${effect.itemId}`
-      : 'Выдан предмет'
+    return effect.itemId ? `Предмет: ${effect.itemId}` : 'Выдан предмет'
   }
   if (effect.type === 'unlock_node') {
     return effect.nodeId ? `Нода: ${effect.nodeId}` : 'Открыта нода'
@@ -328,7 +331,7 @@ const TimeResult = ({
     >
       <div className="relative inline-flex items-center justify-center">
         {showBestCup ? (
-          <span className="pointer-events-none absolute right-full mr-1">
+          <span className="absolute mr-1 pointer-events-none right-full">
             <YellowCupIcon />
           </span>
         ) : null}
@@ -341,7 +344,9 @@ const TimeResult = ({
         >
           {isGapFromPrevious ? (
             <div className="inline-flex items-center gap-x-1 rounded-md border border-rose-300/65 bg-rose-50/85 px-1.5 py-0.5 text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/12 dark:text-rose-200">
-              <span className="font-mono">+{toHHMMSS(penaltySeconds, true)}</span>
+              <span className="font-mono">
+                +{toHHMMSS(penaltySeconds, true)}
+              </span>
             </div>
           ) : (
             <>
@@ -373,7 +378,9 @@ const TimeResult = ({
                 <div
                   className={cn(
                     'absolute left-1/2 z-30 w-56 -translate-x-1/2 rounded-lg border border-cyan-300/60 bg-white/95 p-2 text-left text-[11px] text-slate-700 shadow-lg dark:border-cyan-500/35 dark:bg-[#07122a]/96 dark:text-slate-200',
-                    openTooltipUpward ? 'bottom-full mb-1.5' : 'top-full mt-1.5',
+                    openTooltipUpward
+                      ? 'bottom-full mb-1.5'
+                      : 'top-full mt-1.5',
                   )}
                 >
                   <p className="mb-1 font-semibold text-slate-800 dark:text-slate-100">
@@ -383,9 +390,11 @@ const TimeResult = ({
                     <ul className="space-y-1">
                       {adjustments.map((item, index) => {
                         const secondsValue = Number(item?.seconds)
-                        const type = item?.type === 'bonus' ? 'bonus' : 'penalty'
+                        const type =
+                          item?.type === 'bonus' ? 'bonus' : 'penalty'
                         const display =
-                          item?.display || toHHMMSS(Math.abs(secondsValue), true)
+                          item?.display ||
+                          toHHMMSS(Math.abs(secondsValue), true)
                         const description =
                           item?.description || item?.name || 'Корректировка'
                         return (
@@ -396,7 +405,9 @@ const TimeResult = ({
                             <span
                               className={cn(
                                 'mt-0.5 inline-flex h-1.5 w-1.5 rounded-full',
-                                type === 'bonus' ? 'bg-emerald-500' : 'bg-rose-500',
+                                type === 'bonus'
+                                  ? 'bg-emerald-500'
+                                  : 'bg-rose-500',
                               )}
                             />
                             <span>
@@ -449,7 +460,9 @@ const GameBlock = ({ game, isDarkTheme }) => {
   const [sortMode, setSortMode] = useState('result')
   const [activeAdjustmentKey, setActiveAdjustmentKey] = useState(null)
   const [isTableDragging, setIsTableDragging] = useState(false)
+  const [tableWrapperWidth, setTableWrapperWidth] = useState(null)
   const tableScrollRef = useRef(null)
+  const tableInnerRef = useRef(null)
   const tableDragStateRef = useRef({
     isActive: false,
     startX: 0,
@@ -567,10 +580,12 @@ const GameBlock = ({ game, isDarkTheme }) => {
     }
   })
   const hasOutOfCompetitionTeams = useMemo(
-    () => gameTeamsWithTeamsBase.some((item) => Boolean(item?.outOfCompetition)),
+    () =>
+      gameTeamsWithTeamsBase.some((item) => Boolean(item?.outOfCompetition)),
     [gameTeamsWithTeamsBase],
   )
-  const [showOutOfCompetitionTeams, setShowOutOfCompetitionTeams] = useState(true)
+  const [showOutOfCompetitionTeams, setShowOutOfCompetitionTeams] =
+    useState(true)
 
   useEffect(() => {
     setShowOutOfCompetitionTeams(true)
@@ -716,7 +731,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
       ? Math.max(...finishedTeamTimes)
       : allTeamTimes.length > 0
         ? Math.max(...allTeamTimes)
-      : 0) || 1
+        : 0) || 1
   const animationSeconds = Math.round(maxTeamTime)
   const animationDuration = isForceFinished ? 0 : duration
 
@@ -726,28 +741,34 @@ const GameBlock = ({ game, isDarkTheme }) => {
       return (clamped * 0.99) / maxTeamTime
     }),
   )
-  const bestTaskTimeByIndex = Array.from({ length: tasksCount }, (_, taskIndex) => {
-    const task = tasks[taskIndex]
-    if (task?.isBonusTask) {
-      return null
-    }
-
-    let best = Number.POSITIVE_INFINITY
-    teamsAnimateSteps.forEach((timeResults) => {
-      const current = Number(timeResults?.[taskIndex])
-      const previous = taskIndex > 0 ? Number(timeResults?.[taskIndex - 1]) : 0
-      if (!Number.isFinite(current) || !Number.isFinite(previous)) {
-        return
+  const bestTaskTimeByIndex = Array.from(
+    { length: tasksCount },
+    (_, taskIndex) => {
+      const task = tasks[taskIndex]
+      if (task?.isBonusTask) {
+        return null
       }
 
-      const timeSpent = current - previous
-      if (Number.isFinite(timeSpent) && timeSpent >= 0 && timeSpent < best) {
-        best = timeSpent
-      }
-    })
+      let best = Number.POSITIVE_INFINITY
+      teamsAnimateSteps.forEach((timeResults) => {
+        const current = Number(timeResults?.[taskIndex])
+        const previous =
+          taskIndex > 0 ? Number(timeResults?.[taskIndex - 1]) : 0
+        if (!Number.isFinite(current) || !Number.isFinite(previous)) {
+          return
+        }
 
-    return Number.isFinite(best) && best < Number.POSITIVE_INFINITY ? best : null
-  })
+        const timeSpent = current - previous
+        if (Number.isFinite(timeSpent) && timeSpent >= 0 && timeSpent < best) {
+          best = timeSpent
+        }
+      })
+
+      return Number.isFinite(best) && best < Number.POSITIVE_INFINITY
+        ? best
+        : null
+    },
+  )
 
   const teamSegmentSpeedModes = teamsAnimateSteps.map((timeResults) =>
     Array.from({ length: tasksCount }, (_, taskIndex) => {
@@ -1010,11 +1031,15 @@ const GameBlock = ({ game, isDarkTheme }) => {
                 }
 
                 return {
-                  type: item?.type === 'bonus' || rawSeconds < 0 ? 'bonus' : 'penalty',
+                  type:
+                    item?.type === 'bonus' || rawSeconds < 0
+                      ? 'bonus'
+                      : 'penalty',
                   seconds: absSeconds,
                   display: item?.display || toHHMMSS(absSeconds, true),
                   description:
-                    typeof item?.name === 'string' && item.name.trim().length > 0
+                    typeof item?.name === 'string' &&
+                    item.name.trim().length > 0
                       ? `Орг. корректировка: ${item.name.trim()}`
                       : 'Орг. корректировка',
                 }
@@ -1031,7 +1056,8 @@ const GameBlock = ({ game, isDarkTheme }) => {
                     seconds: Math.abs(Number(item?.value) || 0),
                     display: formatPrequelValue(item?.value, game?.type),
                     description:
-                      typeof item?.description === 'string' && item.description.trim()
+                      typeof item?.description === 'string' &&
+                      item.description.trim()
                         ? `Приквел: ${item.description.trim()}`
                         : item?.code
                           ? `Приквел: бонусный код ${item.code}`
@@ -1044,7 +1070,8 @@ const GameBlock = ({ game, isDarkTheme }) => {
                     seconds: Math.abs(Number(item?.value) || 0),
                     display: formatPrequelValue(item?.value, game?.type),
                     description:
-                      typeof item?.description === 'string' && item.description.trim()
+                      typeof item?.description === 'string' &&
+                      item.description.trim()
                         ? `Приквел: ${item.description.trim()}`
                         : item?.code
                           ? `Приквел: штрафной код ${item.code}`
@@ -1057,7 +1084,8 @@ const GameBlock = ({ game, isDarkTheme }) => {
                     seconds: Math.abs(Number(item?.value) || 0),
                     display: formatPrequelValue(item?.value, game?.type),
                     description:
-                      typeof item?.description === 'string' && item.description.trim()
+                      typeof item?.description === 'string' &&
+                      item.description.trim()
                         ? `Приквел: ${item.description.trim()}`
                         : 'Приквел: штраф за лимит неверных кодов',
                   }))
@@ -1088,7 +1116,8 @@ const GameBlock = ({ game, isDarkTheme }) => {
                   seconds: absSeconds,
                   display: toHHMMSS(absSeconds, true),
                   description:
-                    typeof item?.name === 'string' && item.name.trim().length > 0
+                    typeof item?.name === 'string' &&
+                    item.name.trim().length > 0
                       ? `Орг. корректировка: ${item.name.trim()}`
                       : 'Орг. корректировка',
                 }
@@ -1097,27 +1126,27 @@ const GameBlock = ({ game, isDarkTheme }) => {
           : []
 
       const fromTaskAdjustments = !computedTeam
-        ? (Array.isArray(teamsTaskAdjustments[index])
-            ? teamsTaskAdjustments[index]
-                .flat()
-                .map((item) => {
-                  const type = item?.type === 'bonus' ? 'bonus' : 'penalty'
-                  const numericSeconds = Number(item?.seconds)
-                  const absSeconds = Number.isFinite(numericSeconds)
-                    ? Math.abs(numericSeconds)
-                    : 0
-                  if (!(absSeconds > 0)) {
-                    return null
-                  }
-                  return {
-                    ...item,
-                    type,
-                    seconds: absSeconds,
-                    display: item?.display || toHHMMSS(absSeconds, true),
-                  }
-                })
-                .filter(Boolean)
-            : [])
+        ? Array.isArray(teamsTaskAdjustments[index])
+          ? teamsTaskAdjustments[index]
+              .flat()
+              .map((item) => {
+                const type = item?.type === 'bonus' ? 'bonus' : 'penalty'
+                const numericSeconds = Number(item?.seconds)
+                const absSeconds = Number.isFinite(numericSeconds)
+                  ? Math.abs(numericSeconds)
+                  : 0
+                if (!(absSeconds > 0)) {
+                  return null
+                }
+                return {
+                  ...item,
+                  type,
+                  seconds: absSeconds,
+                  display: item?.display || toHHMMSS(absSeconds, true),
+                }
+              })
+              .filter(Boolean)
+          : []
         : []
 
       return [
@@ -1140,11 +1169,14 @@ const GameBlock = ({ game, isDarkTheme }) => {
     .filter(
       ({ prequel }) =>
         prequel?.enabled &&
-        ((Array.isArray(prequel?.bonusItems) && prequel.bonusItems.length > 0) ||
-          (Array.isArray(prequel?.penaltyItems) && prequel.penaltyItems.length > 0) ||
+        ((Array.isArray(prequel?.bonusItems) &&
+          prequel.bonusItems.length > 0) ||
+          (Array.isArray(prequel?.penaltyItems) &&
+            prequel.penaltyItems.length > 0) ||
           (Array.isArray(prequel?.wrongLimitPenaltyItems) &&
             prequel.wrongLimitPenaltyItems.length > 0) ||
-          (Array.isArray(prequel?.storyEffects) && prequel.storyEffects.length > 0)),
+          (Array.isArray(prequel?.storyEffects) &&
+            prequel.storyEffects.length > 0)),
     )
 
   const fallbackPlaces = totalTeamsTimeWithBonusAndPenalty.map(
@@ -1175,6 +1207,22 @@ const GameBlock = ({ game, isDarkTheme }) => {
     setIsForceFinished(false)
     setActiveAdjustmentKey(null)
   }, [game?._id, game?.updatedAt])
+
+  useEffect(() => {
+    const measureWidth = () => {
+      if (tableInnerRef.current) {
+        setTableWrapperWidth(
+          tableInnerRef.current.getBoundingClientRect().width,
+        )
+      }
+    }
+
+    measureWidth()
+
+    const onResize = () => requestAnimationFrame(measureWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const handleTableMouseDown = (event) => {
     if (event.button !== 0) {
@@ -1228,7 +1276,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                 Скорость демонстрации:
               </div>
               <select
-                className="cursor-pointer px-3 py-1 transition border rounded-lg outline-none border-slate-300 bg-white/90 text-slate-800 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-300 dark:border-cyan-500/35 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-500/30"
+                className="px-3 py-1 transition border rounded-lg outline-none cursor-pointer border-slate-300 bg-white/90 text-slate-800 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-300 dark:border-cyan-500/35 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-500/30"
                 value={String(duration)}
                 onChange={(e) => setDuration(Number(e.target.value))}
               >
@@ -1241,7 +1289,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
             <div className="flex items-center justify-center gap-x-2">
               <div className="text-xs tablet:text-sm">Сортировка:</div>
               <select
-                className="cursor-pointer px-3 py-1 transition border rounded-lg outline-none border-slate-300 bg-white/90 text-slate-800 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-300 dark:border-cyan-500/35 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-500/30"
+                className="px-3 py-1 transition border rounded-lg outline-none cursor-pointer border-slate-300 bg-white/90 text-slate-800 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-300 dark:border-cyan-500/35 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-cyan-400 dark:focus:ring-cyan-500/30"
                 value={sortMode}
                 onChange={(e) => setSortMode(e.target.value)}
               >
@@ -1250,10 +1298,10 @@ const GameBlock = ({ game, isDarkTheme }) => {
               </select>
             </div>
             {canManageOutOfCompetitionVisibility && hasOutOfCompetitionTeams ? (
-              <label className="flex items-center justify-center gap-x-2 text-xs tablet:text-sm text-slate-700 dark:text-slate-200">
+              <label className="flex items-center justify-center text-xs gap-x-2 tablet:text-sm text-slate-700 dark:text-slate-200">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 dark:border-slate-600 dark:bg-slate-900"
+                  className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 dark:border-slate-600 dark:bg-slate-900"
                   checked={showOutOfCompetitionTeams}
                   onChange={(event) =>
                     setShowOutOfCompetitionTeams(Boolean(event.target.checked))
@@ -1262,7 +1310,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                 Показывать команды Вне зачёта
               </label>
             ) : null}
-            <div className="mt-1 flex items-center justify-center gap-x-2">
+            <div className="flex items-center justify-center mt-1 gap-x-2">
               <button
                 type="button"
                 className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-300 bg-cyan-50/90 px-5 py-2 text-base font-semibold text-cyan-700 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-[#00D1FF]/45 dark:bg-[#00D1FF]/14 dark:text-[#bdf4ff] dark:shadow-[0_0_0_1px_rgba(0,209,255,0.16),0_0_14px_rgba(0,209,255,0.2)] dark:hover:bg-[#00D1FF]/24 dark:hover:text-[#e9fbff]"
@@ -1320,9 +1368,13 @@ const GameBlock = ({ game, isDarkTheme }) => {
         onMouseUp={stopTableDragging}
         onMouseLeave={stopTableDragging}
       >
-        <div className="mx-auto w-fit">
+        <div
+          className="tablet:mx-auto"
+          style={{ width: tableWrapperWidth ?? 'fit-content' }}
+        >
           <div
-            className="overflow-x-hidden overflow-y-visible rounded-2xl border border-slate-300/70 bg-white/85 text-slate-800 shadow-[0_10px_26px_rgba(2,8,23,0.14)] translate-x-0 -translate-y-[19%] tablet:-translate-y-[12%] laptop:translate-y-0 scale-[60%] tablet:scale-75 laptop:scale-100 dark:border-[#00D1FF]/32 dark:bg-[#060d20]/92 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(0,209,255,0.14),0_0_26px_rgba(0,209,255,0.12),0_22px_42px_rgba(0,0,0,0.55)]"
+            ref={tableInnerRef}
+            className="overflow-x-hidden overflow-y-visible rounded-2xl border border-slate-300/70 bg-white/85 text-slate-800 shadow-[0_10px_26px_rgba(2,8,23,0.14)] origin-left -translate-y-[19%] tablet:-translate-y-[12%] laptop:translate-y-0 scale-[60%] tablet:scale-75 laptop:scale-100 dark:border-[#00D1FF]/32 dark:bg-[#060d20]/92 dark:text-slate-100 dark:shadow-[0_0_0_1px_rgba(0,209,255,0.14),0_0_26px_rgba(0,209,255,0.12),0_22px_42px_rgba(0,0,0,0.55)]"
             style={{
               position: 'relative',
               display: 'flex',
@@ -1373,8 +1425,16 @@ const GameBlock = ({ game, isDarkTheme }) => {
                       }}
                       transition={{
                         ease: 'linear',
-                        duration: isForceFinished ? 0 : start ? animationDuration : 0,
-                        times: isForceFinished ? undefined : start ? [0, 0.99, 1] : 0,
+                        duration: isForceFinished
+                          ? 0
+                          : start
+                            ? animationDuration
+                            : 0,
+                        times: isForceFinished
+                          ? undefined
+                          : start
+                            ? [0, 0.99, 1]
+                            : 0,
                       }}
                       className="flex items-center justify-center w-full gap-2 px-2 text-lg leading-5 text-center text-slate-900 dark:text-slate-100"
                       style={{
@@ -1476,9 +1536,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                           Number.isFinite(bestTaskTimeByIndex[index]) &&
                           timeResult === bestTaskTimeByIndex[index]
                         }
-                        openTooltipUpward={
-                          i >= gameTeamsWithTeams.length - 2
-                        }
+                        openTooltipUpward={i >= gameTeamsWithTeams.length - 2}
                         rowHeight={rowHeight}
                         forceFinish={isForceFinished}
                       />
@@ -1575,9 +1633,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                       activeAdjustmentKey={activeAdjustmentKey}
                       setActiveAdjustmentKey={setActiveAdjustmentKey}
                       addings={totalAddings[index]}
-                      openTooltipUpward={
-                        index >= gameTeamsWithTeams.length - 2
-                      }
+                      openTooltipUpward={index >= gameTeamsWithTeams.length - 2}
                       rowHeight={rowHeight}
                       forceFinish={isForceFinished}
                     />
@@ -1651,9 +1707,7 @@ const GameBlock = ({ game, isDarkTheme }) => {
                       adjustmentKey={`total-${index}`}
                       activeAdjustmentKey={activeAdjustmentKey}
                       setActiveAdjustmentKey={setActiveAdjustmentKey}
-                      openTooltipUpward={
-                        index >= gameTeamsWithTeams.length - 2
-                      }
+                      openTooltipUpward={index >= gameTeamsWithTeams.length - 2}
                       forceFinish={isForceFinished}
                     />
                   )
@@ -1691,8 +1745,16 @@ const GameBlock = ({ game, isDarkTheme }) => {
                       ease: 'linear',
                       // type: 'spring',
                       // stiffness: 1,
-                      duration: isForceFinished ? 0 : start ? animationDuration : 0,
-                      times: isForceFinished ? undefined : start ? [0, 0.99, 1] : 0,
+                      duration: isForceFinished
+                        ? 0
+                        : start
+                          ? animationDuration
+                          : 0,
+                      times: isForceFinished
+                        ? undefined
+                        : start
+                          ? [0, 0.99, 1]
+                          : 0,
                     }}
                     className={cn(
                       'w-[50px] flex items-center justify-center',
@@ -1812,7 +1874,11 @@ const GameBlock = ({ game, isDarkTheme }) => {
                     ease: 'linear',
                     // type: 'spring',
                     // stiffness: 1,
-                    duration: isForceFinished ? 0 : start ? animationDuration : 0,
+                    duration: isForceFinished
+                      ? 0
+                      : start
+                        ? animationDuration
+                        : 0,
                     times: isForceFinished
                       ? undefined
                       : start
@@ -1840,7 +1906,11 @@ const GameBlock = ({ game, isDarkTheme }) => {
                       }}
                       transition={{
                         ease: 'linear',
-                        duration: isForceFinished ? 0 : start ? animationDuration : 0,
+                        duration: isForceFinished
+                          ? 0
+                          : start
+                            ? animationDuration
+                            : 0,
                         times: isForceFinished
                           ? undefined
                           : start
@@ -1867,131 +1937,145 @@ const GameBlock = ({ game, isDarkTheme }) => {
         </div>
       </div>
       {prequelSummaryTeams.length > 0 ? (
-        <div className="relative z-50 mx-auto mt-6 max-w-6xl px-4 pb-10">
+        <div className="relative z-50 max-w-6xl px-4 pb-10 mx-auto mt-6">
           <div className="rounded-3xl border border-slate-300/70 bg-white/85 p-5 shadow-[0_10px_26px_rgba(2,8,23,0.14)] dark:border-[#00D1FF]/32 dark:bg-[#060d20]/92 dark:shadow-[0_0_0_1px_rgba(0,209,255,0.14),0_0_26px_rgba(0,209,255,0.12),0_22px_42px_rgba(0,0,0,0.55)]">
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Приквел
               </h2>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                Отдельные корректировки и story-эффекты, полученные командами до старта игры.
+                Отдельные корректировки и story-эффекты, полученные командами до
+                старта игры.
               </p>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
               {prequelSummaryTeams.map(
                 ({ teamId, teamName, outOfCompetition, prequel }) => (
-                <section
-                  key={`prequel-${teamId || teamName}`}
-                  className="rounded-2xl border border-slate-300/70 bg-slate-50/85 p-4 dark:border-cyan-500/20 dark:bg-slate-900/45"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      {teamName}
-                    </h3>
-                    {outOfCompetition ? (
-                      <span className="inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-                        Вне зачёта
-                      </span>
-                    ) : null}
-                  </div>
+                  <section
+                    key={`prequel-${teamId || teamName}`}
+                    className="p-4 border rounded-2xl border-slate-300/70 bg-slate-50/85 dark:border-cyan-500/20 dark:bg-slate-900/45"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                        {teamName}
+                      </h3>
+                      {outOfCompetition ? (
+                        <span className="inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                          Вне зачёта
+                        </span>
+                      ) : null}
+                    </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    {Number(prequel?.bonusValue) > 0 ? (
-                      <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-200">
-                        Бонус: {formatPrequelValue(prequel?.bonusValue, game.type)}
-                      </span>
-                    ) : null}
-                    {Number(prequel?.penaltyValue) > 0 ? (
-                      <span className="inline-flex items-center rounded-full border border-rose-300 bg-rose-50 px-2.5 py-1 font-medium text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-200">
-                        Штрафные коды: {formatPrequelValue(prequel?.penaltyValue, game.type)}
-                      </span>
-                    ) : null}
-                    {Number(prequel?.wrongPenaltyValue) > 0 ? (
-                      <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-200">
-                        Лимит ошибок: {formatPrequelValue(prequel?.wrongPenaltyValue, game.type)}
-                      </span>
-                    ) : null}
-                  </div>
+                    <div className="flex flex-wrap gap-2 mt-3 text-xs">
+                      {Number(prequel?.bonusValue) > 0 ? (
+                        <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-200">
+                          Бонус:{' '}
+                          {formatPrequelValue(prequel?.bonusValue, game.type)}
+                        </span>
+                      ) : null}
+                      {Number(prequel?.penaltyValue) > 0 ? (
+                        <span className="inline-flex items-center rounded-full border border-rose-300 bg-rose-50 px-2.5 py-1 font-medium text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-200">
+                          Штрафные коды:{' '}
+                          {formatPrequelValue(prequel?.penaltyValue, game.type)}
+                        </span>
+                      ) : null}
+                      {Number(prequel?.wrongPenaltyValue) > 0 ? (
+                        <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-200">
+                          Лимит ошибок:{' '}
+                          {formatPrequelValue(
+                            prequel?.wrongPenaltyValue,
+                            game.type,
+                          )}
+                        </span>
+                      ) : null}
+                    </div>
 
-                  <div className="mt-4 space-y-3 text-sm">
-                    {Array.isArray(prequel?.bonusItems) && prequel.bonusItems.length > 0 ? (
-                      <div>
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                          Бонусные коды
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {prequel.bonusItems.map((item, index) => (
-                            <span
-                              key={`bonus-${item.code || index}`}
-                              className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2 py-1 text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-200"
-                              title={item.description || undefined}
-                            >
-                              {item.code || 'Бонус'}: -{formatPrequelValue(item.value, game.type)}
-                            </span>
-                          ))}
+                    <div className="mt-4 space-y-3 text-sm">
+                      {Array.isArray(prequel?.bonusItems) &&
+                      prequel.bonusItems.length > 0 ? (
+                        <div>
+                          <p className="mb-1 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400">
+                            Бонусные коды
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {prequel.bonusItems.map((item, index) => (
+                              <span
+                                key={`bonus-${item.code || index}`}
+                                className="inline-flex items-center px-2 py-1 border rounded-full border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                title={item.description || undefined}
+                              >
+                                {item.code || 'Бонус'}: -
+                                {formatPrequelValue(item.value, game.type)}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ) : null}
+                      ) : null}
 
-                    {Array.isArray(prequel?.penaltyItems) && prequel.penaltyItems.length > 0 ? (
-                      <div>
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                          Штрафные коды
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {prequel.penaltyItems.map((item, index) => (
-                            <span
-                              key={`penalty-${item.code || index}`}
-                              className="inline-flex items-center rounded-full border border-rose-300 bg-rose-50 px-2 py-1 text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-200"
-                              title={item.description || undefined}
-                            >
-                              {item.code || 'Штраф'}: +{formatPrequelValue(item.value, game.type)}
-                            </span>
-                          ))}
+                      {Array.isArray(prequel?.penaltyItems) &&
+                      prequel.penaltyItems.length > 0 ? (
+                        <div>
+                          <p className="mb-1 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400">
+                            Штрафные коды
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {prequel.penaltyItems.map((item, index) => (
+                              <span
+                                key={`penalty-${item.code || index}`}
+                                className="inline-flex items-center px-2 py-1 border rounded-full border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-200"
+                                title={item.description || undefined}
+                              >
+                                {item.code || 'Штраф'}: +
+                                {formatPrequelValue(item.value, game.type)}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ) : null}
+                      ) : null}
 
-                    {Array.isArray(prequel?.wrongLimitPenaltyItems) &&
-                    prequel.wrongLimitPenaltyItems.length > 0 ? (
-                      <div>
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                          Штрафы за лимит неверных кодов
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {prequel.wrongLimitPenaltyItems.map((item, index) => (
-                            <span
-                              key={`wrong-limit-${index}`}
-                              className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-1 text-amber-700 dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-200"
-                              title={item.description || undefined}
-                            >
-                              +{formatPrequelValue(item.value, game.type)}
-                            </span>
-                          ))}
+                      {Array.isArray(prequel?.wrongLimitPenaltyItems) &&
+                      prequel.wrongLimitPenaltyItems.length > 0 ? (
+                        <div>
+                          <p className="mb-1 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400">
+                            Штрафы за лимит неверных кодов
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {prequel.wrongLimitPenaltyItems.map(
+                              (item, index) => (
+                                <span
+                                  key={`wrong-limit-${index}`}
+                                  className="inline-flex items-center px-2 py-1 border rounded-full border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-200"
+                                  title={item.description || undefined}
+                                >
+                                  +{formatPrequelValue(item.value, game.type)}
+                                </span>
+                              ),
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ) : null}
+                      ) : null}
 
-                    {Array.isArray(prequel?.storyEffects) && prequel.storyEffects.length > 0 ? (
-                      <div>
-                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                          Story-эффекты
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {prequel.storyEffects.map((effect, index) => (
-                            <span
-                              key={`effect-${effect.type || 'story'}-${index}`}
-                              className="inline-flex items-center rounded-full border border-violet-300 bg-violet-50 px-2 py-1 text-violet-700 dark:border-violet-500/35 dark:bg-violet-500/10 dark:text-violet-200"
-                            >
-                              {getPrequelStoryEffectLabel(effect)}
-                            </span>
-                          ))}
+                      {Array.isArray(prequel?.storyEffects) &&
+                      prequel.storyEffects.length > 0 ? (
+                        <div>
+                          <p className="mb-1 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400">
+                            Story-эффекты
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {prequel.storyEffects.map((effect, index) => (
+                              <span
+                                key={`effect-${effect.type || 'story'}-${index}`}
+                                className="inline-flex items-center px-2 py-1 border rounded-full border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-500/35 dark:bg-violet-500/10 dark:text-violet-200"
+                              >
+                                {getPrequelStoryEffectLabel(effect)}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </section>
+                      ) : null}
+                    </div>
+                  </section>
                 ),
               )}
             </div>
@@ -2119,4 +2203,3 @@ export default ResultPage
 //     fallback: true,
 //   }
 // }
-

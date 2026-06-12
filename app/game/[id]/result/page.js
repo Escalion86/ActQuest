@@ -4,8 +4,6 @@ import LegacyGameResultPage from '@app/[location]/game/result/[id]/page'
 import { resolveGameLocationById } from '@app/api/cabinet/_lib/resolveGameLocation'
 import { getCityPageByLocationKey } from '@app/_lib/cityLandingPages'
 import { seoArticles } from '@app/_lib/seoArticles'
-import SeoActionLink from '@components/public/seo/SeoActionLink'
-import SeoSectionCard from '@components/public/seo/SeoSectionCard'
 import fetchGame from '@server/fetchGame'
 
 export const dynamic = 'force-dynamic'
@@ -173,32 +171,6 @@ export default async function GameResultPage({ params }) {
         ))}
       </div>
       <LegacyGameResultPage params={{ id: gameId, location }} />
-      {cityPage || cityArticles.length > 0 ? (
-        <section className="mx-auto mt-6 w-full max-w-5xl px-4 pb-8 sm:px-6 lg:px-8">
-          <SeoSectionCard title="Полезные ссылки по игре" titleClassName="text-sm sm:text-base">
-            <div className="mt-2 flex flex-wrap gap-2">
-              {cityPage ? (
-                <SeoActionLink href={`/${cityPage.slug}`} variant="ghost" className="text-xs">
-                  Автоквесты в {cityPage.cityName}
-                </SeoActionLink>
-              ) : null}
-              <SeoActionLink href="/articles" variant="secondary" className="text-xs">
-                Гайды и статьи
-              </SeoActionLink>
-              {cityArticles.map((article) => (
-                <SeoActionLink
-                  key={article.slug}
-                  href={`/articles/${article.slug}`}
-                  variant="ghost"
-                  className="text-xs"
-                >
-                  {article.title}
-                </SeoActionLink>
-              ))}
-            </div>
-          </SeoSectionCard>
-        </section>
-      ) : null}
     </>
   )
 }

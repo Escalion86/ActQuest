@@ -101,6 +101,7 @@ const buildAcceptedCodeItems = (codeDefinitions, acceptedCodes) => {
       code: codeValue,
       description:
         typeof item?.description === 'string' ? item.description.trim() : '',
+      value: Number(item?.bonus ?? item?.penalty ?? 0),
     })
   })
 
@@ -109,6 +110,7 @@ const buildAcceptedCodeItems = (codeDefinitions, acceptedCodes) => {
     return {
       code: byDefinition?.code || acceptedCode,
       description: byDefinition?.description || '',
+      value: byDefinition?.value || 0,
       isKnown: acceptedSet.has(acceptedCode.toLowerCase()),
     }
   })
@@ -149,7 +151,9 @@ const buildTaskDisplayMeta = (task, gameTeam, taskIndex) => {
     requiredCodesCount: toFiniteNonNegativeIntegerOrNull(
       task?.numCodesToCompliteTask,
     ),
-    bonusCodesCount: Array.isArray(task?.bonusCodes) ? task.bonusCodes.length : 0,
+    bonusCodesCount: Array.isArray(task?.bonusCodes)
+      ? task.bonusCodes.length
+      : 0,
     penaltyCodesCount: Array.isArray(task?.penaltyCodes)
       ? task.penaltyCodes.length
       : 0,
@@ -181,7 +185,8 @@ const sanitizeFragment = (value) => sanitize(String(value || ''))
 const getTaskPostCompletionMessage = (task) => {
   const rich =
     typeof task?.postMessageRich === 'string' ? task.postMessageRich.trim() : ''
-  const plain = typeof task?.postMessage === 'string' ? task.postMessage.trim() : ''
+  const plain =
+    typeof task?.postMessage === 'string' ? task.postMessage.trim() : ''
   const source = rich || plain
   return source ? sanitizeFragment(source) : ''
 }
@@ -348,9 +353,17 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
     return base
   }
 
-  const startTimes = ensureArrayWithLength(gameTeam?.startTime, tasksCount, null)
+  const startTimes = ensureArrayWithLength(
+    gameTeam?.startTime,
+    tasksCount,
+    null,
+  )
   const endTimes = ensureArrayWithLength(gameTeam?.endTime, tasksCount, null)
-  const forcedClues = ensureArrayWithLength(gameTeam?.forcedClues, tasksCount, 0)
+  const forcedClues = ensureArrayWithLength(
+    gameTeam?.forcedClues,
+    tasksCount,
+    0,
+  )
   const activeTask = tasks[activeTaskIndex]
   const totalClues = Array.isArray(activeTask?.clues)
     ? activeTask.clues.length
@@ -365,7 +378,9 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
     forcedCluesCount: forcedClues[activeTaskIndex],
   })
   const isAlreadyFinished = Boolean(endTimes[activeTaskIndex])
-  const isAlreadyFailed = Boolean(getTaskFailureEntry(gameTeam, activeTaskIndex))
+  const isAlreadyFailed = Boolean(
+    getTaskFailureEntry(gameTeam, activeTaskIndex),
+  )
   const canMutateActiveTask = !isAlreadyFinished && !isAlreadyFailed
   const effectiveElapsedSeconds = getEffectiveTaskElapsedSeconds({
     gameTeam,
@@ -377,7 +392,10 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
     totalClues > 0 ? Math.min(visibleCluesCount + 1, totalClues) : null
   const forceClueAdvanceSeconds =
     nextClueNumber && cluesDurationSeconds > 0
-      ? Math.max(nextClueNumber * cluesDurationSeconds - effectiveElapsedSeconds, 0)
+      ? Math.max(
+          nextClueNumber * cluesDurationSeconds - effectiveElapsedSeconds,
+          0,
+        )
       : 0
   const canForceClue =
     game?.allowCaptainForceClue !== false &&
@@ -458,8 +476,10 @@ const finishBreakForCaptain = async ({
 
   const isBreakAfterCaptainFailureActive =
     activeTaskFailure?.failedAt &&
-    Math.max(Math.floor((nowMs - activeTaskFailure.failedAt.getTime()) / 1000), 0) <
-      breakDurationSeconds
+    Math.max(
+      Math.floor((nowMs - activeTaskFailure.failedAt.getTime()) / 1000),
+      0,
+    ) < breakDurationSeconds
   const isBreakAfterSuccessActive =
     activeTaskEndTime &&
     Math.max(Math.floor((nowMs - activeTaskEndTime.getTime()) / 1000), 0) <
@@ -825,7 +845,8 @@ const failTaskForCaptain = async ({
     result: {
       message: '<b>Задание провалено по решению команды.</b>',
       messages: ['Задание провалено по решению команды.'],
-      shouldResetMessages: breakDurationSeconds <= 0 || nextTaskIndex >= tasksCount,
+      shouldResetMessages:
+        breakDurationSeconds <= 0 || nextTaskIndex >= tasksCount,
     },
   }
 }
@@ -874,7 +895,11 @@ const computeTaskHtml = async ({
     const activeEnd = ensureDateValue(endTimes[clampedIndex])
     const nowMs = Date.now()
 
-    const buildTimeoutFailureUpdates = (taskIndex, failedAt, extraUpdates = {}) => {
+    const buildTimeoutFailureUpdates = (
+      taskIndex,
+      failedAt,
+      extraUpdates = {},
+    ) => {
       const existingFailures = normalizeTaskFailures(teamState.taskFailures)
       const hasExistingFailure = existingFailures.some(
         (item) => item.taskIndex === taskIndex,
@@ -988,7 +1013,9 @@ const computeTaskHtml = async ({
       if (elapsedAfterFailure >= breakDurationSeconds) {
         autoProgressMessages.push('<b>Перерыв завершён.</b>')
         return advanceToNextTask(
-          new Date(activeFailure.failedAt.getTime() + breakDurationSeconds * 1000),
+          new Date(
+            activeFailure.failedAt.getTime() + breakDurationSeconds * 1000,
+          ),
         )
       }
 
@@ -1061,13 +1088,14 @@ const computeTaskHtml = async ({
       : 0
     const previousStartTimeSignature = JSON.stringify(
       Array.isArray(effectiveGameTeam?.startTime)
-        ? effectiveGameTeam.startTime.map((value) =>
-            ensureDateValue(value)?.toISOString() || null,
+        ? effectiveGameTeam.startTime.map(
+            (value) => ensureDateValue(value)?.toISOString() || null,
           )
         : [],
     )
 
-    const nextGameTeam = await maybeHandleAutomaticProgressOnce(effectiveGameTeam)
+    const nextGameTeam =
+      await maybeHandleAutomaticProgressOnce(effectiveGameTeam)
     effectiveGameTeam = nextGameTeam || effectiveGameTeam
 
     const nextActiveNum = Number.isInteger(effectiveGameTeam?.activeNum)
@@ -1075,8 +1103,8 @@ const computeTaskHtml = async ({
       : 0
     const nextStartTimeSignature = JSON.stringify(
       Array.isArray(effectiveGameTeam?.startTime)
-        ? effectiveGameTeam.startTime.map((value) =>
-            ensureDateValue(value)?.toISOString() || null,
+        ? effectiveGameTeam.startTime.map(
+            (value) => ensureDateValue(value)?.toISOString() || null,
           )
         : [],
     )
@@ -1222,8 +1250,8 @@ const computeTaskHtml = async ({
           breakReason === 'captain_failed'
             ? '<b>Задание провалено по решению команды.</b>'
             : breakReason === 'timeout'
-            ? '<b>Время на задание вышло.</b>'
-            : '<b>Задание выполнено.</b>',
+              ? '<b>Время на задание вышло.</b>'
+              : '<b>Задание выполнено.</b>',
         ]
         breakParts.push('<br /><br /><b>Ожидайте следующее задание.</b>')
         breakParts.push(hiddenBreakCountdown)
