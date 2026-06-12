@@ -1,14 +1,15 @@
 import PropTypes from 'prop-types'
 
-export const DEFAULT_MONEY_INPUT_CLASS_NAME =
-  'aq-amount-step-input h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-center text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
+import {
+  normalizeAmountStepperDisplayValue,
+  normalizeAmountStepperValue,
+} from '@helpers/amountStepperInput'
 
-const normalizeNumber = (value, fallback = 0) => {
-  const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric : fallback
-}
+export const DEFAULT_MONEY_INPUT_CLASS_NAME =
+  'aq-amount-step-input h-10 w-full rounded-xl border border-slate-200 bg-white pl-3 pr-8 py-2 text-center text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white'
 
 const AmountStepperInput = ({
+  id,
   value,
   onChange,
   min,
@@ -17,7 +18,7 @@ const AmountStepperInput = ({
   className,
   inputClassName,
 }) => {
-  const currentValue = normalizeNumber(value, min)
+  const currentValue = normalizeAmountStepperValue(value, min)
 
   const applyDelta = (delta) => {
     const next = Math.max(min, currentValue + delta)
@@ -37,6 +38,7 @@ const AmountStepperInput = ({
           ▼
         </button>
         <input
+          id={id}
           type="number"
           min={min}
           step={step}
@@ -47,11 +49,21 @@ const AmountStepperInput = ({
               onChange(min)
               return
             }
-            onChange(Math.max(min, normalizeNumber(rawValue, min)))
+            const nextValue = Math.max(
+              min,
+              normalizeAmountStepperValue(rawValue, min),
+            )
+            event.target.value = normalizeAmountStepperDisplayValue(
+              nextValue,
+              min,
+            )
+            onChange(nextValue)
           }}
           placeholder={placeholder}
           className={inputClassName}
-          style={{ paddingLeft: '3rem', paddingRight: '4.5rem' }}
+          style={{
+            textAlign: 'center',
+          }}
         />
         <button
           type="button"
@@ -63,7 +75,7 @@ const AmountStepperInput = ({
           ▲
         </button>
         <span
-          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold leading-none text-slate-500 dark:text-slate-300"
+          className="absolute text-sm font-semibold leading-none -translate-y-1/2 pointer-events-none right-3 top-1/2 text-slate-500 dark:text-slate-300"
           aria-hidden="true"
         >
           ₽
@@ -74,6 +86,7 @@ const AmountStepperInput = ({
 }
 
 AmountStepperInput.propTypes = {
+  id: PropTypes.string,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   onChange: PropTypes.func.isRequired,
   min: PropTypes.number,
@@ -84,6 +97,7 @@ AmountStepperInput.propTypes = {
 }
 
 AmountStepperInput.defaultProps = {
+  id: undefined,
   min: 0,
   step: 100,
   placeholder: 'Сумма',

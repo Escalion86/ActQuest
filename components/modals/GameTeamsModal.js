@@ -15,6 +15,7 @@ import requestApiJson from '@helpers/requestApiJson'
 import { LOCATIONS } from '@server/serverConstants'
 import TeamDescriptionModal from './TeamDescriptionModal'
 import GameControlTeamStatsModal from './GameControlTeamStatsModal'
+import TeamGamePaymentsModal from './TeamGamePaymentsModal'
 
 const resolveRatingBadge = (rating) =>
   rating?.isEligible && Number.isFinite(rating?.rank) ? `#${rating.rank}` : null
@@ -31,6 +32,19 @@ const formatDurationBadge = (secondsRaw) => {
     return `${minutes}м`
   }
   return `${seconds}с`
+}
+
+const formatMoney = (amountRaw) => {
+  const amount = Number(amountRaw)
+  if (!Number.isFinite(amount)) {
+    return '0 ₽'
+  }
+
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    maximumFractionDigits: 0,
+  }).format(amount)
 }
 
 const OpenDoorIcon = () => (
@@ -105,6 +119,24 @@ const TeamStatsIcon = () => (
   </svg>
 )
 
+const TeamPaymentIcon = () => (
+  <svg
+    className="w-4 h-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="6" width="18" height="12" rx="2" />
+    <path d="M3 10h18" />
+    <path d="M7 15h4" />
+    <path d="M15 15h2" />
+  </svg>
+)
+
 const GameTeamsModal = ({
   selectedGame,
   isTeamsModalOpen,
@@ -154,6 +186,8 @@ const GameTeamsModal = ({
   const [selectedTeamStatsName, setSelectedTeamStatsName] = useState('')
   const [selectedTeamStats, setSelectedTeamStats] = useState(null)
   const [isTeamStatsModalOpen, setIsTeamStatsModalOpen] = useState(false)
+  const [isTeamPaymentsModalOpen, setIsTeamPaymentsModalOpen] = useState(false)
+  const [teamPaymentsTarget, setTeamPaymentsTarget] = useState(null)
 
   const teamDetailsQuery = useQuery({
     queryKey: ['team', selectedTeamDetailsId],
@@ -277,6 +311,8 @@ const GameTeamsModal = ({
       setSelectedTeamStatsName('')
       setSelectedTeamStats(null)
       setIsTeamStatsModalOpen(false)
+      setIsTeamPaymentsModalOpen(false)
+      setTeamPaymentsTarget(null)
     }
   }, [isTeamsModalOpen])
 
@@ -285,6 +321,30 @@ const GameTeamsModal = ({
     setSelectedTeamStatsName('')
     setSelectedTeamStats(null)
   }, [])
+
+  const handleOpenTeamPaymentsModal = useCallback(
+    (team) => {
+      if (!team?.id) {
+        return
+      }
+
+      const members = Array.isArray(team?.teamDetails?.members)
+        ? team.teamDetails.members.filter((member) => member?.userId)
+        : []
+      const target = {
+        gameTeamId: String(team.id),
+        teamId: String(team.teamId || ''),
+        teamName: String(team.teamName || 'Без названия'),
+        paidGame: Boolean(team.paidGame),
+        members,
+        totalPaid: Number(team.totalPaid) || 0,
+      }
+
+      setTeamPaymentsTarget(target)
+      setIsTeamPaymentsModalOpen(true)
+    },
+    [],
+  )
 
   const handleOpenTeamStatsModal = useCallback(
     async (team) => {
@@ -882,9 +942,6 @@ const GameTeamsModal = ({
                     const isRemoving = removingTeamIds.includes(team.id)
                     const isUpdatingOutOfCompetition =
                       updatingOutOfCompetitionTeamIds.includes(team.id)
-                    const isUpdatingPaidGame = updatingPaidGameTeamIds.includes(
-                      team.id,
-                    )
                     const membersCount = Number.isFinite(team?.membersCount)
                       ? team.membersCount
                       : 0
@@ -1089,38 +1146,25 @@ const GameTeamsModal = ({
                                       />
                                       Вне зачёта
                                     </label>
-                                    {canEditRegisteredTeams ? (
-                                      <label
-                                        className="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300"
-                                        onClick={(event) =>
-                                          event.stopPropagation()
-                                        }
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={Boolean(team.paidGame)}
-                                          disabled={
-                                            isUpdatingPaidGame ||
-                                            teamsModalState.isLoading
-                                          }
-                                          onChange={(event) => {
-                                            handleToggleTeamPaidGame({
-                                              gameTeamId: team.id,
-                                              paidGame: Boolean(
-                                                event.target.checked,
-                                              ),
-                                            })
-                                          }}
-                                          className="w-4 h-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-400 dark:border-slate-600"
-                                        />
-                                        Команда оплатила игру
-                                      </label>
-                                    ) : null}
                                   </div>
                                 ) : null}
                               </div>
                             </div>
                             <div className="flex items-center gap-2 pl-14 sm:pl-0">
+                              {canEditRegisteredTeams ? (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    handleOpenTeamPaymentsModal(team)
+                                  }}
+                                  aria-label={`Оплата команды ${team.teamName || ''}`}
+                                  title="Оплата команды"
+                                  className="inline-flex items-center justify-center transition border rounded-lg h-9 w-9 border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100 dark:border-emerald-500/35 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:border-emerald-400/65 dark:hover:bg-emerald-500/20 sm:h-8 sm:w-8"
+                                >
+                                  <TeamPaymentIcon />
+                                </button>
+                              ) : null}
                               {canEditRegisteredTeams ? (
                                 <button
                                   type="button"
@@ -1278,6 +1322,11 @@ const GameTeamsModal = ({
                               )}
                             </div>
                           </div>
+                          <div className="flex justify-end mt-3">
+                            <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
+                              Оплачено: {formatMoney(team.totalPaid)}
+                            </span>
+                          </div>
                         </div>
                       </li>
                     )
@@ -1345,6 +1394,18 @@ const GameTeamsModal = ({
         isOpen={isTeamDetailsModalOpen}
         onClose={closeTeamDetailsModal}
         selectedTeam={resolvedSelectedTeamDetails}
+      />
+      <TeamGamePaymentsModal
+        isOpen={isTeamPaymentsModalOpen}
+        onClose={() => {
+          setIsTeamPaymentsModalOpen(false)
+          setTeamPaymentsTarget(null)
+        }}
+        selectedGame={selectedGame}
+        target={teamPaymentsTarget}
+        updatingPaidGameTeamIds={updatingPaidGameTeamIds}
+        onPaidGameChange={handleToggleTeamPaidGame}
+        onPaymentsChanged={handleRefreshTeamsModalData}
       />
       <Modal
         isOpen={isRestrictedDeleteModalOpen}
@@ -1888,6 +1949,7 @@ const teamShape = PropTypes.shape({
   open: PropTypes.bool,
   outOfCompetition: PropTypes.bool,
   paidGame: PropTypes.bool,
+  totalPaid: PropTypes.number,
   updatedAt: PropTypes.string,
   membersCount: PropTypes.number,
   rating: PropTypes.shape({

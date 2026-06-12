@@ -73,6 +73,13 @@ export const buildTransactionPayload = (input = {}) => {
   const couponStatus = ['none', 'active', 'redeemed', 'expired'].includes(couponStatusRaw)
     ? couponStatusRaw
     : 'none'
+  const teamId = normalizeNullableString(input.teamId)
+  const gameTeamId = normalizeNullableString(input.gameTeamId)
+  const paidAt = input.paidAt ? new Date(input.paidAt) : null
+  const affectsUserBalance =
+    input.affectsUserBalance === undefined
+      ? !teamId && !gameTeamId
+      : input.affectsUserBalance !== false
 
   if (!direction) throw new Error('Некорректное направление транзакции')
   if (!paymentMethod) throw new Error('Некорректный способ проведения транзакции')
@@ -89,6 +96,9 @@ export const buildTransactionPayload = (input = {}) => {
         ? null
         : toNumber(input.userTelegramId, null),
     gameId: normalizeNullableString(input.gameId),
+    teamId,
+    gameTeamId,
+    paidAt: paidAt && Number.isFinite(paidAt.getTime()) ? paidAt : null,
     location: normalizeNullableString(input.location),
     couponCode,
     couponStatus,
@@ -105,11 +115,13 @@ export const buildTransactionPayload = (input = {}) => {
     redeemedAt: input.redeemedAt ? new Date(input.redeemedAt) : null,
   }
 
-  payload.userBalanceDelta = computeUserBalanceDelta({
-    direction: payload.direction,
-    amount: payload.amount,
-    userId: payload.userId,
-  })
+  payload.userBalanceDelta = affectsUserBalance
+    ? computeUserBalanceDelta({
+        direction: payload.direction,
+        amount: payload.amount,
+        userId: payload.userId,
+      })
+    : 0
 
   return payload
 }

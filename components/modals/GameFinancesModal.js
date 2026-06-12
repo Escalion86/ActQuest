@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 
 import Modal from '@components/Modal'
@@ -9,9 +9,37 @@ import CabinetButton from '@components/cabinet/CabinetButton'
 import CabinetInputField from '@components/cabinet/CabinetInputField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import formatDate from '@helpers/formatDate'
+import requestApiJson from '@helpers/requestApiJson'
 import ModalSection from './ModalSection'
+import TeamGamePaymentsModal from './TeamGamePaymentsModal'
 
 const amountInputClassName = DEFAULT_MONEY_INPUT_CLASS_NAME
+
+const createFinanceDraft = () => ({
+  type: 'income',
+  sum: '',
+  date: formatDate(new Date(), true),
+  description: '',
+})
+
+const getFinanceTypeMeta = (type) =>
+  type === 'expense'
+    ? {
+        label: 'Расход',
+        badgeClassName:
+          'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200',
+        amountClassName: 'text-rose-600 dark:text-rose-200',
+        sign: '-',
+      }
+    : {
+        label: 'Доход',
+        badgeClassName:
+          'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200',
+        amountClassName: 'text-emerald-700 dark:text-emerald-200',
+        sign: '+',
+      }
+
+const formatFinanceDate = (value) => formatDate(value) || 'Дата не указана'
 
 const GameFinancesModal = ({
   selectedGame,
@@ -24,12 +52,166 @@ const GameFinancesModal = ({
   handlePrimaryAction,
   handleResetChanges,
   handleAddFinance,
-  handleFinanceChange,
   handleRemoveFinance,
   currencyFormatter,
   financesSummary,
-  balanceClass,
 }) => {
+  const [teamPaymentsState, setTeamPaymentsState] = useState({
+    isLoading: false,
+    error: '',
+    totalPaid: 0,
+    teams: [],
+  })
+  const [isTeamPaymentsModalOpen, setIsTeamPaymentsModalOpen] =
+    useState(false)
+  const [teamPaymentsTarget, setTeamPaymentsTarget] = useState(null)
+  const [isFinanceCreateOpen, setIsFinanceCreateOpen] = useState(false)
+  const [financeDraft, setFinanceDraft] = useState(() => createFinanceDraft())
+  const [financeDraftError, setFinanceDraftError] = useState('')
+
+  const loadTeamPaymentsSummary = useCallback(
+    async ({ silent = false } = {}) => {
+      if (!selectedGame?.id || !canEditSelectedGame) {
+        setTeamPaymentsState({
+          isLoading: false,
+          error: '',
+          totalPaid: 0,
+          teams: [],
+        })
+        return
+      }
+
+      setTeamPaymentsState((prev) => ({
+        ...prev,
+        isLoading: silent ? prev.isLoading : true,
+        error: '',
+      }))
+
+      try {
+        const { json } = await requestApiJson(
+          `/api/cabinet/games/${encodeURIComponent(String(selectedGame.id))}/teams?scope=payments`,
+          {
+            fallbackMessage: 'Не удалось загрузить оплаты команд',
+          },
+        )
+
+        const data = json?.data ?? {}
+        setTeamPaymentsState({
+          isLoading: false,
+          error: '',
+          totalPaid: Number(data.totalPaid) || 0,
+          teams: Array.isArray(data.teams) ? data.teams : [],
+        })
+      } catch (error) {
+        setTeamPaymentsState({
+          isLoading: false,
+          error: error?.message || 'Не удалось загрузить оплаты команд',
+          totalPaid: 0,
+          teams: [],
+        })
+      }
+    },
+    [canEditSelectedGame, selectedGame?.id],
+  )
+
+  useEffect(() => {
+    if (!isOpen) {
+      setTeamPaymentsState({
+        isLoading: false,
+        error: '',
+        totalPaid: 0,
+        teams: [],
+      })
+      setIsTeamPaymentsModalOpen(false)
+      setTeamPaymentsTarget(null)
+      setIsFinanceCreateOpen(false)
+      setFinanceDraft(createFinanceDraft())
+      setFinanceDraftError('')
+      return
+    }
+
+    loadTeamPaymentsSummary()
+  }, [isOpen, loadTeamPaymentsSummary])
+
+  const handleOpenTeamPaymentsModal = useCallback((team) => {
+    if (!team?.gameTeamId) {
+      return
+    }
+
+    setTeamPaymentsTarget({
+      gameTeamId: String(team.gameTeamId),
+      teamId: String(team.teamId || ''),
+      teamName: String(team.teamName || 'Без названия'),
+      paidGame: Boolean(team.paidGame),
+      totalPaid: Number(team.totalPaid) || 0,
+      members: Array.isArray(team.members) ? team.members : [],
+    })
+    setIsTeamPaymentsModalOpen(true)
+  }, [])
+
+  const handleCloseTeamPaymentsModal = useCallback(() => {
+    setIsTeamPaymentsModalOpen(false)
+    setTeamPaymentsTarget(null)
+  }, [])
+
+  const handlePaymentsChanged = useCallback(async () => {
+    await loadTeamPaymentsSummary({ silent: true })
+  }, [loadTeamPaymentsSummary])
+
+  const handleOpenFinanceCreate = useCallback(() => {
+    setFinanceDraft(createFinanceDraft())
+    setFinanceDraftError('')
+    setIsFinanceCreateOpen(true)
+  }, [])
+
+  const handleCloseFinanceCreate = useCallback(() => {
+    if (isSaving) {
+      return
+    }
+    setIsFinanceCreateOpen(false)
+    setFinanceDraftError('')
+  }, [isSaving])
+
+  const handleFinanceDraftChange = useCallback((field, value) => {
+    setFinanceDraft((prev) => ({
+      ...prev,
+      [field]:
+        field === 'type' ? (value === 'expense' ? 'expense' : 'income') : value,
+    }))
+    setFinanceDraftError('')
+  }, [])
+
+  const handleCreateFinance = useCallback(() => {
+    if (!canEditSelectedGame) {
+      return
+    }
+
+    const sum = Number(financeDraft.sum)
+    if (!Number.isFinite(sum) || sum <= 0) {
+      setFinanceDraftError('Укажите сумму больше нуля')
+      return
+    }
+
+    const date = financeDraft.date ? new Date(financeDraft.date) : null
+    if (!date || !Number.isFinite(date.getTime())) {
+      setFinanceDraftError('Укажите корректную дату')
+      return
+    }
+
+    handleAddFinance({
+      type: financeDraft.type === 'expense' ? 'expense' : 'income',
+      sum,
+      date: date.toISOString(),
+      description:
+        typeof financeDraft.description === 'string'
+          ? financeDraft.description.trim()
+          : '',
+    })
+    setIsFinanceCreateOpen(false)
+    setFinanceDraft(createFinanceDraft())
+    setFinanceDraftError('')
+  }, [canEditSelectedGame, financeDraft, handleAddFinance])
+
   const modalFooter = (
     <>
       <CabinetButton
@@ -69,6 +251,12 @@ const GameFinancesModal = ({
     )
   }
 
+  const teamPaymentsIncome = Number(teamPaymentsState.totalPaid) || 0
+  const summaryIncome = financesSummary.income + teamPaymentsIncome
+  const summaryBalance = summaryIncome - financesSummary.expense
+  const summaryBalanceClass =
+    summaryBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'
+
   return (
     <Modal
       isOpen={isOpen}
@@ -81,89 +269,102 @@ const GameFinancesModal = ({
         className="m-0 space-y-6 border-0 p-0 [&_button]:cursor-pointer [&_select]:cursor-pointer"
       >
         <ModalSection>
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
+            Сводка
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/40 dark:bg-emerald-500/10">
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                Доходы
+              </p>
+              <p className="mt-1 flex flex-wrap items-baseline gap-x-1 text-sm font-semibold text-emerald-700 dark:text-emerald-100">
+                <span>{currencyFormatter.format(financesSummary.income)}</span>
+                <span>+</span>
+                <span>{currencyFormatter.format(teamPaymentsIncome)}</span>
+                <span>=</span>
+                <span className="text-base">
+                  {currencyFormatter.format(summaryIncome)}
+                </span>
+              </p>
+            </div>
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-500/40 dark:bg-rose-500/10">
+              <p className="text-xs font-medium uppercase tracking-wide text-rose-700 dark:text-rose-200">
+                Расходы
+              </p>
+              <p className="mt-1 text-base font-semibold text-rose-700 dark:text-rose-100">
+                {currencyFormatter.format(financesSummary.expense)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">
+                Баланс
+              </p>
+              <p className={`mt-1 text-base font-semibold ${summaryBalanceClass}`}>
+                {currencyFormatter.format(summaryBalance)}
+              </p>
+            </div>
+          </div>
+        </ModalSection>
+
+        <ModalSection>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
               Финансы игры
             </h2>
-            <CabinetButton
-              onClick={handleAddFinance}
-              variant="primary"
-              size="sm"
+            <span
+              className={`rounded-xl border px-3 py-1.5 text-sm font-semibold ${
+                financesSummary.balance >= 0
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
+                  : 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200'
+              }`}
             >
-              Добавить запись
-            </CabinetButton>
+              Итого: {currencyFormatter.format(financesSummary.balance)}
+            </span>
           </div>
 
           {(selectedGame.finances ?? []).length > 0 ? (
             <div className="space-y-3">
-              {selectedGame.finances.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="grid items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-[1fr_1fr_1fr_auto] dark:border-slate-700 dark:bg-slate-900/50"
-                >
-                  <CabinetSelectField
-                    id={`game-finance-type-${entry.id}`}
-                    label={null}
-                    value={entry.type}
-                    onChange={(event) =>
-                      handleFinanceChange(entry.id, 'type', event.target.value)
-                    }
-                    containerClassName="w-full space-y-0"
-                    selectClassName="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
+              {selectedGame.finances.map((entry) => {
+                const typeMeta = getFinanceTypeMeta(entry.type)
+                const amount = Number(entry.sum) || 0
+
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/50 sm:flex-row sm:items-start sm:justify-between"
                   >
-                    <option value="income">Доход</option>
-                    <option value="expense">Расход</option>
-                  </CabinetSelectField>
-                  <AmountStepperInput
-                    value={entry.sum}
-                    min={0}
-                    step={100}
-                    placeholder="Сумма"
-                    className="max-w-none"
-                    inputClassName={amountInputClassName}
-                    onChange={(nextValue) =>
-                      handleFinanceChange(entry.id, 'sum', nextValue)
-                    }
-                  />
-                  <CabinetInputField
-                    id={`game-finance-date-${entry.id}`}
-                    label={null}
-                    type="date"
-                    value={entry.date ? formatDate(entry.date, true) : ''}
-                    onChange={(event) =>
-                      handleFinanceChange(entry.id, 'date', event.target.value)
-                    }
-                    containerClassName="w-full space-y-0"
-                    inputClassName="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
-                  />
-                  <CabinetButton
-                    onClick={() => handleRemoveFinance(entry.id)}
-                    variant="secondary"
-                    tone="danger"
-                    size="sm"
-                  >
-                    Удалить
-                  </CabinetButton>
-                  <div className="md:col-span-3">
-                    <CabinetInputField
-                      id={`game-finance-description-${entry.id}`}
-                      label={null}
-                      type="text"
-                      value={entry.description}
-                      onChange={(event) =>
-                        handleFinanceChange(
-                          entry.id,
-                          'description',
-                          event.target.value,
-                        )
-                      }
-                      placeholder="Комментарий"
-                      containerClassName="w-full space-y-0"
-                      inputClassName="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
-                    />
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${typeMeta.badgeClassName}`}
+                        >
+                          {typeMeta.label}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-300">
+                          {formatFinanceDate(entry.date)}
+                        </span>
+                      </div>
+                      <p
+                        className={`text-base font-semibold ${typeMeta.amountClassName}`}
+                      >
+                        {typeMeta.sign}
+                        {currencyFormatter.format(amount)}
+                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-200">
+                        {entry.description || 'Комментарий не указан'}
+                      </p>
+                    </div>
+                    <CabinetButton
+                      onClick={() => handleRemoveFinance(entry.id)}
+                      variant="secondary"
+                      tone="danger"
+                      size="sm"
+                    >
+                      Удалить
+                    </CabinetButton>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <p className="text-sm text-slate-500 dark:text-slate-200">
@@ -172,32 +373,182 @@ const GameFinancesModal = ({
             </p>
           )}
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
-            <p className="text-sm text-slate-600 dark:text-slate-200">
-              Доходы:{' '}
-              <span className="font-semibold">
-                {currencyFormatter.format(financesSummary.income)}
-              </span>
-            </p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-200">
-              Расходы:{' '}
-              <span className="font-semibold">
-                {currencyFormatter.format(financesSummary.expense)}
-              </span>
-            </p>
-            <p className={`mt-1 text-sm font-semibold ${balanceClass}`}>
-              Баланс: {currencyFormatter.format(financesSummary.balance)}
-            </p>
+          <div className="flex justify-end">
+            <CabinetButton
+              onClick={handleOpenFinanceCreate}
+              variant="primary"
+              size="sm"
+            >
+              Добавить запись
+            </CabinetButton>
           </div>
         </ModalSection>
+
+        <ModalSection>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
+              Оплаты от команд
+            </h2>
+            <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+              Итого: {currencyFormatter.format(teamPaymentsState.totalPaid)}
+            </span>
+          </div>
+
+          {teamPaymentsState.error ? (
+            <p className="text-sm text-rose-600 dark:text-rose-200">
+              {teamPaymentsState.error}
+            </p>
+          ) : teamPaymentsState.isLoading ? (
+            <p className="text-sm text-slate-500 dark:text-slate-200">
+              Загружаем оплаты команд…
+            </p>
+          ) : teamPaymentsState.teams.length > 0 ? (
+            <div className="space-y-2">
+              {teamPaymentsState.teams.map((team) => (
+                <button
+                  type="button"
+                  key={team.gameTeamId}
+                  onClick={() => handleOpenTeamPaymentsModal(team)}
+                  className="flex w-full cursor-pointer flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50/60 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:border-emerald-500/45 dark:hover:bg-emerald-500/10 dark:focus:ring-emerald-500/20 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {team.teamName || 'Команда без названия'}
+                      </p>
+                      {team.paidGame ? (
+                        <span
+                          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200"
+                          title="Команда оплатила игру"
+                        >
+                          <svg
+                            className="h-3.5 w-3.5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <rect x="2" y="6" width="20" height="12" rx="2" />
+                            <circle cx="12" cy="12" r="2.5" />
+                            <line x1="6" y1="10" x2="6" y2="14" />
+                            <line x1="18" y1="10" x2="18" y2="14" />
+                          </svg>
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">
+                      Транзакций: {Number(team.transactionsCount) || 0}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-200">
+                    {currencyFormatter.format(Number(team.totalPaid) || 0)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 dark:text-slate-200">
+              Пока нет зарегистрированных команд или оплат по этой игре.
+            </p>
+          )}
+        </ModalSection>
       </fieldset>
+      <TeamGamePaymentsModal
+        isOpen={isTeamPaymentsModalOpen}
+        onClose={handleCloseTeamPaymentsModal}
+        selectedGame={selectedGame}
+        target={teamPaymentsTarget}
+        onPaymentsChanged={handlePaymentsChanged}
+      />
+      <Modal
+        isOpen={isFinanceCreateOpen}
+        title="Добавить финансовую запись"
+        onClose={handleCloseFinanceCreate}
+        dialogClassName="md:max-w-xl"
+        footer={
+          <>
+            <CabinetButton
+              onClick={handleCreateFinance}
+              disabled={!canEditSelectedGame || isSaving}
+              variant="primary"
+            >
+              Добавить
+            </CabinetButton>
+            <CabinetButton
+              onClick={handleCloseFinanceCreate}
+              disabled={isSaving}
+              variant="secondary"
+            >
+              Отмена
+            </CabinetButton>
+          </>
+        }
+      >
+        <fieldset
+          disabled={!canEditSelectedGame || isSaving}
+          className="m-0 space-y-4 border-0 p-0"
+        >
+          <CabinetSelectField
+            id="game-finance-create-type"
+            label="Тип записи"
+            value={financeDraft.type}
+            onChange={(event) =>
+              handleFinanceDraftChange('type', event.target.value)
+            }
+            selectClassName="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
+          >
+            <option value="income">Доход</option>
+            <option value="expense">Расход</option>
+          </CabinetSelectField>
+          <AmountStepperInput
+            value={financeDraft.sum}
+            min={0}
+            step={100}
+            placeholder="Сумма"
+            className="max-w-none"
+            inputClassName={amountInputClassName}
+            onChange={(nextValue) =>
+              handleFinanceDraftChange('sum', nextValue)
+            }
+          />
+          <CabinetInputField
+            id="game-finance-create-date"
+            label="Дата"
+            type="date"
+            value={financeDraft.date}
+            onChange={(event) =>
+              handleFinanceDraftChange('date', event.target.value)
+            }
+            inputClassName="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
+          />
+          <CabinetInputField
+            id="game-finance-create-description"
+            label="Комментарий"
+            type="text"
+            value={financeDraft.description}
+            onChange={(event) =>
+              handleFinanceDraftChange('description', event.target.value)
+            }
+            placeholder="Например: аренда, призы, взнос партнёра"
+            inputClassName="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
+          />
+          {financeDraftError ? (
+            <p className="text-sm text-rose-600 dark:text-rose-200">
+              {financeDraftError}
+            </p>
+          ) : null}
+        </fieldset>
+      </Modal>
     </Modal>
   )
 }
 
 GameFinancesModal.propTypes = {
   selectedGame: PropTypes.shape({
-    id: PropTypes.string,
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     name: PropTypes.string,
     finances: PropTypes.arrayOf(
       PropTypes.shape({
@@ -221,7 +572,6 @@ GameFinancesModal.propTypes = {
   handlePrimaryAction: PropTypes.func.isRequired,
   handleResetChanges: PropTypes.func.isRequired,
   handleAddFinance: PropTypes.func.isRequired,
-  handleFinanceChange: PropTypes.func.isRequired,
   handleRemoveFinance: PropTypes.func.isRequired,
   currencyFormatter: PropTypes.instanceOf(Intl.NumberFormat).isRequired,
   financesSummary: PropTypes.shape({
@@ -229,7 +579,6 @@ GameFinancesModal.propTypes = {
     expense: PropTypes.number.isRequired,
     balance: PropTypes.number.isRequired,
   }).isRequired,
-  balanceClass: PropTypes.string.isRequired,
 }
 
 GameFinancesModal.defaultProps = {

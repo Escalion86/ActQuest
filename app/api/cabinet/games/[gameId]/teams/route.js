@@ -5,6 +5,8 @@ import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import { authOptions } from '@server/auth/authOptions'
 import { LOCATIONS } from '@server/serverConstants'
 import buildGameResultComputed from '@server/buildGameResultComputed'
+import { buildGameTeamPaymentsSummary } from '@server/gameTeamPaymentsSummary'
+import { createTransaction } from '@server/transactionsService'
 import updateParticipantsClosedStats from '@server/updateParticipantsClosedStats'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -332,6 +334,33 @@ const hasGameManageAccess = ({ identity, game }) => {
   })
 }
 
+const hasGamePaymentAccess = ({ identity, game }) => {
+  if (!identity || !game) {
+    return false
+  }
+
+  if (isElevatedRole(identity.role)) {
+    return true
+  }
+
+  if (identity.role !== 'moder' || !identity.userId) {
+    return false
+  }
+
+  const moderators = Array.isArray(game?.moderators) ? game.moderators : []
+  return moderators.some((moderator) => {
+    if (!moderator) {
+      return false
+    }
+
+    if (typeof moderator === 'string') {
+      return toStringId(moderator) === identity.userId
+    }
+
+    return toStringId(moderator?.id ?? moderator?._id) === identity.userId
+  })
+}
+
 const resolveMembershipFilter = ({ userId }) => (userId ? [{ userId }] : [])
 
 const ensureGameAllowsRegistration = (game) => {
@@ -347,7 +376,352 @@ const ensureGameAllowsRegistration = (game) => {
   return null
 }
 
+const buildTransactionResponse = (transaction) => ({
+  _id: toStringId(transaction?._id),
+  direction: transaction?.direction || '',
+  amount: Number(transaction?.amount) || 0,
+  paymentMethod: transaction?.paymentMethod || '',
+  status: transaction?.status || '',
+  userId: toStringId(transaction?.userId) || null,
+  gameId: toStringId(transaction?.gameId) || null,
+  teamId: toStringId(transaction?.teamId) || null,
+  gameTeamId: toStringId(transaction?.gameTeamId) || null,
+  paidAt: transaction?.paidAt
+    ? new Date(transaction.paidAt).toISOString()
+    : null,
+  createdAt: transaction?.createdAt
+    ? new Date(transaction.createdAt).toISOString()
+    : null,
+  comment: typeof transaction?.comment === 'string' ? transaction.comment : '',
+})
+
+const calculateTotalPaid = (transactions) =>
+  transactions.reduce((sum, item) => {
+    if (item?.direction !== 'income' || item?.status !== 'completed') {
+      return sum
+    }
+    const amount = Number(item?.amount)
+    return Number.isFinite(amount) ? sum + amount : sum
+  }, 0)
+
+const loadGamePaymentContext = async ({ db, gameId, session }) => {
+  const GamesModel = db.model('Games')
+  const game = await findGameByAnyId(GamesModel, gameId, {
+    _id: 1,
+    id: 1,
+    name: 1,
+    location: 1,
+    moderators: 1,
+  })
+
+  if (!game?._id) {
+    return {
+      error: NextResponse.json(
+        { success: false, error: 'Игра не найдена' },
+        { status: 404 },
+      ),
+    }
+  }
+
+  const identity = resolveSessionIdentity(session)
+  if (!hasGamePaymentAccess({ identity, game })) {
+    return {
+      error: NextResponse.json(
+        { success: false, error: 'Недостаточно прав для управления оплатами' },
+        { status: 403 },
+      ),
+    }
+  }
+
+  return {
+    game,
+    gameId: toStringId(game._id),
+  }
+}
+
+const loadGameTeamPaymentEntry = async ({ db, gameId, gameTeamId }) => {
+  const GamesTeamsModel = db.model('GamesTeams')
+  return GamesTeamsModel.findOne({
+    _id: gameTeamId,
+    gameId,
+  })
+    .select({ _id: 1, teamId: 1, paidGame: 1 })
+    .lean()
+}
+
+const buildTeamPaymentsSummaryResponse = async ({ db, game, gameId }) => {
+  const GamesTeamsModel = db.model('GamesTeams')
+  const gameTeams = await GamesTeamsModel.find({ gameId })
+    .select({ _id: 1, teamId: 1, paidGame: 1 })
+    .lean()
+  const teamIds = Array.from(
+    new Set(gameTeams.map((item) => toStringId(item?.teamId)).filter(Boolean)),
+  )
+  const teams = teamIds.length
+    ? await fetchTeamsForCabinet({
+        db,
+        teamIds,
+        location: game?.location || null,
+      })
+    : []
+
+  const TransactionsModel = db.model('Transactions')
+  const gameTeamIds = gameTeams
+    .map((item) => toStringId(item?._id))
+    .filter(Boolean)
+  const paymentTotals = gameTeamIds.length
+    ? await TransactionsModel.aggregate([
+        {
+          $match: {
+            gameId,
+            gameTeamId: { $in: gameTeamIds },
+            direction: 'income',
+            status: 'completed',
+          },
+        },
+        {
+          $group: {
+            _id: '$gameTeamId',
+            totalPaid: { $sum: '$amount' },
+            transactionsCount: { $sum: 1 },
+          },
+        },
+      ])
+    : []
+  const summary = buildGameTeamPaymentsSummary({
+    gameTeams,
+    teams,
+    paymentTotals,
+  })
+
+  return NextResponse.json(
+    {
+      success: true,
+      data: {
+        gameId,
+        ...summary,
+      },
+    },
+    { status: 200 },
+  )
+}
+
+const buildTeamPaymentsDetailResponse = async ({ db, gameId, gameTeamId }) => {
+  const gameTeam = await loadGameTeamPaymentEntry({ db, gameId, gameTeamId })
+  if (!gameTeam?._id) {
+    return NextResponse.json(
+      { success: false, error: 'Регистрация команды на игру не найдена' },
+      { status: 404 },
+    )
+  }
+
+  const teamId = toStringId(gameTeam.teamId)
+  const TransactionsModel = db.model('Transactions')
+  const transactions = await TransactionsModel.find({
+    gameId,
+    teamId,
+    gameTeamId,
+  })
+    .sort({ paidAt: -1, createdAt: -1 })
+    .lean()
+
+  return NextResponse.json(
+    {
+      success: true,
+      data: {
+        gameId,
+        gameTeamId,
+        teamId,
+        paidGame: Boolean(gameTeam.paidGame),
+        totalPaid: calculateTotalPaid(transactions),
+        transactions: transactions.map(buildTransactionResponse),
+      },
+    },
+    { status: 200 },
+  )
+}
+
+const handleTeamPaymentsGet = async ({ request, params, session }) => {
+  if (!session?.user) {
+    return NextResponse.json(
+      { success: false, error: 'Требуется авторизация' },
+      { status: 401 },
+    )
+  }
+
+  const resolvedParams = await params
+  const gameId = toStringId(resolvedParams?.gameId)
+  if (!gameId) {
+    return NextResponse.json(
+      { success: false, error: 'Не передан идентификатор игры' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) {
+      throw new Error('Соединение с базой данных не установлено')
+    }
+
+    const context = await loadGamePaymentContext({ db, gameId, session })
+    if (context.error) {
+      return context.error
+    }
+
+    const requestUrl = new URL(request.url)
+    const gameTeamId = toStringId(requestUrl.searchParams.get('gameTeamId'))
+    if (!gameTeamId) {
+      return buildTeamPaymentsSummaryResponse({
+        db,
+        game: context.game,
+        gameId: context.gameId,
+      })
+    }
+
+    return buildTeamPaymentsDetailResponse({
+      db,
+      gameId: context.gameId,
+      gameTeamId,
+    })
+  } catch (error) {
+    console.error('Game team payments API error', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Не удалось загрузить оплаты команды',
+      },
+      { status: 400 },
+    )
+  }
+}
+
+const handleTeamPaymentCreate = async ({ payload, params, session }) => {
+  if (!session?.user) {
+    return NextResponse.json(
+      { success: false, error: 'Требуется авторизация' },
+      { status: 401 },
+    )
+  }
+
+  const resolvedParams = await params
+  const gameId = toStringId(resolvedParams?.gameId)
+  const gameTeamId = toStringId(payload?.gameTeamId)
+  const userId = toStringId(payload?.userId)
+
+  if (!gameId || !gameTeamId) {
+    return NextResponse.json(
+      { success: false, error: 'Не передан идентификатор игры или команды' },
+      { status: 400 },
+    )
+  }
+
+  if (!userId) {
+    return NextResponse.json(
+      { success: false, error: 'Необходимо выбрать игрока команды' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) {
+      throw new Error('Соединение с базой данных не установлено')
+    }
+
+    const context = await loadGamePaymentContext({ db, gameId, session })
+    if (context.error) {
+      return context.error
+    }
+
+    const gameTeam = await loadGameTeamPaymentEntry({
+      db,
+      gameId: context.gameId,
+      gameTeamId,
+    })
+    if (!gameTeam?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Регистрация команды на игру не найдена' },
+        { status: 404 },
+      )
+    }
+
+    const teamId = toStringId(gameTeam.teamId)
+    const TeamsUsersModel = db.model('TeamsUsers')
+    const membership = await TeamsUsersModel.findOne({ teamId, userId })
+      .select({ _id: 1 })
+      .lean()
+    if (!membership?._id) {
+      return NextResponse.json(
+        { success: false, error: 'Выбранный игрок не состоит в команде' },
+        { status: 400 },
+      )
+    }
+
+    const created = await createTransaction({
+      db,
+      data: {
+        direction: 'income',
+        amount: payload?.amount,
+        paymentMethod: payload?.paymentMethod || 'transfer',
+        status: 'completed',
+        userId,
+        gameId: context.gameId,
+        teamId,
+        gameTeamId,
+        paidAt: payload?.paidAt || new Date(),
+        location: context.game?.location || null,
+        comment: payload?.comment || 'Оплата участия команды в игре',
+        source: 'manual',
+        affectsUserBalance: false,
+        meta: {
+          ...(payload?.meta && typeof payload.meta === 'object'
+            ? payload.meta
+            : {}),
+          teamPayment: true,
+        },
+      },
+    })
+
+    const TransactionsModel = db.model('Transactions')
+    const transactions = await TransactionsModel.find({
+      gameId: context.gameId,
+      teamId,
+      gameTeamId,
+    })
+      .sort({ paidAt: -1, createdAt: -1 })
+      .lean()
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          transaction: buildTransactionResponse(created),
+          totalPaid: calculateTotalPaid(transactions),
+          transactions: transactions.map(buildTransactionResponse),
+        },
+      },
+      { status: 201 },
+    )
+  } catch (error) {
+    console.error('Game team payment create API error', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Не удалось создать оплату команды',
+      },
+      { status: 400 },
+    )
+  }
+}
+
 export async function GET(request, { params }) {
+  const requestUrl = new URL(request.url)
+  if (requestUrl.searchParams.get('scope') === 'payments') {
+    const session = await getServerSession(authOptions)
+    return handleTeamPaymentsGet({ request, params, session })
+  }
+
   const resolvedParams = await params
   const { gameId } = resolvedParams ?? {}
 
@@ -408,9 +782,39 @@ export async function GET(request, { params }) {
     const entries = Array.isArray(gameTeamsDocs)
       ? gameTeamsDocs.map((doc) => normalizeGameTeamEntry(doc)).filter(Boolean)
       : []
+    const gameTeamIds = entries.map((entry) => entry.id).filter(Boolean)
+    const TransactionsModel = db.model('Transactions')
+    const paymentTotals = gameTeamIds.length
+      ? await TransactionsModel.aggregate([
+          {
+            $match: {
+              gameId: normalizedResolvedGameId,
+              gameTeamId: { $in: gameTeamIds },
+              direction: 'income',
+              status: 'completed',
+            },
+          },
+          {
+            $group: {
+              _id: '$gameTeamId',
+              totalPaid: { $sum: '$amount' },
+            },
+          },
+        ])
+      : []
+    const paymentTotalsMap = new Map(
+      paymentTotals.map((item) => [
+        toStringId(item?._id),
+        Number(item?.totalPaid) || 0,
+      ]),
+    )
+    const entriesWithPaymentTotals = entries.map((entry) => ({
+      ...entry,
+      totalPaid: paymentTotalsMap.get(entry.id) || 0,
+    }))
 
     const uniqueTeamIds = Array.from(
-      new Set(entries.map((entry) => entry.teamId)),
+      new Set(entriesWithPaymentTotals.map((entry) => entry.teamId)),
     )
 
     const teams = uniqueTeamIds.length
@@ -432,7 +836,7 @@ export async function GET(request, { params }) {
       {
         success: true,
         data: {
-          entries,
+          entries: entriesWithPaymentTotals,
           teams,
           allTeams: Array.isArray(allTeams) ? allTeams : [],
         },
@@ -460,6 +864,12 @@ export async function POST(request, { params }) {
   const resolvedParams = await params
   const gameId = toStringId(resolvedParams?.gameId)
   const payload = await request.json().catch(() => ({}))
+  const action =
+    typeof payload?.action === 'string' ? payload.action.trim() : ''
+  if (action === 'create_team_payment') {
+    return handleTeamPaymentCreate({ payload, params, session })
+  }
+
   const teamId = toStringId(payload?.teamId)
 
   if (!gameId || !teamId) {

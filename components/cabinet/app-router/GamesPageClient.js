@@ -288,7 +288,7 @@ const createPrice = () => ({
   price: 0,
 })
 
-const createFinanceEntry = () => {
+const createFinanceEntry = (patch = {}) => {
   const now = new Date()
 
   return {
@@ -297,6 +297,7 @@ const createFinanceEntry = () => {
     sum: 0,
     date: now.toISOString(),
     description: '',
+    ...(patch && typeof patch === 'object' ? patch : {}),
   }
 }
 
@@ -3997,10 +3998,10 @@ const GamesPage = ({
     [canEditSelectedGame, updateSelectedGame],
   )
 
-  const handleAddFinance = useCallback(() => {
+  const handleAddFinance = useCallback((financePatch = {}) => {
     if (!canEditSelectedGame) return
     updateSelectedGame((game) => ({
-      finances: [...(game.finances ?? []), createFinanceEntry()],
+      finances: [...(game.finances ?? []), createFinanceEntry(financePatch)],
     }))
   }, [canEditSelectedGame, updateSelectedGame])
 
@@ -4596,6 +4597,9 @@ const GamesPage = ({
             teamId,
             outOfCompetition: Boolean(entry?.outOfCompetition),
             paidGame: Boolean(entry?.paidGame),
+            totalPaid: Number.isFinite(Number(entry?.totalPaid))
+              ? Number(entry.totalPaid)
+              : 0,
             timeAddings: Array.isArray(entry?.timeAddings)
               ? entry.timeAddings
               : [],

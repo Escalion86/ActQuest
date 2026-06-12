@@ -41,6 +41,21 @@ const transactionsSchema = {
     type: String,
     default: null,
   },
+  // Команда, за которую внесена оплата участия в игре
+  teamId: {
+    type: String,
+    default: null,
+  },
+  // Регистрация команды на конкретную игру
+  gameTeamId: {
+    type: String,
+    default: null,
+  },
+  // Фактическая дата внесения оплаты
+  paidAt: {
+    type: Date,
+    default: null,
+  },
   // Город/площадка, чтобы удобно фильтровать отчеты
   location: {
     type: String,
