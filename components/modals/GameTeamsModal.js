@@ -322,29 +322,26 @@ const GameTeamsModal = ({
     setSelectedTeamStats(null)
   }, [])
 
-  const handleOpenTeamPaymentsModal = useCallback(
-    (team) => {
-      if (!team?.id) {
-        return
-      }
+  const handleOpenTeamPaymentsModal = useCallback((team) => {
+    if (!team?.id) {
+      return
+    }
 
-      const members = Array.isArray(team?.teamDetails?.members)
-        ? team.teamDetails.members.filter((member) => member?.userId)
-        : []
-      const target = {
-        gameTeamId: String(team.id),
-        teamId: String(team.teamId || ''),
-        teamName: String(team.teamName || 'Без названия'),
-        paidGame: Boolean(team.paidGame),
-        members,
-        totalPaid: Number(team.totalPaid) || 0,
-      }
+    const members = Array.isArray(team?.teamDetails?.members)
+      ? team.teamDetails.members.filter((member) => member?.userId)
+      : []
+    const target = {
+      gameTeamId: String(team.id),
+      teamId: String(team.teamId || ''),
+      teamName: String(team.teamName || 'Без названия'),
+      paidGame: Boolean(team.paidGame),
+      members,
+      totalPaid: Number(team.totalPaid) || 0,
+    }
 
-      setTeamPaymentsTarget(target)
-      setIsTeamPaymentsModalOpen(true)
-    },
-    [],
-  )
+    setTeamPaymentsTarget(target)
+    setIsTeamPaymentsModalOpen(true)
+  }, [])
 
   const handleOpenTeamStatsModal = useCallback(
     async (team) => {
@@ -1041,7 +1038,7 @@ const GameTeamsModal = ({
                                       <ClosedDoorIcon />
                                     )}
                                   </span>
-                                  {team.paidGame ? (
+                                  {canEditRegisteredTeams && team.paidGame ? (
                                     <span
                                       className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border rounded-full border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200"
                                       title="Команда оплатила игру"
@@ -1322,11 +1319,13 @@ const GameTeamsModal = ({
                               )}
                             </div>
                           </div>
-                          <div className="flex justify-end mt-3">
-                            <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
-                              Оплачено: {formatMoney(team.totalPaid)}
-                            </span>
-                          </div>
+                          {canEditRegisteredTeams ? (
+                            <div className="flex justify-end mt-3">
+                              <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200">
+                                Оплачено: {formatMoney(team.totalPaid)}
+                              </span>
+                            </div>
+                          ) : null}
                         </div>
                       </li>
                     )
