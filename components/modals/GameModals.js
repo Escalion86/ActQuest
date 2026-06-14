@@ -1,8 +1,8 @@
 import { memo } from 'react'
 import PropTypes from 'prop-types'
 
-import GameSettingsEditModal from './GameSettingsEditModal'
-import GameTasksEditModal from './GameTasksEditModal'
+import GameEditModal from './game-edit/GameEditModal'
+import GameTasksEditModal from './game-tasks/GameTasksEditModal'
 import GameTeamsModal from './GameTeamsModal'
 import GameRegisterModal from './GameRegisterModal'
 import GameCreateModal from './GameCreateModal'
@@ -15,22 +15,54 @@ import GameHistoryModal from './GameHistoryModal'
 const GameModals = ({
   selectedGame,
   editGame,
+
+  // Edit modal
   isEditModalOpen,
   handleCloseEditModal,
-  isTasksModalOpen,
-  handleCloseTasksModal,
   canEditSelectedGame,
   isSaving,
   location,
   isDirty,
   handleModalPrimaryAction,
-  handleTasksModalPrimaryAction,
   handleResetChanges,
   updateSelectedGame,
   GAME_TYPE_OPTIONS,
   CLUE_EARLY_MODE_OPTIONS,
-  toMinutes,
-  toSeconds,
+  canGenerateResults,
+  isGeneratingResults,
+  handleGenerateResults,
+  generateResultsButtonLabel,
+  selectedGameModerators,
+  availableModeratorsForSelect,
+  availableModeratorsMap,
+  availableOrganizersForSelect,
+  selectedModeratorToAdd,
+  setSelectedModeratorToAdd,
+  handleAddModerator,
+  handleRemoveModerator,
+  selectedGameAgents,
+  availableAgentsForSelect,
+  availableAgentsMap,
+  selectedAgentToAdd,
+  setSelectedAgentToAdd,
+  handleAddAgent,
+  handleRemoveAgent,
+  editGameLocationOptions,
+  editGameSeasons,
+  isEditGameSeasonsLoading,
+  isEditGameSeasonCreating,
+  handleCreateSeasonForEditGame,
+  handleAddPrice,
+  handlePriceChange,
+  handleRemovePrice,
+  canViewCodePhotos,
+
+  // Tasks modal
+  isTasksModalOpen,
+  handleCloseTasksModal,
+  handleTasksModalPrimaryAction,
+  expandedTaskIds,
+  toggleTaskExpansion,
   handleAddTask,
   handleReorderTask,
   isTaskReorderLocked,
@@ -45,9 +77,6 @@ const GameModals = ({
   handleTaskCodeChange,
   handleTaskCodePhotoChange,
   handleRemoveTaskCode,
-  handleAddTaskImage,
-  handleTaskImageChange,
-  handleRemoveTaskImage,
   handleAddClue,
   handleReorderClue,
   handleTaskClueChange,
@@ -61,27 +90,26 @@ const GameModals = ({
   handleAddBonusCode,
   handleBonusCodeChange,
   handleRemoveBonusCode,
-  handleAddPrice,
-  handlePriceChange,
-  handleRemovePrice,
-  handleAddFinance,
-  handleFinanceChange,
-  handleRemoveFinance,
+  handleSaveAndOpenTaskPreview,
+
+  // Finances modal
   isFinancesModalOpen,
   handleCloseFinancesModal,
   handleFinancesModalPrimaryAction,
-  isGameHistoryModalOpen,
-  handleCloseGameHistoryModal,
-  handleGameHistoryRollbackSuccess,
-  canGenerateResults,
-  isGeneratingResults,
-  handleGenerateResults,
-  generateResultsButtonLabel,
+  handleAddFinance,
+  handleFinanceChange,
+  handleRemoveFinance,
   currencyFormatter,
   financesSummary,
   balanceClass,
-  expandedTaskIds,
-  toggleTaskExpansion,
+
+  // History modal
+  isGameHistoryModalOpen,
+  handleCloseGameHistoryModal,
+  handleGameHistoryRollbackSuccess,
+  currentUserRole,
+
+  // Teams modal
   isTeamsModalOpen,
   handleCloseTeamsModal,
   teamsModalState,
@@ -97,6 +125,8 @@ const GameModals = ({
   handleToggleTeamPaidGame,
   handleRefreshTeamsModalData,
   isTeamsModalReadOnly,
+
+  // Register modal
   isRegisterModalOpen,
   handleCloseRegisterModal,
   isRegisterSubmitting,
@@ -112,8 +142,8 @@ const GameModals = ({
   isRegisterTeamsLoading,
   registerTeams,
   currentUserId,
-  currentUserRole,
-  canViewCodePhotos,
+
+  // Create game modal
   isCreateGameModalOpen,
   handleCloseCreateGameModal,
   isCreatingGame,
@@ -141,10 +171,10 @@ const GameModals = ({
   handleChangeCreateGameCloneOption,
   isCreateGameActionDisabled,
   createGameFeedback,
+
+  // Description modal
   isDescriptionModalOpen,
   handleCloseDescriptionModal,
-  isTasksViewModalOpen,
-  handleCloseTasksViewModal,
   gameTypeLabel,
   plannedStartLabel,
   canViewRestrictedGameInfo,
@@ -158,27 +188,6 @@ const GameModals = ({
   handleEnterGameFromDescription,
   handleCancelGameRegistrationFromDescription,
   isGameRegistrationSubmittingFromDescription,
-  selectedGameModerators,
-  availableModeratorsForSelect,
-  availableModeratorsMap,
-  availableOrganizersForSelect,
-  selectedModeratorToAdd,
-  setSelectedModeratorToAdd,
-  handleAddModerator,
-  handleRemoveModerator,
-  selectedGameAgents,
-  availableAgentsForSelect,
-  availableAgentsMap,
-  selectedAgentToAdd,
-  setSelectedAgentToAdd,
-  handleAddAgent,
-  handleRemoveAgent,
-  editGameLocationOptions,
-  editGameSeasons,
-  isEditGameSeasonsLoading,
-  isEditGameSeasonCreating,
-  handleCreateSeasonForEditGame,
-  handleSaveAndOpenTaskPreview,
   taskDurationLabel,
   cluesDurationLabel,
   clueModeDetails,
@@ -186,6 +195,12 @@ const GameModals = ({
   taskFailurePenaltyLabel,
   manyCodesLimitLabel,
   manyCodesPenaltyLabel,
+
+  // Tasks view modal
+  isTasksViewModalOpen,
+  handleCloseTasksViewModal,
+
+  // Results modal
   isResultsModalOpen,
   handleCloseResultsModal,
   resultsModalState,
@@ -196,7 +211,7 @@ const GameModals = ({
   return (
     <>
       {gameForEdit ? (
-        <GameSettingsEditModal
+        <GameEditModal
           selectedGame={gameForEdit}
           isEditModalOpen={isEditModalOpen}
           handleCloseEditModal={handleCloseEditModal}
@@ -209,53 +224,10 @@ const GameModals = ({
           updateSelectedGame={updateSelectedGame}
           GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
           CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
-          toMinutes={toMinutes}
-          toSeconds={toSeconds}
-          handleAddTask={handleAddTask}
-          handleReorderTask={handleReorderTask}
-          isTaskReorderLocked={isTaskReorderLocked}
-          startedGameLockedTaskCount={startedGameLockedTaskCount}
-          handleRemoveTask={handleRemoveTask}
-          handleTaskFieldChange={handleTaskFieldChange}
-          handleTaskNumberChange={handleTaskNumberChange}
-          handleTaskOptionalNumberChange={handleTaskOptionalNumberChange}
-          handleTaskCheckboxChange={handleTaskCheckboxChange}
-          handleTaskCoordinateChange={handleTaskCoordinateChange}
-          handleAddTaskCode={handleAddTaskCode}
-          handleTaskCodeChange={handleTaskCodeChange}
-          handleTaskCodePhotoChange={handleTaskCodePhotoChange}
-          handleRemoveTaskCode={handleRemoveTaskCode}
-          handleAddTaskImage={handleAddTaskImage}
-          handleTaskImageChange={handleTaskImageChange}
-          handleRemoveTaskImage={handleRemoveTaskImage}
-          handleAddClue={handleAddClue}
-          handleReorderClue={handleReorderClue}
-          handleTaskClueChange={handleTaskClueChange}
-          handleRemoveClue={handleRemoveClue}
-          handleAddSubTask={handleAddSubTask}
-          handleSubTaskChange={handleSubTaskChange}
-          handleRemoveSubTask={handleRemoveSubTask}
-          handleAddPenaltyCode={handleAddPenaltyCode}
-          handlePenaltyCodeChange={handlePenaltyCodeChange}
-          handleRemovePenaltyCode={handleRemovePenaltyCode}
-          handleAddBonusCode={handleAddBonusCode}
-          handleBonusCodeChange={handleBonusCodeChange}
-          handleRemoveBonusCode={handleRemoveBonusCode}
-          handleAddPrice={handleAddPrice}
-          handlePriceChange={handlePriceChange}
-          handleRemovePrice={handleRemovePrice}
-          handleAddFinance={handleAddFinance}
-          handleFinanceChange={handleFinanceChange}
-          handleRemoveFinance={handleRemoveFinance}
           canGenerateResults={canGenerateResults}
           isGeneratingResults={isGeneratingResults}
           handleGenerateResults={handleGenerateResults}
           generateResultsButtonLabel={generateResultsButtonLabel}
-          currencyFormatter={currencyFormatter}
-          financesSummary={financesSummary}
-          balanceClass={balanceClass}
-          expandedTaskIds={expandedTaskIds}
-          toggleTaskExpansion={toggleTaskExpansion}
           selectedGameModerators={selectedGameModerators}
           availableModeratorsForSelect={availableModeratorsForSelect}
           availableModeratorsMap={availableModeratorsMap}
@@ -276,7 +248,9 @@ const GameModals = ({
           isEditGameSeasonsLoading={isEditGameSeasonsLoading}
           isEditGameSeasonCreating={isEditGameSeasonCreating}
           handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
-          handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
+          handleAddPrice={handleAddPrice}
+          handlePriceChange={handlePriceChange}
+          handleRemovePrice={handleRemovePrice}
           canViewCodePhotos={canViewCodePhotos}
         />
       ) : null}
@@ -292,11 +266,8 @@ const GameModals = ({
           isDirty={isDirty}
           handleModalPrimaryAction={handleTasksModalPrimaryAction}
           handleResetChanges={handleResetChanges}
-          updateSelectedGame={updateSelectedGame}
-          GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
-          CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
-          toMinutes={toMinutes}
-          toSeconds={toSeconds}
+          expandedTaskIds={expandedTaskIds}
+          toggleTaskExpansion={toggleTaskExpansion}
           handleAddTask={handleAddTask}
           handleReorderTask={handleReorderTask}
           isTaskReorderLocked={isTaskReorderLocked}
@@ -311,9 +282,6 @@ const GameModals = ({
           handleTaskCodeChange={handleTaskCodeChange}
           handleTaskCodePhotoChange={handleTaskCodePhotoChange}
           handleRemoveTaskCode={handleRemoveTaskCode}
-          handleAddTaskImage={handleAddTaskImage}
-          handleTaskImageChange={handleTaskImageChange}
-          handleRemoveTaskImage={handleRemoveTaskImage}
           handleAddClue={handleAddClue}
           handleReorderClue={handleReorderClue}
           handleTaskClueChange={handleTaskClueChange}
@@ -327,43 +295,10 @@ const GameModals = ({
           handleAddBonusCode={handleAddBonusCode}
           handleBonusCodeChange={handleBonusCodeChange}
           handleRemoveBonusCode={handleRemoveBonusCode}
-          handleAddPrice={handleAddPrice}
-          handlePriceChange={handlePriceChange}
-          handleRemovePrice={handleRemovePrice}
-          handleAddFinance={handleAddFinance}
-          handleFinanceChange={handleFinanceChange}
-          handleRemoveFinance={handleRemoveFinance}
-          canGenerateResults={canGenerateResults}
-          isGeneratingResults={isGeneratingResults}
-          handleGenerateResults={handleGenerateResults}
-          generateResultsButtonLabel={generateResultsButtonLabel}
-          currencyFormatter={currencyFormatter}
-          financesSummary={financesSummary}
-          balanceClass={balanceClass}
-          expandedTaskIds={expandedTaskIds}
-          toggleTaskExpansion={toggleTaskExpansion}
-          selectedGameModerators={selectedGameModerators}
-          availableModeratorsForSelect={availableModeratorsForSelect}
-          availableModeratorsMap={availableModeratorsMap}
-          availableOrganizersForSelect={availableOrganizersForSelect}
-          selectedModeratorToAdd={selectedModeratorToAdd}
-          setSelectedModeratorToAdd={setSelectedModeratorToAdd}
-          handleAddModerator={handleAddModerator}
-          handleRemoveModerator={handleRemoveModerator}
           selectedGameAgents={selectedGameAgents}
-          availableAgentsForSelect={availableAgentsForSelect}
-          availableAgentsMap={availableAgentsMap}
-          selectedAgentToAdd={selectedAgentToAdd}
-          setSelectedAgentToAdd={setSelectedAgentToAdd}
-          handleAddAgent={handleAddAgent}
-          handleRemoveAgent={handleRemoveAgent}
-          editGameLocationOptions={editGameLocationOptions}
-          editGameSeasons={editGameSeasons}
-          isEditGameSeasonsLoading={isEditGameSeasonsLoading}
-          isEditGameSeasonCreating={isEditGameSeasonCreating}
-          handleCreateSeasonForEditGame={handleCreateSeasonForEditGame}
-          handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
           canViewCodePhotos={canViewCodePhotos}
+          updateSelectedGame={updateSelectedGame}
+          handleSaveAndOpenTaskPreview={handleSaveAndOpenTaskPreview}
         />
       ) : null}
 
@@ -563,10 +498,10 @@ const agentShape = PropTypes.shape({
 GameModals.propTypes = {
   selectedGame: PropTypes.shape({ id: PropTypes.string }),
   editGame: PropTypes.shape({ id: PropTypes.string }),
+
+  // Edit modal
   isEditModalOpen: PropTypes.bool.isRequired,
   handleCloseEditModal: PropTypes.func.isRequired,
-  isTasksModalOpen: PropTypes.bool.isRequired,
-  handleCloseTasksModal: PropTypes.func.isRequired,
   canEditSelectedGame: PropTypes.bool.isRequired,
   isSaving: PropTypes.bool.isRequired,
   location: PropTypes.oneOfType([
@@ -575,13 +510,46 @@ GameModals.propTypes = {
   ]),
   isDirty: PropTypes.bool.isRequired,
   handleModalPrimaryAction: PropTypes.func.isRequired,
-  handleTasksModalPrimaryAction: PropTypes.func.isRequired,
   handleResetChanges: PropTypes.func.isRequired,
   updateSelectedGame: PropTypes.func.isRequired,
   GAME_TYPE_OPTIONS: PropTypes.array.isRequired,
   CLUE_EARLY_MODE_OPTIONS: PropTypes.array.isRequired,
-  toMinutes: PropTypes.func.isRequired,
-  toSeconds: PropTypes.func.isRequired,
+  canGenerateResults: PropTypes.bool.isRequired,
+  isGeneratingResults: PropTypes.bool.isRequired,
+  handleGenerateResults: PropTypes.func.isRequired,
+  generateResultsButtonLabel: PropTypes.string.isRequired,
+  selectedGameModerators: PropTypes.arrayOf(moderatorShape).isRequired,
+  availableModeratorsForSelect:
+    PropTypes.arrayOf(moderatorOptionShape).isRequired,
+  availableModeratorsMap: PropTypes.instanceOf(Map).isRequired,
+  availableOrganizersForSelect: PropTypes.array.isRequired,
+  selectedModeratorToAdd: PropTypes.string.isRequired,
+  setSelectedModeratorToAdd: PropTypes.func.isRequired,
+  handleAddModerator: PropTypes.func.isRequired,
+  handleRemoveModerator: PropTypes.func.isRequired,
+  selectedGameAgents: PropTypes.arrayOf(agentShape).isRequired,
+  availableAgentsForSelect: PropTypes.arrayOf(agentShape).isRequired,
+  availableAgentsMap: PropTypes.instanceOf(Map).isRequired,
+  selectedAgentToAdd: PropTypes.string.isRequired,
+  setSelectedAgentToAdd: PropTypes.func.isRequired,
+  handleAddAgent: PropTypes.func.isRequired,
+  handleRemoveAgent: PropTypes.func.isRequired,
+  editGameLocationOptions: PropTypes.array,
+  editGameSeasons: PropTypes.array,
+  isEditGameSeasonsLoading: PropTypes.bool,
+  isEditGameSeasonCreating: PropTypes.bool,
+  handleCreateSeasonForEditGame: PropTypes.func.isRequired,
+  handleAddPrice: PropTypes.func.isRequired,
+  handlePriceChange: PropTypes.func.isRequired,
+  handleRemovePrice: PropTypes.func.isRequired,
+  canViewCodePhotos: PropTypes.bool,
+
+  // Tasks modal
+  isTasksModalOpen: PropTypes.bool.isRequired,
+  handleCloseTasksModal: PropTypes.func.isRequired,
+  handleTasksModalPrimaryAction: PropTypes.func.isRequired,
+  expandedTaskIds: PropTypes.array.isRequired,
+  toggleTaskExpansion: PropTypes.func.isRequired,
   handleAddTask: PropTypes.func.isRequired,
   handleReorderTask: PropTypes.func.isRequired,
   isTaskReorderLocked: PropTypes.func.isRequired,
@@ -596,9 +564,6 @@ GameModals.propTypes = {
   handleTaskCodeChange: PropTypes.func.isRequired,
   handleTaskCodePhotoChange: PropTypes.func.isRequired,
   handleRemoveTaskCode: PropTypes.func.isRequired,
-  handleAddTaskImage: PropTypes.func.isRequired,
-  handleTaskImageChange: PropTypes.func.isRequired,
-  handleRemoveTaskImage: PropTypes.func.isRequired,
   handleAddClue: PropTypes.func.isRequired,
   handleReorderClue: PropTypes.func.isRequired,
   handleTaskClueChange: PropTypes.func.isRequired,
@@ -612,22 +577,15 @@ GameModals.propTypes = {
   handleAddBonusCode: PropTypes.func.isRequired,
   handleBonusCodeChange: PropTypes.func.isRequired,
   handleRemoveBonusCode: PropTypes.func.isRequired,
-  handleAddPrice: PropTypes.func.isRequired,
-  handlePriceChange: PropTypes.func.isRequired,
-  handleRemovePrice: PropTypes.func.isRequired,
-  handleAddFinance: PropTypes.func.isRequired,
-  handleFinanceChange: PropTypes.func.isRequired,
-  handleRemoveFinance: PropTypes.func.isRequired,
+  handleSaveAndOpenTaskPreview: PropTypes.func.isRequired,
+
+  // Finances modal
   isFinancesModalOpen: PropTypes.bool.isRequired,
   handleCloseFinancesModal: PropTypes.func.isRequired,
   handleFinancesModalPrimaryAction: PropTypes.func.isRequired,
-  isGameHistoryModalOpen: PropTypes.bool.isRequired,
-  handleCloseGameHistoryModal: PropTypes.func.isRequired,
-  handleGameHistoryRollbackSuccess: PropTypes.func.isRequired,
-  canGenerateResults: PropTypes.bool.isRequired,
-  isGeneratingResults: PropTypes.bool.isRequired,
-  handleGenerateResults: PropTypes.func.isRequired,
-  generateResultsButtonLabel: PropTypes.string.isRequired,
+  handleAddFinance: PropTypes.func.isRequired,
+  handleFinanceChange: PropTypes.func.isRequired,
+  handleRemoveFinance: PropTypes.func.isRequired,
   currencyFormatter: PropTypes.instanceOf(Intl.NumberFormat).isRequired,
   financesSummary: PropTypes.shape({
     income: PropTypes.number.isRequired,
@@ -635,8 +593,13 @@ GameModals.propTypes = {
     balance: PropTypes.number.isRequired,
   }).isRequired,
   balanceClass: PropTypes.string.isRequired,
-  expandedTaskIds: PropTypes.instanceOf(Set).isRequired,
-  toggleTaskExpansion: PropTypes.func.isRequired,
+
+  // History modal
+  isGameHistoryModalOpen: PropTypes.bool.isRequired,
+  handleCloseGameHistoryModal: PropTypes.func.isRequired,
+  handleGameHistoryRollbackSuccess: PropTypes.func.isRequired,
+
+  // Teams modal
   isTeamsModalOpen: PropTypes.bool.isRequired,
   handleCloseTeamsModal: PropTypes.func.isRequired,
   teamsModalState: PropTypes.shape({
@@ -658,6 +621,8 @@ GameModals.propTypes = {
   handleToggleTeamPaidGame: PropTypes.func,
   handleRefreshTeamsModalData: PropTypes.func,
   isTeamsModalReadOnly: PropTypes.bool,
+
+  // Register modal
   isRegisterModalOpen: PropTypes.bool.isRequired,
   handleCloseRegisterModal: PropTypes.func.isRequired,
   isRegisterSubmitting: PropTypes.bool.isRequired,
@@ -675,8 +640,8 @@ GameModals.propTypes = {
     PropTypes.shape({ id: PropTypes.string.isRequired }),
   ).isRequired,
   currentUserId: PropTypes.string,
-  currentUserRole: PropTypes.string,
-  canViewCodePhotos: PropTypes.bool,
+
+  // Create game modal
   isCreateGameModalOpen: PropTypes.bool.isRequired,
   handleCloseCreateGameModal: PropTypes.func.isRequired,
   isCreatingGame: PropTypes.bool.isRequired,
@@ -730,10 +695,10 @@ GameModals.propTypes = {
   handleChangeCreateGameCloneOption: PropTypes.func.isRequired,
   isCreateGameActionDisabled: PropTypes.bool.isRequired,
   createGameFeedback: registerFeedbackShape,
+
+  // Description modal
   isDescriptionModalOpen: PropTypes.bool.isRequired,
   handleCloseDescriptionModal: PropTypes.func.isRequired,
-  isTasksViewModalOpen: PropTypes.bool.isRequired,
-  handleCloseTasksViewModal: PropTypes.func.isRequired,
   gameTypeLabel: PropTypes.string.isRequired,
   plannedStartLabel: PropTypes.string.isRequired,
   canViewRestrictedGameInfo: PropTypes.bool.isRequired,
@@ -747,45 +712,6 @@ GameModals.propTypes = {
   handleEnterGameFromDescription: PropTypes.func,
   handleCancelGameRegistrationFromDescription: PropTypes.func,
   isGameRegistrationSubmittingFromDescription: PropTypes.bool,
-  selectedGameModerators: PropTypes.arrayOf(moderatorShape).isRequired,
-  availableModeratorsForSelect:
-    PropTypes.arrayOf(moderatorOptionShape).isRequired,
-  availableModeratorsMap: PropTypes.instanceOf(Map).isRequired,
-  availableOrganizersForSelect: PropTypes.arrayOf(
-    PropTypes.shape({
-      telegramId: PropTypes.string.isRequired,
-      name: PropTypes.string,
-      username: PropTypes.string,
-    }),
-  ).isRequired,
-  selectedModeratorToAdd: PropTypes.string.isRequired,
-  setSelectedModeratorToAdd: PropTypes.func.isRequired,
-  handleAddModerator: PropTypes.func.isRequired,
-  handleRemoveModerator: PropTypes.func.isRequired,
-  selectedGameAgents: PropTypes.arrayOf(agentShape).isRequired,
-  availableAgentsForSelect: PropTypes.arrayOf(agentShape).isRequired,
-  availableAgentsMap: PropTypes.instanceOf(Map).isRequired,
-  selectedAgentToAdd: PropTypes.string.isRequired,
-  setSelectedAgentToAdd: PropTypes.func.isRequired,
-  handleAddAgent: PropTypes.func.isRequired,
-  handleRemoveAgent: PropTypes.func.isRequired,
-  editGameLocationOptions: PropTypes.arrayOf(
-    PropTypes.shape({
-      key: PropTypes.string.isRequired,
-      label: PropTypes.string.isRequired,
-    }),
-  ),
-  editGameSeasons: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      name: PropTypes.string.isRequired,
-      location: PropTypes.string,
-    }),
-  ),
-  isEditGameSeasonsLoading: PropTypes.bool,
-  isEditGameSeasonCreating: PropTypes.bool,
-  handleCreateSeasonForEditGame: PropTypes.func.isRequired,
-  handleSaveAndOpenTaskPreview: PropTypes.func.isRequired,
   taskDurationLabel: PropTypes.string.isRequired,
   cluesDurationLabel: PropTypes.string.isRequired,
   clueModeDetails: PropTypes.shape({
@@ -796,6 +722,12 @@ GameModals.propTypes = {
   taskFailurePenaltyLabel: PropTypes.string.isRequired,
   manyCodesLimitLabel: PropTypes.string,
   manyCodesPenaltyLabel: PropTypes.string,
+
+  // Tasks view modal
+  isTasksViewModalOpen: PropTypes.bool.isRequired,
+  handleCloseTasksViewModal: PropTypes.func.isRequired,
+
+  // Results modal
   isResultsModalOpen: PropTypes.bool.isRequired,
   handleCloseResultsModal: PropTypes.func.isRequired,
   resultsModalState: PropTypes.shape({
