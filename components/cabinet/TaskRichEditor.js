@@ -60,6 +60,21 @@ const ESCALIONCLOUD_PUBLIC_ORIGIN =
 const MAX_VIDEO_SIZE_BYTES = 40 * 1024 * 1024
 const DEFAULT_PICKER_COLOR = '#111827'
 const NO_COLOR_TOKEN = '__no_color__'
+
+const STANDARD_COLORS = [
+  { hex: '#000000', label: 'Чёрный' },
+  { hex: '#ffffff', label: 'Белый' },
+  { hex: '#dc2626', label: 'Красный' },
+  { hex: '#ea580c', label: 'Оранжевый' },
+  { hex: '#eab308', label: 'Жёлтый' },
+  { hex: '#16a34a', label: 'Зелёный' },
+  { hex: '#06b6d4', label: 'Циан' },
+  { hex: '#2563eb', label: 'Синий' },
+  { hex: '#7c3aed', label: 'Фиолетовый' },
+  { hex: '#ec4899', label: 'Розовый' },
+  { hex: '#78716c', label: 'Серый' },
+  { hex: '#111827', label: 'Тёмно-серый' },
+]
 const AI_SYSTEM_PROMPTS_SECTION = 'task_rich_editor'
 const AI_UI_QUESTIONS_PREFIX = 'AQ_UI_QUESTIONS'
 const AI_GAMES_PAGE_LIMIT = 100
@@ -169,7 +184,11 @@ const normalizeMediaSrc = (value) => {
     return ''
   }
 
-  if (/^https?:\/\//i.test(decoded) || /^data:/i.test(decoded) || /^blob:/i.test(decoded)) {
+  if (
+    /^https?:\/\//i.test(decoded) ||
+    /^data:/i.test(decoded) ||
+    /^blob:/i.test(decoded)
+  ) {
     return decoded
   }
 
@@ -1417,6 +1436,7 @@ const TaskRichEditor = ({
 }) => {
   const fileInputRef = useRef(null)
   const editorContentWrapperRef = useRef(null)
+  const colorPickerRef = useRef(null)
   const uploadModeRef = useRef('image')
   const [uploadMode, setUploadMode] = useState('image')
   const [isUploading, setIsUploading] = useState(false)
@@ -1424,6 +1444,7 @@ const TaskRichEditor = ({
   const [selectedColor, setSelectedColor] = useState(DEFAULT_PICKER_COLOR)
   const [isColorActive, setIsColorActive] = useState(false)
   const [isMixedColorSelection, setIsMixedColorSelection] = useState(false)
+  const [isColorPaletteOpen, setIsColorPaletteOpen] = useState(false)
   const [toolbarState, setToolbarState] = useState({
     blockType: 'p',
     bold: false,
@@ -1811,6 +1832,22 @@ const TaskRichEditor = ({
       editor.off('blur', syncToolbarState)
     }
   }, [editor, selectedColor])
+
+  useEffect(() => {
+    if (!isColorPaletteOpen) return undefined
+
+    const handleOutsideClick = (event) => {
+      if (
+        colorPickerRef.current &&
+        !colorPickerRef.current.contains(event.target)
+      ) {
+        setIsColorPaletteOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [isColorPaletteOpen])
 
   const filteredSlashCommands = useMemo(() => {
     const query = slashMenu.query.trim().toLowerCase()
@@ -2739,36 +2776,91 @@ const TaskRichEditor = ({
               disabled={disabled}
             />
 
-            <label
-              className={`inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-xs transition ${
-                isMixedColorSelection
-                  ? 'border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-400 dark:bg-amber-500/15 dark:text-amber-200'
-                  : isColorActive
-                    ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/20 dark:text-blue-100'
-                    : 'border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100'
-              }`}
-              title={
-                isMixedColorSelection
-                  ? 'В выделении несколько разных цветов'
-                  : 'Цвет текста'
-              }
-            >
-              Цвет
-              <input
-                type="color"
-                value={selectedColor}
+            <div className="relative" ref={colorPickerRef}>
+              <button
+                type="button"
                 disabled={disabled}
-                onChange={(event) => {
-                  const color = event.target.value
-                  setSelectedColor(color)
-                  setIsMixedColorSelection(false)
-                  setIsColorActive(true)
-                  editor.chain().focus().setColor(color).run()
+                onClick={() => {
+                  if (!disabled) setIsColorPaletteOpen((prev) => !prev)
                 }}
-                className="w-6 h-5 p-0 bg-transparent cursor-pointer"
-                aria-label="Цвет текста"
-              />
-            </label>
+                className={`inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-xs transition ${
+                  isMixedColorSelection
+                    ? 'border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-400 dark:bg-amber-500/15 dark:text-amber-200'
+                    : isColorActive
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/20 dark:text-blue-100'
+                      : 'border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100'
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+                title={
+                  isMixedColorSelection
+                    ? 'В выделении несколько разных цветов'
+                    : 'Цвет текста'
+                }
+              >
+                Цвет
+                <span
+                  className="inline-block w-4 h-4 border rounded border-slate-300 dark:border-slate-600"
+                  style={
+                    selectedColor === '#ffffff'
+                      ? {
+                          backgroundColor: selectedColor,
+                          outline: '1px solid #d1d5db',
+                        }
+                      : { backgroundColor: selectedColor }
+                  }
+                />
+              </button>
+
+              {!disabled && isColorPaletteOpen ? (
+                <div className="absolute top-full left-0 z-10 mt-1 flex flex-wrap gap-0.5 rounded-lg border border-slate-200 bg-white p-1.5 shadow-md dark:border-slate-700 dark:bg-slate-900">
+                  {STANDARD_COLORS.map(({ hex, label }) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      title={label}
+                      onClick={() => {
+                        setSelectedColor(hex)
+                        setIsMixedColorSelection(false)
+                        setIsColorActive(true)
+                        editor.chain().focus().setColor(hex).run()
+                        setIsColorPaletteOpen(false)
+                      }}
+                      className={`h-6 w-6 cursor-pointer rounded border transition hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
+                        selectedColor === hex
+                          ? 'border-blue-500 ring-1 ring-blue-400'
+                          : 'border-slate-300 dark:border-slate-600'
+                      }`}
+                      style={
+                        hex === '#ffffff'
+                          ? {
+                              backgroundColor: hex,
+                              outline: '1px solid #d1d5db',
+                            }
+                          : { backgroundColor: hex }
+                      }
+                      aria-label={label}
+                    />
+                  ))}
+                  <div className="flex w-full items-center gap-1.5 pt-1.5 mt-1.5 border-t border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                      Произвольный:
+                    </span>
+                    <input
+                      type="color"
+                      value={selectedColor}
+                      onChange={(event) => {
+                        const color = event.target.value
+                        setSelectedColor(color)
+                        setIsMixedColorSelection(false)
+                        setIsColorActive(true)
+                        editor.chain().focus().setColor(color).run()
+                      }}
+                      className="w-8 h-6 p-0 bg-transparent cursor-pointer"
+                      aria-label="Произвольный цвет"
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
             <div className="w-px h-6 bg-slate-300 dark:bg-slate-600" />
 
             <ToolbarButton
