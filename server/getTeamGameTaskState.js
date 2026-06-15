@@ -5,6 +5,7 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import taskText from 'telegram/func/taskText'
 import sanitize from '@helpers/sanitize'
 import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
+import getGameProcessFinishingPlace from '@helpers/getGameProcessFinishingPlace'
 import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
 import resolveTeamMembershipForIdentity from '@helpers/resolveTeamMembershipForIdentity'
 
@@ -320,7 +321,7 @@ const safeSerializeGameForClient = (game) => {
     dateStartFact: game.dateStartFact || null,
     dateEndFact: game.dateEndFact || null,
     status: game.status || 'active',
-    finishingPlace: game.showFinishingPlace ? game.finishingPlace || '' : '',
+    finishingPlace: getGameProcessFinishingPlace(game),
     showFinishingPlace: Boolean(game.showFinishingPlace),
     image: game.image || null,
     tasksCount: Array.isArray(game.tasks) ? game.tasks.length : 0,
@@ -1156,7 +1157,7 @@ const computeTaskHtml = async ({
   if (isGameStarted && !isGameFinished && tasksCount > 0) {
     if (hasCompletedAllTasks) {
       const lastTask = tasks[tasksCount - 1] ?? null
-      const finishingPlace = game.showFinishingPlace ? game.finishingPlace : ''
+      const finishingPlace = getGameProcessFinishingPlace(game)
       const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
       if (finishingPlace) {
         completionParts.push(
@@ -1329,7 +1330,7 @@ const computeTaskHtml = async ({
 
   if (!taskHtml && (hasCompletedAllTasks || isGameFinished) && tasksCount > 0) {
     const lastTask = tasks[tasksCount - 1] ?? null
-    const finishingPlace = game.showFinishingPlace ? game.finishingPlace : ''
+    const finishingPlace = getGameProcessFinishingPlace(game)
     const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
     if (finishingPlace) {
       completionParts.push(`<br /><br /><b>Точка сбора:</b> ${finishingPlace}`)

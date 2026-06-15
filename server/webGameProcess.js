@@ -4,6 +4,7 @@ import createTaskProgressArrays, {
   createTaskPhotosArray,
 } from '@helpers/createTaskProgressArrays'
 import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
+import getGameProcessFinishingPlace from '@helpers/getGameProcessFinishingPlace'
 import getLocationTimeZone from '@helpers/locationTimeZone'
 import sanitize from '@helpers/sanitize'
 import taskText from 'telegram/func/taskText'
@@ -118,12 +119,13 @@ const buildBreakMessage = ({ code, task }) => {
 }
 
 const buildGameFinishedMessage = (game) => {
-  const { tasks = [], finishingPlace } = game || {}
+  const { tasks = [] } = game || {}
+  const finishingPlace = getGameProcessFinishingPlace(game)
   const lastTask = tasks.length > 0 ? tasks[tasks.length - 1] : null
 
   const parts = ['Поздравляем Вы завершили все задания! Игра окончена.']
 
-  if (game?.showFinishingPlace && finishingPlace) {
+  if (finishingPlace) {
     parts.push(`Вы можете выдвигаться на точку сбора: ${finishingPlace}`)
   }
 

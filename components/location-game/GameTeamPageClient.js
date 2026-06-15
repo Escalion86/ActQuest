@@ -2471,7 +2471,7 @@ function GameTeamPage({
                 <p className="mt-4 text-base leading-relaxed text-emerald-900 dark:text-emerald-100">
                   Поздравляем! Вы завершили игру.
                 </p>
-                {game?.showFinishingPlace && game?.finishingPlace ? (
+                {game?.finishingPlace ? (
                   <p className="mt-3 text-base leading-relaxed text-emerald-900 dark:text-emerald-100">
                     Точка сбора после игры: {game.finishingPlace}
                   </p>
