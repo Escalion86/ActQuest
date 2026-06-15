@@ -810,7 +810,6 @@ const buildUpdatePayload = (game) => {
 
   return {
     name: game.name,
-    status: game.status,
     dateStart: game.dateStart ? new Date(game.dateStart).toISOString() : null,
     type: game.type,
     description:
@@ -3998,12 +3997,15 @@ const GamesPage = ({
     [canEditSelectedGame, updateSelectedGame],
   )
 
-  const handleAddFinance = useCallback((financePatch = {}) => {
-    if (!canEditSelectedGame) return
-    updateSelectedGame((game) => ({
-      finances: [...(game.finances ?? []), createFinanceEntry(financePatch)],
-    }))
-  }, [canEditSelectedGame, updateSelectedGame])
+  const handleAddFinance = useCallback(
+    (financePatch = {}) => {
+      if (!canEditSelectedGame) return
+      updateSelectedGame((game) => ({
+        finances: [...(game.finances ?? []), createFinanceEntry(financePatch)],
+      }))
+    },
+    [canEditSelectedGame, updateSelectedGame],
+  )
 
   const handleFinanceChange = useCallback(
     (financeId, field, value) => {
