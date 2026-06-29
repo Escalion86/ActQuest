@@ -1520,6 +1520,18 @@ const GamesPage = ({
           variant: 'secondary',
           tone: 'cyan',
         },
+        ...(statusModalGame.taskDistributionMode === 'random'
+          ? [
+              {
+                id: 'distribute_tasks',
+                label: 'Распределить задания',
+                description:
+                  'Создаст индивидуальный маршрут заданий для каждой команды по общему или командному шаблону.',
+                variant: 'secondary',
+                tone: 'brand',
+              },
+            ]
+          : []),
         {
           id: 'start_game',
           label: 'СТАРТ ИГРЫ',
@@ -5204,6 +5216,33 @@ const GamesPage = ({
 
         setStatusValidationResult(null)
         let successMessage = 'Статус игры обновлён'
+
+        if (actionId === 'distribute_tasks') {
+          setStatusProgressMessage('Распределяем задания по командам…')
+          const { json } = await requestApiJson(
+            '/api/cabinet/admin/task-distribution',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ gameId: statusModalGame.id }),
+              fallbackMessage: 'Не удалось распределить задания',
+            },
+          )
+          const teamsUpdated = Number(json?.data?.teamsUpdated) || 0
+          await queryClient.invalidateQueries({ queryKey: ['cabinet-games'] })
+          await gamesQuery.refetch()
+          setStatusProgressMessage('')
+          setFeedback({
+            type: 'success',
+            message: `Задания распределены. Команд обновлено: ${teamsUpdated}`,
+          })
+          setToastEvent({
+            id: `task-distribution-${Date.now()}`,
+            type: 'success',
+            message: 'Задания распределены',
+          })
+          return
+        }
 
         if (actionId === 'start_game') {
           setStatusProgressMessage('Проверяем игру перед запуском…')
