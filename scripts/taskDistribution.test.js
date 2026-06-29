@@ -49,6 +49,28 @@ test('validates missing duplicate out-of-range and empty blocks', () => {
   assert.match(result.messages.join('\n'), /пустой блок/)
 })
 
+test('reports normalized out-of-range UI task number above tasks count', () => {
+  const result = validateTaskDistributionTemplate(
+    normalizeTaskDistributionTemplate([[9]], 8),
+    8,
+  )
+
+  assert.deepEqual(result.outOfRangeTaskNumbers, [9])
+  assert.match(result.messages.join('\n'), /несуществующие задания: 9/)
+})
+
+test('reports normalized zero UI task number as invalid without treating it as task 1', () => {
+  const result = validateTaskDistributionTemplate(
+    normalizeTaskDistributionTemplate([[0]], 8),
+    8,
+  )
+
+  assert.deepEqual(result.outOfRangeTaskNumbers, [0])
+  assert.match(result.messages.join('\n'), /несуществующие задания: 0/)
+  assert.deepEqual(result.duplicateTaskNumbers, [])
+  assert.deepEqual(result.missingTaskNumbers, [1, 2, 3, 4, 5, 6, 7, 8])
+})
+
 test('builds sequence by shuffling inside blocks only', () => {
   const sequence = buildTaskSequenceFromTemplate(
     [[0, 1, 2], [3, 4], [5]],

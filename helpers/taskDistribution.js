@@ -19,7 +19,6 @@ export const normalizeTaskDistributionMode = (value) =>
   value === 'random' ? 'random' : 'linear'
 
 export const normalizeTaskDistributionTemplate = (value, tasksCount = 0) => {
-  const count = normalizeTasksCount(tasksCount)
   const source = Array.isArray(value) ? value : []
 
   return source.map((block) => {
@@ -29,8 +28,7 @@ export const normalizeTaskDistributionTemplate = (value, tasksCount = 0) => {
       .map((item) => {
         const integer = toIntegerOrNull(item)
         if (integer === null) return null
-        if (integer >= 1 && integer <= count) return integer - 1
-        return integer
+        return integer - 1
       })
       .filter((item) => item !== null)
   })
