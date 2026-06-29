@@ -15,6 +15,11 @@ import {
   normalizePrequelConfig,
   normalizePrequelStoryEffect,
 } from '@helpers/normalizePrequel'
+import {
+  normalizeStoredTaskDistributionTemplate,
+  normalizeTaskDistributionMode,
+  validateTaskDistributionTemplate,
+} from '@helpers/taskDistribution'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
 
 const buildResetPayload = ({
@@ -630,6 +635,64 @@ const execute = (request, params) =>
             existingGame?.tasks,
             allowedAgentIds,
           )
+        }
+
+        const hasTaskDistributionUpdate =
+          Object.prototype.hasOwnProperty.call(
+            updateData,
+            'taskDistributionMode',
+          ) ||
+          Object.prototype.hasOwnProperty.call(
+            updateData,
+            'taskDistributionTemplate',
+          ) ||
+          Array.isArray(updateData.tasks)
+
+        if (hasTaskDistributionUpdate) {
+          const tasksCount = Array.isArray(updateData.tasks)
+            ? updateData.tasks.length
+            : Array.isArray(existingGame?.tasks)
+              ? existingGame.tasks.length
+              : 0
+          const taskDistributionMode = normalizeTaskDistributionMode(
+            Object.prototype.hasOwnProperty.call(
+              updateData,
+              'taskDistributionMode',
+            )
+              ? updateData.taskDistributionMode
+              : existingGame?.taskDistributionMode,
+          )
+          const taskDistributionTemplate =
+            taskDistributionMode === 'random'
+              ? normalizeStoredTaskDistributionTemplate(
+                  Object.prototype.hasOwnProperty.call(
+                    updateData,
+                    'taskDistributionTemplate',
+                  )
+                    ? updateData.taskDistributionTemplate
+                    : existingGame?.taskDistributionTemplate,
+                  tasksCount,
+                )
+              : []
+
+          if (taskDistributionMode === 'random') {
+            const validation = validateTaskDistributionTemplate(
+              taskDistributionTemplate,
+              tasksCount,
+            )
+
+            if (!validation.valid) {
+              return res.status(400).json({
+                success: false,
+                error:
+                  validation.messages[0] ||
+                  'Некорректный шаблон распределения заданий',
+              })
+            }
+          }
+
+          updateData.taskDistributionMode = taskDistributionMode
+          updateData.taskDistributionTemplate = taskDistributionTemplate
         }
 
         if (Array.isArray(updateData.storyNodes)) {

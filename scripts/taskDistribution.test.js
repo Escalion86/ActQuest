@@ -204,3 +204,11 @@ test('normalizes game distribution fields for cabinet', () => {
   assert.equal(game.taskDistributionMode, 'random')
   assert.deepEqual(game.taskDistributionTemplate, [[0, 1]])
 })
+
+test('random template must cover every task exactly once', () => {
+  const normalized = normalizeTaskDistributionTemplate([[1, 2], [4]], 4)
+  const result = validateTaskDistributionTemplate(normalized, 4)
+
+  assert.equal(result.valid, false)
+  assert.deepEqual(result.missingTaskNumbers, [3])
+})
