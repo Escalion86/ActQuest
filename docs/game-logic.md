@@ -26,6 +26,7 @@
 - Ключевые поля: `name`, `type` (classic/photo/story), `status`, `location`, `seasonId`
 - Временные: `dateStart`, `dateStartFact`, `dateEndFact`
 - Настройки игры: `taskDuration`, `cluesDuration`, `breakDuration`
+- Распределение заданий: `taskDistributionMode`, `taskDistributionTemplate`
 - Результат: `result` (object с snapshots и computed)
 - Скрытие/рейтинг: `hidden`, `isRated`, `hideResult`
 - Корпоративные: `orderType` (public/private/corporate), `sourceOrderId`, `clientName`, `clientContact`
@@ -53,7 +54,8 @@
 
 **GamesTeams** (`gamesTeamsSchema.js`)
 - Регистрация команды на игру: `gameId`, `teamId`, `outOfCompetition`
-- Процесс игры: `activeNum` (текущее задание), `startTime[]`, `endTime[]`
+- Процесс игры: `activeNum` (шаг команды в маршруте), `startTime[]`, `endTime[]`
+- Маршрут заданий: `taskDistributionTemplate`, `taskSequence`, `taskSequenceGeneratedAt`, `taskSequenceSource`
 - Коды: `findedCodes[]`, `wrongCodes[]`, `findedBonusCodes[]`, `findedPenaltyCodes[]`
 - Photo: `photos[taskIndex].photos`, `photos[taskIndex].checks`
 - Story: `storyProgress` (status, inventory, history)
@@ -80,6 +82,23 @@ TeamsUsers (члены команды - текущие)
 ```
 
 ## Ключевая бизнес-логика игр
+
+### Распределение заданий
+
+Для web/cabinet-ветки задания могут идти линейно или по случайному блочному распределению.
+
+- `Games.taskDistributionMode = linear` сохраняет порядок `Games.tasks`.
+- `Games.taskDistributionMode = random` требует валидный `Games.taskDistributionTemplate`.
+- Шаблон хранится в zero-based формате, а в UI показывается one-based: `[1,2,3],[4,5],6`.
+- Каждый блок перемешивается отдельно, блоки идут строго по порядку.
+- `GamesTeams.taskDistributionTemplate` переопределяет общий шаблон игры для конкретной команды.
+- `GamesTeams.taskSequence` хранит индивидуальный маршрут команды в исходных индексах `Games.tasks`.
+- `GamesTeams.activeNum` хранит шаг команды в маршруте, а не исходный индекс задания.
+- Все массивы прогресса (`startTime`, `endTime`, `findedCodes`, `wrongCodes`, `findedBonusCodes`, `findedPenaltyCodes`, `photos`, `taskFailures`) индексируются исходным индексом задания.
+- Перед стартом random-игры сервер блокирует запуск, если хотя бы у одной команды нет валидного `taskSequence`.
+- Если администратор меняет индивидуальный шаблон команды после распределения, для этой команды нужно снова выполнить распределение.
+- При повторном распределении уже начатые задания сохраняются в начале маршрута и не переставляются.
+- Интерактивная таблица результата отображает столбцы в порядке редактора заданий; данные в ячейках берутся по исходному индексу задания, а не по порядку маршрута команды.
 
 ### Статусы и переходы
 
