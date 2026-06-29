@@ -14,6 +14,7 @@ import ModalSection from '@components/modals/ModalSection'
 import GameBasicInfoSection from './sections/GameBasicInfoSection'
 import GameModeratorsSection from './sections/GameModeratorsSection'
 import GameSettingsSection from './sections/GameSettingsSection'
+import TaskDistributionSection from './sections/TaskDistributionSection'
 
 const fieldLabelClassName =
   'text-sm font-semibold text-slate-700 dark:text-white'
@@ -258,6 +259,14 @@ const GameEditModal = ({
           }}
           getCheckboxChecked={getCheckboxChecked}
         />
+
+        {selectedGame?.type !== 'story' ? (
+          <TaskDistributionSection
+            selectedGame={selectedGame}
+            updateSelectedGame={updateSelectedGame}
+            disabled={!canEditSelectedGame || isSaving}
+          />
+        ) : null}
 
         <GameModeratorsSection
           selectedGameModerators={selectedGameModerators}

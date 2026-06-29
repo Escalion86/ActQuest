@@ -36,6 +36,7 @@ import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import {
   normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionMode,
+  validateTaskDistributionTemplate,
 } from '@helpers/taskDistribution'
 import requestApiJson from '@helpers/requestApiJson'
 import { resolveGameEntryHrefFromGame } from '@helpers/resolveGameEntryHref'
@@ -3802,6 +3803,30 @@ const GamesPage = ({
 
       setFeedback({ type: 'error', message: blockingMessage })
       return
+    }
+
+    if (normalizeTaskDistributionMode(gameToSave.taskDistributionMode) === 'random') {
+      const tasksCount = Array.isArray(gameToSave.tasks)
+        ? gameToSave.tasks.length
+        : 0
+      const distributionTemplate = normalizeStoredTaskDistributionTemplate(
+        gameToSave.taskDistributionTemplate,
+        tasksCount,
+      )
+      const distributionValidation = validateTaskDistributionTemplate(
+        distributionTemplate,
+        tasksCount,
+      )
+
+      if (!distributionValidation.valid) {
+        setFeedback({
+          type: 'error',
+          message:
+            distributionValidation.messages[0] ||
+            'Проверьте шаблон распределения заданий.',
+        })
+        return
+      }
     }
 
     setFeedback(null)
