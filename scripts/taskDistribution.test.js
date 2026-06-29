@@ -10,6 +10,7 @@ import {
   getTeamTaskSequence,
   isValidTaskSequence,
   normalizeTaskDistributionMode,
+  normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionTemplate,
   taskHasProgress,
   validateTaskDistributionTemplate,
@@ -20,6 +21,20 @@ test('normalizes mixed UI template to zero-based blocks', () => {
   assert.deepEqual(
     normalizeTaskDistributionTemplate([[1, 2, 3], [4, 5], 6, [7, 8]], 8),
     [[0, 1, 2], [3, 4], [5], [6, 7]],
+  )
+})
+
+test('normalizes stored zero-based template without shifting valid indexes', () => {
+  assert.deepEqual(normalizeStoredTaskDistributionTemplate([[0, 1]], 2), [[0, 1]])
+})
+
+test('drops invalid stored zero-based template values without coercing them to zero', () => {
+  assert.deepEqual(
+    normalizeStoredTaskDistributionTemplate(
+      [[null, '', false, undefined, '0']],
+      2,
+    ),
+    [[0]],
   )
 })
 

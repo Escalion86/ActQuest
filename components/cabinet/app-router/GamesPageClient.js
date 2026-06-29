@@ -34,8 +34,8 @@ import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import { toStringId } from '@helpers/idAndDate'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import {
+  normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionMode,
-  normalizeTaskDistributionTemplate,
 } from '@helpers/taskDistribution'
 import requestApiJson from '@helpers/requestApiJson'
 import { resolveGameEntryHrefFromGame } from '@helpers/resolveGameEntryHref'
@@ -582,16 +582,6 @@ const cloneGameDraft = (game) => {
 
   return JSON.parse(JSON.stringify(game))
 }
-
-const normalizeStoredTaskDistributionTemplate = (template, tasksCount) =>
-  normalizeTaskDistributionTemplate(
-    (Array.isArray(template) ? template : []).map((block) =>
-      (Array.isArray(block) ? block : [block]).map(
-        (taskIndex) => Number(taskIndex) + 1,
-      ),
-    ),
-    tasksCount,
-  )
 
 const buildUpdatePayload = (game) => {
   const isPhotoGame = game?.type === 'photo'

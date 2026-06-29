@@ -5,8 +5,8 @@ import {
   normalizePrequelConfig,
 } from './normalizePrequel.js'
 import {
+  normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionMode,
-  normalizeTaskDistributionTemplate,
 } from './taskDistribution.js'
 
 const ensureString = (value, fallback = '') => {
@@ -494,14 +494,6 @@ const normalizePrequelForCabinet = (prequel) => ({
   ...buildDefaultPrequel(),
   ...normalizePrequelConfig(prequel),
 })
-
-const normalizeStoredTaskDistributionTemplate = (template, tasksCount) =>
-  normalizeTaskDistributionTemplate(
-    (Array.isArray(template) ? template : []).map((block) =>
-      (Array.isArray(block) ? block : [block]).map((taskIndex) => Number(taskIndex) + 1),
-    ),
-    tasksCount,
-  )
 
 const computeTasksStats = (tasks = []) => {
   if (!Array.isArray(tasks) || tasks.length === 0) {

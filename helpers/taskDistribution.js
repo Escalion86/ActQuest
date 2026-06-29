@@ -5,6 +5,22 @@ const toIntegerOrNull = (value) => {
   return integer === numeric ? integer : null
 }
 
+const toStoredIntegerOrNull = (value) => {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === 'boolean' ||
+    (typeof value !== 'number' && typeof value !== 'string')
+  ) {
+    return null
+  }
+
+  const prepared = typeof value === 'string' ? value.trim() : value
+  if (prepared === '') return null
+
+  return toIntegerOrNull(prepared)
+}
+
 const normalizeTasksCount = (tasksCount) => {
   const count = Number(tasksCount)
   return Number.isInteger(count) && count > 0 ? count : 0
@@ -19,6 +35,7 @@ export const normalizeTaskDistributionMode = (value) =>
   value === 'random' ? 'random' : 'linear'
 
 export const normalizeTaskDistributionTemplate = (value, tasksCount = 0) => {
+  void tasksCount
   const source = Array.isArray(value) ? value : []
 
   return source.map((block) => {
@@ -30,6 +47,22 @@ export const normalizeTaskDistributionTemplate = (value, tasksCount = 0) => {
         if (integer === null) return null
         return integer - 1
       })
+      .filter((item) => item !== null)
+  })
+}
+
+export const normalizeStoredTaskDistributionTemplate = (
+  value,
+  tasksCount = 0,
+) => {
+  void tasksCount
+  const source = Array.isArray(value) ? value : []
+
+  return source.map((block) => {
+    const blockItems = Array.isArray(block) ? block : [block]
+
+    return blockItems
+      .map((item) => toStoredIntegerOrNull(item))
       .filter((item) => item !== null)
   })
 }
