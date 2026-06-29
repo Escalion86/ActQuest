@@ -12,6 +12,10 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { fetchUnreadTeamMessageCounts } from '@server/gameTeamMessages'
 import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
+import {
+  getTaskIndexForStep,
+  getTeamTaskSequence,
+} from '@helpers/taskDistribution'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) {
@@ -429,7 +433,8 @@ const syncGameTeamProgressForStatus = async ({
 
   const advanceToNextTask = async (
     teamState,
-    nextIndex,
+    nextStep,
+    nextTaskIndex,
     startedAt,
     extraUpdates = {},
   ) => {
@@ -438,7 +443,7 @@ const syncGameTeamProgressForStatus = async ({
       tasksCount,
       null,
     ).map(cloneDateValue)
-    startTimeUpdates[nextIndex] = toDateValue(startedAt) || nowDate
+    startTimeUpdates[nextTaskIndex] = toDateValue(startedAt) || nowDate
 
     const forcedCluesUpdates = ensureArrayLength(
       teamState.forcedClues,
@@ -448,25 +453,26 @@ const syncGameTeamProgressForStatus = async ({
       const numeric = Number(value)
       return Number.isFinite(numeric) ? numeric : 0
     })
-    forcedCluesUpdates[nextIndex] = 0
+    forcedCluesUpdates[nextTaskIndex] = 0
 
     return updateTeam(teamState, {
       ...extraUpdates,
-      activeNum: nextIndex,
+      activeNum: nextStep,
       startTime: startTimeUpdates,
       forcedClues: forcedCluesUpdates,
     })
   }
 
   const progressOnce = async (teamState) => {
-    const activeNum = Number.isInteger(teamState?.activeNum)
+    const activeStep = Number.isInteger(teamState?.activeNum)
       ? teamState.activeNum
       : 0
-    if (activeNum >= tasksCount) return teamState
+    const taskIndex = getTaskIndexForStep(game, teamState, activeStep)
+    if (activeStep >= tasksCount || taskIndex === null) return teamState
 
-    const taskIndex = Math.max(Math.min(activeNum, tasksCount - 1), 0)
-    const nextIndex = taskIndex + 1
-    const hasNextTask = nextIndex < tasksCount
+    const nextStep = activeStep + 1
+    const nextIndex = getTaskIndexForStep(game, teamState, nextStep)
+    const hasNextTask = nextIndex !== null
     const startTimes = ensureArrayLength(teamState.startTime, tasksCount, null)
     const endTimes = ensureArrayLength(teamState.endTime, tasksCount, null)
     const activeStart = toDateValue(startTimes[taskIndex])
@@ -475,7 +481,7 @@ const syncGameTeamProgressForStatus = async ({
 
     if (!hasNextTask) {
       if (activeEnd) {
-        return updateTeam(teamState, { activeNum: nextIndex })
+        return updateTeam(teamState, { activeNum: nextStep })
       }
 
       if (activeStart && taskDuration > 0) {
@@ -488,7 +494,7 @@ const syncGameTeamProgressForStatus = async ({
           const failedAt = getTimeoutFailedAt(teamState, taskIndex, activeStart)
           return updateTeam(teamState, {
             ...buildTimeoutFailureUpdates(teamState, taskIndex, failedAt),
-            activeNum: nextIndex,
+            activeNum: nextStep,
           })
         }
       }
@@ -500,7 +506,7 @@ const syncGameTeamProgressForStatus = async ({
       const failedAt = toDateValue(activeFailure.failedAt)
       if (!failedAt) return teamState
       if (breakDuration <= 0) {
-        return advanceToNextTask(teamState, nextIndex, failedAt)
+        return advanceToNextTask(teamState, nextStep, nextIndex, failedAt)
       }
 
       const elapsedAfterFailure = Math.max(
@@ -510,6 +516,7 @@ const syncGameTeamProgressForStatus = async ({
       if (elapsedAfterFailure >= breakDuration) {
         return advanceToNextTask(
           teamState,
+          nextStep,
           nextIndex,
           new Date(failedAt.getTime() + breakDuration * 1000),
         )
@@ -520,7 +527,7 @@ const syncGameTeamProgressForStatus = async ({
 
     if (activeEnd) {
       if (breakDuration <= 0) {
-        return advanceToNextTask(teamState, nextIndex, activeEnd)
+        return advanceToNextTask(teamState, nextStep, nextIndex, activeEnd)
       }
 
       const elapsedAfterEnd = Math.max(
@@ -530,6 +537,7 @@ const syncGameTeamProgressForStatus = async ({
       if (elapsedAfterEnd >= breakDuration) {
         return advanceToNextTask(
           teamState,
+          nextStep,
           nextIndex,
           new Date(activeEnd.getTime() + breakDuration * 1000),
         )
@@ -552,6 +560,7 @@ const syncGameTeamProgressForStatus = async ({
           if (elapsed >= taskDuration + breakDuration) {
             return advanceToNextTask(
               teamState,
+              nextStep,
               nextIndex,
               new Date(failedAt.getTime() + breakDuration * 1000),
               timeoutUpdates,
@@ -561,7 +570,13 @@ const syncGameTeamProgressForStatus = async ({
           return updateTeam(teamState, timeoutUpdates)
         }
 
-        return advanceToNextTask(teamState, nextIndex, failedAt, timeoutUpdates)
+        return advanceToNextTask(
+          teamState,
+          nextStep,
+          nextIndex,
+          failedAt,
+          timeoutUpdates,
+        )
       }
     }
 
@@ -1024,7 +1039,15 @@ export async function GET(request) {
     const teamsStatus = gameTeams.map((gt) => {
       const teamId = toStringId(gt.teamId)
       const team = teamsById[teamId]
-      const activeNum = gt.activeNum ?? 0
+      const activeTaskStep = Number.isInteger(gt.activeNum) ? gt.activeNum : 0
+      const taskSequence = getTeamTaskSequence(game, gt)
+      const activeTaskIndexRaw = getTaskIndexForStep(game, gt, activeTaskStep)
+      const activeTaskIndex =
+        activeTaskIndexRaw !== null ? activeTaskIndexRaw : tasksCount
+      const nextTaskIndex = getTaskIndexForStep(game, gt, activeTaskStep + 1)
+      const completedRouteTaskIndexes = new Set(
+        taskSequence.slice(0, Math.max(activeTaskStep, 0)),
+      )
       const startTime = Array.isArray(gt.startTime) ? gt.startTime : []
       const endTime = Array.isArray(gt.endTime) ? gt.endTime : []
       const findedCodes = Array.isArray(gt.findedCodes) ? gt.findedCodes : []
@@ -1051,7 +1074,6 @@ export async function GET(request) {
         }
       })
 
-      const activeTaskIndex = activeNum
       const currentFindedCodes = findedCodes[activeTaskIndex] ?? []
       const currentWrongCodes = wrongCodes[activeTaskIndex] ?? []
       const currentBonusCodes = findedBonusCodes[activeTaskIndex] ?? []
@@ -1114,7 +1136,8 @@ export async function GET(request) {
       const isAllTasksStarted =
         startTime.length === tasksCount &&
         startTime.filter(Boolean).length === tasksCount
-      const isTeamFinished = isAllTasksStarted && isActiveTaskFinished
+      const isTeamFinished =
+        activeTaskStep >= tasksCount || (isAllTasksStarted && isActiveTaskFinished)
       const isTeamOnBreak =
         Boolean(breakDuration) && isActiveTaskFinished && !isTeamFinished
 
@@ -1126,7 +1149,11 @@ export async function GET(request) {
 
       // Суммарное время
       let sumTimeSeconds = 0
-      for (let i = 0; i <= activeTaskIndex && i < startTime.length; i += 1) {
+      const routeIndexesForElapsed = taskSequence.slice(
+        0,
+        Math.min(activeTaskStep + 1, tasksCount),
+      )
+      for (const i of routeIndexesForElapsed) {
         if (!startTime[i]) {
           continue
         }
@@ -1210,8 +1237,8 @@ export async function GET(request) {
           ? (game.tasks[activeTaskIndex]?.title ?? '')
           : ''
       const nextTaskTitle =
-        startedTasks < tasksCount && Array.isArray(game.tasks)
-          ? (game.tasks[startedTasks]?.title ?? '')
+        nextTaskIndex !== null && Array.isArray(game.tasks)
+          ? (game.tasks[nextTaskIndex]?.title ?? '')
           : ''
 
       // Фото для photo-игр
@@ -1272,9 +1299,14 @@ export async function GET(request) {
         const endAt = normalizeIsoDate(endTime[taskIndex])
         const startMs = startAt ? Date.parse(startAt) : Number.NaN
         const endMs = endAt ? Date.parse(endAt) : Number.NaN
-        const nextStartAt = normalizeIsoDate(startTime[taskIndex + 1])
+        const taskRouteStep = taskSequence.indexOf(taskIndex)
+        const nextRouteTaskIndex =
+          taskRouteStep >= 0 ? taskSequence[taskRouteStep + 1] : taskIndex + 1
+        const nextStartAt = normalizeIsoDate(startTime[nextRouteTaskIndex])
         const nextStartMs = nextStartAt ? Date.parse(nextStartAt) : Number.NaN
-        const activeTaskIndexInt = Number.isInteger(activeNum) ? activeNum : 0
+        const activeTaskIndexInt = Number.isInteger(activeTaskIndex)
+          ? activeTaskIndex
+          : tasksCount
         const taskFailure = taskFailures.find(
           (item) => item.taskIndex === taskIndex,
         )
@@ -1329,7 +1361,10 @@ export async function GET(request) {
                       task: taskSource,
                     }),
                 )
-        } else if (Number.isFinite(startMs) && taskIndex < activeTaskIndexInt) {
+        } else if (
+          Number.isFinite(startMs) &&
+          completedRouteTaskIndexes.has(taskIndex)
+        ) {
           completedSeconds = normalizedTaskDuration
         } else if (Number.isFinite(startMs) && taskIndex === activeTaskIndexInt) {
           const elapsedForActiveTask = Math.max(
@@ -1364,7 +1399,7 @@ export async function GET(request) {
           Number.isFinite(startMs) &&
           !Number.isFinite(endMs) &&
           (Boolean(taskFailure) ||
-            taskIndex < activeTaskIndexInt ||
+            completedRouteTaskIndexes.has(taskIndex) ||
             (Number.isFinite(completedSeconds) &&
               normalizedTaskDuration > 0 &&
               completedSeconds >= normalizedTaskDuration))
@@ -1511,7 +1546,15 @@ export async function GET(request) {
         teamName: team?.name ?? 'Без названия',
         unreadTeamMessagesCount: Number(unreadMessagesByTeamId[teamId] || 0),
         members: teamMembersByTeamId.get(teamId) || [],
+        activeTaskStep,
         activeTaskIndex,
+        taskSequence,
+        taskSequenceLabels: taskSequence.map((taskIndex, step) => ({
+          step,
+          taskIndex,
+          taskNumber: taskIndex + 1,
+          title: normalizeText(game.tasks?.[taskIndex]?.title),
+        })),
         startedTasks,
         currentTaskTitle,
         nextTaskTitle,
@@ -1568,8 +1611,8 @@ export async function GET(request) {
     //    - на перерыве: кто дольше на перерыве (меньше осталось) — выше
     //    - в активной фазе: кто дольше на задании — выше
     teamsStatus.sort((a, b) => {
-      if (b.activeTaskIndex !== a.activeTaskIndex) {
-        return b.activeTaskIndex - a.activeTaskIndex
+      if (b.activeTaskStep !== a.activeTaskStep) {
+        return b.activeTaskStep - a.activeTaskStep
       }
       if (a.isTeamFinished || b.isTeamFinished) {
         if (a.isTeamFinished && !b.isTeamFinished) return -1
