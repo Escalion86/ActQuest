@@ -152,6 +152,8 @@ export async function GET(request) {
         breakDuration: 1,
         taskFailurePenalty: 1,
         manyCodesPenalty: 1,
+        taskDistributionMode: 1,
+        taskDistributionTemplate: 1,
         individualStart: 1,
         isRated: 1,
         hidden: 1,
