@@ -1,9 +1,13 @@
-import { ensureDateISOString } from '@helpers/idAndDate'
+import { ensureDateISOString } from './idAndDate.js'
 import {
   buildDefaultPrequel,
   normalizePrequelProgress,
   normalizePrequelConfig,
-} from '@helpers/normalizePrequel'
+} from './normalizePrequel.js'
+import {
+  normalizeTaskDistributionMode,
+  normalizeTaskDistributionTemplate,
+} from './taskDistribution.js'
 
 const ensureString = (value, fallback = '') => {
   if (typeof value === 'string') {
@@ -491,6 +495,14 @@ const normalizePrequelForCabinet = (prequel) => ({
   ...normalizePrequelConfig(prequel),
 })
 
+const normalizeStoredTaskDistributionTemplate = (template, tasksCount) =>
+  normalizeTaskDistributionTemplate(
+    (Array.isArray(template) ? template : []).map((block) =>
+      (Array.isArray(block) ? block : [block]).map((taskIndex) => Number(taskIndex) + 1),
+    ),
+    tasksCount,
+  )
+
 const computeTasksStats = (tasks = []) => {
   if (!Array.isArray(tasks) || tasks.length === 0) {
     return { total: 0, bonus: 0, canceled: 0 }
@@ -581,6 +593,13 @@ const normalizeGameForCabinet = (game) => {
     breakDuration: ensureNumber(game.breakDuration, 0),
     taskFailurePenalty: ensureNumber(game.taskFailurePenalty, 0),
     manyCodesPenalty: normalizeManyCodesPenalty(game.manyCodesPenalty),
+    taskDistributionMode: normalizeTaskDistributionMode(
+      game.taskDistributionMode,
+    ),
+    taskDistributionTemplate: normalizeStoredTaskDistributionTemplate(
+      game.taskDistributionTemplate,
+      Array.isArray(game.tasks) ? game.tasks.length : 0,
+    ),
     individualStart: ensureBoolean(game.individualStart, false),
     isRated: ensureBoolean(game.isRated, true),
     hidden: ensureBoolean(game.hidden, true),

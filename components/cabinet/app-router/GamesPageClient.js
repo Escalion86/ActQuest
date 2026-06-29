@@ -33,6 +33,10 @@ import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import { toStringId } from '@helpers/idAndDate'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
+import {
+  normalizeTaskDistributionMode,
+  normalizeTaskDistributionTemplate,
+} from '@helpers/taskDistribution'
 import requestApiJson from '@helpers/requestApiJson'
 import { resolveGameEntryHrefFromGame } from '@helpers/resolveGameEntryHref'
 import {
@@ -579,6 +583,16 @@ const cloneGameDraft = (game) => {
   return JSON.parse(JSON.stringify(game))
 }
 
+const normalizeStoredTaskDistributionTemplate = (template, tasksCount) =>
+  normalizeTaskDistributionTemplate(
+    (Array.isArray(template) ? template : []).map((block) =>
+      (Array.isArray(block) ? block : [block]).map(
+        (taskIndex) => Number(taskIndex) + 1,
+      ),
+    ),
+    tasksCount,
+  )
+
 const buildUpdatePayload = (game) => {
   const isPhotoGame = game?.type === 'photo'
   const prices = (game.prices ?? []).map((price) => ({
@@ -807,6 +821,9 @@ const buildUpdatePayload = (game) => {
 
   const normalizedIsRated = Boolean(game.isRated ?? true)
   const normalizedPrequel = normalizePrequelConfig(game?.prequel)
+  const taskDistributionMode = normalizeTaskDistributionMode(
+    game.taskDistributionMode,
+  )
 
   return {
     name: game.name,
@@ -933,6 +950,14 @@ const buildUpdatePayload = (game) => {
     breakDuration: Number(game.breakDuration) || 0,
     taskFailurePenalty: Number(game.taskFailurePenalty) || 0,
     manyCodesPenalty,
+    taskDistributionMode,
+    taskDistributionTemplate:
+      taskDistributionMode === 'random'
+        ? normalizeStoredTaskDistributionTemplate(
+            game.taskDistributionTemplate,
+            Array.isArray(game.tasks) ? game.tasks.length : 0,
+          )
+        : [],
     individualStart: Boolean(game.individualStart),
     isRated: normalizedIsRated,
     seasonId:
@@ -2713,6 +2738,8 @@ const GamesPage = ({
         prices: [],
         finances: [],
         tasks: [],
+        taskDistributionMode: 'linear',
+        taskDistributionTemplate: [],
         moderators: [],
         agents: [],
         agentNotifications: {
@@ -2793,6 +2820,18 @@ const GamesPage = ({
           baseDraft.tasks = Array.isArray(normalizedSource.tasks)
             ? JSON.parse(JSON.stringify(normalizedSource.tasks))
             : []
+          baseDraft.taskDistributionMode = normalizeTaskDistributionMode(
+            normalizedSource.taskDistributionMode,
+          )
+          baseDraft.taskDistributionTemplate =
+            baseDraft.taskDistributionMode === 'random'
+              ? normalizeStoredTaskDistributionTemplate(
+                  normalizedSource.taskDistributionTemplate,
+                  Array.isArray(normalizedSource.tasks)
+                    ? normalizedSource.tasks.length
+                    : 0,
+                )
+              : []
         }
 
         if (createGameCloneOptions.locations) {
@@ -4923,6 +4962,13 @@ const GamesPage = ({
     }
 
     const draft = cloneGameDraft(game)
+    draft.taskDistributionMode = normalizeTaskDistributionMode(
+      game.taskDistributionMode,
+    )
+    draft.taskDistributionTemplate = normalizeStoredTaskDistributionTemplate(
+      game.taskDistributionTemplate,
+      Array.isArray(game.tasks) ? game.tasks.length : 0,
+    )
     setEditingGame(draft)
     setEditingBaselineGame(cloneGameDraft(draft))
     setHasUnsavedChanges(false)
@@ -8144,6 +8190,10 @@ GamesPage.propTypes = {
       breakDuration: PropTypes.number,
       taskFailurePenalty: PropTypes.number,
       manyCodesPenalty: PropTypes.arrayOf(PropTypes.number),
+      taskDistributionMode: PropTypes.oneOf(['linear', 'random']),
+      taskDistributionTemplate: PropTypes.arrayOf(
+        PropTypes.arrayOf(PropTypes.number),
+      ),
       individualStart: PropTypes.bool,
       isRated: PropTypes.bool,
       hidden: PropTypes.bool,

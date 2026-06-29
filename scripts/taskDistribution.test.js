@@ -14,6 +14,7 @@ import {
   taskHasProgress,
   validateTaskDistributionTemplate,
 } from '../helpers/taskDistribution.js'
+import normalizeGameForCabinet from '../helpers/normalizeGameForCabinet.js'
 
 test('normalizes mixed UI template to zero-based blocks', () => {
   assert.deepEqual(
@@ -173,4 +174,18 @@ test('detects progress markers by source task index', () => {
     ),
     true,
   )
+})
+
+test('normalizes game distribution fields for cabinet', () => {
+  const game = normalizeGameForCabinet({
+    _id: 'game-1',
+    name: 'Game',
+    type: 'classic',
+    tasks: [{ title: 'A' }, { title: 'B' }],
+    taskDistributionMode: 'random',
+    taskDistributionTemplate: [[0, 1]],
+  })
+
+  assert.equal(game.taskDistributionMode, 'random')
+  assert.deepEqual(game.taskDistributionTemplate, [[0, 1]])
 })
