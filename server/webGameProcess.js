@@ -7,6 +7,7 @@ import ensureArrayCapacity from '@helpers/ensureArrayCapacity'
 import getGameProcessFinishingPlace from '@helpers/getGameProcessFinishingPlace'
 import getLocationTimeZone from '@helpers/locationTimeZone'
 import sanitize from '@helpers/sanitize'
+import { getTaskIndexForStep } from '@helpers/taskDistribution'
 import taskText from 'telegram/func/taskText'
 
 const PROMPT_TEXT = {
@@ -51,16 +52,18 @@ const endTaskForIndex = (endTime, taskIndex, tasksLength) => {
   return endTimeTemp
 }
 
-const prepareNextTaskStart = (startTime, taskIndex, tasksLength) => {
+const prepareTaskStart = (startTime, taskIndex, tasksLength) => {
   const startTimeTemp = ensureArrayCapacity(startTime, tasksLength)
-  if (taskIndex < tasksLength - 1) {
-    startTimeTemp[taskIndex + 1] = new Date()
+  if (taskIndex >= 0 && taskIndex < tasksLength) {
+    startTimeTemp[taskIndex] = new Date()
   }
   return startTimeTemp
 }
 
 const resetForcedClueForTask = (forcedClues, taskIndex, tasksLength) => {
-  if (taskIndex < 0 || taskIndex >= tasksLength) return null
+  if (!Number.isInteger(taskIndex) || taskIndex < 0 || taskIndex >= tasksLength) {
+    return null
+  }
   const forcedCluesTemp = ensureArrayCapacity(forcedClues, tasksLength, 0)
   forcedCluesTemp[taskIndex] = 0
   return forcedCluesTemp
@@ -70,8 +73,9 @@ const initializeTeamProgress = async (gameTeam, game, GamesTeams) => {
   const { _id: gameTeamId } = gameTeam
   const tasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
   const startTime = new Array(tasksCount).fill(null)
-  if (tasksCount > 0) {
-    startTime[0] = new Date()
+  const firstTaskIndex = getTaskIndexForStep(game, gameTeam, 0)
+  if (firstTaskIndex !== null) {
+    startTime[firstTaskIndex] = new Date()
   }
   const endTime = new Array(tasksCount).fill(null)
   const {
@@ -309,10 +313,17 @@ const webGameProcess = async ({
     ? Math.max(resolvedGame.cluesDuration, 0)
     : 1200
 
-  const activeIndexRaw = Number.isInteger(resolvedGameTeam.activeNum)
+  const activeStep = Number.isInteger(resolvedGameTeam.activeNum)
     ? resolvedGameTeam.activeNum
     : 0
-  const activeTaskIndex = Math.min(Math.max(activeIndexRaw, 0), tasksCount - 1)
+  const activeTaskIndex = getTaskIndexForStep(
+    resolvedGame,
+    resolvedGameTeam,
+    activeStep,
+  )
+  if (activeTaskIndex === null) {
+    return { message: buildGameFinishedMessage(resolvedGame) }
+  }
   const currentTask = tasks[activeTaskIndex]
 
   if (!currentTask) {
@@ -593,16 +604,19 @@ const webGameProcess = async ({
 
   if (isTaskComplete) {
     const endTimeTemp = endTaskForIndex(endTime, activeTaskIndex, tasksCount)
-    const startTimeTemp = prepareNextTaskStart(
-      startTime,
-      activeTaskIndex,
-      tasksCount
+    const nextStep = activeStep + 1
+    const nextTaskIndex = getTaskIndexForStep(
+      resolvedGame,
+      resolvedGameTeam,
+      nextStep,
     )
-
-    const nextTaskIndex = activeTaskIndex + 1
+    const startTimeTemp =
+      nextTaskIndex !== null
+        ? prepareTaskStart(startTime, nextTaskIndex, tasksCount)
+        : ensureArrayCapacity(startTime, tasksCount)
 
     // Если следующее задание отсутствует — игра завершена.
-    if (nextTaskIndex >= tasksCount) {
+    if (nextTaskIndex === null) {
       const lastTaskPostMessage = getTaskPostCompletionMessage(currentTask)
       const forcedCluesTemp = resetForcedClueForTask(
         forcedClues,
@@ -614,7 +628,7 @@ const webGameProcess = async ({
         ...updates,
         startTime: startTimeTemp,
         endTime: endTimeTemp,
-        activeNum: nextTaskIndex,
+        activeNum: nextStep,
         ...(forcedCluesTemp ? { forcedClues: forcedCluesTemp } : {}),
       }
 
@@ -677,7 +691,7 @@ const webGameProcess = async ({
       ...updates,
       startTime: startTimeTemp,
       endTime: endTimeTemp,
-      activeNum: nextTaskIndex,
+      activeNum: nextStep,
       ...(forcedCluesTemp ? { forcedClues: forcedCluesTemp } : {}),
     }
 

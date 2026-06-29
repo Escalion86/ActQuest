@@ -8,6 +8,7 @@ import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
 import getGameProcessFinishingPlace from '@helpers/getGameProcessFinishingPlace'
 import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
 import resolveTeamMembershipForIdentity from '@helpers/resolveTeamMembershipForIdentity'
+import { getTaskIndexForStep } from '@helpers/taskDistribution'
 
 const isGameTaskDebugEnabled =
   process.env.GAME_TASK_DEBUG === '1' || process.env.SESSION_DEBUG === '1'
@@ -339,6 +340,17 @@ const buildCaptainActions = ({ game, isCaptain }) => ({
   canFailTask: false,
 })
 
+const getActiveTaskStep = (gameTeam) =>
+  Number.isInteger(gameTeam?.activeNum) ? gameTeam.activeNum : 0
+
+const getActiveSourceTaskIndex = (game, gameTeam) =>
+  getTaskIndexForStep(game, gameTeam, getActiveTaskStep(gameTeam))
+
+const getNextTaskStep = (gameTeam) => getActiveTaskStep(gameTeam) + 1
+
+const getNextSourceTaskIndex = (game, gameTeam) =>
+  getTaskIndexForStep(game, gameTeam, getNextTaskStep(gameTeam))
+
 const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
   const base = buildCaptainActions({ game, isCaptain })
   if (!isCaptain) {
@@ -347,10 +359,8 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
 
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
   const tasksCount = tasks.length
-  const activeTaskIndex = Number.isInteger(gameTeam?.activeNum)
-    ? gameTeam.activeNum
-    : 0
-  if (activeTaskIndex < 0 || activeTaskIndex >= tasksCount) {
+  const activeTaskIndex = getActiveSourceTaskIndex(game, gameTeam)
+  if (activeTaskIndex === null || activeTaskIndex < 0 || activeTaskIndex >= tasksCount) {
     return base
   }
 
@@ -455,13 +465,11 @@ const finishBreakForCaptain = async ({
     }
   }
 
-  const activeNumRaw = Number.isInteger(gameTeam?.activeNum)
-    ? gameTeam.activeNum
-    : 0
-  const activeTaskIndex = Math.max(Math.min(activeNumRaw, tasksCount - 1), 0)
-  const nextTaskIndex = activeTaskIndex + 1
+  const nextStep = getNextTaskStep(gameTeam)
+  const activeTaskIndex = getActiveSourceTaskIndex(game, gameTeam)
+  const nextTaskIndex = getNextSourceTaskIndex(game, gameTeam)
 
-  if (nextTaskIndex >= tasksCount) {
+  if (activeTaskIndex === null || nextTaskIndex === null) {
     return {
       gameTeam,
       result: { message: 'Игра уже завершена.' },
@@ -532,7 +540,7 @@ const finishBreakForCaptain = async ({
     .findByIdAndUpdate(
       gameTeam._id,
       {
-        activeNum: nextTaskIndex,
+        activeNum: nextStep,
         startTime: nextStartTimes,
         forcedClues: nextForcedClues,
       },
@@ -543,7 +551,7 @@ const finishBreakForCaptain = async ({
   return {
     gameTeam: updatedGameTeam ?? {
       ...gameTeam,
-      activeNum: nextTaskIndex,
+      activeNum: nextStep,
       startTime: nextStartTimes,
       forcedClues: nextForcedClues,
     },
@@ -581,11 +589,9 @@ const forceClueForCaptain = async ({
 
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
   const tasksCount = tasks.length
-  const activeTaskIndex = Number.isInteger(gameTeam?.activeNum)
-    ? gameTeam.activeNum
-    : 0
+  const activeTaskIndex = getActiveSourceTaskIndex(game, gameTeam)
 
-  if (activeTaskIndex < 0 || activeTaskIndex >= tasksCount) {
+  if (activeTaskIndex === null || activeTaskIndex < 0 || activeTaskIndex >= tasksCount) {
     return {
       gameTeam,
       result: { message: 'Задание уже завершено.' },
@@ -738,11 +744,9 @@ const failTaskForCaptain = async ({
 
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
   const tasksCount = tasks.length
-  const activeTaskIndex = Number.isInteger(gameTeam?.activeNum)
-    ? gameTeam.activeNum
-    : 0
+  const activeTaskIndex = getActiveSourceTaskIndex(game, gameTeam)
 
-  if (activeTaskIndex < 0 || activeTaskIndex >= tasksCount) {
+  if (activeTaskIndex === null || activeTaskIndex < 0 || activeTaskIndex >= tasksCount) {
     return {
       gameTeam,
       result: { message: 'Задание уже завершено.' },
@@ -789,7 +793,8 @@ const failTaskForCaptain = async ({
   }
 
   const failedAt = new Date()
-  const nextTaskIndex = activeTaskIndex + 1
+  const nextStep = getNextTaskStep(gameTeam)
+  const nextTaskIndex = getNextSourceTaskIndex(game, gameTeam)
   const breakDurationSeconds = parseDurationSeconds(game?.breakDuration, 0)
   const existingFailures = normalizeTaskFailures(gameTeam.taskFailures)
   const nextTaskFailures = [
@@ -810,13 +815,13 @@ const failTaskForCaptain = async ({
     taskFailures: nextTaskFailures,
   }
 
-  if (breakDurationSeconds <= 0 || nextTaskIndex >= tasksCount) {
+  if (breakDurationSeconds <= 0 || nextTaskIndex === null) {
     const nextStartTimes = ensureArrayWithLength(
       gameTeam.startTime,
       tasksCount,
       null,
     ).map(cloneDateValue)
-    if (nextTaskIndex < tasksCount) {
+    if (nextTaskIndex !== null) {
       nextStartTimes[nextTaskIndex] = failedAt
     }
 
@@ -828,11 +833,11 @@ const failTaskForCaptain = async ({
       const numeric = Number(value)
       return Number.isFinite(numeric) ? numeric : 0
     })
-    if (nextTaskIndex < tasksCount) {
+    if (nextTaskIndex !== null) {
       nextForcedClues[nextTaskIndex] = 0
     }
 
-    updates.activeNum = nextTaskIndex
+    updates.activeNum = nextStep
     updates.startTime = nextStartTimes
     updates.forcedClues = nextForcedClues
   }
@@ -847,7 +852,7 @@ const failTaskForCaptain = async ({
       message: '<b>Задание провалено по решению команды.</b>',
       messages: ['Задание провалено по решению команды.'],
       shouldResetMessages:
-        breakDurationSeconds <= 0 || nextTaskIndex >= tasksCount,
+        breakDurationSeconds <= 0 || nextTaskIndex === null,
     },
   }
 }
@@ -872,17 +877,16 @@ const computeTaskHtml = async ({
   const maybeHandleAutomaticProgressOnce = async (teamState) => {
     if (!teamState || tasksCount === 0) return teamState
 
-    const activeNumValue = Number.isInteger(teamState?.activeNum)
-      ? teamState.activeNum
-      : 0
-    const clampedIndex = Math.max(Math.min(activeNumValue, tasksCount - 1), 0)
+    const activeNumValue = getActiveTaskStep(teamState)
+    const activeTaskIndex = getActiveSourceTaskIndex(game, teamState)
 
-    if (activeNumValue >= tasksCount) {
+    if (activeNumValue >= tasksCount || activeTaskIndex === null) {
       return teamState
     }
 
-    const nextIndex = clampedIndex + 1
-    const hasNextTask = nextIndex < tasksCount
+    const nextStep = activeNumValue + 1
+    const nextIndex = getTaskIndexForStep(game, teamState, nextStep)
+    const hasNextTask = nextIndex !== null
 
     const startTimes = ensureArrayWithLength(
       teamState.startTime,
@@ -890,10 +894,10 @@ const computeTaskHtml = async ({
       null,
     )
     const endTimes = ensureArrayWithLength(teamState.endTime, tasksCount, null)
-    const activeFailure = getTaskFailureEntry(teamState, clampedIndex)
+    const activeFailure = getTaskFailureEntry(teamState, activeTaskIndex)
 
-    const activeStart = ensureDateValue(startTimes[clampedIndex])
-    const activeEnd = ensureDateValue(endTimes[clampedIndex])
+    const activeStart = ensureDateValue(startTimes[activeTaskIndex])
+    const activeEnd = ensureDateValue(endTimes[activeTaskIndex])
     const nowMs = Date.now()
 
     const buildTimeoutFailureUpdates = (
@@ -932,8 +936,8 @@ const computeTaskHtml = async ({
             taskDurationSeconds -
               getClueAdvanceSecondsForTask({
                 gameTeam: teamState,
-                taskIndex: clampedIndex,
-                task: tasks[clampedIndex],
+                taskIndex: activeTaskIndex,
+                task: tasks[activeTaskIndex],
               }),
             0,
           ) *
@@ -951,14 +955,14 @@ const computeTaskHtml = async ({
 
     if (!hasNextTask) {
       if (activeEnd) {
-        return updateActiveNum(nextIndex)
+        return updateActiveNum(nextStep)
       }
 
       if (activeStart && taskDurationSeconds > 0) {
         const elapsedSinceStart = getEffectiveTaskElapsedSeconds({
           gameTeam: teamState,
-          taskIndex: clampedIndex,
-          task: tasks[clampedIndex],
+          taskIndex: activeTaskIndex,
+          task: tasks[activeTaskIndex],
           startTime: activeStart,
           now: new Date(nowMs),
         })
@@ -966,8 +970,8 @@ const computeTaskHtml = async ({
         if (elapsedSinceStart >= taskDurationSeconds) {
           const failedAt = getTimeoutFailedAt()
           return updateActiveNum(
-            nextIndex,
-            buildTimeoutFailureUpdates(clampedIndex, failedAt),
+            nextStep,
+            buildTimeoutFailureUpdates(activeTaskIndex, failedAt),
           )
         }
       }
@@ -994,7 +998,7 @@ const computeTaskHtml = async ({
       ).map((value) => (Number.isFinite(value) ? value : 0))
       forcedCluesUpdates[nextIndex] = 0
 
-      return updateActiveNum(nextIndex, {
+      return updateActiveNum(nextStep, {
         ...extraUpdates,
         startTime: startTimeUpdates,
         forcedClues: forcedCluesUpdates,
@@ -1044,10 +1048,10 @@ const computeTaskHtml = async ({
 
     if (activeStart && taskDurationSeconds > 0) {
       const elapsedSinceStart = getEffectiveTaskElapsedSeconds({
-        gameTeam: teamState,
-        taskIndex: clampedIndex,
-        task: tasks[clampedIndex],
-        startTime: activeStart,
+          gameTeam: teamState,
+          taskIndex: activeTaskIndex,
+          task: tasks[activeTaskIndex],
+          startTime: activeStart,
         now: new Date(nowMs),
       })
 
@@ -1059,20 +1063,20 @@ const computeTaskHtml = async ({
             autoProgressMessages.push('<b>Перерыв завершён.</b>')
             return advanceToNextTask(
               new Date(failedAt.getTime() + breakDurationSeconds * 1000),
-              buildTimeoutFailureUpdates(clampedIndex, failedAt),
+              buildTimeoutFailureUpdates(activeTaskIndex, failedAt),
             )
           }
 
           return updateActiveNum(
             activeNumValue,
-            buildTimeoutFailureUpdates(clampedIndex, failedAt),
+            buildTimeoutFailureUpdates(activeTaskIndex, failedAt),
           )
         } else {
           autoProgressMessages.push('<b>Время на задание вышло.</b>')
           const failedAt = getTimeoutFailedAt()
           return advanceToNextTask(
             failedAt,
-            buildTimeoutFailureUpdates(clampedIndex, failedAt),
+            buildTimeoutFailureUpdates(activeTaskIndex, failedAt),
           )
         }
       }
@@ -1118,9 +1122,7 @@ const computeTaskHtml = async ({
     }
   }
 
-  const activeNumRaw = Number.isInteger(effectiveGameTeam?.activeNum)
-    ? effectiveGameTeam.activeNum
-    : 0
+  const activeNumRaw = getActiveTaskStep(effectiveGameTeam)
 
   if (autoProgressMessages.length > 0) {
     const baseMessages = Array.isArray(processResult?.messages)
@@ -1156,7 +1158,13 @@ const computeTaskHtml = async ({
 
   if (isGameStarted && !isGameFinished && tasksCount > 0) {
     if (hasCompletedAllTasks) {
-      const lastTask = tasks[tasksCount - 1] ?? null
+      const lastTaskIndex = getTaskIndexForStep(
+        game,
+        effectiveGameTeam,
+        tasksCount - 1,
+      )
+      const lastTask =
+        lastTaskIndex !== null ? tasks[lastTaskIndex] : tasks[tasksCount - 1]
       const finishingPlace = getGameProcessFinishingPlace(game)
       const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
       if (finishingPlace) {
@@ -1187,10 +1195,11 @@ const computeTaskHtml = async ({
         null,
       )
 
-      const activeTaskIndex = Math.max(
-        Math.min(activeNumRaw, tasksCount - 1),
-        0,
-      )
+      const activeTaskIndex = getActiveSourceTaskIndex(game, effectiveGameTeam)
+      if (activeTaskIndex === null) {
+        taskHtml = '<b>Поздравляем! Вы завершили игру.</b>'
+        taskState = 'completed'
+      } else {
       const activeTaskEndTime = ensureDateValue(endTimes[activeTaskIndex])
       const activeTaskStartTime = ensureDateValue(startTimes[activeTaskIndex])
       const activeTaskFailure = getTaskFailureEntry(
@@ -1317,19 +1326,32 @@ const computeTaskHtml = async ({
 
         taskState = 'active'
 
-        if (activeTaskIndex > 0) {
-          const previousTask = tasks[activeTaskIndex - 1] ?? null
+        if (activeNumRaw > 0) {
+          const previousTaskIndex = getTaskIndexForStep(
+            game,
+            effectiveGameTeam,
+            activeNumRaw - 1,
+          )
+          const previousTask =
+            previousTaskIndex !== null ? tasks[previousTaskIndex] : null
           const previousPostMessage = getTaskPostCompletionMessage(previousTask)
           if (previousPostMessage) {
             postCompletionMessage = previousPostMessage
           }
         }
       }
+      }
     }
   }
 
   if (!taskHtml && (hasCompletedAllTasks || isGameFinished) && tasksCount > 0) {
-    const lastTask = tasks[tasksCount - 1] ?? null
+    const lastTaskIndex = getTaskIndexForStep(
+      game,
+      effectiveGameTeam,
+      tasksCount - 1,
+    )
+    const lastTask =
+      lastTaskIndex !== null ? tasks[lastTaskIndex] : tasks[tasksCount - 1]
     const finishingPlace = getGameProcessFinishingPlace(game)
     const completionParts = ['<b>Поздравляем! Вы завершили игру.</b>']
     if (finishingPlace) {
