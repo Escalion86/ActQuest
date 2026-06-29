@@ -149,6 +149,25 @@ export const buildTaskSequenceFromTemplate = (template, random = Math.random) =>
     return items
   })
 
+export const mergeTaskSequenceWithLockedPrefix = (generatedSequence, lockedPrefix) => {
+  const locked = Array.isArray(lockedPrefix)
+    ? lockedPrefix
+        .map((item) => toIntegerOrNull(item))
+        .filter((item) => item !== null)
+    : []
+  const lockedSet = new Set(locked)
+  const generated = Array.isArray(generatedSequence)
+    ? generatedSequence
+        .map((item) => toIntegerOrNull(item))
+        .filter((item) => item !== null)
+    : []
+
+  return [
+    ...locked,
+    ...generated.filter((taskIndex) => !lockedSet.has(taskIndex)),
+  ]
+}
+
 export const isValidTaskSequence = (sequence, tasksCount) => {
   const expected = buildLinearTaskSequence(tasksCount)
   if (!Array.isArray(sequence) || sequence.length !== expected.length) return false

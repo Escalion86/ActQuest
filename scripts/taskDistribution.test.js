@@ -9,6 +9,7 @@ import {
   getTaskIndexForStep,
   getTeamTaskSequence,
   isValidTaskSequence,
+  mergeTaskSequenceWithLockedPrefix,
   normalizeTaskDistributionMode,
   normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionTemplate,
@@ -96,6 +97,13 @@ test('builds sequence by shuffling inside blocks only', () => {
   assert.deepEqual(sequence.slice(0, 3).sort((a, b) => a - b), [0, 1, 2])
   assert.deepEqual(sequence.slice(3, 5).sort((a, b) => a - b), [3, 4])
   assert.equal(sequence[5], 5)
+})
+
+test('merges generated sequence without moving locked prefix tasks', () => {
+  assert.deepEqual(
+    mergeTaskSequenceWithLockedPrefix([1, 3, 2, 0], [2, 0]),
+    [2, 0, 1, 3],
+  )
 })
 
 test('uses team template before game template and falls back to linear', () => {
