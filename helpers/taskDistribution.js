@@ -189,6 +189,26 @@ export const getTeamTaskSequence = (game, gameTeam) => {
     : buildLinearTaskSequence(tasksCount)
 }
 
+export const getTaskDistributionStartErrors = (game, gameTeams = []) => {
+  if (normalizeTaskDistributionMode(game?.taskDistributionMode) !== 'random') {
+    return []
+  }
+
+  const tasksCount = Array.isArray(game?.tasks) ? game.tasks.length : 0
+  const teams = Array.isArray(gameTeams) ? gameTeams : []
+  const invalidTeamsCount = teams.filter(
+    (gameTeam) => !isValidTaskSequence(gameTeam?.taskSequence, tasksCount),
+  ).length
+
+  return invalidTeamsCount > 0
+    ? [
+        invalidTeamsCount === 1
+          ? 'Сначала распределите задания для команды.'
+          : `Сначала распределите задания для всех команд. Не распределено команд: ${invalidTeamsCount}.`,
+      ]
+    : []
+}
+
 export const getTaskIndexForStep = (game, gameTeam, step) => {
   const sequence = getTeamTaskSequence(game, gameTeam)
   const stepIndex = toIntegerOrNull(step)

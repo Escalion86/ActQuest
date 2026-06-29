@@ -57,3 +57,15 @@ test('preserves manual adjustments and removes system clue penalties on game sta
     preservedNamedAdjustment,
   ])
 })
+
+test('does not include task distribution fields in start progress reset', () => {
+  const result = buildGameStartProgressUpdate({
+    gameTasksCount: 3,
+    startImmediately: true,
+  })
+
+  assert.equal(Object.hasOwn(result, 'taskSequence'), false)
+  assert.equal(Object.hasOwn(result, 'taskSequenceSource'), false)
+  assert.equal(Object.hasOwn(result, 'taskSequenceGeneratedAt'), false)
+  assert.equal(Object.hasOwn(result, 'taskDistributionTemplate'), false)
+})

@@ -6,6 +6,7 @@ import {
   buildTaskSequenceFromTemplate,
   formatTaskDistributionTemplate,
   getLockedTaskSequencePrefix,
+  getTaskDistributionStartErrors,
   getTaskIndexForStep,
   getTeamTaskSequence,
   isValidTaskSequence,
@@ -119,6 +120,35 @@ test('uses team template before game template and falls back to linear', () => {
   )
   assert.deepEqual(getTeamTaskSequence({ tasks: [{}, {}] }, {}), [0, 1])
   assert.deepEqual(buildLinearTaskSequence(3), [0, 1, 2])
+})
+
+test('blocks random game start until every team has a valid sequence', () => {
+  const game = {
+    tasks: [{}, {}, {}],
+    taskDistributionMode: 'random',
+  }
+
+  assert.deepEqual(
+    getTaskDistributionStartErrors(game, [
+      { taskSequence: [2, 0, 1] },
+      { taskSequence: [0, 1] },
+    ]),
+    ['Сначала распределите задания для команды.'],
+  )
+  assert.deepEqual(
+    getTaskDistributionStartErrors(game, [
+      { taskSequence: [2, 0, 1] },
+      { taskSequence: [1, 2, 0] },
+    ]),
+    [],
+  )
+  assert.deepEqual(
+    getTaskDistributionStartErrors(
+      { tasks: [{}, {}, {}], taskDistributionMode: 'linear' },
+      [{ taskSequence: [] }],
+    ),
+    [],
+  )
 })
 
 test('validates task sequence exact zero-based coverage once each', () => {
