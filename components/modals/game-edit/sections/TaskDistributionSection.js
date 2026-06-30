@@ -15,6 +15,27 @@ import {
 const buildDefaultTemplate = (tasksCount) =>
   tasksCount > 0 ? [Array.from({ length: tasksCount }, (_, index) => index)] : []
 
+const getDropTargetFromPoint = (clientX, clientY) => {
+  if (typeof document === 'undefined') return null
+
+  const element = document.elementFromPoint(clientX, clientY)
+  const targetElement = element?.closest('[data-task-distribution-drop-target="true"]')
+  if (!targetElement) return null
+
+  const blockIndex = Number(targetElement.dataset.blockIndex)
+  if (!Number.isInteger(blockIndex)) return null
+
+  const beforeTaskIndex =
+    targetElement.dataset.beforeTaskIndex === undefined
+      ? null
+      : Number(targetElement.dataset.beforeTaskIndex)
+
+  return {
+    blockIndex,
+    beforeTaskIndex: Number.isInteger(beforeTaskIndex) ? beforeTaskIndex : null,
+  }
+}
+
 const TaskDistributionSection = ({
   selectedGame,
   updateSelectedGame,
@@ -22,6 +43,7 @@ const TaskDistributionSection = ({
 }) => {
   const [isConstructorOpen, setIsConstructorOpen] = useState(false)
   const [draggedTaskIndex, setDraggedTaskIndex] = useState(null)
+  const [activeDropTarget, setActiveDropTarget] = useState(null)
   const tasks = Array.isArray(selectedGame?.tasks) ? selectedGame.tasks : []
   const tasksCount = tasks.length
   const mode = normalizeTaskDistributionMode(selectedGame?.taskDistributionMode)
@@ -85,8 +107,45 @@ const TaskDistributionSection = ({
     updateTemplate(removeTaskFromDistributionTemplate(effectiveTemplate, taskIndex))
   }
 
+  const handleStartTaskDrag = ({ event, taskIndex }) => {
+    if (disabled || event.button > 0) return
+
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    setDraggedTaskIndex(taskIndex)
+    setActiveDropTarget(null)
+  }
+
+  const handleMoveTaskDrag = (event) => {
+    if (draggedTaskIndex === null) return
+
+    event.preventDefault()
+    setActiveDropTarget(getDropTargetFromPoint(event.clientX, event.clientY))
+  }
+
+  const handleEndTaskDrag = (event) => {
+    void event
+    if (draggedTaskIndex === null) return
+
+    if (activeDropTarget) {
+      handleDropTask({
+        taskIndex: draggedTaskIndex,
+        blockIndex: activeDropTarget.blockIndex,
+        beforeTaskIndex: activeDropTarget.beforeTaskIndex,
+      })
+    } else {
+      setDraggedTaskIndex(null)
+    }
+
+    setActiveDropTarget(null)
+  }
+
   const handleDropTask = ({ taskIndex, blockIndex, beforeTaskIndex = null }) => {
     if (!Number.isInteger(taskIndex)) return
+    if (beforeTaskIndex === taskIndex) {
+      setDraggedTaskIndex(null)
+      setActiveDropTarget(null)
+      return
+    }
 
     const blockWithoutDraggedTask = (effectiveTemplate[blockIndex] || []).filter(
       (item) => item !== taskIndex,
@@ -106,6 +165,18 @@ const TaskDistributionSection = ({
     )
     setDraggedTaskIndex(null)
   }
+
+  const getBlockDropClassName = (blockIndex) =>
+    activeDropTarget?.blockIndex === blockIndex &&
+    activeDropTarget.beforeTaskIndex === null
+      ? 'border-cyan-300 shadow-[0_0_0_3px_rgba(34,211,238,0.28)] dark:border-cyan-500 dark:shadow-[0_0_0_3px_rgba(34,211,238,0.2)]'
+      : 'border-slate-200 dark:border-slate-700'
+
+  const getTaskDropClassName = (blockIndex, taskIndex) =>
+    activeDropTarget?.blockIndex === blockIndex &&
+    activeDropTarget.beforeTaskIndex === taskIndex
+      ? 'shadow-[0_0_0_3px_rgba(34,211,238,0.42)] ring-2 ring-cyan-300 dark:ring-cyan-500'
+      : ''
 
   const handleAddBlock = () => {
     updateTemplate([...effectiveTemplate, []])
@@ -174,7 +245,9 @@ const TaskDistributionSection = ({
             {effectiveTemplate.map((block, blockIndex) => (
               <div
                 key={`task-distribution-block-${blockIndex}`}
-                className="rounded-2xl border border-slate-200 p-3 dark:border-slate-700"
+                data-task-distribution-drop-target="true"
+                data-block-index={blockIndex}
+                className={`rounded-2xl border p-3 transition-shadow ${getBlockDropClassName(blockIndex)}`}
                 onDragOver={(event) => {
                   if (draggedTaskIndex !== null) event.preventDefault()
                 }}
@@ -206,8 +279,17 @@ const TaskDistributionSection = ({
                   {block.map((taskIndex) => (
                     <span
                       key={taskIndex}
+                      data-task-distribution-drop-target="true"
+                      data-block-index={blockIndex}
+                      data-before-task-index={taskIndex}
                       draggable={!disabled}
-                      className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-2 py-1 text-sm text-slate-700 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                      className={`inline-flex touch-none select-none items-center gap-2 rounded-lg bg-slate-100 px-2 py-1 text-sm text-slate-700 transition hover:cursor-grab hover:bg-slate-200 active:cursor-grabbing dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 ${draggedTaskIndex === taskIndex ? 'cursor-grabbing opacity-70' : 'cursor-grab'} ${getTaskDropClassName(blockIndex, taskIndex)}`}
+                      onPointerDown={(event) => {
+                        handleStartTaskDrag({ event, taskIndex })
+                      }}
+                      onPointerMove={handleMoveTaskDrag}
+                      onPointerUp={handleEndTaskDrag}
+                      onPointerCancel={handleEndTaskDrag}
                       onDragStart={() => setDraggedTaskIndex(taskIndex)}
                       onDragEnd={() => setDraggedTaskIndex(null)}
                       onDragOver={(event) => {
@@ -231,6 +313,7 @@ const TaskDistributionSection = ({
                         type="button"
                         className="rounded-full px-1 text-xs font-bold text-slate-500 hover:bg-white hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-rose-300"
                         onClick={() => handleRemoveTask(taskIndex)}
+                        onPointerDown={(event) => event.stopPropagation()}
                         disabled={disabled}
                         aria-label={`Убрать задание ${taskIndex + 1} из блока`}
                       >
