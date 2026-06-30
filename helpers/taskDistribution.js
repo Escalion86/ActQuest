@@ -78,6 +78,49 @@ export const formatTaskDistributionTemplate = (template) =>
     })
     .join(',')
 
+export const removeTaskFromDistributionTemplate = (template, taskIndex) => {
+  const task = toStoredIntegerOrNull(taskIndex)
+  const blocks = Array.isArray(template) ? template : []
+
+  if (task === null) {
+    return blocks.map((block) => (Array.isArray(block) ? [...block] : []))
+  }
+
+  return blocks.map((block) =>
+    (Array.isArray(block) ? block : []).filter((item) => item !== task),
+  )
+}
+
+export const moveTaskInDistributionTemplate = ({
+  template,
+  taskIndex,
+  toBlockIndex,
+  toItemIndex = null,
+}) => {
+  const task = toStoredIntegerOrNull(taskIndex)
+  const destinationBlockIndex = toStoredIntegerOrNull(toBlockIndex)
+
+  const nextTemplate = removeTaskFromDistributionTemplate(template, taskIndex)
+
+  if (task === null || destinationBlockIndex === null || destinationBlockIndex < 0) {
+    return nextTemplate
+  }
+
+  while (nextTemplate.length <= destinationBlockIndex) {
+    nextTemplate.push([])
+  }
+
+  const destinationBlock = nextTemplate[destinationBlockIndex]
+  const preparedItemIndex = toStoredIntegerOrNull(toItemIndex)
+  const insertIndex =
+    preparedItemIndex === null
+      ? destinationBlock.length
+      : Math.max(0, Math.min(preparedItemIndex, destinationBlock.length))
+
+  destinationBlock.splice(insertIndex, 0, task)
+  return nextTemplate
+}
+
 export const validateTaskDistributionTemplate = (template, tasksCount) => {
   const count = normalizeTasksCount(tasksCount)
   const blocks = Array.isArray(template) ? template : []

@@ -5,26 +5,15 @@ import Modal from '@components/Modal'
 import ModalSection from '@components/modals/ModalSection'
 import {
   formatTaskDistributionTemplate,
+  moveTaskInDistributionTemplate,
   normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionMode,
+  removeTaskFromDistributionTemplate,
   validateTaskDistributionTemplate,
 } from '@helpers/taskDistribution'
 
 const buildDefaultTemplate = (tasksCount) =>
   tasksCount > 0 ? [Array.from({ length: tasksCount }, (_, index) => index)] : []
-
-const moveTaskToBlock = ({ template, taskIndex, blockIndex }) => {
-  const nextTemplate = template
-    .map((block) => block.filter((item) => item !== taskIndex))
-    .filter((block) => block.length > 0)
-
-  while (nextTemplate.length <= blockIndex) {
-    nextTemplate.push([])
-  }
-
-  nextTemplate[blockIndex] = [...nextTemplate[blockIndex], taskIndex]
-  return nextTemplate.filter((block) => block.length > 0)
-}
 
 const TaskDistributionSection = ({
   selectedGame,
@@ -32,6 +21,7 @@ const TaskDistributionSection = ({
   disabled,
 }) => {
   const [isConstructorOpen, setIsConstructorOpen] = useState(false)
+  const [draggedTaskIndex, setDraggedTaskIndex] = useState(null)
   const tasks = Array.isArray(selectedGame?.tasks) ? selectedGame.tasks : []
   const tasksCount = tasks.length
   const mode = normalizeTaskDistributionMode(selectedGame?.taskDistributionMode)
@@ -55,6 +45,13 @@ const TaskDistributionSection = ({
       })),
     [tasks],
   )
+  const assignedTaskIndexes = useMemo(
+    () => new Set(effectiveTemplate.flat()),
+    [effectiveTemplate],
+  )
+  const unassignedTaskOptions = taskOptions.filter(
+    (task) => !assignedTaskIndexes.has(task.taskIndex),
+  )
 
   const updateTemplate = (nextTemplate) => {
     updateSelectedGame({
@@ -76,12 +73,38 @@ const TaskDistributionSection = ({
 
   const handleMoveTask = (taskIndex, blockIndex) => {
     updateTemplate(
-      moveTaskToBlock({
+      moveTaskInDistributionTemplate({
         template: effectiveTemplate,
         taskIndex,
-        blockIndex,
+        toBlockIndex: blockIndex,
       }),
     )
+  }
+
+  const handleRemoveTask = (taskIndex) => {
+    updateTemplate(removeTaskFromDistributionTemplate(effectiveTemplate, taskIndex))
+  }
+
+  const handleDropTask = ({ taskIndex, blockIndex, beforeTaskIndex = null }) => {
+    if (!Number.isInteger(taskIndex)) return
+
+    const blockWithoutDraggedTask = (effectiveTemplate[blockIndex] || []).filter(
+      (item) => item !== taskIndex,
+    )
+    const toItemIndex =
+      beforeTaskIndex === null
+        ? null
+        : blockWithoutDraggedTask.indexOf(beforeTaskIndex)
+
+    updateTemplate(
+      moveTaskInDistributionTemplate({
+        template: effectiveTemplate,
+        taskIndex,
+        toBlockIndex: blockIndex,
+        toItemIndex: toItemIndex >= 0 ? toItemIndex : null,
+      }),
+    )
+    setDraggedTaskIndex(null)
   }
 
   const handleAddBlock = () => {
@@ -100,9 +123,6 @@ const TaskDistributionSection = ({
           <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
             Распределение заданий
           </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
-            Конструкция блоков: [1,2,3],[4,5],6,[7,8].
-          </p>
         </div>
         <select
           value={mode}
@@ -155,6 +175,16 @@ const TaskDistributionSection = ({
               <div
                 key={`task-distribution-block-${blockIndex}`}
                 className="rounded-2xl border border-slate-200 p-3 dark:border-slate-700"
+                onDragOver={(event) => {
+                  if (draggedTaskIndex !== null) event.preventDefault()
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  handleDropTask({
+                    taskIndex: draggedTaskIndex,
+                    blockIndex,
+                  })
+                }}
               >
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
@@ -176,32 +206,60 @@ const TaskDistributionSection = ({
                   {block.map((taskIndex) => (
                     <span
                       key={taskIndex}
-                      className="rounded-lg bg-slate-100 px-2 py-1 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      draggable={!disabled}
+                      className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-2 py-1 text-sm text-slate-700 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                      onDragStart={() => setDraggedTaskIndex(taskIndex)}
+                      onDragEnd={() => setDraggedTaskIndex(null)}
+                      onDragOver={(event) => {
+                        if (draggedTaskIndex !== null) event.preventDefault()
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        handleDropTask({
+                          taskIndex: draggedTaskIndex,
+                          blockIndex,
+                          beforeTaskIndex: taskIndex,
+                        })
+                      }}
                     >
-                      {taskOptions.find((item) => item.taskIndex === taskIndex)
-                        ?.label || `Задание ${taskIndex + 1}`}
+                      <span>
+                        {taskOptions.find((item) => item.taskIndex === taskIndex)
+                          ?.label || `Задание ${taskIndex + 1}`}
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded-full px-1 text-xs font-bold text-slate-500 hover:bg-white hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-rose-300"
+                        onClick={() => handleRemoveTask(taskIndex)}
+                        disabled={disabled}
+                        aria-label={`Убрать задание ${taskIndex + 1} из блока`}
+                      >
+                        ×
+                      </button>
                     </span>
                   ))}
                 </div>
 
-                <select
-                  className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
-                  value=""
-                  onChange={(event) => {
-                    const taskIndex = Number(event.target.value)
-                    if (Number.isInteger(taskIndex)) {
-                      handleMoveTask(taskIndex, blockIndex)
-                    }
-                  }}
-                  disabled={disabled}
-                >
-                  <option value="">Добавить задание в этот блок</option>
-                  {taskOptions.map((task) => (
-                    <option key={task.taskIndex} value={task.taskIndex}>
-                      {task.label}
-                    </option>
-                  ))}
-                </select>
+                {unassignedTaskOptions.length > 0 ? (
+                  <select
+                    className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
+                    value=""
+                    onChange={(event) => {
+                      const taskIndex = Number(event.target.value)
+                      if (Number.isInteger(taskIndex)) {
+                        handleMoveTask(taskIndex, blockIndex)
+                      }
+                    }}
+                    disabled={disabled}
+                  >
+                    <option value="">Добавить задание в этот блок</option>
+                    {unassignedTaskOptions.map((task) => (
+                      <option key={task.taskIndex} value={task.taskIndex}>
+                        {task.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
               </div>
             ))}
           </div>
