@@ -20,6 +20,11 @@ import {
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
+import {
+  normalizeStoredTaskDistributionTemplate,
+  normalizeTaskDistributionTemplate,
+  validateTaskDistributionTemplate,
+} from '@helpers/taskDistribution'
 
 const MANUAL_TEAM_ADJUSTMENT_SOURCE = 'manual_team_adjustment'
 
@@ -197,6 +202,19 @@ const normalizeGameTeamEntry = (doc) => {
     teamId,
     outOfCompetition: Boolean(doc?.outOfCompetition),
     paidGame: Boolean(doc?.paidGame),
+    taskDistributionTemplate: normalizeStoredTaskDistributionTemplate(
+      doc?.taskDistributionTemplate,
+    ),
+    taskSequence: Array.isArray(doc?.taskSequence)
+      ? doc.taskSequence.map((item) => Number(item)).filter(Number.isInteger)
+      : [],
+    taskSequenceGeneratedAt: doc?.taskSequenceGeneratedAt
+      ? new Date(doc.taskSequenceGeneratedAt).toISOString()
+      : null,
+    taskSequenceSource:
+      typeof doc?.taskSequenceSource === 'string'
+        ? doc.taskSequenceSource
+        : 'linear',
     timeAddings: normalizeTimeAddingsForResponse(doc?.timeAddings),
     hasPrequelAdjustments: hasPrequelAdjustments(doc?.prequelProgress),
     prequelAdjustments,
@@ -774,6 +792,10 @@ export async function GET(request, { params }) {
         teamId: 1,
         outOfCompetition: 1,
         paidGame: 1,
+        taskDistributionTemplate: 1,
+        taskSequence: 1,
+        taskSequenceGeneratedAt: 1,
+        taskSequenceSource: 1,
         timeAddings: 1,
         prequelProgress: 1,
       })
@@ -1332,6 +1354,72 @@ export async function PATCH(request, { params }) {
     }
 
     const normalizedResolvedGameId = toStringId(game._id)
+
+    if (action === 'update_task_distribution_template') {
+      const gameTeamId = toStringId(payload?.gameTeamId)
+      if (!gameId || !gameTeamId) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Не передан идентификатор игры или регистрации',
+          },
+          { status: 400 },
+        )
+      }
+
+      const currentGameTeam = await GamesTeamsModel.findOne({
+        _id: gameTeamId,
+        gameId: normalizedResolvedGameId,
+      })
+        .select({ _id: 1, teamId: 1 })
+        .lean()
+
+      if (!currentGameTeam?._id) {
+        return NextResponse.json(
+          { success: false, error: 'Регистрация команды на игру не найдена' },
+          { status: 404 },
+        )
+      }
+
+      const tasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
+      const template = normalizeTaskDistributionTemplate(
+        payload?.taskDistributionTemplate,
+        tasksCount,
+      )
+
+      if (template.length > 0) {
+        const validation = validateTaskDistributionTemplate(template, tasksCount)
+        if (!validation.valid) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                validation.messages[0] ||
+                'Индивидуальный шаблон распределения некорректен',
+            },
+            { status: 400 },
+          )
+        }
+      }
+
+      await GamesTeamsModel.updateOne(
+        { _id: gameTeamId, gameId: normalizedResolvedGameId },
+        { $set: { taskDistributionTemplate: template } },
+      )
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            gameId: normalizedResolvedGameId,
+            gameTeamId,
+            teamId: toStringId(currentGameTeam?.teamId) || '',
+            taskDistributionTemplate: template,
+          },
+        },
+        { status: 200 },
+      )
+    }
 
     if (action === 'update_team_profile') {
       const teamId = toStringId(payload?.teamId)

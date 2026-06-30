@@ -33,6 +33,11 @@ import getGameStatusLabel from '@helpers/getGameStatusLabel'
 import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import { toStringId } from '@helpers/idAndDate'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
+import {
+  normalizeStoredTaskDistributionTemplate,
+  normalizeTaskDistributionMode,
+  validateTaskDistributionTemplate,
+} from '@helpers/taskDistribution'
 import requestApiJson from '@helpers/requestApiJson'
 import { resolveGameEntryHrefFromGame } from '@helpers/resolveGameEntryHref'
 import {
@@ -807,6 +812,9 @@ const buildUpdatePayload = (game) => {
 
   const normalizedIsRated = Boolean(game.isRated ?? true)
   const normalizedPrequel = normalizePrequelConfig(game?.prequel)
+  const taskDistributionMode = normalizeTaskDistributionMode(
+    game.taskDistributionMode,
+  )
 
   return {
     name: game.name,
@@ -933,6 +941,14 @@ const buildUpdatePayload = (game) => {
     breakDuration: Number(game.breakDuration) || 0,
     taskFailurePenalty: Number(game.taskFailurePenalty) || 0,
     manyCodesPenalty,
+    taskDistributionMode,
+    taskDistributionTemplate:
+      taskDistributionMode === 'random'
+        ? normalizeStoredTaskDistributionTemplate(
+            game.taskDistributionTemplate,
+            Array.isArray(game.tasks) ? game.tasks.length : 0,
+          )
+        : [],
     individualStart: Boolean(game.individualStart),
     isRated: normalizedIsRated,
     seasonId:
@@ -1504,6 +1520,18 @@ const GamesPage = ({
           variant: 'secondary',
           tone: 'cyan',
         },
+        ...(statusModalGame.taskDistributionMode === 'random'
+          ? [
+              {
+                id: 'distribute_tasks',
+                label: 'Распределить задания',
+                description:
+                  'Создаст индивидуальный маршрут заданий для каждой команды по общему или командному шаблону.',
+                variant: 'secondary',
+                tone: 'brand',
+              },
+            ]
+          : []),
         {
           id: 'start_game',
           label: 'СТАРТ ИГРЫ',
@@ -2713,6 +2741,8 @@ const GamesPage = ({
         prices: [],
         finances: [],
         tasks: [],
+        taskDistributionMode: 'linear',
+        taskDistributionTemplate: [],
         moderators: [],
         agents: [],
         agentNotifications: {
@@ -2793,6 +2823,18 @@ const GamesPage = ({
           baseDraft.tasks = Array.isArray(normalizedSource.tasks)
             ? JSON.parse(JSON.stringify(normalizedSource.tasks))
             : []
+          baseDraft.taskDistributionMode = normalizeTaskDistributionMode(
+            normalizedSource.taskDistributionMode,
+          )
+          baseDraft.taskDistributionTemplate =
+            baseDraft.taskDistributionMode === 'random'
+              ? normalizeStoredTaskDistributionTemplate(
+                  normalizedSource.taskDistributionTemplate,
+                  Array.isArray(normalizedSource.tasks)
+                    ? normalizedSource.tasks.length
+                    : 0,
+                )
+              : []
         }
 
         if (createGameCloneOptions.locations) {
@@ -3773,6 +3815,30 @@ const GamesPage = ({
 
       setFeedback({ type: 'error', message: blockingMessage })
       return
+    }
+
+    if (normalizeTaskDistributionMode(gameToSave.taskDistributionMode) === 'random') {
+      const tasksCount = Array.isArray(gameToSave.tasks)
+        ? gameToSave.tasks.length
+        : 0
+      const distributionTemplate = normalizeStoredTaskDistributionTemplate(
+        gameToSave.taskDistributionTemplate,
+        tasksCount,
+      )
+      const distributionValidation = validateTaskDistributionTemplate(
+        distributionTemplate,
+        tasksCount,
+      )
+
+      if (!distributionValidation.valid) {
+        setFeedback({
+          type: 'error',
+          message:
+            distributionValidation.messages[0] ||
+            'Проверьте шаблон распределения заданий.',
+        })
+        return
+      }
     }
 
     setFeedback(null)
@@ -4923,6 +4989,13 @@ const GamesPage = ({
     }
 
     const draft = cloneGameDraft(game)
+    draft.taskDistributionMode = normalizeTaskDistributionMode(
+      game.taskDistributionMode,
+    )
+    draft.taskDistributionTemplate = normalizeStoredTaskDistributionTemplate(
+      game.taskDistributionTemplate,
+      Array.isArray(game.tasks) ? game.tasks.length : 0,
+    )
     setEditingGame(draft)
     setEditingBaselineGame(cloneGameDraft(draft))
     setHasUnsavedChanges(false)
@@ -5143,6 +5216,33 @@ const GamesPage = ({
 
         setStatusValidationResult(null)
         let successMessage = 'Статус игры обновлён'
+
+        if (actionId === 'distribute_tasks') {
+          setStatusProgressMessage('Распределяем задания по командам…')
+          const { json } = await requestApiJson(
+            '/api/cabinet/admin/task-distribution',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ gameId: statusModalGame.id }),
+              fallbackMessage: 'Не удалось распределить задания',
+            },
+          )
+          const teamsUpdated = Number(json?.data?.teamsUpdated) || 0
+          await queryClient.invalidateQueries({ queryKey: ['cabinet-games'] })
+          await gamesQuery.refetch()
+          setStatusProgressMessage('')
+          setFeedback({
+            type: 'success',
+            message: `Задания распределены. Команд обновлено: ${teamsUpdated}`,
+          })
+          setToastEvent({
+            id: `task-distribution-${Date.now()}`,
+            type: 'success',
+            message: 'Задания распределены',
+          })
+          return
+        }
 
         if (actionId === 'start_game') {
           setStatusProgressMessage('Проверяем игру перед запуском…')
@@ -8144,6 +8244,10 @@ GamesPage.propTypes = {
       breakDuration: PropTypes.number,
       taskFailurePenalty: PropTypes.number,
       manyCodesPenalty: PropTypes.arrayOf(PropTypes.number),
+      taskDistributionMode: PropTypes.oneOf(['linear', 'random']),
+      taskDistributionTemplate: PropTypes.arrayOf(
+        PropTypes.arrayOf(PropTypes.number),
+      ),
       individualStart: PropTypes.bool,
       isRated: PropTypes.bool,
       hidden: PropTypes.bool,

@@ -1,6 +1,10 @@
-import getSecondsBetween from '@helpers/getSecondsBetween'
-import { toStringId } from '@helpers/idAndDate'
-import { normalizePrequelConfig, normalizePrequelProgress } from '@helpers/normalizePrequel'
+import getSecondsBetween from '../helpers/getSecondsBetween.js'
+import { toStringId } from '../helpers/idAndDate.js'
+import {
+  normalizePrequelConfig,
+  normalizePrequelProgress,
+} from '../helpers/normalizePrequel.js'
+import { getTeamTaskSequence } from '../helpers/taskDistribution.js'
 
 const secondsToTime = (sec) => {
   const numeric = Number(sec)
@@ -149,7 +153,17 @@ const buildTaskDurations = (gameTeam, game) => {
   const taskFailures = Array.isArray(gameTeam?.taskFailures)
     ? gameTeam.taskFailures
     : []
-  const activeNum = Number(gameTeam?.activeNum) || 0
+  const activeStep = Number.isInteger(gameTeam?.activeNum)
+    ? gameTeam.activeNum
+    : 0
+  const taskSequence = getTeamTaskSequence(game, gameTeam)
+  const completedTaskIndexes = new Set(
+    taskSequence.slice(0, Math.max(activeStep, 0)),
+  )
+  const activeTaskIndex =
+    activeStep >= 0 && activeStep < taskSequence.length
+      ? taskSequence[activeStep]
+      : null
 
   const result = []
 
@@ -166,7 +180,7 @@ const buildTaskDurations = (gameTeam, game) => {
     const applyTaskElapsedAdjustment = (seconds) =>
       Math.max(0, Math.min(taskDuration, seconds + taskElapsedAdjustmentSeconds))
 
-    if (activeNum > index) {
+    if (completedTaskIndexes.has(index)) {
       if (!endTime[index]) {
         result.push(taskDuration)
       } else {
@@ -179,7 +193,7 @@ const buildTaskDurations = (gameTeam, game) => {
       continue
     }
 
-    if (activeNum === index) {
+    if (activeTaskIndex === index) {
       if (isFailedByDecision) {
         result.push(taskDuration)
         continue
@@ -426,6 +440,7 @@ const buildEmptyTeamResult = (team, game) => {
           prequelResult.bonusValue,
       ) || '00:00:00',
     taskResults,
+    taskSequence: tasks.map((_, taskIndex) => taskIndex),
     prequel: prequelResult,
     place: null,
   }
@@ -439,6 +454,7 @@ const buildTeamResult = (team, gameTeam, game) => {
   const tasks = Array.isArray(game?.tasks) ? game.tasks : []
   const taskDuration = Number(game?.taskDuration) || 3600
   const taskFailurePenalty = Number(game?.taskFailurePenalty) || 0
+  const taskSequence = getTeamTaskSequence(game, gameTeam)
   const durations = buildTaskDurations(gameTeam, game)
 
   let baseSeconds = 0
@@ -616,6 +632,7 @@ const buildTeamResult = (team, gameTeam, game) => {
     finalSeconds,
     finalDisplay: secondsToTime(finalSeconds) || '00:00:00',
     taskResults,
+    taskSequence,
     prequel: prequelResult,
     place: null,
   }

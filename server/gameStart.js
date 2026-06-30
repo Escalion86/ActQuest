@@ -4,6 +4,7 @@ import getGame from 'telegram/func/getGame'
 import sendMessage from 'telegram/sendMessage'
 import { getGameValidationErrors } from '@helpers/isGameHaveErrors'
 import buildGameStartProgressUpdate from '@server/buildGameStartProgressUpdate'
+import { getTaskDistributionStartErrors } from '@helpers/taskDistribution'
 
 const runInBackground = (label, job) => {
   Promise.resolve()
@@ -47,14 +48,24 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
     }
   }
 
-  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
-    status: 'started',
-    dateStartFact: new Date(),
-  })
-
   // Получаем список команд
   const gameTeams = await db.model('GamesTeams').find({
     gameId: jsonCommand.gameId,
+  })
+
+  const taskDistributionErrors = getTaskDistributionStartErrors(game, gameTeams)
+  if (taskDistributionErrors.length > 0) {
+    return {
+      success: false,
+      error: 'Задания не распределены',
+      errors: taskDistributionErrors,
+      message: `Запуск игры невозможен. Обнаружены ошибки:\n- ${taskDistributionErrors.join('\n- ')}`,
+    }
+  }
+
+  await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
+    status: 'started',
+    dateStartFact: new Date(),
   })
 
   const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)

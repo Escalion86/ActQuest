@@ -19,6 +19,23 @@ const gamesTeamsSchema = {
     type: Number,
     default: 0,
   },
+  taskDistributionTemplate: {
+    type: [[Number]],
+    default: [],
+  },
+  taskSequence: {
+    type: [Number],
+    default: [],
+  },
+  taskSequenceGeneratedAt: {
+    type: Date,
+    default: null,
+  },
+  taskSequenceSource: {
+    type: String,
+    enum: ['game_template', 'team_template', 'linear'],
+    default: 'linear',
+  },
   findedCodes: [[String]],
   wrongCodes: [[String]],
   timeAddings: [

@@ -494,6 +494,15 @@ const gamesSchema = {
     ],
     default: [],
   },
+  taskDistributionMode: {
+    type: String,
+    enum: ['linear', 'random'],
+    default: 'linear',
+  },
+  taskDistributionTemplate: {
+    type: [[Number]],
+    default: [],
+  },
   type: {
     type: String,
     default: 'classic',

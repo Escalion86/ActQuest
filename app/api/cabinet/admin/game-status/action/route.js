@@ -9,6 +9,7 @@ import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
+import { getTaskIndexForStep } from '@helpers/taskDistribution'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) {
@@ -48,11 +49,13 @@ const forceCompleteActiveTask = async ({ GamesTeams, game, gameTeam }) => {
     return { success: false, message: 'В игре нет заданий.' }
   }
 
-  const activeNumRaw = Number.isInteger(gameTeam?.activeNum) ? gameTeam.activeNum : 0
-  if (activeNumRaw >= tasksCount) {
+  const activeStep = Number.isInteger(gameTeam?.activeNum) ? gameTeam.activeNum : 0
+  const activeTaskIndex = getTaskIndexForStep(game, gameTeam, activeStep)
+  if (activeStep >= tasksCount || activeTaskIndex === null) {
     return { success: false, message: 'Команда уже завершила игру.' }
   }
-  const activeTaskIndex = Math.max(0, Math.min(activeNumRaw, tasksCount - 1))
+  const nextStep = activeStep + 1
+  const nextTaskIndex = getTaskIndexForStep(game, gameTeam, nextStep)
 
   const startTime = ensureArrayCapacity(gameTeam?.startTime, tasksCount, null)
   const endTime = ensureArrayCapacity(gameTeam?.endTime, tasksCount, null)
@@ -71,22 +74,21 @@ const forceCompleteActiveTask = async ({ GamesTeams, game, gameTeam }) => {
   }
   endTime[activeTaskIndex] = now
 
-  const nextTaskIndex = activeTaskIndex + 1
   const updates = {
     startTime,
     endTime,
     forcedClues,
   }
 
-  if (nextTaskIndex >= tasksCount) {
-    updates.activeNum = nextTaskIndex
+  if (nextTaskIndex === null) {
+    updates.activeNum = nextStep
   } else if (breakDuration > 0) {
     forcedClues[nextTaskIndex] = 0
   } else {
     const nextStartTime = ensureArrayCapacity(startTime, tasksCount, null)
     nextStartTime[nextTaskIndex] = now
     updates.startTime = nextStartTime
-    updates.activeNum = nextTaskIndex
+    updates.activeNum = nextStep
     forcedClues[nextTaskIndex] = 0
   }
 
@@ -101,11 +103,13 @@ const forceFailActiveTask = async ({ GamesTeams, game, gameTeam }) => {
     return { success: false, message: 'В игре нет заданий.' }
   }
 
-  const activeNumRaw = Number.isInteger(gameTeam?.activeNum) ? gameTeam.activeNum : 0
-  if (activeNumRaw >= tasksCount) {
+  const activeStep = Number.isInteger(gameTeam?.activeNum) ? gameTeam.activeNum : 0
+  const activeTaskIndex = getTaskIndexForStep(game, gameTeam, activeStep)
+  if (activeStep >= tasksCount || activeTaskIndex === null) {
     return { success: false, message: 'Команда уже завершила игру.' }
   }
-  const activeTaskIndex = Math.max(0, Math.min(activeNumRaw, tasksCount - 1))
+  const nextStep = activeStep + 1
+  const nextTaskIndex = getTaskIndexForStep(game, gameTeam, nextStep)
 
   const startTime = ensureArrayCapacity(gameTeam?.startTime, tasksCount, null)
   const endTime = ensureArrayCapacity(gameTeam?.endTime, tasksCount, null)
@@ -129,20 +133,19 @@ const forceFailActiveTask = async ({ GamesTeams, game, gameTeam }) => {
   startTime[activeTaskIndex] = new Date(nowMs - consumedTaskTimeMs)
   endTime[activeTaskIndex] = null
 
-  const nextTaskIndex = activeTaskIndex + 1
   const updates = {
     startTime,
     endTime,
     forcedClues,
   }
 
-  if (nextTaskIndex >= tasksCount) {
-    updates.activeNum = nextTaskIndex
+  if (nextTaskIndex === null) {
+    updates.activeNum = nextStep
   } else if (breakDuration > 0) {
     forcedClues[nextTaskIndex] = 0
   } else {
     startTime[nextTaskIndex] = new Date(nowMs)
-    updates.activeNum = nextTaskIndex
+    updates.activeNum = nextStep
     forcedClues[nextTaskIndex] = 0
   }
 

@@ -1,9 +1,13 @@
-import { ensureDateISOString } from '@helpers/idAndDate'
+import { ensureDateISOString } from './idAndDate.js'
 import {
   buildDefaultPrequel,
   normalizePrequelProgress,
   normalizePrequelConfig,
-} from '@helpers/normalizePrequel'
+} from './normalizePrequel.js'
+import {
+  normalizeStoredTaskDistributionTemplate,
+  normalizeTaskDistributionMode,
+} from './taskDistribution.js'
 
 const ensureString = (value, fallback = '') => {
   if (typeof value === 'string') {
@@ -581,6 +585,13 @@ const normalizeGameForCabinet = (game) => {
     breakDuration: ensureNumber(game.breakDuration, 0),
     taskFailurePenalty: ensureNumber(game.taskFailurePenalty, 0),
     manyCodesPenalty: normalizeManyCodesPenalty(game.manyCodesPenalty),
+    taskDistributionMode: normalizeTaskDistributionMode(
+      game.taskDistributionMode,
+    ),
+    taskDistributionTemplate: normalizeStoredTaskDistributionTemplate(
+      game.taskDistributionTemplate,
+      Array.isArray(game.tasks) ? game.tasks.length : 0,
+    ),
     individualStart: ensureBoolean(game.individualStart, false),
     isRated: ensureBoolean(game.isRated, true),
     hidden: ensureBoolean(game.hidden, true),

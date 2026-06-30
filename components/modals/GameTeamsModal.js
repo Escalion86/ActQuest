@@ -12,6 +12,12 @@ import ImagesInput from '@components/cabinet/ImagesInput'
 import NoticeBanner from '@components/NoticeBanner'
 import fetchCabinetTeamDetails from '@helpers/fetchCabinetTeamDetails'
 import requestApiJson from '@helpers/requestApiJson'
+import {
+  formatTaskDistributionTemplate,
+  normalizeStoredTaskDistributionTemplate,
+  normalizeTaskDistributionTemplate,
+  validateTaskDistributionTemplate,
+} from '@helpers/taskDistribution'
 import { LOCATIONS } from '@server/serverConstants'
 import TeamDescriptionModal from './TeamDescriptionModal'
 import GameControlTeamStatsModal from './GameControlTeamStatsModal'
@@ -45,6 +51,23 @@ const formatMoney = (amountRaw) => {
     currency: 'RUB',
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+const parseTaskDistributionTemplateText = (value) => {
+  const source = String(value || '').trim()
+  if (!source) return []
+
+  return (source.match(/\[[^\]]*\]|\d+/g) || []).map((token) => {
+    if (token.startsWith('[')) {
+      return token
+        .replace(/[[\]]/g, '')
+        .split(',')
+        .map((item) => Number(item.trim()))
+        .filter(Number.isFinite)
+    }
+
+    return Number(token)
+  })
 }
 
 const OpenDoorIcon = () => (
@@ -188,6 +211,12 @@ const GameTeamsModal = ({
   const [isTeamStatsModalOpen, setIsTeamStatsModalOpen] = useState(false)
   const [isTeamPaymentsModalOpen, setIsTeamPaymentsModalOpen] = useState(false)
   const [teamPaymentsTarget, setTeamPaymentsTarget] = useState(null)
+  const [teamDistributionTarget, setTeamDistributionTarget] = useState(null)
+  const [teamDistributionText, setTeamDistributionText] = useState('')
+  const [teamDistributionError, setTeamDistributionError] = useState('')
+  const [isSavingTeamDistribution, setIsSavingTeamDistribution] =
+    useState(false)
+  const [distributingTeamId, setDistributingTeamId] = useState('')
 
   const teamDetailsQuery = useQuery({
     queryKey: ['team', selectedTeamDetailsId],
@@ -313,6 +342,11 @@ const GameTeamsModal = ({
       setIsTeamStatsModalOpen(false)
       setIsTeamPaymentsModalOpen(false)
       setTeamPaymentsTarget(null)
+      setTeamDistributionTarget(null)
+      setTeamDistributionText('')
+      setTeamDistributionError('')
+      setIsSavingTeamDistribution(false)
+      setDistributingTeamId('')
     }
   }, [isTeamsModalOpen])
 
@@ -342,6 +376,131 @@ const GameTeamsModal = ({
     setTeamPaymentsTarget(target)
     setIsTeamPaymentsModalOpen(true)
   }, [])
+
+  const handleOpenTeamDistributionModal = useCallback(
+    (team) => {
+      const tasksCount = Array.isArray(selectedGame?.tasks)
+        ? selectedGame.tasks.length
+        : 0
+      const template = normalizeStoredTaskDistributionTemplate(
+        team?.taskDistributionTemplate,
+        tasksCount,
+      )
+
+      setTeamDistributionTarget({
+        gameTeamId: String(team?.id || ''),
+        teamName: String(team?.teamName || 'Команда'),
+      })
+      setTeamDistributionText(formatTaskDistributionTemplate(template))
+      setTeamDistributionError('')
+    },
+    [selectedGame?.tasks],
+  )
+
+  const handleCloseTeamDistributionModal = useCallback(() => {
+    if (isSavingTeamDistribution) {
+      return
+    }
+    setTeamDistributionTarget(null)
+    setTeamDistributionText('')
+    setTeamDistributionError('')
+  }, [isSavingTeamDistribution])
+
+  const handleSaveTeamDistributionTemplate = useCallback(async () => {
+    if (!selectedGame?.id || !teamDistributionTarget?.gameTeamId) {
+      setTeamDistributionError('Не передан идентификатор игры или команды')
+      return
+    }
+
+    const tasksCount = Array.isArray(selectedGame?.tasks)
+      ? selectedGame.tasks.length
+      : 0
+    const rawText = String(teamDistributionText || '').trim()
+    const template = rawText
+      ? normalizeTaskDistributionTemplate(
+          parseTaskDistributionTemplateText(rawText),
+          tasksCount,
+        )
+      : []
+
+    if (template.length > 0) {
+      const validation = validateTaskDistributionTemplate(template, tasksCount)
+      if (!validation.valid) {
+        setTeamDistributionError(
+          validation.messages[0] || 'Шаблон команды некорректен',
+        )
+        return
+      }
+    }
+
+    setIsSavingTeamDistribution(true)
+    setTeamDistributionError('')
+
+    try {
+      await requestApiJson(
+        `/api/cabinet/games/${encodeURIComponent(String(selectedGame.id))}/teams`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_task_distribution_template',
+            gameTeamId: String(teamDistributionTarget.gameTeamId),
+            taskDistributionTemplate: template.map((block) =>
+              block.map((taskIndex) => taskIndex + 1),
+            ),
+          }),
+          fallbackMessage: 'Не удалось сохранить шаблон команды',
+        },
+      )
+
+      if (typeof handleRefreshTeamsModalData === 'function') {
+        await handleRefreshTeamsModalData()
+      }
+
+      setTeamDistributionTarget(null)
+      setTeamDistributionText('')
+    } catch (error) {
+      setTeamDistributionError(
+        error?.message || 'Не удалось сохранить шаблон команды',
+      )
+    } finally {
+      setIsSavingTeamDistribution(false)
+    }
+  }, [
+    handleRefreshTeamsModalData,
+    selectedGame?.id,
+    selectedGame?.tasks,
+    teamDistributionTarget?.gameTeamId,
+    teamDistributionText,
+  ])
+
+  const handleDistributeTeamTasks = useCallback(
+    async (team) => {
+      if (!selectedGame?.id || !team?.id) {
+        return
+      }
+
+      setDistributingTeamId(String(team.id))
+      try {
+        await requestApiJson('/api/cabinet/admin/task-distribution', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gameId: String(selectedGame.id),
+            teamId: String(team.id),
+          }),
+          fallbackMessage: 'Не удалось распределить задания команды',
+        })
+
+        if (typeof handleRefreshTeamsModalData === 'function') {
+          await handleRefreshTeamsModalData()
+        }
+      } finally {
+        setDistributingTeamId('')
+      }
+    },
+    [handleRefreshTeamsModalData, selectedGame?.id],
+  )
 
   const handleOpenTeamStatsModal = useCallback(
     async (team) => {
@@ -991,6 +1150,21 @@ const GameTeamsModal = ({
                       },
                       0,
                     )
+                    const isRandomDistribution =
+                      selectedGame?.taskDistributionMode === 'random'
+                    const teamTemplate = normalizeStoredTaskDistributionTemplate(
+                      team?.taskDistributionTemplate,
+                      Array.isArray(selectedGame?.tasks)
+                        ? selectedGame.tasks.length
+                        : 0,
+                    )
+                    const teamSequence = Array.isArray(team?.taskSequence)
+                      ? team.taskSequence
+                          .map((item) => Number(item))
+                          .filter(Number.isInteger)
+                      : []
+                    const isDistributingTeam =
+                      distributingTeamId === String(team.id)
 
                     return (
                       <li key={team.id}>
@@ -1112,6 +1286,61 @@ const GameTeamsModal = ({
                                           prequelPenaltySeconds,
                                         )}
                                       </span>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                                {isRandomDistribution ? (
+                                  <div
+                                    className="mt-3 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-3 text-xs text-cyan-900 dark:border-cyan-500/35 dark:bg-cyan-500/10 dark:text-cyan-100"
+                                    onClick={(event) => event.stopPropagation()}
+                                  >
+                                    <div className="space-y-1">
+                                      <p>
+                                        <span className="font-semibold">
+                                          Шаблон:{' '}
+                                        </span>
+                                        {teamTemplate.length > 0
+                                          ? formatTaskDistributionTemplate(
+                                              teamTemplate,
+                                            )
+                                          : 'общий шаблон игры'}
+                                      </p>
+                                      <p>
+                                        <span className="font-semibold">
+                                          Маршрут:{' '}
+                                        </span>
+                                        {teamSequence.length > 0
+                                          ? teamSequence
+                                              .map((taskIndex) => taskIndex + 1)
+                                              .join(' → ')
+                                          : 'не распределён'}
+                                      </p>
+                                    </div>
+                                    {canEditRegisteredTeams ? (
+                                      <div className="mt-3 flex flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          className="rounded-lg border border-cyan-300 bg-white px-2.5 py-1 text-xs font-semibold text-cyan-800 transition hover:border-cyan-500 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-500/40 dark:bg-slate-900/70 dark:text-cyan-100 dark:hover:border-cyan-300"
+                                          onClick={() =>
+                                            handleOpenTeamDistributionModal(team)
+                                          }
+                                          disabled={isReadOnly}
+                                        >
+                                          Изменить шаблон
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 transition hover:border-emerald-500 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100 dark:hover:border-emerald-300"
+                                          onClick={() =>
+                                            handleDistributeTeamTasks(team)
+                                          }
+                                          disabled={isReadOnly || isDistributingTeam}
+                                        >
+                                          {isDistributingTeam
+                                            ? 'Распределяем…'
+                                            : 'Распределить для команды'}
+                                        </button>
+                                      </div>
                                     ) : null}
                                   </div>
                                 ) : null}
@@ -1406,6 +1635,60 @@ const GameTeamsModal = ({
         onPaidGameChange={handleToggleTeamPaidGame}
         onPaymentsChanged={handleRefreshTeamsModalData}
       />
+      <Modal
+        isOpen={Boolean(teamDistributionTarget)}
+        onClose={handleCloseTeamDistributionModal}
+        title={`Шаблон заданий — ${teamDistributionTarget?.teamName || 'Команда'}`}
+        footer={
+          <>
+            <button
+              type="button"
+              className="aq-modal-btn aq-modal-btn-secondary"
+              onClick={handleCloseTeamDistributionModal}
+              disabled={isSavingTeamDistribution}
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              className={`aq-modal-btn aq-modal-btn-primary ${isSavingTeamDistribution ? 'cursor-wait' : ''}`}
+              onClick={handleSaveTeamDistributionTemplate}
+              disabled={isSavingTeamDistribution}
+            >
+              {isSavingTeamDistribution ? 'Сохранение…' : 'Сохранить'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {teamDistributionError ? (
+            <NoticeBanner tone="error" variant="neon">
+              {teamDistributionError}
+            </NoticeBanner>
+          ) : null}
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Пустое поле использует общий шаблон игры. После изменения нажмите
+            «Распределить для команды».
+          </p>
+          <div>
+            <label
+              htmlFor="team-task-distribution-template"
+              className="text-sm font-semibold text-slate-700 dark:text-slate-100"
+            >
+              Шаблон
+            </label>
+            <textarea
+              id="team-task-distribution-template"
+              rows={4}
+              value={teamDistributionText}
+              onChange={(event) => setTeamDistributionText(event.target.value)}
+              placeholder="[1,2],[3,4,5],[6,7,8],[9,10]"
+              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 font-mono text-sm text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+              disabled={isSavingTeamDistribution}
+            />
+          </div>
+        </div>
+      </Modal>
       <Modal
         isOpen={isRestrictedDeleteModalOpen}
         onClose={closeRestrictedDeleteModal}

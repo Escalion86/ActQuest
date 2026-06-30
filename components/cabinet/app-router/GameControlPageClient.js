@@ -1691,6 +1691,23 @@ export default function GameControlPageClient({ session: _session }) {
                 const shouldShowPenaltyCodes =
                   normalizeCodeEntries(foundPenaltyEntries).length > 0 ||
                   remainingPenaltyEntries.length > 0
+                const activeTaskStep = Number.isInteger(team?.activeTaskStep)
+                  ? team.activeTaskStep
+                  : Number.isInteger(team?.activeTaskIndex)
+                    ? team.activeTaskIndex
+                    : 0
+                const activeTaskLabel = team.isTeamFinished
+                  ? 'Завершено'
+                  : `Шаг ${activeTaskStep + 1}/${Number(data?.tasksCount || 0)}: задание ${team.activeTaskIndex + 1}. ${team.currentTaskTitle || 'Без названия'}`
+                const nextTaskLabel =
+                  Number.isInteger(team?.activeTaskStep) &&
+                  team.activeTaskStep + 1 < Number(data?.tasksCount || 0)
+                    ? `Шаг ${team.activeTaskStep + 2}/${Number(data?.tasksCount || 0)}: задание ${
+                        Number.isInteger(team.taskSequence?.[team.activeTaskStep + 1])
+                          ? team.taskSequence[team.activeTaskStep + 1] + 1
+                          : team.activeTaskIndex + 2
+                      }. ${team.nextTaskTitle || 'Без названия'}`
+                    : ''
 
                 return (
                   <div
@@ -1789,9 +1806,7 @@ export default function GameControlPageClient({ session: _session }) {
                           Задание:{' '}
                         </span>
                         <span className="font-medium text-slate-800 dark:text-slate-200">
-                          {team.isTeamFinished
-                            ? 'Завершено'
-                            : `${team.activeTaskIndex + 1}. ${team.currentTaskTitle || 'Без названия'}`}
+                          {activeTaskLabel}
                         </span>
                       </div>
                       <div>
@@ -1814,9 +1829,7 @@ export default function GameControlPageClient({ session: _session }) {
                             onClick={() =>
                               setWrongCodesModalData({
                                 teamName: String(team.teamName || ''),
-                                taskLabel: team.isTeamFinished
-                                  ? 'Завершено'
-                                  : `${team.activeTaskIndex + 1}. ${team.currentTaskTitle || 'Без названия'}`,
+                                taskLabel: activeTaskLabel,
                                 wrongCodes: normalizeCodeEntries(
                                   team.wrongCodes,
                                 ).map((entry) => entry.code),
@@ -2065,15 +2078,13 @@ export default function GameControlPageClient({ session: _session }) {
                       )}
                       {team.isTeamOnBreak &&
                         !team.isTeamFinished &&
-                        Number.isInteger(team.activeTaskIndex) &&
-                        team.activeTaskIndex + 1 <
-                          Number(data?.tasksCount || 0) && (
+                        nextTaskLabel && (
                           <div>
                             <span className="text-slate-600 dark:text-slate-500">
                               Следующее задание:{' '}
                             </span>
                             <span className="font-medium text-cyan-700 dark:text-cyan-200">
-                              {`${team.activeTaskIndex + 2}. ${team.nextTaskTitle || 'Без названия'}`}
+                              {nextTaskLabel}
                             </span>
                           </div>
                         )}
