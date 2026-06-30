@@ -11,9 +11,11 @@ import {
   getTeamTaskSequence,
   isValidTaskSequence,
   mergeTaskSequenceWithLockedPrefix,
+  moveTaskInDistributionTemplate,
   normalizeTaskDistributionMode,
   normalizeStoredTaskDistributionTemplate,
   normalizeTaskDistributionTemplate,
+  removeTaskFromDistributionTemplate,
   taskHasProgress,
   validateTaskDistributionTemplate,
 } from '../helpers/taskDistribution.js'
@@ -50,6 +52,36 @@ test('formats normalized template for cabinet UI', () => {
   assert.equal(
     formatTaskDistributionTemplate([[0, 1, 2], [3, 4], [5], [6, 7]]),
     '[1,2,3],[4,5],6,[7,8]',
+  )
+})
+
+test('removes task from distribution block without removing the block', () => {
+  assert.deepEqual(
+    removeTaskFromDistributionTemplate([[0], [1, 2]], 0),
+    [[], [1, 2]],
+  )
+})
+
+test('moves task between distribution blocks without duplicating it', () => {
+  assert.deepEqual(
+    moveTaskInDistributionTemplate({
+      template: [[0, 1], [2]],
+      taskIndex: 1,
+      toBlockIndex: 1,
+    }),
+    [[0], [2, 1]],
+  )
+})
+
+test('moves task to a specific position inside distribution block', () => {
+  assert.deepEqual(
+    moveTaskInDistributionTemplate({
+      template: [[0, 1, 2], [3]],
+      taskIndex: 2,
+      toBlockIndex: 0,
+      toItemIndex: 0,
+    }),
+    [[2, 0, 1], [3]],
   )
 })
 
