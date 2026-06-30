@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
 import { LOCATIONS } from '@server/serverConstants'
+import { buildGameOrderSiteEventMessage } from '@helpers/adminEventNotifications'
+import logSiteEvent from '@helpers/logSiteEvent'
 import { normalizePhoneForSubmit } from '@helpers/phoneInputMask'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 
@@ -112,6 +114,39 @@ export async function POST(request) {
       selectedGameId: normalizeString(payload?.selectedGameId, 100) || null,
       comment: normalizeString(payload?.comment, MAX_TEXT_LENGTH),
       createdByUserId: resolveSessionUserId(session?.user),
+    })
+
+    await logSiteEvent({
+      db,
+      type: 'game_order_created',
+      location,
+      message: buildGameOrderSiteEventMessage({
+        contactName,
+        companyName: normalizeString(payload?.companyName),
+        participantsCount:
+          Number.isFinite(participantsCount) && participantsCount > 0
+            ? Math.floor(participantsCount)
+            : null,
+      }),
+      actorUserId: resolveSessionUserId(session?.user),
+      gameId: normalizeString(payload?.selectedGameId, 100) || null,
+      metadata: {
+        orderId: String(doc._id),
+        companyName: normalizeString(payload?.companyName),
+        contactName,
+        phone,
+        email,
+        telegram,
+        preferredDate: doc.preferredDate
+          ? new Date(doc.preferredDate).toISOString()
+          : null,
+        preferredTime: normalizeString(payload?.preferredTime, 20),
+        participantsCount:
+          Number.isFinite(participantsCount) && participantsCount > 0
+            ? Math.floor(participantsCount)
+            : null,
+        gameType,
+      },
     })
 
     return NextResponse.json(

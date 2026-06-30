@@ -10,6 +10,7 @@ import { createTransaction } from '@server/transactionsService'
 import updateParticipantsClosedStats from '@server/updateParticipantsClosedStats'
 import updateParticipantsRatings from '@server/updateParticipantsRatings'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import { isScheduledGameForTeamEvent } from '@helpers/adminEventNotifications'
 import logSiteEvent from '@helpers/logSiteEvent'
 import { toStringId } from '@helpers/idAndDate'
 import { getCaptainRoleQuery } from '@helpers/teamRoles'
@@ -918,6 +919,8 @@ export async function POST(request, { params }) {
       status: 1,
       registrationOpen: 1,
       location: 1,
+      dateStartFact: 1,
+      dateEndFact: 1,
     })
     if (!game?._id) {
       return NextResponse.json(
@@ -1049,18 +1052,20 @@ export async function POST(request, { params }) {
       teamId,
     })
 
-    await logSiteEvent({
-      db,
-      type: 'team_registered_to_game',
-      location: normalizeLocation(game?.location),
-      message: `Команда «${typeof team?.name === 'string' ? team.name : ''}» зарегистрирована на игру «${typeof game?.name === 'string' ? game.name : ''}»`,
-      actorUserId: identity.userId,
-      actorTelegramId: null,
-      teamId,
-      teamName: typeof team?.name === 'string' ? team.name : '',
-      gameId: normalizedResolvedGameId,
-      gameName: typeof game?.name === 'string' ? game.name : '',
-    })
+    if (isScheduledGameForTeamEvent(game)) {
+      await logSiteEvent({
+        db,
+        type: 'team_registered_to_game',
+        location: normalizeLocation(game?.location),
+        message: `Команда «${typeof team?.name === 'string' ? team.name : ''}» зарегистрирована на игру «${typeof game?.name === 'string' ? game.name : ''}»`,
+        actorUserId: identity.userId,
+        actorTelegramId: null,
+        teamId,
+        teamName: typeof team?.name === 'string' ? team.name : '',
+        gameId: normalizedResolvedGameId,
+        gameName: typeof game?.name === 'string' ? game.name : '',
+      })
+    }
 
     const afterHistoryState = await fetchGameHistoryState({
       db,
@@ -1141,6 +1146,9 @@ export async function DELETE(request, { params }) {
       _id: 1,
       name: 1,
       location: 1,
+      status: 1,
+      dateStartFact: 1,
+      dateEndFact: 1,
     })
     if (!game?._id) {
       return NextResponse.json(
@@ -1223,7 +1231,10 @@ export async function DELETE(request, { params }) {
       teamId: { $in: deletedTeamIds },
     })
 
-    if (Number(deleteResult?.deletedCount || 0) > 0) {
+    if (
+      Number(deleteResult?.deletedCount || 0) > 0 &&
+      isScheduledGameForTeamEvent(game)
+    ) {
       await Promise.all(
         deletedTeamIds.map((currentTeamId) =>
           logSiteEvent({

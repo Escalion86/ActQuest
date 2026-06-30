@@ -29,6 +29,7 @@ const EVENT_TYPE_LABELS = {
   team_deleted: 'Удалена команда',
   team_registered_to_game: 'Команда зарегистрирована на игру',
   team_unregistered_from_game: 'Команда снята с игры',
+  game_order_created: 'Новая заявка на игру',
   client_diagnostic: 'Клиентская диагностика',
 }
 
