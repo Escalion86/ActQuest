@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useRef } from 'react'
 import PropTypes from 'prop-types'
 import dynamic from 'next/dynamic'
 
@@ -13,8 +13,10 @@ import {
 } from '@helpers/dateTimeLocalInLocation'
 import {
   stripHtmlToPlainText,
-  normalizeComparablePlainText,
+  normalizeComparableEditorPlainText,
   normalizeComparableRichText,
+  areComparableMediaListsEqual,
+  isInitialEditorHtmlNormalization,
 } from '../sharedHelpers'
 
 const TaskRichEditor = dynamic(
@@ -39,6 +41,18 @@ const GameBasicInfoSection = ({
   debugCheckboxUpdate,
   getCheckboxChecked,
 }) => {
+  const descriptionEditorInitialWindowRef = useRef({
+    gameId: null,
+    until: 0,
+  })
+  const currentGameId = selectedGame?.id || 'draft'
+  if (descriptionEditorInitialWindowRef.current.gameId !== currentGameId) {
+    descriptionEditorInitialWindowRef.current = {
+      gameId: currentGameId,
+      until: Date.now() + 4000,
+    }
+  }
+
   const organizersByUserId = new Map(
     (Array.isArray(availableOrganizersForSelect)
       ? availableOrganizersForSelect
@@ -214,8 +228,8 @@ const GameBasicInfoSection = ({
                 ? selectedGame.descriptionRich
                 : ''
             const isSameDescription =
-              normalizeComparablePlainText(nextDescription) ===
-              normalizeComparablePlainText(currentDescription)
+              normalizeComparableEditorPlainText(nextDescription) ===
+              normalizeComparableEditorPlainText(currentDescription)
             const isSameDescriptionRich =
               normalizeComparableRichText(
                 nextDescriptionRich,
@@ -225,16 +239,29 @@ const GameBasicInfoSection = ({
                 currentDescriptionRich,
                 currentDescription,
               )
-            const isSameMedia =
-              JSON.stringify(Array.isArray(media) ? media : []) ===
-              JSON.stringify(
-                Array.isArray(selectedGame.descriptionMedia)
-                  ? selectedGame.descriptionMedia
-                  : [],
-              )
-            if (isSameDescription && isSameDescriptionRich && isSameMedia) {
+            const isSameMedia = areComparableMediaListsEqual(
+              media,
+              selectedGame.descriptionMedia,
+            )
+            const isInitialHtmlNormalization =
+              isInitialEditorHtmlNormalization({
+                nextPlainText: nextDescription,
+                nextRichText: nextDescriptionRich,
+                currentPlainText: currentDescription,
+                currentRichText: currentDescriptionRich,
+              })
+            const isInitialEditorEquivalentNormalization =
+              Date.now() <= descriptionEditorInitialWindowRef.current.until &&
+              isSameDescription &&
+              isSameMedia
+            if (
+              (isSameDescription && isSameDescriptionRich && isSameMedia) ||
+              (isInitialHtmlNormalization && isSameMedia) ||
+              isInitialEditorEquivalentNormalization
+            ) {
               return
             }
+            descriptionEditorInitialWindowRef.current.until = 0
             updateSelectedGame({
               descriptionRich: nextDescriptionRich,
               description: nextDescription,

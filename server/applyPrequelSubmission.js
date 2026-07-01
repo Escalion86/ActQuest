@@ -1,5 +1,7 @@
 import {
   PREQUEL_MODE_SINGLE_HIT,
+  isPrequelOpenForDate,
+  isPrequelReadyForPlayers,
   isPrequelProgressClosedForConfig,
   isPrequelProgressExhaustedForConfig,
   normalizePrequelConfig,
@@ -73,6 +75,24 @@ const applyPrequelSubmission = ({ game, gameTeam, code, now = new Date() }) => {
       ok: false,
       status: 400,
       message: 'Приквел для этой игры выключен',
+      progress: normalizePrequelProgress(gameTeam?.prequelProgress),
+    }
+  }
+
+  if (!isPrequelReadyForPlayers(prequel)) {
+    return {
+      ok: false,
+      status: 400,
+      message: 'Приквел заполнен не полностью',
+      progress: normalizePrequelProgress(gameTeam?.prequelProgress),
+    }
+  }
+
+  if (!isPrequelOpenForDate(prequel, now)) {
+    return {
+      ok: false,
+      status: 423,
+      message: 'Приквел ещё не открыт',
       progress: normalizePrequelProgress(gameTeam?.prequelProgress),
     }
   }

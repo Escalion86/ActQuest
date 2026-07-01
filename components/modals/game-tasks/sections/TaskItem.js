@@ -12,8 +12,9 @@ import NeonCheckbox from '@components/NeonCheckbox'
 import ModalSection from '@components/modals/ModalSection'
 import {
   stripHtmlToPlainText,
-  normalizeComparablePlainText,
+  normalizeComparableEditorPlainText,
   normalizeComparableRichText,
+  areComparableMediaListsEqual,
   hasMeaningfulRichMarkup,
   compactSingleLine,
   truncateWithDots,
@@ -550,16 +551,15 @@ const TaskItem = ({
                 const currentTaskRich =
                   typeof task.taskRich === 'string' ? task.taskRich : ''
                 const isSameTaskText =
-                  normalizeComparablePlainText(nextTaskText) ===
-                  normalizeComparablePlainText(currentTaskText)
+                  normalizeComparableEditorPlainText(nextTaskText) ===
+                  normalizeComparableEditorPlainText(currentTaskText)
                 const isSameTaskRich =
                   normalizeComparableRichText(nextTaskRich, nextTaskText) ===
                   normalizeComparableRichText(currentTaskRich, currentTaskText)
-                const isSameTaskMedia =
-                  JSON.stringify(Array.isArray(media) ? media : []) ===
-                  JSON.stringify(
-                    Array.isArray(task.taskMedia) ? task.taskMedia : [],
-                  )
+                const isSameTaskMedia = areComparableMediaListsEqual(
+                  media,
+                  task.taskMedia,
+                )
                 if (isSameTaskText && isSameTaskRich && isSameTaskMedia) return
                 handleTaskFieldChange(task.id, 'taskRich', nextTaskRich)
                 handleTaskFieldChange(task.id, 'task', nextTaskText)
@@ -896,6 +896,35 @@ const TaskItem = ({
                 const nextPostMessage =
                   plainText || stripHtmlToPlainText(html || '')
                 const nextPostMessageRich = typeof html === 'string' ? html : ''
+                const currentPostMessage =
+                  typeof task.postMessage === 'string' ? task.postMessage : ''
+                const currentPostMessageRich =
+                  typeof task.postMessageRich === 'string'
+                    ? task.postMessageRich
+                    : ''
+                const isSamePostMessage =
+                  normalizeComparableEditorPlainText(nextPostMessage) ===
+                  normalizeComparableEditorPlainText(currentPostMessage)
+                const isSamePostMessageRich =
+                  normalizeComparableRichText(
+                    nextPostMessageRich,
+                    nextPostMessage,
+                  ) ===
+                  normalizeComparableRichText(
+                    currentPostMessageRich,
+                    currentPostMessage,
+                  )
+                const isSamePostMessageMedia = areComparableMediaListsEqual(
+                  media,
+                  task.postMessageMedia,
+                )
+                if (
+                  isSamePostMessage &&
+                  isSamePostMessageRich &&
+                  isSamePostMessageMedia
+                ) {
+                  return
+                }
                 handleTaskFieldChange(
                   task.id,
                   'postMessageRich',

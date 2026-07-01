@@ -5,9 +5,12 @@ import Modal from '@components/Modal'
 import CopyableId from '@components/cabinet/CopyableId'
 import TiptapContentView from '@components/cabinet/TiptapContentView'
 import UserTeamCard from '@components/cabinet/cards/UserTeamCard'
+import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import requestApiJson from '@helpers/requestApiJson'
 import {
   buildDefaultPrequelProgress,
+  isPrequelOpenForDate,
+  isPrequelReadyForPlayers,
   isPrequelProgressClosedForConfig,
   isPrequelProgressExhaustedForConfig,
   normalizePrequelConfig,
@@ -37,6 +40,14 @@ const buildAcceptedPrequelCodeItems = (progress, source) =>
       code: String(item.code || '').trim(),
       description: String(item.description || '').trim(),
     }))
+
+const formatPrequelOpenAt = (value, locationKey) =>
+  formatDateInLocationTimeZone(value, locationKey, {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 
 const GameDescriptionModal = ({
   selectedGame,
@@ -73,6 +84,19 @@ const GameDescriptionModal = ({
   const prequel = useMemo(
     () => normalizePrequelConfig(selectedGame?.prequel, { includeCodes: false }),
     [selectedGame?.prequel],
+  )
+  const [prequelNowTs, setPrequelNowTs] = useState(() => Date.now())
+  const isPrequelOpen = useMemo(
+    () => isPrequelOpenForDate(prequel, new Date(prequelNowTs)),
+    [prequel, prequelNowTs],
+  )
+  const isPrequelReady = useMemo(
+    () => isPrequelReadyForPlayers(prequel),
+    [prequel],
+  )
+  const prequelOpenAtLabel = useMemo(
+    () => formatPrequelOpenAt(prequel.openAt, selectedGame?.location),
+    [prequel.openAt, selectedGame?.location],
   )
   const captainParticipation = useMemo(
     () =>
@@ -123,14 +147,30 @@ const GameDescriptionModal = ({
     }
   }, [isDescriptionModalOpen])
 
+  useEffect(() => {
+    if (!isDescriptionModalOpen || !prequel.openAt || isPrequelOpen) {
+      return undefined
+    }
+
+    const intervalId = window.setInterval(() => {
+      setPrequelNowTs(Date.now())
+    }, 30000)
+
+    return () => window.clearInterval(intervalId)
+  }, [isDescriptionModalOpen, isPrequelOpen, prequel.openAt])
+
   const canUsePrequel =
     Boolean(prequel.enabled) &&
+    isPrequelReady &&
+    isPrequelOpen &&
     Boolean(captainGameTeamId) &&
     Boolean(captainParticipation?.isCaptain) &&
     !isPrequelClosed &&
     String(selectedGame?.status || '').trim().toLowerCase() === 'active'
   const prequelStatusMessage =
-    String(selectedGame?.status || '').trim().toLowerCase() !== 'active'
+    !isPrequelOpen
+      ? `Задание приквела будет открыто ${prequelOpenAtLabel || 'в указанную дату и время'}.`
+      : String(selectedGame?.status || '').trim().toLowerCase() !== 'active'
       ? 'После фактического старта игры ввод приквела недоступен.'
       : isPrequelExhausted
         ? 'Все доступные коды приквела для вашей команды уже найдены.'
@@ -406,7 +446,7 @@ const GameDescriptionModal = ({
           </div>
         </div>
 
-        {selectedGame?.prequel?.enabled && (
+        {isPrequelReady && (
           <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 sm:p-5 dark:border-cyan-500/35 dark:bg-cyan-500/10">
             <div className="flex items-start justify-between gap-3">
               <ModalSectionTitle>Приквел</ModalSectionTitle>
@@ -420,16 +460,22 @@ const GameDescriptionModal = ({
             </div>
             <div className="mt-3">
               <div className="border-t border-cyan-200/80 dark:border-cyan-500/20" />
-              <TiptapContentView
-                html={selectedGame?.prequel?.descriptionRich}
-                text={selectedGame?.prequel?.description}
-                emptyText="Описание приквела не заполнено."
-                className="mt-3 text-slate-600 dark:prose-invert dark:text-slate-300"
-                textClassName="mt-3 text-sm text-slate-600 dark:text-slate-300"
-                emptyClassName="text-sm text-slate-500"
-              />
+              {isPrequelOpen ? (
+                <TiptapContentView
+                  html={selectedGame?.prequel?.descriptionRich}
+                  text={selectedGame?.prequel?.description}
+                  emptyText="Описание приквела не заполнено."
+                  className="mt-3 text-slate-600 dark:prose-invert dark:text-slate-300"
+                  textClassName="mt-3 text-sm text-slate-600 dark:text-slate-300"
+                  emptyClassName="text-sm text-slate-500"
+                />
+              ) : (
+                <p className="mt-3 text-sm font-medium text-cyan-900 dark:text-cyan-100">
+                  {prequelStatusMessage}
+                </p>
+              )}
               <div className="mt-3 border-t border-cyan-200/80 dark:border-cyan-500/20" />
-              {Number(selectedGame?.prequel?.wrongAttemptsLimit) > 0 && (
+              {isPrequelOpen && Number(selectedGame?.prequel?.wrongAttemptsLimit) > 0 && (
                 <p className="mt-3 text-xs text-cyan-800 dark:text-cyan-200">
                   Каждые {selectedGame.prequel.wrongAttemptsLimit} неверных кодов дают штраф.
                 </p>
@@ -454,13 +500,13 @@ const GameDescriptionModal = ({
                   </button>
                 </div>
               </form>
-            ) : (
+            ) : isPrequelOpen ? (
               <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
                 {prequelStatusMessage}
               </p>
-            )}
+            ) : null}
 
-            {prequelFeedback ? (
+            {isPrequelOpen && prequelFeedback ? (
               <div
                 className={`mt-3 rounded-xl px-3 py-2 text-sm ${
                   prequelFeedback.type === 'error'
@@ -474,11 +520,13 @@ const GameDescriptionModal = ({
               </div>
             ) : null}
 
-            <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">
-              Неверных кодов: {prequelProgress.wrongCodes.length}
-            </p>
+            {isPrequelOpen ? (
+              <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">
+                Неверных кодов: {prequelProgress.wrongCodes.length}
+              </p>
+            ) : null}
 
-            {acceptedBonusCodeItems.length > 0 ? (
+            {isPrequelOpen && acceptedBonusCodeItems.length > 0 ? (
               <div className="mt-3">
                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                   Принятые бонусные коды:
@@ -498,7 +546,7 @@ const GameDescriptionModal = ({
               </div>
             ) : null}
 
-            {acceptedPenaltyCodeItems.length > 0 ? (
+            {isPrequelOpen && acceptedPenaltyCodeItems.length > 0 ? (
               <div className="mt-3">
                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                   Принятые штрафные коды:
@@ -727,8 +775,8 @@ const GameDescriptionModal = ({
           </p>
           <p>
             Капитан зарегистрированной команды может вводить коды приквела прямо
-            в описании игры. Верные коды дают бонус, а некоторые коды или серии
-            неверных попыток могут дать штраф.
+            в описании игры после его открытия. Верные коды дают бонус, а
+            некоторые коды или серии неверных попыток могут дать штраф.
           </p>
           <p>
             После фактического старта игры ввод приквела закрывается, а
@@ -746,6 +794,7 @@ GameDescriptionModal.propTypes = {
     finishingPlace: PropTypes.string,
     showFinishingPlace: PropTypes.bool,
     status: PropTypes.string,
+    location: PropTypes.string,
     prequel: PropTypes.object,
     userParticipationTeams: PropTypes.arrayOf(
       PropTypes.shape({

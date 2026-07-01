@@ -199,7 +199,7 @@ const TaskDistributionSection = ({
           value={mode}
           onChange={handleModeChange}
           disabled={disabled}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
+          className="min-w-[150px] rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-9 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-white"
         >
           <option value="linear">Линейное</option>
           <option value="random">Случайное</option>
@@ -275,7 +275,7 @@ const TaskDistributionSection = ({
                   ) : null}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-2">
                   {block.map((taskIndex) => (
                     <span
                       key={taskIndex}
@@ -283,7 +283,7 @@ const TaskDistributionSection = ({
                       data-block-index={blockIndex}
                       data-before-task-index={taskIndex}
                       draggable={!disabled}
-                      className={`inline-flex touch-none select-none items-center gap-2 rounded-lg bg-slate-100 px-2 py-1 text-sm text-slate-700 transition hover:cursor-grab hover:bg-slate-200 active:cursor-grabbing dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 ${draggedTaskIndex === taskIndex ? 'cursor-grabbing opacity-70' : 'cursor-grab'} ${getTaskDropClassName(blockIndex, taskIndex)}`}
+                      className={`flex w-full touch-none select-none items-center justify-between gap-2 rounded-lg bg-slate-100 px-2 py-1 text-sm text-slate-700 transition hover:cursor-grab hover:bg-slate-200 active:cursor-grabbing dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 ${draggedTaskIndex === taskIndex ? 'cursor-grabbing opacity-70' : 'cursor-grab'} ${getTaskDropClassName(blockIndex, taskIndex)}`}
                       onPointerDown={(event) => {
                         handleStartTaskDrag({ event, taskIndex })
                       }}

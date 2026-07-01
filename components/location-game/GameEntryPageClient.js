@@ -10,6 +10,8 @@ import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
 import requestApiJson from '@helpers/requestApiJson'
 import {
   buildDefaultPrequelProgress,
+  isPrequelOpenForDate,
+  isPrequelReadyForPlayers,
   isPrequelProgressClosedForConfig,
   isPrequelProgressExhaustedForConfig,
   normalizePrequelConfig,
@@ -172,6 +174,19 @@ function GameEntryPage({
     () => normalizePrequelConfig(game?.prequel, { includeCodes: false }),
     [game?.prequel],
   )
+  const [prequelNowTs, setPrequelNowTs] = useState(() => Date.now())
+  const isPrequelOpen = useMemo(
+    () => isPrequelOpenForDate(prequel, new Date(prequelNowTs)),
+    [prequel, prequelNowTs],
+  )
+  const isPrequelReady = useMemo(
+    () => isPrequelReadyForPlayers(prequel),
+    [prequel],
+  )
+  const prequelOpenAtLabel = useMemo(
+    () => formatDateTime(prequel.openAt, location),
+    [prequel.openAt, location],
+  )
   const initialPrequelProgress = useMemo(
     () =>
       normalizePrequelProgress(captainParticipantTeam?.prequelProgress) ||
@@ -204,13 +219,17 @@ function GameEntryPage({
   )
   const canUsePrequel =
     Boolean(prequel.enabled) &&
+    isPrequelReady &&
+    isPrequelOpen &&
     Boolean(captainGameTeamId) &&
     Boolean(captainParticipantTeam?.isCaptain) &&
     !isPrequelClosed &&
     !isGameStarted &&
     !isGameFinished
   const prequelStatusMessage =
-    isGameStarted || isGameFinished
+    !isPrequelOpen
+      ? `Задание приквела будет открыто ${prequelOpenAtLabel || 'в указанную дату и время'}.`
+      : isGameStarted || isGameFinished
       ? 'После фактического старта игры ввод приквела недоступен.'
       : isPrequelExhausted
         ? 'Все доступные коды приквела для вашей команды уже найдены.'
@@ -221,6 +240,18 @@ function GameEntryPage({
   useEffect(() => {
     setPrequelProgress(initialPrequelProgress)
   }, [initialPrequelProgress])
+
+  useEffect(() => {
+    if (!prequel.openAt || isPrequelOpen) {
+      return undefined
+    }
+
+    const intervalId = window.setInterval(() => {
+      setPrequelNowTs(Date.now())
+    }, 30000)
+
+    return () => window.clearInterval(intervalId)
+  }, [isPrequelOpen, prequel.openAt])
 
   const [isGameIdCopied, setIsGameIdCopied] = useState(false)
   const gameIdCopyTimeoutRef = useRef(null)
@@ -377,7 +408,7 @@ function GameEntryPage({
                   textClassName="text-base leading-relaxed text-gray-700 dark:text-slate-200"
                   emptyText=""
                 />
-                {prequel.enabled ? (
+                {isPrequelReady ? (
                   <div className="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-4 dark:border-cyan-500/35 dark:bg-cyan-500/10">
                     <div className="flex flex-col gap-2">
                       <div className="flex items-start justify-between gap-3">
@@ -393,16 +424,22 @@ function GameEntryPage({
                         </button>
                       </div>
                       <div className="border-t border-cyan-200/80 dark:border-cyan-500/20" />
-                      <TiptapContentView
-                        html={prequel.descriptionRich}
-                        text={prequel.description}
-                        emptyText="Описание приквела пока не заполнено."
-                        className="mt-3 text-sm text-slate-700 dark:prose-invert dark:text-slate-200"
-                        textClassName="mt-3 text-sm text-slate-700 dark:text-slate-200"
-                        emptyClassName="text-sm text-slate-500"
-                      />
+                      {isPrequelOpen ? (
+                        <TiptapContentView
+                          html={prequel.descriptionRich}
+                          text={prequel.description}
+                          emptyText="Описание приквела пока не заполнено."
+                          className="mt-3 text-sm text-slate-700 dark:prose-invert dark:text-slate-200"
+                          textClassName="mt-3 text-sm text-slate-700 dark:text-slate-200"
+                          emptyClassName="text-sm text-slate-500"
+                        />
+                      ) : (
+                        <p className="mt-3 text-sm font-medium text-cyan-900 dark:text-cyan-100">
+                          {prequelStatusMessage}
+                        </p>
+                      )}
                       <div className="border-t border-cyan-200/80 dark:border-cyan-500/20" />
-                      {Number(prequel.wrongAttemptsLimit) > 0 ? (
+                      {isPrequelOpen && Number(prequel.wrongAttemptsLimit) > 0 ? (
                         <p className="text-xs text-cyan-800 dark:text-cyan-200">
                           Внимание: каждые {prequel.wrongAttemptsLimit} неверных кодов
                           дают штраф.
@@ -429,13 +466,13 @@ function GameEntryPage({
                           </button>
                         </div>
                       </form>
-                    ) : (
+                    ) : isPrequelOpen ? (
                       <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
                         {prequelStatusMessage}
                       </p>
-                    )}
+                    ) : null}
 
-                    {prequelFeedback ? (
+                    {isPrequelOpen && prequelFeedback ? (
                       <div
                         className={`mt-3 rounded-xl px-3 py-2 text-sm ${
                           prequelFeedback.type === 'error'
@@ -449,11 +486,13 @@ function GameEntryPage({
                       </div>
                     ) : null}
 
-                    <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">
-                      Неверных кодов: {prequelProgress.wrongCodes.length}
-                    </p>
+                    {isPrequelOpen ? (
+                      <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">
+                        Неверных кодов: {prequelProgress.wrongCodes.length}
+                      </p>
+                    ) : null}
 
-                    {acceptedBonusCodeItems.length > 0 ? (
+                    {isPrequelOpen && acceptedBonusCodeItems.length > 0 ? (
                       <div className="mt-3">
                         <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                           Принятые бонусные коды:
@@ -473,7 +512,7 @@ function GameEntryPage({
                       </div>
                     ) : null}
 
-                    {acceptedPenaltyCodeItems.length > 0 ? (
+                    {isPrequelOpen && acceptedPenaltyCodeItems.length > 0 ? (
                       <div className="mt-3">
                         <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">
                           Принятые штрафные коды:
@@ -667,8 +706,8 @@ function GameEntryPage({
           </p>
           <p>
             Капитан зарегистрированной команды может вводить коды приквела прямо
-            на странице игры. Верные коды дают бонус, а некоторые коды или
-            серии неверных попыток могут дать штраф.
+            на странице игры после его открытия. Верные коды дают бонус, а
+            некоторые коды или серии неверных попыток могут дать штраф.
           </p>
           <p>
             После фактического старта игры ввод приквела закрывается, а

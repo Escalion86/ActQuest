@@ -270,6 +270,7 @@ const gamesSchema = {
   prequel: {
     type: {
       enabled: { type: Boolean, default: false },
+      openAt: { type: Date, default: null },
       description: { type: String, default: '', trim: true },
       descriptionRich: { type: String, default: '' },
       descriptionMedia: {

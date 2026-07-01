@@ -250,6 +250,7 @@ const sanitizePrequelContent = (prequel = {}) => {
   return {
     ...buildDefaultPrequel(),
     enabled: Boolean(normalized.enabled),
+    openAt: normalized.openAt,
     description: descriptionPlain,
     descriptionRich,
     descriptionMedia: sanitizeTaskMedia(normalized.descriptionMedia),

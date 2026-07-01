@@ -46,6 +46,10 @@ import {
 } from '@helpers/getTaskDuplicateCodeConflicts'
 import { canManageCabinetGameFinances } from '@helpers/cabinetGameVisibility'
 import buildGameFinancesSummary from '@helpers/gameFinancesSummary'
+import {
+  applyGameDraftPatch,
+  areGameDraftsEqual,
+} from '@helpers/gameDraftDirtyState'
 import useMergedSession from '@helpers/useMergedSession'
 import { getNounTeams } from '@helpers/getNoun'
 import {
@@ -852,6 +856,7 @@ const buildUpdatePayload = (game) => {
     prequel: {
       ...buildDefaultPrequel(),
       enabled: Boolean(normalizedPrequel.enabled),
+      openAt: normalizedPrequel.openAt || null,
       description:
         typeof normalizedPrequel.description === 'string'
           ? normalizedPrequel.description
@@ -1217,7 +1222,6 @@ const GamesPage = ({
   const [statusProgressMessage, setStatusProgressMessage] = useState('')
   const [editingGame, setEditingGame] = useState(null)
   const [editingBaselineGame, setEditingBaselineGame] = useState(null)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [toastEvent, setToastEvent] = useState(null)
   const setFeedback = useCallback((feedback) => {
     if (!feedback) {
@@ -1651,7 +1655,6 @@ const GamesPage = ({
     if (!isEditModalOpen && !isTasksModalOpen) {
       setEditingGame(null)
       setEditingBaselineGame(null)
-      setHasUnsavedChanges(false)
     }
     setIsStatusModalOpen(false)
     setIsGameHistoryModalOpen(false)
@@ -2944,7 +2947,6 @@ const GamesPage = ({
       const createdDraft = cloneGameDraft(createdGame)
       setEditingGame(createdDraft)
       setEditingBaselineGame(cloneGameDraft(createdDraft))
-      setHasUnsavedChanges(false)
       setIsEditModalOpen(true)
     },
     onError: (error) => {
@@ -3404,8 +3406,8 @@ const GamesPage = ({
     if (!editingGame || !editingBaselineGame) {
       return false
     }
-    return Boolean(hasUnsavedChanges)
-  }, [editingBaselineGame, editingGame, hasUnsavedChanges])
+    return !areGameDraftsEqual(editingGame, editingBaselineGame)
+  }, [editingBaselineGame, editingGame])
 
   const canEditSelectedGame = useMemo(() => {
     const gameForPermissions =
@@ -3524,7 +3526,6 @@ const GamesPage = ({
       const draft = cloneGameDraft(targetGame)
       setEditingGame(draft)
       setEditingBaselineGame(cloneGameDraft(draft))
-      setHasUnsavedChanges(false)
       setIsDescriptionModalOpen(false)
       setIsEditModalOpen(false)
       setIsTasksModalOpen(true)
@@ -3563,8 +3564,9 @@ const GamesPage = ({
 
   const updateSelectedGame = useCallback(
     (updater) => {
-      if (!canEditSelectedGame || !editingGame) return
-      setHasUnsavedChanges(true)
+      if (!canEditSelectedGame || !editingGame) {
+        return
+      }
 
       setEditingGame((prevGame) => {
         if (!prevGame) {
@@ -3573,39 +3575,15 @@ const GamesPage = ({
 
         const patch =
           typeof updater === 'function' ? updater(prevGame) : updater
-        const isClosedEditing = isClosedStatus(prevGame.status)
-        const allowedClosedKeys = [
-          'showCreator',
-          'showFinishingPlace',
-          'showTasks',
-          'hideResult',
-          'registrationOpen',
-        ]
-        const normalizedPatch =
-          isClosedEditing && patch && typeof patch === 'object'
-            ? Object.fromEntries(
-                Object.entries(patch).filter(([key]) =>
-                  allowedClosedKeys.includes(key),
-                ),
-              )
-            : patch
-        if (
-          isClosedEditing &&
-          (!normalizedPatch || Object.keys(normalizedPatch).length === 0)
-        ) {
-          return prevGame
-        }
-        const nextGame = { ...prevGame, ...normalizedPatch }
-        if (Boolean(nextGame.isRated ?? true)) {
-          nextGame.hidden = false
-        } else {
-          nextGame.seasonId = ''
-          nextGame.seasonName = ''
-        }
-        return nextGame
+        const result = applyGameDraftPatch({
+          prevGame,
+          baselineGame: editingBaselineGame,
+          patch,
+        })
+        return result.nextGame
       })
     },
-    [canEditSelectedGame, editingGame],
+    [canEditSelectedGame, editingBaselineGame, editingGame],
   )
   const isEditingPhotoGame = useMemo(() => {
     const type =
@@ -3757,7 +3735,6 @@ const GamesPage = ({
     if (!editingBaselineGame) return
 
     setEditingGame(cloneGameDraft(editingBaselineGame))
-    setHasUnsavedChanges(false)
     setFeedback(null)
   }, [editingBaselineGame])
 
@@ -3859,7 +3836,6 @@ const GamesPage = ({
       } else {
         setFeedback({ type: 'success', message: 'Изменения сохранены' })
       }
-      setHasUnsavedChanges(false)
       setEditingGame(null)
       setEditingBaselineGame(null)
       setIsEditModalOpen(false)
@@ -3949,7 +3925,6 @@ const GamesPage = ({
           applyPersistedGameUpdate(normalizedGame.id, normalizedGame)
           setEditingGame(cloneGameDraft(normalizedGame))
           setEditingBaselineGame(cloneGameDraft(normalizedGame))
-          setHasUnsavedChanges(false)
           setFeedback({ type: 'success', message: 'Задания сохранены' })
 
           gameForPreview = normalizedGame
@@ -4998,7 +4973,6 @@ const GamesPage = ({
     )
     setEditingGame(draft)
     setEditingBaselineGame(cloneGameDraft(draft))
-    setHasUnsavedChanges(false)
   }, [])
 
   const handleSelectGameCard = useCallback((game) => {
@@ -5852,7 +5826,6 @@ const GamesPage = ({
     if (!isTasksModalOpen) {
       setEditingGame(null)
       setEditingBaselineGame(null)
-      setHasUnsavedChanges(false)
     }
   }, [isSaving, isTasksModalOpen])
 
@@ -5865,7 +5838,6 @@ const GamesPage = ({
     if (!isEditModalOpen) {
       setEditingGame(null)
       setEditingBaselineGame(null)
-      setHasUnsavedChanges(false)
     }
   }, [isEditModalOpen, isSaving])
 
@@ -5878,7 +5850,6 @@ const GamesPage = ({
     if (!isEditModalOpen && !isTasksModalOpen) {
       setEditingGame(null)
       setEditingBaselineGame(null)
-      setHasUnsavedChanges(false)
     }
   }, [isEditModalOpen, isSaving, isTasksModalOpen])
 

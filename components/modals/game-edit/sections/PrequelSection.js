@@ -11,12 +11,20 @@ import CabinetTextareaField from '@components/cabinet/CabinetTextareaField'
 import ImagesInput from '@components/cabinet/ImagesInput'
 import NeonCheckbox from '@components/NeonCheckbox'
 import {
+  formatDateTimeLocalInLocation,
+  parseDateTimeLocalInLocation,
+} from '@helpers/dateTimeLocalInLocation'
+import {
   buildDefaultPrequel,
+  isPrequelReadyForPlayers,
   normalizePrequelConfig,
   normalizePrequelStoryEffect,
 } from '@helpers/normalizePrequel'
 import {
   stripHtmlToPlainText,
+  normalizeComparableEditorPlainText,
+  normalizeComparableRichText,
+  areComparableMediaListsEqual,
   compactSingleLine,
   truncateWithDots,
 } from '../sharedHelpers'
@@ -54,7 +62,7 @@ const PrequelSection = ({
   const [expandedCodeAccordions, setExpandedCodeAccordions] = useState(
     () => new Set(),
   )
-  const [selectedCodePhoto, setSelectedCodePhoto] = useState(null)
+  const [, setSelectedCodePhoto] = useState(null)
 
   const isPhotoGame = selectedGame?.type === 'photo'
   const isStoryGame = selectedGame?.type === 'story'
@@ -62,21 +70,8 @@ const PrequelSection = ({
     selectedGame?.prequel || buildDefaultPrequel(),
   )
 
-  const prequelDescriptionText =
-    typeof prequel.description === 'string' ? prequel.description.trim() : ''
-  const prequelHasDescription =
-    prequelDescriptionText !== '' ||
-    /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(
-      String(prequel.descriptionRich || ''),
-    ) ||
-    (Array.isArray(prequel.descriptionMedia) &&
-      prequel.descriptionMedia.length > 0)
-  const prequelBonusCodesCount = Array.isArray(prequel.bonusCodes)
-    ? prequel.bonusCodes.length
-    : 0
   const hasPrequelValidationErrors =
-    Boolean(prequel.enabled) &&
-    (!prequelHasDescription || prequelBonusCodesCount === 0)
+    Boolean(prequel.enabled) && !isPrequelReadyForPlayers(prequel)
 
   useEffect(() => {
     setIsPrequelExpanded(false)
@@ -422,6 +417,37 @@ const PrequelSection = ({
 
       {prequel.enabled && isPrequelExpanded ? (
         <div className="px-3 py-4 space-y-5 sm:px-4 sm:py-5">
+          <CabinetInputField
+            id="game-prequel-open-at"
+            label="Открыть приквел"
+            type="datetime-local"
+            value={
+              prequel.openAt
+                ? formatDateTimeLocalInLocation(
+                    prequel.openAt,
+                    selectedGame.location,
+                  )
+                : ''
+            }
+            onChange={(event) =>
+              updatePrequel({
+                openAt: event.target.value
+                  ? parseDateTimeLocalInLocation(
+                      event.target.value,
+                      selectedGame.location,
+                    )
+                  : null,
+              })
+            }
+            disabled={!canEditSelectedGame || isSaving}
+            labelClassName={fieldLabelClassName}
+            inputClassName={fieldInputClassName}
+          />
+
+          <p className="-mt-3 text-xs text-slate-500 dark:text-slate-300">
+            Обязательная дата, с которой игроки увидят задание приквела.
+          </p>
+
           <div className="space-y-2">
             <p className={fieldLabelClassName}>Описание приквела</p>
             <TaskRichEditor
@@ -433,8 +459,29 @@ const PrequelSection = ({
               onChange={({ html, plainText, media }) => {
                 const nextDescription =
                   plainText || stripHtmlToPlainText(html || '')
+                const nextDescriptionRich =
+                  typeof html === 'string' ? html : ''
+                const isSameDescription =
+                  normalizeComparableEditorPlainText(nextDescription) ===
+                  normalizeComparableEditorPlainText(prequel.description)
+                const isSameDescriptionRich =
+                  normalizeComparableRichText(
+                    nextDescriptionRich,
+                    nextDescription,
+                  ) ===
+                  normalizeComparableRichText(
+                    prequel.descriptionRich,
+                    prequel.description,
+                  )
+                const isSameMedia = areComparableMediaListsEqual(
+                  media,
+                  prequel.descriptionMedia,
+                )
+                if (isSameDescription && isSameDescriptionRich && isSameMedia) {
+                  return
+                }
                 updatePrequel({
-                  descriptionRich: typeof html === 'string' ? html : '',
+                  descriptionRich: nextDescriptionRich,
                   description: nextDescription,
                   descriptionMedia: Array.isArray(media) ? media : [],
                 })
@@ -535,6 +582,7 @@ PrequelSection.propTypes = {
   selectedGame: PropTypes.shape({
     id: PropTypes.string,
     type: PropTypes.string,
+    location: PropTypes.string,
     prequel: PropTypes.object,
   }),
   canEditSelectedGame: PropTypes.bool.isRequired,

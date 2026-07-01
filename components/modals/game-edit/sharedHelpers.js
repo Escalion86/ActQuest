@@ -27,6 +27,31 @@ export const normalizeComparablePlainText = (value) =>
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 
+export const normalizeComparableEditorPlainText = (value) =>
+  normalizeComparablePlainText(stripHtmlToPlainText(value))
+
+export const hasHtmlMarkup = (value) => /<[^>]+>/i.test(String(value || ''))
+
+export const isInitialEditorHtmlNormalization = ({
+  nextPlainText,
+  nextRichText,
+  currentPlainText,
+  currentRichText,
+}) => {
+  if (String(currentRichText || '').trim() !== '') {
+    return false
+  }
+  if (!hasHtmlMarkup(currentPlainText)) {
+    return false
+  }
+
+  const normalizedCurrent = normalizeComparableEditorPlainText(currentPlainText)
+  return (
+    normalizeComparableEditorPlainText(nextPlainText) === normalizedCurrent &&
+    normalizeComparableEditorPlainText(nextRichText) === normalizedCurrent
+  )
+}
+
 export const hasMeaningfulRichMarkup = (value) =>
   /<(?!\/?(p|br|div|span)\b)[^>]+>/i.test(String(value || ''))
 
@@ -47,6 +72,21 @@ export const normalizeComparableRichText = (richValue, plainValue) => {
   }
   return rich
 }
+
+const normalizeComparableMediaItem = (item) => ({
+  type:
+    item?.type === 'audio' ? 'audio' : item?.type === 'video' ? 'video' : 'image',
+  url: typeof item?.url === 'string' ? item.url.trim() : '',
+})
+
+export const normalizeComparableMediaList = (media) =>
+  (Array.isArray(media) ? media : [])
+    .map(normalizeComparableMediaItem)
+    .filter((item) => item.url !== '')
+
+export const areComparableMediaListsEqual = (left, right) =>
+  JSON.stringify(normalizeComparableMediaList(left)) ===
+  JSON.stringify(normalizeComparableMediaList(right))
 
 export const compactSingleLine = (value) =>
   String(value || '')

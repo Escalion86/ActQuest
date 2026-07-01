@@ -54,6 +54,19 @@ const ensureNullableNumber = (value) => {
   return Number.isFinite(number) ? number : null
 }
 
+const ensureNullableDateISOString = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+
+  return date.toISOString()
+}
+
 const normalizeStringArray = (values = []) =>
   (Array.isArray(values) ? values : [])
     .map((item) => ensureString(item, '').trim())
@@ -120,6 +133,7 @@ const normalizePrequelCodeEntry = (entry, index = 0, kind = 'bonus') => {
 
 const buildDefaultPrequel = () => ({
   enabled: false,
+  openAt: null,
   description: '',
   descriptionRich: '',
   descriptionMedia: [],
@@ -169,6 +183,7 @@ const normalizePrequelConfig = (prequel, options = {}) => {
 
   return {
     enabled: ensureBoolean(nextPrequel?.enabled, false),
+    openAt: ensureNullableDateISOString(nextPrequel?.openAt),
     description: ensureString(nextPrequel?.description, ''),
     descriptionRich: ensureString(nextPrequel?.descriptionRich, ''),
     descriptionMedia: (Array.isArray(nextPrequel?.descriptionMedia)
@@ -336,6 +351,40 @@ const isPrequelProgressClosedForConfig = (progress, prequel) => {
   return true
 }
 
+const isPrequelOpenForDate = (prequel, now = new Date()) => {
+  const normalizedPrequel = normalizePrequelConfig(prequel, {
+    includeCodes: false,
+  })
+  if (!normalizedPrequel.openAt) {
+    return true
+  }
+
+  const openAtDate = new Date(normalizedPrequel.openAt)
+  const nowDate = now instanceof Date ? now : new Date(now)
+  if (Number.isNaN(openAtDate.getTime()) || Number.isNaN(nowDate.getTime())) {
+    return true
+  }
+
+  return openAtDate.getTime() <= nowDate.getTime()
+}
+
+const isPrequelReadyForPlayers = (prequel) => {
+  const normalizedPrequel = normalizePrequelConfig(prequel, {
+    includeCodes: false,
+  })
+  if (!normalizedPrequel.enabled || !normalizedPrequel.openAt) {
+    return false
+  }
+
+  const hasDescription =
+    ensureString(normalizedPrequel.description, '').trim() !== '' ||
+    ensureString(normalizedPrequel.descriptionRich, '').trim() !== '' ||
+    normalizedPrequel.descriptionMedia.length > 0
+  const hasBonusCode = Math.max(0, Number(normalizedPrequel.bonusCodesCount) || 0) > 0
+
+  return hasDescription && hasBonusCode
+}
+
 export {
   PREQUEL_EFFECT_TYPES,
   PREQUEL_MODE_MULTI_HIT,
@@ -343,6 +392,8 @@ export {
   buildDefaultPrequel,
   buildDefaultPrequelProgress,
   hasPrequelAdjustments,
+  isPrequelOpenForDate,
+  isPrequelReadyForPlayers,
   isPrequelProgressClosedForConfig,
   isPrequelProgressExhaustedForConfig,
   normalizePrequelCodeEntry,

@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@server/auth/authOptions'
+import {
+  isPrequelOpenForDate,
+  isPrequelReadyForPlayers,
+} from '@helpers/normalizePrequel'
 import applyPrequelSubmission from '@server/applyPrequelSubmission'
 import normalizePrequelProgressForApi from '@server/normalizePrequelProgress'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -97,6 +101,20 @@ export async function POST(request) {
       return NextResponse.json(
         { success: false, error: 'После фактического старта игры приквел недоступен' },
         { status: 409 },
+      )
+    }
+
+    if (!isPrequelReadyForPlayers(game?.prequel)) {
+      return NextResponse.json(
+        { success: false, error: 'Приквел заполнен не полностью' },
+        { status: 400 },
+      )
+    }
+
+    if (!isPrequelOpenForDate(game?.prequel, new Date())) {
+      return NextResponse.json(
+        { success: false, error: 'Приквел ещё не открыт' },
+        { status: 423 },
       )
     }
 

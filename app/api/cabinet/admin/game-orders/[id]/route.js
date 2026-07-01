@@ -80,3 +80,50 @@ export async function PATCH(request, { params }) {
     )
   }
 }
+
+export async function DELETE(_request, { params }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user || !isUserAdmin({ role: session.user.role })) {
+    return NextResponse.json(
+      { success: false, error: 'Недостаточно прав' },
+      { status: 403 },
+    )
+  }
+
+  const resolvedParams = await params
+  const id = typeof resolvedParams?.id === 'string' ? resolvedParams.id : ''
+  if (!id) {
+    return NextResponse.json(
+      { success: false, error: 'Некорректный идентификатор заявки' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    const db = await dbConnectGlobal()
+    if (!db) {
+      throw new Error('Соединение с базой данных не установлено')
+    }
+
+    const GameOrders = db.model('GameOrders')
+    const deleted = await GameOrders.findByIdAndDelete(id).lean()
+
+    if (!deleted) {
+      return NextResponse.json(
+        { success: false, error: 'Заявка не найдена' },
+        { status: 404 },
+      )
+    }
+
+    return NextResponse.json(
+      { success: true, data: { id } },
+      { status: 200 },
+    )
+  } catch (error) {
+    console.error('Failed to delete game order (app)', error)
+    return NextResponse.json(
+      { success: false, error: 'Не удалось удалить заявку' },
+      { status: 500 },
+    )
+  }
+}

@@ -9,6 +9,11 @@ import CabinetButton from '@components/cabinet/CabinetButton'
 import FormSectionCard from '@components/cabinet/FormSectionCard'
 import NoticeBanner from '@components/NoticeBanner'
 import Modal from '@components/Modal'
+import {
+  formatGameOrderPhone,
+  getGameOrderPhoneHref,
+  getGameOrderTelegramHref,
+} from '@helpers/gameOrderContacts'
 import requestApiJson from '@helpers/requestApiJson'
 import isUserAdmin from '@helpers/isUserAdmin'
 import useMergedSession from '@helpers/useMergedSession'
@@ -131,6 +136,7 @@ const AdminGameOrdersPageClient = ({
   const [convertName, setConvertName] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isConverting, setIsConverting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const locationOptions = useMemo(
     () => [
@@ -321,6 +327,72 @@ const AdminGameOrdersPageClient = ({
     }
   }, [convertName, selectedOrder?.id])
 
+  const handleDeleteOrder = useCallback(async () => {
+    if (!selectedOrder?.id || isDeleting) {
+      return
+    }
+    const shouldDelete = window.confirm(
+      'Удалить заявку безвозвратно? Это действие нельзя отменить.',
+    )
+    if (!shouldDelete) {
+      return
+    }
+    setIsDeleting(true)
+    setFeedback(null)
+    try {
+      await requestApiJson(`${API_BASE}/${selectedOrder.id}`, {
+        method: 'DELETE',
+        headers: {
+          Accept: 'application/json',
+        },
+        fallbackMessage: 'Не удалось удалить заявку',
+      })
+      setOrders((prev) => prev.filter((item) => item.id !== selectedOrder.id))
+      setSelectedOrder(null)
+      setFeedback({ type: 'success', message: 'Заявка удалена' })
+    } catch (error) {
+      setFeedback({
+        type: 'error',
+        message: error?.message || 'Не удалось удалить заявку',
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }, [isDeleting, selectedOrder?.id])
+
+  const renderPhoneLink = useCallback((phone, fallback = null) => {
+    const formattedPhone = formatGameOrderPhone(phone)
+    const phoneHref = getGameOrderPhoneHref(phone)
+    if (!formattedPhone || !phoneHref) {
+      return fallback
+    }
+    return (
+      <a
+        href={phoneHref}
+        className="font-semibold text-cyan-700 underline-offset-2 hover:underline dark:text-cyan-200"
+      >
+        {formattedPhone}
+      </a>
+    )
+  }, [])
+
+  const renderTelegramLink = useCallback((telegram, fallback = null) => {
+    const telegramHref = getGameOrderTelegramHref(telegram)
+    if (!telegram || !telegramHref) {
+      return fallback
+    }
+    return (
+      <a
+        href={telegramHref}
+        target="_blank"
+        rel="noreferrer"
+        className="font-semibold text-cyan-700 underline-offset-2 hover:underline dark:text-cyan-200"
+      >
+        {telegram}
+      </a>
+    )
+  }, [])
+
   if (!isAdmin) {
     return (
       <CabinetLayout
@@ -444,8 +516,10 @@ const AdminGameOrdersPageClient = ({
               </div>
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-300">
                 <span>Контакт: {order.contactName || 'не указан'}</span>
-                {order.phone ? <span>{order.phone}</span> : null}
-                {order.telegram ? <span>{order.telegram}</span> : null}
+                {order.phone ? <span>{renderPhoneLink(order.phone)}</span> : null}
+                {order.telegram ? (
+                  <span>{renderTelegramLink(order.telegram)}</span>
+                ) : null}
                 {order.email ? <span>{order.email}</span> : null}
                 <span>Создана: {formatDateTime(order.createdAt)}</span>
               </div>
@@ -475,14 +549,23 @@ const AdminGameOrdersPageClient = ({
             <button
               type="button"
               onClick={() => setSelectedOrder(null)}
+              disabled={isDeleting}
               className="aq-modal-btn aq-modal-btn-secondary"
             >
               Закрыть
             </button>
             <button
               type="button"
+              onClick={() => void handleDeleteOrder()}
+              disabled={isDeleting || isSaving || isConverting}
+              className="aq-modal-btn aq-modal-btn-secondary border-red-300 text-red-700 hover:bg-red-50 dark:border-red-500/50 dark:text-red-200 dark:hover:bg-red-500/10"
+            >
+              {isDeleting ? 'Удаляем...' : 'Удалить'}
+            </button>
+            <button
+              type="button"
               onClick={() => void handleSaveComment()}
-              disabled={isSaving}
+              disabled={isSaving || isDeleting}
               className="aq-modal-btn aq-modal-btn-primary"
             >
               {isSaving ? 'Сохраняем...' : 'Сохранить'}
@@ -513,8 +596,15 @@ const AdminGameOrdersPageClient = ({
                 </div>
               </div>
               <div className="grid gap-3 md:grid-cols-3">
-                <div>{selectedOrder.phone || 'Телефон не указан'}</div>
-                <div>{selectedOrder.telegram || 'Telegram не указан'}</div>
+                <div>
+                  {renderPhoneLink(selectedOrder.phone, 'Телефон не указан')}
+                </div>
+                <div>
+                  {renderTelegramLink(
+                    selectedOrder.telegram,
+                    'Telegram не указан',
+                  )}
+                </div>
                 <div>{selectedOrder.email || 'Email не указан'}</div>
               </div>
               {selectedOrder.comment ? (
@@ -568,7 +658,7 @@ const AdminGameOrdersPageClient = ({
                 ) : (
                   <CabinetButton
                     tone="success"
-                    disabled={isConverting}
+                    disabled={isConverting || isDeleting}
                     onClick={() => void handleConvert()}
                   >
                     {isConverting ? 'Создаем игру...' : 'Создать скрытую игру'}
