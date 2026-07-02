@@ -45,6 +45,10 @@ const normalizeStoryItems = (items) =>
       image: normalizeText(item?.image, 2000),
       descriptionRich: normalizeText(item?.descriptionRich, 50000),
       media: normalizeMedia(item?.media),
+      position: {
+        x: normalizeNumber(item?.position?.x, 80 + index * 48),
+        y: normalizeNumber(item?.position?.y, 80 + index * 48),
+      },
       consumableOnUse: normalizeBoolean(item?.consumableOnUse, false),
       hiddenUntilObtained: item?.hiddenUntilObtained !== false,
     }))
@@ -122,6 +126,15 @@ const normalizeStoryNodes = (nodes, allowedAgentIds = null) =>
         startVisible: normalizeBoolean(node?.visibility?.startVisible, false),
         requiredNodeIds: normalizeStringArray(node?.visibility?.requiredNodeIds),
         requiredItemIds: normalizeStringArray(node?.visibility?.requiredItemIds),
+        requiredInputMode: ['any', 'count'].includes(
+          node?.visibility?.requiredInputMode,
+        )
+          ? node.visibility.requiredInputMode
+          : 'all',
+        requiredInputCount: Math.max(
+          1,
+          Math.trunc(normalizeNumber(node?.visibility?.requiredInputCount, 1)),
+        ),
         hiddenUntilUnlocked: node?.visibility?.hiddenUntilUnlocked !== false,
       },
       scoring: {
@@ -137,15 +150,28 @@ const normalizeStoryNodes = (nodes, allowedAgentIds = null) =>
     }))
     .filter((node) => node.id)
 
-const normalizeStoryEdges = (edges, nodeIds) =>
+const normalizeStoryEdges = (edges, nodeIds, itemIds) =>
   (Array.isArray(edges) ? edges : [])
     .map((edge, index) => ({
       id: normalizeText(edge?.id, 100) || `edge-${index + 1}`,
-      fromNodeId: normalizeText(edge?.fromNodeId, 100),
+      fromNodeId: normalizeText(edge?.fromNodeId, 100) || null,
+      fromItemId: normalizeText(edge?.fromItemId, 100) || null,
       toNodeId: normalizeText(edge?.toNodeId, 100),
-      type: ['unlock', 'requires_item', 'ending'].includes(edge?.type)
-        ? edge.type
-        : 'unlock',
+      type: [
+        'required_node',
+        'required_item',
+        'unlock',
+        'requires_item',
+        'ending',
+      ].includes(edge?.type)
+        ? edge.type === 'unlock'
+          ? 'required_node'
+          : edge.type === 'requires_item'
+            ? 'required_item'
+            : edge.type
+        : edge?.fromItemId
+          ? 'required_item'
+          : 'required_node',
       itemId: normalizeText(edge?.itemId, 100) || null,
       actionId: normalizeText(edge?.actionId, 100) || null,
       codeId: normalizeText(edge?.codeId, 100) || null,
@@ -153,12 +179,42 @@ const normalizeStoryEdges = (edges, nodeIds) =>
     .filter(
       (edge) =>
         edge.id &&
-        edge.fromNodeId &&
+        (edge.fromNodeId || edge.fromItemId) &&
         edge.toNodeId &&
-        nodeIds.has(edge.fromNodeId) &&
+        (!edge.fromNodeId || nodeIds.has(edge.fromNodeId)) &&
+        (!edge.fromItemId || itemIds.has(edge.fromItemId)) &&
         nodeIds.has(edge.toNodeId) &&
         edge.fromNodeId !== edge.toNodeId,
     )
+
+const syncNodeVisibilityFromEdges = (nodes, edges) => {
+  const requiredNodeIdsByNode = new Map()
+  const requiredItemIdsByNode = new Map()
+
+  edges.forEach((edge) => {
+    if (!edge?.toNodeId) return
+    if (edge.type === 'required_item' && edge.fromItemId) {
+      const items = requiredItemIdsByNode.get(edge.toNodeId) || new Set()
+      items.add(edge.fromItemId)
+      requiredItemIdsByNode.set(edge.toNodeId, items)
+      return
+    }
+    if (edge.fromNodeId) {
+      const nodesSet = requiredNodeIdsByNode.get(edge.toNodeId) || new Set()
+      nodesSet.add(edge.fromNodeId)
+      requiredNodeIdsByNode.set(edge.toNodeId, nodesSet)
+    }
+  })
+
+  return nodes.map((node) => ({
+    ...node,
+    visibility: {
+      ...node.visibility,
+      requiredNodeIds: Array.from(requiredNodeIdsByNode.get(node.id) || []),
+      requiredItemIds: Array.from(requiredItemIdsByNode.get(node.id) || []),
+    },
+  }))
+}
 
 const normalizeStoryEndings = (endings) =>
   (Array.isArray(endings) ? endings : [])
@@ -170,6 +226,10 @@ const normalizeStoryEndings = (endings) =>
         : 'success',
       descriptionRich: normalizeText(ending?.descriptionRich, 50000),
       media: normalizeMedia(ending?.media),
+      position: {
+        x: normalizeNumber(ending?.position?.x, 420 + index * 48),
+        y: normalizeNumber(ending?.position?.y, 140 + index * 88),
+      },
       conditions: {
         minScore:
           ending?.conditions?.minScore === null ||
@@ -306,8 +366,18 @@ export async function PATCH(request) {
         .map((agent) => normalizeStringId(agent?.userId ?? agent?.id ?? agent))
         .filter(Boolean),
     )
-    const storyNodes = normalizeStoryNodes(payload?.storyNodes, allowedAgentIds)
-    const nodeIds = new Set(storyNodes.map((node) => node.id))
+    const normalizedStoryNodes = normalizeStoryNodes(
+      payload?.storyNodes,
+      allowedAgentIds,
+    )
+    const storyItems = normalizeStoryItems(payload?.storyItems)
+    const nodeIds = new Set(normalizedStoryNodes.map((node) => node.id))
+    const itemIds = new Set(storyItems.map((item) => item.id))
+    const storyEdges = normalizeStoryEdges(payload?.storyEdges, nodeIds, itemIds)
+    const storyNodes = syncNodeVisibilityFromEdges(
+      normalizedStoryNodes,
+      storyEdges,
+    )
     const update = {
       type: 'story',
       storyConfig: {
@@ -320,9 +390,9 @@ export async function PATCH(request) {
         showScoreToTeam: Boolean(storyConfig?.showScoreToTeam),
         showFinalHistoryToTeam: Boolean(storyConfig?.showFinalHistoryToTeam),
       },
-      storyItems: normalizeStoryItems(payload?.storyItems),
+      storyItems,
       storyNodes,
-      storyEdges: normalizeStoryEdges(payload?.storyEdges, nodeIds),
+      storyEdges,
       storyEndings: normalizeStoryEndings(payload?.storyEndings),
     }
 

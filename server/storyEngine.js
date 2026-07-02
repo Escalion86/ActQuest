@@ -163,6 +163,32 @@ const areRequirementsMet = (progress, requirements = {}) => {
     requirements?.requiredNodeIds ?? requirements?.requiredCompletedNodeIds,
   )
   const requiredItemIds = uniqueStrings(requirements?.requiredItemIds)
+  const enabledInputsCount =
+    requiredNodeIds.filter((nodeId) => hasCompletedNode(progress, nodeId))
+      .length +
+    requiredItemIds.filter((itemId) => hasActiveItem(progress, itemId)).length
+  const totalInputsCount = requiredNodeIds.length + requiredItemIds.length
+  const requiredInputMode = ['any', 'count'].includes(
+    requirements?.requiredInputMode,
+  )
+    ? requirements.requiredInputMode
+    : 'all'
+
+  if (totalInputsCount === 0) {
+    return true
+  }
+
+  if (requiredInputMode === 'any') {
+    return enabledInputsCount >= 1
+  }
+
+  if (requiredInputMode === 'count') {
+    const requiredInputCount = Math.max(
+      1,
+      Math.trunc(toNumber(requirements?.requiredInputCount, 1)),
+    )
+    return enabledInputsCount >= Math.min(requiredInputCount, totalInputsCount)
+  }
 
   return (
     requiredNodeIds.every((nodeId) => hasCompletedNode(progress, nodeId)) &&
@@ -187,6 +213,8 @@ const nodeIsAvailable = (node, progress) => {
   return areRequirementsMet(progress, {
     requiredNodeIds: node?.visibility?.requiredNodeIds,
     requiredItemIds: node?.visibility?.requiredItemIds,
+    requiredInputMode: node?.visibility?.requiredInputMode,
+    requiredInputCount: node?.visibility?.requiredInputCount,
   })
 }
 

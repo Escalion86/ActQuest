@@ -41,6 +41,13 @@ const StoryItemSchema = new Schema(
     image: { type: String, trim: true, default: '' },
     descriptionRich: { type: String, default: '' },
     media: { type: [StoryMediaSchema], default: [] },
+    position: {
+      type: {
+        x: { type: Number, default: 0 },
+        y: { type: Number, default: 0 },
+      },
+      default: () => ({}),
+    },
     consumableOnUse: { type: Boolean, default: false },
     hiddenUntilObtained: { type: Boolean, default: true },
   },
@@ -58,6 +65,13 @@ const StoryEndingSchema = new Schema(
     },
     descriptionRich: { type: String, default: '' },
     media: { type: [StoryMediaSchema], default: [] },
+    position: {
+      type: {
+        x: { type: Number, default: 0 },
+        y: { type: Number, default: 0 },
+      },
+      default: () => ({}),
+    },
     conditions: {
       type: {
         minScore: { type: Number, default: null },
@@ -92,6 +106,12 @@ const StoryNodeSchema = new Schema(
         startVisible: { type: Boolean, default: false },
         requiredNodeIds: { type: [String], default: [] },
         requiredItemIds: { type: [String], default: [] },
+        requiredInputMode: {
+          type: String,
+          enum: ['all', 'any', 'count'],
+          default: 'all',
+        },
+        requiredInputCount: { type: Number, default: 1 },
         hiddenUntilUnlocked: { type: Boolean, default: true },
       },
       default: () => ({}),
@@ -167,12 +187,19 @@ const StoryNodeSchema = new Schema(
 const StoryEdgeSchema = new Schema(
   {
     id: { type: String, trim: true, required: true },
-    fromNodeId: { type: String, trim: true, required: true },
+    fromNodeId: { type: String, trim: true, default: null },
+    fromItemId: { type: String, trim: true, default: null },
     toNodeId: { type: String, trim: true, required: true },
     type: {
       type: String,
-      enum: ['unlock', 'requires_item', 'ending'],
-      default: 'unlock',
+      enum: [
+        'required_node',
+        'required_item',
+        'unlock',
+        'requires_item',
+        'ending',
+      ],
+      default: 'required_node',
     },
     itemId: { type: String, trim: true, default: null },
     actionId: { type: String, trim: true, default: null },

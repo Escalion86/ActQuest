@@ -246,6 +246,10 @@ const normalizeStoryItems = (items = []) => {
     image: normalizeMediaUrl(item?.image),
     descriptionRich: ensureString(item?.descriptionRich, ''),
     media: normalizeStoryMedia(item?.media),
+    position: {
+      x: ensureNumber(item?.position?.x, 0),
+      y: ensureNumber(item?.position?.y, 0),
+    },
     consumableOnUse: ensureBoolean(item?.consumableOnUse, false),
     hiddenUntilObtained: ensureBoolean(item?.hiddenUntilObtained, true),
   }))
@@ -265,6 +269,15 @@ const normalizeStoryNodes = (nodes = []) => {
       startVisible: ensureBoolean(node?.visibility?.startVisible, false),
       requiredNodeIds: normalizeStringArray(node?.visibility?.requiredNodeIds),
       requiredItemIds: normalizeStringArray(node?.visibility?.requiredItemIds),
+      requiredInputMode: ['any', 'count'].includes(
+        node?.visibility?.requiredInputMode,
+      )
+        ? node.visibility.requiredInputMode
+        : 'all',
+      requiredInputCount: Math.max(
+        1,
+        Math.trunc(ensureNumber(node?.visibility?.requiredInputCount, 1)),
+      ),
       hiddenUntilUnlocked: ensureBoolean(
         node?.visibility?.hiddenUntilUnlocked,
         true,
@@ -292,8 +305,15 @@ const normalizeStoryEdges = (edges = []) => {
   return edges.map((edge, index) => ({
     id: ensureString(edge?.id, `story-edge-${index}`),
     fromNodeId: ensureString(edge?.fromNodeId, ''),
+    fromItemId: ensureString(edge?.fromItemId, ''),
     toNodeId: ensureString(edge?.toNodeId, ''),
-    type: ['unlock', 'requires_item', 'ending'].includes(edge?.type)
+    type: [
+      'required_node',
+      'required_item',
+      'unlock',
+      'requires_item',
+      'ending',
+    ].includes(edge?.type)
       ? edge.type
       : 'unlock',
     itemId: ensureString(edge?.itemId, ''),
@@ -315,6 +335,10 @@ const normalizeStoryEndings = (endings = []) => {
       : 'success',
     descriptionRich: ensureString(ending?.descriptionRich, ''),
     media: normalizeStoryMedia(ending?.media),
+    position: {
+      x: ensureNumber(ending?.position?.x, 420 + index * 48),
+      y: ensureNumber(ending?.position?.y, 140 + index * 88),
+    },
     conditions: {
       minScore: ensureNullableNumber(ending?.conditions?.minScore),
       requiredItemIds: normalizeStringArray(ending?.conditions?.requiredItemIds),

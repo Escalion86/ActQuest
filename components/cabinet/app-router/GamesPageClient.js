@@ -100,6 +100,12 @@ const GAME_TYPE_OPTIONS = [
   { value: 'photo', label: 'Фотоквест' },
 ]
 
+const STORY_GAME_TYPE_OPTION = { value: 'story', label: 'Сюжетный квест' }
+const ALL_GAME_TYPE_OPTIONS = [...GAME_TYPE_OPTIONS, STORY_GAME_TYPE_OPTION]
+
+const getGameTypeOptionsForRole = (role) =>
+  role === 'dev' ? ALL_GAME_TYPE_OPTIONS : GAME_TYPE_OPTIONS
+
 const CLUE_EARLY_MODE_OPTIONS = [
   { value: 'time', label: 'Добавить время до следующей подсказки' },
   { value: 'penalty', label: 'Штраф организатора за подсказку' },
@@ -824,6 +830,39 @@ const buildUpdatePayload = (game) => {
     name: game.name,
     dateStart: game.dateStart ? new Date(game.dateStart).toISOString() : null,
     type: game.type,
+    storyConfig:
+      game.storyConfig && typeof game.storyConfig === 'object'
+        ? {
+            nodeLabel:
+              typeof game.storyConfig.nodeLabel === 'string' &&
+              game.storyConfig.nodeLabel.trim()
+                ? game.storyConfig.nodeLabel.trim()
+                : 'Локация',
+            startMode:
+              game.storyConfig.startMode === 'individual'
+                ? 'individual'
+                : 'common',
+            hideTotalNodes: game.storyConfig.hideTotalNodes !== false,
+            hideTotalItems: game.storyConfig.hideTotalItems !== false,
+            showInventory: game.storyConfig.showInventory !== false,
+            showScoreToTeam: Boolean(game.storyConfig.showScoreToTeam),
+            showFinalHistoryToTeam: Boolean(
+              game.storyConfig.showFinalHistoryToTeam,
+            ),
+          }
+        : undefined,
+    storyItems: Array.isArray(game.storyItems)
+      ? JSON.parse(JSON.stringify(game.storyItems))
+      : [],
+    storyNodes: Array.isArray(game.storyNodes)
+      ? JSON.parse(JSON.stringify(game.storyNodes))
+      : [],
+    storyEdges: Array.isArray(game.storyEdges)
+      ? JSON.parse(JSON.stringify(game.storyEdges))
+      : [],
+    storyEndings: Array.isArray(game.storyEndings)
+      ? JSON.parse(JSON.stringify(game.storyEndings))
+      : [],
     description:
       typeof game.description === 'string'
         ? game.description
@@ -1202,6 +1241,10 @@ const GamesPage = ({
       : Number(currentUserTelegramId)
   const canEditAllGames = userRole === 'admin' || userRole === 'dev'
   const canSeeClosedStatus = userRole === 'admin' || userRole === 'dev'
+  const availableGameTypeOptions = useMemo(
+    () => getGameTypeOptionsForRole(userRole),
+    [userRole],
+  )
   const canEditOwnGames = Boolean(
     currentUserIdString || currentUserTelegramIdNumber,
   )
@@ -2713,6 +2756,19 @@ const GamesPage = ({
         status: 'active',
         dateStart: null,
         type: 'classic',
+        storyConfig: {
+          nodeLabel: 'Локация',
+          startMode: 'common',
+          hideTotalNodes: true,
+          hideTotalItems: true,
+          showInventory: true,
+          showScoreToTeam: false,
+          showFinalHistoryToTeam: false,
+        },
+        storyItems: [],
+        storyNodes: [],
+        storyEdges: [],
+        storyEndings: [],
         description: '',
         descriptionRich: '',
         descriptionMedia: [],
@@ -2825,6 +2881,23 @@ const GamesPage = ({
         if (createGameCloneOptions.tasks) {
           baseDraft.tasks = Array.isArray(normalizedSource.tasks)
             ? JSON.parse(JSON.stringify(normalizedSource.tasks))
+            : []
+          baseDraft.storyConfig =
+            normalizedSource.storyConfig &&
+            typeof normalizedSource.storyConfig === 'object'
+              ? JSON.parse(JSON.stringify(normalizedSource.storyConfig))
+              : baseDraft.storyConfig
+          baseDraft.storyItems = Array.isArray(normalizedSource.storyItems)
+            ? JSON.parse(JSON.stringify(normalizedSource.storyItems))
+            : []
+          baseDraft.storyNodes = Array.isArray(normalizedSource.storyNodes)
+            ? JSON.parse(JSON.stringify(normalizedSource.storyNodes))
+            : []
+          baseDraft.storyEdges = Array.isArray(normalizedSource.storyEdges)
+            ? JSON.parse(JSON.stringify(normalizedSource.storyEdges))
+            : []
+          baseDraft.storyEndings = Array.isArray(normalizedSource.storyEndings)
+            ? JSON.parse(JSON.stringify(normalizedSource.storyEndings))
             : []
           baseDraft.taskDistributionMode = normalizeTaskDistributionMode(
             normalizedSource.taskDistributionMode,
@@ -6451,7 +6524,7 @@ const GamesPage = ({
                             <EditCardIcon />
                           </CardActionIconButton>
                         )}
-                        {canManageThisGame && (
+                        {canManageThisGame && game.type !== 'story' && (
                           <CardActionIconButton
                             onClick={(event) => {
                               event.stopPropagation()
@@ -6459,6 +6532,20 @@ const GamesPage = ({
                             }}
                             label="Редактор заданий"
                             title="Открыть редактор заданий"
+                          >
+                            <TargetCardIcon />
+                          </CardActionIconButton>
+                        )}
+                        {canManageThisGame && game.type === 'story' && (
+                          <CardActionIconButton
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              router.push(
+                                `/cabinet/admin/story-editor?gameId=${game.id}`,
+                              )
+                            }}
+                            label="Story-редактор"
+                            title="Открыть редактор сценария"
                           >
                             <TargetCardIcon />
                           </CardActionIconButton>
@@ -6916,7 +7003,7 @@ const GamesPage = ({
                           <EditCardIcon />
                         </CardActionIconButton>
                       )}
-                      {canManageThisGame && (
+                      {canManageThisGame && game.type !== 'story' && (
                         <CardActionIconButton
                           onClick={(event) => {
                             event.stopPropagation()
@@ -6924,6 +7011,21 @@ const GamesPage = ({
                           }}
                           label="Редактор заданий"
                           title="Открыть редактор заданий"
+                          className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
+                        >
+                          <TargetCardIcon />
+                        </CardActionIconButton>
+                      )}
+                      {canManageThisGame && game.type === 'story' && (
+                        <CardActionIconButton
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            router.push(
+                              `/cabinet/admin/story-editor?gameId=${game.id}`,
+                            )
+                          }}
+                          label="Story-редактор"
+                          title="Открыть редактор сценария"
                           className="inline-flex items-center justify-center w-8 h-8 transition border rounded-full cursor-pointer border-cyan-300 bg-white/90 text-cyan-700 hover:border-cyan-500 hover:bg-cyan-50 hover:text-cyan-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-1 dark:border-slate-500 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-violet-400 dark:hover:text-violet-100 dark:focus:ring-primary"
                         >
                           <TargetCardIcon />
@@ -7087,7 +7189,7 @@ const GamesPage = ({
       return '—'
     }
 
-    const option = GAME_TYPE_OPTIONS.find(
+    const option = ALL_GAME_TYPE_OPTIONS.find(
       (item) => item.value === modalGame.type,
     )
     return option?.label ?? '—'
@@ -7820,7 +7922,7 @@ const GamesPage = ({
                 handleTasksModalPrimaryAction={handleTasksModalPrimaryAction}
                 handleResetChanges={handleResetChanges}
                 updateSelectedGame={updateSelectedGame}
-                GAME_TYPE_OPTIONS={GAME_TYPE_OPTIONS}
+                GAME_TYPE_OPTIONS={availableGameTypeOptions}
                 CLUE_EARLY_MODE_OPTIONS={CLUE_EARLY_MODE_OPTIONS}
                 toMinutes={toMinutes}
                 toSeconds={toSeconds}

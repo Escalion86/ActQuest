@@ -1451,6 +1451,7 @@ const TaskRichEditor = ({
     italic: false,
     strike: false,
     underline: false,
+    blockquote: false,
     frameBox: false,
     bulletList: false,
     orderedList: false,
@@ -1723,6 +1724,7 @@ const TaskRichEditor = ({
       italic: editor.isActive('italic'),
       strike: editor.isActive('strike'),
       underline: editor.isActive('underline'),
+      blockquote: editor.isActive('blockquote'),
       frameBox: editor.isActive('frameBox'),
       bulletList: editor.isActive('bulletList'),
       orderedList: editor.isActive('orderedList'),
@@ -1803,6 +1805,7 @@ const TaskRichEditor = ({
           prev.italic === nextState.italic &&
           prev.strike === nextState.strike &&
           prev.underline === nextState.underline &&
+          prev.blockquote === nextState.blockquote &&
           prev.frameBox === nextState.frameBox &&
           prev.bulletList === nextState.bulletList &&
           prev.orderedList === nextState.orderedList &&
@@ -2873,6 +2876,12 @@ const TaskRichEditor = ({
               label="1. List"
               isActive={toolbarState.orderedList}
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              disabled={disabled}
+            />
+            <ToolbarButton
+              label="Цитата"
+              isActive={toolbarState.blockquote}
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}
               disabled={disabled}
             />
             <ToolbarButton
