@@ -164,6 +164,8 @@ const GameModals = ({
   isCloneSourceGamesLoading,
   createGameLocation,
   setCreateGameLocation,
+  createGameOrganizerId,
+  setCreateGameOrganizerId,
   createGameSeasonId,
   setCreateGameSeasonId,
   createGameSeasons,
@@ -368,6 +370,9 @@ const GameModals = ({
         isCloneSourceGamesLoading={isCloneSourceGamesLoading}
         createGameLocation={createGameLocation}
         setCreateGameLocation={setCreateGameLocation}
+        createGameOrganizerId={createGameOrganizerId}
+        setCreateGameOrganizerId={setCreateGameOrganizerId}
+        availableOrganizersForSelect={availableOrganizersForSelect}
         createGameSeasonId={createGameSeasonId}
         setCreateGameSeasonId={setCreateGameSeasonId}
         createGameSeasons={createGameSeasons}
@@ -673,6 +678,8 @@ GameModals.propTypes = {
   isCloneSourceGamesLoading: PropTypes.bool,
   createGameLocation: PropTypes.string.isRequired,
   setCreateGameLocation: PropTypes.func.isRequired,
+  createGameOrganizerId: PropTypes.string,
+  setCreateGameOrganizerId: PropTypes.func,
   createGameSeasonId: PropTypes.string.isRequired,
   setCreateGameSeasonId: PropTypes.func.isRequired,
   createGameSeasons: PropTypes.arrayOf(
@@ -766,6 +773,8 @@ GameModals.defaultProps = {
   canViewCodePhotos: false,
   startedGameLockedTaskCount: 0,
   isCloneSourceGamesLoading: false,
+  createGameOrganizerId: '',
+  setCreateGameOrganizerId: () => {},
   selectedTeamToAdd: '',
   updatingPaidGameTeamIds: [],
   handleToggleTeamPaidGame: undefined,

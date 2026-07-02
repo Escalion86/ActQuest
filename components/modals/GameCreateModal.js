@@ -37,7 +37,12 @@ const GameCreateModal = ({
   onCloneOptionChange,
   isCreateGameActionDisabled,
   createGameFeedback,
-}) => (
+}) => {
+  const organizerOptions = Array.isArray(availableOrganizersForSelect)
+    ? availableOrganizersForSelect
+    : []
+
+  return (
   <Modal
     isOpen={isCreateGameModalOpen}
     title="Создать игру"
@@ -134,7 +139,7 @@ const GameCreateModal = ({
           className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
         >
           <option value="">Текущий пользователь</option>
-          {availableOrganizersForSelect.map((organizer) => (
+          {organizerOptions.map((organizer) => (
             <option key={organizer.id} value={organizer.id}>
               {organizer.name || organizer.username || 'Без имени'}
             </option>
@@ -281,7 +286,8 @@ const GameCreateModal = ({
       </NoticeBanner>
     </fieldset>
   </Modal>
-)
+  )
+}
 
 GameCreateModal.propTypes = {
   isCreateGameModalOpen: PropTypes.bool.isRequired,
