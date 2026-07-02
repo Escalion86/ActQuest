@@ -1,6 +1,10 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import PropTypes from 'prop-types'
 
+import {
+  buildGameTaskCountLabel,
+  getVisibleGameTaskCounts,
+} from '@helpers/gameTaskCounts'
 import GameEditModal from './game-edit/GameEditModal'
 import GameTasksEditModal from './game-tasks/GameTasksEditModal'
 import GameTeamsModal from './GameTeamsModal'
@@ -207,6 +211,10 @@ const GameModals = ({
 }) => {
   const gameForEdit = editGame ?? selectedGame
   const hasSelectedGame = Boolean(selectedGame)
+  const taskCountLabel = useMemo(
+    () => buildGameTaskCountLabel(getVisibleGameTaskCounts(selectedGame)),
+    [selectedGame],
+  )
 
   return (
     <>
@@ -428,6 +436,7 @@ const GameModals = ({
           taskFailurePenaltyLabel={taskFailurePenaltyLabel}
           manyCodesLimitLabel={manyCodesLimitLabel}
           manyCodesPenaltyLabel={manyCodesPenaltyLabel}
+          taskCountLabel={taskCountLabel}
           currencyFormatter={currencyFormatter}
         />
       ) : null}

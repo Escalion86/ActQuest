@@ -23,6 +23,9 @@ const GameCreateModal = ({
   isCloneSourceGamesLoading,
   createGameLocation,
   setCreateGameLocation,
+  createGameOrganizerId,
+  setCreateGameOrganizerId,
+  availableOrganizersForSelect,
   createGameSeasonId,
   setCreateGameSeasonId,
   createGameSeasons,
@@ -113,6 +116,27 @@ const GameCreateModal = ({
           {createGameLocationOptions.map((item) => (
             <option key={item.key} value={item.key}>
               {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-2">
+        <label
+          htmlFor="new-game-organizer"
+          className="block text-sm font-semibold text-slate-700 dark:text-slate-100"
+        >
+          Организатор игры
+        </label>
+        <select
+          id="new-game-organizer"
+          value={createGameOrganizerId}
+          onChange={(event) => setCreateGameOrganizerId(event.target.value)}
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+        >
+          <option value="">Текущий пользователь</option>
+          {availableOrganizersForSelect.map((organizer) => (
+            <option key={organizer.id} value={organizer.id}>
+              {organizer.name || organizer.username || 'Без имени'}
             </option>
           ))}
         </select>
@@ -281,6 +305,16 @@ GameCreateModal.propTypes = {
   isCloneSourceGamesLoading: PropTypes.bool,
   createGameLocation: PropTypes.string.isRequired,
   setCreateGameLocation: PropTypes.func.isRequired,
+  createGameOrganizerId: PropTypes.string.isRequired,
+  setCreateGameOrganizerId: PropTypes.func.isRequired,
+  availableOrganizersForSelect: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      name: PropTypes.string,
+      username: PropTypes.string,
+      telegramId: PropTypes.string,
+    }),
+  ),
   createGameSeasonId: PropTypes.string.isRequired,
   setCreateGameSeasonId: PropTypes.func.isRequired,
   createGameSeasons: PropTypes.arrayOf(
@@ -325,6 +359,7 @@ GameCreateModal.defaultProps = {
   isCreateGameSeasonsLoading: false,
   isCreateGameSeasonCreating: false,
   createGameLocationOptions: [],
+  availableOrganizersForSelect: [],
 }
 
 export default memo(GameCreateModal)

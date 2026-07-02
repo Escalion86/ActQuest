@@ -2,6 +2,7 @@ const CLOSED_GAME_EDITABLE_KEYS = [
   'showCreator',
   'showFinishingPlace',
   'showTasks',
+  'showTasksCountInGame',
   'hideResult',
   'registrationOpen',
 ]

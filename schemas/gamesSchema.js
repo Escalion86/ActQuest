@@ -726,6 +726,10 @@ const gamesSchema = {
     type: Boolean,
     default: false,
   },
+  showTasksCountInGame: {
+    type: Boolean,
+    default: false,
+  },
   showCreator: {
     type: Boolean,
     default: true,

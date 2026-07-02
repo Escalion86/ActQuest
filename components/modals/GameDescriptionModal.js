@@ -74,6 +74,7 @@ const GameDescriptionModal = ({
   taskFailurePenaltyLabel,
   manyCodesLimitLabel,
   manyCodesPenaltyLabel,
+  taskCountLabel,
   currencyFormatter,
 }) => {
   const [isPrequelHelpOpen, setIsPrequelHelpOpen] = useState(false)
@@ -337,6 +338,16 @@ const GameDescriptionModal = ({
                 </dd>
               </div>
             )}
+            {taskCountLabel ? (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Количество заданий
+                </dt>
+                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                  {taskCountLabel}
+                </dd>
+              </div>
+            ) : null}
             {canViewRestrictedGameInfo && (
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -832,6 +843,7 @@ GameDescriptionModal.propTypes = {
   taskFailurePenaltyLabel: PropTypes.string.isRequired,
   manyCodesLimitLabel: PropTypes.string,
   manyCodesPenaltyLabel: PropTypes.string,
+  taskCountLabel: PropTypes.string,
   currencyFormatter: PropTypes.instanceOf(Intl.NumberFormat).isRequired,
 }
 
@@ -848,6 +860,7 @@ GameDescriptionModal.defaultProps = {
   isRegistrationSubmitting: false,
   manyCodesLimitLabel: null,
   manyCodesPenaltyLabel: null,
+  taskCountLabel: '',
 }
 
 export default memo(GameDescriptionModal)

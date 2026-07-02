@@ -1011,6 +1011,7 @@ const buildUpdatePayload = (game) => {
     showCreator: Boolean(game.showCreator),
     showEnterButton: Boolean(game.showEnterButton),
     showTasks: Boolean(game.showTasks),
+    showTasksCountInGame: Boolean(game.showTasksCountInGame),
     hideResult: Boolean(game.hideResult),
     registrationOpen: Boolean(game.registrationOpen ?? true),
     maxTeamPlayers: toNullableNumber(game.maxTeamPlayers),
@@ -1338,6 +1339,7 @@ const GamesPage = ({
   const [newGameName, setNewGameName] = useState('')
   const [newGameIsRated, setNewGameIsRated] = useState(true)
   const [createGameLocation, setCreateGameLocation] = useState('')
+  const [createGameOrganizerId, setCreateGameOrganizerId] = useState('')
   const [createGameSeasonId, setCreateGameSeasonId] = useState('')
   const [seasonsByLocation, setSeasonsByLocation] = useState({})
   const [seasonsLoadingByLocation, setSeasonsLoadingByLocation] = useState({})
@@ -2543,6 +2545,7 @@ const GamesPage = ({
     setNewGameName('')
     setNewGameIsRated(true)
     setCreateGameLocation(defaultLocation)
+    setCreateGameOrganizerId('')
     setCreateGameSeasonId('')
     setCreateGameMode(CREATE_GAME_MODE_EMPTY)
     setCloneSourceGameId('')
@@ -2750,6 +2753,7 @@ const GamesPage = ({
       trimmedName,
       isCloneMode,
       normalizedCreateLocation,
+      selectedOrganizerId,
     }) => {
       const baseDraft = {
         name: trimmedName,
@@ -2794,6 +2798,7 @@ const GamesPage = ({
         hidden: true,
         showCreator: true,
         showTasks: false,
+        showTasksCountInGame: false,
         hideResult: false,
         registrationOpen: true,
         maxTeamPlayers: null,
@@ -2937,6 +2942,9 @@ const GamesPage = ({
           baseDraft.hidden = Boolean(normalizedSource.hidden)
           baseDraft.showCreator = Boolean(normalizedSource.showCreator)
           baseDraft.showTasks = Boolean(normalizedSource.showTasks)
+          baseDraft.showTasksCountInGame = Boolean(
+            normalizedSource.showTasksCountInGame,
+          )
           baseDraft.hideResult = Boolean(normalizedSource.hideResult)
           baseDraft.registrationOpen = Boolean(
             normalizedSource.registrationOpen ?? true,
@@ -2968,7 +2976,7 @@ const GamesPage = ({
           name: trimmedName,
         }),
         location: normalizedCreateLocation,
-        ...(currentUserDbId ? { creatorUserId: currentUserDbId } : {}),
+        ...(selectedOrganizerId ? { creatorUserId: selectedOrganizerId } : {}),
       }
 
       const { json } = await requestApiJson(CABINET_GAMES_API_BASE, {
@@ -3071,6 +3079,7 @@ const GamesPage = ({
     setNewGameName('')
     setNewGameIsRated(true)
     setCreateGameLocation(location || gameLocationOptions[0]?.key || '')
+    setCreateGameOrganizerId('')
     setCreateGameSeasonId('')
     setCreateGameMode(CREATE_GAME_MODE_EMPTY)
     setCloneSourceGameId('')
@@ -3132,11 +3141,13 @@ const GamesPage = ({
       trimmedName,
       isCloneMode,
       normalizedCreateLocation,
+      selectedOrganizerId: createGameOrganizerId.trim(),
     })
   }, [
     canEditAllGames,
     cloneSourceGameId,
     createGameCloneOptions,
+    createGameOrganizerId,
     createGameLocation,
     createGameMode,
     createGameMutation,
@@ -3215,14 +3226,29 @@ const GamesPage = ({
 
   const organizersQuery = useQuery({
     queryKey: ['cabinet-organizer-users'],
-    enabled: canEditAllGames && (isEditModalOpen || isTasksModalOpen),
+    enabled:
+      canEditAllGames &&
+      (isCreateGameModalOpen || isEditModalOpen || isTasksModalOpen),
     staleTime: 60_000,
     queryFn: async () => {
-      const { json } = await requestApiJson(
-        '/api/cabinet/admin/users-list?limit=200&sortBy=registration_desc',
-        { fallbackMessage: 'Не удалось загрузить список организаторов' },
-      )
-      return Array.isArray(json?.data) ? json.data : []
+      const loadRole = async (role) => {
+        const params = new URLSearchParams({
+          role,
+          limit: '500',
+          sortBy: 'registration_desc',
+        })
+        const { json } = await requestApiJson(
+          `/api/cabinet/admin/users-list?${params.toString()}`,
+          { fallbackMessage: 'Не удалось загрузить список организаторов' },
+        )
+        return Array.isArray(json?.data) ? json.data : []
+      }
+
+      const [admins, developers] = await Promise.all([
+        loadRole('admin'),
+        loadRole('dev'),
+      ])
+      return [...admins, ...developers]
     },
   })
 
@@ -7305,36 +7331,6 @@ const GamesPage = ({
       })
     })
 
-    selectedGameModerators.forEach((moderator) => {
-      const userId =
-        typeof moderator === 'string'
-          ? moderator.trim()
-          : String(moderator?.id || '').trim()
-      if (!userId || organizersMap.has(userId)) {
-        return
-      }
-
-      organizersMap.set(userId, {
-        id: userId,
-        telegramId:
-          typeof moderator === 'string'
-            ? ''
-            : String(moderator?.telegramId || '').trim(),
-        name:
-          typeof moderator === 'string'
-            ? ''
-            : typeof moderator?.name === 'string'
-              ? moderator.name
-              : '',
-        username:
-          typeof moderator === 'string'
-            ? ''
-            : typeof moderator?.username === 'string'
-              ? moderator.username
-              : '',
-      })
-    })
-
     const currentOrganizerUserId = String(
       modalGame?.creatorUserId || modalGame?.creator?.id || '',
     ).trim()
@@ -7362,7 +7358,7 @@ const GamesPage = ({
         sensitivity: 'base',
       }),
     )
-  }, [modalGame, organizersQuery.data, selectedGameModerators])
+  }, [modalGame, organizersQuery.data])
 
   const clueModeDetails = useMemo(() => {
     if (!modalGame) {
@@ -8036,6 +8032,9 @@ const GamesPage = ({
                 isCloneSourceGamesLoading={isCloneSourceGamesLoading}
                 createGameLocation={createGameLocation}
                 setCreateGameLocation={handleCreateGameLocationChange}
+                createGameOrganizerId={createGameOrganizerId}
+                setCreateGameOrganizerId={setCreateGameOrganizerId}
+                availableOrganizersForSelect={availableOrganizersForSelect}
                 createGameSeasonId={createGameSeasonId}
                 setCreateGameSeasonId={setCreateGameSeasonId}
                 createGameSeasons={createGameSeasons}
@@ -8326,6 +8325,7 @@ GamesPage.propTypes = {
       hidden: PropTypes.bool,
       showCreator: PropTypes.bool,
       showTasks: PropTypes.bool,
+      showTasksCountInGame: PropTypes.bool,
       hideResult: PropTypes.bool,
       registrationOpen: PropTypes.bool,
       maxTeamPlayers: PropTypes.number,

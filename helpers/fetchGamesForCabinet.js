@@ -2,6 +2,7 @@ import {
   canViewCabinetGameRestrictedInfo,
   sanitizeCabinetGameForViewer,
 } from '@helpers/cabinetGameVisibility'
+import { buildGameTasksStats } from '@helpers/gameTaskCounts'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import { toStringId } from '@helpers/idAndDate'
 import { isCaptainRole } from '@helpers/teamRoles'
@@ -255,6 +256,7 @@ const fetchGamesForCabinet = async ({
       showCreator: 1,
       showEnterButton: 1,
       showTasks: 1,
+      showTasksCountInGame: 1,
       hideResult: 1,
       registrationOpen: 1,
       maxTeamPlayers: 1,
@@ -549,6 +551,7 @@ const fetchGamesForCabinet = async ({
             ),
         }),
       }),
+      tasksStats: buildGameTasksStats(game?.tasks),
       status: normalizedStatus,
       teamsCount,
       adminUnreadMessagesCount: gameId

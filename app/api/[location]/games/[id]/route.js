@@ -20,6 +20,7 @@ import {
   normalizeTaskDistributionMode,
   validateTaskDistributionTemplate,
 } from '@helpers/taskDistribution'
+import { canAssignGameOrganizer } from '@helpers/gameOrganizer'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
 
 const buildResetPayload = ({
@@ -742,13 +743,21 @@ const execute = (request, params) =>
             const creatorDoc = await db
               .model('Users')
               .findById(creatorUserId)
-              .select({ _id: 1, telegramId: 1 })
+              .select({ _id: 1, role: 1, telegramId: 1 })
               .lean()
 
             if (!creatorDoc) {
               return res.status(400).json({
                 success: false,
                 error: 'Организатор игры не найден',
+              })
+            }
+
+            if (!canAssignGameOrganizer(creatorDoc)) {
+              return res.status(400).json({
+                success: false,
+                error:
+                  'Организатором игры может быть только администратор или разработчик',
               })
             }
 

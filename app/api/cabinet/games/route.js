@@ -6,6 +6,10 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
+import {
+  normalizeGameOrganizerId,
+  resolveGameOrganizerForCreate,
+} from '@helpers/gameOrganizer'
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -102,8 +106,8 @@ export async function POST(request) {
     )
   }
 
-  const creatorUserId = resolveSessionUserId(session.user)
-  const creatorTelegramId = normalizeTelegramId(session.user.telegramId)
+  const sessionCreatorUserId = resolveSessionUserId(session.user)
+  const sessionCreatorTelegramId = normalizeTelegramId(session.user.telegramId)
 
   try {
     const db = await dbConnectGlobal()
@@ -112,6 +116,22 @@ export async function POST(request) {
     }
 
     const GamesModel = db.model('Games')
+    const requestedCreatorUserId = normalizeGameOrganizerId(
+      payload?.creatorUserId,
+    )
+    const requestedCreatorDoc = requestedCreatorUserId
+      ? await db
+          .model('Users')
+          .findById(requestedCreatorUserId)
+          .select({ _id: 1, role: 1, telegramId: 1 })
+          .lean()
+      : null
+    const { creatorUserId, creatorTelegramId } = resolveGameOrganizerForCreate({
+      requestedCreatorUserId,
+      requestedCreatorDoc,
+      sessionCreatorUserId,
+      sessionCreatorTelegramId,
+    })
     const createData = {
       ...payload,
       name,
@@ -119,10 +139,7 @@ export async function POST(request) {
       // При создании игра всегда скрыта.
       hidden: true,
       creatorUserId,
-      creatorTelegramId:
-        normalizeTelegramId(payload?.creatorTelegramId) !== null
-          ? normalizeTelegramId(payload?.creatorTelegramId)
-          : creatorTelegramId,
+      creatorTelegramId,
     }
 
     const createdGame = await GamesModel.create(createData)
@@ -140,10 +157,10 @@ export async function POST(request) {
       actionType: 'game_created',
       entityScope: 'game',
       actor: {
-        userId: creatorUserId,
+        userId: sessionCreatorUserId,
         telegramId:
-          normalizeTelegramId(session.user.telegramId) !== null
-            ? String(normalizeTelegramId(session.user.telegramId))
+          sessionCreatorTelegramId !== null
+            ? String(sessionCreatorTelegramId)
             : null,
         role: typeof session?.user?.role === 'string' ? session.user.role : '',
         name: typeof session?.user?.name === 'string' ? session.user.name : '',
@@ -162,6 +179,17 @@ export async function POST(request) {
     )
   } catch (error) {
     console.error('Failed to create game via cabinet API (app)', error)
+    if (
+      error?.message === 'Организатор игры не найден' ||
+      error?.message ===
+        'Организатором игры может быть только администратор или разработчик'
+    ) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 400 },
+      )
+    }
+
     return NextResponse.json(
       { success: false, error: 'Не удалось создать игру' },
       { status: 500 },

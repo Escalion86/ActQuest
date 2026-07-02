@@ -6,6 +6,7 @@ import {
   canViewCabinetGameRestrictedInfo,
   sanitizeCabinetGameForViewer,
 } from '@helpers/cabinetGameVisibility'
+import { buildGameTasksStats } from '@helpers/gameTaskCounts'
 import normalizeGameForCabinet from '@helpers/normalizeGameForCabinet'
 import { toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
@@ -159,6 +160,7 @@ export async function GET(request) {
         hidden: 1,
         showCreator: 1,
         showTasks: 1,
+        showTasksCountInGame: 1,
         hideResult: 1,
         prices: 1,
         finances: 1,
@@ -308,6 +310,7 @@ export async function GET(request) {
             canLoadOwnGames && !currentUserIdString && creatorTelegramId !== null,
         }),
       }),
+      tasksStats: buildGameTasksStats(gameDoc?.tasks),
       status: normalizedStatus,
       teamsCount,
       userTeamPlace,

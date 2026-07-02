@@ -3,6 +3,10 @@ import PropTypes from 'prop-types'
 
 import GameDescriptionModal from '@components/modals/GameDescriptionModal'
 import formatDateInLocationTimeZone from '@helpers/formatDateInLocationTimeZone'
+import {
+  buildGameTaskCountLabel,
+  getVisibleGameTaskCounts,
+} from '@helpers/gameTaskCounts'
 
 const GAME_TYPE_OPTIONS = [
   { value: 'classic', label: 'Классика' },
@@ -141,6 +145,11 @@ const UnifiedGameDescriptionModal = ({
     return minutes > 0 ? `${minutes} мин` : 'Без штрафа'
   }, [selectedGame])
 
+  const taskCountLabel = useMemo(
+    () => buildGameTaskCountLabel(getVisibleGameTaskCounts(selectedGame)),
+    [selectedGame],
+  )
+
   return (
     <GameDescriptionModal
       selectedGame={selectedGame}
@@ -161,6 +170,7 @@ const UnifiedGameDescriptionModal = ({
       taskFailurePenaltyLabel={taskFailurePenaltyLabel}
       manyCodesLimitLabel={manyCodesLimitLabel}
       manyCodesPenaltyLabel={manyCodesPenaltyLabel}
+      taskCountLabel={taskCountLabel}
     />
   )
 }
@@ -172,6 +182,8 @@ UnifiedGameDescriptionModal.propTypes = {
     status: PropTypes.string,
     type: PropTypes.string,
     dateStart: PropTypes.string,
+    showTasksCountInGame: PropTypes.bool,
+    tasks: PropTypes.array,
   }),
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,

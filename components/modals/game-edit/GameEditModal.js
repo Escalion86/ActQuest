@@ -176,6 +176,20 @@ const GameEditModal = ({
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
               />
               <NeonCheckbox
+                id="game-show-tasks-count-in-game-closed"
+                checked={Boolean(selectedGame.showTasksCountInGame)}
+                onChange={(eventOrChecked) => {
+                  const payload = debugCheckboxUpdate(
+                    'showTasksCountInGame',
+                    getCheckboxChecked(eventOrChecked),
+                    (checked) => ({ showTasksCountInGame: checked }),
+                  )
+                  if (payload) updateSelectedGame(payload)
+                }}
+                label="Показывать количество заданий на игре"
+                labelClassName="text-sm text-slate-600 dark:text-slate-200"
+              />
+              <NeonCheckbox
                 id="game-hide-result-closed"
                 checked={!Boolean(selectedGame.hideResult)}
                 onChange={(eventOrChecked) => {
@@ -352,6 +366,20 @@ const GameEditModal = ({
                 if (payload) updateSelectedGame(payload)
               }}
               label="Открыть задания после завершения"
+              labelClassName="text-sm text-slate-600 dark:text-slate-200"
+            />
+            <NeonCheckbox
+              id="game-show-tasks-count-in-game"
+              checked={Boolean(selectedGame.showTasksCountInGame)}
+              onChange={(eventOrChecked) => {
+                const payload = debugCheckboxUpdate(
+                  'showTasksCountInGame',
+                  getCheckboxChecked(eventOrChecked),
+                  (checked) => ({ showTasksCountInGame: checked }),
+                )
+                if (payload) updateSelectedGame(payload)
+              }}
+              label="Показывать количество заданий на игре"
               labelClassName="text-sm text-slate-600 dark:text-slate-200"
             />
             <NeonCheckbox
@@ -582,7 +610,10 @@ const GameEditModal = ({
 }
 
 GameEditModal.propTypes = {
-  selectedGame: PropTypes.shape({ id: PropTypes.string }),
+  selectedGame: PropTypes.shape({
+    id: PropTypes.string,
+    showTasksCountInGame: PropTypes.bool,
+  }),
   isEditModalOpen: PropTypes.bool.isRequired,
   handleCloseEditModal: PropTypes.func.isRequired,
   canEditSelectedGame: PropTypes.bool.isRequired,

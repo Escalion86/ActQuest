@@ -543,6 +543,18 @@ const computeTasksStats = (tasks = []) => {
   )
 }
 
+const normalizeTasksStats = (tasksStats, tasks) => {
+  if (!tasksStats || typeof tasksStats !== 'object') {
+    return computeTasksStats(tasks)
+  }
+
+  return {
+    total: ensureNumber(tasksStats.total, 0),
+    bonus: ensureNumber(tasksStats.bonus, 0),
+    canceled: ensureNumber(tasksStats.canceled, 0),
+  }
+}
+
 const isResultGenerated = (result) => {
   if (!result || typeof result !== 'object') {
     return false
@@ -557,7 +569,7 @@ const normalizeGameForCabinet = (game) => {
   }
 
   const id = ensureString(game._id ?? game.id)
-  const tasksStats = computeTasksStats(game.tasks)
+  const tasksStats = normalizeTasksStats(game.tasksStats, game.tasks)
   const normalizedUserParticipationTeams = normalizeUserParticipationTeams(
     game.userParticipationTeams,
   )
@@ -622,6 +634,7 @@ const normalizeGameForCabinet = (game) => {
     showCreator: ensureBoolean(game.showCreator, true),
     showEnterButton: ensureBoolean(game.showEnterButton, false),
     showTasks: ensureBoolean(game.showTasks, false),
+    showTasksCountInGame: ensureBoolean(game.showTasksCountInGame, false),
     hideResult: ensureBoolean(game.hideResult, false),
     registrationOpen: ensureBoolean(game.registrationOpen, true),
     maxTeamPlayers: ensureNullableNumber(game.maxTeamPlayers),
