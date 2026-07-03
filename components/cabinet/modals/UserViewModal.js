@@ -221,7 +221,7 @@ const UserViewModal = ({
               </div>
 
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl dark:bg-sky-500/10 dark:border-sky-500/30">
+                <div className="p-4 border border-blue-200 bg-blue-50 rounded-xl dark:bg-sky-500/10 dark:border-sky-500/30">
                   <p className="text-xs text-blue-600 dark:text-sky-300">
                     Команд
                   </p>
@@ -229,7 +229,7 @@ const UserViewModal = ({
                     {user.teamsCount || 0}
                   </p>
                 </div>
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl dark:bg-emerald-500/10 dark:border-emerald-500/30">
+                <div className="p-4 border bg-emerald-50 border-emerald-200 rounded-xl dark:bg-emerald-500/10 dark:border-emerald-500/30">
                   <p className="text-xs text-emerald-600 dark:text-emerald-300">
                     Игры
                   </p>
@@ -237,7 +237,7 @@ const UserViewModal = ({
                     {user.gamesCount || 0}
                   </p>
                 </div>
-                <div className="p-4 bg-slate-50 border border-slate-200 dark:bg-slate-800/70 dark:border-slate-700 rounded-xl">
+                <div className="p-4 border bg-slate-50 border-slate-200 dark:bg-slate-800/70 dark:border-slate-700 rounded-xl">
                   <p className="text-xs text-slate-600 dark:text-slate-300">
                     Последнее обновление
                   </p>
@@ -251,7 +251,7 @@ const UserViewModal = ({
 
               {user.rating?.isEligible &&
                 Number.isFinite(user.rating?.rank) && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                  <div className="p-4 border rounded-xl border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10">
                     <p className="text-xs text-amber-700 dark:text-amber-300">
                       Рейтинг пользователя
                     </p>
@@ -303,7 +303,7 @@ const UserViewModal = ({
                         <button
                           type="button"
                           onClick={() => handleOpenGameDetails(game)}
-                          className="w-full text-left hover:opacity-80 transition-opacity focus:outline-none"
+                          className="w-full text-left transition-opacity hover:opacity-80 focus:outline-none"
                         >
                           <ParticipationGameCard game={game} />
                         </button>
@@ -313,7 +313,7 @@ const UserViewModal = ({
                   {!showAllGames && userGamesState.games.length > 5 && (
                     <button
                       onClick={() => setShowAllGames(true)}
-                      className="w-full text-xs text-primary hover:underline font-medium py-2 dark:text-sky-300"
+                      className="w-full py-2 text-xs font-medium text-primary hover:underline dark:text-sky-300"
                     >
                       Показать остальные {userGamesState.games.length - 5} игр
                     </button>
@@ -321,7 +321,7 @@ const UserViewModal = ({
                 </div>
               ) : (
                 <p className="text-sm text-slate-500">
-                  Загравливайте игры, чтобы увидеть историю участия
+                  Загружайте игры, чтобы увидеть историю участия
                 </p>
               )}
 
@@ -389,7 +389,7 @@ const UserViewModal = ({
                       {user.preferences.map((preference) => (
                         <span
                           key={preference}
-                          className="px-3 py-1 text-xs font-medium text-primary bg-blue-50 border border-blue-200 rounded-full dark:bg-sky-500/10 dark:border-sky-500/30 dark:text-sky-200"
+                          className="px-3 py-1 text-xs font-medium border border-blue-200 rounded-full text-primary bg-blue-50 dark:bg-sky-500/10 dark:border-sky-500/30 dark:text-sky-200"
                         >
                           {preference}
                         </span>
@@ -401,7 +401,7 @@ const UserViewModal = ({
               {user.about && (
                 <div>
                   <p className="text-xs text-slate-500">О себе</p>
-                  <p className="mt-1 text-sm text-slate-500 whitespace-pre-line">
+                  <p className="mt-1 text-sm whitespace-pre-line text-slate-500">
                     {user.about.trim()}
                   </p>
                 </div>
@@ -417,7 +417,7 @@ const UserViewModal = ({
                     {phoneValue && phoneHref ? (
                       <a
                         href={`tel:${phoneHref}`}
-                        className="mt-1 inline-block text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
+                        className="inline-block mt-1 text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
                       >
                         {phoneValue}
                       </a>
@@ -434,7 +434,7 @@ const UserViewModal = ({
                         href={`https://t.me/${telegramUsername}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1 inline-block text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
+                        className="inline-block mt-1 text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
                       >
                         @{telegramUsername}
                       </a>
@@ -449,7 +449,7 @@ const UserViewModal = ({
                     {userTelegramId ? (
                       <a
                         href={`tg://user?id=${userTelegramId}`}
-                        className="mt-1 inline-block text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
+                        className="inline-block mt-1 text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
                       >
                         {userTelegramId}
                       </a>
@@ -468,7 +468,7 @@ const UserViewModal = ({
                         href={`https://t.me/${telegramByPhonePath}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1 inline-block text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
+                        className="inline-block mt-1 text-sm text-primary underline-offset-2 hover:underline dark:text-sky-300"
                       >
                         {`t.me/${telegramByPhonePath}`}
                       </a>

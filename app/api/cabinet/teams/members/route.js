@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { toStringId } from '@helpers/idAndDate'
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
 import {
   TEAM_ROLE_CAPTAIN,
   isCaptainRole,
@@ -51,7 +52,7 @@ export async function POST(request) {
   const body = await request.json().catch(() => ({}))
   const payload = body?.data && typeof body.data === 'object' ? body.data : body
 
-  const teamId = toStringId(payload?.teamId)
+  const teamId = normalizeIdForStorage(toStringId(payload?.teamId))
   const requestedRole = String(payload?.role ?? 'participant')
     .trim()
     .toLowerCase()

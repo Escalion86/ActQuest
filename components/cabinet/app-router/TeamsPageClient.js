@@ -17,6 +17,7 @@ import requestApiJson from '@helpers/requestApiJson'
 import { getNounUsers } from '@helpers/getNoun'
 import useSnackbar from '@helpers/useSnackbar'
 import useMergedSession from '@helpers/useMergedSession'
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
 import { LOCATIONS } from '@server/serverConstants'
 
 const MAX_TEAMS_PER_USER = 3
@@ -985,7 +986,7 @@ const TeamsPage = ({
       return
     }
 
-    const trimmedTeamId = joinTeamId.trim()
+    const trimmedTeamId = normalizeIdForStorage(joinTeamId)
 
     if (!trimmedTeamId) {
       snackbar.error('Введите идентификатор команды')
