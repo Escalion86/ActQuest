@@ -1981,7 +1981,7 @@ function GameTeamPage({
   const displayedAdminMessage = latestUnreadAdminMessage
   const shouldShowGameMessagesBlock = shouldShowLatestAdminMessage
   const shouldShowLastMessage =
-    displayedResultMessages.length > 0 && !isStoryGame
+    displayedResultMessages.length > 0 && !isStoryGame && !isGameCompletion
   const shouldShowAnswerForm =
     !isStoryGame && !isGameCompletion && !isBreakState
   const shouldShowGameCompletedBlock = !isStoryGame && isGameCompletion

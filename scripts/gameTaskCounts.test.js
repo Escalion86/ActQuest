@@ -34,7 +34,7 @@ test('game task counts include active main and bonus tasks when enabled', () => 
 
 test('game task count label includes bonus tasks only when present', () => {
   assert.equal(buildGameTaskCountLabel({ main: 3, bonus: 0 }), '3')
-  assert.equal(buildGameTaskCountLabel({ main: 3, bonus: 2 }), '3, бонусные: 2')
+  assert.equal(buildGameTaskCountLabel({ main: 3, bonus: 2 }), '3 + 2 бонусных')
 })
 
 test('game task counts can use precomputed stats when tasks are hidden', () => {

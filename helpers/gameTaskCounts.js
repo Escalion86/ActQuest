@@ -68,5 +68,5 @@ export const buildGameTaskCountLabel = (counts) => {
   const main = Math.max(0, Number(counts.main) || 0)
   const bonus = Math.max(0, Number(counts.bonus) || 0)
 
-  return bonus > 0 ? `${main}, бонусные: ${bonus}` : `${main}`
+  return bonus > 0 ? `${main} + ${bonus} бонусных` : `${main}`
 }
