@@ -1,3 +1,5 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const gameOrdersSchema = {
   companyName: {
     type: String,
@@ -56,6 +58,7 @@ const gameOrdersSchema = {
     type: String,
     default: null,
     trim: true,
+    set: normalizeIdForStorage,
   },
   comment: {
     type: String,
@@ -71,11 +74,13 @@ const gameOrdersSchema = {
     type: String,
     default: null,
     trim: true,
+    set: normalizeIdForStorage,
   },
   convertedGameId: {
     type: String,
     default: null,
     trim: true,
+    set: normalizeIdForStorage,
   },
   managerComment: {
     type: String,

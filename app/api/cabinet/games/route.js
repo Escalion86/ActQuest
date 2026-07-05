@@ -69,6 +69,9 @@ const resolveSessionUserId = (sessionUser) =>
       null,
   )
 
+const normalizeShowTasksAudience = (value) =>
+  value === 'participants' ? 'participants' : 'all'
+
 export async function POST(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -138,6 +141,7 @@ export async function POST(request) {
       location: location.toLowerCase(),
       // При создании игра всегда скрыта.
       hidden: true,
+      showTasksAudience: normalizeShowTasksAudience(payload?.showTasksAudience),
       creatorUserId,
       creatorTelegramId,
     }

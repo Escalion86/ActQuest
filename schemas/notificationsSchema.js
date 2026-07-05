@@ -1,8 +1,11 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const notificationsSchema = {
   userId: {
     type: String,
     required: true,
     index: true,
+    set: normalizeIdForStorage,
   },
   location: {
     type: String,

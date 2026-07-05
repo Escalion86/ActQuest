@@ -1,3 +1,5 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const siteEventsSchema = {
   type: {
     type: String,
@@ -30,6 +32,7 @@ const siteEventsSchema = {
     default: null,
     trim: true,
     index: true,
+    set: normalizeIdForStorage,
   },
   actorTelegramId: {
     type: Number,
@@ -41,12 +44,14 @@ const siteEventsSchema = {
     default: null,
     trim: true,
     index: true,
+    set: normalizeIdForStorage,
   },
   teamId: {
     type: String,
     default: null,
     trim: true,
     index: true,
+    set: normalizeIdForStorage,
   },
   teamName: {
     type: String,
@@ -58,6 +63,7 @@ const siteEventsSchema = {
     default: null,
     trim: true,
     index: true,
+    set: normalizeIdForStorage,
   },
   gameName: {
     type: String,

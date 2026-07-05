@@ -634,6 +634,8 @@ const normalizeGameForCabinet = (game) => {
     showCreator: ensureBoolean(game.showCreator, true),
     showEnterButton: ensureBoolean(game.showEnterButton, false),
     showTasks: ensureBoolean(game.showTasks, false),
+    showTasksAudience:
+      game.showTasksAudience === 'participants' ? 'participants' : 'all',
     showTasksCountInGame: ensureBoolean(game.showTasksCountInGame, false),
     hideResult: ensureBoolean(game.hideResult, false),
     registrationOpen: ensureBoolean(game.registrationOpen, true),

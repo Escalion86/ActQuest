@@ -1,3 +1,5 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const agentNotificationsLogSchema = {
   eventKey: {
     type: String,
@@ -11,22 +13,26 @@ const agentNotificationsLogSchema = {
     required: true,
     index: true,
     trim: true,
+    set: normalizeIdForStorage,
   },
   gameTeamId: {
     type: String,
     default: null,
     trim: true,
+    set: normalizeIdForStorage,
   },
   teamId: {
     type: String,
     default: null,
     trim: true,
+    set: normalizeIdForStorage,
   },
   agentUserId: {
     type: String,
     required: true,
     index: true,
     trim: true,
+    set: normalizeIdForStorage,
   },
   taskIndex: {
     type: Number,

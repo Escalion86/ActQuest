@@ -341,6 +341,9 @@ const normalizeAgentNotificationsForWrite = (value = {}) => ({
   onAllTeamsPassed: value?.onAllTeamsPassed !== false,
 })
 
+const normalizeShowTasksAudience = (value) =>
+  value === 'participants' ? 'participants' : 'all'
+
 const buildHistoryActorFromSession = (session) => ({
   userId:
     session?.user?.globalUserId ??
@@ -624,6 +627,12 @@ const execute = (request, params) =>
         ) {
           updateData.agentNotifications = normalizeAgentNotificationsForWrite(
             updateData.agentNotifications,
+          )
+        }
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'showTasksAudience')) {
+          updateData.showTasksAudience = normalizeShowTasksAudience(
+            updateData.showTasksAudience,
           )
         }
 

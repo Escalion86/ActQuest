@@ -1,3 +1,5 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const usersGamesPaymentsSchema = {
   userTelegramId: {
     type: Number,
@@ -6,6 +8,7 @@ const usersGamesPaymentsSchema = {
   gameId: {
     type: String,
     required: [true, 'Необходимо выбрать игру'],
+    set: normalizeIdForStorage,
   },
   sum: {
     type: Number,

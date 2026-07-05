@@ -44,7 +44,10 @@ import {
   getDuplicateCodeKindsLabel,
   getTaskDuplicateCodeConflicts,
 } from '@helpers/getTaskDuplicateCodeConflicts'
-import { canManageCabinetGameFinances } from '@helpers/cabinetGameVisibility'
+import {
+  canManageCabinetGameFinances,
+  canViewPublishedGameTasks,
+} from '@helpers/cabinetGameVisibility'
 import buildGameFinancesSummary from '@helpers/gameFinancesSummary'
 import {
   applyGameDraftPatch,
@@ -1011,6 +1014,8 @@ const buildUpdatePayload = (game) => {
     showCreator: Boolean(game.showCreator),
     showEnterButton: Boolean(game.showEnterButton),
     showTasks: Boolean(game.showTasks),
+    showTasksAudience:
+      game.showTasksAudience === 'participants' ? 'participants' : 'all',
     showTasksCountInGame: Boolean(game.showTasksCountInGame),
     hideResult: Boolean(game.hideResult),
     registrationOpen: Boolean(game.registrationOpen ?? true),
@@ -2798,6 +2803,7 @@ const GamesPage = ({
         hidden: true,
         showCreator: true,
         showTasks: false,
+        showTasksAudience: 'all',
         showTasksCountInGame: false,
         hideResult: false,
         registrationOpen: true,
@@ -2942,6 +2948,10 @@ const GamesPage = ({
           baseDraft.hidden = Boolean(normalizedSource.hidden)
           baseDraft.showCreator = Boolean(normalizedSource.showCreator)
           baseDraft.showTasks = Boolean(normalizedSource.showTasks)
+          baseDraft.showTasksAudience =
+            normalizedSource.showTasksAudience === 'participants'
+              ? 'participants'
+              : 'all'
           baseDraft.showTasksCountInGame = Boolean(
             normalizedSource.showTasksCountInGame,
           )
@@ -5617,18 +5627,9 @@ const GamesPage = ({
   )
 
   const canViewTasksForGame = useCallback((game) => {
-    if (!game || !Boolean(game.showTasks)) {
-      return false
-    }
-
-    const status =
-      typeof game.status === 'string' ? game.status.toLowerCase() : ''
-    const isCompleted = status === 'finished' || status === 'closed'
-    if (!isCompleted) {
-      return false
-    }
-
-    return Array.isArray(game.tasks) && game.tasks.length > 0
+    return canViewPublishedGameTasks(game, {
+      hasUserParticipation: getUserParticipationTeams(game).length > 0,
+    })
   }, [])
 
   const canGenerateResults = useMemo(() => {
@@ -8325,6 +8326,7 @@ GamesPage.propTypes = {
       hidden: PropTypes.bool,
       showCreator: PropTypes.bool,
       showTasks: PropTypes.bool,
+      showTasksAudience: PropTypes.oneOf(['all', 'participants']),
       showTasksCountInGame: PropTypes.bool,
       hideResult: PropTypes.bool,
       registrationOpen: PropTypes.bool,

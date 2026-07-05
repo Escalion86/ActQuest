@@ -1,7 +1,10 @@
 import { Schema } from 'mongoose'
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
 import gamesTeamsSchema from './gamesTeamsSchema'
 import teamsSchema from './teamsSchema'
 import teamsUsersSchema from './teamsUsersSchema'
+
+const { normalizeIdsForStorage } = normalizeIdForStorage
 
 const TeamsSchema = new Schema(teamsSchema)
 const GamesTeamsSchema = new Schema(gamesTeamsSchema)
@@ -125,6 +128,7 @@ const StoryNodeSchema = new Schema(
     agentUserIds: {
       type: [String],
       default: [],
+      set: normalizeIdsForStorage,
     },
     clues: {
       type: [
@@ -353,6 +357,7 @@ const gamesSchema = {
     type: String,
     default: null,
     trim: true,
+    set: normalizeIdForStorage,
   },
   seasonName: {
     type: String,
@@ -517,6 +522,7 @@ const gamesSchema = {
         agentUserIds: {
           type: [String],
           default: [],
+          set: normalizeIdsForStorage,
         },
       },
     ],
@@ -634,6 +640,7 @@ const gamesSchema = {
     type: String,
     default: null,
     trim: true,
+    set: normalizeIdForStorage,
   },
   clientName: {
     type: String,
@@ -654,6 +661,7 @@ const gamesSchema = {
     required: false,
     default: null,
     trim: true,
+    set: normalizeIdForStorage,
   },
   creatorTelegramId: {
     type: Number,
@@ -726,6 +734,11 @@ const gamesSchema = {
     type: Boolean,
     default: false,
   },
+  showTasksAudience: {
+    type: String,
+    enum: ['all', 'participants'],
+    default: 'all',
+  },
   showTasksCountInGame: {
     type: Boolean,
     default: false,
@@ -745,6 +758,7 @@ const gamesSchema = {
           type: String,
           required: true,
           trim: true,
+          set: normalizeIdForStorage,
         },
         active: {
           type: Boolean,

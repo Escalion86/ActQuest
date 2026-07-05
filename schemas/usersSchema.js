@@ -1,3 +1,5 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const usersSchema = {
   telegramId: {
     type: Number,
@@ -49,6 +51,7 @@ const usersSchema = {
     type: String,
     default: null,
     trim: true,
+    set: normalizeIdForStorage,
   },
   accountLocation: {
     type: String,

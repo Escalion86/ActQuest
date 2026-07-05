@@ -1,8 +1,40 @@
 import {
   buildDefaultPrequel,
   normalizePrequelConfig,
-} from '@helpers/normalizePrequel'
-import { canBypassGameAssignments } from '@helpers/gameAssignmentAccess'
+} from './normalizePrequel.js'
+import { canBypassGameAssignments } from './gameAssignmentAccess.js'
+
+const normalizeShowTasksAudience = (value) =>
+  value === 'participants' ? 'participants' : 'all'
+
+const isCompletedGameStatus = (status) => {
+  const normalized =
+    typeof status === 'string' ? status.toLowerCase() : String(status)
+  return normalized === 'finished' || normalized === 'closed'
+}
+
+const canExposePublishedGameTasks = (
+  game,
+  { hasUserParticipation = false } = {},
+) => {
+  if (!game || !Boolean(game.showTasks) || !isCompletedGameStatus(game.status)) {
+    return false
+  }
+
+  if (normalizeShowTasksAudience(game.showTasksAudience) === 'participants') {
+    return Boolean(hasUserParticipation)
+  }
+
+  return true
+}
+
+const canViewPublishedGameTasks = (
+  game,
+  { hasUserParticipation = false } = {},
+) =>
+  canExposePublishedGameTasks(game, { hasUserParticipation }) &&
+  Array.isArray(game?.tasks) &&
+  game.tasks.length > 0
 
 const normalizeRole = (value) => {
   if (typeof value !== 'string') {
@@ -49,10 +81,17 @@ const canViewCabinetGameRestrictedInfo = ({
   return Boolean(allowCreatorFallback)
 }
 
-const sanitizeCabinetGameForViewer = (game, { canViewRestrictedGameInfo }) => {
+const sanitizeCabinetGameForViewer = (
+  game,
+  { canViewRestrictedGameInfo, hasUserParticipation = false },
+) => {
   if (!game || typeof game !== 'object' || canViewRestrictedGameInfo) {
     return game
   }
+
+  const canViewPublishedTasks = canExposePublishedGameTasks(game, {
+    hasUserParticipation,
+  })
 
   return {
     ...game,
@@ -61,10 +100,11 @@ const sanitizeCabinetGameForViewer = (game, { canViewRestrictedGameInfo }) => {
     manyCodesPenalty: undefined,
     individualStart: false,
     showCreator: false,
-    showTasks: false,
+    showTasks: canViewPublishedTasks,
+    showTasksAudience: normalizeShowTasksAudience(game.showTasksAudience),
     hideResult: Boolean(game?.hideResult),
     finances: [],
-    tasks: [],
+    tasks: canViewPublishedTasks && Array.isArray(game.tasks) ? game.tasks : [],
     prequel: {
       ...buildDefaultPrequel(),
       ...normalizePrequelConfig(game?.prequel, { includeCodes: false }),
@@ -90,6 +130,8 @@ const canManageCabinetGameFinances = ({
 export {
   canManageCabinetGameFinances,
   canOpenRestrictedTeamGamePreview,
+  canViewPublishedGameTasks,
   canViewCabinetGameRestrictedInfo,
+  normalizeShowTasksAudience,
   sanitizeCabinetGameForViewer,
 }

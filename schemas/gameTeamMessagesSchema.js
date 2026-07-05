@@ -1,15 +1,19 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const gameTeamMessagesSchema = {
   gameId: {
     type: String,
     required: true,
     index: true,
     trim: true,
+    set: normalizeIdForStorage,
   },
   teamId: {
     type: String,
     default: null,
     index: true,
     trim: true,
+    set: normalizeIdForStorage,
   },
   scope: {
     type: String,
@@ -33,6 +37,7 @@ const gameTeamMessagesSchema = {
     required: true,
     index: true,
     trim: true,
+    set: normalizeIdForStorage,
   },
   createdByRole: {
     type: String,
@@ -76,6 +81,7 @@ const gameTeamMessagesSchema = {
           type: String,
           required: true,
           trim: true,
+          set: normalizeIdForStorage,
         },
         readAt: {
           type: Date,
@@ -92,6 +98,7 @@ const gameTeamMessagesSchema = {
           type: String,
           required: true,
           trim: true,
+          set: normalizeIdForStorage,
         },
         userKey: {
           type: String,

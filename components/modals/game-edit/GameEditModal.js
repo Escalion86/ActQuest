@@ -88,6 +88,49 @@ const GameEditModal = ({
 }) => {
   const isClosedGame =
     String(selectedGame?.status || '').toLowerCase() === 'closed'
+  const showTasksAudience =
+    selectedGame?.showTasksAudience === 'participants' ? 'participants' : 'all'
+  const renderShowTasksAudienceToggle = (idPrefix) => {
+    if (!Boolean(selectedGame?.showTasks)) {
+      return null
+    }
+
+    const options = [
+      { value: 'all', label: 'Показывать всем' },
+      { value: 'participants', label: 'Показывать только участникам игры' },
+    ]
+
+    return (
+      <div
+        className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-900/70"
+        role="radiogroup"
+        aria-label="Доступ к заданиям после завершения"
+      >
+        {options.map((option) => {
+          const isSelected = showTasksAudience === option.value
+          return (
+            <button
+              key={option.value}
+              id={`${idPrefix}-${option.value}`}
+              type="button"
+              role="radio"
+              aria-checked={isSelected}
+              onClick={() =>
+                updateSelectedGame({ showTasksAudience: option.value })
+              }
+              className={`min-h-10 flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                isSelected
+                  ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white'
+                  : 'text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-slate-800'
+              }`}
+            >
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
 
   if (!selectedGame) {
     return (
@@ -175,6 +218,9 @@ const GameEditModal = ({
                 label="Открыть задания после завершения"
                 labelClassName="text-sm text-slate-600 dark:text-slate-200"
               />
+              {renderShowTasksAudienceToggle(
+                'game-show-tasks-audience-closed',
+              )}
               <NeonCheckbox
                 id="game-show-tasks-count-in-game-closed"
                 checked={Boolean(selectedGame.showTasksCountInGame)}
@@ -368,6 +414,7 @@ const GameEditModal = ({
               label="Открыть задания после завершения"
               labelClassName="text-sm text-slate-600 dark:text-slate-200"
             />
+            {renderShowTasksAudienceToggle('game-show-tasks-audience')}
             <NeonCheckbox
               id="game-show-tasks-count-in-game"
               checked={Boolean(selectedGame.showTasksCountInGame)}
@@ -612,6 +659,8 @@ const GameEditModal = ({
 GameEditModal.propTypes = {
   selectedGame: PropTypes.shape({
     id: PropTypes.string,
+    showTasks: PropTypes.bool,
+    showTasksAudience: PropTypes.oneOf(['all', 'participants']),
     showTasksCountInGame: PropTypes.bool,
   }),
   isEditModalOpen: PropTypes.bool.isRequired,

@@ -182,6 +182,7 @@ UnifiedGameDescriptionModal.propTypes = {
     status: PropTypes.string,
     type: PropTypes.string,
     dateStart: PropTypes.string,
+    showTasksAudience: PropTypes.oneOf(['all', 'participants']),
     showTasksCountInGame: PropTypes.bool,
     tasks: PropTypes.array,
   }),

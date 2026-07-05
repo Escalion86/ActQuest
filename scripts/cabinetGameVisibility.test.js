@@ -50,6 +50,61 @@ test('public cabinet game view strips financial and restricted fields', () => {
   assert.equal(sanitized.creator.telegramId, '')
 })
 
+test('public cabinet game view keeps published tasks for finished games', () => {
+  const sanitized = sanitizeCabinetGameForViewer(
+    {
+      status: 'finished',
+      showTasks: true,
+      showTasksAudience: 'all',
+      tasks: [{ id: 't1', task: 'Кодовое место' }],
+      finances: [{ id: 'f1', sum: 1000 }],
+    },
+    { canViewRestrictedGameInfo: false },
+  )
+
+  assert.equal(sanitized.showTasks, true)
+  assert.deepEqual(sanitized.tasks, [{ id: 't1', task: 'Кодовое место' }])
+  assert.deepEqual(sanitized.finances, [])
+})
+
+test('public cabinet game view keeps participant-only published tasks for participants', () => {
+  const sanitized = sanitizeCabinetGameForViewer(
+    {
+      status: 'closed',
+      showTasks: true,
+      showTasksAudience: 'participants',
+      tasks: [{ id: 't1', task: 'Финишный код' }],
+      finances: [{ id: 'f1', sum: 1000 }],
+    },
+    {
+      canViewRestrictedGameInfo: false,
+      hasUserParticipation: true,
+    },
+  )
+
+  assert.equal(sanitized.showTasks, true)
+  assert.deepEqual(sanitized.tasks, [{ id: 't1', task: 'Финишный код' }])
+  assert.deepEqual(sanitized.finances, [])
+})
+
+test('public cabinet game view hides participant-only tasks from nonparticipants', () => {
+  const sanitized = sanitizeCabinetGameForViewer(
+    {
+      status: 'finished',
+      showTasks: true,
+      showTasksAudience: 'participants',
+      tasks: [{ id: 't1', task: 'Секрет' }],
+    },
+    {
+      canViewRestrictedGameInfo: false,
+      hasUserParticipation: false,
+    },
+  )
+
+  assert.equal(sanitized.showTasks, false)
+  assert.deepEqual(sanitized.tasks, [])
+})
+
 test('moderator can view restricted info only for own game', () => {
   assert.equal(
     canViewCabinetGameRestrictedInfo({

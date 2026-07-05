@@ -1,9 +1,12 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const gameHistoryEntriesSchema = {
   gameId: {
     type: String,
     required: true,
     trim: true,
     index: true,
+    set: normalizeIdForStorage,
   },
   location: {
     type: String,
@@ -29,7 +32,12 @@ const gameHistoryEntriesSchema = {
   },
   actor: {
     type: {
-      userId: { type: String, default: null, trim: true },
+      userId: {
+        type: String,
+        default: null,
+        trim: true,
+        set: normalizeIdForStorage,
+      },
       telegramId: { type: String, default: null, trim: true },
       role: { type: String, default: '', trim: true },
       name: { type: String, default: '', trim: true },

@@ -160,6 +160,7 @@ export async function GET(request) {
         hidden: 1,
         showCreator: 1,
         showTasks: 1,
+        showTasksAudience: 1,
         showTasksCountInGame: 1,
         hideResult: 1,
         prices: 1,

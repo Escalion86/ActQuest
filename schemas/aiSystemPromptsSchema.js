@@ -1,8 +1,11 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const aiSystemPromptsSchema = {
   userId: {
     type: String,
     required: true,
     index: true,
+    set: normalizeIdForStorage,
   },
   title: {
     type: String,

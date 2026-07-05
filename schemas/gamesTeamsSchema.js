@@ -1,11 +1,15 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const gamesTeamsSchema = {
   teamId: {
     type: String,
     required: [true, 'Необходимо выбрать команду'],
+    set: normalizeIdForStorage,
   },
   gameId: {
     type: String,
     required: [true, 'Необходимо указать id игры'],
+    set: normalizeIdForStorage,
   },
   outOfCompetition: {
     type: Boolean,

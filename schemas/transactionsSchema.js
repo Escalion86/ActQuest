@@ -1,3 +1,5 @@
+import normalizeIdForStorage from '@helpers/normalizeIdForStorage'
+
 const transactionsSchema = {
   // Финансовое направление транзакции: доход или затрата
   direction: {
@@ -30,6 +32,7 @@ const transactionsSchema = {
   userId: {
     type: String,
     default: null,
+    set: normalizeIdForStorage,
   },
   // Легаси идентификатор пользователя для совместимости со старым потоком
   userTelegramId: {
@@ -40,16 +43,19 @@ const transactionsSchema = {
   gameId: {
     type: String,
     default: null,
+    set: normalizeIdForStorage,
   },
   // Команда, за которую внесена оплата участия в игре
   teamId: {
     type: String,
     default: null,
+    set: normalizeIdForStorage,
   },
   // Регистрация команды на конкретную игру
   gameTeamId: {
     type: String,
     default: null,
+    set: normalizeIdForStorage,
   },
   // Фактическая дата внесения оплаты
   paidAt: {
@@ -78,11 +84,13 @@ const transactionsSchema = {
   couponOwnerUserId: {
     type: String,
     default: null,
+    set: normalizeIdForStorage,
   },
   // Игра, в которой купон был погашен
   redeemedGameId: {
     type: String,
     default: null,
+    set: normalizeIdForStorage,
   },
   // Время погашения купона
   redeemedAt: {
@@ -93,6 +101,7 @@ const transactionsSchema = {
   redeemedByUserId: {
     type: String,
     default: null,
+    set: normalizeIdForStorage,
   },
   // Влияние на бонусный баланс пользователя (рубли)
   userBalanceDelta: {

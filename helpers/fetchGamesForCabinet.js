@@ -256,6 +256,7 @@ const fetchGamesForCabinet = async ({
       showCreator: 1,
       showEnterButton: 1,
       showTasks: 1,
+      showTasksAudience: 1,
       showTasksCountInGame: 1,
       hideResult: 1,
       registrationOpen: 1,
@@ -550,6 +551,9 @@ const fetchGamesForCabinet = async ({
                 currentUserIdString,
             ),
         }),
+        hasUserParticipation: gameId
+          ? (participationByGameId[gameId] || []).length > 0
+          : false,
       }),
       tasksStats: buildGameTasksStats(game?.tasks),
       status: normalizedStatus,

@@ -334,7 +334,11 @@ const GameDescriptionModal = ({
                   Публиковать задания в кабинете
                 </dt>
                 <dd className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                  {selectedGame.showTasks ? 'Да' : 'Нет'}
+                  {selectedGame.showTasks
+                    ? selectedGame.showTasksAudience === 'participants'
+                      ? 'Только участникам'
+                      : 'Всем'
+                    : 'Нет'}
                 </dd>
               </div>
             )}
@@ -806,6 +810,8 @@ GameDescriptionModal.propTypes = {
     showFinishingPlace: PropTypes.bool,
     status: PropTypes.string,
     location: PropTypes.string,
+    showTasks: PropTypes.bool,
+    showTasksAudience: PropTypes.oneOf(['all', 'participants']),
     prequel: PropTypes.object,
     userParticipationTeams: PropTypes.arrayOf(
       PropTypes.shape({

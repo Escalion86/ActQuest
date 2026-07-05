@@ -49,6 +49,26 @@ test('keeps closed game draft clean when patch has no allowed fields', () => {
   assert.equal(result.hasUnsavedChanges, false)
 })
 
+test('allows changing tasks audience for closed game draft', () => {
+  const baseline = {
+    id: 'game-1',
+    status: 'closed',
+    showTasks: true,
+    showTasksAudience: 'all',
+    hidden: false,
+    isRated: true,
+  }
+
+  const result = applyGameDraftPatch({
+    prevGame: baseline,
+    baselineGame: baseline,
+    patch: { showTasksAudience: 'participants' },
+  })
+
+  assert.equal(result.nextGame.showTasksAudience, 'participants')
+  assert.equal(result.hasUnsavedChanges, true)
+})
+
 test('marks game draft dirty when patch changes value compared with baseline', () => {
   const baseline = {
     id: 'game-1',
