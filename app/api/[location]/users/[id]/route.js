@@ -5,7 +5,14 @@ const execute = (request, params) =>
   runLocationLegacyHandler({
     request,
     params,
-    handler: async (req, res) => CRUD('Users', req, res),
+    requireAuth: true,
+    handler: async (req, res) => {
+      const role = String(req.session?.user?.role || '').trim().toLowerCase()
+      if (role !== 'admin' && role !== 'dev') {
+        return res.status(403).json({ success: false, error: 'Недостаточно прав' })
+      }
+      return CRUD('Users', req, res)
+    },
   })
 
 export async function GET(request, { params }) {

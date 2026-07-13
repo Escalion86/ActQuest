@@ -23,6 +23,14 @@ const gamesTeamsSchema = {
     type: Number,
     default: 0,
   },
+  gameProcessLock: {
+    type: {
+      token: { type: String, default: null },
+      acquiredAt: { type: Date, default: null },
+      expiresAt: { type: Date, default: null },
+    },
+    default: null,
+  },
   taskDistributionTemplate: {
     type: [[Number]],
     default: [],

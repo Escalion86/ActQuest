@@ -37,6 +37,11 @@ const phoneVerificationsSchema = {
     type: Date,
     required: true,
     index: true,
+    expires: 0,
+  },
+  finalizingAt: {
+    type: Date,
+    default: null,
   },
   meta: {
     type: Object,

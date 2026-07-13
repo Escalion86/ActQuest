@@ -2,11 +2,13 @@ import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { getGameValidationErrors } from '@helpers/isGameHaveErrors'
 import fetchTeamsForCabinet from '@helpers/fetchTeamsForCabinet'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
+import { canManageGame } from '@server/gameHistory/gameManageAccess'
 
 export async function GET(request, { params }) {
   return runLocationLegacyHandler({
     request,
     params,
+    requireAuth: true,
     handler: async (req, res) => {
       const { query } = req
       const id = query.id
@@ -29,6 +31,13 @@ export async function GET(request, { params }) {
         const game = await db.model('Games').findById(id).lean()
         if (!game) {
           return res.status(404).json({ success: false, error: 'Игра не найдена' })
+        }
+
+        if (!canManageGame({ session: req.session, game })) {
+          return res.status(403).json({
+            success: false,
+            error: 'Недостаточно прав для проверки игры',
+          })
         }
 
         const existingGameLocation =

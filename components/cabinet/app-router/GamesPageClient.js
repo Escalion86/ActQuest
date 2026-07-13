@@ -5357,6 +5357,7 @@ const GamesPage = ({
               statusModalGame.id,
             )}/start`,
             {
+              method: 'POST',
               fallbackMessage: 'Не удалось обновить статус игры',
             },
           )
@@ -5368,6 +5369,7 @@ const GamesPage = ({
               statusModalGame.id,
             )}/stop`,
             {
+              method: 'POST',
               fallbackMessage: 'Не удалось обновить статус игры',
             },
           )

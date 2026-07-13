@@ -7,6 +7,11 @@ import sanitize from '@helpers/sanitize'
 import buildTaskDisplayContent from '@helpers/buildTaskDisplayContent'
 import getGameProcessFinishingPlace from '@helpers/getGameProcessFinishingPlace'
 import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
+import {
+  acquireGameProcessLock,
+  didGameProcessStepChange,
+  releaseGameProcessLock,
+} from '@server/gameProcessLock'
 import resolveTeamMembershipForIdentity from '@helpers/resolveTeamMembershipForIdentity'
 import { getTaskIndexForStep } from '@helpers/taskDistribution'
 
@@ -1487,33 +1492,69 @@ const getTeamGameTaskState = async ({
     let processResult = null
 
     try {
-      if (action === 'finishBreak') {
-        const finishBreakResult = await finishBreakForCaptain({
-          game,
-          gameTeam,
-          gamesTeamsModel,
-          isCaptain,
-        })
-        gameTeam = finishBreakResult.gameTeam || gameTeam
-        processResult = finishBreakResult.result
-      } else if (action === 'forceClue') {
-        const forceClueResult = await forceClueForCaptain({
-          game,
-          gameTeam,
-          gamesTeamsModel,
-          isCaptain,
-        })
-        gameTeam = forceClueResult.gameTeam || gameTeam
-        processResult = forceClueResult.result
-      } else if (action === 'failTask') {
-        const failTaskResult = await failTaskForCaptain({
-          game,
-          gameTeam,
-          gamesTeamsModel,
-          isCaptain,
-        })
-        gameTeam = failTaskResult.gameTeam || gameTeam
-        processResult = failTaskResult.result
+      const captainActionHandler =
+        action === 'finishBreak'
+          ? finishBreakForCaptain
+          : action === 'forceClue'
+            ? forceClueForCaptain
+            : action === 'failTask'
+              ? failTaskForCaptain
+              : null
+
+      if (captainActionHandler) {
+        const expectedActiveStep = getActiveTaskStep(gameTeam)
+        const lock = isCaptain
+          ? await acquireGameProcessLock({
+              GamesTeams: gamesTeamsModel,
+              teamId: gameTeam._id,
+            })
+          : null
+
+        if (isCaptain && !lock?.acquired) {
+          processResult = {
+            message:
+              'Другой ответ команды ещё обрабатывается. Подождите несколько секунд и повторите действие.',
+            retryable: true,
+          }
+        } else {
+          try {
+            const actionGameTeam = lock?.gameTeam || gameTeam
+            const currentActiveStep = getActiveTaskStep(actionGameTeam)
+
+            if (
+              lock?.acquired &&
+              didGameProcessStepChange(expectedActiveStep, currentActiveStep)
+            ) {
+              gameTeam = actionGameTeam
+              processResult = {
+                message:
+                  'Задание уже изменилось. Обновите экран перед повторным действием.',
+                staleState: true,
+              }
+            } else {
+              const actionResult = await captainActionHandler({
+                game,
+                gameTeam: actionGameTeam,
+                gamesTeamsModel,
+                isCaptain,
+              })
+              gameTeam = actionResult.gameTeam || actionGameTeam
+              processResult = actionResult.result
+            }
+          } finally {
+            if (lock?.acquired) {
+              try {
+                await releaseGameProcessLock({
+                  GamesTeams: gamesTeamsModel,
+                  teamId: gameTeam._id,
+                  token: lock.token,
+                })
+              } catch (error) {
+                console.error('Failed to release captain action lock', error)
+              }
+            }
+          }
+        }
       } else {
         processResult = await webGameProcess({
           db,

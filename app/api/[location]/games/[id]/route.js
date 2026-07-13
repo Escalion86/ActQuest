@@ -22,6 +22,8 @@ import {
 } from '@helpers/taskDistribution'
 import { canAssignGameOrganizer } from '@helpers/gameOrganizer'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
+import { canManageGame } from '@server/gameHistory/gameManageAccess'
+import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
 
 const buildResetPayload = ({
   clearTimeAddings = true,
@@ -414,57 +416,72 @@ const execute = (request, params) =>
           query: { id, location },
         } = req
 
-        if (location && id) {
-          try {
-            const db = await dbConnectGlobal()
-            if (db) {
-              const Games = db.model('Games')
-              const existingGame = await Games.findById(id)
-
-              if (existingGame) {
-                const existingGameLocation =
-                  typeof existingGame.location === 'string'
-                    ? existingGame.location.trim().toLowerCase()
-                    : null
-                const requestedLocation = String(location).trim().toLowerCase()
-                const normalizedStatus = String(existingGame.status || '').toLowerCase()
-
-                if (
-                  (!existingGameLocation || existingGameLocation === requestedLocation) &&
-                  (normalizedStatus === 'finished' || normalizedStatus === 'closed') &&
-                  hasResultSnapshots(existingGame?.result) &&
-                  !hasComputedResult(existingGame?.result)
-                ) {
-                  const built = await buildGameResultComputed({
-                    game: existingGame?.toObject ? existingGame.toObject() : existingGame,
-                  })
-
-                  await Games.findByIdAndUpdate(
-                    id,
-                    {
-                      result: {
-                        ...(existingGame.result && typeof existingGame.result === 'object'
-                          ? existingGame.result
-                          : {}),
-                        teamsPlaces: built.teamsPlaces,
-                        computed: built.computed,
-                      },
-                    },
-                    { runValidators: true },
-                  )
-                }
-              }
-            }
-          } catch (error) {
-            console.error('Failed to auto-build game result on GET', {
-              error,
-              gameId: id,
-              location,
-            })
-          }
+        if (!location || !id) {
+          return res.status(400).json({
+            success: false,
+            error: 'Не указан идентификатор игры или площадки',
+          })
         }
 
-        return CRUD('Games', req, res)
+        try {
+          const db = await dbConnectGlobal()
+          if (!db) {
+            return res
+              .status(503)
+              .json({ success: false, error: 'Нет подключения к базе данных' })
+          }
+
+          const Games = db.model('Games')
+          let existingGame = await Games.findById(id)
+
+          if (!existingGame) {
+            return res.status(404).json({ success: false, error: 'Игра не найдена' })
+          }
+
+          const existingGameLocation =
+            typeof existingGame.location === 'string'
+              ? existingGame.location.trim().toLowerCase()
+              : null
+          const requestedLocation = String(location).trim().toLowerCase()
+          if (existingGameLocation && existingGameLocation !== requestedLocation) {
+            return res.status(404).json({ success: false, error: 'Игра не найдена' })
+          }
+          const normalizedStatus = String(existingGame.status || '').toLowerCase()
+
+          if (
+            (normalizedStatus === 'finished' || normalizedStatus === 'closed') &&
+            hasResultSnapshots(existingGame?.result) &&
+            !hasComputedResult(existingGame?.result)
+          ) {
+            const built = await buildGameResultComputed({
+              game: existingGame?.toObject ? existingGame.toObject() : existingGame,
+            })
+
+            existingGame = await Games.findByIdAndUpdate(
+              id,
+              {
+                result: {
+                  ...(existingGame.result && typeof existingGame.result === 'object'
+                    ? existingGame.result
+                    : {}),
+                  teamsPlaces: built.teamsPlaces,
+                  computed: built.computed,
+                },
+              },
+              { returnDocument: 'after', runValidators: true },
+            )
+          }
+
+          return res.status(200).json({
+            success: true,
+            data: sanitizeGameForPublicRead(existingGame),
+          })
+        } catch (error) {
+          console.error('Failed to read public game', { error, gameId: id, location })
+          return res
+            .status(500)
+            .json({ success: false, error: 'Не удалось получить данные игры' })
+        }
       }
 
       if (req.method === 'DELETE') {
@@ -491,6 +508,13 @@ const execute = (request, params) =>
 
           if (!existingGame) {
             return res.status(404).json({ success: false, error: 'Игра не найдена' })
+          }
+
+          if (!canManageGame({ session: req.session, game: existingGame })) {
+            return res.status(403).json({
+              success: false,
+              error: 'Недостаточно прав для удаления игры',
+            })
           }
 
           const existingGameLocation =
@@ -628,6 +652,14 @@ const execute = (request, params) =>
           updateData.agentNotifications = normalizeAgentNotificationsForWrite(
             updateData.agentNotifications,
           )
+        }
+
+
+        if (!canManageGame({ session: req.session, game: existingGame })) {
+          return res.status(403).json({
+            success: false,
+            error: 'Недостаточно прав для изменения игры',
+          })
         }
 
         if (Object.prototype.hasOwnProperty.call(updateData, 'showTasksAudience')) {

@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+
+import { authOptions } from '@server/auth/authOptions'
 
 const ESCALIONCLOUD_API_URL =
   process.env.ESCALIONCLOUD_API_URL || 'https://cloud.escalion.ru/api'
@@ -24,6 +27,19 @@ const parseUpstreamResponse = async (response) => {
 }
 
 export async function GET(request) {
+  const session = await getServerSession(authOptions)
+  const role = String(session?.user?.role || '').trim().toLowerCase()
+  if (!session?.user) {
+    return NextResponse.json(buildError('UNAUTHORIZED', 'Необходима авторизация'), {
+      status: 401,
+    })
+  }
+  if (role !== 'moder' && role !== 'admin' && role !== 'dev') {
+    return NextResponse.json(buildError('FORBIDDEN', 'Недостаточно прав'), {
+      status: 403,
+    })
+  }
+
   const password = process.env.ESCALIONCLOUD_PASSWORD
   if (!password) {
     return NextResponse.json(

@@ -2,6 +2,7 @@ import { broadcastNotificationToUsers } from '@server/pwaNotifications'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
 import { toStringId } from '@helpers/idAndDate'
+import { canManageGame } from '@server/gameHistory/gameManageAccess'
 
 const runInBackground = (label, job) => {
   Promise.resolve()
@@ -65,10 +66,11 @@ const getRegisteredUsersByGame = async ({ db, gameId }) => {
   return Array.from(uniqueByUserId.values())
 }
 
-export async function GET(request, { params }) {
+const execute = (request, { params }) => {
   return runLocationLegacyHandler({
     request,
     params,
+    requireAuth: true,
     handler: async (req, res) => {
       const { query } = req
       const id = query.id
@@ -81,6 +83,22 @@ export async function GET(request, { params }) {
             return res
               .status(503)
               .json({ success: false, error: 'Нет подключения к базе данных' })
+          }
+
+
+          const gameForAccess = await db
+            .model('Games')
+            .findById(id)
+            .select({ creatorUserId: 1, creatorTelegramId: 1, moderators: 1 })
+            .lean()
+          if (!gameForAccess) {
+            return res.status(404).json({ success: false, error: 'Игра не найдена' })
+          }
+          if (!canManageGame({ session: req.session, game: gameForAccess })) {
+            return res.status(403).json({
+              success: false,
+              error: 'Недостаточно прав для остановки игры',
+            })
           }
 
           const jsonCommand = {
@@ -157,4 +175,12 @@ export async function GET(request, { params }) {
         .json({ success: false, error: 'Не передан идентификатор игры' })
     },
   })
+}
+
+export async function GET(request, context) {
+  return execute(request, context)
+}
+
+export async function POST(request, context) {
+  return execute(request, context)
 }

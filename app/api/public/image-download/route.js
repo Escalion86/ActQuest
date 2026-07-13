@@ -1,17 +1,25 @@
 import { NextResponse } from 'next/server'
 
 const FALLBACK_FILE_NAME = 'actquest-image'
+const MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
+const DOWNLOAD_TIMEOUT_MS = 15_000
 
-const PRIVATE_HOST_PATTERNS = [
-  /^localhost$/i,
-  /^127\./,
-  /^10\./,
-  /^192\.168\./,
-  /^172\.(1[6-9]|2\d|3[0-1])\./,
-  /^0\./,
-  /^169\.254\./,
-  /^\[?::1\]?$/i,
-]
+const ALLOWED_REMOTE_HOSTS = new Set(['cloud.escalion.ru'])
+const configuredRemoteHosts = String(
+  process.env.REMOTE_DOWNLOAD_ALLOWED_HOSTS || '',
+)
+  .split(',')
+  .map((value) => value.trim().toLowerCase())
+  .filter(Boolean)
+configuredRemoteHosts.forEach((hostname) => ALLOWED_REMOTE_HOSTS.add(hostname))
+try {
+  const configuredOrigin = process.env.NEXT_PUBLIC_ESCALIONCLOUD_PUBLIC_ORIGIN
+  if (configuredOrigin) {
+    ALLOWED_REMOTE_HOSTS.add(new URL(configuredOrigin).hostname.toLowerCase())
+  }
+} catch {
+  // Некорректный origin не расширяет allowlist.
+}
 
 const sanitizeFileName = (value) => {
   const normalized = String(value || '')
@@ -36,8 +44,23 @@ const getFileNameFromUrl = (url) => {
 
 const isBlockedHost = (hostname) => {
   const normalized = String(hostname || '').trim().toLowerCase()
-  if (!normalized) return true
-  return PRIVATE_HOST_PATTERNS.some((pattern) => pattern.test(normalized))
+  return !normalized || !ALLOWED_REMOTE_HOSTS.has(normalized)
+}
+
+const createLimitedBody = (body) => {
+  let receivedBytes = 0
+  return body.pipeThrough(
+    new TransformStream({
+      transform(chunk, controller) {
+        receivedBytes += chunk?.byteLength || 0
+        if (receivedBytes > MAX_DOWNLOAD_BYTES) {
+          controller.error(new Error('Remote image is too large'))
+          return
+        }
+        controller.enqueue(chunk)
+      },
+    }),
+  )
 }
 
 const encodeContentDispositionFileName = (fileName) => {
@@ -88,6 +111,8 @@ export async function GET(request) {
         Accept: 'image/*,*/*;q=0.8',
       },
       cache: 'no-store',
+      redirect: 'error',
+      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
     })
 
     if (!upstreamResponse.ok || !upstreamResponse.body) {
@@ -101,6 +126,24 @@ export async function GET(request) {
     const fileName = sanitizeFileName(requestedFileName || getFileNameFromUrl(imageUrl))
     const contentType =
       upstreamResponse.headers.get('content-type') || 'application/octet-stream'
+    if (!contentType.toLowerCase().startsWith('image/')) {
+      return NextResponse.json(
+        { success: false, error: 'Удалённый ресурс не является изображением' },
+        { status: 415 },
+      )
+    }
+    const contentLengthNumber = Number(
+      upstreamResponse.headers.get('content-length'),
+    )
+    if (
+      Number.isFinite(contentLengthNumber) &&
+      contentLengthNumber > MAX_DOWNLOAD_BYTES
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'Изображение слишком большое' },
+        { status: 413 },
+      )
+    }
     const headers = new Headers({
       'Content-Type': contentType,
       'Content-Disposition': encodeContentDispositionFileName(fileName),
@@ -112,7 +155,7 @@ export async function GET(request) {
       headers.set('Content-Length', contentLength)
     }
 
-    return new Response(upstreamResponse.body, {
+    return new Response(createLimitedBody(upstreamResponse.body), {
       status: 200,
       headers,
     })

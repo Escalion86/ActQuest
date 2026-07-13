@@ -10,6 +10,11 @@ import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
 import { getTaskIndexForStep } from '@helpers/taskDistribution'
+import {
+  acquireGameProcessLock,
+  didGameProcessStepChange,
+  releaseGameProcessLock,
+} from '@server/gameProcessLock'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) {
@@ -154,6 +159,54 @@ const forceFailActiveTask = async ({ GamesTeams, game, gameTeam }) => {
   return { success: true, message: 'Задание принудительно провалено.' }
 }
 
+const runLockedAdminProgressAction = async ({
+  GamesTeams,
+  gameTeam,
+  actionHandler,
+}) => {
+  const expectedActiveStep = Number.isInteger(gameTeam?.activeNum)
+    ? gameTeam.activeNum
+    : 0
+  const lock = await acquireGameProcessLock({
+    GamesTeams,
+    teamId: gameTeam._id,
+  })
+
+  if (!lock.acquired) {
+    return {
+      success: false,
+      statusCode: 409,
+      message:
+        'Ответ команды ещё обрабатывается. Подождите несколько секунд и повторите действие.',
+    }
+  }
+
+  try {
+    const currentActiveStep = Number.isInteger(lock.gameTeam?.activeNum)
+      ? lock.gameTeam.activeNum
+      : 0
+    if (didGameProcessStepChange(expectedActiveStep, currentActiveStep)) {
+      return {
+        success: false,
+        statusCode: 409,
+        message: 'Задание уже изменилось. Обновите Game Control.',
+      }
+    }
+
+    return await actionHandler(lock.gameTeam)
+  } finally {
+    try {
+      await releaseGameProcessLock({
+        GamesTeams,
+        teamId: gameTeam._id,
+        token: lock.token,
+      })
+    } catch (error) {
+      console.error('Failed to release admin game progress lock', error)
+    }
+  }
+}
+
 export async function POST(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -279,6 +332,15 @@ export async function POST(request) {
       const summaryMessage =
         typeof processResult?.message === 'string' ? processResult.message : ''
       const lowered = summaryMessage.toLowerCase()
+      if (processResult?.retryable || processResult?.staleState) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: summaryMessage || 'Состояние задания изменилось',
+          },
+          { status: 409 },
+        )
+      }
       if (
         lowered.includes('не верен') ||
         lowered.includes('уже найден') ||
@@ -319,11 +381,20 @@ export async function POST(request) {
     }
 
     if (action === 'force_complete') {
-      const result = await forceCompleteActiveTask({ GamesTeams, game, gameTeam })
+      const result = await runLockedAdminProgressAction({
+        GamesTeams,
+        gameTeam,
+        actionHandler: (currentGameTeam) =>
+          forceCompleteActiveTask({
+            GamesTeams,
+            game,
+            gameTeam: currentGameTeam,
+          }),
+      })
       if (!result.success) {
         return NextResponse.json(
           { success: false, error: result.message || 'Не удалось завершить задание' },
-          { status: 400 },
+          { status: result.statusCode || 400 },
         )
       }
 
@@ -352,11 +423,20 @@ export async function POST(request) {
     }
 
     if (action === 'force_fail') {
-      const result = await forceFailActiveTask({ GamesTeams, game, gameTeam })
+      const result = await runLockedAdminProgressAction({
+        GamesTeams,
+        gameTeam,
+        actionHandler: (currentGameTeam) =>
+          forceFailActiveTask({
+            GamesTeams,
+            game,
+            gameTeam: currentGameTeam,
+          }),
+      })
       if (!result.success) {
         return NextResponse.json(
           { success: false, error: result.message || 'Не удалось провалить задание' },
-          { status: 400 },
+          { status: result.statusCode || 400 },
         )
       }
 

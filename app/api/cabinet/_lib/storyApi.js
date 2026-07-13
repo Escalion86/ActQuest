@@ -11,6 +11,10 @@ import applyPrequelStoryEffects from '@server/applyPrequelStoryEffects'
 import { toStringId } from '@helpers/idAndDate'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { canAccessGameAsModerator } from '@helpers/gameAssignmentAccess'
+import {
+  acquireGameProcessLock,
+  releaseGameProcessLock,
+} from '@server/gameProcessLock'
 
 export const normalizeStringId = (value) => {
   const id = toStringId(value)
@@ -165,6 +169,67 @@ export const ensureStoryProgress = async ({
   }
 
   return progress
+}
+
+export const runLockedStoryMutation = async ({ context, actor, action }) => {
+  const lock = await acquireGameProcessLock({
+    GamesTeams: context.GamesTeams,
+    teamId: context.gameTeam._id,
+  })
+
+  if (!lock.acquired) {
+    return {
+      response: jsonError(
+        'Другое действие команды ещё обрабатывается. Повторите через несколько секунд.',
+        409,
+        { retryable: true },
+      ),
+    }
+  }
+
+  try {
+    const progress = await ensureStoryProgress({
+      GamesTeams: context.GamesTeams,
+      game: context.game,
+      gameTeam: lock.gameTeam,
+      actor,
+      save: false,
+    })
+    const mutationResult = await action({
+      ...context,
+      gameTeam: lock.gameTeam,
+      progress,
+    })
+    const nextProgress = mutationResult?.progress || progress
+
+    const writeResult = await context.GamesTeams.updateOne(
+      {
+        _id: context.gameTeam._id,
+        'gameProcessLock.token': lock.token,
+      },
+      { $set: { storyProgress: nextProgress } },
+    )
+
+    if (writeResult?.matchedCount !== 1) {
+      throw new Error('Story progress lock expired before write')
+    }
+
+    return {
+      mutationResult,
+      progress: nextProgress,
+      gameTeam: lock.gameTeam,
+    }
+  } finally {
+    try {
+      await releaseGameProcessLock({
+        GamesTeams: context.GamesTeams,
+        teamId: context.gameTeam._id,
+        token: lock.token,
+      })
+    } catch (error) {
+      console.error('Failed to release story progress lock', error)
+    }
+  }
 }
 
 export const buildTeamStoryStatePayload = ({ game, team, gameTeam, progress }) => {

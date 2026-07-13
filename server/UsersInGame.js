@@ -1,4 +1,5 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import sanitizeGameForPublicRead from '@helpers/sanitizeGameForPublicRead'
 
 export default async function UsersInGame(req, res) {
   const { query, method } = req
@@ -48,6 +49,7 @@ export default async function UsersInGame(req, res) {
           .find({
             telegramId: { $in: usersTelegramIds },
           })
+          .select({ telegramId: 1, location: 1 })
           .lean()
         const usersWithTeams = users.map((user) => {
           const userTeam = teamsUsers.find(
@@ -55,11 +57,21 @@ export default async function UsersInGame(req, res) {
           )
           const team = teams.find((team) => String(team._id) == userTeam.teamId)
 
-          return { ...user, team, roleInTeam: userTeam.role }
+          return {
+            location: user.location || null,
+            team: team
+              ? { _id: team._id, name: team.name || '' }
+              : null,
+            roleInTeam: userTeam.role,
+          }
         })
         return res?.status(200).json({
           success: true,
-          data: { game, gameTeams, teams, teamsUsers, users: usersWithTeams },
+          data: {
+            game: sanitizeGameForPublicRead(game),
+            teams: teams.map((team) => ({ _id: team._id, name: team.name || '' })),
+            users: usersWithTeams,
+          },
         })
       } catch (error) {
         console.log(error)

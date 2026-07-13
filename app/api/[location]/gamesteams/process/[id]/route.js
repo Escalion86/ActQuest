@@ -1,10 +1,13 @@
 import dbConnectGlobal from '@utils/dbConnectGlobal'
 import { runLocationLegacyHandler } from '@app/api/_lib/runLocationLegacyHandler'
+import resolveTeamMembershipForIdentity from '@helpers/resolveTeamMembershipForIdentity'
+import { canManageGame } from '@server/gameHistory/gameManageAccess'
 
 export async function GET(request, { params }) {
   return runLocationLegacyHandler({
     request,
     params,
+    requireAuth: true,
     handler: async (req, res) => {
       const { query } = req
       const id = query.id
@@ -24,6 +27,38 @@ export async function GET(request, { params }) {
             return res
               .status(404)
               .json({ success: false, error: 'Команда в игре не найдена' })
+          }
+
+          const sessionUser = req.session?.user || {}
+          const userId =
+            sessionUser.globalUserId ||
+            sessionUser.userId ||
+            sessionUser._id ||
+            sessionUser.id ||
+            null
+          const teamUsers = await db
+            .model('TeamsUsers')
+            .find({ teamId: data.teamId })
+            .select({ userId: 1, userTelegramId: 1, role: 1 })
+            .lean()
+          const membership = resolveTeamMembershipForIdentity({
+            teamUsers,
+            userId,
+            telegramId: sessionUser.telegramId,
+          })
+          const game = await db
+            .model('Games')
+            .findById(data.gameId)
+            .select({ creatorUserId: 1, creatorTelegramId: 1, moderators: 1 })
+            .lean()
+          if (
+            !membership.isTeamMember &&
+            !canManageGame({ session: req.session, game })
+          ) {
+            return res.status(403).json({
+              success: false,
+              error: 'Нет доступа к игровому процессу этой команды',
+            })
           }
           const jsonCommand = {
             gameTeamId: id,

@@ -81,6 +81,10 @@ const canManageGameHistory = ({ session, game }) => {
   })
 }
 
+// Единая проверка права управлять игрой. История, настройки, запуск и остановка
+// должны использовать одну и ту же модель доступа.
+const canManageGame = canManageGameHistory
+
 const buildHistoryActorFromSession = (session) => ({
   userId:
     session?.user?.globalUserId ??
@@ -97,6 +101,7 @@ const buildHistoryActorFromSession = (session) => ({
 })
 
 export {
+  canManageGame,
   canManageGameHistory,
   buildHistoryActorFromSession,
   normalizeRole,

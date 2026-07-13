@@ -7,6 +7,7 @@ import {
   loadPlayerStoryContext,
   normalizeStringId,
   readJsonPayload,
+  runLockedStoryMutation,
 } from '@app/api/cabinet/_lib/storyApi'
 
 export async function POST(request, { params }) {
@@ -31,29 +32,36 @@ export async function POST(request, { params }) {
       )
     }
 
-    const result = applyStoryAction({
-      game: context.game,
-      progress: context.progress,
-      nodeId,
-      actionId,
+    const lockedMutation = await runLockedStoryMutation({
+      context,
       actor: 'team',
+      action: ({ game, progress }) =>
+        applyStoryAction({
+          game,
+          progress,
+          nodeId,
+          actionId,
+          actor: 'team',
+        }),
     })
+    if (lockedMutation.response) return lockedMutation.response
 
-    await context.GamesTeams.updateOne(
-      { _id: context.gameTeam._id },
-      { $set: { storyProgress: result.progress } },
-    )
+    const result = lockedMutation.mutationResult
     await notifyAgentsForGameTeamProgress({
       db: context.db,
       game: context.game,
       gameTeam: {
-        ...(context.gameTeam.toObject?.() || context.gameTeam),
-        storyProgress: result.progress,
+        ...lockedMutation.gameTeam,
+        storyProgress: lockedMutation.progress,
       },
       team: context.team,
     })
 
-    const nextContext = { ...context, progress: result.progress }
+    const nextContext = {
+      ...context,
+      gameTeam: lockedMutation.gameTeam,
+      progress: lockedMutation.progress,
+    }
     return NextResponse.json({
       success: true,
       data: {

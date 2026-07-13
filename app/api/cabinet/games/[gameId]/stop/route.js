@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { proxyToLocationGameRoute } from '@app/api/cabinet/_lib/proxyToLocationGameRoute'
 
-export async function GET(request, { params }) {
+const execute = async (request, { params }) => {
   const resolvedParams = await params
   const gameId = resolvedParams?.gameId
   if (!gameId) {
@@ -16,6 +16,15 @@ export async function GET(request, { params }) {
     request,
     gameId,
     targetPath: '/api/:location/games/stop/:gameId',
-    method: 'GET',
+    method: request.method === 'POST' ? 'POST' : 'GET',
   })
+}
+
+
+export async function GET(request, context) {
+  return execute(request, context)
+}
+
+export async function POST(request, context) {
+  return execute(request, context)
 }

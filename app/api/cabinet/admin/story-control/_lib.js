@@ -10,10 +10,10 @@ import {
 } from '@server/storyEngine'
 import {
   buildAdminStoryTeamPayload,
-  ensureStoryProgress,
   loadAdminStoryContext,
   normalizeStringId,
   readJsonPayload,
+  runLockedStoryMutation,
 } from '@app/api/cabinet/_lib/storyApi'
 import { notifyAgentsForGameTeamProgress } from '@server/agentNotifications'
 
@@ -29,26 +29,21 @@ export const runAdminStoryMutation = async ({ request, action }) => {
     return context.response
   }
 
-  const progress = await ensureStoryProgress({
-    GamesTeams: context.GamesTeams,
-    game: context.game,
-    gameTeam: context.gameTeam,
+  const lockedMutation = await runLockedStoryMutation({
+    context,
     actor: 'admin',
-    save: true,
+    action: ({ progress, ...lockedContext }) =>
+      action({ ...lockedContext, payload, progress }),
   })
+  if (lockedMutation.response) return lockedMutation.response
 
-  const mutationResult = action({ ...context, payload, progress })
-  const nextProgress = mutationResult?.progress || progress
-
-  await context.GamesTeams.updateOne(
-    { _id: context.gameTeam._id },
-    { $set: { storyProgress: nextProgress } },
-  )
+  const mutationResult = lockedMutation.mutationResult
+  const nextProgress = lockedMutation.progress
   await notifyAgentsForGameTeamProgress({
     db: context.db,
     game: context.game,
     gameTeam: {
-      ...(context.gameTeam.toObject?.() || context.gameTeam),
+      ...lockedMutation.gameTeam,
       storyProgress: nextProgress,
     },
     team: context.team,
@@ -62,7 +57,7 @@ export const runAdminStoryMutation = async ({ request, action }) => {
       team: buildAdminStoryTeamPayload({
         game: context.game,
         team: context.team,
-        gameTeam: context.gameTeam,
+        gameTeam: lockedMutation.gameTeam,
         progress: nextProgress,
       }),
     },

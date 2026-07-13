@@ -40,6 +40,19 @@ export async function POST(request) {
     return errorJson(400, 'phone', 'Пароль должен содержать минимум 8 символов.')
   }
 
+  let PhoneVerifications = null
+  let verificationLock = null
+
+  const releaseVerificationLock = async () => {
+    if (!PhoneVerifications || !verificationLock?._id || !verificationLock?.lockedAt) {
+      return
+    }
+    await PhoneVerifications.updateOne(
+      { _id: verificationLock._id, finalizingAt: verificationLock.lockedAt },
+      { $unset: { finalizingAt: 1 } },
+    ).catch(() => null)
+  }
+
   try {
     if (flow === 'register' && !location) {
       return errorJson(
@@ -72,16 +85,28 @@ export async function POST(request) {
       )
     }
 
-    const PhoneVerifications = globalDb.model('PhoneVerifications')
-    const verification = await PhoneVerifications.findOne({ phone, flow }).lean()
+    PhoneVerifications = globalDb.model('PhoneVerifications')
+    const lockedAt = new Date()
+    const verification = await PhoneVerifications.findOneAndUpdate(
+      {
+        phone,
+        flow,
+        confirmed: true,
+        expiresAt: { $gt: lockedAt },
+        finalizingAt: null,
+      },
+      { $set: { finalizingAt: lockedAt } },
+      { returnDocument: 'after' },
+    ).lean()
 
-    if (!verification || !verification.confirmed) {
+    if (!verification) {
       return errorJson(
         400,
         'phone',
-        'Номер телефона не подтвержден. Сначала завершите проверку звонком.',
+        'Подтверждение не найдено, истекло или уже обрабатывается. Запустите проверку снова.',
       )
     }
+    verificationLock = { _id: verification._id, lockedAt }
 
     if (flow === 'register') {
       const registerResult = await registerPhoneUser({
@@ -93,6 +118,7 @@ export async function POST(request) {
       })
 
       if (!registerResult.success) {
+        await releaseVerificationLock()
         return errorJson(
           400,
           'phone',
@@ -164,6 +190,7 @@ export async function POST(request) {
       { status: 200 },
     )
   } catch (error) {
+    await releaseVerificationLock()
     console.error('Phone verify finalize error (app)', error)
     return errorJson(
       500,

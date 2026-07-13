@@ -8,6 +8,11 @@ import getGameProcessFinishingPlace from '@helpers/getGameProcessFinishingPlace'
 import getLocationTimeZone from '@helpers/locationTimeZone'
 import sanitize from '@helpers/sanitize'
 import { getTaskIndexForStep } from '@helpers/taskDistribution'
+import {
+  acquireGameProcessLock,
+  didGameProcessStepChange,
+  releaseGameProcessLock,
+} from '@server/gameProcessLock'
 import taskText from 'telegram/func/taskText'
 
 const PROMPT_TEXT = {
@@ -234,7 +239,7 @@ const buildCodeAttemptEntry = ({ taskIndex, code, category, status, source }) =>
  * Логика повторяет telegram-версию, но избавлена от кнопок и рассылок,
  * а также старается возвращать структурированные ответы специально для web UI.
  */
-const webGameProcess = async ({
+const webGameProcessUnlocked = async ({
   db,
   game,
   gameTeam,
@@ -788,6 +793,80 @@ const webGameProcess = async ({
     promptMessage: createPromptMessage(resolvedGame.type),
     images: currentTask.images,
   })
+}
+
+const webGameProcess = async (options) => {
+  const { db, gameTeam, gameTeamId, message } = options || {}
+
+  if (!db) {
+    return { message: 'Нет подключения к базе данных.' }
+  }
+
+  const effectiveTeamId = gameTeamId || gameTeam?._id
+  if (!effectiveTeamId) {
+    return { message: 'Команда не найдена.' }
+  }
+
+  const hasMessage = typeof message === 'string' && message.trim().length > 0
+  const needsInitialization =
+    !Array.isArray(gameTeam?.startTime) || gameTeam.startTime.length === 0
+
+  // Обычное обновление экрана не пишет прогресс и не должно ждать блокировку.
+  if (!hasMessage && !needsInitialization) {
+    return webGameProcessUnlocked(options)
+  }
+
+  const GamesTeams = db.model('GamesTeams')
+  const expectedActiveStep = Number.isInteger(gameTeam?.activeNum)
+    ? gameTeam.activeNum
+    : 0
+  const lock = await acquireGameProcessLock({
+    GamesTeams,
+    teamId: effectiveTeamId,
+  })
+
+  if (!lock.acquired) {
+    return {
+      message:
+        'Другой ответ команды ещё обрабатывается. Подождите несколько секунд и повторите ввод.',
+      retryable: true,
+    }
+  }
+
+  try {
+    const currentActiveStep = Number.isInteger(lock.gameTeam?.activeNum)
+      ? lock.gameTeam.activeNum
+      : 0
+
+    // Код был введён для предыдущего задания, пока другой запрос уже перевёл
+    // команду дальше. Не применяем его к новому заданию автоматически.
+    if (
+      hasMessage &&
+      didGameProcessStepChange(expectedActiveStep, currentActiveStep)
+    ) {
+      return {
+        message:
+          'Задание уже изменилось. Проверьте новое задание и введите подходящий код ещё раз.',
+        staleState: true,
+      }
+    }
+
+    return await webGameProcessUnlocked({
+      ...options,
+      gameTeam: lock.gameTeam,
+      gameTeamId: effectiveTeamId,
+    })
+  } finally {
+    try {
+      await releaseGameProcessLock({
+        GamesTeams,
+        teamId: effectiveTeamId,
+        token: lock.token,
+      })
+    } catch (error) {
+      console.error('Failed to release game process lock', error)
+    }
+  }
 }
 
 export default webGameProcess

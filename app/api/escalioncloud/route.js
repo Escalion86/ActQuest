@@ -1,10 +1,24 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+
+import { authOptions } from '@server/auth/authOptions'
+import dbConnectGlobal from '@utils/dbConnectGlobal'
+import resolveTeamMembershipForIdentity from '@helpers/resolveTeamMembershipForIdentity'
 
 const ESCALIONCLOUD_API_URL =
   process.env.ESCALIONCLOUD_API_URL || 'https://cloud.escalion.ru/api'
 const IOS_USER_AGENT_RE = /\b(iPhone|iPad|iPod)\b/i
 const HEIC_HEIF_NAME_RE = /\.(heic|heif)$/i
 const isDevEnv = process.env.NODE_ENV !== 'production'
+const MAX_REQUEST_BYTES = 55 * 1024 * 1024
+const MAX_ADMIN_FILE_BYTES = 50 * 1024 * 1024
+const MAX_PLAYER_FILE_BYTES = 25 * 1024 * 1024
+const MAX_FILES = 5
+const SAFE_DIRECTORY_SEGMENT_RE = /^[a-zA-Z0-9._-]+$/
+const PLAYER_IMAGE_NAME_RE = /\.(jpe?g|png|webp|heic|heif)$/i
+const ESCALIONCLOUD_PROJECT =
+  String(process.env.NEXT_PUBLIC_ESCALIONCLOUD_PROJECT || 'actquest').trim() ||
+  'actquest'
 
 const buildError = (type, message) => ({
   success: false,
@@ -27,6 +41,76 @@ const parseUpstreamResponse = async (response) => {
 
 const normalizePathSegment = (value) =>
   typeof value === 'string' ? value.trim().replace(/^\/+|\/+$/g, '') : ''
+
+const normalizeSafeDirectory = (value) => {
+  const normalized = normalizePathSegment(value)
+  if (!normalized) return ''
+  const segments = normalized.split('/')
+  if (
+    segments.some(
+      (segment) =>
+        !segment ||
+        segment === '.' ||
+        segment === '..' ||
+        !SAFE_DIRECTORY_SEGMENT_RE.test(segment),
+    )
+  ) {
+    return ''
+  }
+  return segments.join('/')
+}
+
+const resolveSessionIdentity = (sessionUser) => ({
+  userId:
+    sessionUser?.globalUserId ||
+    sessionUser?.userId ||
+    sessionUser?._id ||
+    sessionUser?.id ||
+    null,
+  telegramId: sessionUser?.telegramId ?? null,
+  role: String(sessionUser?.role || '').trim().toLowerCase(),
+})
+
+const canUploadPlayerPhoto = async ({ directory, identity }) => {
+  const segments = directory.split('/')
+  if (
+    segments.length !== 4 ||
+    segments[0] !== ESCALIONCLOUD_PROJECT ||
+    segments[1] !== 'game-photo-answers' ||
+    !segments[2] ||
+    !segments[3]
+  ) {
+    return false
+  }
+
+  const [, , gameId, teamId] = segments
+  const db = await dbConnectGlobal()
+  if (!db) return false
+
+  const [game, gameTeam, teamUsers] = await Promise.all([
+    db
+      .model('Games')
+      .findById(gameId)
+      .select({ type: 1, status: 1 })
+      .lean(),
+    db.model('GamesTeams').findOne({ gameId, teamId }).select({ _id: 1 }).lean(),
+    db
+      .model('TeamsUsers')
+      .find({ teamId })
+      .select({ userId: 1, userTelegramId: 1, role: 1 })
+      .lean(),
+  ])
+
+  if (game?.type !== 'photo' || game?.status !== 'started' || !gameTeam) {
+    return false
+  }
+
+  return resolveTeamMembershipForIdentity({
+    teamUsers,
+    userId: identity.userId,
+    telegramId: identity.telegramId,
+  }).isTeamMember
+}
 
 const getRequestId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -52,6 +136,26 @@ export async function POST(request) {
   const contentLength = String(request.headers.get('content-length') || '')
   const isIosClient = IOS_USER_AGENT_RE.test(userAgent)
 
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json(buildError('UNAUTHORIZED', 'Необходима авторизация'), {
+      status: 401,
+    })
+  }
+
+  const identity = resolveSessionIdentity(session.user)
+  const hasElevatedAccess =
+    identity.role === 'moder' ||
+    identity.role === 'admin' ||
+    identity.role === 'dev'
+  const requestBytes = Number(contentLength)
+  if (Number.isFinite(requestBytes) && requestBytes > MAX_REQUEST_BYTES) {
+    return NextResponse.json(
+      buildError('FILE_TOO_LARGE', 'Слишком большой объём загрузки'),
+      { status: 413 },
+    )
+  }
+
   const password = process.env.ESCALIONCLOUD_PASSWORD
   if (!password) {
     return NextResponse.json(
@@ -74,7 +178,7 @@ export async function POST(request) {
     const generateNameRaw = incomingFormData.get('generateName')
     const legacyProjectRaw = incomingFormData.get('project')
     const legacyFolderRaw = incomingFormData.get('folder')
-    const directoryFromNewContract = normalizePathSegment(directoryRaw)
+    const directoryFromNewContract = normalizeSafeDirectory(directoryRaw)
     const fileName =
       typeof fileNameRaw === 'string' && fileNameRaw.trim().length > 0
         ? fileNameRaw.trim()
@@ -87,8 +191,8 @@ export async function POST(request) {
       typeof generateNameRaw === 'string' && generateNameRaw.trim().length > 0
         ? generateNameRaw.trim()
         : null
-    const legacyProject = normalizePathSegment(legacyProjectRaw)
-    const legacyFolder = normalizePathSegment(legacyFolderRaw)
+    const legacyProject = normalizeSafeDirectory(legacyProjectRaw)
+    const legacyFolder = normalizeSafeDirectory(legacyFolderRaw)
     const directory =
       directoryFromNewContract ||
       [legacyProject, legacyFolder].filter(Boolean).join('/')
@@ -107,6 +211,13 @@ export async function POST(request) {
       )
     }
 
+    if (files.length > MAX_FILES) {
+      return NextResponse.json(
+        buildError('VALIDATION_ERROR', `За один раз можно загрузить не более ${MAX_FILES} файлов`),
+        { status: 400 },
+      )
+    }
+
     if (!directory) {
       console.error('[EscalionCloud][upload][validation-error]', {
         requestId,
@@ -120,6 +231,42 @@ export async function POST(request) {
         buildError(
           'VALIDATION_ERROR',
           'Directory is required. Expected "<project>/<folder>"',
+        ),
+        { status: 400 },
+      )
+    }
+
+
+    if (!hasElevatedAccess) {
+      const hasPlayerAccess = await canUploadPlayerPhoto({ directory, identity })
+      if (!hasPlayerAccess) {
+        return NextResponse.json(
+          buildError('FORBIDDEN', 'Нет доступа к указанному каталогу загрузки'),
+          { status: 403 },
+        )
+      }
+    }
+
+    const maxFileBytes = hasElevatedAccess
+      ? MAX_ADMIN_FILE_BYTES
+      : MAX_PLAYER_FILE_BYTES
+    const invalidFile = files.find((file) => {
+      const meta = getFileMeta(file)
+      if (meta.size === null || meta.size <= 0 || meta.size > maxFileBytes) {
+        return true
+      }
+      if (hasElevatedAccess) {
+        return !/^(image|audio|video)\//i.test(meta.type)
+      }
+      return !/^image\//i.test(meta.type) && !PLAYER_IMAGE_NAME_RE.test(meta.name)
+    })
+    if (invalidFile) {
+      return NextResponse.json(
+        buildError(
+          'VALIDATION_ERROR',
+          hasElevatedAccess
+            ? 'Разрешены только изображения, аудио и видео установленного размера'
+            : 'Разрешены только изображения размером до 25 МБ',
         ),
         { status: 400 },
       )

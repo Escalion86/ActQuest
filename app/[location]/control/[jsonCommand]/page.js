@@ -1,7 +1,10 @@
 import { notFound } from 'next/navigation'
+import { getServerSession } from 'next-auth'
 
 import executeCommand from '@server/executeCommand'
+import { authOptions } from '@server/auth/authOptions'
 import dbConnectGlobal from '@utils/dbConnectGlobal'
+import resolveSessionUserFilter from '@helpers/resolveSessionUserFilter'
 import { decodeCommandKeys } from 'telegram/func/commandShortcuts'
 import GameControlPageClient from '@components/location-game/GameControlPageClient'
 
@@ -15,13 +18,23 @@ export default async function GameControlPage({ params }) {
     notFound()
   }
 
+  const session = await getServerSession(authOptions)
+  if (String(session?.user?.role || '').trim().toLowerCase() !== 'dev') {
+    notFound()
+  }
+
+  const sessionUserFilter = resolveSessionUserFilter(session.user)
+  if (!sessionUserFilter) {
+    notFound()
+  }
+
   const db = await dbConnectGlobal()
   if (!db) {
     return <GameControlPageClient location={location} result={{ text: 'Нет подключения к базе данных' }} />
   }
 
-  const user = await db.model('Users').findOne({ telegramId: 261102161 }).lean()
-  if (!user) {
+  const user = await db.model('Users').findOne(sessionUserFilter).lean()
+  if (!user?.telegramId) {
     return <GameControlPageClient location={location} result={{ text: 'Пользователь не найден' }} />
   }
 
@@ -35,7 +48,7 @@ export default async function GameControlPage({ params }) {
   const lastCmd = await db
     .model('LastCommands')
     .findOne({
-      userTelegramId: 261102161,
+      userTelegramId: user.telegramId,
     })
     .lean()
 
