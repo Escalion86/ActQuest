@@ -594,6 +594,11 @@ const gamesSchema = {
     type: Boolean,
     default: true,
   },
+  clueEarlyAccessFrom: {
+    type: Number,
+    min: 1,
+    default: 1,
+  },
   allowCaptainFailTask: {
     type: Boolean,
     default: true,

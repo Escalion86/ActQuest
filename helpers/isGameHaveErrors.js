@@ -2,6 +2,10 @@ import {
   getDuplicateCodeKindsLabel,
   getTaskDuplicateCodeConflicts,
 } from './getTaskDuplicateCodeConflicts'
+import {
+  getTimedCluesCount,
+  normalizeClueEarlyAccessFrom,
+} from './clueEarlyAccess'
 
 const stripHtmlToPlainText = (value) =>
   String(value || '')
@@ -86,14 +90,33 @@ export const getGameValidationErrors = (game) => {
   const safeGame = game && typeof game === 'object' ? game : {}
   const taskDuration = Number(safeGame.taskDuration ?? 3600) || 3600
   const cluesDuration = Number(safeGame.cluesDuration ?? 1200) || 0
-  const cluesNeeded =
-    cluesDuration > 0 ? Math.ceil((taskDuration - cluesDuration) / cluesDuration) : 0
+  const cluesNeeded = getTimedCluesCount(taskDuration, cluesDuration)
   const activeTasks = Array.isArray(safeGame.tasks)
     ? safeGame.tasks.filter((task) => !task?.canceled)
     : []
 
   if (taskDuration - cluesDuration < 0) {
     errors.push('Время до подсказки больше, чем длительность задания.')
+  }
+
+  if (safeGame.allowCaptainForceClue !== false) {
+    const clueEarlyAccessFrom =
+      safeGame.clueEarlyAccessFrom === null ||
+      safeGame.clueEarlyAccessFrom === undefined
+        ? 1
+        : normalizeClueEarlyAccessFrom(safeGame.clueEarlyAccessFrom, 0)
+
+    if (
+      cluesNeeded < 1 ||
+      clueEarlyAccessFrom < 1 ||
+      clueEarlyAccessFrom > cluesNeeded
+    ) {
+      errors.push(
+        cluesNeeded > 0
+          ? `Номер первой доступной досрочно подсказки должен быть от 1 до ${cluesNeeded}.`
+          : 'Для досрочного получения подсказок задайте интервал меньше продолжительности задания или отключите эту возможность.',
+      )
+    }
   }
 
   if (!safeGame.startingPlace) {

@@ -14,6 +14,7 @@ import {
 } from '@server/gameProcessLock'
 import resolveTeamMembershipForIdentity from '@helpers/resolveTeamMembershipForIdentity'
 import { getTaskIndexForStep } from '@helpers/taskDistribution'
+import { normalizeClueEarlyAccessFrom } from '@helpers/clueEarlyAccess'
 
 const isGameTaskDebugEnabled =
   process.env.GAME_TASK_DEBUG === '1' || process.env.SESSION_DEBUG === '1'
@@ -406,6 +407,9 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
   })
   const nextClueNumber =
     totalClues > 0 ? Math.min(visibleCluesCount + 1, totalClues) : null
+  const clueEarlyAccessFrom = normalizeClueEarlyAccessFrom(
+    game?.clueEarlyAccessFrom,
+  )
   const forceClueAdvanceSeconds =
     nextClueNumber && cluesDurationSeconds > 0
       ? Math.max(
@@ -418,6 +422,7 @@ const buildCaptainActionsForState = ({ game, gameTeam, isCaptain }) => {
     totalClues > 0 &&
     cluesDurationSeconds > 0 &&
     visibleCluesCount < totalClues &&
+    nextClueNumber >= clueEarlyAccessFrom &&
     forceClueAdvanceSeconds > 0 &&
     canMutateActiveTask
 
@@ -657,6 +662,18 @@ const forceClueForCaptain = async ({
     startTime: startTimes[activeTaskIndex],
   })
   const nextClueNumber = Math.min(visibleCluesCount + 1, totalClues)
+  const clueEarlyAccessFrom = normalizeClueEarlyAccessFrom(
+    game?.clueEarlyAccessFrom,
+  )
+
+  if (nextClueNumber < clueEarlyAccessFrom) {
+    return {
+      gameTeam,
+      result: {
+        message: `Досрочное получение доступно начиная с подсказки №${clueEarlyAccessFrom}.`,
+      },
+    }
+  }
   const advanceSeconds = Math.max(
     nextClueNumber * cluesDurationSeconds - effectiveElapsedSeconds,
     0,

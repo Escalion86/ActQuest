@@ -6,6 +6,10 @@ import CabinetNumberField from '@components/cabinet/CabinetNumberField'
 import CabinetSelectField from '@components/cabinet/CabinetSelectField'
 import NeonCheckbox from '@components/NeonCheckbox'
 import ModalSection from '@components/modals/ModalSection'
+import {
+  getTimedCluesCount,
+  normalizeClueEarlyAccessFrom,
+} from '@helpers/clueEarlyAccess'
 
 const fieldLabelClassName =
   'text-sm font-semibold text-slate-700 dark:text-white'
@@ -23,6 +27,33 @@ const GameSettingsSection = ({
   getCheckboxChecked,
 }) => {
   const isPhotoGame = selectedGame?.type === 'photo'
+  const timedCluesCount = getTimedCluesCount(
+    selectedGame.taskDuration,
+    selectedGame.cluesDuration,
+  )
+  const clueEarlyAccessOptions = Array.from(
+    { length: timedCluesCount },
+    (_, index) => index + 1,
+  )
+  const updateDurationAndClueAccess = (durationPatch) =>
+    updateSelectedGame((currentGame) => {
+      const nextGame = { ...currentGame, ...durationPatch }
+      const nextTimedCluesCount = getTimedCluesCount(
+        nextGame.taskDuration,
+        nextGame.cluesDuration,
+      )
+      const currentAccessFrom = normalizeClueEarlyAccessFrom(
+        currentGame.clueEarlyAccessFrom,
+      )
+
+      return {
+        ...durationPatch,
+        clueEarlyAccessFrom:
+          nextTimedCluesCount > 0
+            ? Math.min(currentAccessFrom, nextTimedCluesCount)
+            : 1,
+      }
+    })
 
   return (
     <ModalSection>
@@ -36,7 +67,7 @@ const GameSettingsSection = ({
           label="Продолжительность задания"
           valueSeconds={selectedGame.taskDuration}
           onChangeSeconds={(nextSeconds) =>
-            updateSelectedGame({ taskDuration: nextSeconds })
+            updateDurationAndClueAccess({ taskDuration: nextSeconds })
           }
           labelClassName={fieldLabelClassName}
         />
@@ -46,7 +77,7 @@ const GameSettingsSection = ({
             label="Время до подсказки"
             valueSeconds={selectedGame.cluesDuration}
             onChangeSeconds={(nextSeconds) =>
-              updateSelectedGame({ cluesDuration: nextSeconds })
+              updateDurationAndClueAccess({ cluesDuration: nextSeconds })
             }
             labelClassName={fieldLabelClassName}
           />
@@ -173,15 +204,25 @@ const GameSettingsSection = ({
         <NeonCheckbox
           id="game-allow-force-clue"
           checked={Boolean(selectedGame.allowCaptainForceClue)}
-          onChange={(eventOrChecked) =>
-            debugCheckboxUpdate(
-              'allowCaptainForceClue',
-              getCheckboxChecked(eventOrChecked),
-              (checked) => ({
-                allowCaptainForceClue: checked,
-              }),
-            )
-          }
+          onChange={(eventOrChecked) => {
+            const checked = getCheckboxChecked(eventOrChecked)
+            updateSelectedGame({
+              allowCaptainForceClue: checked,
+              ...(checked
+                ? {
+                    clueEarlyAccessFrom:
+                      timedCluesCount > 0
+                        ? Math.min(
+                            normalizeClueEarlyAccessFrom(
+                              selectedGame.clueEarlyAccessFrom,
+                            ),
+                            timedCluesCount,
+                          )
+                        : 1,
+                  }
+                : {}),
+            })
+          }}
           label="Досрочные подсказки капитанам"
           labelClassName="text-sm text-slate-600 dark:text-slate-200"
         />
@@ -216,6 +257,44 @@ const GameSettingsSection = ({
           labelClassName="text-sm text-slate-600 dark:text-slate-200"
         />
       </div>
+
+      {selectedGame.allowCaptainForceClue ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <CabinetSelectField
+            id="game-clue-early-access-from"
+            label="Досрочно начиная с подсказки"
+            value={
+              timedCluesCount > 0
+                ? normalizeClueEarlyAccessFrom(
+                    selectedGame.clueEarlyAccessFrom,
+                  )
+                : ''
+            }
+            onChange={(event) =>
+              updateSelectedGame({
+                clueEarlyAccessFrom: Number(event.target.value),
+              })
+            }
+            disabled={timedCluesCount === 0}
+            labelClassName={fieldLabelClassName}
+            selectClassName={fieldSelectClassName}
+          >
+            {timedCluesCount === 0 ? (
+              <option value="">Нет доступных подсказок</option>
+            ) : (
+              clueEarlyAccessOptions.map((clueNumber) => (
+                <option key={clueNumber} value={clueNumber}>
+                  {clueNumber}
+                </option>
+              ))
+            )}
+          </CabinetSelectField>
+          <p className="self-end pb-3 text-xs text-slate-500 dark:text-slate-200">
+            Более ранние подсказки команда получит только автоматически по
+            таймеру.
+          </p>
+        </div>
+      ) : null}
     </ModalSection>
   )
 }
@@ -231,6 +310,7 @@ GameSettingsSection.propTypes = {
     taskFailurePenalty: PropTypes.number,
     manyCodesPenalty: PropTypes.array,
     allowCaptainForceClue: PropTypes.bool,
+    clueEarlyAccessFrom: PropTypes.number,
     allowCaptainFailTask: PropTypes.bool,
     allowCaptainFinishBreak: PropTypes.bool,
   }).isRequired,

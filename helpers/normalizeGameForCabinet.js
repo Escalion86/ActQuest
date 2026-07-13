@@ -616,6 +616,10 @@ const normalizeGameForCabinet = (game) => {
       game?.clueEarlyAccessMode === 'penalty' ? 'penalty' : 'time',
     clueEarlyPenalty: ensureNumber(game.clueEarlyPenalty, 0),
     allowCaptainForceClue: ensureBoolean(game.allowCaptainForceClue, true),
+    clueEarlyAccessFrom: Math.max(
+      1,
+      Math.trunc(ensureNumber(game.clueEarlyAccessFrom, 1)),
+    ),
     allowCaptainFailTask: ensureBoolean(game.allowCaptainFailTask, true),
     allowCaptainFinishBreak: ensureBoolean(game.allowCaptainFinishBreak, true),
     breakDuration: ensureNumber(game.breakDuration, 0),

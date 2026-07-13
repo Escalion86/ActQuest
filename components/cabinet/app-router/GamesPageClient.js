@@ -983,6 +983,10 @@ const buildUpdatePayload = (game) => {
     clueEarlyAccessMode: game.clueEarlyAccessMode,
     clueEarlyPenalty: Number(game.clueEarlyPenalty) || 0,
     allowCaptainForceClue: Boolean(game.allowCaptainForceClue),
+    clueEarlyAccessFrom: Math.max(
+      1,
+      Math.trunc(Number(game.clueEarlyAccessFrom) || 1),
+    ),
     allowCaptainFailTask: Boolean(game.allowCaptainFailTask),
     allowCaptainFinishBreak: Boolean(game.allowCaptainFinishBreak),
     breakDuration: Number(game.breakDuration) || 0,
@@ -2791,6 +2795,7 @@ const GamesPage = ({
         clueEarlyAccessMode: 'time',
         clueEarlyPenalty: 0,
         allowCaptainForceClue: true,
+        clueEarlyAccessFrom: 1,
         allowCaptainFailTask: true,
         allowCaptainFinishBreak: true,
         breakDuration: 0,
@@ -2880,6 +2885,10 @@ const GamesPage = ({
         if (createGameCloneOptions.captainRules) {
           baseDraft.allowCaptainForceClue = Boolean(
             normalizedSource.allowCaptainForceClue,
+          )
+          baseDraft.clueEarlyAccessFrom = Math.max(
+            1,
+            Math.trunc(Number(normalizedSource.clueEarlyAccessFrom) || 1),
           )
           baseDraft.allowCaptainFailTask = Boolean(
             normalizedSource.allowCaptainFailTask,
@@ -8314,6 +8323,7 @@ GamesPage.propTypes = {
       clueEarlyAccessMode: PropTypes.string,
       clueEarlyPenalty: PropTypes.number,
       allowCaptainForceClue: PropTypes.bool,
+      clueEarlyAccessFrom: PropTypes.number,
       allowCaptainFailTask: PropTypes.bool,
       allowCaptainFinishBreak: PropTypes.bool,
       breakDuration: PropTypes.number,

@@ -148,6 +148,7 @@ export async function GET(request) {
         clueEarlyAccessMode: 1,
         clueEarlyPenalty: 1,
         allowCaptainForceClue: 1,
+        clueEarlyAccessFrom: 1,
         allowCaptainFailTask: 1,
         allowCaptainFinishBreak: 1,
         breakDuration: 1,
