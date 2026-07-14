@@ -15,6 +15,9 @@ const GameCreateModal = ({
   setNewGameName,
   newGameIsRated,
   setNewGameIsRated,
+  createGameType,
+  setCreateGameType,
+  gameTypeOptions,
   createGameMode,
   setCreateGameMode,
   cloneSourceGameId,
@@ -146,16 +149,44 @@ const GameCreateModal = ({
           ))}
         </select>
       </div>
-      {createGameMode === 'empty' && (
-        <CabinetInputField
-          id="new-game-name"
-          label="Название игры"
-          value={newGameName}
-          onChange={(event) => setNewGameName(event.target.value)}
-          placeholder="Например, Ночной квест"
-          inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
-        />
-      )}
+      {createGameMode === 'empty' ? (
+        <div className="space-y-4">
+          <CabinetInputField
+            id="new-game-name"
+            label="Название игры"
+            value={newGameName}
+            onChange={(event) => setNewGameName(event.target.value)}
+            placeholder="Например, Ночной квест"
+            inputClassName="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+          />
+          <div className="space-y-2">
+            <label
+              htmlFor="new-game-type"
+              className="block text-sm font-semibold text-slate-700 dark:text-slate-100"
+            >
+              Тип игры
+            </label>
+            <select
+              id="new-game-type"
+              value={createGameType}
+              onChange={(event) => setCreateGameType(event.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+            >
+              {gameTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {createGameType === 'story' ? (
+            <NoticeBanner tone="info" variant="neon">
+              После создания настройте локации, предметы, действия и концовки в
+              story-редакторе. Story-игра не участвует в рейтинге.
+            </NoticeBanner>
+          ) : null}
+        </div>
+      ) : null}
       {createGameMode === 'clone' && (
         <div className="space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
           <div className="space-y-2">
@@ -298,6 +329,14 @@ GameCreateModal.propTypes = {
   setNewGameName: PropTypes.func.isRequired,
   newGameIsRated: PropTypes.bool.isRequired,
   setNewGameIsRated: PropTypes.func.isRequired,
+  createGameType: PropTypes.oneOf(['classic', 'photo', 'story']).isRequired,
+  setCreateGameType: PropTypes.func.isRequired,
+  gameTypeOptions: PropTypes.arrayOf(
+    PropTypes.shape({
+      value: PropTypes.oneOf(['classic', 'photo', 'story']).isRequired,
+      label: PropTypes.string.isRequired,
+    }),
+  ).isRequired,
   createGameMode: PropTypes.oneOf(['empty', 'clone']).isRequired,
   setCreateGameMode: PropTypes.func.isRequired,
   cloneSourceGameId: PropTypes.string.isRequired,

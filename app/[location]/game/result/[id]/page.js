@@ -15,6 +15,8 @@ import ClassicCar from '@components/cars/ClassicCar'
 import SportCar from '@components/cars/SportCar'
 import SuvCar from '@components/cars/SuvCar'
 import VanCar from '@components/cars/VanCar'
+import RichTaskContentView from '@components/game/RichTaskContentView'
+import PropTypes from 'prop-types'
 
 const CYBER_CAR_COLORS = [
   '#68e8ff',
@@ -449,6 +451,123 @@ const TimeResult = ({
       )}
     </motion.div>
   )
+}
+
+const storyResultStatusLabels = {
+  not_started: 'Не начат',
+  in_progress: 'Не завершён',
+  completed: 'Пройден',
+  failed: 'Провален',
+}
+
+const storyEndingTypeLabels = {
+  success: 'Успешная концовка',
+  failed: 'Провал',
+  neutral: 'Нейтральная концовка',
+  secret: 'Секретная концовка',
+}
+
+const StoryGameBlock = ({ game }) => {
+  const computed = game?.result?.computed || {}
+  const teams = [
+    ...(Array.isArray(computed?.teams) ? computed.teams : []),
+    ...(Array.isArray(computed?.outOfCompetitionTeams)
+      ? computed.outOfCompetitionTeams
+      : []),
+  ]
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-20 text-slate-950 dark:bg-[#050b17] dark:text-white sm:px-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <header className="rounded-3xl border border-violet-300 bg-white p-6 shadow-xl dark:border-violet-500/30 dark:bg-slate-900">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600 dark:text-violet-300">
+            Результаты story-квеста
+          </p>
+          <h1 className="mt-2 text-3xl font-bold">{game?.name || 'Story-квест'}</h1>
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            Команды проходят сюжет независимо, поэтому места не присваиваются.
+            Итог определяется достигнутой концовкой и набранными баллами.
+          </p>
+        </header>
+
+        {teams.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {teams.map((team) => (
+              <article
+                key={team.teamId}
+                className="rounded-3xl border border-slate-200 bg-white p-5 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-semibold">{team.teamName}</h2>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      {storyResultStatusLabels[team.status] || team.status || '—'}
+                      {team.outOfCompetition ? ' · вне зачёта' : ''}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-cyan-300 bg-cyan-50 px-3 py-1 text-sm font-semibold text-cyan-800 dark:border-cyan-500/40 dark:bg-cyan-500/10 dark:text-cyan-100">
+                    {team.score} баллов
+                  </span>
+                </div>
+
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                    <dt className="text-slate-500 dark:text-slate-400">Локаций</dt>
+                    <dd className="mt-1 font-semibold">{team.completedNodesCount}</dd>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                    <dt className="text-slate-500 dark:text-slate-400">Время</dt>
+                    <dd className="mt-1 font-semibold">
+                      {team.durationDisplay || '—'}
+                    </dd>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                    <dt className="text-slate-500 dark:text-slate-400">Подсказок</dt>
+                    <dd className="mt-1 font-semibold">{team.usedCluesCount}</dd>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                    <dt className="text-slate-500 dark:text-slate-400">Предметов</dt>
+                    <dd className="mt-1 font-semibold">{team.activeItemsCount}</dd>
+                  </div>
+                </dl>
+
+                {team.ending ? (
+                  <div className="mt-4 rounded-2xl border border-violet-300 bg-violet-50 p-4 dark:border-violet-500/30 dark:bg-violet-500/10">
+                    <p className="text-xs font-semibold uppercase text-violet-600 dark:text-violet-300">
+                      {storyEndingTypeLabels[team.ending.type] || 'Концовка'}
+                    </p>
+                    <h3 className="mt-1 font-semibold">{team.ending.title}</h3>
+                    {team.ending.descriptionRich ? (
+                      <RichTaskContentView
+                        html={team.ending.descriptionRich}
+                        text=""
+                        className="mt-2 text-sm leading-relaxed"
+                        textClassName="mt-2 text-sm leading-relaxed"
+                        directory={`games/story/result/${team.teamId}/ending`}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+            В сохранённом результате нет команд.
+          </div>
+        )}
+      </div>
+    </main>
+  )
+}
+
+StoryGameBlock.propTypes = {
+  game: PropTypes.shape({
+    name: PropTypes.string,
+    result: PropTypes.shape({
+      computed: PropTypes.object,
+    }),
+  }).isRequired,
 }
 
 const GameBlock = ({ game, isDarkTheme }) => {
@@ -2167,7 +2286,14 @@ function ResultPage({ params }) {
       </div>
       {/* <StateLoader {...props}>
         <Header /> */}
-      {game && <GameBlock game={game} isDarkTheme={isDarkTheme} />}
+      {game ? (
+        game?.type === 'story' ||
+        game?.result?.computed?.summary?.scoringMode === 'story' ? (
+          <StoryGameBlock game={game} />
+        ) : (
+          <GameBlock game={game} isDarkTheme={isDarkTheme} />
+        )
+      ) : null}
       {/* </StateLoader> */}
     </>
   )

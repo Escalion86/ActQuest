@@ -949,6 +949,113 @@ const resolveGameDuration = ({ game, gameTeams }) => {
   }
 }
 
+const buildStoryTeamResult = ({ team, gameTeam, game }) => {
+  const teamId = toStringId(team?._id ?? team?.id)
+  const progress =
+    gameTeam?.storyProgress && typeof gameTeam.storyProgress === 'object'
+      ? gameTeam.storyProgress
+      : {}
+  const startedAt = toDate(progress?.startedAt)
+  const finishedAt =
+    toDate(progress?.finishedAt) ||
+    (progress?.status === 'in_progress' ? toDate(game?.dateEndFact) : null)
+  const durationSeconds =
+    startedAt && finishedAt
+      ? Math.max(0, Math.round((finishedAt.getTime() - startedAt.getTime()) / 1000))
+      : null
+  const endingId = toStringId(progress?.currentEndingId)
+  const ending = (Array.isArray(game?.storyEndings) ? game.storyEndings : []).find(
+    (item) => toStringId(item?.id) === endingId,
+  )
+  const inventory = Array.isArray(progress?.inventory) ? progress.inventory : []
+
+  return {
+    teamId,
+    teamName:
+      typeof team?.name === 'string' && team.name.trim()
+        ? team.name.trim()
+        : 'Без названия',
+    place: null,
+    status: progress?.status || 'not_started',
+    score: Number(progress?.score) || 0,
+    startedAt: startedAt ? startedAt.toISOString() : null,
+    finishedAt: finishedAt ? finishedAt.toISOString() : null,
+    durationSeconds,
+    durationDisplay: durationSeconds === null ? null : secondsToTime(durationSeconds),
+    completedNodesCount: Array.isArray(progress?.completedNodeIds)
+      ? progress.completedNodeIds.length
+      : 0,
+    usedCluesCount: Array.isArray(progress?.usedClueIds)
+      ? progress.usedClueIds.length
+      : 0,
+    activeItemsCount: inventory.filter((item) => item?.status === 'active').length,
+    consumedItemsCount: inventory.filter((item) => item?.status === 'consumed').length,
+    ending: ending
+      ? {
+          id: toStringId(ending?.id),
+          title: typeof ending?.title === 'string' ? ending.title : '',
+          type: typeof ending?.type === 'string' ? ending.type : 'neutral',
+          descriptionRich:
+            typeof ending?.descriptionRich === 'string'
+              ? ending.descriptionRich
+              : '',
+          media: Array.isArray(ending?.media) ? ending.media : [],
+        }
+      : null,
+    prequel: getPrequelResult(game, gameTeam),
+  }
+}
+
+const buildStoryGameResult = ({
+  game,
+  teams,
+  gameTeams,
+  teamsUsers,
+  outOfCompetitionTeamIds,
+}) => {
+  const teamResults = teams.map((team) => {
+    const teamId = toStringId(team?._id ?? team?.id)
+    const gameTeam = gameTeams.find(
+      (item) => toStringId(item?.teamId) === teamId,
+    )
+    return {
+      ...buildStoryTeamResult({ team, gameTeam, game }),
+      outOfCompetition: Boolean(teamId && outOfCompetitionTeamIds.has(teamId)),
+    }
+  })
+  const sortedTeams = teamResults
+    .filter((item) => !item.outOfCompetition)
+    .sort((first, second) => first.teamName.localeCompare(second.teamName, 'ru'))
+  const outOfCompetitionTeams = teamResults
+    .filter((item) => item.outOfCompetition)
+    .sort((first, second) => first.teamName.localeCompare(second.teamName, 'ru'))
+  const duration = resolveGameDuration({ game, gameTeams })
+
+  return {
+    snapshots: { teams, gameTeams, teamsUsers },
+    teamsPlaces: {},
+    computed: {
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      summary: {
+        scoringMode: 'story',
+        teamsCount: sortedTeams.length,
+        participantsCount: teamsUsers.length,
+        outOfCompetitionTeamsCount: outOfCompetitionTeams.length,
+        nodesCount: Array.isArray(game?.storyNodes) ? game.storyNodes.length : 0,
+        gameDurationSeconds: duration.gameDurationSeconds,
+        gameDurationDisplay: duration.gameDurationDisplay,
+        gameStartedAt: duration.gameStartedAt,
+        gameEndedAt: duration.gameEndedAt,
+      },
+      teams: sortedTeams,
+      outOfCompetitionTeams,
+      taskBoards: [],
+      highlights: null,
+    },
+  }
+}
+
 const getResultSnapshots = (game) => {
   const currentResult =
     game?.result && typeof game.result === 'object' ? game.result : {}
@@ -991,6 +1098,16 @@ const buildGameResultComputed = async ({ game }) => {
       .map((item) => toStringId(item?.teamId))
       .filter(Boolean),
   )
+
+  if (game?.type === 'story') {
+    return buildStoryGameResult({
+      game,
+      teams,
+      gameTeams,
+      teamsUsers,
+      outOfCompetitionTeamIds,
+    })
+  }
 
   const isPhotoGame = game?.type === 'photo'
   const teamsResults = teams.map((team) => {

@@ -17,6 +17,7 @@ export async function POST(request, { params }) {
       request,
       params,
       teamIdOverride: payload?.teamId,
+      requireStarted: true,
     })
     if (context.response) {
       return context.response
@@ -67,6 +68,7 @@ export async function POST(request, { params }) {
       data: {
         applied: Boolean(result.applied),
         reason: result.reason || null,
+        resultMessageRich: result.resultMessageRich || '',
         state: buildTeamStoryStatePayload(nextContext),
       },
     })

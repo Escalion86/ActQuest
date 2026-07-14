@@ -8,6 +8,7 @@ import {
 import fetchGameHistoryState from '@server/gameHistory/fetchGameHistoryState'
 import recordGameHistoryEntry from '@server/gameHistory/recordGameHistoryEntry'
 import buildGameHistorySnapshot from '@server/gameHistory/buildGameHistorySnapshot'
+import { getStoryValidationErrors } from '@helpers/isGameHaveErrors'
 
 const normalizeText = (value, maxLength = 4000) =>
   typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
@@ -77,6 +78,7 @@ const normalizeCodes = (codes) =>
     consumesItemIds: normalizeStringArray(code?.consumesItemIds),
     unlocksNodeIds: normalizeStringArray(code?.unlocksNodeIds),
     completesNode: code?.completesNode !== false,
+    repeatable: normalizeBoolean(code?.repeatable, false),
     endingId: normalizeText(code?.endingId, 100) || null,
     resultMessageRich: normalizeText(code?.resultMessageRich, 50000),
   }))
@@ -93,6 +95,7 @@ const normalizeActions = (actions) =>
     scoreBonus: normalizeNumber(action?.scoreBonus, 0),
     scorePenalty: normalizeNumber(action?.scorePenalty, 0),
     completesNode: normalizeBoolean(action?.completesNode, false),
+    repeatable: normalizeBoolean(action?.repeatable, false),
     endingId: normalizeText(action?.endingId, 100) || null,
     resultMessageRich: normalizeText(action?.resultMessageRich, 50000),
   }))
@@ -224,6 +227,7 @@ const normalizeStoryEndings = (endings) =>
       type: ['success', 'failed', 'neutral', 'secret'].includes(ending?.type)
         ? ending.type
         : 'success',
+      manualOnly: normalizeBoolean(ending?.manualOnly, false),
       descriptionRich: normalizeText(ending?.descriptionRich, 50000),
       media: normalizeMedia(ending?.media),
       position: {
@@ -260,6 +264,8 @@ const buildHistoryActorFromSession = (session) => ({
   role: typeof session?.user?.role === 'string' ? session.user.role : '',
   name: typeof session?.user?.name === 'string' ? session.user.name : '',
 })
+
+const STORY_EDITOR_LOCKED_STATUSES = new Set(['started', 'finished', 'closed'])
 
 const enrichGameAgents = async (db, game) => {
   const baseGame = game?.toObject?.() || game || {}
@@ -319,6 +325,7 @@ const buildEditorPayload = (game) => ({
     storyEdges: Array.isArray(game?.storyEdges) ? game.storyEdges : [],
     storyEndings: Array.isArray(game?.storyEndings) ? game.storyEndings : [],
     agents: Array.isArray(game?.agents) ? game.agents : [],
+    validationErrors: getStoryValidationErrors(game),
   },
 })
 
@@ -353,6 +360,19 @@ export async function PATCH(request) {
     })
     if (context.response) {
       return context.response
+    }
+
+    const gameStatus = normalizeText(context.game?.status).toLowerCase()
+    if (STORY_EDITOR_LOCKED_STATUSES.has(gameStatus)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Сценарий уже опубликован для игры и защищён от изменений. Создайте копию игры для новой версии.',
+          code: 'story_scenario_locked',
+        },
+        { status: 409 },
+      )
     }
 
     const storyConfig = payload?.storyConfig || {}

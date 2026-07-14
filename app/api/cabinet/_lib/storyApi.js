@@ -239,14 +239,23 @@ export const buildTeamStoryStatePayload = ({ game, team, gameTeam, progress }) =
     descriptionRich: typeof node?.descriptionRich === 'string' ? node.descriptionRich : '',
     media: Array.isArray(node?.media) ? node.media : [],
     clues: Array.isArray(node?.clues)
-      ? node.clues.map((clue) => ({
-          id: normalizeText(clue?.id),
-          title: normalizeText(clue?.title),
-          scorePenalty: Number(clue?.scorePenalty) || 0,
-          isUsed: Array.isArray(progress?.usedClueIds)
-            ? progress.usedClueIds.includes(normalizeText(clue?.id))
-            : false,
-        }))
+      ? node.clues.map((clue) => {
+          const clueId = normalizeText(clue?.id)
+          const isUsed = Array.isArray(progress?.usedClueIds)
+            ? progress.usedClueIds.includes(clueId)
+            : false
+          return {
+            id: clueId,
+            title: normalizeText(clue?.title),
+            scorePenalty: Number(clue?.scorePenalty) || 0,
+            isUsed,
+            contentRich:
+              isUsed && typeof clue?.contentRich === 'string'
+                ? clue.contentRich
+                : '',
+            media: isUsed && Array.isArray(clue?.media) ? clue.media : [],
+          }
+        })
       : [],
     actions: Array.isArray(node?.actions)
       ? node.actions.map((action) => ({
@@ -259,6 +268,11 @@ export const buildTeamStoryStatePayload = ({ game, team, gameTeam, progress }) =
           requiredItemIds: Array.isArray(action?.requiredItemIds)
             ? action.requiredItemIds
             : [],
+          repeatable: action?.repeatable === true,
+          isUsed:
+            action?.repeatable !== true &&
+            Array.isArray(progress?.usedActionIds) &&
+            progress.usedActionIds.includes(normalizeText(action?.id)),
         }))
       : [],
   }))
@@ -306,6 +320,12 @@ export const buildTeamStoryStatePayload = ({ game, team, gameTeam, progress }) =
         showScoreToTeam: Boolean(config?.showScoreToTeam),
         showFinalHistoryToTeam: Boolean(config?.showFinalHistoryToTeam),
       },
+      totalNodes: config?.hideTotalNodes === false
+        ? Array.isArray(game?.storyNodes)
+          ? game.storyNodes.length
+          : 0
+        : null,
+      totalItems: config?.hideTotalItems === false ? storyItems.length : null,
     },
     team: {
       id: normalizeStringId(team?._id ?? gameTeam?.teamId),
@@ -363,6 +383,7 @@ export const loadPlayerStoryContext = async ({
   request,
   params,
   teamIdOverride = '',
+  requireStarted = false,
 }) => {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -397,6 +418,20 @@ export const loadPlayerStoryContext = async ({
   if (game.type !== 'story') {
     return { response: jsonError('Игра не является story-квестом', 400) }
   }
+  const gameStatus = normalizeText(game?.status).toLowerCase()
+  const canReadStory =
+    gameStatus === 'started' ||
+    (!requireStarted && ['finished', 'closed'].includes(gameStatus))
+  if (!canReadStory) {
+    return {
+      response: jsonError(
+        gameStatus === 'active'
+          ? 'Story-квест ещё не начался'
+          : 'Story-квест уже недоступен для действий',
+        409,
+      ),
+    }
+  }
 
   const gameTeam = await GamesTeams.findOne({
     gameId: normalizeStringId(game._id),
@@ -413,13 +448,17 @@ export const loadPlayerStoryContext = async ({
   }
 
   const team = await Teams.findById(teamId).lean()
-  const progress = await ensureStoryProgress({
-    GamesTeams,
-    game,
-    gameTeam,
-    actor: 'team',
-    save: true,
-  })
+  const progress = gameTeam?.storyProgress
+    ? gameTeam.storyProgress
+    : gameStatus === 'started'
+      ? await ensureStoryProgress({
+          GamesTeams,
+          game,
+          gameTeam,
+          actor: 'team',
+          save: true,
+        })
+      : { status: 'not_started' }
 
   return { db, GamesTeams, game, gameTeam, team, progress, session, identity }
 }

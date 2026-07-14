@@ -145,6 +145,7 @@ const gamesTeamsSchema = {
       usedClueIds: { type: [String], default: [] },
       usedCodeIds: { type: [String], default: [] },
       usedBonusCodeIds: { type: [String], default: [] },
+      usedActionIds: { type: [String], default: [] },
       prequelFlags: { type: [String], default: [] },
       history: {
         type: [

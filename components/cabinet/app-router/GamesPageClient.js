@@ -1347,6 +1347,7 @@ const GamesPage = ({
   const [isCreateGameModalOpen, setIsCreateGameModalOpen] = useState(false)
   const [newGameName, setNewGameName] = useState('')
   const [newGameIsRated, setNewGameIsRated] = useState(true)
+  const [createGameType, setCreateGameType] = useState('classic')
   const [createGameLocation, setCreateGameLocation] = useState('')
   const [createGameOrganizerId, setCreateGameOrganizerId] = useState('')
   const [createGameSeasonId, setCreateGameSeasonId] = useState('')
@@ -2553,6 +2554,7 @@ const GamesPage = ({
     setCreateGameFeedback(null)
     setNewGameName('')
     setNewGameIsRated(true)
+    setCreateGameType('classic')
     setCreateGameLocation(defaultLocation)
     setCreateGameOrganizerId('')
     setCreateGameSeasonId('')
@@ -2763,12 +2765,13 @@ const GamesPage = ({
       isCloneMode,
       normalizedCreateLocation,
       selectedOrganizerId,
+      selectedGameType,
     }) => {
       const baseDraft = {
         name: trimmedName,
         status: 'active',
         dateStart: null,
-        type: 'classic',
+        type: selectedGameType,
         storyConfig: {
           nodeLabel: 'Локация',
           startMode: 'common',
@@ -3097,6 +3100,7 @@ const GamesPage = ({
     setIsCreateGameModalOpen(false)
     setNewGameName('')
     setNewGameIsRated(true)
+    setCreateGameType('classic')
     setCreateGameLocation(location || gameLocationOptions[0]?.key || '')
     setCreateGameOrganizerId('')
     setCreateGameSeasonId('')
@@ -3161,6 +3165,8 @@ const GamesPage = ({
       isCloneMode,
       normalizedCreateLocation,
       selectedOrganizerId: createGameOrganizerId.trim(),
+      selectedGameType:
+        createGameMode === CREATE_GAME_MODE_EMPTY ? createGameType : 'classic',
     })
   }, [
     canEditAllGames,
@@ -3170,6 +3176,7 @@ const GamesPage = ({
     createGameLocation,
     createGameMode,
     createGameMutation,
+    createGameType,
     newGameName,
   ])
 
@@ -8036,6 +8043,8 @@ const GamesPage = ({
                 setNewGameName={setNewGameName}
                 newGameIsRated={newGameIsRated}
                 setNewGameIsRated={setNewGameIsRated}
+                createGameType={createGameType}
+                setCreateGameType={setCreateGameType}
                 createGameMode={createGameMode}
                 setCreateGameMode={setCreateGameMode}
                 cloneSourceGameId={cloneSourceGameId}

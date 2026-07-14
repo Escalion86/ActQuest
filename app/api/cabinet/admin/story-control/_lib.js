@@ -10,6 +10,7 @@ import {
 } from '@server/storyEngine'
 import {
   buildAdminStoryTeamPayload,
+  jsonError,
   loadAdminStoryContext,
   normalizeStringId,
   readJsonPayload,
@@ -27,6 +28,9 @@ export const runAdminStoryMutation = async ({ request, action }) => {
   })
   if (context.response) {
     return context.response
+  }
+  if (context.game?.status !== 'started') {
+    return jsonError('Story-действия доступны только во время запущенной игры', 409)
   }
 
   const lockedMutation = await runLockedStoryMutation({

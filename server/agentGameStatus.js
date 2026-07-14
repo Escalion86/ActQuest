@@ -8,6 +8,7 @@ import {
   resolveTeamAgentStatus,
   resolveTeamBreakState,
 } from '@helpers/agentGameStatus'
+import { getAvailableStoryNodes } from '@server/storyEngine'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) return ''
@@ -88,16 +89,18 @@ export const hasTeamPassedTask = (gameTeam, taskIndex, tasksCount) => {
   return activeNum > taskIndex || Boolean(endTime[taskIndex])
 }
 
-const resolveTeamStoryAgentStatus = ({ gameTeam, assignedStoryNodes }) => {
+const resolveTeamStoryAgentStatus = ({ game, gameTeam, assignedStoryNodes }) => {
   const progress = gameTeam?.storyProgress || {}
-  const unlockedNodeIds = new Set(ensureArray(progress?.unlockedNodeIds).map(normalizeStringId))
+  const availableNodeIds = new Set(
+    getAvailableStoryNodes(game, progress).map((node) => normalizeStringId(node?.id)),
+  )
   const completedNodeIds = new Set(
     ensureArray(progress?.completedNodeIds).map(normalizeStringId),
   )
   const isFinished = ['completed', 'failed'].includes(progress?.status)
 
   const activeNode = assignedStoryNodes.find(
-    (node) => unlockedNodeIds.has(node.nodeId) && !completedNodeIds.has(node.nodeId),
+    (node) => availableNodeIds.has(node.nodeId) && !completedNodeIds.has(node.nodeId),
   )
   if (activeNode) {
     return {
@@ -220,7 +223,7 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
           taskDurationSeconds,
         })
     const status = storyGame
-      ? resolveTeamStoryAgentStatus({ gameTeam, assignedStoryNodes })
+      ? resolveTeamStoryAgentStatus({ game, gameTeam, assignedStoryNodes })
       : resolveTeamAgentStatus({
           gameTeam,
           assignedTaskIndexes,
@@ -231,12 +234,10 @@ export const buildAgentGameStatus = async ({ db, gameId, userId, role }) => {
     const activeTaskIndex = Number.isInteger(gameTeam?.activeNum)
       ? gameTeam.activeNum
       : Number(gameTeam?.activeNum) || 0
-    const currentStoryNodeIds = ensureArray(
-      gameTeam?.storyProgress?.unlockedNodeIds,
-    ).filter(
-      (nodeId) =>
-        !ensureArray(gameTeam?.storyProgress?.completedNodeIds).includes(nodeId),
-    )
+    const currentStoryNodeIds = getAvailableStoryNodes(
+      game,
+      gameTeam?.storyProgress || {},
+    ).map((node) => normalizeStringId(node?.id))
     const currentStoryNode = storyNodesById.get(normalizeStringId(currentStoryNodeIds[0]))
     const agentStoryNode = storyNodesById.get(normalizeStringId(status.storyNodeId))
 

@@ -441,6 +441,20 @@ const storyStatusLabels = {
   failed: 'Провалена',
 }
 
+const storyMutationErrorLabels = {
+  action_already_used: 'Действие уже выполнено.',
+  ending_requirements_not_met: 'Условия концовки ещё не выполнены.',
+  ending_score_too_low: 'Для этой концовки недостаточно баллов.',
+  invalid_points: 'Укажите ненулевое количество баллов.',
+  item_already_active: 'Предмет уже находится в инвентаре команды.',
+  item_not_active: 'Предмета нет в активном инвентаре команды.',
+  node_already_completed: 'Локация уже завершена.',
+  node_already_unlocked: 'Локация уже открыта.',
+}
+
+const getStoryMutationErrorLabel = (reason) =>
+  storyMutationErrorLabels[reason] || 'Story-действие не было применено.'
+
 const formatStoryHistoryDate = (value) => {
   if (!value) return ''
   const date = new Date(value)
@@ -1337,6 +1351,9 @@ export default function GameControlPageClient({ session: _session }) {
 
         if (!json?.success) {
           throw new Error(json?.error || 'Не удалось выполнить story-действие')
+        }
+        if (json?.data?.applied === false) {
+          throw new Error(getStoryMutationErrorLabel(json.data.reason))
         }
 
         await refetchStoryControl()

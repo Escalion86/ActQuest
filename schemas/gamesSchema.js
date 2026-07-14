@@ -66,6 +66,7 @@ const StoryEndingSchema = new Schema(
       enum: ['success', 'failed', 'neutral', 'secret'],
       default: 'success',
     },
+    manualOnly: { type: Boolean, default: false },
     descriptionRich: { type: String, default: '' },
     media: { type: [StoryMediaSchema], default: [] },
     position: {
@@ -159,6 +160,7 @@ const StoryNodeSchema = new Schema(
           consumesItemIds: { type: [String], default: [] },
           unlocksNodeIds: { type: [String], default: [] },
           completesNode: { type: Boolean, default: true },
+          repeatable: { type: Boolean, default: false },
           endingId: { type: String, trim: true, default: null },
           resultMessageRich: { type: String, default: '' },
         },
@@ -178,6 +180,7 @@ const StoryNodeSchema = new Schema(
           scoreBonus: { type: Number, default: 0 },
           scorePenalty: { type: Number, default: 0 },
           completesNode: { type: Boolean, default: false },
+          repeatable: { type: Boolean, default: false },
           endingId: { type: String, trim: true, default: null },
           resultMessageRich: { type: String, default: '' },
         },

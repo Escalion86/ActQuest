@@ -5,6 +5,8 @@ import sendMessage from 'telegram/sendMessage'
 import { getGameValidationErrors } from '@helpers/isGameHaveErrors'
 import buildGameStartProgressUpdate from '@server/buildGameStartProgressUpdate'
 import { getTaskDistributionStartErrors } from '@helpers/taskDistribution'
+import { buildInitialStoryProgress } from '@server/storyEngine'
+import applyPrequelStoryEffects from '@server/applyPrequelStoryEffects'
 
 const runInBackground = (label, job) => {
   Promise.resolve()
@@ -53,7 +55,8 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
     gameId: jsonCommand.gameId,
   })
 
-  const taskDistributionErrors = getTaskDistributionStartErrors(game, gameTeams)
+  const taskDistributionErrors =
+    game.type === 'story' ? [] : getTaskDistributionStartErrors(game, gameTeams)
   if (taskDistributionErrors.length > 0) {
     return {
       success: false,
@@ -63,34 +66,56 @@ const gameStart = async ({ telegramId: _telegramId, jsonCommand, location, db })
     }
   }
 
+  const startedAt = new Date()
   await db.model('Games').findByIdAndUpdate(jsonCommand.gameId, {
     status: 'started',
-    dateStartFact: new Date(),
+    dateStartFact: startedAt,
   })
 
   const teamsIds = gameTeams.map((gameTeam) => gameTeam.teamId)
-  const gameTasksCount = game.tasks.length
+  const gameTasksCount = Array.isArray(game.tasks) ? game.tasks.length : 0
+  const isIndividualStart =
+    game.type === 'story'
+      ? game?.storyConfig?.startMode === 'individual'
+      : Boolean(game.individualStart)
 
   const resetResults = await Promise.all(
-    gameTeams.map((team) =>
-      db.model('GamesTeams').findByIdAndUpdate(
+    gameTeams.map((team) => {
+      let storyProgress = null
+      if (game.type === 'story' && !isIndividualStart) {
+        const baseProgress = buildInitialStoryProgress(game, {
+          actor: 'system',
+          now: startedAt,
+        })
+        storyProgress = applyPrequelStoryEffects({
+          game,
+          progress: baseProgress,
+          effects: Array.isArray(team?.prequelProgress?.appliedStoryEffects)
+            ? team.prequelProgress.appliedStoryEffects
+            : [],
+          actor: 'system',
+        }).progress
+      }
+
+      return db.model('GamesTeams').findByIdAndUpdate(
         team._id,
         buildGameStartProgressUpdate({
           gameTasksCount,
-          startImmediately: !game.individualStart,
+          startImmediately: !isIndividualStart,
           timeAddings: team.timeAddings,
+          storyProgress,
         }),
-      ),
-    ),
+      )
+    }),
   )
   console.info('[game-start] reset team progress', {
     gameId: String(jsonCommand.gameId),
     teamsCount: gameTeams.length,
     resetCount: resetResults.filter(Boolean).length,
-    individualStart: Boolean(game.individualStart),
+    individualStart: isIndividualStart,
   })
 
-  if (!game.individualStart) {
+  if (!isIndividualStart) {
     // const teams = await db.model('Teams').find({
     //   _id: { $in: teamsIds },
     // })

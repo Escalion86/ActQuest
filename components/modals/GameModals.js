@@ -156,6 +156,8 @@ const GameModals = ({
   setNewGameName,
   newGameIsRated,
   setNewGameIsRated,
+  createGameType,
+  setCreateGameType,
   createGameMode,
   setCreateGameMode,
   cloneSourceGameId,
@@ -362,6 +364,9 @@ const GameModals = ({
         setNewGameName={setNewGameName}
         newGameIsRated={newGameIsRated}
         setNewGameIsRated={setNewGameIsRated}
+        createGameType={createGameType}
+        setCreateGameType={setCreateGameType}
+        gameTypeOptions={GAME_TYPE_OPTIONS}
         createGameMode={createGameMode}
         setCreateGameMode={setCreateGameMode}
         cloneSourceGameId={cloneSourceGameId}
@@ -664,6 +669,8 @@ GameModals.propTypes = {
   setNewGameName: PropTypes.func.isRequired,
   newGameIsRated: PropTypes.bool.isRequired,
   setNewGameIsRated: PropTypes.func.isRequired,
+  createGameType: PropTypes.oneOf(['classic', 'photo', 'story']).isRequired,
+  setCreateGameType: PropTypes.func.isRequired,
   createGameMode: PropTypes.oneOf(['empty', 'clone']).isRequired,
   setCreateGameMode: PropTypes.func.isRequired,
   cloneSourceGameId: PropTypes.string.isRequired,

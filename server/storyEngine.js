@@ -70,6 +70,7 @@ const cloneProgress = (progress = {}) => ({
   usedClueIds: uniqueStrings(progress?.usedClueIds),
   usedCodeIds: uniqueStrings(progress?.usedCodeIds),
   usedBonusCodeIds: uniqueStrings(progress?.usedBonusCodeIds),
+  usedActionIds: uniqueStrings(progress?.usedActionIds),
   prequelFlags: uniqueStrings(progress?.prequelFlags),
   history: toArray(progress?.history).map((entry) => ({
     id: normalizeId(entry?.id) || createEventId(),
@@ -210,9 +211,15 @@ const nodeIsAvailable = (node, progress) => {
     return true
   }
 
+  const requiredNodeIds = uniqueStrings(node?.visibility?.requiredNodeIds)
+  const requiredItemIds = uniqueStrings(node?.visibility?.requiredItemIds)
+  if (requiredNodeIds.length === 0 && requiredItemIds.length === 0) {
+    return node?.visibility?.hiddenUntilUnlocked === false
+  }
+
   return areRequirementsMet(progress, {
-    requiredNodeIds: node?.visibility?.requiredNodeIds,
-    requiredItemIds: node?.visibility?.requiredItemIds,
+    requiredNodeIds,
+    requiredItemIds,
     requiredInputMode: node?.visibility?.requiredInputMode,
     requiredInputCount: node?.visibility?.requiredInputCount,
   })
@@ -576,7 +583,7 @@ const applyStoryEffects = ({
   }
 
   for (const itemId of grantItemIds) {
-    nextProgress = grantStoryItem({
+    const result = grantStoryItem({
       game,
       progress: nextProgress,
       itemId,
@@ -584,7 +591,11 @@ const applyStoryEffects = ({
       nodeId,
       actionId,
       now,
-    }).progress
+    })
+    if (!result.applied && result.reason !== 'item_already_active') {
+      return { progress: cloneProgress(progress), applied: false, reason: result.reason }
+    }
+    nextProgress = result.progress
   }
 
   const autoConsumedRequiredItemIds = requiredItemIds.filter(
@@ -596,7 +607,7 @@ const applyStoryEffects = ({
   ])
 
   for (const itemId of consumedItemIds) {
-    nextProgress = consumeStoryItem({
+    const result = consumeStoryItem({
       game,
       progress: nextProgress,
       itemId,
@@ -604,7 +615,11 @@ const applyStoryEffects = ({
       nodeId,
       actionId,
       now,
-    }).progress
+    })
+    if (!result.applied) {
+      return { progress: cloneProgress(progress), applied: false, reason: result.reason }
+    }
+    nextProgress = result.progress
   }
 
   const points =
@@ -623,7 +638,7 @@ const applyStoryEffects = ({
   }
 
   for (const unlockedNodeId of uniqueStrings(effect?.unlocksNodeIds)) {
-    nextProgress = unlockStoryNode({
+    const result = unlockStoryNode({
       game,
       progress: nextProgress,
       nodeId: unlockedNodeId,
@@ -631,11 +646,15 @@ const applyStoryEffects = ({
       actionId,
       codeId,
       now,
-    }).progress
+    })
+    if (!result.applied && result.reason !== 'node_already_unlocked') {
+      return { progress: cloneProgress(progress), applied: false, reason: result.reason }
+    }
+    nextProgress = result.progress
   }
 
   if (effect?.completesNode) {
-    nextProgress = completeStoryNode({
+    const result = completeStoryNode({
       game,
       progress: nextProgress,
       nodeId,
@@ -643,11 +662,15 @@ const applyStoryEffects = ({
       actionId,
       codeId,
       now,
-    }).progress
+    })
+    if (!result.applied) {
+      return { progress: cloneProgress(progress), applied: false, reason: result.reason }
+    }
+    nextProgress = result.progress
   }
 
   if (effect?.endingId) {
-    nextProgress = reachStoryEnding({
+    const result = reachStoryEnding({
       game,
       progress: nextProgress,
       endingId: effect.endingId,
@@ -656,10 +679,19 @@ const applyStoryEffects = ({
       actionId,
       codeId,
       now,
-    }).progress
+    })
+    if (!result.applied) {
+      return { progress: cloneProgress(progress), applied: false, reason: result.reason }
+    }
+    nextProgress = result.progress
   }
 
-  return { progress: nextProgress, applied: true }
+  return {
+    progress: nextProgress,
+    applied: true,
+    resultMessageRich:
+      typeof effect?.resultMessageRich === 'string' ? effect.resultMessageRich : '',
+  }
 }
 
 export const applyStoryAction = ({
@@ -686,15 +718,38 @@ export const applyStoryAction = ({
     return { progress: prepared, applied: false, reason: 'action_not_found' }
   }
 
-  return applyStoryEffects({
+  if (
+    action?.repeatable !== true &&
+    uniqueStrings(prepared.usedActionIds).includes(normalizedActionId)
+  ) {
+    return { progress: prepared, applied: false, reason: 'action_already_used' }
+  }
+
+  let candidateProgress = {
+    ...prepared,
+    usedActionIds:
+      action?.repeatable === true
+        ? prepared.usedActionIds
+        : addUnique(prepared.usedActionIds, [normalizedActionId]),
+  }
+  candidateProgress = addHistory(candidateProgress, {
+    type: 'action_used',
+    now,
+    nodeId,
+    actionId: normalizedActionId,
+    actor,
+  })
+
+  const result = applyStoryEffects({
     game,
-    progress: prepared,
+    progress: candidateProgress,
     node,
     effect: action,
     actor,
     actionId: normalizedActionId,
     now,
   })
+  return result.applied ? result : { ...result, progress: prepared }
 }
 
 export const applyStoryCode = ({
@@ -730,10 +785,14 @@ export const applyStoryCode = ({
 
   const codeId = normalizeId(storyCode?.id)
   if (
-    storyCode?.type === 'bonus' &&
-    uniqueStrings(prepared.usedBonusCodeIds).includes(codeId)
+    storyCode?.repeatable !== true &&
+    uniqueStrings(prepared.usedCodeIds).includes(codeId)
   ) {
-    return { progress: prepared, applied: false, reason: 'bonus_code_used' }
+    return {
+      progress: prepared,
+      applied: false,
+      reason: storyCode?.type === 'bonus' ? 'bonus_code_used' : 'code_already_used',
+    }
   }
 
   let nextProgress = {
@@ -753,7 +812,7 @@ export const applyStoryCode = ({
     actor,
   })
 
-  return applyStoryEffects({
+  const result = applyStoryEffects({
     game,
     progress: nextProgress,
     node,
@@ -762,6 +821,7 @@ export const applyStoryCode = ({
     codeId,
     now,
   })
+  return result.applied ? result : { ...result, progress: prepared }
 }
 
 export const useStoryClue = ({

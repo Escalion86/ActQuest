@@ -425,6 +425,49 @@ StoryMediaList.defaultProps = {
   directory: 'story-media',
 }
 
+const STORY_ACTION_ERROR_MESSAGES = {
+  action_already_used: 'Это действие уже выполнено.',
+  bonus_code_used: 'Этот бонусный код уже использован.',
+  code_already_used: 'Этот код уже использован.',
+  code_not_found: 'Код не подходит.',
+  consumed_items_missing: 'Для действия не хватает предмета, который нужно отдать.',
+  ending_requirements_not_met: 'Условия выбранной концовки ещё не выполнены.',
+  ending_score_too_low: 'Для этой концовки пока недостаточно баллов.',
+  item_not_active: 'Нужного предмета нет в активном инвентаре.',
+  node_not_available: 'Эта локация сейчас недоступна.',
+  required_items_missing: 'Для действия не хватает нужных предметов.',
+}
+
+const getStoryActionErrorMessage = (reason) =>
+  STORY_ACTION_ERROR_MESSAGES[reason] ||
+  'Действие не применено. Обновите состояние и попробуйте ещё раз.'
+
+const STORY_HISTORY_LABELS = {
+  action_used: 'Выполнено действие',
+  clue_used: 'Открыта подсказка',
+  code_accepted: 'Принят код',
+  effect_score: 'Изменены баллы',
+  ending_reached: 'Достигнута концовка',
+  item_consumed: 'Использован предмет',
+  item_granted: 'Получен предмет',
+  node_completed: 'Завершена локация',
+  node_score: 'Начислены баллы за локацию',
+  node_unlocked: 'Открыта локация',
+  story_started: 'Story-квест начат',
+  wrong_code: 'Введён неверный код',
+}
+
+const formatStoryHistoryDate = (value) => {
+  const date = value ? new Date(value) : null
+  if (!date || Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
 const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
   const [state, setState] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -432,6 +475,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
   const [error, setError] = useState('')
   const [codeDrafts, setCodeDrafts] = useState({})
   const [openedClues, setOpenedClues] = useState({})
+  const [resultMessageHtml, setResultMessageHtml] = useState('')
 
   const loadState = useCallback(async () => {
     if (!gameId || !teamId || !isActive) return false
@@ -488,6 +532,16 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
         if (data.state) {
           setState(data.state)
         }
+        if (data.applied === false) {
+          setResultMessageHtml('')
+          setError(getStoryActionErrorMessage(data.reason))
+        } else {
+          setResultMessageHtml(
+            typeof data.resultMessageRich === 'string'
+              ? data.resultMessageRich
+              : '',
+          )
+        }
         return data
       } catch (actionError) {
         setError(actionError?.message || 'Не удалось выполнить действие')
@@ -506,7 +560,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
       if (!code) return
 
       const data = await postStoryAction('code', { nodeId, code })
-      if (data?.state) {
+      if (data?.applied) {
         setCodeDrafts((prev) => ({ ...prev, [nodeId]: '' }))
       }
     },
@@ -537,6 +591,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
     ? state.availableNodes
     : []
   const inventory = Array.isArray(state?.inventory) ? state.inventory : []
+  const finalHistory = Array.isArray(state?.history) ? state.history : []
   const nodeLabel = state?.game?.storyConfig?.nodeLabel || 'Локация'
   const status = state?.progress?.status || 'not_started'
   const isFinished = status === 'completed' || status === 'failed'
@@ -561,6 +616,18 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
                 Баллы: {state.progress.score}
               </span>
             ) : null}
+            {state?.game?.totalNodes !== null &&
+            state?.game?.totalNodes !== undefined ? (
+              <span className="px-3 py-1 text-sm font-semibold border rounded-full border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+                Локаций: {state.game.totalNodes}
+              </span>
+            ) : null}
+            {state?.game?.totalItems !== null &&
+            state?.game?.totalItems !== undefined ? (
+              <span className="px-3 py-1 text-sm font-semibold border rounded-full border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+                Предметов: {state.game.totalItems}
+              </span>
+            ) : null}
             <button
               type="button"
               onClick={() => void loadState()}
@@ -581,6 +648,17 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
           <p className="px-3 py-2 mt-4 text-sm border rounded-xl border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
             {error}
           </p>
+        ) : null}
+        {resultMessageHtml ? (
+          <div className="px-4 py-3 mt-4 border rounded-xl border-emerald-300 bg-emerald-50 text-emerald-950 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-50">
+            <RichTaskContentView
+              html={resultMessageHtml}
+              text=""
+              className="text-sm leading-relaxed"
+              textClassName="text-sm leading-relaxed"
+              directory={`games/story/${gameId}/${teamId}/result-message`}
+            />
+          </div>
         ) : null}
 
         {state?.currentEnding ? (
@@ -650,6 +728,35 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
         </section>
       ) : null}
 
+      {isFinished && finalHistory.length > 0 ? (
+        <section className="p-6 bg-white border shadow-lg rounded-3xl border-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/40">
+          <h2 className="text-lg font-semibold text-primary dark:text-white">
+            История прохождения
+          </h2>
+          <div className="mt-4 space-y-2">
+            {finalHistory.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200"
+              >
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {formatStoryHistoryDate(entry.at)}
+                </span>
+                <span className="font-semibold">
+                  {STORY_HISTORY_LABELS[entry.type] || entry.type}
+                </span>
+                {entry.points ? (
+                  <span className="text-xs font-semibold">
+                    {entry.points > 0 ? '+' : ''}
+                    {entry.points}
+                  </span>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {availableNodes.length > 0 ? (
         <div className="grid gap-6">
           {availableNodes.map((node) => {
@@ -686,7 +793,8 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
                       Подсказки
                     </h3>
                     {nodeClues.map((clue) => {
-                      const openedClue = openedClues[clue.id]
+                      const openedClue =
+                        openedClues[clue.id] || (clue.isUsed ? clue : null)
                       const wasUsed = Boolean(clue.isUsed || openedClue)
                       return (
                         <div
@@ -749,7 +857,7 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
                           onClick={() =>
                             handleActionClick({ nodeId, actionId: action.id })
                           }
-                          disabled={isMutating || isFinished}
+                          disabled={isMutating || isFinished || action.isUsed}
                           className="px-4 py-2 text-sm font-semibold text-white transition rounded-full bg-primary hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                           title={
                             Array.isArray(action.requiredItemIds) &&
@@ -758,7 +866,9 @@ const StoryQuestProcess = ({ gameId, teamId, isActive }) => {
                               : undefined
                           }
                         >
-                          {action.label || 'Выполнить действие'}
+                          {action.isUsed
+                            ? 'Выполнено'
+                            : action.label || 'Выполнить действие'}
                         </button>
                       ))}
                     </div>
@@ -2528,11 +2638,13 @@ function GameTeamPage({
               </section>
             ) : null}
 
-            {isStoryGame && status === 'started' && !error ? (
+            {isStoryGame &&
+            ['started', 'finished', 'closed'].includes(status) &&
+            !error ? (
               <StoryQuestProcess
                 gameId={gameId}
                 teamId={teamId}
-                isActive={isStoryGame && status === 'started'}
+                isActive={isStoryGame}
               />
             ) : null}
 

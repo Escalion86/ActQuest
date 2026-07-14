@@ -17,6 +17,7 @@ export async function POST(request, { params }) {
       request,
       params,
       teamIdOverride: payload?.teamId,
+      requireStarted: true,
     })
     if (context.response) {
       return context.response

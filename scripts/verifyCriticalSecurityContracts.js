@@ -115,6 +115,11 @@ requireText('app/api/cabinet/_lib/storyApi.js', [
 requireText('app/api/cabinet/admin/story-control/_lib.js', [
   'runLockedStoryMutation',
 ])
+requireText('app/api/cabinet/games/route.js', [
+  "gameType === 'story'",
+  "normalizeRole(session.user.role) !== 'dev'",
+  'Создание story-игр пока доступно только разработчику',
+])
 requireText('server/getTeamGameTaskState.js', [
   'resolveTeamMembershipForIdentity',
   'webGameProcess',
@@ -151,3 +156,4 @@ console.log('- административные маршруты требуют 
 console.log('- публичные ответы не содержат правильные коды')
 console.log('- внешние прокси и телефонная верификация защищены')
 console.log('- основной web-маршрут ввода кодов сохранён')
+console.log('- создание story-игр ограничено ролью dev')

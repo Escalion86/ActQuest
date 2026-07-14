@@ -10,6 +10,7 @@ import {
 } from '@helpers/agentNotifications'
 import { hasTeamFinishedAgentWorkForTask } from '@helpers/agentGameStatus'
 import { toStringId } from '@helpers/idAndDate'
+import { getAvailableStoryNodes } from '@server/storyEngine'
 
 const normalizeStringId = (value) => {
   if (value === null || value === undefined) return ''
@@ -52,8 +53,10 @@ const hasStoryTeamPassedNode = (gameTeam, storyNodeId) =>
 const resolveStoryNodeEventsForTeam = ({ game, gameTeam }) => {
   const settings = getAgentNotificationSettings(game)
   const nodes = ensureArray(game?.storyNodes)
-  const unlockedNodeIds = new Set(
-    ensureArray(gameTeam?.storyProgress?.unlockedNodeIds).map(normalizeStringId),
+  const availableNodeIds = new Set(
+    getAvailableStoryNodes(game, gameTeam?.storyProgress || {}).map((node) =>
+      normalizeStringId(node?.id),
+    ),
   )
   const completedNodeIds = new Set(
     ensureArray(gameTeam?.storyProgress?.completedNodeIds).map(normalizeStringId),
@@ -67,7 +70,7 @@ const resolveStoryNodeEventsForTeam = ({ game, gameTeam }) => {
 
     if (
       settings.onCurrentTask &&
-      unlockedNodeIds.has(storyNodeId) &&
+      availableNodeIds.has(storyNodeId) &&
       !completedNodeIds.has(storyNodeId)
     ) {
       events.push({ eventType: 'current_task', storyNodeId, agentUserIds })

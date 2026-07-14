@@ -100,7 +100,46 @@ test('buildGameResultComputed preserves story prequel effects in computed', asyn
   const result = await buildGameResultComputed({ game: buildBaseGame('story') })
   const team = result.computed.teams[0]
 
+  assert.deepEqual(result.teamsPlaces, {})
+  assert.equal(result.computed.summary.scoringMode, 'story')
+  assert.equal(team.place, null)
   assert.equal(Array.isArray(team.prequel.storyEffects), true)
   assert.equal(team.prequel.storyEffects.length, 1)
   assert.equal(team.prequel.storyEffects[0].type, 'unlock_node')
+})
+
+test('buildGameResultComputed exposes story ending, score and duration without places', async () => {
+  const game = buildBaseGame('story')
+  game.storyNodes = [{ id: 'node-1' }, { id: 'node-2' }]
+  game.storyEndings = [
+    {
+      id: 'ending-1',
+      title: 'Спасение',
+      type: 'success',
+      descriptionRich: '<p>Город спасён</p>',
+    },
+  ]
+  game.result.gameTeams[0].storyProgress = {
+    status: 'completed',
+    startedAt: new Date('2026-05-26T00:00:00.000Z'),
+    finishedAt: new Date('2026-05-26T00:10:00.000Z'),
+    currentEndingId: 'ending-1',
+    score: 42,
+    completedNodeIds: ['node-1', 'node-2'],
+    usedClueIds: ['clue-1'],
+    inventory: [
+      { itemId: 'key', status: 'active' },
+      { itemId: 'coin', status: 'consumed' },
+    ],
+  }
+
+  const result = await buildGameResultComputed({ game })
+  const team = result.computed.teams[0]
+
+  assert.deepEqual(result.teamsPlaces, {})
+  assert.equal(team.score, 42)
+  assert.equal(team.durationSeconds, 600)
+  assert.equal(team.completedNodesCount, 2)
+  assert.equal(team.usedCluesCount, 1)
+  assert.equal(team.ending.title, 'Спасение')
 })

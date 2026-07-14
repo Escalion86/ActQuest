@@ -5,6 +5,7 @@ const buildGameStartProgressUpdate = ({
   gameTasksCount,
   startImmediately,
   timeAddings = [],
+  storyProgress = null,
 }) => {
   const startTime = startImmediately
     ? new Array(gameTasksCount).fill(null)
@@ -37,7 +38,7 @@ const buildGameStartProgressUpdate = ({
     taskFailures: [],
     timeAddings: removeCluePenalties(timeAddings),
     forcedClues: startImmediately ? new Array(gameTasksCount).fill(0) : [],
-    storyProgress: null,
+    storyProgress,
   }
 }
 

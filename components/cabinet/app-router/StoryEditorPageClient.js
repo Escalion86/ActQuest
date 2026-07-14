@@ -90,6 +90,7 @@ const buildEnding = (index) => ({
   id: createId('ending'),
   title: `Концовка ${index + 1}`,
   type: 'success',
+  manualOnly: false,
   descriptionRich: '',
   media: [],
   position: getDefaultEndingPosition(index),
@@ -111,6 +112,7 @@ const buildCode = () => ({
   consumesItemIds: [],
   unlocksNodeIds: [],
   completesNode: true,
+  repeatable: false,
   endingId: null,
   resultMessageRich: '',
 })
@@ -126,6 +128,7 @@ const buildAction = () => ({
   scoreBonus: 0,
   scorePenalty: 0,
   completesNode: false,
+  repeatable: false,
   endingId: null,
   resultMessageRich: '',
 })
@@ -137,14 +140,6 @@ const buildClue = () => ({
   media: [],
   scorePenalty: 0,
 })
-
-const parseCsv = (value) =>
-  String(value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-
-const joinCsv = (value) => normalizeArray(value).join(', ')
 
 const buildEdgeKey = (edge) =>
   `${edge?.type || 'required_node'}:${edge?.fromNodeId || edge?.fromItemId || ''}->${edge?.toNodeId || ''}`
@@ -241,6 +236,183 @@ const getItemOutputPoint = (item) => ({
 
 const fieldClassName =
   'rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100'
+
+const StoryReferenceChecklist = ({ label, options, value, onChange }) => {
+  const selectedIds = new Set(normalizeArray(value))
+
+  return (
+    <fieldset className="grid gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+      <legend className="px-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+        {label}
+      </legend>
+      {options.length > 0 ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {options.map((option) => (
+            <label
+              key={option.id}
+              className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.has(option.id)}
+                onChange={(event) => {
+                  const nextIds = new Set(selectedIds)
+                  if (event.target.checked) nextIds.add(option.id)
+                  else nextIds.delete(option.id)
+                  onChange(Array.from(nextIds))
+                }}
+              />
+              <span className="truncate">{option.title || option.id}</span>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Подходящих элементов пока нет.
+        </p>
+      )}
+    </fieldset>
+  )
+}
+
+StoryReferenceChecklist.propTypes = {
+  label: PropTypes.string.isRequired,
+  options: PropTypes.arrayOf(PropTypes.object).isRequired,
+  value: PropTypes.arrayOf(PropTypes.string),
+  onChange: PropTypes.func.isRequired,
+}
+
+StoryReferenceChecklist.defaultProps = {
+  value: [],
+}
+
+const StoryEffectFields = ({ effect, kind, items, nodes, endings, onChange }) => {
+  const patchEffect = (patch) => onChange({ ...effect, ...patch })
+
+  return (
+    <div className="grid gap-3">
+      {kind === 'code' ? (
+        <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
+          Тип кода
+          <select
+            value={effect.type || 'complete'}
+            onChange={(event) => patchEffect({ type: event.target.value })}
+            className={fieldClassName}
+          >
+            <option value="complete">Основной код</option>
+            <option value="bonus">Бонусный код</option>
+            <option value="effect">Код с эффектом</option>
+          </select>
+        </label>
+      ) : (
+        <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
+          Описание действия
+          <textarea
+            value={effect.descriptionRich || ''}
+            onChange={(event) =>
+              patchEffect({ descriptionRich: event.target.value })
+            }
+            rows={2}
+            className={fieldClassName}
+          />
+        </label>
+      )}
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
+          Начислить баллы
+          <input
+            type="number"
+            value={effect.scoreBonus || 0}
+            onChange={(event) =>
+              patchEffect({ scoreBonus: Number(event.target.value) || 0 })
+            }
+            className={fieldClassName}
+          />
+        </label>
+        <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
+          Списать баллы
+          <input
+            type="number"
+            min="0"
+            value={effect.scorePenalty || 0}
+            onChange={(event) =>
+              patchEffect({
+                scorePenalty: Math.max(0, Number(event.target.value) || 0),
+              })
+            }
+            className={fieldClassName}
+          />
+        </label>
+      </div>
+
+      <StoryReferenceChecklist
+        label="Требует предметы"
+        options={items}
+        value={effect.requiredItemIds}
+        onChange={(requiredItemIds) => patchEffect({ requiredItemIds })}
+      />
+      <StoryReferenceChecklist
+        label="Выдаёт предметы"
+        options={items}
+        value={effect.grantsItemIds}
+        onChange={(grantsItemIds) => patchEffect({ grantsItemIds })}
+      />
+      <StoryReferenceChecklist
+        label="Тратит предметы"
+        options={items}
+        value={effect.consumesItemIds}
+        onChange={(consumesItemIds) => patchEffect({ consumesItemIds })}
+      />
+      <StoryReferenceChecklist
+        label="Открывает локации"
+        options={nodes}
+        value={effect.unlocksNodeIds}
+        onChange={(unlocksNodeIds) => patchEffect({ unlocksNodeIds })}
+      />
+
+      <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
+        Перейти к концовке
+        <select
+          value={effect.endingId || ''}
+          onChange={(event) =>
+            patchEffect({ endingId: event.target.value || null })
+          }
+          className={fieldClassName}
+        >
+          <option value="">Не завершать сюжет</option>
+          {endings.map((ending) => (
+            <option key={ending.id} value={ending.id}>
+              {ending.title || ending.id}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
+        Сообщение после выполнения
+        <textarea
+          value={effect.resultMessageRich || ''}
+          onChange={(event) =>
+            patchEffect({ resultMessageRich: event.target.value })
+          }
+          rows={2}
+          placeholder="Необязательный текст для команды"
+          className={fieldClassName}
+        />
+      </label>
+    </div>
+  )
+}
+
+StoryEffectFields.propTypes = {
+  effect: PropTypes.object.isRequired,
+  kind: PropTypes.oneOf(['code', 'action']).isRequired,
+  items: PropTypes.arrayOf(PropTypes.object).isRequired,
+  nodes: PropTypes.arrayOf(PropTypes.object).isRequired,
+  endings: PropTypes.arrayOf(PropTypes.object).isRequired,
+  onChange: PropTypes.func.isRequired,
+}
 
 const StoryEditorPageClient = ({ session: _session }) => {
   const searchParams = useSearchParams()
@@ -423,16 +595,43 @@ const StoryEditorPageClient = ({ session: _session }) => {
       if (!nodeId) return
       if (!window.confirm('Удалить локацию и связи с ней?')) return
       updateGame((prev) => {
-        const storyNodes = normalizeArray(prev.storyNodes).filter(
-          (node) => node.id !== nodeId,
-        )
+        const storyNodes = normalizeArray(prev.storyNodes)
+          .filter((node) => node.id !== nodeId)
+          .map((node) => ({
+            ...node,
+            codes: normalizeArray(node.codes).map((code) => ({
+              ...code,
+              unlocksNodeIds: normalizeArray(code.unlocksNodeIds).filter(
+                (id) => id !== nodeId,
+              ),
+            })),
+            actions: normalizeArray(node.actions).map((action) => ({
+              ...action,
+              unlocksNodeIds: normalizeArray(action.unlocksNodeIds).filter(
+                (id) => id !== nodeId,
+              ),
+            })),
+          }))
         const storyEdges = normalizeArray(prev.storyEdges).filter(
           (edge) => edge.fromNodeId !== nodeId && edge.toNodeId !== nodeId,
         )
         const syncedNodes = syncNodesFromEdges(storyNodes, storyEdges)
         setSelectedNodeId(syncedNodes[0]?.id || '')
         setEditingNodeId('')
-        return { ...prev, storyNodes: syncedNodes, storyEdges }
+        return {
+          ...prev,
+          storyNodes: syncedNodes,
+          storyEdges,
+          storyEndings: normalizeArray(prev.storyEndings).map((ending) => ({
+            ...ending,
+            conditions: {
+              ...ending.conditions,
+              requiredCompletedNodeIds: normalizeArray(
+                ending?.conditions?.requiredCompletedNodeIds,
+              ).filter((id) => id !== nodeId),
+            },
+          })),
+        }
       })
     },
     [updateGame],
@@ -449,10 +648,78 @@ const StoryEditorPageClient = ({ session: _session }) => {
         const storyEdges = normalizeArray(prev.storyEdges).filter(
           (edge) => edge.fromItemId !== itemId,
         )
-        const storyNodes = syncNodesFromEdges(prev.storyNodes, storyEdges)
+        const storyNodes = syncNodesFromEdges(prev.storyNodes, storyEdges).map(
+          (node) => ({
+            ...node,
+            codes: normalizeArray(node.codes).map((code) => ({
+              ...code,
+              requiredItemIds: normalizeArray(code.requiredItemIds).filter(
+                (id) => id !== itemId,
+              ),
+              grantsItemIds: normalizeArray(code.grantsItemIds).filter(
+                (id) => id !== itemId,
+              ),
+              consumesItemIds: normalizeArray(code.consumesItemIds).filter(
+                (id) => id !== itemId,
+              ),
+            })),
+            actions: normalizeArray(node.actions).map((action) => ({
+              ...action,
+              requiredItemIds: normalizeArray(action.requiredItemIds).filter(
+                (id) => id !== itemId,
+              ),
+              grantsItemIds: normalizeArray(action.grantsItemIds).filter(
+                (id) => id !== itemId,
+              ),
+              consumesItemIds: normalizeArray(action.consumesItemIds).filter(
+                (id) => id !== itemId,
+              ),
+            })),
+          }),
+        )
         setSelectedItemId(storyItems[0]?.id || '')
         setEditingItemId('')
-        return { ...prev, storyItems, storyNodes, storyEdges }
+        return {
+          ...prev,
+          storyItems,
+          storyNodes,
+          storyEdges,
+          storyEndings: normalizeArray(prev.storyEndings).map((ending) => ({
+            ...ending,
+            conditions: {
+              ...ending.conditions,
+              requiredItemIds: normalizeArray(
+                ending?.conditions?.requiredItemIds,
+              ).filter((id) => id !== itemId),
+            },
+          })),
+        }
+      })
+    },
+    [updateGame],
+  )
+
+  const removeEnding = useCallback(
+    (endingId) => {
+      if (!endingId) return
+      if (!window.confirm('Удалить концовку и переходы к ней?')) return
+      updateGame((prev) => {
+        const storyEndings = normalizeArray(prev.storyEndings).filter(
+          (ending) => ending.id !== endingId,
+        )
+        const storyNodes = normalizeArray(prev.storyNodes).map((node) => ({
+          ...node,
+          codes: normalizeArray(node.codes).map((code) => ({
+            ...code,
+            endingId: code.endingId === endingId ? null : code.endingId,
+          })),
+          actions: normalizeArray(node.actions).map((action) => ({
+            ...action,
+            endingId: action.endingId === endingId ? null : action.endingId,
+          })),
+        }))
+        setSelectedEndingId(storyEndings[0]?.id || '')
+        return { ...prev, storyEndings, storyNodes }
       })
     },
     [updateGame],
@@ -657,6 +924,9 @@ const StoryEditorPageClient = ({ session: _session }) => {
     })
     return map
   }, [edges])
+  const isScenarioLocked = ['started', 'finished', 'closed'].includes(
+    normalizeText(game?.status).toLowerCase(),
+  )
 
   if (!gameId) {
     return (
@@ -680,26 +950,35 @@ const StoryEditorPageClient = ({ session: _session }) => {
       activePage="admin"
     >
       <div className="space-y-4">
+        {isScenarioLocked ? (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+            Эта версия сценария уже использовалась в игре и доступна только для
+            просмотра. Для изменений создайте копию игры.
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={addNode}
-              className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500"
+              disabled={isScenarioLocked}
+              className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Добавить локацию
             </button>
             <button
               type="button"
               onClick={addItem}
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500"
+              disabled={isScenarioLocked}
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Добавить предмет
             </button>
             <button
               type="button"
               onClick={addEnding}
-              className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500"
+              disabled={isScenarioLocked}
+              className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Добавить концовку
             </button>
@@ -707,7 +986,7 @@ const StoryEditorPageClient = ({ session: _session }) => {
           <button
             type="button"
             onClick={() => void saveEditor()}
-            disabled={saving || loading}
+            disabled={saving || loading || isScenarioLocked}
             className="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? 'Сохраняем...' : 'Сохранить сценарий'}
@@ -722,6 +1001,18 @@ const StoryEditorPageClient = ({ session: _session }) => {
         {feedback ? (
           <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
             {feedback}
+          </div>
+        ) : null}
+        {normalizeArray(game?.validationErrors).length > 0 ? (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+            <p className="font-semibold">
+              Сохранённый сценарий пока нельзя запускать:
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {game.validationErrors.map((message, index) => (
+                <li key={`${index}-${message}`}>{message}</li>
+              ))}
+            </ul>
           </div>
         ) : null}
 
@@ -1061,6 +1352,25 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     className={fieldClassName}
                   />
                 </label>
+                <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
+                  Режим старта
+                  <select
+                    value={game?.storyConfig?.startMode || 'common'}
+                    onChange={(event) =>
+                      updateGame((prev) => ({
+                        ...prev,
+                        storyConfig: {
+                          ...prev.storyConfig,
+                          startMode: event.target.value,
+                        },
+                      }))
+                    }
+                    className={fieldClassName}
+                  >
+                    <option value="common">Общий старт</option>
+                    <option value="individual">Индивидуальный старт</option>
+                  </select>
+                </label>
                 <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                   <input
                     type="checkbox"
@@ -1077,6 +1387,32 @@ const StoryEditorPageClient = ({ session: _session }) => {
                   />
                   Показывать баллы команде
                 </label>
+                {[
+                  ['showInventory', 'Показывать инвентарь'],
+                  ['showFinalHistoryToTeam', 'Показывать историю после финала'],
+                  ['hideTotalNodes', 'Скрывать общее число локаций'],
+                  ['hideTotalItems', 'Скрывать общее число предметов'],
+                ].map(([field, label]) => (
+                  <label
+                    key={field}
+                    className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(game?.storyConfig?.[field])}
+                      onChange={(event) =>
+                        updateGame((prev) => ({
+                          ...prev,
+                          storyConfig: {
+                            ...prev.storyConfig,
+                            [field]: event.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    {label}
+                  </label>
+                ))}
               </div>
             </section>
 
@@ -1173,9 +1509,20 @@ const StoryEditorPageClient = ({ session: _session }) => {
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
-              <h2 className="font-semibold text-slate-900 dark:text-slate-100">
-                Концовки
-              </h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="font-semibold text-slate-900 dark:text-slate-100">
+                  Концовки
+                </h2>
+                {selectedEnding ? (
+                  <button
+                    type="button"
+                    onClick={() => removeEnding(selectedEnding.id)}
+                    className="text-sm font-semibold text-rose-600"
+                  >
+                    Удалить
+                  </button>
+                ) : null}
+              </div>
               <select
                 value={selectedEndingId}
                 onChange={(event) => setSelectedEndingId(event.target.value)}
@@ -1216,17 +1563,109 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     <option value="neutral">Нейтральная</option>
                     <option value="secret">Секретная</option>
                   </select>
-                  <textarea
+                  <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(selectedEnding.manualOnly)}
+                      onChange={(event) => {
+                        const manualOnly = event.target.checked
+                        updateGame((prev) => ({
+                          ...prev,
+                          storyEndings: normalizeArray(prev.storyEndings).map(
+                            (ending) =>
+                              ending.id === selectedEnding.id
+                                ? { ...ending, manualOnly }
+                                : ending,
+                          ),
+                          storyNodes: manualOnly
+                            ? normalizeArray(prev.storyNodes).map((node) => ({
+                                ...node,
+                                codes: normalizeArray(node.codes).map(
+                                  (code) => ({
+                                    ...code,
+                                    endingId:
+                                      code.endingId === selectedEnding.id
+                                        ? null
+                                        : code.endingId,
+                                  }),
+                                ),
+                                actions: normalizeArray(node.actions).map(
+                                  (action) => ({
+                                    ...action,
+                                    endingId:
+                                      action.endingId === selectedEnding.id
+                                        ? null
+                                        : action.endingId,
+                                  }),
+                                ),
+                              }))
+                            : prev.storyNodes,
+                        }))
+                      }}
+                    />
+                    Только ручное завершение организатором
+                  </label>
+                  <TaskRichEditor
                     value={selectedEnding.descriptionRich || ''}
-                    onChange={(event) =>
+                    directory={`games/${gameId || 'draft'}/story/endings/${selectedEnding.id}/description/editor`}
+                    contentMaxHeight="320px"
+                    placeholder="Описание финала. Можно использовать форматирование и медиа."
+                    onChange={({ html, media }) =>
                       updateEnding(selectedEnding.id, (ending) => ({
                         ...ending,
-                        descriptionRich: event.target.value,
+                        descriptionRich: typeof html === 'string' ? html : '',
+                        media: Array.isArray(media) ? media : [],
                       }))
                     }
-                    rows={4}
-                    placeholder="Описание финала"
-                    className={fieldClassName}
+                  />
+                  <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
+                    Минимум баллов
+                    <input
+                      type="number"
+                      value={selectedEnding.conditions?.minScore ?? ''}
+                      onChange={(event) =>
+                        updateEnding(selectedEnding.id, (ending) => ({
+                          ...ending,
+                          conditions: {
+                            ...ending.conditions,
+                            minScore:
+                              event.target.value === ''
+                                ? null
+                                : Number(event.target.value) || 0,
+                          },
+                        }))
+                      }
+                      placeholder="Без ограничения"
+                      className={fieldClassName}
+                    />
+                  </label>
+                  <StoryReferenceChecklist
+                    label="Требует предметы"
+                    options={items}
+                    value={selectedEnding.conditions?.requiredItemIds}
+                    onChange={(requiredItemIds) =>
+                      updateEnding(selectedEnding.id, (ending) => ({
+                        ...ending,
+                        conditions: {
+                          ...ending.conditions,
+                          requiredItemIds,
+                        },
+                      }))
+                    }
+                  />
+                  <StoryReferenceChecklist
+                    label="Требует завершённые локации"
+                    options={nodes}
+                    value={selectedEnding.conditions?.requiredCompletedNodeIds}
+                    onChange={(requiredCompletedNodeIds) =>
+                      updateEnding(selectedEnding.id, (ending) => ({
+                        ...ending,
+                        conditions: {
+                          ...ending.conditions,
+                          requiredCompletedNodeIds,
+                        },
+                      }))
+                    }
                   />
                 </div>
               ) : null}
@@ -1312,6 +1751,22 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     />
                     Стартовая
                   </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={editingNode.visibility?.hiddenUntilUnlocked !== false}
+                      onChange={(event) =>
+                        updateNode(editingNode.id, (node) => ({
+                          ...node,
+                          visibility: {
+                            ...node.visibility,
+                            hiddenUntilUnlocked: event.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                    Скрыта до открытия
+                  </label>
                   <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300">
                     Баллы
                     <input
@@ -1376,6 +1831,40 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     />
                   </label>
                 ) : null}
+                <div className="grid gap-3 md:grid-cols-3">
+                  {[
+                    ['latitude', 'Широта'],
+                    ['longitude', 'Долгота'],
+                    ['radius', 'Радиус, м'],
+                  ].map(([field, label]) => (
+                    <label
+                      key={field}
+                      className="grid gap-1 text-sm text-slate-600 dark:text-slate-300"
+                    >
+                      {label}
+                      <input
+                        type="number"
+                        step={field === 'radius' ? '1' : 'any'}
+                        min={field === 'radius' ? '0' : undefined}
+                        value={editingNode.coordinates?.[field] ?? ''}
+                        onChange={(event) =>
+                          updateNode(editingNode.id, (node) => ({
+                            ...node,
+                            coordinates: {
+                              ...node.coordinates,
+                              [field]:
+                                event.target.value === ''
+                                  ? null
+                                  : Number(event.target.value),
+                            },
+                          }))
+                        }
+                        placeholder="Не задано"
+                        className={fieldClassName}
+                      />
+                    </label>
+                  ))}
+                </div>
               </section>
 
               <section className="grid gap-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
@@ -1401,21 +1890,37 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     key={code.id}
                     className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60"
                   >
-                    <input
-                      value={code.code || ''}
-                      onChange={(event) =>
-                        updateNode(editingNode.id, (node) => ({
-                          ...node,
-                          codes: normalizeArray(node.codes).map((item) =>
-                            item.id === code.id
-                              ? { ...item, code: event.target.value }
-                              : item,
-                          ),
-                        }))
-                      }
-                      placeholder="Код"
-                      className={fieldClassName}
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        value={code.code || ''}
+                        onChange={(event) =>
+                          updateNode(editingNode.id, (node) => ({
+                            ...node,
+                            codes: normalizeArray(node.codes).map((item) =>
+                              item.id === code.id
+                                ? { ...item, code: event.target.value }
+                                : item,
+                            ),
+                          }))
+                        }
+                        placeholder="Код"
+                        className={`min-w-0 flex-1 ${fieldClassName}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateNode(editingNode.id, (node) => ({
+                            ...node,
+                            codes: normalizeArray(node.codes).filter(
+                              (item) => item.id !== code.id,
+                            ),
+                          }))
+                        }
+                        className="rounded-xl border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 dark:border-rose-500/40 dark:text-rose-200"
+                      >
+                        Удалить
+                      </button>
+                    </div>
                     <div className="grid gap-2 md:grid-cols-3">
                       <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                         <input
@@ -1437,45 +1942,39 @@ const StoryEditorPageClient = ({ session: _session }) => {
                         />
                         Завершает локацию
                       </label>
-                      <input
-                        value={joinCsv(code.grantsItemIds)}
-                        onChange={(event) =>
-                          updateNode(editingNode.id, (node) => ({
-                            ...node,
-                            codes: normalizeArray(node.codes).map((item) =>
-                              item.id === code.id
-                                ? {
-                                    ...item,
-                                    grantsItemIds: parseCsv(event.target.value),
-                                  }
-                                : item,
-                            ),
-                          }))
-                        }
-                        placeholder="Выдает предметы"
-                        className={fieldClassName}
-                      />
-                      <input
-                        value={joinCsv(code.consumesItemIds)}
-                        onChange={(event) =>
-                          updateNode(editingNode.id, (node) => ({
-                            ...node,
-                            codes: normalizeArray(node.codes).map((item) =>
-                              item.id === code.id
-                                ? {
-                                    ...item,
-                                    consumesItemIds: parseCsv(
-                                      event.target.value,
-                                    ),
-                                  }
-                                : item,
-                            ),
-                          }))
-                        }
-                        placeholder="Тратит предметы"
-                        className={fieldClassName}
-                      />
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(code.repeatable)}
+                          onChange={(event) =>
+                            updateNode(editingNode.id, (node) => ({
+                              ...node,
+                              codes: normalizeArray(node.codes).map((item) =>
+                                item.id === code.id
+                                  ? { ...item, repeatable: event.target.checked }
+                                  : item,
+                              ),
+                            }))
+                          }
+                        />
+                        Можно использовать повторно
+                      </label>
                     </div>
+                    <StoryEffectFields
+                      effect={code}
+                      kind="code"
+                      items={items}
+                      nodes={nodes.filter((node) => node.id !== editingNode.id)}
+                      endings={endings.filter((ending) => !ending.manualOnly)}
+                      onChange={(nextCode) =>
+                        updateNode(editingNode.id, (node) => ({
+                          ...node,
+                          codes: normalizeArray(node.codes).map((item) =>
+                            item.id === code.id ? nextCode : item,
+                          ),
+                        }))
+                      }
+                    />
                   </div>
                 ))}
               </section>
@@ -1503,41 +2002,91 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     key={action.id}
                     className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60"
                   >
-                    <input
-                      value={action.label || ''}
-                      onChange={(event) =>
-                        updateNode(editingNode.id, (node) => ({
-                          ...node,
-                          actions: normalizeArray(node.actions).map((item) =>
-                            item.id === action.id
-                              ? { ...item, label: event.target.value }
-                              : item,
-                          ),
-                        }))
-                      }
-                      placeholder="Название кнопки"
-                      className={fieldClassName}
-                    />
-                    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <div className="flex gap-2">
                       <input
-                        type="checkbox"
-                        checked={Boolean(action.completesNode)}
+                        value={action.label || ''}
                         onChange={(event) =>
                           updateNode(editingNode.id, (node) => ({
                             ...node,
                             actions: normalizeArray(node.actions).map((item) =>
                               item.id === action.id
-                                ? {
-                                    ...item,
-                                    completesNode: event.target.checked,
-                                  }
+                                ? { ...item, label: event.target.value }
                                 : item,
                             ),
                           }))
                         }
+                        placeholder="Название кнопки"
+                        className={`min-w-0 flex-1 ${fieldClassName}`}
                       />
-                      Завершает локацию
-                    </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateNode(editingNode.id, (node) => ({
+                            ...node,
+                            actions: normalizeArray(node.actions).filter(
+                              (item) => item.id !== action.id,
+                            ),
+                          }))
+                        }
+                        className="rounded-xl border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 dark:border-rose-500/40 dark:text-rose-200"
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-4">
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(action.completesNode)}
+                          onChange={(event) =>
+                            updateNode(editingNode.id, (node) => ({
+                              ...node,
+                              actions: normalizeArray(node.actions).map((item) =>
+                                item.id === action.id
+                                  ? {
+                                      ...item,
+                                      completesNode: event.target.checked,
+                                    }
+                                  : item,
+                              ),
+                            }))
+                          }
+                        />
+                        Завершает локацию
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(action.repeatable)}
+                          onChange={(event) =>
+                            updateNode(editingNode.id, (node) => ({
+                              ...node,
+                              actions: normalizeArray(node.actions).map((item) =>
+                                item.id === action.id
+                                  ? { ...item, repeatable: event.target.checked }
+                                  : item,
+                              ),
+                            }))
+                          }
+                        />
+                        Можно выполнять повторно
+                      </label>
+                    </div>
+                    <StoryEffectFields
+                      effect={action}
+                      kind="action"
+                      items={items}
+                      nodes={nodes.filter((node) => node.id !== editingNode.id)}
+                      endings={endings.filter((ending) => !ending.manualOnly)}
+                      onChange={(nextAction) =>
+                        updateNode(editingNode.id, (node) => ({
+                          ...node,
+                          actions: normalizeArray(node.actions).map((item) =>
+                            item.id === action.id ? nextAction : item,
+                          ),
+                        }))
+                      }
+                    />
                   </div>
                 ))}
               </section>
@@ -1565,37 +2114,83 @@ const StoryEditorPageClient = ({ session: _session }) => {
                     key={clue.id}
                     className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60"
                   >
-                    <input
-                      value={clue.title || ''}
-                      onChange={(event) =>
-                        updateNode(editingNode.id, (node) => ({
-                          ...node,
-                          clues: normalizeArray(node.clues).map((item) =>
-                            item.id === clue.id
-                              ? { ...item, title: event.target.value }
-                              : item,
-                          ),
-                        }))
-                      }
-                      placeholder="Название подсказки"
-                      className={fieldClassName}
-                    />
-                    <textarea
+                    <div className="flex gap-2">
+                      <input
+                        value={clue.title || ''}
+                        onChange={(event) =>
+                          updateNode(editingNode.id, (node) => ({
+                            ...node,
+                            clues: normalizeArray(node.clues).map((item) =>
+                              item.id === clue.id
+                                ? { ...item, title: event.target.value }
+                                : item,
+                            ),
+                          }))
+                        }
+                        placeholder="Название подсказки"
+                        className={`min-w-0 flex-1 ${fieldClassName}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateNode(editingNode.id, (node) => ({
+                            ...node,
+                            clues: normalizeArray(node.clues).filter(
+                              (item) => item.id !== clue.id,
+                            ),
+                          }))
+                        }
+                        className="rounded-xl border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 dark:border-rose-500/40 dark:text-rose-200"
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                    <TaskRichEditor
                       value={clue.contentRich || ''}
-                      onChange={(event) =>
+                      directory={`games/${gameId || 'draft'}/story/nodes/${editingNode.id}/clues/${clue.id}/editor`}
+                      contentMaxHeight="280px"
+                      placeholder="Текст и медиа подсказки"
+                      onChange={({ html, media }) =>
                         updateNode(editingNode.id, (node) => ({
                           ...node,
                           clues: normalizeArray(node.clues).map((item) =>
                             item.id === clue.id
-                              ? { ...item, contentRich: event.target.value }
+                              ? {
+                                  ...item,
+                                  contentRich:
+                                    typeof html === 'string' ? html : '',
+                                  media: Array.isArray(media) ? media : [],
+                                }
                               : item,
                           ),
                         }))
                       }
-                      rows={3}
-                      placeholder="Текст подсказки"
-                      className={fieldClassName}
                     />
+                    <label className="grid gap-1 text-sm text-slate-600 dark:text-slate-300 sm:max-w-xs">
+                      Штраф за подсказку
+                      <input
+                        type="number"
+                        min="0"
+                        value={clue.scorePenalty || 0}
+                        onChange={(event) =>
+                          updateNode(editingNode.id, (node) => ({
+                            ...node,
+                            clues: normalizeArray(node.clues).map((item) =>
+                              item.id === clue.id
+                                ? {
+                                    ...item,
+                                    scorePenalty: Math.max(
+                                      0,
+                                      Number(event.target.value) || 0,
+                                    ),
+                                  }
+                                : item,
+                            ),
+                          }))
+                        }
+                        className={fieldClassName}
+                      />
+                    </label>
                   </div>
                 ))}
               </section>

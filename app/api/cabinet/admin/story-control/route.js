@@ -45,25 +45,29 @@ export async function GET(request) {
       teams.map((team) => [normalizeStringId(team?._id), team]),
     )
 
-    const teamPayloads = []
-    for (const gameTeam of gameTeams) {
-      const progress = await ensureStoryProgress({
-        GamesTeams: context.GamesTeams,
-        game: context.game,
-        gameTeam,
-        actor: 'admin',
-        save: true,
-      })
+    const teamPayloads = await Promise.all(gameTeams.map(async (gameTeam) => {
+      const shouldInitializeCommonProgress =
+        context.game?.status === 'started' &&
+        context.game?.storyConfig?.startMode !== 'individual'
+      const progress = gameTeam?.storyProgress
+        ? gameTeam.storyProgress
+        : shouldInitializeCommonProgress
+          ? await ensureStoryProgress({
+              GamesTeams: context.GamesTeams,
+              game: context.game,
+              gameTeam,
+              actor: 'admin',
+              save: true,
+            })
+          : null
       const teamId = normalizeStringId(gameTeam?.teamId)
-      teamPayloads.push(
-        buildAdminStoryTeamPayload({
-          game: context.game,
-          team: teamsById.get(teamId),
-          gameTeam,
-          progress,
-        }),
-      )
-    }
+      return buildAdminStoryTeamPayload({
+        game: context.game,
+        team: teamsById.get(teamId),
+        gameTeam,
+        progress,
+      })
+    }))
 
     return NextResponse.json({
       success: true,

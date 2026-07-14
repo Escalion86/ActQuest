@@ -72,6 +72,14 @@ const resolveSessionUserId = (sessionUser) =>
 const normalizeShowTasksAudience = (value) =>
   value === 'participants' ? 'participants' : 'all'
 
+const normalizeGameTypeForCreate = (value) => {
+  const normalized =
+    typeof value === 'string' ? value.trim().toLowerCase() : 'classic'
+  return ['classic', 'photo', 'story'].includes(normalized)
+    ? normalized
+    : 'classic'
+}
+
 export async function POST(request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -96,6 +104,7 @@ export async function POST(request) {
 
   const name = normalizeStringOrNull(payload?.name)
   const location = normalizeStringOrNull(payload?.location)
+  const gameType = normalizeGameTypeForCreate(payload?.type)
   if (!name) {
     return NextResponse.json(
       { success: false, error: 'Не указано название игры' },
@@ -106,6 +115,15 @@ export async function POST(request) {
     return NextResponse.json(
       { success: false, error: 'Не указана площадка игры' },
       { status: 400 },
+    )
+  }
+  if (gameType === 'story' && normalizeRole(session.user.role) !== 'dev') {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Создание story-игр пока доступно только разработчику',
+      },
+      { status: 403 },
     )
   }
 
@@ -139,6 +157,7 @@ export async function POST(request) {
       ...payload,
       name,
       location: location.toLowerCase(),
+      type: gameType,
       // При создании игра всегда скрыта.
       hidden: true,
       showTasksAudience: normalizeShowTasksAudience(payload?.showTasksAudience),
